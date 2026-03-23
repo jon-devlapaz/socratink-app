@@ -3,29 +3,36 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <title>LearnOps</title>
   <style>
     /* ┌──────────────────────────────────────────────────────────┐
        │  CSS TABLE OF CONTENTS                                   │
        │  1. @property registrations                              │
-       │  2. Primitive tokens                                     │
-       │  3. Base elements                                        │
+       │  2. Primitive tokens + design system tokens              │
+       │  3. Base elements (typography, buttons, controls)        │
        │  4. Grid container + tile styles                         │
        │  5. Crystal instance state selectors                     │
        │  6. Night mode (.night on body)                          │
        │  7. @keyframes                                           │
        │  8. Transition animation classes                         │
-       │  9. Drawer + backdrop                                    │
+       │  9. Sidebar + backdrop                                   │
        │  10. Concept list items                                  │
+       │  11. Content input overlay                               │
+       │  12. Drawer creation form                                │
+       │  13. App layout (sidebar + hero, responsive)             │
        └──────────────────────────────────────────────────────────┘ */
 
     /* ── 1. @property ─────────────────────────────────────────── */
     @property --crystal-glow-opacity { syntax:'<number>'; inherits:false; initial-value:0.10; }
     @property --crystal-glow-blur    { syntax:'<length>'; inherits:false; initial-value:6px;  }
 
-    /* ── 2. Primitive tokens ──────────────────────────────────── */
+    /* ── 2. Primitive tokens + design system tokens ──────────── */
     :root {
-      --bg:         #f0eff6;
+      /* Core palette */
+      --bg:         #f9f9ff;
       --card-bg:    #ffffff;
       --text:       #2d2b3d;
       --text-sub:   #6b6880;
@@ -33,21 +40,37 @@
       --locked:     #c4c2d4;
       --danger:     #e05c6b;
       --success:    #4dba8a;
-      --drawer-bg:  #f8f7fc;
+      --drawer-bg:  #f2f3fb;
       --border:     rgba(100,80,180,0.10);
       --tile-top:   hsl(260,20%,95%);
       --tile-left:  hsl(260,15%,85%);
       --tile-right: hsl(260,15%,75%);
       --morph-ms:   600ms;
       --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+      /* Design system surfaces */
+      --surface:          #f9f9ff;
+      --surface-low:      #f2f3fb;
+      --surface-card:     #ffffff;
+      --surface-nested:   #e8eaf4;
+      /* Typography */
+      --font-display:     'Manrope', -apple-system, sans-serif;
+      --font-body:        'Inter', -apple-system, sans-serif;
+      /* Shadows */
+      --shadow-ambient:   0 40px 100px rgba(44,51,62,0.05), 0 2px 8px rgba(44,51,62,0.04);
+      --shadow-card:      0 8px 32px rgba(100,80,180,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      /* Radii */
+      --radius-hero:      2.5rem;
+      --radius-card:      1.5rem;
+      --radius-btn:       999px;
+      --radius-sm:        0.625rem;
     }
 
-    /* ── 3. Base elements ─────────────────────────────────────── */
+    /* ── 3. Base elements (typography, buttons, controls) ─────── */
     *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg);
+      font-family: var(--font-body);
+      background-color: var(--surface);
       color: var(--text);
       display: flex;
       align-items: center;
@@ -56,47 +79,47 @@
       transition: background-color 0.6s ease;
     }
 
-    .container {
-      background-color: var(--card-bg);
-      padding: 36px 40px 40px;
-      border-radius: 24px;
-      box-shadow: 0 8px 40px rgba(100,80,180,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    /* Mobile fallback card (overridden at desktop in section 13) */
+    #card {
+      background-color: transparent;
       text-align: center;
       max-width: 440px;
       width: 100%;
       position: relative;
-      transition: background-color 0.6s ease, opacity 0.3s ease, transform 0.3s ease;
+      transition: opacity 0.3s ease, transform 0.3s ease;
     }
-    body[data-drawer-open="true"] .container {
+    body[data-drawer-open="true"] #card {
       opacity: 0.45;
       transform: scale(0.97);
       pointer-events: none;
     }
 
     h2 {
+      font-family: var(--font-display);
       font-size: 10.5px;
-      font-weight: 600;
-      letter-spacing: 0.8px;
+      font-weight: 700;
+      letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--text-sub);
-      margin: 0 0 2px;
+      margin: 0 0 4px;
       transition: color 0.6s ease;
     }
     p.desc {
+      font-family: var(--font-display);
       color: var(--text);
-      font-size: 21px;
+      font-size: 22px;
       font-weight: 700;
       letter-spacing: -0.5px;
       line-height: 1.3;
       min-height: 36px;
-      margin: 10px 0 24px;
+      margin: 8px 0 28px;
       transition: color 0.6s ease;
     }
     .concept-label {
-      font-size: 15px;
-      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 600;
       letter-spacing: 0.3px;
-      text-transform: none;
       color: var(--primary);
       margin-bottom: 4px;
       min-height: 14px;
@@ -107,13 +130,13 @@
     .row      { display:flex; gap:10px; }
 
     button {
-      flex:1; padding:11px 16px; border:none; border-radius:10px;
-      font-size:13px; font-weight:600; cursor:pointer;
+      flex:1; padding:12px 20px; border:none; border-radius:var(--radius-btn);
+      font-family:var(--font-body); font-size:13px; font-weight:600; cursor:pointer;
       background-color:var(--primary); color:white; letter-spacing:0.1px;
       transition: opacity 0.15s, transform 0.1s, background-color 0.3s;
     }
     button:hover:not(:disabled) { opacity:0.88; }
-    button:active:not(:disabled) { transform:translateY(1px); }
+    button:active:not(:disabled) { transform:scale(0.98); }
     button:disabled { background-color:var(--locked); cursor:not-allowed; transform:none; opacity:1; }
     .btn-fail { background-color:var(--danger); }
     .btn-pass { background-color:var(--success); }
@@ -125,7 +148,6 @@
     }
 
     .drawer-toggle {
-      position:absolute; top:14px; left:16px;
       background:none; border:none; cursor:pointer;
       padding:6px; border-radius:8px; color:var(--text-sub);
       font-size:18px; line-height:1; flex:none; width:auto;
@@ -134,7 +156,6 @@
     .drawer-toggle:hover { color:var(--primary); background-color:var(--border); }
 
     .dev-skip {
-      position:absolute; top:12px; right:12px;
       background:none; color:transparent; font-size:9px;
       padding:4px 6px; box-shadow:none; width:auto; flex:none; letter-spacing:0;
     }
@@ -248,17 +269,20 @@
 
     /* ── 6. Night mode ────────────────────────────────────────── */
     body.night {
-      --bg:         #12111e;
-      --card-bg:    #1c1a2e;
-      --text:       #ccc8e8;
-      --text-sub:   #7b78a0;
-      --primary:    #9d8fe8;
-      --locked:     #3a3756;
-      --drawer-bg:  #161428;
-      --border:     rgba(160,140,240,0.10);
-      --tile-top:   hsl(260,20%,18%);
-      --tile-left:  hsl(260,15%,13%);
-      --tile-right: hsl(260,15%,10%);
+      --bg:           #12111e;
+      --card-bg:      #1c1a2e;
+      --text:         #ccc8e8;
+      --text-sub:     #7b78a0;
+      --primary:      #9d8fe8;
+      --locked:       #3a3756;
+      --drawer-bg:    #161428;
+      --border:       rgba(160,140,240,0.10);
+      --tile-top:     hsl(260,20%,18%);
+      --tile-left:    hsl(260,15%,13%);
+      --tile-right:   hsl(260,15%,10%);
+      --surface:      #12111e;
+      --surface-low:  #161428;
+      --surface-card: #1c1a2e;
     }
 
     /* ── 7. @keyframes ───────────────────────────────────────── */
@@ -303,7 +327,7 @@
     .crystal-anim.anim-actualize { animation:gridActualize 750ms ease forwards; }
     .crystal-anim.anim-repair    { animation:gridRepair    550ms ease forwards; }
 
-    /* ── 9. Drawer + backdrop ─────────────────────────────────── */
+    /* ── 9. Sidebar + backdrop ────────────────────────────────── */
     #backdrop {
       position:fixed; inset:0;
       background:rgba(20,16,40,0.25);
@@ -312,6 +336,7 @@
     }
     body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 
+    /* Mobile default: off-canvas (overridden at desktop in section 13) */
     #drawer {
       position:fixed; top:0; left:-300px; width:280px; height:100vh; height:100dvh;
       background-color:var(--drawer-bg);
@@ -323,22 +348,47 @@
     }
     #drawer[data-open="true"] { left:0; }
 
-    .drawer-header {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:20px 16px 16px; border-bottom:1px solid var(--border); flex-shrink:0;
+    /* Sidebar brand */
+    .sidebar-brand {
+      padding:28px 20px 16px; flex-shrink:0;
     }
-    .drawer-header h3 {
-      font-size:12px; font-weight:700; letter-spacing:0.8px;
+    .sidebar-brand-name {
+      font-family:var(--font-display);
+      font-size:20px; font-weight:800; letter-spacing:-0.5px; color:var(--text);
+    }
+
+    /* Sidebar navigation */
+    .sidebar-nav {
+      padding:4px 12px 8px; display:flex; flex-direction:column;
+      gap:2px; flex-shrink:0;
+    }
+    .sidebar-nav-item {
+      display:flex; align-items:center; gap:10px; padding:9px 12px;
+      border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+      color:var(--text-sub); text-decoration:none;
+      transition:background-color 0.15s, color 0.15s; cursor:pointer;
+    }
+    .sidebar-nav-item:hover { background:var(--border); color:var(--text); }
+    .sidebar-nav-item.active { background:rgba(124,111,205,0.10); color:var(--primary); }
+
+    .sidebar-divider { height:1px; background:var(--border); margin:8px 12px; flex-shrink:0; }
+
+    .sidebar-section-label {
+      font-family:var(--font-display);
+      font-size:10px; font-weight:700; letter-spacing:0.8px;
       text-transform:uppercase; color:var(--text-sub);
+      padding:8px 20px 4px; flex-shrink:0; display:block;
     }
+
     .drawer-close {
+      position:absolute; top:16px; right:16px;
       background:none; border:none; cursor:pointer; color:var(--text-sub);
       font-size:18px; line-height:1; padding:4px; border-radius:6px;
       width:auto; flex:none; transition:color 0.15s;
     }
     .drawer-close:hover { color:var(--text); }
 
-    #concept-list { flex:1; overflow-y:auto; padding:8px 0; }
+    #concept-list { flex:1; overflow-y:auto; padding:4px 0; }
 
     /* ── 10. Concept list items ──────────────────────────────── */
     .concept-item {
@@ -509,60 +559,232 @@
       transition:opacity 0.15s;
     }
     .paste-clipboard-btn:hover { opacity:0.7; }
+
+    /* ── 13. App layout — sidebar + hero, responsive ──────────── */
+
+    /* ─── Desktop (≥900px): persistent sidebar + main content ─── */
+    @media (min-width: 900px) {
+      body {
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: flex-start;
+        min-height: 100vh;
+      }
+
+      /* Sidebar becomes static, always visible */
+      #drawer {
+        position: relative;
+        left: 0 !important;
+        top: 0;
+        height: 100vh;
+        height: 100dvh;
+        width: 280px;
+        flex-shrink: 0;
+        border-right: none;
+        box-shadow: none;
+        z-index: auto;
+      }
+
+      /* Hide mobile-only controls */
+      .drawer-toggle { display: none; }
+      .drawer-close  { display: none !important; }
+      #backdrop      { display: none !important; }
+
+      /* Suppress drawer-open dim at desktop */
+      body[data-drawer-open="true"] #card {
+        opacity: 1 !important;
+        transform: none !important;
+        pointer-events: auto !important;
+      }
+
+      /* Main content — full remaining width */
+      #card {
+        flex: 1;
+        max-width: none;
+        width: auto;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+        background: var(--surface);
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+    }
+
+    /* ─── Main header bar ──────────────────────────────────────── */
+    .main-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 40px 0;
+      flex-shrink: 0;
+    }
+    .main-header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .main-header-title {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-sub);
+    }
+
+    /* ─── Hero card ────────────────────────────────────────────── */
+    .hero-card {
+      display: flex;
+      align-items: center;
+      gap: 56px;
+      background: var(--surface-card);
+      border-radius: var(--radius-hero);
+      padding: 52px 56px;
+      margin: 24px 40px 32px;
+      box-shadow: var(--shadow-ambient);
+      transition: background-color 0.6s ease;
+      flex-shrink: 0;
+    }
+    .hero-info {
+      flex: 1;
+      min-width: 0;
+      max-width: 440px;
+      text-align: left;
+    }
+    /* Buttons inside hero should not stretch full panel width */
+    .hero-info .controls {
+      max-width: 320px;
+    }
+
+    /* ─── Grid inside hero — override mobile centering ─────────── */
+    @media (min-width: 900px) {
+      #grid-container {
+        margin: 0;
+        width: 280px;
+        flex-shrink: 0;
+      }
+    }
+
+    /* ─── Night mode — hero card picks up CSS variable overrides ── */
+    body.night .hero-card { background-color: var(--card-bg); }
+    body.night #card      { background-color: var(--bg); }
+
+    /* ─── Mobile (< 900px): centered-card layout ──────────────── */
+    @media (max-width: 899px) {
+      body { flex-direction: column; align-items: center; justify-content: center; }
+
+      /* Keep header but position hamburger absolutely within card */
+      .main-header {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        padding: 14px 16px;
+        background: transparent;
+        z-index: 2;
+      }
+      .main-header-title { display: none; }
+
+      .hero-card {
+        flex-direction: column;
+        gap: 8px;
+        padding: 52px 40px 40px; /* top padding clears the header */
+        margin: 0;
+        border-radius: 24px;
+        box-shadow: var(--shadow-card);
+        background: var(--surface-card);
+        position: relative;
+      }
+      .hero-info { text-align: center; }
+      #grid-container { margin: 10px auto 16px; }
+    }
   </style>
 </head>
 <body>
 
+<!-- Backdrop (mobile only) -->
 <div id="backdrop" onclick="App.closeDrawer()"></div>
 
+<!-- Left sidebar -->
 <div id="drawer" data-open="false">
-  <div class="drawer-header">
-    <h3>Concepts</h3>
-    <button class="drawer-close" onclick="App.closeDrawer()">×</button>
+  <div class="sidebar-brand">
+    <span class="sidebar-brand-name">LearnOps</span>
   </div>
+
+  <nav class="sidebar-nav">
+    <a class="sidebar-nav-item active" href="#">Dashboard</a>
+    <a class="sidebar-nav-item" href="#">Library</a>
+    <a class="sidebar-nav-item" href="#">Analytics</a>
+    <a class="sidebar-nav-item" href="#">Settings</a>
+  </nav>
+
+  <div class="sidebar-divider"></div>
+  <span class="sidebar-section-label">Concepts</span>
+
   <div id="concept-list"></div>
   <div id="add-trigger-area"></div>
+
+  <!-- Close button (mobile only) -->
+  <button class="drawer-close" onclick="App.closeDrawer()">×</button>
 </div>
 
-<div class="container" id="card">
-  <button class="drawer-toggle" onclick="App.toggleDrawer()" title="Concepts">☰</button>
-  <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
+<!-- Main content -->
+<div id="card">
 
-  <!-- 2×2 isometric grid -->
-  <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
-    <svg id="grid-svg" viewBox="0 0 280 220" width="280" height="220"
-         xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
-      <defs>
-        <filter id="glow-filter" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="3" result="blur"/>
-          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-        </filter>
-      </defs>
-      <!-- Paint order: back → front. Transforms are fixed. Content populated by renderGrid(). -->
-      <g id="tile-0" class="tile-group" transform="translate(70,45)"  onclick="App.selectTile(0)"></g>
-      <g id="tile-1" class="tile-group" transform="translate(0,85)"   onclick="App.selectTile(1)"></g>
-      <g id="tile-2" class="tile-group" transform="translate(140,85)" onclick="App.selectTile(2)"></g>
-      <g id="tile-3" class="tile-group" transform="translate(70,125)" onclick="App.selectTile(3)"></g>
-    </svg>
-    <div id="tile-tooltip"></div>
-  </div>
+  <!-- Header bar (desktop) -->
+  <header class="main-header">
+    <div class="main-header-left">
+      <button class="drawer-toggle" onclick="App.toggleDrawer()" title="Menu">☰</button>
+      <span class="main-header-title">Clarity Dashboard</span>
+    </div>
+    <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
+  </header>
 
-  <div class="concept-label" id="concept-label"></div>
-  <h2 id="title">LearnOps</h2>
-  <p class="desc" id="desc">Open the menu to add your first concept.</p>
-  <div id="timer-display">24:00:00</div>
+  <!-- Hero card: concept info left, crystal grid right -->
+  <section class="hero-card">
 
-  <div class="controls" id="primary-controls" style="display:none;">
-    <button id="btn-extract" onclick="App.extract()">1. Extract</button>
-    <button id="btn-drill"   onclick="App.drill()"   disabled>3. Drill (Recall)</button>
-  </div>
-  <div class="controls row" id="drill-controls" style="display:none;">
-    <button class="btn-fail" onclick="App.drillFail()">Simulate Fail</button>
-    <button class="btn-pass" onclick="App.drillPass()">Simulate Pass</button>
-  </div>
-  <div class="controls" id="consolidate-controls" style="display:none; margin-top:10px;">
-    <button id="btn-consolidate" onclick="App.consolidate()">4. Consolidate</button>
-  </div>
+    <div class="hero-info">
+      <div class="concept-label" id="concept-label"></div>
+      <h2 id="title">LearnOps</h2>
+      <p class="desc" id="desc">Add a concept to begin your learning pipeline.</p>
+      <div id="timer-display">24:00:00</div>
+
+      <div class="controls" id="primary-controls" style="display:none;">
+        <button id="btn-extract" onclick="App.extract()">1. Extract</button>
+        <button id="btn-drill"   onclick="App.drill()" disabled>3. Drill (Recall)</button>
+      </div>
+      <div class="controls row" id="drill-controls" style="display:none;">
+        <button class="btn-fail" onclick="App.drillFail()">Simulate Fail</button>
+        <button class="btn-pass" onclick="App.drillPass()">Simulate Pass</button>
+      </div>
+      <div class="controls" id="consolidate-controls" style="display:none; margin-top:10px;">
+        <button id="btn-consolidate" onclick="App.consolidate()">4. Consolidate</button>
+      </div>
+    </div>
+
+    <!-- 2×2 isometric crystal grid -->
+    <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
+      <svg id="grid-svg" viewBox="0 0 280 220" width="280" height="220"
+           xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">
+        <defs>
+          <filter id="glow-filter" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+        <!-- Paint order: back → front. Transforms are fixed. Content populated by renderGrid(). -->
+        <g id="tile-0" class="tile-group" transform="translate(70,45)"  onclick="App.selectTile(0)"></g>
+        <g id="tile-1" class="tile-group" transform="translate(0,85)"   onclick="App.selectTile(1)"></g>
+        <g id="tile-2" class="tile-group" transform="translate(140,85)" onclick="App.selectTile(2)"></g>
+        <g id="tile-3" class="tile-group" transform="translate(70,125)" onclick="App.selectTile(3)"></g>
+      </svg>
+      <div id="tile-tooltip"></div>
+    </div>
+
+  </section>
+
 </div>
 
 <script>
