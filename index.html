@@ -554,6 +554,7 @@
     .creation-submit:not(:disabled):hover { opacity:0.88; }
     .creation-form .overlay-textarea { height:90px; }
     .creation-form .overlay-dropzone { padding:18px 12px; }
+    .paste-actions { display:flex; gap:10px; align-items:center; margin-top:6px; }
     .paste-clipboard-btn {
       background:none; border:none; cursor:pointer; padding:0;
       font-size:11px; font-weight:600; color:var(--primary);
@@ -561,6 +562,13 @@
       transition:opacity 0.15s;
     }
     .paste-clipboard-btn:hover { opacity:0.7; }
+    .wiki-random-btn {
+      background:none; border:none; cursor:pointer; padding:0;
+      font-size:11px; font-weight:600; color:var(--text-sub);
+      width:auto; flex:none; letter-spacing:0; transition:color 0.15s, opacity 0.15s;
+    }
+    .wiki-random-btn:hover:not(:disabled) { color:var(--primary); }
+    .wiki-random-btn:disabled { opacity:0.4; cursor:default; }
 
     /* ── 13. App layout — sidebar + hero, responsive ──────────── */
 
@@ -703,7 +711,34 @@
       #grid-container { margin: 10px auto 16px; }
     }
 
-    /* ── 14. Settings Panel ────── */
+    /* ── 14. Extraction Overlay ───── */
+    #extract-overlay {
+      position: fixed; inset: 0; z-index: 190;
+      background: #0e0c1b;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.35s ease;
+      pointer-events: none;
+    }
+    #extract-overlay.visible { opacity: 1; pointer-events: all; }
+    .extract-body { text-align: center; user-select: none; }
+    .extract-spinner {
+      width: 38px; height: 38px; margin: 0 auto 22px;
+      border: 2.5px solid rgba(139,128,208,0.2);
+      border-top-color: #9b8fe8;
+      border-radius: 50%;
+      animation: extractSpin 0.75s linear infinite;
+    }
+    @keyframes extractSpin { to { transform: rotate(360deg); } }
+    .extract-label {
+      font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+      color: rgba(255,255,255,0.85); margin: 0 0 8px;
+    }
+    .extract-name {
+      font-size: 12px; color: rgba(255,255,255,0.35); margin: 0;
+      max-width: 280px;
+    }
+
+    /* ── 15. Settings Panel ────── */
     .settings-panel { padding:16px 16px 20px; }
 
     /* Header row: title + X close */

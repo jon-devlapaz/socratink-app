@@ -356,7 +356,7 @@ const App = (() => {
       </div>
       <div class="overlay-panel" data-panel="paste">
         <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article…' : 'Paste content here…'}"></textarea>
-        ${showClipboard ? '<button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button>' : ''}
+        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button><button class="wiki-random-btn" type="button">🎲 Random Wikipedia</button></div>' : ''}
       </div>
       <div class="overlay-panel" data-panel="upload" style="display:none">
         <div class="overlay-dropzone">
@@ -383,6 +383,7 @@ const App = (() => {
     const fileInput = container.querySelector('input[type="file"]');
     const feedback  = container.querySelector('.overlay-dropfeedback');
     const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
+    const wikiRandomBtn = container.querySelector('.wiki-random-btn');
     const nameInput = container.querySelector('.creation-name-input');
     const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
@@ -434,6 +435,29 @@ const App = (() => {
           textarea.focus();
           document.execCommand('paste');
         });
+      });
+    }
+
+    if (showClipboard && wikiRandomBtn) {
+      wikiRandomBtn.addEventListener('click', async () => {
+        const orig = wikiRandomBtn.textContent;
+        wikiRandomBtn.disabled = true;
+        wikiRandomBtn.textContent = 'Loading…';
+        try {
+          const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          textarea.value = `${data.title}\n\n${data.extract}`;
+          if (nameInput && !nameInput.value.trim()) nameInput.value = data.title;
+          textarea.focus();
+          checkSubmitEnabled();
+        } catch(e) {
+          wikiRandomBtn.textContent = 'Failed — retry';
+          setTimeout(() => { wikiRandomBtn.textContent = orig; }, 2000);
+        } finally {
+          wikiRandomBtn.disabled = false;
+          if (wikiRandomBtn.textContent === 'Loading…') wikiRandomBtn.textContent = orig;
+        }
       });
     }
 
@@ -533,11 +557,27 @@ const App = (() => {
         if (concepts.length >= 4) { renderAddTrigger(); return; }
 
         const id = generateId();
-        
-        const btn = addTriggerArea.querySelector('.creation-submit');
-        if(btn) { btn.disabled = true; btn.textContent = 'Extracting...'; }
+
+        // Show full-screen extraction overlay immediately
+        const extractOverlay = document.createElement('div');
+        extractOverlay.id = 'extract-overlay';
+        extractOverlay.innerHTML = `
+          <div class="extract-body">
+            <div class="extract-spinner"></div>
+            <p class="extract-label">Extracting concepts</p>
+            <p class="extract-name">${escHtml(name)}</p>
+          </div>
+        `;
+        document.body.appendChild(extractOverlay);
+        requestAnimationFrame(() => extractOverlay.classList.add('visible'));
+
+        function removeOverlay() {
+          extractOverlay.classList.remove('visible');
+          setTimeout(() => { if(extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
+        }
 
         performAIExtraction(text, (graphData) => {
+          removeOverlay();
           const concept = {
             id, name, state: 'growing',
             createdAt: Date.now(), timerStart: null,
@@ -554,8 +594,8 @@ const App = (() => {
           selectConcept(concept.id);
           closeDrawer();
         }, (errMsg) => {
+          removeOverlay();
           alert('Extraction Failed: ' + errMsg);
-          if(btn) { btn.disabled = false; btn.textContent = 'Add Concept →'; }
         });
       },
       onCancel: () => {

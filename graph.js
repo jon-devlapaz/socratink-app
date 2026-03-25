@@ -7,12 +7,10 @@ function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
 const GraphEngine = (() => {
   let canvas, ctx, animFrame, w, h;
   let nodes = [], edges = [];
-  let bgColor, primaryColor, textColor;
-  
+  let primaryColor;
+
   function init() {
-    bgColor = getComputedStyle(document.body).getPropertyValue('--surface-card').trim() || '#ffffff';
     primaryColor = getComputedStyle(document.body).getPropertyValue('--primary').trim() || '#7c6fcd';
-    textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || '#2d2b3d';
 
     
     if(!document.getElementById('ai-debug-modal')) {
@@ -103,8 +101,6 @@ const GraphEngine = (() => {
 
   function loop() {
     ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0,0,w,h);
     
     for(let i=0; i<nodes.length; i++) {
       for(let j=i+1; j<nodes.length; j++) {
@@ -133,7 +129,7 @@ const GraphEngine = (() => {
       e.target.vy -= (dy/dist)*f;
     }
     
-    ctx.strokeStyle = '#c4c2d4';
+    ctx.strokeStyle = 'rgba(180,170,230,0.35)';
     ctx.lineWidth = 1.5;
     for(let e of edges) {
       ctx.beginPath();
@@ -141,21 +137,21 @@ const GraphEngine = (() => {
       ctx.lineTo(e.target.x, e.target.y);
       ctx.stroke();
     }
-    
-    ctx.font = '12px sans-serif';
+
+    ctx.font = '600 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
     for(let n of nodes) {
       n.vx += (w/2 - n.x) * 0.005;
       n.vy += (h/2 - n.y) * 0.005;
       n.vx *= 0.85; n.vy *= 0.85;
       n.x += n.vx; n.y += n.vy;
-      
+
       ctx.beginPath();
-      ctx.arc(n.x, n.y, 8, 0, Math.PI*2);
+      ctx.arc(n.x, n.y, 7, 0, Math.PI*2);
       ctx.fillStyle = primaryColor;
       ctx.fill();
-      ctx.fillStyle = textColor;
-      ctx.fillText(n.label, n.x, n.y - 14);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(n.label, n.x, n.y - 13);
     }
     animFrame = requestAnimationFrame(loop);
   }
@@ -195,7 +191,7 @@ async function performAIExtraction(text, onSuccess, onError) {
     }
   }
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?key=${key}&alt=sse`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`;
   const prompt = `You are a cognitive extractor analyzing text. Output EXACTLY ONE item per line using ONLY these formats:
 NODE: <Concept Name>
 EDGE: <Source Concept> -> <Target Concept> | <Relationship>
@@ -217,7 +213,6 @@ ${text.slice(0, 10000)}`;
     });
 
     log(`Response status: ${response.status} ${response.statusText}`);
-    log(`Content-Type: ${response.headers.get('content-type') || '(none)'}`);
 
     if(!response.ok) {
       let errBody = '(could not read body)';
@@ -226,90 +221,40 @@ ${text.slice(0, 10000)}`;
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    if(!response.body) {
-      throw new Error('response.body is null — streaming not supported in this environment');
-    }
+    const data = await response.json();
+    const fullText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    log('Stream open. Reading chunks...\n');
+    log(`Received ${fullText.length} chars of AI output`);
+    log('Parsing nodes and edges...\n');
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-
-    let streamBuffer = '';
-    let textBuffer = '';
-    let chunkCount = 0;
+    const lines = fullText.split('\n');
     let nodeCount = 0;
     let edgeCount = 0;
 
-    while(true) {
-      const { done, value } = await reader.read();
-      if(done) break;
-
-      const raw = decoder.decode(value, { stream: true });
-      chunkCount++;
-
-      if(chunkCount <= 3) {
-        log(`--- RAW CHUNK ${chunkCount} ---\n${raw.slice(0, 400)}${raw.length > 400 ? '...(truncated)' : ''}`);
-      }
-
-      streamBuffer += raw;
-      let lines = streamBuffer.split('\n\n');
-      streamBuffer = lines.pop();
-
-      for(const line of lines) {
-        if(!line.startsWith('data: ')) continue;
-        const rawPayload = line.slice(6).trim();
-        if(rawPayload === '[DONE]') { log('Received [DONE]'); continue; }
-
-        try {
-          const data = JSON.parse(rawPayload);
-          const chunkText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          if(!chunkText) continue;
-
-          textBuffer += chunkText;
-          let parts = textBuffer.split('\n');
-          textBuffer = parts.pop();
-
-          for(let p of parts) {
-            p = p.trim().replace(/\*\*/g, '');
-            if(p.startsWith('NODE:')) {
-              const label = p.substring(5).trim();
-              GraphEngine.addNode(label);
-              nodeCount++;
-              log(`NODE(${nodeCount}): ${label}`);
-            } else if(p.startsWith('EDGE:')) {
-              const split1 = p.substring(5).split('->');
-              if(split1.length === 2) {
-                const source = split1[0].trim();
-                const split2 = split1[1].split('|');
-                if(split2.length === 2) {
-                  const target = split2[0].trim();
-                  const edgeLabel = split2[1].trim();
-                  GraphEngine.addEdge(source, target, edgeLabel);
-                  edgeCount++;
-                  log(`EDGE(${edgeCount}): ${source} -> ${target} | ${edgeLabel}`);
-                }
-              }
-            }
-          }
-        } catch(e) {
-          log(`[JSON parse error: ${e.message}] payload: ${rawPayload.slice(0, 100)}`);
-        }
-      }
-    }
-
-    // flush remaining text buffer
-    if(textBuffer.trim()) {
-      const p = textBuffer.trim().replace(/\*\*/g, '');
+    for(let p of lines) {
+      p = p.trim().replace(/\*\*/g, '');
       if(p.startsWith('NODE:')) {
         const label = p.substring(5).trim();
         GraphEngine.addNode(label);
         nodeCount++;
-        log(`NODE(${nodeCount}) [flush]: ${label}`);
+        log(`NODE(${nodeCount}): ${label}`);
+      } else if(p.startsWith('EDGE:')) {
+        const split1 = p.substring(5).split('->');
+        if(split1.length === 2) {
+          const source = split1[0].trim();
+          const split2 = split1[1].split('|');
+          if(split2.length === 2) {
+            const target = split2[0].trim();
+            const edgeLabel = split2[1].trim();
+            GraphEngine.addEdge(source, target, edgeLabel);
+            edgeCount++;
+            log(`EDGE(${edgeCount}): ${source} -> ${target} | ${edgeLabel}`);
+          }
+        }
       }
     }
 
-    log(`\nStream complete. Chunks: ${chunkCount} | Nodes: ${nodeCount} | Edges: ${edgeCount}`);
+    log(`\nComplete. Nodes: ${nodeCount} | Edges: ${edgeCount}`);
 
     setTimeout(() => {
       GraphEngine.stop();
