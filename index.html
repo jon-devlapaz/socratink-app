@@ -23,6 +23,7 @@
        │  11. Content input overlay                               │
        │  12. Drawer creation form                                │
        │  13. App layout (sidebar + hero, responsive)             │
+       │  14. Settings panel                                      │
        └──────────────────────────────────────────────────────────┘ */
 
     /* ── 1. @property ─────────────────────────────────────────── */
@@ -703,15 +704,78 @@
     }
 
     /* ── 14. Settings Panel ────── */
-    .settings-panel { padding: 16px; }
-    .settings-panel h3 { margin-top:0; font-size:16px; font-weight:700; color:var(--text); transition: color 0.6s ease; }
-    .settings-subtext { font-size:13px; color:var(--text-sub); transition: color 0.6s ease; }
-    .settings-box { background:var(--surface); padding:16px; border-radius:8px; margin-top:24px; transition: background-color 0.6s ease; }
-    .settings-box h4 { margin:0 0 12px; font-size:13px; color:var(--text); transition: color 0.6s ease; }
-    .settings-input { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:6px; font-size:13px; color:var(--text); outline:none; transition: background-color 0.6s ease, color 0.6s ease, border-color 0.6s ease; }
+    .settings-panel { padding:16px 16px 20px; }
+
+    /* Header row: title + X close */
+    .settings-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+    .settings-header-text { flex:1; min-width:0; }
+    .settings-panel h3 { margin:0 0 3px; font-size:15px; font-weight:700; color:var(--text); transition:color 0.6s ease; }
+    .settings-subtext { font-size:12px; color:var(--text-sub); margin:0; line-height:1.4; transition:color 0.6s ease; }
+    .settings-close-btn {
+      flex:none; width:auto; background:none; border:none; cursor:pointer;
+      color:var(--text-sub); font-size:18px; line-height:1; padding:2px 5px;
+      border-radius:6px; margin-top:-2px;
+      transition:color 0.15s, background-color 0.15s;
+    }
+    .settings-close-btn:hover { color:var(--text); background-color:var(--border); }
+
+    /* Connection box */
+    .settings-box { background:var(--surface-nested); padding:14px; border-radius:var(--radius-sm); margin-top:16px; transition:background-color 0.6s ease; }
+
+    /* Section header: label + status dot */
+    .settings-section-header { display:flex; align-items:center; gap:7px; margin-bottom:11px; }
+    .settings-box h4 { margin:0; font-size:10px; font-weight:700; letter-spacing:0.7px; text-transform:uppercase; color:var(--text-sub); transition:color 0.6s ease; }
+    .settings-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--locked); transition:background-color 0.3s ease, box-shadow 0.3s ease; }
+    .settings-dot.connected { background:var(--success); box-shadow:0 0 5px var(--success); }
+    .settings-dot.error     { background:var(--danger);  box-shadow:0 0 4px var(--danger); }
+
+    /* Input + eye toggle */
+    .settings-input-wrap { position:relative; }
+    .settings-input {
+      width:100%; box-sizing:border-box;
+      background:var(--card-bg); border:1px solid var(--border);
+      padding:9px 36px 9px 10px; border-radius:var(--radius-sm);
+      font-size:13px; color:var(--text); outline:none;
+      transition:background-color 0.6s ease, color 0.6s ease, border-color 0.2s;
+    }
+    .settings-input:focus { border-color:var(--primary); }
+    .settings-eye {
+      position:absolute; right:8px; top:50%; transform:translateY(-50%);
+      background:none; border:none; cursor:pointer; flex:none; width:auto;
+      color:var(--text-sub); padding:4px; line-height:1;
+      transition:color 0.15s, opacity 0.15s;
+    }
+    .settings-eye:hover { color:var(--primary); }
+    .settings-eye.revealed { color:var(--primary); opacity:1; }
+
+    /* Helper link */
+    .settings-helper {
+      display:inline-block; margin-top:6px;
+      font-size:11px; font-weight:600; color:var(--primary);
+      text-decoration:none; opacity:0.75; transition:opacity 0.15s;
+    }
+    .settings-helper:hover { opacity:1; text-decoration:underline; }
+
+    /* Action buttons */
     .settings-actions { display:flex; gap:8px; margin-top:12px; }
-    .settings-status { margin-top:16px; font-size:12px; font-weight:600; text-align:center; }
-    .settings-close { margin-top:24px; width:100%; }
+    .settings-test  {
+      background:transparent; color:var(--primary);
+      border:1.5px solid var(--primary);
+    }
+    .settings-test:hover:not(:disabled) { background:rgba(124,111,205,0.08); opacity:1; }
+    .settings-test:disabled { background:transparent; color:var(--locked); border-color:var(--locked); opacity:1; }
+
+    /* Spinner inside test button */
+    .settings-spinner {
+      display:inline-block; width:10px; height:10px; vertical-align:middle;
+      border:1.5px solid transparent; border-top-color:currentColor;
+      border-radius:50%; animation:settingsSpin 0.65s linear infinite;
+      margin-right:5px;
+    }
+    @keyframes settingsSpin { to { transform:rotate(360deg); } }
+
+    /* Status line */
+    .settings-status { min-height:18px; margin-top:10px; font-size:11.5px; font-weight:600; text-align:center; transition:color 0.3s; }
   </style>
 </head>
 <body>
