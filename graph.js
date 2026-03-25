@@ -222,5 +222,77 @@ ${text.slice(0, 10000)}`;
     onError(err.message);
   }
 }
-window.performAIExtraction = performAIExtraction;
-window.getGeminiKey = getGeminiKey;
+
+function startSettings() {
+  const triggerArea = document.getElementById('add-trigger-area');
+  triggerArea.style.overflowY = 'auto';
+  
+  const key = getGeminiKey();
+  const masked = key ? key.slice(0, 6) + '••••••••••••••••' : '';
+  
+  triggerArea.innerHTML = `
+    <div class="settings-panel">
+      <h3>Settings</h3>
+      <p class="settings-subtext">Configure your neurocognitive pipeline and integration hooks.</p>
+      
+      <div class="settings-box">
+        <h4>Gemini Connection</h4>
+        <input type="password" id="settings-key-input" class="settings-input" placeholder="Paste Gemini API Key" value="${masked}">
+        <div class="settings-actions">
+           <button id="settings-key-save">Save Key</button>
+           <button id="settings-key-test">Test Connection</button>
+        </div>
+        <div id="settings-api-status" class="settings-status"></div>
+      </div>
+      
+      <button class="settings-close" onclick="App.closeDrawer(); App.renderAddTrigger();">Close Settings</button>
+    </div>
+  `;
+
+  App.openDrawer();
+
+  const inp = triggerArea.querySelector('#settings-key-input');
+  const saveBtn = triggerArea.querySelector('#settings-key-save');
+  const testBtn = triggerArea.querySelector('#settings-key-test');
+  const statusBox = triggerArea.querySelector('#settings-api-status');
+
+  saveBtn.addEventListener('click', () => {
+    const val = inp.value.trim();
+    if(val && !val.includes('••••')) {
+      localStorage.setItem('gemini_key', val);
+      statusBox.textContent = 'Key saved to browser!';
+      statusBox.style.color = 'var(--text-sub)';
+    }
+  });
+
+  testBtn.addEventListener('click', async () => {
+    const currentKey = getGeminiKey();
+    if(!currentKey) {
+      statusBox.textContent = '🔴 Disconnected: No key saved.';
+      statusBox.style.color = 'var(--danger)';
+      return;
+    }
+
+    testBtn.disabled = true;
+    testBtn.textContent = 'Testing...';
+    statusBox.textContent = '🟠 Pinging Gemini API...';
+    statusBox.style.color = 'var(--text-sub)';
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`;
+      const payload = { contents: [{ parts: [{ text: "Reply OK" }] }] };
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
+      await res.json();
+      
+      statusBox.textContent = '🟢 Connected Successfully';
+      statusBox.style.color = '#10b981';
+    } catch(err) {
+      statusBox.textContent = '🔴 Disconnected: ' + err.message;
+      statusBox.style.color = 'var(--danger)';
+    } finally {
+      testBtn.disabled = false;
+      testBtn.textContent = 'Test Connection';
+    }
+  });
+}

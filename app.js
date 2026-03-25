@@ -913,92 +913,11 @@ const App = (() => {
     renderGrid(); // re-render to apply .selected class
   }
 
-
-  
-
-  function startSettings() {
-    addTriggerArea.style.overflowY = 'auto';
-    
-    const key = getGeminiKey();
-    const masked = key ? key.slice(0, 6) + '••••••••••••••••' : '';
-    
-    addTriggerArea.innerHTML = `
-      <div style="padding:16px;">
-        <h3 style="margin-top:0;font-size:16px;font-weight:700;">Settings</h3>
-        <p style="font-size:13px;color:var(--text-sub);">Configure your neurocognitive pipeline and integration hooks.</p>
-        
-        <div style="background:var(--surface); padding:16px; border-radius:8px; margin-top:24px;">
-          <h4 style="margin:0 0 12px;font-size:13px;">Gemini Connection</h4>
-          <input type="password" id="settings-key-input" placeholder="Paste Gemini API Key" value="${masked}" style="width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:6px; font-size:13px; color:var(--text); outline:none;">
-          <div style="display:flex; gap:8px; margin-top:12px;">
-             <button id="settings-key-save" class="btn primary" style="flex:1;">Save Key</button>
-             <button id="settings-key-test" class="btn secondary" style="flex:1;">Test Connection</button>
-          </div>
-          <div id="settings-api-status" style="margin-top:16px; font-size:12px; font-weight:600; text-align:center;"></div>
-        </div>
-        
-        <button class="btn secondary" style="margin-top:24px;width:100%;" onclick="App.closeDrawer(); App.renderAddTrigger();">Close Settings</button>
-      </div>
-    `;
-
-    openDrawer();
-
-    const inp = addTriggerArea.querySelector('#settings-key-input');
-    const saveBtn = addTriggerArea.querySelector('#settings-key-save');
-    const testBtn = addTriggerArea.querySelector('#settings-key-test');
-    const statusBox = addTriggerArea.querySelector('#settings-api-status');
-
-    saveBtn.addEventListener('click', () => {
-      const val = inp.value.trim();
-      if(val && !val.includes('••••')) {
-        localStorage.setItem('gemini_key', val);
-        statusBox.textContent = 'Key saved to browser!';
-        statusBox.style.color = 'var(--text-sub)';
-      }
-    });
-
-    testBtn.addEventListener('click', async () => {
-      const currentKey = getGeminiKey();
-      if(!currentKey) {
-        statusBox.textContent = '🔴 Disconnected: No key saved.';
-        statusBox.style.color = 'var(--danger)';
-        return;
-      }
-
-      testBtn.disabled = true;
-      testBtn.textContent = 'Testing...';
-      statusBox.textContent = '🟠 Pinging Gemini API...';
-      statusBox.style.color = 'var(--text-sub)';
-
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`;
-        const payload = { contents: [{ parts: [{ text: "Reply OK" }] }] };
-        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if(!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        await res.json();
-        
-        statusBox.textContent = '🟢 Connected Successfully';
-        statusBox.style.color = '#10b981';
-      } catch(err) {
-        statusBox.textContent = '🔴 Disconnected: ' + err.message;
-        statusBox.style.color = 'var(--danger)';
-      } finally {
-        testBtn.disabled = false;
-        testBtn.textContent = 'Test Connection';
-      }
-    });
-  }
-
-  
-
-  
-
   return {
     toggleDrawer, openDrawer, closeDrawer,
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },
     deleteConcept,
     startAddConcept,
-    startSettings,
     renderAddTrigger,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,

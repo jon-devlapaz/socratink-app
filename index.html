@@ -701,6 +701,17 @@
       .hero-info { text-align: center; }
       #grid-container { margin: 10px auto 16px; }
     }
+
+    /* ── 14. Settings Panel ────── */
+    .settings-panel { padding: 16px; }
+    .settings-panel h3 { margin-top:0; font-size:16px; font-weight:700; color:var(--text); transition: color 0.6s ease; }
+    .settings-subtext { font-size:13px; color:var(--text-sub); transition: color 0.6s ease; }
+    .settings-box { background:var(--surface); padding:16px; border-radius:8px; margin-top:24px; transition: background-color 0.6s ease; }
+    .settings-box h4 { margin:0 0 12px; font-size:13px; color:var(--text); transition: color 0.6s ease; }
+    .settings-input { width:100%; box-sizing:border-box; background:var(--bg); border:1px solid var(--border); padding:10px; border-radius:6px; font-size:13px; color:var(--text); outline:none; transition: background-color 0.6s ease, color 0.6s ease, border-color 0.6s ease; }
+    .settings-actions { display:flex; gap:8px; margin-top:12px; }
+    .settings-status { margin-top:16px; font-size:12px; font-weight:600; text-align:center; }
+    .settings-close { margin-top:24px; width:100%; }
   </style>
 </head>
 <body>
@@ -721,7 +732,7 @@
     <a class="sidebar-nav-item active" href="#">Dashboard</a>
     <a class="sidebar-nav-item" href="#">Library</a>
     <a class="sidebar-nav-item" href="#">Analytics</a>
-    <a class="sidebar-nav-item" href="#" onclick="App.startSettings()">Settings</a>
+    <a class="sidebar-nav-item" href="#" onclick="startSettings()">Settings</a>
   </nav>
 
   <div class="sidebar-divider"></div>
