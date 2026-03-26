@@ -335,7 +335,7 @@ const App = (() => {
     addTriggerArea.innerHTML = full
       ? `<div class="add-trigger disabled"><span class="add-trigger-icon">+</span>Grid full (4/4)</div>`
       : `<div class="add-trigger" id="add-trigger" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon">+</span>New concept
+           <span class="add-trigger-icon">+</span>new tink
          </div>`;
   }
 
@@ -356,7 +356,7 @@ const App = (() => {
       </div>
       <div class="overlay-panel" data-panel="paste">
         <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article…' : 'Paste content here…'}"></textarea>
-        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button><button class="wiki-random-btn" type="button">🎲 Random Wikipedia</button></div>' : ''}
+        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button><button class="wiki-random-btn" type="button">🔬 Random Science</button><button class="graph-preview-btn" type="button">⚡ Preview Graph</button></div>' : ''}
       </div>
       <div class="overlay-panel" data-panel="upload" style="display:none">
         <div class="overlay-dropzone">
@@ -383,7 +383,8 @@ const App = (() => {
     const fileInput = container.querySelector('input[type="file"]');
     const feedback  = container.querySelector('.overlay-dropfeedback');
     const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
-    const wikiRandomBtn = container.querySelector('.wiki-random-btn');
+    const wikiRandomBtn    = container.querySelector('.wiki-random-btn');
+    const graphPreviewBtn  = container.querySelector('.graph-preview-btn');
     const nameInput = container.querySelector('.creation-name-input');
     const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
@@ -438,15 +439,43 @@ const App = (() => {
       });
     }
 
+    const STEM_CATEGORIES = [
+      'Quantum_mechanics', 'Thermodynamics', 'Electromagnetism',
+      'Organic_chemistry', 'Biochemistry', 'Molecular_biology',
+      'Neuroscience', 'Evolutionary_biology', 'Genetics', 'Ecology',
+      'Calculus', 'Linear_algebra', 'Number_theory', 'Probability_theory',
+      'Computer_algorithms', 'Machine_learning', 'Astronomy',
+      'Particle_physics', 'Fluid_mechanics', 'Cell_biology'
+    ];
+
     if (showClipboard && wikiRandomBtn) {
       wikiRandomBtn.addEventListener('click', async () => {
         const orig = wikiRandomBtn.textContent;
         wikiRandomBtn.disabled = true;
         wikiRandomBtn.textContent = 'Loading…';
         try {
-          const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const data = await res.json();
+          // Two-step: category members → article summary
+          async function fetchStemArticle(attempt) {
+            const cat = STEM_CATEGORIES[Math.floor(Math.random() * STEM_CATEGORIES.length)];
+            const membersRes = await fetch(
+              `https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:${cat}&cmlimit=50&cmtype=page&cmnamespace=0&format=json&origin=*`
+            );
+            if (!membersRes.ok) throw new Error(`HTTP ${membersRes.status}`);
+            const membersData = await membersRes.json();
+            const members = membersData.query?.categorymembers || [];
+            // Retry once with a fresh category if this one is empty
+            if (members.length === 0 && attempt < 2) return fetchStemArticle(attempt + 1);
+            if (members.length === 0) throw new Error('No articles found');
+            return members[Math.floor(Math.random() * members.length)];
+          }
+
+          const article = await fetchStemArticle(1);
+          const summaryRes = await fetch(
+            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(article.title)}`
+          );
+          if (!summaryRes.ok) throw new Error(`HTTP ${summaryRes.status}`);
+          const data = await summaryRes.json();
+
           textarea.value = `${data.title}\n\n${data.extract}`;
           if (nameInput && !nameInput.value.trim()) nameInput.value = data.title;
           textarea.focus();
@@ -458,6 +487,13 @@ const App = (() => {
           wikiRandomBtn.disabled = false;
           if (wikiRandomBtn.textContent === 'Loading…') wikiRandomBtn.textContent = orig;
         }
+      });
+    }
+
+    if (showClipboard && graphPreviewBtn) {
+      graphPreviewBtn.addEventListener('click', () => {
+        const name = (nameInput && nameInput.value.trim()) || 'Photosynthesis';
+        window.testGraph(name);
       });
     }
 
@@ -576,6 +612,19 @@ const App = (() => {
           setTimeout(() => { if(extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
         }
 
+        function onPhaseChange(phase) {
+          extractOverlay.dataset.phase = String(phase);
+          if(phase === 2) {
+            extractOverlay.querySelector('.extract-label').textContent = name;
+          }
+          if(phase === 3) {
+            extractOverlay.querySelector('.extract-label').textContent = 'Mapped';
+            const ring = document.createElement('div');
+            ring.className = 'extract-complete-ring';
+            extractOverlay.appendChild(ring);
+          }
+        }
+
         performAIExtraction(text, (graphData) => {
           removeOverlay();
           const concept = {
@@ -596,7 +645,7 @@ const App = (() => {
         }, (errMsg) => {
           removeOverlay();
           alert('Extraction Failed: ' + errMsg);
-        });
+        }, onPhaseChange);
       },
       onCancel: () => {
         renderAddTrigger();
@@ -726,8 +775,8 @@ const App = (() => {
     stopTimer();
     removeRestartButton();
     conceptLabelEl.textContent = '';
-    titleEl.textContent = 'LearnOps';
-    descEl.textContent  = 'Open the menu to add your first concept.';
+    titleEl.textContent = 'tink';
+    descEl.textContent  = 'Add your first tink.';
     document.body.classList.remove('night');
     showControls(false,false,false,false,false);
   }

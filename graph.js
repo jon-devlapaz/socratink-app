@@ -2,6 +2,21 @@
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
+// ── Tunable animation constants ─────────────────────────────────
+// Adjust these to change the feel of the graph reveal.
+const GRAPH_NODE_INTERVAL_MS   = 220;  // ms between each node appearing
+const GRAPH_EDGE_DELAY_MS      = 300;  // ms pause after last node before edges wire up
+const GRAPH_EDGE_INTERVAL_MS   = 80;   // ms between each edge appearing
+const GRAPH_NODE_ENTRANCE_MS   = 280;  // ms for the pop-in scale animation
+const GRAPH_EDGE_FADE_MS       = 250;  // ms for edge fade-in
+const GRAPH_COMPLETION_HOLD_MS = 1100; // ms between phase-3 signal and handing back to app
+// ────────────────────────────────────────────────────────────────
+
+function easeOutBack(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
 function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
 
 const GraphEngine = (() => {
@@ -53,7 +68,7 @@ const GraphEngine = (() => {
 
     if(!canvas) {
       canvas = document.createElement('canvas');
-      canvas.style.position = 'absolute';
+      canvas.style.position = 'fixed';
       canvas.style.top = '0';
       canvas.style.left = '0';
       canvas.style.width = '100%';
@@ -85,7 +100,7 @@ const GraphEngine = (() => {
     spawnX += (Math.random()-0.5) * 5;
     spawnY += (Math.random()-0.5) * 5;
     
-    nodes.push({ id: label, label, x: spawnX, y: spawnY, vx: 0, vy: 0 });
+    nodes.push({ id: label, label, x: spawnX, y: spawnY, vx: 0, vy: 0, born: performance.now() });
   }
 
   function addEdge(source, target, label) {
@@ -95,13 +110,13 @@ const GraphEngine = (() => {
     if(!t) { addNode(target); t = nodes.find(n => n.label === target); }
     
     if(s && t && !edges.find(e => e.source === s && e.target === t)) {
-      edges.push({ source: s, target: t, label });
+      edges.push({ source: s, target: t, label, born: performance.now() });
     }
   }
 
-  function loop() {
+  function loop(now) {
     ctx.clearRect(0,0,w,h);
-    
+
     for(let i=0; i<nodes.length; i++) {
       for(let j=i+1; j<nodes.length; j++) {
         let dx = nodes[i].x - nodes[j].x;
@@ -128,16 +143,19 @@ const GraphEngine = (() => {
       e.target.vx -= (dx/dist)*f;
       e.target.vy -= (dy/dist)*f;
     }
-    
-    ctx.strokeStyle = 'rgba(180,170,230,0.35)';
+
+    // Draw edges — fade in over 250ms from born
     ctx.lineWidth = 1.5;
     for(let e of edges) {
+      const alpha = Math.min(0.38, ((now - e.born) / GRAPH_EDGE_FADE_MS) * 0.38);
+      ctx.strokeStyle = `rgba(180,170,230,${alpha.toFixed(3)})`;
       ctx.beginPath();
       ctx.moveTo(e.source.x, e.source.y);
       ctx.lineTo(e.target.x, e.target.y);
       ctx.stroke();
     }
 
+    // Draw nodes — pop in with easeOutBack scale over 280ms
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
     for(let n of nodes) {
@@ -146,12 +164,19 @@ const GraphEngine = (() => {
       n.vx *= 0.85; n.vy *= 0.85;
       n.x += n.vx; n.y += n.vy;
 
+      const t = Math.max(0, Math.min(1, (now - n.born) / GRAPH_NODE_ENTRANCE_MS));
+      if(t < 0.02) continue; // skip nodes not yet born — prevents ghost labels
+      const scale = easeOutBack(t);
+
       ctx.beginPath();
-      ctx.arc(n.x, n.y, 7, 0, Math.PI*2);
+      ctx.arc(n.x, n.y, 7 * scale, 0, Math.PI * 2);
       ctx.fillStyle = primaryColor;
       ctx.fill();
+
+      ctx.globalAlpha = Math.min(1, t * 1.5); // label fades in slightly faster than dot
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
       ctx.fillText(n.label, n.x, n.y - 13);
+      ctx.globalAlpha = 1;
     }
     animFrame = requestAnimationFrame(loop);
   }
@@ -173,7 +198,7 @@ const GraphEngine = (() => {
   return { init, addNode, addEdge, stop, getGraph: () => ({ nodes, edges }) };
 })();
 
-async function performAIExtraction(text, onSuccess, onError) {
+async function performAIExtraction(text, onSuccess, onError, onPhaseChange) {
   const key = getGeminiKey();
   if(!key) {
     onError('Extraction paused: Please configure your Gemini API Key in the Settings menu.');
@@ -205,6 +230,8 @@ ${text.slice(0, 10000)}`;
   log(`Text length: ${text.length} chars (sending first ${Math.min(text.length, 10000)})`);
   log('Sending request...');
 
+  let cancelled = false;
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -224,20 +251,18 @@ ${text.slice(0, 10000)}`;
     const data = await response.json();
     const fullText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    log(`Received ${fullText.length} chars of AI output`);
-    log('Parsing nodes and edges...\n');
+    log(`Received ${fullText.length} chars`);
 
-    const lines = fullText.split('\n');
-    let nodeCount = 0;
-    let edgeCount = 0;
+    // Two-pass: all nodes queued first, then edges (edges only ref known nodes)
+    const nodeQueue = [];
+    const edgeQueue = [];
+    const knownNodes = new Set();
 
-    for(let p of lines) {
+    for(let p of fullText.split('\n')) {
       p = p.trim().replace(/\*\*/g, '');
       if(p.startsWith('NODE:')) {
         const label = p.substring(5).trim();
-        GraphEngine.addNode(label);
-        nodeCount++;
-        log(`NODE(${nodeCount}): ${label}`);
+        if(label) { nodeQueue.push(label); knownNodes.add(label); }
       } else if(p.startsWith('EDGE:')) {
         const split1 = p.substring(5).split('->');
         if(split1.length === 2) {
@@ -246,27 +271,209 @@ ${text.slice(0, 10000)}`;
           if(split2.length === 2) {
             const target = split2[0].trim();
             const edgeLabel = split2[1].trim();
-            GraphEngine.addEdge(source, target, edgeLabel);
-            edgeCount++;
-            log(`EDGE(${edgeCount}): ${source} -> ${target} | ${edgeLabel}`);
+            if(knownNodes.has(source) && knownNodes.has(target)) {
+              edgeQueue.push({ source, target, label: edgeLabel });
+            }
           }
         }
       }
     }
 
-    log(`\nComplete. Nodes: ${nodeCount} | Edges: ${edgeCount}`);
+    log(`Queued: ${nodeQueue.length} nodes, ${edgeQueue.length} edges`);
 
+    // Timing: compress interval for large graphs so reveal stays engaging
+    const NODE_INTERVAL = nodeQueue.length > 20
+      ? Math.max(120, GRAPH_NODE_INTERVAL_MS - (nodeQueue.length - 20) * 5)
+      : GRAPH_NODE_INTERVAL_MS;
+    const EDGE_INTERVAL = GRAPH_EDGE_INTERVAL_MS;
+
+    let delay = 0;
+
+    // Stagger nodes — each one gets its own moment
+    nodeQueue.forEach((label, i) => {
+      setTimeout(() => {
+        if(cancelled) return;
+        GraphEngine.addNode(label);
+        log(`NODE(${i + 1}): ${label}`);
+        if(i === 0 && onPhaseChange) onPhaseChange(2);
+      }, delay);
+      delay += NODE_INTERVAL;
+    });
+
+    // Edges wire up after last node lands
+    delay += GRAPH_EDGE_DELAY_MS;
+    edgeQueue.forEach((edge, i) => {
+      setTimeout(() => {
+        if(cancelled) return;
+        GraphEngine.addEdge(edge.source, edge.target, edge.label);
+        log(`EDGE(${i + 1}): ${edge.source} -> ${edge.target} | ${edge.label}`);
+      }, delay);
+      delay += EDGE_INTERVAL;
+    });
+
+    // Completion: phase 3 signal, then 1100ms breath before handing back
     setTimeout(() => {
-      GraphEngine.stop();
-      onSuccess(GraphEngine.getGraph());
-    }, 1500);
+      if(cancelled) return;
+      log(`\nComplete. Nodes: ${nodeQueue.length} | Edges: ${edgeQueue.length}`);
+      if(onPhaseChange) onPhaseChange(3);
+      setTimeout(() => {
+        if(cancelled) return;
+        GraphEngine.stop();
+        onSuccess(GraphEngine.getGraph());
+      }, GRAPH_COMPLETION_HOLD_MS);
+    }, delay + 400);
 
   } catch(err) {
+    cancelled = true;
     log(`\nFATAL: ${err.message}`);
     GraphEngine.stop();
     onError(err.message);
   }
 }
+
+// ── Dev test harness — bypasses Gemini API entirely ─────────────
+// Call window.testGraph() from the browser console to preview the
+// full extraction animation with canned data. No API key required.
+const MOCK_GRAPH_DATA = `
+NODE: Photosynthesis
+NODE: Chlorophyll
+NODE: Light Reactions
+NODE: Calvin Cycle
+NODE: ATP
+NODE: NADPH
+NODE: Carbon Dioxide
+NODE: Glucose
+NODE: Thylakoid Membrane
+NODE: Stroma
+NODE: Electron Transport Chain
+NODE: Water Splitting
+EDGE: Photosynthesis -> Chlorophyll | requires pigment
+EDGE: Chlorophyll -> Light Reactions | absorbs photons for
+EDGE: Light Reactions -> ATP | produces
+EDGE: Light Reactions -> NADPH | produces
+EDGE: Light Reactions -> Thylakoid Membrane | occurs in
+EDGE: Light Reactions -> Water Splitting | drives
+EDGE: Calvin Cycle -> Carbon Dioxide | fixes
+EDGE: Calvin Cycle -> ATP | consumes
+EDGE: Calvin Cycle -> NADPH | consumes
+EDGE: Calvin Cycle -> Glucose | synthesises
+EDGE: Calvin Cycle -> Stroma | occurs in
+EDGE: Light Reactions -> Electron Transport Chain | drives
+`.trim();
+
+function runGraphReveal(rawText, onSuccess, onError, onPhaseChange) {
+  const nodeQueue = [];
+  const edgeQueue = [];
+  const knownNodes = new Set();
+
+  for(let p of rawText.split('\n')) {
+    p = p.trim();
+    if(p.startsWith('NODE:')) {
+      const label = p.substring(5).trim();
+      if(label) { nodeQueue.push(label); knownNodes.add(label); }
+    } else if(p.startsWith('EDGE:')) {
+      const split1 = p.substring(5).split('->');
+      if(split1.length === 2) {
+        const source = split1[0].trim();
+        const split2 = split1[1].split('|');
+        if(split2.length === 2) {
+          const target = split2[0].trim();
+          const edgeLabel = split2[1].trim();
+          if(knownNodes.has(source) && knownNodes.has(target)) {
+            edgeQueue.push({ source, target, label: edgeLabel });
+          }
+        }
+      }
+    }
+  }
+
+  const NODE_INTERVAL = nodeQueue.length > 20
+    ? Math.max(120, GRAPH_NODE_INTERVAL_MS - (nodeQueue.length - 20) * 5)
+    : GRAPH_NODE_INTERVAL_MS;
+
+  let delay = 0;
+  let cancelled = false;
+
+  nodeQueue.forEach((label, i) => {
+    setTimeout(() => {
+      if(cancelled) return;
+      GraphEngine.addNode(label);
+      if(i === 0 && onPhaseChange) onPhaseChange(2);
+    }, delay);
+    delay += NODE_INTERVAL;
+  });
+
+  delay += GRAPH_EDGE_DELAY_MS;
+  edgeQueue.forEach(edge => {
+    setTimeout(() => {
+      if(cancelled) return;
+      GraphEngine.addEdge(edge.source, edge.target, edge.label);
+    }, delay);
+    delay += GRAPH_EDGE_INTERVAL_MS;
+  });
+
+  setTimeout(() => {
+    if(cancelled) return;
+    if(onPhaseChange) onPhaseChange(3);
+    setTimeout(() => {
+      if(cancelled) return;
+      GraphEngine.stop();
+      onSuccess(GraphEngine.getGraph());
+    }, GRAPH_COMPLETION_HOLD_MS);
+  }, delay + 400);
+
+  return () => { cancelled = true; };
+}
+
+window.testGraph = function(conceptName) {
+  const name = conceptName || 'Photosynthesis';
+  console.log('[testGraph] Starting preview with mock data — concept:', name);
+
+  // Build overlay the same way app.js does
+  const existing = document.getElementById('extract-overlay');
+  if(existing) existing.parentNode.removeChild(existing);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'extract-overlay';
+  overlay.innerHTML = `
+    <div class="extract-body">
+      <div class="extract-spinner"></div>
+      <p class="extract-label">Extracting concepts</p>
+      <p class="extract-name">${name}</p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('visible'));
+
+  function removeOverlay() {
+    overlay.classList.remove('visible');
+    setTimeout(() => { if(overlay.parentNode) overlay.parentNode.removeChild(overlay); }, 400);
+  }
+
+  function onPhaseChange(phase) {
+    overlay.dataset.phase = String(phase);
+    if(phase === 2) overlay.querySelector('.extract-label').textContent = name;
+    if(phase === 3) {
+      overlay.querySelector('.extract-label').textContent = 'Mapped';
+      const ring = document.createElement('div');
+      ring.className = 'extract-complete-ring';
+      overlay.appendChild(ring);
+    }
+  }
+
+  GraphEngine.init();
+  // Simulate a brief "API wait" before nodes appear
+  setTimeout(() => {
+    runGraphReveal(MOCK_GRAPH_DATA, (graphData) => {
+      removeOverlay();
+      console.log('[testGraph] Complete:', graphData.nodes.length, 'nodes,', graphData.edges.length, 'edges');
+    }, (err) => {
+      removeOverlay();
+      console.error('[testGraph] Error:', err);
+    }, onPhaseChange);
+  }, 800);
+};
+// ────────────────────────────────────────────────────────────────
 
 function startSettings() {
   const triggerArea = document.getElementById('add-trigger-area');
