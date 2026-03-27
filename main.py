@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from ai_service import extract_knowledge_map
@@ -43,3 +44,8 @@ def extract(req: ExtractRequest):
         raise HTTPException(status_code=401, detail=str(err))
     except Exception as err:
         raise HTTPException(status_code=500, detail=str(err))
+
+
+# Serve the frontend locally. Vercel handles static files itself and sets VERCEL=1.
+if not os.environ.get("VERCEL"):
+    app.mount("/", StaticFiles(directory=".", html=True), name="static")
