@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -46,6 +47,6 @@ def extract(req: ExtractRequest):
         raise HTTPException(status_code=500, detail=str(err))
 
 
-# Serve the frontend locally. Vercel handles static files itself and sets VERCEL=1.
-if not os.environ.get("VERCEL"):
-    app.mount("/", StaticFiles(directory=".", html=True), name="static")
+# Serve the frontend. API routes must be defined above this mount.
+# Path(__file__).parent resolves correctly both locally and on Vercel.
+app.mount("/", StaticFiles(directory=str(Path(__file__).parent), html=True), name="static")
