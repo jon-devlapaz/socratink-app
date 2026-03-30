@@ -1,4 +1,4 @@
-function escHtml(value) {
+export function escHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -63,6 +63,7 @@ export function transformKnowledgeMapToGraph(rawData) {
     data: {
       id: backboneId,
       type: 'backbone',
+      state: 'solidified',
       label: shortenLabel(getBackboneLabel(source), 40),
       fullLabel: source?.metadata?.source_title || 'Core Thesis',
       detail: getBackboneDetail(source),
@@ -79,6 +80,7 @@ export function transformKnowledgeMapToGraph(rawData) {
       data: {
         id: clusterId,
         type: 'cluster',
+        state: 'locked',
         label: shortenLabel(cluster.label, 28),
         fullLabel: cluster.label || `Cluster ${clusterIndex + 1}`,
         detail: cluster.description || '',
@@ -106,6 +108,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         data: {
           id: subnodeId,
           type: 'subnode',
+          state: 'locked',
           label: shortenLabel(subnode.label, 24),
           fullLabel: subnode.label || `Drill Node ${subIndex + 1}`,
           detail: subnode.mechanism || '',
@@ -175,25 +178,29 @@ function detailMarkupForNode(node) {
     `;
   }
 
+  const isLocked = data.state === 'locked';
+
   if (data.type === 'cluster') {
     return `
       <div class="graph-detail-kicker">Cluster</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${escHtml(data.detail || 'No cluster description available yet.')}</p>
-      <div class="graph-detail-meta">
+      <p class="graph-detail-copy">${isLocked ? 'This cluster is locked. Complete the drill to reveal the architectural summary.' : escHtml(data.detail || 'No cluster description available yet.')}</p>
+      <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
       </div>
+      ${isLocked ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
     `;
   }
 
   return `
     <div class="graph-detail-kicker">Drill Node</div>
     <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-    <p class="graph-detail-copy">${escHtml(data.detail || 'No mechanism extracted for this drill node yet.')}</p>
-    <div class="graph-detail-meta">
+    <p class="graph-detail-copy">${isLocked ? 'The mechanism here is locked by the Fog of War. Drill to unlock.' : escHtml(data.detail || 'No mechanism extracted for this drill node yet.')}</p>
+    <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
       ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
       ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
     </div>
+    ${isLocked ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
   `;
 }
 
@@ -264,9 +271,15 @@ function installHoverFocus(cy, detailEl) {
   });
 }
 
-function installSelection(cy, detailEl, source) {
+function installSelection(cy, detailEl, source, onNodeSelect) {
   cy.on('tap', 'node', (event) => {
     detailEl.innerHTML = detailMarkupForNode(event.target);
+    const drillBtn = detailEl.querySelector('.trigger-drill');
+    if (drillBtn) {
+      drillBtn.addEventListener('click', () => {
+        onNodeSelect?.(event.target.data());
+      });
+    }
   });
 
   cy.on('tap', 'edge', (event) => {
@@ -425,7 +438,7 @@ function installAmbientFloat(cy) {
   };
 }
 
-export function mountKnowledgeGraph({ container, detailEl, rawData }) {
+export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect }) {
   if (!container || !detailEl) return null;
 
   if (typeof window === 'undefined' || typeof window.cytoscape !== 'function') {
@@ -481,9 +494,6 @@ export function mountKnowledgeGraph({ container, detailEl, rawData }) {
         style: {
           width: 72,
           height: 72,
-          'background-color': '#7c6fcd',
-          'border-color': '#988be4',
-          color: '#7c6fcd',
           'font-size': 12,
           'text-max-width': 200,
           'text-margin-y': 22,
@@ -494,9 +504,6 @@ export function mountKnowledgeGraph({ container, detailEl, rawData }) {
         style: {
           width: 34,
           height: 34,
-          'background-color': '#fbf9ff',
-          'border-width': 2,
-          'border-color': '#8c7fe0',
           'font-size': 10,
           'text-max-width': 100,
           'text-margin-y': 16,
@@ -507,14 +514,51 @@ export function mountKnowledgeGraph({ container, detailEl, rawData }) {
         style: {
           width: 16,
           height: 16,
-          'background-color': '#ffffff',
-          'border-width': 1.1,
-          'border-color': '#d7d0f1',
           'font-size': 8,
           'text-max-width': 84,
           'text-margin-y': 12,
+        },
+      },
+      {
+        selector: 'node[state = "locked"]',
+        style: {
+          'background-color': 'rgba(255,255,255,0.18)',
+          'border-color': 'rgba(124,111,205,0.18)',
+          'border-style': 'dashed',
+          opacity: 0.28,
+          label: '',
+          color: 'rgba(66,60,88,0.08)',
           'text-opacity': 0,
-          color: '#6b6488',
+          'overlay-opacity': 0,
+          events: 'no',
+        },
+      },
+      {
+        selector: 'node[state = "solidified"]',
+        style: {
+          'background-color': '#7c6fcd',
+          'border-color': '#988be4',
+          'border-style': 'solid',
+          opacity: 1,
+          label: 'data(label)',
+          color: '#7c6fcd',
+          'text-opacity': 1,
+          'overlay-opacity': 0.06,
+        },
+      },
+      {
+        selector: 'node[state = "active_drill"]',
+        style: {
+          'background-color': '#7c6fcd',
+          'border-color': '#b3a7f2',
+          'border-width': 3,
+          opacity: 1,
+          label: 'data(label)',
+          color: '#7c6fcd',
+          'text-opacity': 0.08,
+          'overlay-color': '#7c6fcd',
+          'overlay-opacity': 0.12,
+          'overlay-padding': 18,
         },
       },
       {
@@ -597,6 +641,18 @@ export function mountKnowledgeGraph({ container, detailEl, rawData }) {
         },
       },
       {
+        selector: '.is-active-drill',
+        style: {
+          'border-color': '#7c6fcd',
+          'border-width': 3,
+          'background-color': '#f3efff',
+          'overlay-color': '#7c6fcd',
+          'overlay-opacity': 0.12,
+          'overlay-padding': 16,
+          'text-opacity': 0.08,
+        },
+      },
+      {
         selector: '.is-entering',
         style: {
           opacity: 0.001,
@@ -659,7 +715,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData }) {
   };
 
   installHoverFocus(cy, detailEl);
-  installSelection(cy, detailEl, transformed.source);
+  installSelection(cy, detailEl, transformed.source, onNodeSelect);
   installDragBehavior(cy);
 
   const root = cy.getElementById(transformed.backboneId);
@@ -674,6 +730,52 @@ export function mountKnowledgeGraph({ container, detailEl, rawData }) {
     destroy() {
       ambientFloat.destroy();
       cy.destroy();
+    },
+    setActiveDrillNode(nodeId) {
+      cy.nodes().removeClass('is-active-drill');
+      if (!nodeId) return;
+      const node = cy.getElementById(nodeId);
+      if (node.length) node.addClass('is-active-drill');
+    },
+    updateNodeState(nodeId, newState) {
+      const node = cy.getElementById(nodeId);
+      if (!node.length) return;
+
+      node.data('state', newState);
+
+      // Unlock text + visual state immediately.
+      if (newState === 'solidified') {
+        node.removeClass('is-active-drill');
+      }
+
+      // Brief physics "bloom" so the graph settles organically around the new node.
+      const bloomLayout = cy.layout({
+        name: 'cose',
+        animate: true,
+        animationDuration: 900,
+        fit: false,
+        padding: 40,
+        randomize: false,
+        componentSpacing: 80,
+        nodeRepulsion: 9000,
+        idealEdgeLength: (edge) => edge.hasClass('edge-subnode-link') ? 55 : 120,
+        edgeElasticity: (edge) => edge.hasClass('edge-subnode-link') ? 0.18 : 0.08,
+        gravity: 0.12,
+        numIter: 400,
+        initialTemp: 80,
+        coolingFactor: 0.95,
+        minTemp: 1.0,
+      });
+
+      bloomLayout.run();
+
+      window.setTimeout(() => {
+        ambientFloat.captureBasePositions();
+        cy.fit(cy.elements(), 50);
+      }, 1000);
+    },
+    clearActiveDrillNode() {
+      cy.nodes().removeClass('is-active-drill');
     },
     resize() {
       renderOrbit(false);

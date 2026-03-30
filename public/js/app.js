@@ -1,7 +1,7 @@
 import { Bus } from './bus.js';
 import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
 import { Morph, crystalPolygons } from './morph.js';
-import { mountKnowledgeGraph } from './graph-view.js';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js';
 import { 
   STATES, generateId, loadConcepts, saveConcepts, 
   getActiveId, setActiveId, getActiveConcept, 
@@ -10,7 +10,7 @@ import {
 
 import {
   card, titleEl, descEl, conceptLabelEl, primaryControls, drillControls,
-  consolidateControls, timerDisplay, devBtn, drawer, conceptListEl,
+  consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls, POLYGON_IDS
 } from './dom.js';
@@ -18,6 +18,7 @@ import {
 const App = (() => {
   let currentGraphController = null;
   let currentMapMode = 'study';
+  let activeDrillNode = null;
 
 
   // ── 7. Animation helpers ───────────────────────────────────
@@ -106,9 +107,11 @@ const App = (() => {
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
-  function openDrawer()   { drawer.dataset.open='true';  document.body.dataset.drawerOpen='true';  }
-  function closeDrawer()  { drawer.dataset.open='false'; document.body.dataset.drawerOpen='false'; }
+  function openDrawer()   { drawer.dataset.open='true';  document.body.dataset.drawerOpen='true';  if (drawerToggle) drawerToggle.setAttribute('aria-expanded','true'); }
+  function closeDrawer()  { drawer.dataset.open='false'; document.body.dataset.drawerOpen='false'; if (drawerToggle) drawerToggle.setAttribute('aria-expanded','false'); }
   function toggleDrawer() { drawer.dataset.open==='true' ? closeDrawer() : openDrawer(); }
+
+  if (window.innerWidth >= 900) openDrawer();
 
   // ── 11. Concept list render ────────────────────────────────
   function renderConceptList(concepts = loadConcepts()) {
@@ -144,10 +147,6 @@ const App = (() => {
       : `<div class="add-trigger" id="add-trigger" onclick="App.startAddConcept()">
            <span class="add-trigger-icon">+</span>new tink
          </div>`;
-  }
-
-  function escHtml(s) {
-    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   // ── 12. CRUD ───────────────────────────────────────────────
@@ -726,7 +725,22 @@ const App = (() => {
     showContentOverlay();
   }
 
-  function drill()     { showControls(false,true,false,false,false); }
+  function drill() {
+    const concept = getActiveConcept();
+    if (!concept?.graphData) {
+      showControls(false,true,false,false,false);
+      return;
+    }
+    showMapView(concept);
+    setMapMode('graph');
+    startDrill({
+      id: 'core-thesis',
+      type: 'backbone',
+      label: concept.name,
+      fullLabel: concept.name,
+      detail: concept.contentPreview || 'Explain this core idea in your own words.',
+    });
+  }
 
   function drillFail() {
     setState('fractured');
@@ -780,7 +794,7 @@ const App = (() => {
     const mapContent = document.getElementById('map-content');
     const graphContent = document.getElementById('graph-content');
     const graphStage = document.getElementById('graph-stage');
-    const graphDetail = document.getElementById('graph-detail');
+    const graphNodeDetail = document.getElementById('graph-node-detail');
     const heroCard = document.querySelector('.hero-card');
 
     if (!concept || !concept.graphData) return;
@@ -906,11 +920,14 @@ const App = (() => {
       currentGraphController.destroy();
       currentGraphController = null;
     }
-    if (graphStage && graphDetail) {
+    if (drillUi) drillUi.style.display = 'none';
+    if (chatHistory) chatHistory.innerHTML = '';
+    if (graphStage && graphNodeDetail) {
       currentGraphController = mountKnowledgeGraph({
         container: graphStage,
-        detailEl: graphDetail,
+        detailEl: graphNodeDetail,
         rawData: data,
+        onNodeSelect: (nodeData) => startDrill(nodeData),
       });
     }
 
@@ -1105,80 +1122,143 @@ const App = (() => {
     renderGrid(); // re-render to apply .selected class
   }
 
-  let drillState = { active: false, step: 0, script: [] };
-  const SIMULATED_SCRIPT = [
-    { role: 'ai', text: "Let's test your understanding. Explain this concept in your own words." },
-    { role: 'wait' },
-    { role: 'ai', text: "Good start. What specific mechanisms are involved here?" },
-    { role: 'wait' },
-    { role: 'ai', text: "Exactly. Finally, what is the ultimate outcome or product?" },
-    { role: 'wait' },
-    { role: 'ai', text: "Correct. You've demonstrated solid recall." },
-    { role: 'finish', result: 'growing' }
-  ];
+  let drillState = { active: false, messages: [], node: null, pending: false };
 
-  function startDrill() {
+  function extractSystemAction(rawText) {
+    if (!rawText) return { visibleText: '', action: null };
+
+    const match = rawText.match(/\[SYSTEM_ACTION:\s*(\{[\s\S]*?\})\s*\]\s*$/);
+    if (!match) {
+      return { visibleText: rawText.trim(), action: null };
+    }
+
+    let action = null;
+    try {
+      action = JSON.parse(match[1]);
+    } catch (err) {
+      console.warn('Failed to parse SYSTEM_ACTION payload', err);
+    }
+
+    const visibleText = rawText.replace(match[0], '').trim();
+    return { visibleText, action };
+  }
+
+  function handleSystemAction(action) {
+    if (!action) return;
+
+    if (action.action === 'UPDATE_NODE_STATE' && action.id && action.newState) {
+      currentGraphController?.updateNodeState?.(action.id, action.newState);
+
+      if (action.newState === 'solidified' && activeDrillNode === action.id) {
+        currentGraphController?.clearActiveDrillNode?.();
+        activeDrillNode = null;
+      }
+    }
+  }
+
+  function handleDrillAssistantMessage(rawText) {
+    const { visibleText, action } = extractSystemAction(rawText);
+
+    if (visibleText) {
+      appendBubble('ai', visibleText);
+    }
+
+    handleSystemAction(action);
+  }
+
+  async function requestDrillTurn(userText) {
     const concept = getActiveConcept();
-    if (!concept || (concept.state !== 'growing' && concept.state !== 'fractured')) return;
+    if (!concept || !drillState.node) return;
+
+    drillState.pending = true;
+    if (chatInput) chatInput.disabled = true;
+
+    const outboundMessages = [...drillState.messages];
+    if (userText) {
+      outboundMessages.push({ role: 'user', content: userText });
+    }
+
+    const knowledgeMap = typeof concept.graphData === 'string'
+      ? JSON.parse(concept.graphData)
+      : concept.graphData;
+
+    const apiKey = localStorage.getItem('gemini_key') || undefined;
+    const response = await fetch('/api/drill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        concept_id: concept.id,
+        node_id: drillState.node.id,
+        node_label: drillState.node.fullLabel || drillState.node.label || concept.name,
+        node_detail: drillState.node.detail || '',
+        knowledge_map: knowledgeMap,
+        messages: outboundMessages,
+        api_key: apiKey,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text().catch(() => '');
+      throw new Error(`Drill request failed: ${response.status}: ${err}`);
+    }
+
+    const data = await response.json();
+
+    drillState.messages = outboundMessages;
+    handleDrillAssistantMessage(data.reply || '');
+    if (data.reply?.trim()) {
+      drillState.messages.push({ role: 'assistant', content: data.reply.trim() });
+    }
+    drillState.pending = false;
+    if (chatInput) {
+      chatInput.disabled = false;
+      chatInput.focus();
+    }
+  }
+
+  function startDrill(nodeContext = null) {
+    const concept = getActiveConcept();
+    if (!concept) return;
     
     drillState.active = true;
-    drillState.step = 0;
-    drillState.script = SIMULATED_SCRIPT;
+    drillState.messages = [];
+    drillState.node = nodeContext;
+    drillState.pending = false;
+    activeDrillNode = nodeContext?.id || null;
     
-    if (heroInfo) heroInfo.style.display = 'none';
     if (drillUi) drillUi.style.display = 'flex';
     if (chatHistory) chatHistory.innerHTML = '';
     if (chatInput) {
       chatInput.value = '';
       chatInput.disabled = true;
     }
-    if (drillTitle) drillTitle.textContent = `Drilling: ${concept.name}`;
-    
-    advanceDrill();
+    if (drillTitle) {
+      const label = nodeContext?.fullLabel || nodeContext?.label || concept.name;
+      drillTitle.textContent = `Drilling: ${label}`;
+    }
+    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
+    setMapMode('graph');
+
+    requestDrillTurn('Start the drill for this node and ask me the first retrieval question.').catch((err) => {
+      console.error(err);
+      appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
+      drillState.pending = false;
+      if (chatInput) chatInput.disabled = false;
+    });
   }
 
   function cancelDrill() {
     drillState.active = false;
-    if (heroInfo) heroInfo.style.display = 'block';
+    drillState.messages = [];
+    drillState.pending = false;
     if (drillUi) drillUi.style.display = 'none';
-    const concept = getActiveConcept();
-    if (concept) applyControlsForState(concept.state, concept);
-  }
-
-  function advanceDrill() {
-    if (!drillState.active) return;
-    const step = drillState.script[drillState.step];
-    if (!step) return;
-
-    if (step.role === 'ai') {
-      if (chatInput) chatInput.disabled = true;
-      setTimeout(() => {
-        if (!drillState.active) return;
-        appendBubble('ai', step.text);
-        drillState.step++;
-        advanceDrill();
-      }, 600);
-    } 
-    else if (step.role === 'wait') {
-      if (chatInput) {
-        chatInput.disabled = false;
-        chatInput.focus();
-      }
+    activeDrillNode = null;
+    if (chatHistory) chatHistory.innerHTML = '';
+    if (chatInput) {
+      chatInput.value = '';
+      chatInput.disabled = true;
     }
-    else if (step.role === 'finish') {
-      if (chatInput) chatInput.disabled = true;
-      setTimeout(() => {
-        if (!drillState.active) return;
-        cancelDrill();
-        
-        // Mark concept as drilled so the Consolidate button dynamically appears!
-        updateActiveConcept({ drilled: true });
-
-        const fromFractured = getActiveConcept()?.state === 'fractured';
-        setState(step.result); // sets to 'growing'
-        if (fromFractured) playAnim('repair', getActiveTileIdx());
-      }, 1500);
-    }
+    currentGraphController?.clearActiveDrillNode?.();
   }
 
   function appendBubble(role, text) {
@@ -1197,21 +1277,36 @@ const App = (() => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         const text = chatInput.value.trim();
-        if (!text) return;
+        if (!text || drillState.pending) return;
         
         appendBubble('user', text);
         chatInput.value = '';
         chatInput.disabled = true;
-        
-        drillState.step++;
-        advanceDrill();
+        requestDrillTurn(text).catch((err) => {
+          console.error(err);
+          appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
+          drillState.pending = false;
+          if (chatInput) chatInput.disabled = false;
+        });
       }
     });
   }
 
   return {
     toggleDrawer, openDrawer, closeDrawer,
-    cancelDrill, startDrill, startDrillFromMap: () => { hideMapView(); startDrill(); },
+    cancelDrill, startDrill, startDrillFromMap: () => {
+      const concept = getActiveConcept();
+      if (!concept?.graphData) return;
+      showMapView(concept);
+      setMapMode('graph');
+      startDrill({
+        id: 'core-thesis',
+        type: 'backbone',
+        label: concept.name,
+        fullLabel: concept.name,
+        detail: concept.contentPreview || 'Explain this core idea in your own words.',
+      });
+    },
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },
     deleteConcept,
     startAddConcept,

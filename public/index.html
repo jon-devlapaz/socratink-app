@@ -50,7 +50,20 @@
     <!-- Header bar (desktop) -->
     <header class="main-header">
       <div class="main-header-left">
-        <button class="drawer-toggle" onclick="App.toggleDrawer()" title="Menu">☰</button>
+        <button class="drawer-toggle" id="drawer-toggle" onclick="App.toggleDrawer()"
+                aria-label="Toggle sidebar" aria-expanded="false" aria-controls="drawer">
+          <svg class="toggle-icon" width="18" height="18" viewBox="0 0 18 18" fill="none"
+               stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <g class="icon-menu">
+              <line x1="3" y1="4.5" x2="15" y2="4.5" />
+              <line x1="3" y1="9" x2="15" y2="9" />
+              <line x1="3" y1="13.5" x2="15" y2="13.5" />
+            </g>
+            <g class="icon-collapse">
+              <polyline points="10,4 4.5,9 10,14" />
+            </g>
+          </svg>
+        </button>
         <span class="main-header-title">tinkboard</span>
       </div>
       <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
@@ -76,17 +89,6 @@
         </div>
         <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
           <button onclick="App.consolidate()">Consolidate</button>
-        </div>
-      </div>
-
-      <div class="drill-ui" id="drill-ui" style="display:none;">
-        <div class="drill-header">
-          <button class="drill-back" onclick="App.cancelDrill()">← Back</button>
-          <span class="drill-title" id="drill-title">Drill Session</span>
-        </div>
-        <div class="chat-history" id="chat-history"></div>
-        <div class="chat-input-area">
-          <textarea class="chat-input" id="chat-input" placeholder="Explain this concept in your own words..." rows="2"></textarea>
         </div>
       </div>
 
@@ -146,7 +148,19 @@
               </div>
               <div id="graph-stage" class="graph-stage"></div>
             </div>
-            <aside id="graph-detail" class="graph-detail"></aside>
+            <aside id="graph-detail" class="graph-detail">
+              <div id="graph-node-detail" class="graph-node-detail"></div>
+              <div class="drill-ui drill-ui-embedded" id="drill-ui">
+                <div class="drill-header">
+                  <button class="drill-back" onclick="App.cancelDrill()">← Back</button>
+                  <span class="drill-title" id="drill-title">Socratic Drill</span>
+                </div>
+                <div class="chat-history" id="chat-history"></div>
+                <div class="chat-input-area">
+                  <textarea class="chat-input" id="chat-input" placeholder="Explain this concept in your own words..." rows="2"></textarea>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       </div>
@@ -158,7 +172,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
-  <script src="ai_service.js"></script>
+  <script src="js/ai_service.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 

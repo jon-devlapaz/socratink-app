@@ -16,27 +16,34 @@ The UI maps internal JS state names to visual indicators (colored `.concept-dot`
 
 ## Running the Project
 
-No build step. Serve locally (required for AI extraction — `fetch()` calls fail over `file://`):
+No build step. The FastAPI backend serves frontend files from `public/`:
 
 ```bash
-python3 -m http.server 8000
+uvicorn main:app --reload
 # then open http://localhost:8000
 ```
 
 ## Architecture
 
-The app is pure vanilla HTML/CSS/JavaScript with no build step and no frameworks. The structure across files:
+The app is pure vanilla HTML/CSS/JavaScript with no build step and no frameworks. Frontend lives in `public/`, backend at root.
 
 | File | Role |
 |------|------|
-| `index.html` | Shell: HTML structure + script/style tags |
-| `styles.css` | All CSS (12 numbered sections) |
-| `app.js` | Main `App` IIFE — all UI logic, state machine, data store |
-| `graph.js` | `GraphEngine` (canvas force-directed graph) + `performAIExtraction()` |
-| `ai_service.js` | `AIService.generateKnowledgeMap()` — full knowledge map via Gemini API |
-| `file_system.js` | `FileSystem` module — Web File System Access API + IndexedDB handle persistence |
+| `public/index.html` | Shell: HTML structure + script/style tags |
+| `public/styles.css` | CSS entry — `@import`s from `public/css/` |
+| `public/js/app.js` | Main `App` IIFE — all UI logic, state machine, data store |
+| `public/js/graph-view.js` | Cytoscape-based knowledge graph + fog-of-war drill integration |
+| `public/js/ai_service.js` | `AIService.generateKnowledgeMap()` — calls Python backend |
+| `public/js/store.js` | localStorage CRUD, concept state definitions, transient content store |
+| `public/js/bus.js` | Pub/sub event emitter for cross-section communication |
+| `public/js/dom.js` | DOM element references |
+| `public/js/geo.js` | Crystal polygon coordinates + easing utilities |
+| `public/js/morph.js` | Crystal shape morphing engine (requestAnimationFrame) |
+| `main.py` | FastAPI backend — `/api/extract`, `/api/drill`, static file serving |
+| `ai_service.py` | Gemini API calls for extraction and Socratic drill |
+| `api/index.py` | Vercel serverless entry point (imports `main.py`) |
 
-**Script load order in `index.html`:** `file_system.js` → `ai_service.js` → `app.js` → `graph.js`
+**Script load order in `index.html`:** `ai_service.js` (global) → `app.js` (ES module)
 
 **Key patterns in `app.js`:**
 - **`setState(state)`** — central function that drives all UI transitions; calls `applyControlsForState()` at its end — this is the *only* place controls are updated (no manual `showControls`/`setButtons` calls elsewhere)
@@ -66,18 +73,16 @@ The app is pure vanilla HTML/CSS/JavaScript with no build step and no frameworks
 15. Timer
 16. Init / restore
 
-**`graph.js`** contains two things:
-- `GraphEngine` — IIFE; mounts a `<canvas>` inside `#extract-overlay` during extraction; physics-based force-directed layout; call `init()` before streaming nodes/edges, `stop()` on completion
-- `performAIExtraction(text, onSuccess, onError, onPhaseChange)` — orchestrates the Gemini streaming call, feeds nodes/edges into `GraphEngine` as they arrive, then hands the parsed knowledge map back via `onSuccess`
+**`graph-view.js`** — exports `mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect })` and `transformKnowledgeMapToGraph(rawData)`. Cytoscape-based graph with solar orbit layout, ambient float animation, fog-of-war node states (`locked` → `solidified`), and `SYSTEM_ACTION` parsing for drill-driven node unlocks. Also exports `escHtml()` (shared HTML-escape utility).
 
-**`ai_service.js`** — `AIService.generateKnowledgeMap(rawText, onProgress)` — non-streaming full extraction; fetches the system prompt from `learnops/skills/learnops-extract/extract-system-v1.txt` at call time; returns raw JSON string.
+**`ai_service.js`** — `AIService.generateKnowledgeMap(rawText, onProgress)` — calls the Python backend's `/api/extract` endpoint. Returns the extracted knowledge map JSON.
 
-**`file_system.js`** — `FileSystem` module; persists the user-selected staging directory `FileSystemDirectoryHandle` in IndexedDB (`LearnOps_FS_DB` / `handles` store / key `staging_dir_handle`) so it survives page reload; exposes `initDirectoryPicker()`, `writeStagingFile(filename, content)`, `hasDirectorySelected()`, `getDirectoryName()`.
-
-**CSS is organized into 12 numbered sections in `styles.css`:**
-1–10. Base styles, layout, grid, crystal, card, buttons, drawer, concept list, states, animations
-11. Content overlay (shown when clicking Extract on a legacy `instantiated` concept)
-12. Drawer creation form (`.creation-form`, `.creation-name-input`, `.creation-footer`, etc.)
+**CSS is split into modular files in `public/css/`:**
+- `variables.css` — CSS custom properties (colors, spacing, radii, shadows)
+- `base.css` — Reset, typography, body layout
+- `crystal.css` — Crystal SVG styles, state-based color transitions, animations
+- `components.css` — Buttons, drawer, concept list, drill UI, settings panel, creation form
+- `layout.css` — Hero card, map view, graph layout, mobile breakpoints
 
 ## External Integrations & Configuration
 
@@ -88,9 +93,9 @@ Two settings are required for AI extraction — both configured via the **Settin
 | Gemini API key | `localStorage` | `gemini_key` |
 | Staging directory handle | IndexedDB | `staging_dir_handle` |
 
-The Gemini model is `gemini-2.5-flash` (constant `GEMINI_MODEL` in `graph.js`). Both `graph.js` and `ai_service.js` read the key via `getGeminiKey()` defined in `graph.js`.
+The Gemini model is `gemini-2.5-flash` (constant `MODEL` in `ai_service.py`). The API key is resolved server-side from `GEMINI_API_KEY` env var or the client-provided key in localStorage.
 
-The extraction system prompt is loaded at runtime from `learnops/skills/learnops-extract/extract-system-v1.txt` — this file must be present when serving locally (it's fetched via `fetch('./learnops/...')`). Opening `index.html` directly via `file://` will fail this fetch; use `python3 -m http.server 8000`.
+The extraction system prompt is loaded by the Python backend from `learnops/skills/learnops-extract/extract-system-v1.txt`. The drill system prompt is loaded from `learnops/skills/learnops-drill/SKILL.md`.
 
 ## Content-First Concept Creation
 
@@ -124,7 +129,7 @@ The biological constraint of hibernation-over-death is intentional: concepts go 
 
 ## API Docs — Use chub Before Touching AI Code
 
-This project calls the Gemini API directly via `fetch()` (no SDK). Before editing `graph.js` or `ai_service.js`, fetch current docs with the `chub` CLI to avoid stale API assumptions:
+The Python backend calls the Gemini API via the `google-genai` SDK. Before editing `ai_service.py`, fetch current docs with the `chub` CLI to avoid stale API assumptions:
 
 ```bash
 chub get gemini/genai --lang js        # main Gemini JS reference
@@ -146,8 +151,8 @@ chub annotate gemini/genai "your note here"
 
 The `learnops/` directory contains Claude Agent Skills for each pipeline stage. Stage 1 (Extract) is partially wired to the UI:
 
-- `learnops/skills/learnops-extract/` — Stage 1. `extract-system-v1.txt` is actively fetched by `ai_service.js` as the Gemini system prompt during extraction. `SKILL.md` and `references/` contain the full cognitive processing pipeline spec.
-- `learnops/skills/learnops-drill/` — Stage 3. Standalone skill spec; not yet wired to the UI's drill chat.
+- `learnops/skills/learnops-extract/` — Stage 1. `extract-system-v1.txt` is loaded by `ai_service.py` as the Gemini system prompt during extraction. `SKILL.md` and `references/` contain the full cognitive processing pipeline spec.
+- `learnops/skills/learnops-drill/` — Stage 3. `SKILL.md` is loaded by `ai_service.py` as the system prompt for Socratic drill chat. Wired to the UI via `/api/drill`.
 - `learnops/skills/learnops-present/` — Stage 2. Standalone skill spec; not yet wired.
 - Stage 4 (Consolidate) — designed but not yet built.
 

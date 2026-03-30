@@ -105,10 +105,24 @@ button:disabled { background-color:var(--locked); cursor:not-allowed; transform:
 .drawer-toggle {
   background:none; border:none; cursor:pointer;
   padding:6px; border-radius:8px; color:var(--text-sub);
-  font-size:18px; line-height:1; flex:none; width:auto;
+  line-height:1; flex:none; width:auto;
   transition:color 0.2s, background-color 0.2s;
 }
 .drawer-toggle:hover { color:var(--primary); background-color:var(--border); }
+
+.toggle-icon { display:block; }
+.icon-menu, .icon-collapse {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.icon-collapse {
+  opacity:0; transform:translateX(-3px);
+}
+body[data-drawer-open="true"] .icon-menu {
+  opacity:0; transform:translateX(3px);
+}
+body[data-drawer-open="true"] .icon-collapse {
+  opacity:1; transform:translateX(0);
+}
 
 .dev-skip {
   background:none; color:transparent; font-size:9px;

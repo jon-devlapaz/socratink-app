@@ -9,6 +9,7 @@ export const consolidateControls = document.getElementById('consolidate-controls
 export const timerDisplay        = document.getElementById('timer-display');
 export const devBtn              = document.getElementById('dev-btn');
 export const drawer              = document.getElementById('drawer');
+export const drawerToggle        = document.getElementById('drawer-toggle');
 export const conceptListEl       = document.getElementById('concept-list');
 export const addTriggerArea      = document.getElementById('add-trigger-area');
 export const heroInfo            = document.getElementById('hero-info');
