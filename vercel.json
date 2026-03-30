@@ -1,11 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/(.*)", "destination": "/public/$1" }
-  ],
-  "functions": {
-    "api/**/*.py": {
-      "maxDuration": 60
-    }
-  }
+    { "source": "/(.*)", "destination": "/api/index.py" }
+  ]
 }
