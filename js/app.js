@@ -1,6 +1,7 @@
 import { Bus } from './bus.js';
 import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
 import { Morph, crystalPolygons } from './morph.js';
+import { mountKnowledgeGraph } from './graph-view.js';
 import { 
   STATES, generateId, loadConcepts, saveConcepts, 
   getActiveId, setActiveId, getActiveConcept, 
@@ -15,6 +16,8 @@ import {
 } from './dom.js';
 
 const App = (() => {
+  let currentGraphController = null;
+  let currentMapMode = 'study';
 
 
   // ── 7. Animation helpers ───────────────────────────────────
@@ -775,6 +778,9 @@ const App = (() => {
   function showMapView(concept) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
+    const graphContent = document.getElementById('graph-content');
+    const graphStage = document.getElementById('graph-stage');
+    const graphDetail = document.getElementById('graph-detail');
     const heroCard = document.querySelector('.hero-card');
 
     if (!concept || !concept.graphData) return;
@@ -895,16 +901,64 @@ const App = (() => {
     }
 
     mapContent.innerHTML = html;
-    
+
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
+    if (graphStage && graphDetail) {
+      currentGraphController = mountKnowledgeGraph({
+        container: graphStage,
+        detailEl: graphDetail,
+        rawData: data,
+      });
+    }
+
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
+    if (graphContent) graphContent.hidden = false;
+    setMapMode('study');
   }
 
   function hideMapView() {
     const mapView = document.getElementById('map-view');
     const heroCard = document.querySelector('.hero-card');
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
     if (mapView) mapView.classList.remove('visible');
     if (heroCard) heroCard.style.display = 'flex';
+  }
+
+  function setMapMode(mode = 'study') {
+    currentMapMode = mode === 'graph' ? 'graph' : 'study';
+    const studyBtn = document.getElementById('map-mode-study');
+    const graphBtn = document.getElementById('map-mode-graph');
+    const mapContent = document.getElementById('map-content');
+    const graphContent = document.getElementById('graph-content');
+
+    if (studyBtn) studyBtn.classList.toggle('active', currentMapMode === 'study');
+    if (graphBtn) graphBtn.classList.toggle('active', currentMapMode === 'graph');
+    if (studyBtn) studyBtn.setAttribute('aria-pressed', String(currentMapMode === 'study'));
+    if (graphBtn) graphBtn.setAttribute('aria-pressed', String(currentMapMode === 'graph'));
+    if (mapContent) mapContent.hidden = currentMapMode !== 'study';
+    if (graphContent) graphContent.hidden = currentMapMode !== 'graph';
+
+    if (currentMapMode === 'graph' && currentGraphController) {
+      requestAnimationFrame(() => currentGraphController?.resize());
+    }
+  }
+
+  function bindMapModeControls() {
+    const modeButtons = document.querySelectorAll('[data-map-mode]');
+    modeButtons.forEach((button) => {
+      if (button.dataset.boundMapMode === 'true') return;
+      button.dataset.boundMapMode = 'true';
+      button.addEventListener('click', () => {
+        setMapMode(button.dataset.mapMode);
+      });
+    });
   }
 
   function setNavActive(id) {
@@ -921,6 +975,10 @@ const App = (() => {
     
     if (libraryView) libraryView.classList.remove('visible');
     if (mapView) mapView.classList.remove('visible');
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
     if (heroCard) heroCard.style.display = 'flex';
   }
 
@@ -1027,6 +1085,7 @@ const App = (() => {
   });
 
   // Render grid first (populates polygon DOM nodes)
+  bindMapModeControls();
   renderGrid();
   renderConceptList();
 
@@ -1159,7 +1218,7 @@ const App = (() => {
     renderAddTrigger,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
-    hideMapView, toggleCluster,
+    hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, showDashboard
   };
 

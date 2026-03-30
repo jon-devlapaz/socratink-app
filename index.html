@@ -128,13 +128,35 @@
     <!-- Map View Panel -->
     <section id="map-view" class="map-view">
       <button class="map-close-btn" onclick="App.hideMapView()" aria-label="Close map">×</button>
-      <div id="map-content"></div>
+      <div class="map-view-shell">
+        <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
+          <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button">Study View</button>
+          <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button">Graph View</button>
+        </div>
+        <div id="map-content"></div>
+        <div id="graph-content" class="graph-content" hidden>
+          <div class="graph-layout">
+            <div class="graph-stage-wrap">
+              <div class="graph-stage-header">
+                <div>
+                  <div class="graph-stage-kicker">Architecture</div>
+                  <h3 class="graph-stage-title">Knowledge Graph</h3>
+                </div>
+                <p class="graph-stage-note">The backbone anchors the map. Clusters orbit it, drill nodes travel as satellites, and dashed links show cross-cluster logic.</p>
+              </div>
+              <div id="graph-stage" class="graph-stage"></div>
+            </div>
+            <aside id="graph-detail" class="graph-detail"></aside>
+          </div>
+        </div>
+      </div>
     </section>
 
   </div>
 
   <!-- PDF.js for robust client-side extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <script src="ai_service.js"></script>
   <script type="module" src="js/app.js"></script>

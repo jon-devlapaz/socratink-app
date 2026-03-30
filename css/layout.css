@@ -370,6 +370,148 @@ body.night #card      { background-color: var(--bg); }
 .map-fw-name { font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 6px; }
 .map-fw-state { font-size: 13px; color: var(--text-sub); line-height: 1.4; }
 
+.map-view-shell { display: flex; flex-direction: column; gap: 24px; min-height: 100%; }
+.map-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface-nested);
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+.map-mode-btn {
+  flex: none;
+  width: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: none;
+  line-height: 1;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.map-mode-btn.active {
+  background: rgba(124,111,205,0.14);
+  color: var(--primary);
+}
+.map-mode-btn:hover:not(:disabled) {
+  background: rgba(124,111,205,0.08);
+  color: var(--primary);
+  transform: none;
+  box-shadow: none;
+}
+.map-mode-btn:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.graph-content[hidden],
+#map-content[hidden] { display: none !important; }
+
+.graph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  gap: 20px;
+  min-height: 620px;
+}
+.graph-stage-wrap,
+.graph-detail {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(30, 22, 58, 0.04);
+}
+.graph-stage-wrap {
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 620px;
+}
+.graph-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.graph-stage-kicker,
+.graph-detail-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.graph-stage-title,
+.graph-detail-title {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--text);
+}
+.graph-stage-note,
+.graph-detail-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  max-width: 340px;
+}
+.graph-stage {
+  flex: 1;
+  min-height: 520px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(124,111,205,0.09), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(246,244,251,0.96));
+  border: 1px solid rgba(124,111,205,0.10);
+}
+.graph-detail {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.graph-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.graph-detail-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(124,111,205,0.10);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.graph-detail-pill.warning {
+  background: rgba(217,103,125,0.10);
+  color: #bf4f68;
+}
+.graph-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 24px;
+  color: var(--text-sub);
+  font-size: 13px;
+  text-align: center;
+}
+
 /* Mobile adjustments for map and library views */
 @media (max-width: 899px) {
   .map-view, .library-view { 
@@ -383,4 +525,13 @@ body.night #card      { background-color: var(--bg); }
   }
   .map-close-btn { top: 16px; right: 16px; }
   .map-core-thesis { font-size: 17px; }
+  .map-view-shell { gap: 18px; }
+  .map-mode-switch { width: 100%; }
+  .map-mode-btn { flex: 1; }
+  .graph-layout { grid-template-columns: 1fr; min-height: auto; }
+  .graph-stage-wrap { min-height: 460px; }
+  .graph-stage-header { flex-direction: column; }
+  .graph-stage-title, .graph-detail-title { font-size: 20px; }
+  .graph-stage { min-height: 360px; }
+  .graph-stage-note { max-width: none; }
 }
