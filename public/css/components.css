@@ -384,6 +384,14 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   flex: 1; display: flex; flex-direction: column;
   max-width: 440px; height: 320px; text-align: left;
 }
+.drill-ui-embedded {
+  max-width: none;
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  padding-top: 4px;
+  overflow: hidden;
+}
 .drill-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 .drill-back {
   background: none; border: none; padding: 4px 8px;
@@ -397,6 +405,8 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 .chat-history {
   flex: 1; overflow-y: auto; display: flex; flex-direction: column;
   gap: 12px; padding-right: 12px; padding-bottom: 12px; scroll-behavior: smooth;
+  min-height: 0;
+  max-height: 100%;
 }
 .chat-history::-webkit-scrollbar { width: 4px; }
 .chat-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -420,4 +430,3 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 .chat-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,111,205,0.1); }
 .chat-input::placeholder { color: var(--text-sub); opacity: 0.7; }
 .chat-input:disabled { opacity: 0.5; cursor: not-allowed; }
-
