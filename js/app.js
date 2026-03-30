@@ -1,190 +1,24 @@
+import { Bus } from './bus.js';
+import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
+import { Morph, crystalPolygons } from './morph.js';
+import { mountKnowledgeGraph } from './graph-view.js';
+import { 
+  STATES, generateId, loadConcepts, saveConcepts, 
+  getActiveId, setActiveId, getActiveConcept, 
+  getActiveTileIdx, updateActiveConcept, contentStore 
+} from './store.js';
+
+import {
+  card, titleEl, descEl, conceptLabelEl, primaryControls, drillControls,
+  consolidateControls, timerDisplay, devBtn, drawer, conceptListEl,
+  addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
+  TILE_IDS, tileEls, POLYGON_IDS
+} from './dom.js';
+
 const App = (() => {
+  let currentGraphController = null;
+  let currentMapMode = 'study';
 
-  
-
-  /* ┌──────────────────────────────────────────────────────────┐
-     │  JS TABLE OF CONTENTS                                    │
-     │  1. DOM references                                       │
-     │  2. Pub/sub Bus                                          │
-     │  3. GEO — polygon coordinate arrays (5 states × 8 polys) │
-     │  4. STATES — display config                              │
-     │  5. Coordinate utilities + easing                        │
-     │  6. MorphEngine — shared rAF, multiple crystal tasks     │
-     │  7. Transition animation helpers                         │
-     │  8. Grid rendering — tiles + crystals                    │
-     │  9. Data store                                           │
-     │  10. Drawer                                              │
-     │  11. Concept list render                                 │
-     │  12. CRUD — add / delete / selectTile                    │
-     │  13. setState + control helpers                          │
-     │  14. Pipeline action handlers                            │
-     │  15. Timer                                               │
-     │  16. Init + restore                                      │
-     └──────────────────────────────────────────────────────────┘ */
-
-  // ── 1. DOM references ──────────────────────────────────────
-  const card                = document.getElementById('card');
-  const titleEl             = document.getElementById('title');
-  const descEl              = document.getElementById('desc');
-  const conceptLabelEl      = document.getElementById('concept-label');
-  const primaryControls     = document.getElementById('primary-controls');
-  const drillControls       = document.getElementById('drill-controls');
-  const consolidateControls = document.getElementById('consolidate-controls');
-  const timerDisplay        = document.getElementById('timer-display');
-  const devBtn              = document.getElementById('dev-btn');
-  const drawer              = document.getElementById('drawer');
-  const conceptListEl       = document.getElementById('concept-list');
-  const addTriggerArea      = document.getElementById('add-trigger-area');
-  const heroInfo            = document.getElementById('hero-info');
-  const drillUi             = document.getElementById('drill-ui');
-  const chatHistory         = document.getElementById('chat-history');
-  const chatInput           = document.getElementById('chat-input');
-  const drillTitle          = document.getElementById('drill-title');
-
-  // Transient content store — full text, NOT in localStorage. Keyed by concept ID.
-  const contentStore = new Map();
-
-  const TILE_IDS = ['tile-0','tile-1','tile-2','tile-3'];
-  const tileEls  = TILE_IDS.map(id => document.getElementById(id));
-
-  // polygons[tileIdx][polyIdx] — rebuilt by renderGrid()
-  const crystalPolygons = [null, null, null, null];
-
-  const POLYGON_IDS = [
-    'cp-top','cp-upper-left','cp-upper-right',
-    'cp-lower-left','cp-lower-right',
-    'cp-bottom-tip','cp-specular','cp-glow',
-  ];
-
-  // ── 2. Bus ─────────────────────────────────────────────────
-  const Bus = (() => {
-    const L = {};
-    return {
-      on:   (ev, fn) => (L[ev] ??= []).push(fn),
-      emit: (ev, d)  => (L[ev]||[]).forEach(fn => fn(d)),
-    };
-  })();
-
-  // ── 3. GEO ─────────────────────────────────────────────────
-  // Index order: [0]cp-top [1]cp-upper-left [2]cp-upper-right
-  //              [3]cp-lower-left [4]cp-lower-right
-  //              [5]cp-bottom-tip [6]cp-specular [7]cp-glow
-  const GEO = {
-    instantiated: [
-      [100,90,  85,108, 100,130, 115,108],
-      [100,90,  85,108,  82,130, 100,130],
-      [100,90, 100,130, 118,130, 115,108],
-      [100,130,  82,130,  88,152, 100,168],
-      [100,130, 100,168, 112,152, 118,130],
-      [88,152, 100,168, 112,152],
-      [106,96, 105,112, 109,103],
-      [100,90, 115,108, 118,130, 112,152, 100,168, 88,152, 82,130, 85,108],
-    ],
-    growing: [
-      [100,73,  79,91, 100,119, 121,91],
-      [100,73,  79,91,  69,119, 100,119],
-      [100,73, 100,119, 131,119, 121,91],
-      [100,119,  69,119,  83,145, 100,167],
-      [100,119, 100,167, 117,145, 131,119],
-      [83,145, 100,167, 117,145],
-      [104,77, 114,94, 112,85],
-      [100,73, 121,91, 131,119, 117,145, 100,167, 83,145, 69,119, 79,91],
-    ],
-    fractured: [
-      [101,73,  77,93, 101,119, 123,89],
-      [101,73,  77,93,  66,120, 101,119],
-      [101,73, 101,119, 134,117, 123,89],
-      [101,119,  66,120,  82,143, 100,168],
-      [101,119, 100,168, 116,147, 134,117],
-      [82,143, 100,168, 116,147],
-      [105,76, 117,91, 114,83],
-      [101,73, 123,89, 134,117, 116,147, 100,168, 82,143, 66,120, 77,93],
-    ],
-    hibernating: [
-      [100,38,  64,70, 100,118, 136,70],
-      [100,38,  64,70,  48,118, 100,118],
-      [100,38, 100,118, 152,118, 136,70],
-      [100,118,  48,118,  72,165, 100,205],
-      [100,118, 100,205, 128,165, 152,118],
-      [72,165, 100,205, 128,165],
-      [106,44, 126,74, 120,58],
-      [100,38, 136,70, 152,118, 128,165, 100,205, 72,165, 48,118, 64,70],
-    ],
-    actualized: [
-      [100,22,  52,60, 100,118, 148,60],
-      [100,22,  52,60,  32,118, 100,118],
-      [100,22, 100,118, 168,118, 148,60],
-      [100,118,  32,118,  62,172, 100,215],
-      [100,118, 100,215, 138,172, 168,118],
-      [62,172, 100,215, 138,172],
-      [106,28, 138,64, 126,45],
-      [100,22, 148,60, 168,118, 138,172, 100,215, 62,172, 32,118, 52,60],
-    ],
-  };
-
-  // ── 4. STATES config ───────────────────────────────────────
-  const STATES = {
-    instantiated: { title:'Raw Concept',            desc:'Causal architecture not yet extracted.' },
-    growing:      { title:'Structurally Sound',     desc:'Facets forming. Ready to drill.' },
-    fractured:    { title:'Misconception Detected', desc:'Knowledge gap found. Drill again to repair.' },
-    hibernating:  { title:'Consolidating…',         desc:'Synaptic lockout enforced. Return tomorrow.' },
-    actualized:   { title:'Consolidated',           desc:'Converted into durable understanding.' },
-  };
-
-  // ── 5. Coordinate utilities ────────────────────────────────
-  function easeInOutCubic(t) { return t < 0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
-
-  function interpCoords(from, to, t) { return from.map((v,i)=>v+(to[i]-v)*t); }
-
-  function coordsToPoints(arr) {
-    const pts = [];
-    for (let i=0; i<arr.length; i+=2) pts.push(arr[i]+','+arr[i+1]);
-    return pts.join(' ');
-  }
-
-  // ── 6. MorphEngine — shared rAF loop ──────────────────────
-  const Morph = (() => {
-    const DUR = 620;
-    let tasks = [];
-    let raf   = null;
-
-    function tick(now) {
-      tasks = tasks.filter(task => {
-        if (!task.t0) task.t0 = now;
-        const t = easeInOutCubic(Math.min((now-task.t0)/DUR, 1));
-        task.polys.forEach((el,i) => {
-          if (el) el.setAttribute('points', coordsToPoints(interpCoords(task.from[i], task.to[i], t)));
-        });
-        return t < 1;
-      });
-      if (tasks.length > 0) { raf = requestAnimationFrame(tick); }
-      else                  { raf = null; }
-    }
-
-    return {
-      start(tileIdx, fromState, toState) {
-        // Cancel any existing task for this tile
-        tasks = tasks.filter(t => t.idx !== tileIdx);
-        tasks.push({
-          idx:   tileIdx,
-          polys: crystalPolygons[tileIdx] || [],
-          from:  GEO[fromState],
-          to:    GEO[toState],
-          t0:    null,
-        });
-        if (!raf) raf = requestAnimationFrame(tick);
-      },
-      snap(tileIdx, state) {
-        // Remove any pending task for this tile
-        tasks = tasks.filter(t => t.idx !== tileIdx);
-        const polys = crystalPolygons[tileIdx];
-        if (!polys) return;
-        GEO[state].forEach((coords,i) => {
-          if (polys[i]) polys[i].setAttribute('points', coordsToPoints(coords));
-        });
-      },
-    };
-  })();
 
   // ── 7. Animation helpers ───────────────────────────────────
   const ANIM_CLASSES = {
@@ -269,40 +103,6 @@ const App = (() => {
         refreshPolygonRefs(idx);
       }
     });
-  }
-
-  // ── 9. Data store ──────────────────────────────────────────
-  const STORE_KEY = 'learnops_concepts';
-  const ACTIVE_KEY = 'learnops_active';
-
-  function generateId() {
-    if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
-  }
-
-  function loadConcepts() {
-    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
-    catch { return []; }
-  }
-  function saveConcepts(arr) { localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }
-  function getActiveId()     { return localStorage.getItem(ACTIVE_KEY) || null; }
-  function setActiveId(id)   { id ? localStorage.setItem(ACTIVE_KEY,id) : localStorage.removeItem(ACTIVE_KEY); }
-
-  function getActiveConcept() {
-    const id = getActiveId();
-    return loadConcepts().find(c => c.id === id) || null;
-  }
-  function getActiveTileIdx() {
-    const id = getActiveId();
-    return loadConcepts().findIndex(c => c.id === id);
-  }
-  function updateActiveConcept(patch) {
-    const concepts = loadConcepts();
-    const id = getActiveId();
-    const idx = concepts.findIndex(c => c.id === id);
-    if (idx === -1) return;
-    Object.assign(concepts[idx], patch);
-    saveConcepts(concepts);
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
@@ -757,7 +557,7 @@ const App = (() => {
           { x: 140, y: 85 },
           { x: 70, y: 125 }
         ];
-        if (idx !== null && base[idx]) {
+        if (idx !== -1 && base[idx]) {
           floatBtn.style.left = (base[idx].x + 70) + 'px';
           floatBtn.style.top  = (base[idx].y + 8) + 'px'; // +28px padding - 20px crystal height
         }
@@ -856,7 +656,7 @@ const App = (() => {
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            extractedText += textContent.items.map(item => item.str).join(' ') + '\\n';
+            extractedText += textContent.items.map(item => item.str).join(' ') + '\n';
           }
 
           if (extractedText.trim().length < 50) {
@@ -978,6 +778,9 @@ const App = (() => {
   function showMapView(concept) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
+    const graphContent = document.getElementById('graph-content');
+    const graphStage = document.getElementById('graph-stage');
+    const graphDetail = document.getElementById('graph-detail');
     const heroCard = document.querySelector('.hero-card');
 
     if (!concept || !concept.graphData) return;
@@ -1098,16 +901,64 @@ const App = (() => {
     }
 
     mapContent.innerHTML = html;
-    
+
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
+    if (graphStage && graphDetail) {
+      currentGraphController = mountKnowledgeGraph({
+        container: graphStage,
+        detailEl: graphDetail,
+        rawData: data,
+      });
+    }
+
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
+    if (graphContent) graphContent.hidden = false;
+    setMapMode('study');
   }
 
   function hideMapView() {
     const mapView = document.getElementById('map-view');
     const heroCard = document.querySelector('.hero-card');
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
     if (mapView) mapView.classList.remove('visible');
     if (heroCard) heroCard.style.display = 'flex';
+  }
+
+  function setMapMode(mode = 'study') {
+    currentMapMode = mode === 'graph' ? 'graph' : 'study';
+    const studyBtn = document.getElementById('map-mode-study');
+    const graphBtn = document.getElementById('map-mode-graph');
+    const mapContent = document.getElementById('map-content');
+    const graphContent = document.getElementById('graph-content');
+
+    if (studyBtn) studyBtn.classList.toggle('active', currentMapMode === 'study');
+    if (graphBtn) graphBtn.classList.toggle('active', currentMapMode === 'graph');
+    if (studyBtn) studyBtn.setAttribute('aria-pressed', String(currentMapMode === 'study'));
+    if (graphBtn) graphBtn.setAttribute('aria-pressed', String(currentMapMode === 'graph'));
+    if (mapContent) mapContent.hidden = currentMapMode !== 'study';
+    if (graphContent) graphContent.hidden = currentMapMode !== 'graph';
+
+    if (currentMapMode === 'graph' && currentGraphController) {
+      requestAnimationFrame(() => currentGraphController?.resize());
+    }
+  }
+
+  function bindMapModeControls() {
+    const modeButtons = document.querySelectorAll('[data-map-mode]');
+    modeButtons.forEach((button) => {
+      if (button.dataset.boundMapMode === 'true') return;
+      button.dataset.boundMapMode = 'true';
+      button.addEventListener('click', () => {
+        setMapMode(button.dataset.mapMode);
+      });
+    });
   }
 
   function setNavActive(id) {
@@ -1124,6 +975,10 @@ const App = (() => {
     
     if (libraryView) libraryView.classList.remove('visible');
     if (mapView) mapView.classList.remove('visible');
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
     if (heroCard) heroCard.style.display = 'flex';
   }
 
@@ -1230,6 +1085,7 @@ const App = (() => {
   });
 
   // Render grid first (populates polygon DOM nodes)
+  bindMapModeControls();
   renderGrid();
   renderConceptList();
 
@@ -1362,7 +1218,7 @@ const App = (() => {
     renderAddTrigger,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
-    hideMapView, toggleCluster,
+    hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, showDashboard
   };
 
@@ -1464,3 +1320,5 @@ function startSettings() {
 
   testBtn.addEventListener('click', testConnection);
 }
+
+window.startSettings = startSettings;

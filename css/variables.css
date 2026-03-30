@@ -1,0 +1,40 @@
+/* ── 1. @property ─────────────────────────────────────────── */
+@property --crystal-glow-opacity { syntax:'<number>'; inherits:false; initial-value:0.10; }
+@property --crystal-glow-blur    { syntax:'<length>'; inherits:false; initial-value:6px;  }
+
+/* ── 2. Primitive tokens + design system tokens ──────────── */
+:root {
+  /* Core palette */
+  --bg:         #f9f9ff;
+  --card-bg:    #ffffff;
+  --text:       #2d2b3d;
+  --text-sub:   #6b6880;
+  --primary:    #7c6fcd;
+  --locked:     #c4c2d4;
+  --danger:     #e05c6b;
+  --success:    #4dba8a;
+  --drawer-bg:  #f2f3fb;
+  --border:     rgba(100,80,180,0.10);
+  --tile-top:   hsl(260,20%,95%);
+  --tile-left:  hsl(260,15%,85%);
+  --tile-right: hsl(260,15%,75%);
+  --morph-ms:   600ms;
+  --ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+  /* Design system surfaces */
+  --surface:          #f9f9ff;
+  --surface-low:      #f2f3fb;
+  --surface-card:     #ffffff;
+  --surface-nested:   #e8eaf4;
+  /* Typography */
+  --font-display:     'Manrope', -apple-system, sans-serif;
+  --font-body:        'Inter', -apple-system, sans-serif;
+  /* Shadows */
+  --shadow-ambient:   0 40px 100px rgba(44,51,62,0.05), 0 2px 8px rgba(44,51,62,0.04);
+  --shadow-card:      0 8px 32px rgba(100,80,180,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  /* Radii */
+  --radius-hero:      2.5rem;
+  --radius-card:      1.5rem;
+  --radius-btn:       10px;
+  --radius-sm:        0.625rem;
+}
+

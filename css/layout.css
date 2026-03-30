@@ -1,0 +1,537 @@
+/* ── 13. App layout — sidebar + hero, responsive ──────────── */
+
+/* ─── Desktop (≥900px): persistent sidebar + main content ─── */
+@media (min-width: 900px) {
+  body {
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 100vh;
+  }
+
+  /* Sidebar becomes static, always visible */
+  #drawer {
+    position: relative;
+    left: 0 !important;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: 280px;
+    flex-shrink: 0;
+    border-right: none;
+    box-shadow: none;
+    z-index: auto;
+  }
+
+  /* Hide mobile-only controls */
+  .drawer-toggle { display: none; }
+  .drawer-close  { display: none !important; }
+  #backdrop      { display: none !important; }
+
+  /* Suppress drawer-open dim at desktop */
+  body[data-drawer-open="true"] #card {
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+
+  /* Main content — full remaining width */
+  #card {
+    flex: 1;
+    max-width: none;
+    width: auto;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    background: var(--surface);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+/* ─── Main header bar ──────────────────────────────────────── */
+.main-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28px 40px 0;
+  flex-shrink: 0;
+}
+.main-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.main-header-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+
+/* ─── Hero card ────────────────────────────────────────────── */
+.hero-card {
+  display: flex;
+  align-items: center;
+  gap: 56px;
+  background: var(--surface-card);
+  border-radius: var(--radius-hero);
+  padding: 52px 56px;
+  margin: 24px 40px 32px;
+  box-shadow: var(--shadow-ambient);
+  transition: background-color 0.6s ease;
+  flex-shrink: 0;
+}
+.hero-info {
+  flex: 1;
+  min-width: 0;
+  max-width: 440px;
+  text-align: left;
+}
+/* Buttons inside hero should not stretch full panel width */
+.hero-info .controls {
+  max-width: 320px;
+}
+
+/* ─── Grid inside hero — override mobile centering ─────────── */
+@media (min-width: 900px) {
+  #grid-container {
+    margin: 0;
+    width: 280px;
+    flex-shrink: 0;
+  }
+}
+
+/* ─── Night mode — hero card picks up CSS variable overrides ── */
+body.night .hero-card { background-color: var(--card-bg); }
+body.night #card      { background-color: var(--bg); }
+
+/* ─── Mobile (< 900px): centered-card layout ──────────────── */
+@media (max-width: 899px) {
+  body { flex-direction: column; align-items: center; justify-content: center; }
+
+  /* Keep header but position hamburger absolutely within card */
+  .main-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 14px 16px;
+    background: transparent;
+    z-index: 2;
+  }
+  .main-header-title { display: none; }
+
+  .hero-card {
+    flex-direction: column;
+    gap: 8px;
+    padding: 52px 20px 24px; /* safe padding for 320px phones */
+    margin: 0;
+    border-radius: 24px;
+    box-shadow: var(--shadow-card);
+    background: var(--surface-card);
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .hero-info { text-align: center; }
+  #grid-container { margin: 10px auto 16px; }
+  
+  p.desc { font-size: 19px; margin: 8px 0 20px; }
+  h2 { font-size: 9.5px; }
+  .drill-ui { max-width: 100%; width: 100%; height: auto; min-height: 280px; }
+}
+
+/* ── 14. Extraction Overlay ───── */
+#extract-overlay {
+  position: fixed; inset: 0; z-index: 190;
+  background: #0e0c1b;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  opacity: 0; transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+#extract-overlay.visible { opacity: 1; pointer-events: all; }
+/* Phase 2/3: overlay stays fully opaque — graph canvas is inside it now,
+   so the page must never bleed through. */
+#extract-overlay[data-phase="2"],
+#extract-overlay[data-phase="3"] {
+  background: #0e0c1b;
+}
+/* extract-body sits above the canvas (z-index:5) so spinner/labels are always legible */
+.extract-body { position: relative; z-index: 10; text-align: center; user-select: none; pointer-events: none; }
+.extract-spinner {
+  width: 38px; height: 38px; margin: 0 auto 22px;
+  border: 2.5px solid rgba(139,128,208,0.2);
+  border-top-color: #9b8fe8;
+  border-radius: 50%;
+  animation: extractSpin 0.75s linear infinite;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+/* Spinner retreats when nodes start appearing */
+#extract-overlay[data-phase="2"] .extract-spinner,
+#extract-overlay[data-phase="3"] .extract-spinner {
+  opacity: 0; transform: scale(0.6);
+}
+@keyframes extractSpin { to { transform: rotate(360deg); } }
+.extract-label {
+  font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.85); margin: 0 0 8px;
+  transition: font-size 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
+}
+/* Label retreats to top of overlay — graph takes the full stage */
+#extract-overlay[data-phase="2"] .extract-label,
+#extract-overlay[data-phase="3"] .extract-label {
+  font-size: 11px; opacity: 0.35; letter-spacing: 0.08em; text-transform: uppercase;
+  transform: translateY(calc(-50vh + 36px));
+}
+.extract-name {
+  font-size: 12px; color: rgba(255,255,255,0.35); margin: 0;
+  max-width: 280px;
+  transition: opacity 0.3s ease;
+}
+#extract-overlay[data-phase="2"] .extract-name,
+#extract-overlay[data-phase="3"] .extract-name { opacity: 0; }
+/* Completion ring — expands and fades on phase 3, contained inside overlay */
+.extract-complete-ring {
+  position: absolute; top: 50%; left: 50%;
+  width: 72px; height: 72px; margin: -36px 0 0 -36px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(155,143,232,0.75);
+  pointer-events: none;
+  animation: extractRingPulse 700ms ease-out forwards;
+}
+@keyframes extractRingPulse {
+  from { transform: scale(0.4); opacity: 1; }
+  to   { transform: scale(2.8); opacity: 0; }
+}
+
+/* ── 15. Settings Panel ────── */
+.settings-panel { padding:16px 16px 20px; }
+
+/* Header row: title + X close */
+.settings-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.settings-header-text { flex:1; min-width:0; }
+.settings-panel h3 { margin:0 0 3px; font-size:15px; font-weight:700; color:var(--text); transition:color 0.6s ease; }
+.settings-subtext { font-size:12px; color:var(--text-sub); margin:0; line-height:1.4; transition:color 0.6s ease; }
+.settings-close-btn {
+  flex:none; width:auto; background:none; border:none; cursor:pointer;
+  color:var(--text-sub); font-size:18px; line-height:1; padding:2px 5px;
+  border-radius:6px; margin-top:-2px;
+  transition:color 0.15s, background-color 0.15s;
+}
+.settings-close-btn:hover { color:var(--text); background-color:var(--border); }
+
+/* Connection box */
+.settings-box { background:var(--surface-nested); padding:14px; border-radius:var(--radius-sm); margin-top:16px; transition:background-color 0.6s ease; }
+
+/* Section header: label + status dot */
+.settings-section-header { display:flex; align-items:center; gap:7px; margin-bottom:11px; }
+.settings-box h4 { margin:0; font-size:10px; font-weight:700; letter-spacing:0.7px; text-transform:uppercase; color:var(--text-sub); transition:color 0.6s ease; }
+.settings-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--locked); transition:background-color 0.3s ease, box-shadow 0.3s ease; }
+.settings-dot.connected { background:var(--success); box-shadow:0 0 5px var(--success); }
+.settings-dot.error     { background:var(--danger);  box-shadow:0 0 4px var(--danger); }
+
+/* Input + eye toggle */
+.settings-input-wrap { position:relative; }
+.settings-input {
+  width:100%; box-sizing:border-box;
+  background:var(--card-bg); border:1px solid var(--border);
+  padding:9px 36px 9px 10px; border-radius:var(--radius-sm);
+  font-size:13px; color:var(--text); outline:none;
+  transition:background-color 0.6s ease, color 0.6s ease, border-color 0.2s;
+}
+.settings-input:focus { border-color:var(--primary); }
+.settings-eye {
+  position:absolute; right:8px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer; flex:none; width:auto;
+  color:var(--text-sub); padding:4px; line-height:1;
+  transition:color 0.15s, opacity 0.15s;
+}
+.settings-eye:hover { color:var(--primary); }
+.settings-eye.revealed { color:var(--primary); opacity:1; }
+
+/* Helper link */
+.settings-helper {
+  display:inline-block; margin-top:6px;
+  font-size:11px; font-weight:600; color:var(--primary);
+  text-decoration:none; opacity:0.75; transition:opacity 0.15s;
+}
+.settings-helper:hover { opacity:1; text-decoration:underline; }
+
+/* Action buttons */
+.settings-actions { display:flex; gap:8px; margin-top:12px; }
+.settings-test  {
+  background:transparent; color:var(--primary);
+  border:1.5px solid var(--primary);
+}
+.settings-test:hover:not(:disabled) { background:rgba(124,111,205,0.08); opacity:1; }
+.settings-test:disabled { background:transparent; color:var(--locked); border-color:var(--locked); opacity:1; }
+
+/* Spinner inside test button */
+.settings-spinner {
+  display:inline-block; width:10px; height:10px; vertical-align:middle;
+  border:1.5px solid transparent; border-top-color:currentColor;
+  border-radius:50%; animation:settingsSpin 0.65s linear infinite;
+  margin-right:5px;
+}
+@keyframes settingsSpin { to { transform:rotate(360deg); } }
+
+/* Status line */
+.settings-status { min-height:18px; margin-top:10px; font-size:11.5px; font-weight:600; text-align:center; transition:color 0.3s; }
+
+/* ── 16. Map View Panel ────── */
+.map-view {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  z-index: 40;
+  overflow-y: auto;
+  padding: 40px 56px;
+  text-align: left;
+  border-radius: var(--radius-hero);
+}
+.map-view.visible {
+  display: flex;
+  animation: mapFadeIn 0.3s ease;
+}
+@keyframes mapFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.map-close-btn {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  background: rgba(124,111,205,0.1);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.map-close-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+/* Map Zones */
+.map-zone { margin-bottom: 32px; }
+
+.map-header-title { font-family: var(--font-display); font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.map-core-thesis { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 16px; font-family: var(--font-display); letter-spacing: -0.3px; }
+
+.map-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.map-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.map-badge.arch { background: rgba(124,111,205,0.15); color: var(--primary); }
+.map-badge.diff { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
+.map-low-density { font-size: 12px; color: var(--text-sub); font-style: italic; opacity: 0.8; margin-top: 8px; }
+
+.map-section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+
+.map-backbone-item { background: var(--surface-card); border-left: 3px solid var(--primary); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+
+/* Accordion */
+.map-cluster-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
+.map-cluster-card.expanded { box-shadow: 0 8px 24px rgba(100,80,180,0.08); border-color: rgba(124,111,205,0.3); }
+.map-cluster-header { padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; color: var(--text); background: var(--surface-card); transition: background 0.2s; }
+.map-cluster-header:hover { background: var(--surface-nested); }
+.map-cluster-icon { color: var(--text-sub); font-size: 18px; transition: transform 0.2s; }
+.map-cluster-card.expanded .map-cluster-icon { transform: rotate(180deg); color: var(--primary); }
+
+.map-cluster-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border); background: var(--surface-card); }
+.map-cluster-card.expanded .map-cluster-body { display: block; }
+.map-cluster-desc { font-size: 13px; color: var(--text-sub); line-height: 1.5; margin: 16px 0; }
+
+.map-subnode-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--surface); border-radius: 8px; margin-bottom: 8px; }
+.map-subnode-indicator { width: 8px; height: 8px; border-radius: 50%; background: #c4c2d4; flex-shrink: 0; margin-top: 6px; }
+.map-subnode-content { flex: 1; }
+.map-subnode-label { font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 4px; }
+.map-subnode-mech { font-size: 12px; color: var(--text-sub); line-height: 1.4; }
+
+.map-cx-item { font-size: 13px; color: var(--text); line-height: 1.5; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+.map-cx-item:last-child { border-bottom: none; }
+.map-cx-item strong { color: var(--primary); font-weight:600; }
+
+.map-fw-card { background: var(--surface-nested); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.map-fw-name { font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 6px; }
+.map-fw-state { font-size: 13px; color: var(--text-sub); line-height: 1.4; }
+
+.map-view-shell { display: flex; flex-direction: column; gap: 24px; min-height: 100%; }
+.map-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface-nested);
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+.map-mode-btn {
+  flex: none;
+  width: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: none;
+  line-height: 1;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+.map-mode-btn.active {
+  background: rgba(124,111,205,0.14);
+  color: var(--primary);
+}
+.map-mode-btn:hover:not(:disabled) {
+  background: rgba(124,111,205,0.08);
+  color: var(--primary);
+  transform: none;
+  box-shadow: none;
+}
+.map-mode-btn:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.graph-content[hidden],
+#map-content[hidden] { display: none !important; }
+
+.graph-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+  gap: 20px;
+  min-height: 620px;
+}
+.graph-stage-wrap,
+.graph-detail {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(30, 22, 58, 0.04);
+}
+.graph-stage-wrap {
+  padding: 18px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 620px;
+}
+.graph-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+.graph-stage-kicker,
+.graph-detail-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.graph-stage-title,
+.graph-detail-title {
+  margin: 6px 0 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--text);
+}
+.graph-stage-note,
+.graph-detail-copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-sub);
+  max-width: 340px;
+}
+.graph-stage {
+  flex: 1;
+  min-height: 520px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at top left, rgba(124,111,205,0.09), transparent 32%),
+    linear-gradient(180deg, rgba(255,255,255,0.78), rgba(246,244,251,0.96));
+  border: 1px solid rgba(124,111,205,0.10);
+}
+.graph-detail {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.graph-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.graph-detail-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(124,111,205,0.10);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.graph-detail-pill.warning {
+  background: rgba(217,103,125,0.10);
+  color: #bf4f68;
+}
+.graph-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 24px;
+  color: var(--text-sub);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Mobile adjustments for map and library views */
+@media (max-width: 899px) {
+  .map-view, .library-view { 
+    padding: 56px 24px 24px; 
+    border-radius: 0; 
+    position: fixed; 
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2000;
+    height: 100dvh;
+    box-sizing: border-box;
+  }
+  .map-close-btn { top: 16px; right: 16px; }
+  .map-core-thesis { font-size: 17px; }
+  .map-view-shell { gap: 18px; }
+  .map-mode-switch { width: 100%; }
+  .map-mode-btn { flex: 1; }
+  .graph-layout { grid-template-columns: 1fr; min-height: auto; }
+  .graph-stage-wrap { min-height: 460px; }
+  .graph-stage-header { flex-direction: column; }
+  .graph-stage-title, .graph-detail-title { font-size: 20px; }
+  .graph-stage { min-height: 360px; }
+  .graph-stage-note { max-width: none; }
+}

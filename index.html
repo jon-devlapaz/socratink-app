@@ -64,6 +64,19 @@
         <h2 id="title">tink</h2>
         <p class="desc" id="desc">Add a tink to begin your growth.</p>
         <div id="timer-display">24:00:00</div>
+        
+        <!-- Action Controls -->
+        <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
+          <button id="btn-extract" onclick="App.extract()">2. Map (Extract)</button>
+          <button id="btn-drill" onclick="App.drill()">3. Drill (Recall)</button>
+        </div>
+        <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
+          <button onclick="App.drillFail()">Forgot</button>
+          <button onclick="App.drillPass()">Remembered</button>
+        </div>
+        <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
+          <button onclick="App.consolidate()">Consolidate</button>
+        </div>
       </div>
 
       <div class="drill-ui" id="drill-ui" style="display:none;">
@@ -115,30 +128,38 @@
     <!-- Map View Panel -->
     <section id="map-view" class="map-view">
       <button class="map-close-btn" onclick="App.hideMapView()" aria-label="Close map">×</button>
-      <div id="map-content"></div>
+      <div class="map-view-shell">
+        <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
+          <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button">Study View</button>
+          <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button">Graph View</button>
+        </div>
+        <div id="map-content"></div>
+        <div id="graph-content" class="graph-content" hidden>
+          <div class="graph-layout">
+            <div class="graph-stage-wrap">
+              <div class="graph-stage-header">
+                <div>
+                  <div class="graph-stage-kicker">Architecture</div>
+                  <h3 class="graph-stage-title">Knowledge Graph</h3>
+                </div>
+                <p class="graph-stage-note">The backbone anchors the map. Clusters orbit it, drill nodes travel as satellites, and dashed links show cross-cluster logic.</p>
+              </div>
+              <div id="graph-stage" class="graph-stage"></div>
+            </div>
+            <aside id="graph-detail" class="graph-detail"></aside>
+          </div>
+        </div>
+      </div>
     </section>
 
   </div>
 
   <!-- PDF.js for robust client-side extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <script src="ai_service.js"></script>
-  <script src="app.js"></script>
-
-
-  <!-- Cross-Page Router -->
-  <a id="mode-toggle" href="stitch/code.html"
-    style="text-decoration:none; display:inline-flex; align-items:center; gap:6px; position:fixed; bottom:24px; right:24px; z-index:2000; background:var(--primary); border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:10px 18px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; font-weight:800; color:white; box-shadow:0 6px 16px rgba(124,111,205,0.4); transition:all 0.3s cubic-bezier(0.2,0.8,0.2,1);"
-    onmouseover="this.style.transform='translateY(-2px) scale(1.02)'; this.style.boxShadow='0 8px 24px rgba(124,111,205,0.6)'; this.style.color='white';"
-    onmouseout="this.style.transform='none'; this.style.boxShadow='0 6px 16px rgba(124,111,205,0.4)';">
-    Ops Mode
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
-  </a>
+  <script type="module" src="js/app.js"></script>
 </body>
 
 </html>
