@@ -493,6 +493,16 @@ body.night #card      { background-color: var(--bg); }
   min-height: 0;
   overflow: hidden;
 }
+.graph-detail.is-drill-active .graph-node-detail {
+  padding-bottom: 14px;
+  margin-bottom: -2px;
+}
+.graph-detail.is-drill-active .graph-detail-copy {
+  max-width: none;
+}
+.graph-detail.is-post-drill .chat-input-area {
+  display: none;
+}
 .graph-node-detail {
   flex: none;
   display: flex;
@@ -523,6 +533,10 @@ body.night #card      { background-color: var(--bg); }
   background: rgba(217,103,125,0.10);
   color: #bf4f68;
 }
+.graph-detail-pill.success {
+  background: rgba(87,163,129,0.12);
+  color: #397a59;
+}
 .graph-empty {
   display: flex;
   align-items: center;
@@ -548,6 +562,20 @@ body.night #card      { background-color: var(--bg); }
   .library-view {
     padding: 24px 16px; 
     border-radius: 0;
+  }
+  .library-hero {
+    margin-bottom: 24px;
+  }
+  .library-heading {
+    max-width: none;
+    font-size: 24px;
+  }
+  .library-intro {
+    font-size: 14px;
+  }
+  .library-starter-grid,
+  .library-vault-grid {
+    grid-template-columns: 1fr;
   }
   .map-close-btn { top: 16px; right: 16px; }
   .map-core-thesis { font-size: 17px; }

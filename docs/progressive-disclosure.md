@@ -163,17 +163,42 @@ then the UX is out of sync.
 
 ## Progression Model
 
+### Core Thesis
+
+The core thesis is the absolute starting room.
+
+It is the first drill target because it establishes the top-level causal claim that the rest of the map depends on.
+
+Until the core thesis is solid:
+
+- backbone principles should remain locked
+- the graph should communicate "start here" clearly
+
 ### Backbone
 
-The core thesis establishes structural orientation.
+Backbone principles are the next progression layer after the core thesis.
 
 Backbone understanding matters because it frames the rest of the map.
 
 Backbone drill state should be visible and persisted, but it should not collapse the distinction between attempted and mastered.
 
+Each backbone independently unlocks its own dependent clusters.
+
+That means:
+
+- `b1` solid -> clusters governed by `b1` can reveal
+- `b2` can remain locked or unresolved without blocking the `b1` branch
+
+This preserves meaningful branching without fake openness.
+
 ### Clusters
 
 Clusters are containers, not the primary drill targets.
+
+A cluster branch is available only when both are true:
+
+- its governing backbone principle is solid
+- all incoming prerequisite clusters are already solidified
 
 Cluster status is derived from subnode outcomes:
 
@@ -186,6 +211,8 @@ Cluster status is derived from subnode outcomes:
 Subnodes are the true drill units.
 
 They are the smallest meaningful mechanisms the learner must reconstruct.
+
+Once a cluster branch is available, its subnodes become the drillable rooms inside that territory.
 
 ## Re-Drill Logic
 

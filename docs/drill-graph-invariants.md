@@ -222,15 +222,40 @@ This prevents sync problems and makes the graph a projection of the knowledge ma
 
 ## Unlock Logic
 
+### Core Thesis
+
+`core-thesis` is the absolute starting room.
+
+- it is always the first intentional drill target
+- backbone principles remain locked until `core-thesis` is solid
+- the UI should make this obvious without explanatory text dumps
+
+The graph should not imply that the learner can skip the core thesis and enter branches freely.
+
 ### Backbone / Core Thesis
 
-When backbone understanding is verified:
+Backbone principles are the second layer of progression, not the starting layer.
+
+When a backbone principle is verified:
 
 - dependent clusters can unlock
 
-Backbone drilling exists to establish the structural foundation of the map.
+Important:
+
+- each backbone independently unlocks its own `dependent_clusters`
+- the learner does **not** need to solidify every backbone before any branch can open
+- the learner does need to solidify the governing backbone before entering that branch
+
+Backbone drilling exists to establish the structural foundation of each branch of the map.
 
 ### Cluster Progression
+
+A cluster is not a primary drill target.
+
+A cluster becomes available only when:
+
+- its governing backbone branch is solid
+- all incoming prerequisite clusters are already solidified
 
 A cluster is considered cleared only when all of its subnodes are solid.
 

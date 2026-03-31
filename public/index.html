@@ -9,7 +9,10 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
-  <title>Theta</title>
+  <title>socraTink</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=4">
+  <link rel="apple-touch-icon" href="/favicon.png?v=4">
+  <link rel="shortcut icon" href="/favicon.png?v=4">
   <link rel="stylesheet" href="styles.css?v=5">
 </head>
 
@@ -24,7 +27,7 @@
   <!-- Left sidebar -->
   <div id="drawer" data-open="false">
     <div class="sidebar-brand">
-      <span class="sidebar-brand-name">tink</span>
+      <span class="sidebar-brand-name">socraTink</span>
     </div>
 
     <nav class="sidebar-nav">
@@ -34,6 +37,7 @@
       <a id="nav-analytics" class="sidebar-nav-item" href="javascript:void(0)" style="opacity:0.5; cursor:not-allowed;"
         title="Analytics Module Offline">Analytics</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)" onclick="startSettings()">Settings</a>
+      <a id="nav-guide" class="sidebar-nav-item" href="javascript:void(0)" onclick="App.toggleTutorial()">[?] Quick Guide</a>
     </nav>
 
     <div class="sidebar-divider"></div>
@@ -66,7 +70,6 @@
             </g>
           </svg>
         </button>
-        <span class="main-header-title">tinkboard</span>
       </div>
       <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
     </header>
@@ -76,13 +79,12 @@
 
       <div class="hero-info" id="hero-info">
         <div class="concept-label" id="concept-label"></div>
-        <h2 id="title">tink</h2>
-        <p class="desc" id="desc">Add a tink to begin your growth.</p>
+        <h2 id="title">socraTink</h2>
+        <p class="desc" id="desc">Add a socraTink to begin your growth.</p>
         <div id="timer-display">24:00:00</div>
 
-        <!-- Action Controls -->
+        <!-- Action Controls (Hidden for Board-First UX) -->
         <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
-          <button id="btn-extract" onclick="App.extract()">2. Map (Extract)</button>
           <button id="btn-drill" onclick="App.drill()">3. Drill (Recall)</button>
         </div>
         <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
@@ -90,7 +92,7 @@
           <button onclick="App.drillPass()">Remembered</button>
         </div>
         <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
-          <button onclick="App.consolidate()">Consolidate</button>
+          <button onclick="App.consolidate()" disabled title="Consolidation is coming soon">Consolidate (Coming Soon)</button>
         </div>
       </div>
 
@@ -98,7 +100,7 @@
       <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
         <!-- Floating Consolidate Button (appears dynamically after successful drill) -->
         <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
-          style="display:none;" title="Consolidate to long-term memory (Hibernation)">
+          style="display:none;" disabled title="Consolidation is coming soon" aria-label="Consolidation coming soon">
           <svg
             style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: #ffffff; fill: none; pointer-events: none;"
             viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -127,7 +129,6 @@
 
     <!-- Library View Panel -->
     <section id="library-view" class="library-view">
-      <h2 class="library-heading">Library</h2>
       <div id="library-content"></div>
     </section>
 
@@ -149,8 +150,6 @@
                   <div class="graph-stage-kicker">Architecture</div>
                   <h3 class="graph-stage-title">Knowledge Graph</h3>
                 </div>
-                <p class="graph-stage-note">The backbone anchors the map. Clusters orbit it, drill nodes travel as
-                  satellites, and dashed links show cross-cluster logic.</p>
               </div>
               <div id="graph-stage" class="graph-stage"></div>
             </div>
@@ -180,7 +179,7 @@
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=10"></script>
+  <script type="module" src="js/app.js?v=11"></script>
 </body>
 
 </html>

@@ -237,6 +237,35 @@ def _call_gemini_with_retry(client, *, model, contents, config, max_retries=MAX_
             raise ValueError(f"Unexpected error: {str(err)}") from err
 
 
+def _normalize_drill_evaluation(
+    evaluation: DrillEvaluation,
+    *,
+    session_phase: str,
+    probe_count: int,
+) -> DrillEvaluation:
+    if session_phase == "init":
+        evaluation.classification = None
+        evaluation.routing = None
+        evaluation.gap_description = None
+        return evaluation
+
+    if not evaluation.classification:
+        raise ValueError("Gemini returned no classification for a drill evaluation turn.")
+
+    if evaluation.classification == "solid":
+        evaluation.routing = "NEXT"
+        evaluation.gap_description = None
+        return evaluation
+
+    if not evaluation.gap_description:
+        evaluation.gap_description = "The learner has some correct pieces, but the causal mechanism is still incomplete."
+
+    if evaluation.routing not in ("PROBE", "SCAFFOLD", "NEXT"):
+        evaluation.routing = "NEXT" if probe_count >= 2 else "PROBE"
+
+    return evaluation
+
+
 def extract_knowledge_map(raw_text: str, api_key: str | None = None) -> str:
     client = _get_client(api_key)
 
@@ -349,6 +378,25 @@ def drill_chat(
         raise ValueError("Gemini returned an invalid structured drill response.")
     if not evaluation.agent_response.strip():
         raise ValueError("Gemini returned an empty drill response.")
+    evaluation = _normalize_drill_evaluation(
+        evaluation,
+        session_phase=session_phase,
+        probe_count=probe_count,
+    )
+    print(
+        "[drill] evaluation",
+        json.dumps(
+            {
+                "node_id": node_id,
+                "session_phase": session_phase,
+                "classification": evaluation.classification,
+                "routing": evaluation.routing,
+                "gap_description": evaluation.gap_description,
+                "probe_count_in": probe_count,
+                "nodes_drilled_in": nodes_drilled,
+            }
+        ),
+    )
 
     new_probe_count = probe_count
     new_nodes_drilled = nodes_drilled

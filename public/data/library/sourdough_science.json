@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "title": "The Science of Sourdough Baking",
+    "thesis": "Sourdough baking is a controlled biological and chemical process where a symbiotic culture of wild yeast and lactic acid bacteria ferments flour, producing metabolic byproducts that leaven the dough, develop its flavor profile, and alter the gluten structure.",
+    "governing_assumptions": [
+      "Microbial fermentation rates are highly temperature-dependent.",
+      "Gluten development and enzymatic degradation are opposing forces that must be balanced during the bulk fermentation phase."
+    ],
+    "difficulty": "Intermediate",
+    "architecture_type": "biological_process"
+  },
+  "backbone": [
+    {
+      "id": "b1",
+      "principle": "Symbiotic Fermentation: Wild yeast produces the carbon dioxide required for leavening, while lactic acid bacteria produce the organic acids (lactic and acetic) that impart the characteristic sour flavor and strengthen the gluten network.",
+      "dependent_clusters": [
+        "c1",
+        "c2",
+        "c3"
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "c1",
+      "label": "Microbial Symbiosis",
+      "subnodes": [
+        {
+          "id": "c1_s1",
+          "label": "Yeast Metabolism & Leavening",
+          "mechanism": "Wild yeast consumes simple sugars derived from the enzymatic breakdown of the flour's starches. In anaerobic conditions, it produces carbon dioxide gas and ethanol as metabolic byproducts. The CO2 gets trapped within the extensible gluten network, creating the alveoli (holes) and causing the dough to rise.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c1_s2",
+          "label": "LAB Acidification",
+          "mechanism": "Lactic acid bacteria (LAB) outnumber yeast by roughly 100:1 in a healthy starter. They metabolize maltose (which the yeast cannot process) and produce lactic acid (which yields mild, creamy flavors) and acetic acid (which yields sharper, more pungent tang). This acidification naturally preserves the bread and chemically alters the dough's rheology.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "label": "Rheology & Gluten Development",
+      "subnodes": [
+        {
+          "id": "c2_s1",
+          "label": "Hydration & Autolyse",
+          "mechanism": "When water hydrates flour, naturally occurring enzymes (amylase and protease) activate. Protease begins degrading proteins, while the glutenin and gliadin proteins hydrate and spontaneously bond to form gluten networks. This preliminary rest phase increases the dough's extensibility before mixing begins.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c2_s2",
+          "label": "Acid-Induced Strengthening",
+          "mechanism": "As the LAB lower the dough's pH during bulk fermentation, the increased acidity alters the electrical charges on the gluten proteins. This tightening effect structurally strengthens the gluten matrix, allowing it to trap the expanding CO2 gas without tearing—up to a specific acidic threshold.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c3",
+      "label": "Thermal Dynamics (Baking)",
+      "subnodes": [
+        {
+          "id": "c3_s1",
+          "label": "Oven Spring",
+          "mechanism": "When introduced to a high-heat environment (e.g., 260°C), three things happen rapidly before the crust sets: gases (CO2 and ethanol vapor) inside the dough violently expand, yeast enters a final frenzy of hyperbolic CO2 production before dying at 60°C, and steam within the baker's vessel keeps the crust pliable, allowing maximum volumetric expansion.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c3_s2",
+          "label": "Maillard Reaction & Caramelization",
+          "mechanism": "Above 140°C on the dough's surface, amino acids and residual complex sugars undergo the Maillard reaction. This non-enzymatic browning creates a mosaic of hundreds of new flavor compounds and the deep mahogany color of the crust. If the dough was over-fermented, there will be no residual sugars left, resulting in a pale, flavorless crust.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    }
+  ],
+  "relationships": {
+    "learning_prerequisites": [
+      {
+        "from": "c1",
+        "to": "c2",
+        "rationale": "Understanding the timeline and byproducts of microbial activity (specifically acid production) is required to understand the changes in the gluten structure over time."
+      },
+      {
+        "from": "c2",
+        "to": "c3",
+        "rationale": "A robust gluten network must be developed to capture the rapid volumetric expansion of gases during the oven spring."
+      }
+    ]
+  },
+  "frameworks": []
+}

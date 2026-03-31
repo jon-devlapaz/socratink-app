@@ -19,6 +19,9 @@ const App = (() => {
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
+  let tutorialMode = false;
+  let tutorialRefreshRaf = null;
+  let activeTutorialTarget = null;
 
 
   // ── 7. Animation helpers ───────────────────────────────────
@@ -54,7 +57,8 @@ const App = (() => {
   const EMPTY_TILE = `
     <polygon class="tile-left"      points="0,40 70,80 70,90 0,50"/>
     <polygon class="tile-right"     points="140,40 70,80 70,90 140,50"/>
-    <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>`;
+    <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>
+    <polygon class="tile-hit"       points="70,0 140,40 70,80 0,40"/>`;
 
   function crystalSVG(idx, state) {
     const G = GEO[state];
@@ -107,8 +111,18 @@ const App = (() => {
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
-  function openDrawer() { drawer.dataset.open = 'true'; document.body.dataset.drawerOpen = 'true'; if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'true'); }
-  function closeDrawer() { drawer.dataset.open = 'false'; document.body.dataset.drawerOpen = 'false'; if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false'); }
+  function openDrawer() {
+    drawer.dataset.open = 'true';
+    document.body.dataset.drawerOpen = 'true';
+    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'true');
+    scheduleTutorialRefresh();
+  }
+  function closeDrawer() {
+    drawer.dataset.open = 'false';
+    document.body.dataset.drawerOpen = 'false';
+    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
+    scheduleTutorialRefresh();
+  }
   function toggleDrawer() { drawer.dataset.open === 'true' ? closeDrawer() : openDrawer(); }
 
   if (window.innerWidth >= 900) openDrawer();
@@ -145,24 +159,43 @@ const App = (() => {
     addTriggerArea.innerHTML = full
       ? `<div class="add-trigger disabled"><span class="add-trigger-icon">+</span>Grid full (4/4)</div>`
       : `<div class="add-trigger" id="add-trigger" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon">+</span>new tink
+           <span class="add-trigger-icon">+</span>new socraTink
          </div>`;
+    scheduleTutorialRefresh();
   }
 
   // ── 12. CRUD ───────────────────────────────────────────────
   function buildContentInputUI(container, { onSubmit, onCancel, showNameField, showClipboard }) {
     let uploadedText = '';
     let uploadedFilename = '';
+    let fetchedUrlText = '';
+    let fetchedUrlTitle = '';
+    let fetchedUrl = '';
     let activeTab = 'paste';
+
+    function isYouTubeUrl(value) {
+      try {
+        const parsed = new URL(value);
+        const host = parsed.hostname.toLowerCase();
+        return host.includes('youtube.com') || host.includes('youtu.be') || host.includes('youtube-nocookie.com');
+      } catch {
+        return false;
+      }
+    }
 
     container.innerHTML = `
       <div class="overlay-tabs" style="margin-bottom:12px;">
         <button class="overlay-tab active" data-tab="paste">${showNameField ? 'Text' : 'Paste'}</button>
+        <button class="overlay-tab" data-tab="url">URL</button>
         <button class="overlay-tab" data-tab="upload">${showNameField ? 'File' : 'Upload'}</button>
       </div>
       <div class="overlay-panel" data-panel="paste">
         <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article…' : 'Paste content here…'}"></textarea>
         ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button><button class="wiki-random-btn" type="button">🔬 Random Science</button><button class="graph-preview-btn" type="button">⚡ Preview Graph</button></div>' : ''}
+      </div>
+      <div class="overlay-panel" data-panel="url" style="display:none">
+        <input class="overlay-url-input" type="url" placeholder="https://example.com/article">
+        <p class="overlay-dropfeedback overlay-url-feedback"></p>
       </div>
       <div class="overlay-panel" data-panel="upload" style="display:none">
         <div class="overlay-dropzone">
@@ -170,7 +203,7 @@ const App = (() => {
           <span style="font-size:11px;opacity:0.65">.txt &nbsp; .md &nbsp; .pdf</span>
         </div>
         <input type="file" accept=".txt,.md,.pdf" style="display:none">
-        <p class="overlay-dropfeedback"></p>
+        <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
       ${showNameField ? `
         <span class="creation-section-label">Name this concept</span>
@@ -187,7 +220,9 @@ const App = (() => {
     const textarea = container.querySelector('.overlay-textarea');
     const dropzone = container.querySelector('.overlay-dropzone');
     const fileInput = container.querySelector('input[type="file"]');
-    const feedback = container.querySelector('.overlay-dropfeedback');
+    const feedback = container.querySelector('.overlay-file-feedback');
+    const urlInput = container.querySelector('.overlay-url-input');
+    const urlFeedback = container.querySelector('.overlay-url-feedback');
     const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
     const wikiRandomBtn = container.querySelector('.wiki-random-btn');
     const graphPreviewBtn = container.querySelector('.graph-preview-btn');
@@ -196,9 +231,9 @@ const App = (() => {
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
 
     function hasContent() {
-      return activeTab === 'paste'
-        ? textarea.value.trim().length > 0
-        : uploadedText.length > 0;
+      if (activeTab === 'paste') return textarea.value.trim().length > 0;
+      if (activeTab === 'url') return urlInput.value.trim().length > 0;
+      return uploadedText.length > 0;
     }
     function checkSubmitEnabled() {
       if (showNameField) {
@@ -304,6 +339,21 @@ const App = (() => {
     }
 
     textarea.addEventListener('input', checkSubmitEnabled);
+    if (urlInput) {
+      urlInput.addEventListener('input', () => {
+        fetchedUrlText = '';
+        fetchedUrlTitle = '';
+        fetchedUrl = '';
+        if (urlFeedback) {
+          urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback';
+          urlFeedback.textContent = '';
+        }
+        checkSubmitEnabled();
+      });
+      urlInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !submitBtn.disabled) { e.preventDefault(); doSubmit(); }
+      });
+    }
     if (nameInput) {
       nameInput.addEventListener('input', checkSubmitEnabled);
       nameInput.addEventListener('keydown', e => {
@@ -362,18 +412,25 @@ const App = (() => {
     });
 
     function doSubmit() {
-      let text, type, filename;
+      let text, type, filename, url;
       if (activeTab === 'paste') {
         text = textarea.value.trim();
         type = 'text';
         filename = null;
+        url = null;
+      } else if (activeTab === 'url') {
+        text = fetchedUrlText;
+        type = 'url';
+        filename = fetchedUrlTitle || null;
+        url = urlInput.value.trim();
       } else {
         text = uploadedText;
         type = 'file';
         filename = uploadedFilename;
+        url = null;
       }
       if (phTimer) clearInterval(phTimer);
-      onSubmit({ text, type, filename, name: nameInput ? nameInput.value.trim() : null });
+      onSubmit({ text, type, filename, url, name: nameInput ? nameInput.value.trim() : null });
     }
 
     textarea.focus();
@@ -393,14 +450,13 @@ const App = (() => {
     buildContentInputUI(form, {
       showNameField: true,
       showClipboard: true,
-      onSubmit: ({ text, type, filename, name }) => {
-        if (!name || !text) return;
+      onSubmit: async ({ text, type, filename, url, name }) => {
+        if (!name) return;
         const concepts = loadConcepts();
         if (concepts.length >= 4) { renderAddTrigger(); return; }
 
         const id = generateId();
 
-        // Show full-screen extraction overlay immediately
         const extractOverlay = document.createElement('div');
         extractOverlay.id = 'extract-overlay';
         extractOverlay.innerHTML = `
@@ -418,39 +474,59 @@ const App = (() => {
           setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
         }
 
-        async function runExtraction() {
-          try {
-            extractOverlay.querySelector('.extract-label').textContent = 'Mapping knowledge...';
-            const jsonPayload = await window.AIService.generateKnowledgeMap(text);
+        try {
+          let sourceText = text;
+          let sourceFilename = filename;
 
-            removeOverlay();
-            const concept = {
-              id, name, state: 'growing',
-              createdAt: Date.now(), timerStart: null,
-              contentPreview: text.slice(0, 500),
-              contentType: type,
-              contentFilename: filename,
-              graphData: jsonPayload
-            };
-            contentStore.set(id, text);
-            concepts.push(concept);
-            saveConcepts(concepts);
-            renderGrid(concepts);
-            renderConceptList(concepts);
-            selectConcept(concept.id);
-            closeDrawer();
-          } catch (err) {
-            removeOverlay();
-            alert('Extraction Failed: ' + err.message);
+          if (type === 'url') {
+            if (!url) throw new Error('No URL provided.');
+            const isYouTube = isYouTubeUrl(url);
+            extractOverlay.querySelector('.extract-label').textContent = isYouTube
+              ? 'Fetching transcript...'
+              : 'Fetching page...';
+            const response = await fetch(isYouTube ? '/api/extract-youtube' : '/api/extract-url', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.detail || 'Failed to fetch page.');
+            sourceText = payload.text;
+            sourceFilename = payload.title || url;
           }
-        }
 
-        runExtraction();
+          if (!sourceText) throw new Error('No content provided.');
+
+          extractOverlay.querySelector('.extract-label').textContent = 'Mapping knowledge...';
+          const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
+
+          removeOverlay();
+          const concept = {
+            id, name, state: 'growing',
+            createdAt: Date.now(), timerStart: null,
+            contentPreview: sourceText.slice(0, 500),
+            contentType: type,
+            contentFilename: sourceFilename,
+            sourceUrl: type === 'url' ? url : null,
+            graphData: jsonPayload
+          };
+          contentStore.set(id, sourceText);
+          concepts.push(concept);
+          saveConcepts(concepts);
+          renderGrid(concepts);
+          renderConceptList(concepts);
+          selectConcept(concept.id);
+          closeDrawer();
+        } catch (err) {
+          removeOverlay();
+          alert('Extraction Failed: ' + err.message);
+        }
       },
       onCancel: () => {
         renderAddTrigger();
       }
     });
+    scheduleTutorialRefresh();
   }
 
   function deleteConcept(id, btnEl) {
@@ -478,6 +554,7 @@ const App = (() => {
       if (concept.graphData) showMapView(concept);
     } else {
       openDrawer();
+      startAddConcept();
     }
   }
 
@@ -540,39 +617,27 @@ const App = (() => {
   function applyControlsForState(state, concept) {
     stopTimer();
     const btnDrill = document.getElementById('btn-drill');
+    const consolidateBtn = document.querySelector('#consolidate-controls button');
     if (btnDrill) btnDrill.textContent = '3. Drill (Recall)';
+    if (consolidateBtn) {
+      consolidateBtn.disabled = true;
+      consolidateBtn.textContent = 'Consolidate (Coming Soon)';
+      consolidateBtn.title = 'Consolidation is coming soon';
+    }
     showControls(false, false, false, false, false);
 
-    // Toggle the new floating Consolidate button over the grid
+    // Consolidation is intentionally unavailable for the MVP.
     const floatBtn = document.getElementById('btn-consolidate-float');
     if (floatBtn) {
-      if (state === 'growing' && concept.drilled) {
-
-        // Dynamically compute exact crystal tip coordinates
-        const idx = getActiveTileIdx();
-        const base = [
-          { x: 70, y: 45 },
-          { x: 0, y: 85 },
-          { x: 140, y: 85 },
-          { x: 70, y: 125 }
-        ];
-        if (idx !== -1 && base[idx]) {
-          floatBtn.style.left = (base[idx].x + 70) + 'px';
-          floatBtn.style.top = (base[idx].y + 8) + 'px'; // +28px padding - 20px crystal height
-        }
-
-        floatBtn.style.display = 'flex';
-        floatBtn.classList.add('show');
-      } else {
-        floatBtn.style.display = 'none';
-        floatBtn.classList.remove('show');
-      }
+      floatBtn.disabled = true;
+      floatBtn.style.display = 'none';
+      floatBtn.classList.remove('show');
     }
 
-    if (state === 'instantiated') { showControls(true, false, false, false, false); setButtons(true, false); }
-    else if (state === 'growing') { showControls(true, false, true, false, false); setButtons(false, true); }
+    if (state === 'instantiated') { showControls(false, false, false, false, false); setButtons(false, true); }
+    else if (state === 'growing') { showControls(false, false, false, false, false); setButtons(false, true); }
     else if (state === 'fractured') {
-      showControls(true, false, false, false, false); setButtons(false, true);
+      showControls(false, false, false, false, false); setButtons(false, true);
       if (btnDrill) btnDrill.textContent = '3. Drill (Repair)';
     }
     else if (state === 'hibernating') {
@@ -596,9 +661,7 @@ const App = (() => {
     if (devBtn) devBtn.style.display = dev ? 'block' : 'none';
   }
   function setButtons(ex, dr) {
-    const btnEx = document.getElementById('btn-extract');
     const btnDr = document.getElementById('btn-drill');
-    if (btnEx) btnEx.disabled = !ex;
     if (btnDr) btnDr.disabled = !dr;
   }
 
@@ -606,8 +669,8 @@ const App = (() => {
     hideContentOverlay();
     stopTimer();
     conceptLabelEl.textContent = '';
-    titleEl.textContent = 'tink';
-    descEl.textContent = 'Add your first tink.';
+    titleEl.textContent = 'socraTink';
+    descEl.textContent = 'Add your first socraTink.';
     document.body.classList.remove('night');
     showControls(false, false, false, false, false);
   }
@@ -727,18 +790,27 @@ const App = (() => {
 
   function drill() {
     const concept = getActiveConcept();
+    if (!concept) return;
+    
+    // If we haven't mapped/extracted yet, trigger that first
+    if (concept.state === 'instantiated') {
+      extract();
+      return;
+    }
+
     if (!concept?.graphData) {
       showControls(false, true, false, false, false);
       return;
     }
     showMapView(concept);
     setMapMode('graph');
+    const graphData = parseConceptGraphData(concept) || {};
     startDrill({
       id: 'core-thesis',
-      type: 'backbone',
-      label: concept.name,
-      fullLabel: concept.name,
-      detail: concept.contentPreview || 'Explain this core idea in your own words.',
+      type: 'core',
+      label: 'Core Thesis',
+      fullLabel: 'Core Thesis',
+      detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
     });
   }
 
@@ -754,9 +826,7 @@ const App = (() => {
   }
 
   function consolidate() {
-    updateActiveConcept({ timerStart: Date.now() });
-    setState('hibernating');
-    playAnim('cocoon', getActiveTileIdx());
+    return;
   }
 
   // ── 15. Timer ──────────────────────────────────────────────
@@ -928,6 +998,7 @@ const App = (() => {
         detailEl: graphNodeDetail,
         rawData: data,
         onNodeSelect: (nodeData) => startDrill(nodeData),
+        onContinue: () => cancelDrill(),
       });
     }
 
@@ -935,6 +1006,7 @@ const App = (() => {
     mapView.classList.add('visible');
     if (graphContent) graphContent.hidden = false;
     setMapMode('study');
+    scheduleTutorialRefresh();
   }
 
   function hideMapView() {
@@ -946,6 +1018,7 @@ const App = (() => {
     }
     if (mapView) mapView.classList.remove('visible');
     if (heroCard) heroCard.style.display = 'flex';
+    scheduleTutorialRefresh();
   }
 
   function setMapMode(mode = 'study') {
@@ -965,6 +1038,7 @@ const App = (() => {
     if (currentMapMode === 'graph' && currentGraphController) {
       requestAnimationFrame(() => currentGraphController?.resize());
     }
+    scheduleTutorialRefresh();
   }
 
   function bindMapModeControls() {
@@ -997,13 +1071,16 @@ const App = (() => {
       currentGraphController = null;
     }
     if (heroCard) heroCard.style.display = 'flex';
+    scheduleTutorialRefresh();
   }
 
   const STARTER_MAPS = [
+    { file: 'thermostat_control.json', name: 'Thermostat Control Loop', desc: 'Simple feedback control with easy causal drill paths' },
     { file: 'espresso_physics.json', name: 'Physics of Espresso Extraction', desc: 'Grind size, channeling, and thermodynamics' },
     { file: 'mrna_vaccine.json', name: 'mRNA Vaccine Mechanism', desc: 'Lipid nanoparticles and ribosomal translation' },
     { file: 'options_trading.json', name: 'Options Trading Fundamentals', desc: 'Leveraged asymmetry and Theta decay' },
-    { file: 'learnops_architecture.json', name: 'Theta: LearnOps Architecture', desc: 'The Generation Effect and Socratic Graphs' }
+    { file: 'learnops_architecture.json', name: 'LearnOps Architecture', desc: 'The Generation Effect and Socratic Graphs' },
+    { file: 'sourdough_science.json', name: 'Science of Sourdough Baking', desc: 'Symbiotic fermentation, rheology, and oven spring' }
   ];
 
   async function importStarterMap(filename, conceptName) {
@@ -1037,6 +1114,34 @@ const App = (() => {
     }
   }
 
+  function getLibraryConceptMeta(concept) {
+    let graph = null;
+    try {
+      graph = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData) : concept.graphData;
+    } catch {
+      graph = null;
+    }
+
+    const metadata = graph?.metadata || {};
+    const clusters = Array.isArray(graph?.clusters) ? graph.clusters : [];
+    const subnodeCount = clusters.reduce((total, cluster) => total + ((cluster.subnodes || []).length), 0);
+    const thesis = metadata.core_thesis || concept.contentPreview || 'No summary available yet.';
+    const sourceLabel = concept.contentFilename
+      ? `Source: ${concept.contentFilename}`
+      : concept.contentType
+        ? `Source: ${concept.contentType.toUpperCase()}`
+        : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Starter concept');
+
+    return {
+      thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
+      architecture: metadata.architecture_type ? metadata.architecture_type.replace(/_/g, ' ') : null,
+      difficulty: metadata.difficulty || null,
+      clusterCount: clusters.length,
+      subnodeCount,
+      sourceLabel,
+    };
+  }
+
   function showLibrary() {
     setNavActive('nav-library');
     const libraryView = document.getElementById('library-view');
@@ -1046,36 +1151,50 @@ const App = (() => {
     const concepts = loadConcepts().filter(c => c.graphData);
 
     let html = `
+      <div class="library-kicker">Library</div>
+
       <div class="library-section">
-        <h3 class="library-section-title">Zero-Friction Starter Shelf</h3>
-        <p style="color:var(--text-secondary); margin-bottom: 20px; font-size: 0.95rem;">Click a concept to instantly drop it into your vault and start drilling.</p>
+        <h3 class="library-section-title">Starter Shelf</h3>
+        <p class="library-section-copy">Preloaded concepts you can drop into the vault instantly.</p>
         <div class="library-starter-grid">
           ${STARTER_MAPS.map(s => `
             <div class="library-card-starter" onclick="App.importStarterMap('${s.file}', '${s.name}')">
+              <div class="library-card-kicker">Starter</div>
               <div class="starter-card-title">${escHtml(s.name)}</div>
               <div class="starter-card-desc">${escHtml(s.desc)}</div>
+              <div class="library-card-cta">Add to vault</div>
             </div>
           `).join('')}
         </div>
       </div>
       
       <div class="library-section" style="margin-top: 40px;">
-        <h3 class="library-section-title">Personal Vault</h3>
+        <h3 class="library-section-title">Your Vault</h3>
+        <p class="library-section-copy">Mapped concepts ready to reopen and drill.</p>
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No extracted knowledge maps yet. Add a concept or click a Starter Map to begin.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No mapped concepts yet. Add a concept on the Dashboard or pull in a Starter Map to begin.</p>';
     } else {
-      html += `<div class="library-vault-grid" style="margin-top:20px; display:flex; flex-direction:column; gap:16px;">` + concepts.map(c => {
-        let pretty = c.graphData;
-        try { pretty = JSON.stringify(JSON.parse(c.graphData), null, 2); } catch { }
+      html += `<div class="library-vault-grid">` + concepts.map(c => {
+        const meta = getLibraryConceptMeta(c);
         return `
-          <div class="library-card" style="cursor:pointer;" onclick="App.selectConcept('${c.id}'); App.hideLibrary();">
+          <div class="library-card library-card-vault" style="cursor:pointer;" onclick="App.selectConcept('${c.id}'); App.hideLibrary();">
             <div class="library-card-header">
-              <span class="library-card-name">${escHtml(c.name)}</span>
-              <span class="library-card-state" style="background:var(--success-surface); color:var(--success-text); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">${c.state}</span>
+              <div>
+                <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
+                <span class="library-card-name">${escHtml(c.name)}</span>
+              </div>
+              <span class="library-card-state">${escHtml(c.state)}</span>
             </div>
-            <pre class="library-card-json">${escHtml(pretty)}</pre>
+            <p class="library-card-summary">${escHtml(meta.thesis)}</p>
+            <div class="library-card-meta">
+              ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
+              ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
+              <span class="library-card-pill">${escHtml(`${meta.clusterCount} clusters`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} drill nodes`)}</span>
+            </div>
+            <div class="library-card-cta">Open concept</div>
           </div>`;
       }).join('') + `</div>`;
     }
@@ -1086,6 +1205,7 @@ const App = (() => {
     if (heroCard) heroCard.style.display = 'none';
     libraryView.classList.add('visible');
     if (window.innerWidth < 900) closeDrawer();
+    scheduleTutorialRefresh();
   }
 
   function hideLibrary() {
@@ -1093,6 +1213,7 @@ const App = (() => {
     const heroCard = document.querySelector('.hero-card');
     if (libraryView) libraryView.classList.remove('visible');
     if (heroCard) heroCard.style.display = 'flex';
+    scheduleTutorialRefresh();
   }
 
   function toggleCluster(el) {
@@ -1211,7 +1332,18 @@ const App = (() => {
   }
 
   function patchActiveConceptDrillOutcome(result) {
-    if (result?.routing !== 'NEXT' || !result?.node_id) return null;
+    if (result?.routing !== 'NEXT' || !result?.node_id) {
+      console.log(
+        `[drill->graph] no mutation node=${result?.node_id ?? 'n/a'} classification=${result?.classification ?? 'null'} routing=${result?.routing ?? 'null'}`
+      );
+      console.log('[drill->graph] no graph mutation', {
+        node_id: result?.node_id ?? null,
+        classification: result?.classification ?? null,
+        routing: result?.routing ?? null,
+        reason: 'routing was not NEXT',
+      });
+      return null;
+    }
 
     const concept = getActiveConcept();
     const graphData = parseConceptGraphData(concept);
@@ -1232,6 +1364,23 @@ const App = (() => {
       graphData.metadata.last_drilled = drilledAt;
       patched = true;
     }
+
+    (graphData.backbone || []).forEach((item) => {
+      if (item?.id !== result.node_id) return;
+
+      if (result.classification === 'solid') {
+        item.drill_status = 'solid';
+        item.gap_type = null;
+        item.gap_description = null;
+      } else if (result.classification) {
+        item.drill_status = result.classification;
+        item.gap_type = result.classification;
+        item.gap_description = result.gap_description || null;
+      }
+
+      item.last_drilled = drilledAt;
+      patched = true;
+    });
 
     (graphData.clusters || []).forEach((cluster) => {
       (cluster.subnodes || []).forEach((subnode) => {
@@ -1258,6 +1407,15 @@ const App = (() => {
     if (!patched) return null;
 
     const updatedConcept = persistActiveConceptGraphData(graphData);
+    console.log(
+      `[drill->graph] patched node=${result.node_id} classification=${result.classification ?? 'null'} routing=${result.routing ?? 'null'}`
+    );
+    console.log('[drill->graph] patched node state', {
+      node_id: result.node_id,
+      classification: result.classification ?? null,
+      routing: result.routing ?? null,
+      gap_description: result.gap_description ?? null,
+    });
     currentGraphController?.syncFromKnowledgeMap?.(graphData, activeDrillNode);
     return updatedConcept;
   }
@@ -1348,6 +1506,10 @@ const App = (() => {
     }
 
     const data = await response.json();
+    console.log(
+      `[drill] classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`
+    );
+    console.log('[drill] response', data);
     hideTypingIndicator();
 
     patchActiveConceptDrillOutcome(data);
@@ -1359,11 +1521,18 @@ const App = (() => {
       drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
     }
     drillState.pending = false;
+    const completedNodeTurn = data.routing === 'NEXT'
+      || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
     if (chatInput) {
-      chatInput.disabled = !!data.session_terminated;
-      if (!data.session_terminated) {
+      chatInput.disabled = completedNodeTurn || !!data.session_terminated;
+      if (!completedNodeTurn && !data.session_terminated) {
         chatInput.focus();
       }
+    }
+    if (completedNodeTurn) {
+      currentGraphController?.setInteractionMode?.('post-drill', activeDrillNode);
+    } else {
+      currentGraphController?.setInteractionMode?.('drill-active', activeDrillNode);
     }
   }
 
@@ -1373,11 +1542,11 @@ const App = (() => {
 
     if (!nodeContext) {
       const km = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData || '{}') : (concept.graphData || {});
-      const backbone = km.backbone && km.backbone[0] ? km.backbone[0] : null;
       nodeContext = { 
-        id: backbone ? backbone.id : 'core-thesis', 
-        fullLabel: concept.name, 
-        detail: backbone ? backbone.principle : '' 
+        id: 'core-thesis',
+        type: 'core',
+        fullLabel: 'Core Thesis',
+        detail: km?.metadata?.core_thesis || km?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
       };
     }
 
@@ -1401,6 +1570,7 @@ const App = (() => {
       drillTitle.textContent = `Drilling: ${label}`;
     }
     currentGraphController?.setActiveDrillNode?.(activeDrillNode);
+    currentGraphController?.setInteractionMode?.('drill-active', activeDrillNode);
     setMapMode('graph');
 
     requestDrillTurn().catch((err) => {
@@ -1409,6 +1579,7 @@ const App = (() => {
       appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
       drillState.pending = false;
       if (chatInput) chatInput.disabled = false;
+      currentGraphController?.setInteractionMode?.('inspect');
     });
   }
 
@@ -1427,7 +1598,192 @@ const App = (() => {
       chatInput.disabled = true;
     }
     currentGraphController?.clearActiveDrillNode?.();
+    currentGraphController?.setInteractionMode?.('inspect');
+    scheduleTutorialRefresh();
   }
+
+  const tutorialDirectives = [
+    {
+      id: 'library',
+      sel: '#nav-library',
+      title: 'Open The Library',
+      text: 'Use starter maps for an instant demo, or reopen concepts you have already extracted.',
+      when: () => true,
+    },
+    {
+      id: 'new-concept',
+      sel: '#add-trigger',
+      title: 'Create A Concept',
+      text: 'Start here with pasted text, notes, or a PDF. This is the fastest path into extraction.',
+      when: () => !document.getElementById('map-view')?.classList.contains('visible')
+        && !document.getElementById('library-view')?.classList.contains('visible'),
+    },
+    {
+      id: 'concept-inputs',
+      sel: '.creation-form .overlay-tabs',
+      title: 'Choose Your Input',
+      text: 'Use Text for pasted notes, URL for article pages or YouTube links with transcripts, and File for .txt, .md, or .pdf uploads up to 2MB.',
+      when: () => !!document.querySelector('.creation-form')
+        && !document.getElementById('map-view')?.classList.contains('visible')
+        && !document.getElementById('library-view')?.classList.contains('visible'),
+    },
+    {
+      id: 'drill',
+      sel: '.tile-group:not(.empty)',
+      title: 'Enter Concept Crystal',
+      text: 'Click any active crystal on your board to enter its Socratic Map and start a recall drill.',
+      when: () => !document.getElementById('map-view')?.classList.contains('visible')
+        && !!document.querySelector('.tile-group:not(.empty)'),
+    },
+    {
+      id: 'graph-view',
+      sel: '#map-mode-graph',
+      title: 'Switch To Graph View',
+      text: 'Use Graph View to see what is locked, in progress, and solidified across the map.',
+      when: () => document.getElementById('map-view')?.classList.contains('visible'),
+    },
+    {
+      id: 'graph-stage',
+      sel: '#graph-stage',
+      title: 'Inspect The Knowledge Graph',
+      text: 'Hover and click visible nodes to inspect them. A drill always targets one node at a time.',
+      when: () => {
+        const graphContent = document.getElementById('graph-content');
+        return !!graphContent && !graphContent.hidden;
+      },
+    },
+    {
+      id: 'chat-input',
+      sel: '#chat-input',
+      title: 'Answer From Memory',
+      text: 'Type your explanation in your own words. The graph updates only for the node you are drilling.',
+      when: () => drillUi?.style.display === 'flex',
+    },
+  ];
+
+  const tutorialLayerEl = document.createElement('div');
+  tutorialLayerEl.className = 'tutorial-layer';
+  document.body.appendChild(tutorialLayerEl);
+
+  const tourTooltipEl = document.createElement('div');
+  tourTooltipEl.className = 'tour-tooltip';
+  tourTooltipEl.setAttribute('role', 'dialog');
+  tourTooltipEl.setAttribute('aria-live', 'polite');
+  document.body.appendChild(tourTooltipEl);
+
+  function isTutorialTargetVisible(target) {
+    if (!target || target.offsetParent === null) return false;
+    const rect = target.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  function cleanupTutorialHighlights() {
+    document.querySelectorAll('.tutorial-target').forEach((el) => el.classList.remove('tutorial-target'));
+    activeTutorialTarget = null;
+  }
+
+  function hideTooltip() {
+    cleanupTutorialHighlights();
+    tourTooltipEl.classList.remove('visible');
+    tourTooltipEl.innerHTML = '';
+  }
+
+  function positionTooltip(rect) {
+    const gap = 14;
+    const maxWidth = 280;
+    let left = rect.right + gap + window.scrollX;
+    let top = rect.top + window.scrollY;
+
+    tourTooltipEl.style.left = `${left}px`;
+    tourTooltipEl.style.top = `${top}px`;
+
+    const tooltipRect = tourTooltipEl.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    if (tooltipRect.right > viewportWidth - 16) {
+      left = rect.left + window.scrollX - Math.min(maxWidth, tooltipRect.width) - gap;
+    }
+    if (left < 16 + window.scrollX) {
+      left = Math.max(16 + window.scrollX, rect.left + window.scrollX);
+      top = rect.bottom + gap + window.scrollY;
+    }
+    if (top + tooltipRect.height > viewportHeight + window.scrollY - 16) {
+      top = Math.max(16 + window.scrollY, rect.bottom + window.scrollY - tooltipRect.height);
+    }
+
+    tourTooltipEl.style.left = `${left}px`;
+    tourTooltipEl.style.top = `${top}px`;
+  }
+
+  function showTooltipForDirective(target, directive) {
+    if (!tutorialMode || !target || !directive) return;
+
+    cleanupTutorialHighlights();
+    activeTutorialTarget = target;
+    target.classList.add('tutorial-target');
+
+    tourTooltipEl.innerHTML = `
+      <div class="tour-tooltip-kicker">Quick Guide</div>
+      <div class="tour-tooltip-title">${escHtml(directive.title)}</div>
+      <div class="tour-tooltip-body">${escHtml(directive.text)}</div>
+    `;
+    positionTooltip(target.getBoundingClientRect());
+    tourTooltipEl.classList.add('visible');
+  }
+
+  function renderBeacons() {
+    tutorialLayerEl.innerHTML = '';
+    if (!tutorialMode) return;
+
+    tutorialDirectives.forEach((directive, index) => {
+      if (directive.when && !directive.when()) return;
+      const target = document.querySelector(directive.sel);
+      if (!isTutorialTargetVisible(target)) return;
+
+      const rect = target.getBoundingClientRect();
+      const beacon = document.createElement('button');
+      beacon.type = 'button';
+      beacon.className = 'beacon';
+      beacon.setAttribute('aria-label', directive.title);
+      beacon.dataset.beaconId = directive.id || `beacon-${index}`;
+      beacon.style.left = `${rect.right + window.scrollX - 8}px`;
+      beacon.style.top = `${rect.top + window.scrollY - 6}px`;
+
+      beacon.addEventListener('mouseenter', () => showTooltipForDirective(target, directive));
+      beacon.addEventListener('focus', () => showTooltipForDirective(target, directive));
+      beacon.addEventListener('mouseleave', hideTooltip);
+      beacon.addEventListener('blur', hideTooltip);
+
+      tutorialLayerEl.appendChild(beacon);
+    });
+
+    if (activeTutorialTarget && activeTutorialTarget.classList.contains('tutorial-target')) {
+      const activeDirective = tutorialDirectives.find((directive) => document.querySelector(directive.sel) === activeTutorialTarget);
+      if (!isTutorialTargetVisible(activeTutorialTarget) || !activeDirective) {
+        hideTooltip();
+      } else {
+        positionTooltip(activeTutorialTarget.getBoundingClientRect());
+      }
+    }
+  }
+
+  function scheduleTutorialRefresh() {
+    if (!tutorialMode) return;
+    if (tutorialRefreshRaf) window.cancelAnimationFrame(tutorialRefreshRaf);
+    tutorialRefreshRaf = window.requestAnimationFrame(() => {
+      tutorialRefreshRaf = null;
+      renderBeacons();
+    });
+  }
+
+  window.addEventListener('resize', scheduleTutorialRefresh);
+  window.addEventListener('scroll', scheduleTutorialRefresh, { passive: true });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && tutorialMode) {
+      App.toggleTutorial();
+    }
+  });
 
   let typingIndicatorElement = null;
 
@@ -1498,14 +1854,33 @@ const App = (() => {
       if (!concept?.graphData) return;
       showMapView(concept);
       setMapMode('graph');
+      const graphData = parseConceptGraphData(concept) || {};
       startDrill({
         id: 'core-thesis',
-        type: 'backbone',
-        label: concept.name,
-        fullLabel: concept.name,
-        detail: concept.contentPreview || 'Explain this core idea in your own words.',
+        type: 'core',
+        label: 'Core Thesis',
+        fullLabel: 'Core Thesis',
+        detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
       });
     },
+
+    toggleTutorial: () => {
+      tutorialMode = !tutorialMode;
+      const guideBtn = document.getElementById('nav-guide');
+      if (guideBtn) guideBtn.classList.toggle('active', tutorialMode);
+
+      if (!tutorialMode) {
+        if (tutorialRefreshRaf) {
+          window.cancelAnimationFrame(tutorialRefreshRaf);
+          tutorialRefreshRaf = null;
+        }
+        tutorialLayerEl.innerHTML = '';
+        hideTooltip();
+        return;
+      }
+      scheduleTutorialRefresh();
+    },
+
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },
     deleteConcept,
     startAddConcept,

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#242038"></rect>
+
+  <!-- receding graph context -->
+  <line x1="16" y1="16" x2="22" y2="22" stroke="#8D86C9" stroke-width="4" stroke-linecap="round"></line>
+  <line x1="42" y1="42" x2="48" y2="48" stroke="#F7ECE1" stroke-width="4" stroke-linecap="round"></line>
+
+  <circle cx="12" cy="12" r="4" fill="#8D86C9"></circle>
+  <circle cx="52" cy="52" r="4" fill="#F7ECE1"></circle>
+
+  <!-- room -->
+  <rect x="18" y="18" width="28" height="28" rx="6" fill="none" stroke="#CAC4CE" stroke-width="4"></rect>
+
+  <!-- active / solidified core -->
+  <rect x="25" y="25" width="14" height="14" rx="3" fill="#9067C6"></rect>
+</svg>
