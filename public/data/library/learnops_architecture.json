@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "title": "Theta: LearnOps Architecture",
+    "thesis": "Theta replaces traditional passive consumption studying with an AI-driven, high-friction learning pipeline modeled explicitly on hippocampal and frontal lobe mechanisms for memory consolidation.",
+    "governing_assumptions": [
+      "Reading text generates a feeling of fluency, but only generative struggle produces lasting CA1-strata memory trace consolidation.",
+      "The Dunning-Kruger effect actively prevents learners from identifying their own cognitive blind spots during self-assessment."
+    ]
+  },
+  "backbone": [
+    {
+      "id": "b1",
+      "principle": "The Generation Effect: Forcing a brain to reconstruct an answer from partial scratch fundamentally alters the neurobiological encoding pathway of the memory, drastically increasing long-term retention compared to recognition tasks.",
+      "dependent_clusters": [
+        "c1",
+        "c2"
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "c1",
+      "label": "Stage 1: Ingestion & Extraction",
+      "subnodes": [
+        {
+          "id": "c1_s1",
+          "label": "Socratic Graph Extraction (Phase 1)",
+          "mechanism": "Instead of summarizing a document into bullet points, Theta uses an LLM to parse raw source text and violently convert it into a structured causal map. It identifies the strict cause-and-effect 'mechanisms' of topics and formats them cleanly into nodes representing Prerequisite dependencies.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "label": "Stage 3: Interactive Drill",
+      "subnodes": [
+        {
+          "id": "c2_s1",
+          "label": "External AI Evaluation (Phase 3)",
+          "mechanism": "Theta substitutes unreliable self-assessment with AI evaluation of free-text explanation quality, classifying understanding failures as Shallow, Deep, or Misconception.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c2_s2",
+          "label": "KReC Refutation Scaffolding",
+          "mechanism": "When the drill agent detects a literal 'misconception' (an actively incorrect mental model), it does not merely provide the right answer. It acknowledges the wrong assumption, explicitly refutes it to cause positive prediction error in the brain, and then introduces the correct baseline mechanism to anchor the new logic.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    }
+  ],
+  "relationships": {
+    "learning_prerequisites": [
+      {
+        "from": "c1",
+        "to": "c2",
+        "rationale": "Socratic graph causal logic must be physically constructed into the JSON map before the drill agent has the necessary 'answer keys' to evaluate a student."
+      }
+    ]
+  },
+  "frameworks": []
+}

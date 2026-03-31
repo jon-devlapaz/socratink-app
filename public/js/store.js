@@ -14,7 +14,15 @@ export function generateId() {
 }
 
 export function loadConcepts() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  try { 
+    let arr = JSON.parse(localStorage.getItem(STORE_KEY)) || []; 
+    // Migration: fix any concepts saved with invalid 'mapped' state during Library testing
+    arr = arr.map(c => {
+      if (c.state === 'mapped') c.state = 'growing';
+      return c;
+    });
+    return arr;
+  }
   catch { return []; }
 }
 
@@ -56,8 +64,8 @@ export function updateActiveConcept(patch) {
 }
 
 export const STATES = {
-  instantiated: { title:'Raw Concept',            desc:'Causal architecture not yet extracted.' },
-  growing:      { title:'Structurally Sound',     desc:'Facets forming. Ready to drill.' },
+  instantiated: { title:'', desc:'' },
+  growing:      { title:'', desc:'' },
   fractured:    { title:'Misconception Detected', desc:'Knowledge gap found. Drill again to repair.' },
   hibernating:  { title:'Consolidating…',         desc:'Synaptic lockout enforced. Return tomorrow.' },
   actualized:   { title:'Consolidated',           desc:'Converted into durable understanding.' },

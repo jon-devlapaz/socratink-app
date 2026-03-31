@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "title": "Options Trading Fundamentals",
+    "thesis": "Options are derivative contracts whose fluctuating value is derived strictly from a mathematical relationship between price, time to expiration, and anticipated volatility, offering leveraged asymmetrical risk profiles.",
+    "governing_assumptions": [
+      "A contract binds the seller to an obligation but gives the buyer the 'option' (not obligation) to execute the trade.",
+      "Time actively destroys the extrinsic value of any option contract as expiration approaches."
+    ]
+  },
+  "backbone": [
+    {
+      "id": "b1",
+      "principle": "Leveraged Asymmetry: Buying an option limits the maximum possible loss to the premium paid, while theoretically exposing the buyer to infinite upside during massive asset price swings.",
+      "dependent_clusters": [
+        "c1",
+        "c2"
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "c1",
+      "label": "Contract Mechanics",
+      "subnodes": [
+        {
+          "id": "c1_s1",
+          "label": "Call Options",
+          "mechanism": "A Call contract gives the buyer the right to purchase 100 shares of a stock at a pre-agreed 'Strike Price' before a specific expiration date. If the stock soars far above the strike price, the buyer can execute the contract to buy the shares at the cheaper strike price and immediately sell them at the higher market value for a massive profit.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c1_s2",
+          "label": "Put Options",
+          "mechanism": "A Put contract gives the buyer the right to successfully sell 100 shares of a stock at the pre-agreed Strike Price before expiration, effectively acting as disaster insurance. If the stock unexpectedly crashes to zero, the buyer is still legally allowed to force the seller to buy the shares at the higher agreed strike price.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "label": "Greeks & Velocity",
+      "subnodes": [
+        {
+          "id": "c2_s1",
+          "label": "Theta Decay (Time Value)",
+          "mechanism": "Because an option only holds value based on the probability that the stock will eventually swing past the strike price, the passing of time slowly mathematically guarantees that a swing won't happen. Therefore, 'Theta' continuously subtracts fractional value from the contract's price every single day as the expiration date approaches, eventually causing the contract to expire completely worthless.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    }
+  ],
+  "relationships": {
+    "learning_prerequisites": [
+      {
+        "from": "c1",
+        "to": "c2",
+        "rationale": "Before analyzing how time destroys an option's extrinsic value (Theta), one must understand what internal rights the contract actually holds."
+      }
+    ]
+  },
+  "frameworks": []
+}

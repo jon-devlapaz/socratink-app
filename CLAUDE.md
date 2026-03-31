@@ -32,7 +32,7 @@ The app is pure vanilla HTML/CSS/JavaScript with no build step and no frameworks
 | `public/index.html` | Shell: HTML structure + script/style tags |
 | `public/styles.css` | CSS entry — `@import`s from `public/css/` |
 | `public/js/app.js` | Main `App` IIFE — all UI logic, state machine, data store |
-| `public/js/graph-view.js` | Cytoscape-based knowledge graph + fog-of-war drill integration |
+| `public/js/graph-view.js` | Cytoscape-based knowledge graph; derives `locked` / `drilled` / `solidified` node states from the knowledge map |
 | `public/js/ai_service.js` | `AIService.generateKnowledgeMap()` — calls Python backend |
 | `public/js/store.js` | localStorage CRUD, concept state definitions, transient content store |
 | `public/js/bus.js` | Pub/sub event emitter for cross-section communication |
@@ -53,6 +53,7 @@ The app is pure vanilla HTML/CSS/JavaScript with no build step and no frameworks
 - **24-hour timer** — `setInterval`-based countdown; a hidden dev-skip button (top-right corner, click to reveal) fast-forwards it for demos
 - **Drill UI** — `#drill-ui` panel with `#chat-history` / `#chat-input` for chat-style Socratic drilling
 - **Data persistence** — `localStorage` keys `learnops_concepts` (array of concept objects) and `learnops_active` (selected concept ID); max 4 concepts
+- **Knowledge map as source of truth** — drill outcomes are patched into `concept.graphData` and the graph derives visual state from `drill_status` / `gap_type`, rather than treating Cytoscape state as authoritative
 - **Transient content store** — `contentStore = new Map()` (module-level) holds full text keyed by concept ID; does not survive page reload (intentional)
 
 **`app.js` is organized into 16 numbered sections** (see the table of contents comment near line ~25):
@@ -73,7 +74,12 @@ The app is pure vanilla HTML/CSS/JavaScript with no build step and no frameworks
 15. Timer
 16. Init / restore
 
-**`graph-view.js`** — exports `mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect })` and `transformKnowledgeMapToGraph(rawData)`. Cytoscape-based graph with solar orbit layout, ambient float animation, fog-of-war node states (`locked` → `solidified`), and `SYSTEM_ACTION` parsing for drill-driven node unlocks. Also exports `escHtml()` (shared HTML-escape utility).
+**`graph-view.js`** — exports `mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect })` and `transformKnowledgeMapToGraph(rawData)`. Cytoscape-based graph with solar orbit layout, ambient float animation, and epistemic node states:
+- `locked` — not yet available
+- `drilled` — attempted but not solid
+- `solidified` — verified understanding
+
+Cluster state is derived from subnode drill outcomes. The graph can live-sync from updated knowledge-map data via `syncFromKnowledgeMap(rawData, activeNodeId)`. Also exports `escHtml()` (shared HTML-escape utility).
 
 **`ai_service.js`** — `AIService.generateKnowledgeMap(rawText, onProgress)` — calls the Python backend's `/api/extract` endpoint. Returns the extracted knowledge map JSON.
 
@@ -93,9 +99,15 @@ Two settings are required for AI extraction — both configured via the **Settin
 | Gemini API key | `localStorage` | `gemini_key` |
 | Staging directory handle | IndexedDB | `staging_dir_handle` |
 
-The Gemini model is `gemini-2.5-flash` (constant `MODEL` in `ai_service.py`). The API key is resolved server-side from `GEMINI_API_KEY` env var or the client-provided key in localStorage.
+The Gemini model is `gemini-2.5-flash` (constant `MODEL` in `ai_service.py`). The API key is resolved server-side from `GEMINI_API_KEY` env var or the client-provided key in localStorage via `_get_client()`.
 
 The extraction system prompt is loaded by the Python backend from `learnops/skills/learnops-extract/extract-system-v1.txt`. The drill system prompt is loaded from `learnops/skills/learnops-drill/SKILL.md`.
+
+`/api/drill` now uses a structured request/response contract:
+- request includes `node_id`, `node_label`, `node_mechanism`, `knowledge_map`, `messages`, `session_phase`, `probe_count`, `nodes_drilled`, `session_start_iso`
+- response includes `agent_response`, `classification`, `gap_description`, `routing`, `node_id`, `probe_count`, `nodes_drilled`, `session_terminated`, `termination_reason`
+
+Known design debt: `node_mechanism` still travels from browser to backend on each drill request. There is a TODO in `main.py` to resolve the mechanism server-side from `knowledge_map` + `node_id` instead.
 
 ## Content-First Concept Creation
 
@@ -120,7 +132,7 @@ Drawer → paste/upload content → type name → "Add Concept →" → concept 
 ## Three-Stage Pipeline
 
 1. **Ingest** (at concept creation) — user provides raw content (paste or file upload); concept is born in `growing` state with content stored
-2. **Drill** — Socratic stress-testing; pass keeps `growing`, fail transitions to `fractured` (requires repair before re-drill)
+2. **Drill** — Socratic stress-testing tied to one graph node at a time. Drill outcomes are persisted into the knowledge map and projected onto the graph as `locked` / `drilled` / `solidified`
 3. **Consolidate** — 24-hour sleep-gated hibernation; timer expires → concept becomes `actualized` 💎
 
 > The "Extract" step (clicking "1. Extract" on a card) still exists as a fallback for legacy `instantiated` concepts in old localStorage data. New concepts never need it.
@@ -132,15 +144,15 @@ The biological constraint of hibernation-over-death is intentional: concepts go 
 The Python backend calls the Gemini API via the `google-genai` SDK. Before editing `ai_service.py`, fetch current docs with the `chub` CLI to avoid stale API assumptions:
 
 ```bash
-chub get gemini/genai --lang js        # main Gemini JS reference
-chub get gemini/deep-research --lang js # if working on the Extract deep-research flow
+chub get gemini/genai --lang py         # main Gemini Python reference
+chub get gemini/deep-research --lang py # if working on any research-oriented extract flow
 ```
 
 Common triggers:
-- Changing the model constant `GEMINI_MODEL` → verify the model ID is still valid
-- Modifying the streaming SSE parsing in `performAIExtraction()` → check streaming API shape
-- Adding structured output / response schema enforcement → check `responseSchema` param
-- Wiring drill or consolidate stages to an AI backend → fetch docs for whichever API you use
+- Changing the model constant `MODEL` → verify the model ID is still valid
+- Modifying structured output or response schema enforcement → verify `response_schema` / `response_mime_type`
+- Modifying retry or error handling → verify `google.genai.errors.APIError`
+- Changing prompt construction or client setup → verify the current `google-genai` Python API shape
 
 If you discover a gotcha during work (e.g. a streaming quirk, deprecated param), annotate it so future sessions start smarter:
 ```bash
@@ -157,3 +169,9 @@ The `learnops/` directory contains Claude Agent Skills for each pipeline stage. 
 - Stage 4 (Consolidate) — designed but not yet built.
 
 `learnops/tools/get_transcript.py` — CLI utility to fetch YouTube transcripts as text files (input for Stage 1). Requires `youtube-transcript-api`, `yt-dlp`, `pyperclip`, `rich`.
+
+## Drill-Graph Context Hub
+
+Before changing drill UX, graph UX, or Stage 3 prompt/routing behavior, read [docs/drill-graph-invariants.md](./docs/drill-graph-invariants.md).
+
+That document defines the product invariants for drill-graph lockstep, the dungeon-room mental model, the epistemic state model (`locked` / `drilled` / `solidified`), cluster derivation rules, and the rules for when graph unlocks are allowed.

@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "title": "The Physics of Espresso Extraction",
+    "thesis": "Espresso extraction relies on manipulating high-pressure water through a highly resistant bed of tamped coffee, where variables like grind size and water temperature dictate the solubility and structural breakdown of flavor compounds.",
+    "governing_assumptions": [
+      "Water under pressure naturally seeks the path of least resistance.",
+      "Coffee solubles extract at different rates chronologically: acids and salts first, complex sugars second, and bitter plant fibers last."
+    ]
+  },
+  "backbone": [
+    {
+      "id": "b1",
+      "principle": "Solubility Kinetics: Heat and pressure overcome the physical barrier of the coffee bean's cellular structure, dissolving compounds selectively based on time and surface area.",
+      "dependent_clusters": [
+        "c1",
+        "c2"
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "c1",
+      "label": "Puck Preparation & Hydraulics",
+      "subnodes": [
+        {
+          "id": "c1_s1",
+          "label": "Grind Size vs. Surface Area",
+          "mechanism": "A finer grind increases the total exposed surface area of the coffee particles. This drastically slows the flow of water (increasing resistance) while simultaneously accelerating the rate at which soluble compounds are dissolved into the water.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c1_s2",
+          "label": "Channeling Mechanism",
+          "mechanism": "When water under 9 bars of pressure locates a pocket of lower density (caused by uneven tamping or clumps), it rapidly accelerates through that isolated path. This drastically over-extracts the specific coffee lining that channel, pulling harsh bitter compounds, while leaving the rest of the puck completely under-extracted and sour.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "label": "Thermal Solubility",
+      "subnodes": [
+        {
+          "id": "c2_s1",
+          "label": "Temperature Profiling",
+          "mechanism": "Water that is too hot (e.g., above 96°C) aggressively dissolves the final, heavier compounds in the coffee bean (tannins and plant fibers), producing a harsh, ashy, and bitter flavor. Water that is too cool fails to dissolve the complex sugars mid-extraction, resulting in a sour, overly acidic profile because only the quickly-dissolving acids were pulled.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    }
+  ],
+  "relationships": {
+    "learning_prerequisites": [
+      {
+        "from": "c1",
+        "to": "c2",
+        "rationale": "Water flow dynamics and uniform resistance must be established before temperature adjustments can cleanly isolate flavor compounds."
+      }
+    ]
+  },
+  "frameworks": []
+}

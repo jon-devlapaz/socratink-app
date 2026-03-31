@@ -32,22 +32,49 @@ function shortenLabel(label, maxLength = 32) {
   return compact || text.slice(0, maxLength - 3).trimEnd() + '...';
 }
 
+function generateTeaser(text) {
+  if (!text) return '???';
+  return text.split(/\s+/).map((word) => {
+    if (word.length <= 1) return word;
+    return word.charAt(0) + '•'.repeat(word.length - 1);
+  }).join(' ');
+}
+
 function getBackboneLabel(source) {
   const backbonePrinciple = source?.backbone?.[0]?.principle?.trim();
   const thesis = source?.metadata?.core_thesis?.trim();
   return backbonePrinciple || thesis || source?.metadata?.source_title || 'Core Thesis';
 }
 
-function getBackboneDetail(source) {
-  const thesis = source?.metadata?.core_thesis?.trim();
-  const backbonePrinciple = source?.backbone?.[0]?.principle?.trim();
-  return backbonePrinciple || thesis || 'This node anchors the extracted concept map.';
+function getCoreThesisDetail(source) {
+  const thesis = source?.metadata?.core_thesis?.trim() || source?.metadata?.thesis?.trim();
+  return thesis || 'This node anchors the extracted concept map.';
 }
 
-function drillTone(subnode) {
-  if (subnode?.gap_type) return 'gap';
-  if (subnode?.drill_status) return 'drilled';
-  return 'fresh';
+function deriveNodeState(status, gapType = null) {
+  if (status === 'solid') return 'solidified';
+  if (status || gapType) return 'drilled';
+  return 'locked';
+}
+
+function deriveCoreState(source) {
+  return deriveNodeState(source?.metadata?.drill_status, source?.metadata?.gap_type);
+}
+
+function deriveBackboneState(item) {
+  return deriveNodeState(item?.drill_status, item?.gap_type);
+}
+
+function deriveSubnodeState(subnode) {
+  return deriveNodeState(subnode?.drill_status, subnode?.gap_type);
+}
+
+function deriveClusterState(cluster) {
+  const subnodes = Array.isArray(cluster?.subnodes) ? cluster.subnodes : [];
+  if (!subnodes.length) return 'locked';
+  if (subnodes.every((subnode) => subnode?.drill_status === 'solid')) return 'solidified';
+  if (subnodes.some((subnode) => subnode?.drill_status || subnode?.gap_type)) return 'drilled';
+  return 'locked';
 }
 
 export function transformKnowledgeMapToGraph(rawData) {
@@ -55,61 +82,166 @@ export function transformKnowledgeMapToGraph(rawData) {
   const nodes = [];
   const edges = [];
   const clusters = Array.isArray(source?.clusters) ? source.clusters : [];
+  const backboneItems = Array.isArray(source?.backbone) ? source.backbone : [];
   const relationships = source?.relationships || {};
-  const backboneId = 'core-thesis';
+  const coreId = 'core-thesis';
   const clusterMap = new Map();
+  const coreState = deriveCoreState(source);
+  const coreSolid = source?.metadata?.drill_status === 'solid';
+  const solidBackboneIds = new Set(
+    backboneItems
+      .filter((item) => item?.drill_status === 'solid' && item?.id)
+      .map((item) => item.id)
+  );
+  const clusterToBackbones = new Map();
+  const solidClusterIds = new Set(
+    clusters
+      .filter((cluster) => deriveClusterState(cluster) === 'solidified' && cluster?.id)
+      .map((cluster) => cluster.id)
+  );
+  const incomingPrereqs = new Map();
+
+  backboneItems.forEach((item) => {
+    (item?.dependent_clusters || []).forEach((clusterId) => {
+      const owners = clusterToBackbones.get(clusterId) || [];
+      owners.push(item.id);
+      clusterToBackbones.set(clusterId, owners);
+    });
+  });
+
+  (relationships.learning_prerequisites || []).forEach((rel) => {
+    if (!rel?.to || !rel?.from) return;
+    const reqs = incomingPrereqs.get(rel.to) || [];
+    reqs.push(rel.from);
+    incomingPrereqs.set(rel.to, reqs);
+  });
 
   nodes.push({
     data: {
-      id: backboneId,
-      type: 'backbone',
-      state: 'solidified',
-      label: shortenLabel(getBackboneLabel(source), 40),
-      fullLabel: source?.metadata?.source_title || 'Core Thesis',
-      detail: getBackboneDetail(source),
+      id: coreId,
+      type: 'core',
+      state: coreState,
+      available: 1,
+      label: 'Core Thesis',
+      fullLabel: 'Core Thesis',
+      detail: getCoreThesisDetail(source),
+      drillStatus: source?.metadata?.drill_status || null,
+      gapType: source?.metadata?.gap_type || null,
+      gapDescription: source?.metadata?.gap_description || null,
       weight: 1,
     },
-    classes: 'node-backbone',
+    classes: 'node-core-thesis',
+  });
+
+  backboneItems.forEach((item, index) => {
+    const backboneId = item.id || `backbone-${index + 1}`;
+    const backboneState = deriveBackboneState(item);
+    const backboneAvailable = coreSolid ? 1 : 0;
+    const backboneLabel = shortenLabel(item.principle, 32);
+
+    nodes.push({
+      data: {
+        id: backboneId,
+        type: 'backbone',
+        state: backboneState,
+        available: backboneAvailable,
+        label: backboneLabel,
+        teaserLabel: generateTeaser(backboneLabel),
+        fullLabel: item.principle || `Backbone Principle ${index + 1}`,
+        detail: item.principle || '',
+        dependentClusters: item.dependent_clusters || [],
+        drillStatus: item.drill_status || null,
+        gapType: item.gap_type || null,
+        gapDescription: item.gap_description || null,
+        weight: 0.72,
+      },
+      classes: 'node-backbone',
+    });
+
+    edges.push({
+      data: {
+        id: `struct-${coreId}-${backboneId}`,
+        source: coreId,
+        target: backboneId,
+        type: 'structural',
+        label: 'Backbone branch',
+        description: 'This backbone principle branches from the core thesis.',
+        available: backboneAvailable,
+      },
+      classes: 'edge-structural edge-core-link',
+    });
   });
 
   clusters.forEach((cluster, clusterIndex) => {
     const clusterId = cluster.id || `cluster-${clusterIndex + 1}`;
     clusterMap.set(clusterId, cluster);
+    const ownerBackbones = clusterToBackbones.get(clusterId) || [];
+    const backboneGateOpen = ownerBackbones.length
+      ? ownerBackbones.some((backboneId) => solidBackboneIds.has(backboneId))
+      : coreSolid;
+    const prerequisites = incomingPrereqs.get(clusterId) || [];
+    const prereqGateOpen = prerequisites.every((sourceId) => solidClusterIds.has(sourceId));
+    const clusterAvailable = backboneGateOpen && prereqGateOpen;
+    const clusterLabel = shortenLabel(cluster.label, 28);
 
     nodes.push({
       data: {
         id: clusterId,
         type: 'cluster',
-        state: 'locked',
-        label: shortenLabel(cluster.label, 28),
+        state: deriveClusterState(cluster),
+        available: clusterAvailable ? 1 : 0,
+        label: clusterLabel,
+        teaserLabel: generateTeaser(clusterLabel),
         fullLabel: cluster.label || `Cluster ${clusterIndex + 1}`,
         detail: cluster.description || '',
         orbitLevel: 1,
         subnodeCount: Array.isArray(cluster.subnodes) ? cluster.subnodes.length : 0,
+        ownerBackbones,
       },
       classes: 'node-cluster',
     });
 
-    edges.push({
-      data: {
-        id: `struct-${backboneId}-${clusterId}`,
-        source: backboneId,
-        target: clusterId,
-        type: 'structural',
-        label: 'Backbone branch',
-        description: `This cluster branches directly from the backbone thesis for this map.`,
-      },
-      classes: 'edge-structural',
-    });
+    if (ownerBackbones.length) {
+      ownerBackbones.forEach((backboneId) => {
+        edges.push({
+          data: {
+            id: `struct-${backboneId}-${clusterId}`,
+            source: backboneId,
+            target: clusterId,
+            type: 'structural',
+            label: 'Backbone branch',
+            description: 'This cluster depends on the connected backbone principle.',
+            available: clusterAvailable ? 1 : 0,
+          },
+          classes: 'edge-structural',
+        });
+      });
+    } else {
+      edges.push({
+        data: {
+          id: `struct-${coreId}-${clusterId}`,
+          source: coreId,
+          target: clusterId,
+          type: 'structural',
+          label: 'Backbone branch',
+          description: 'This cluster branches from the core thesis.',
+          available: clusterAvailable ? 1 : 0,
+        },
+        classes: 'edge-structural',
+      });
+    }
 
     (cluster.subnodes || []).forEach((subnode, subIndex) => {
       const subnodeId = subnode.id || `${clusterId}-sub-${subIndex + 1}`;
+      const subnodeLabel = shortenLabel(subnode.label, 24);
       nodes.push({
         data: {
           id: subnodeId,
           type: 'subnode',
-          state: 'locked',
-          label: shortenLabel(subnode.label, 24),
+          state: deriveSubnodeState(subnode),
+          available: clusterAvailable ? 1 : 0,
+          label: subnodeLabel,
+          teaserLabel: generateTeaser(subnodeLabel),
           fullLabel: subnode.label || `Drill Node ${subIndex + 1}`,
           detail: subnode.mechanism || '',
           parentCluster: clusterId,
@@ -118,7 +250,7 @@ export function transformKnowledgeMapToGraph(rawData) {
           gapType: subnode.gap_type,
           gapDescription: subnode.gap_description,
         },
-        classes: `node-subnode tone-${drillTone(subnode)}`,
+        classes: 'node-subnode',
       });
 
       edges.push({
@@ -129,6 +261,7 @@ export function transformKnowledgeMapToGraph(rawData) {
           type: 'structural',
           label: 'Drill branch',
           description: subnode.mechanism || 'This drill node belongs to the selected cluster.',
+          available: clusterAvailable ? 1 : 0,
         },
         classes: 'edge-structural edge-subnode-link',
       });
@@ -145,6 +278,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         type: 'prerequisite',
         label: 'Prerequisite',
         description: rel.rationale || '',
+        available: 1,
       },
       classes: 'edge-lateral edge-prerequisite',
     });
@@ -160,47 +294,115 @@ export function transformKnowledgeMapToGraph(rawData) {
         type: rel.type || 'domain mechanic',
         label: rel.type || 'Domain mechanic',
         description: rel.mechanism || '',
+        available: 1,
       },
       classes: 'edge-lateral edge-domain',
     });
   });
 
-  return { source, nodes, edges, backboneId };
+  return { source, nodes, edges, coreId, backboneIds: backboneItems.map((item, index) => item.id || `backbone-${index + 1}`) };
 }
 
-function detailMarkupForNode(node) {
+function detailMarkupForNode(node, mode = 'inspect') {
   const data = node.data();
-  if (data.type === 'backbone') {
+  const isDrillActive = mode === 'drill-active';
+  const isPostDrill = mode === 'post-drill';
+
+  if (isDrillActive) {
+    const kicker = data.type === 'core'
+      ? 'Core Thesis'
+      : data.type === 'backbone'
+        ? 'Backbone Principle'
+        : data.type === 'cluster'
+          ? 'Cluster Focus'
+          : 'Drill Node';
     return `
-      <div class="graph-detail-kicker">Backbone</div>
+      <div class="graph-detail-kicker">${escHtml(kicker)}</div>
+      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+      <p class="graph-detail-copy">Explain this from memory. The map stays in the background until the drill resolves.</p>
+      <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
+        ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
+        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`re-drill: ${data.gapType}`)}</span>` : ''}
+      </div>
+    `;
+  }
+
+  if (isPostDrill) {
+    const isSolid = data.drillStatus === 'solid';
+    const kicker = data.type === 'core'
+      ? 'Core Thesis Result'
+      : data.type === 'backbone'
+        ? 'Backbone Result'
+        : data.type === 'cluster'
+          ? 'Cluster Result'
+          : 'Drill Result';
+    return `
+      <div class="graph-detail-kicker">${escHtml(kicker)}</div>
+      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+      <p class="graph-detail-copy">${isSolid ? 'Solidified. You rebuilt this from scratch.' : 'Revisit next session.'}</p>
+      <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
+        <span class="graph-detail-pill ${isSolid ? 'success' : ''}">${escHtml(isSolid ? 'Solid' : 'Revisit next session')}</span>
+        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(data.gapType)}</span>` : ''}
+      </div>
+      ${data.gapDescription ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
+      <button class="btn-start-drill trigger-continue" style="width:100%; margin-top: 16px;">Continue</button>
+    `;
+  }
+
+  if (data.type === 'core') {
+    return `
+      <div class="graph-detail-kicker">Core Thesis</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
       <p class="graph-detail-copy">${escHtml(data.detail)}</p>
+      <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
+        ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
+        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
+        ${data.gapDescription ? `<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>` : ''}
+      </div>
+      <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START WITH CORE THESIS</button>
+    `;
+  }
+
+  if (data.type === 'backbone') {
+    return `
+      <div class="graph-detail-kicker">Backbone Principle</div>
+      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+      <p class="graph-detail-copy">${data.available ? escHtml(data.detail) : 'Solidify the core thesis to unlock this backbone branch.'}</p>
+      <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
+        ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
+        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
+        ${data.gapDescription ? `<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>` : ''}
+      </div>
+      ${data.available ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
     `;
   }
 
   const isLocked = data.state === 'locked';
+  const isDrilled = data.state === 'drilled';
+  const isAvailable = Boolean(data.available);
 
   if (data.type === 'cluster') {
     return `
       <div class="graph-detail-kicker">Cluster</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${isLocked ? 'This cluster is locked. Complete the drill to reveal the architectural summary.' : escHtml(data.detail || 'No cluster description available yet.')}</p>
+      <p class="graph-detail-copy">${!isAvailable ? 'Solidify the governing backbone principle to reveal this branch.' : escHtml(data.detail || 'No cluster description available yet.')}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
+        ${isDrilled ? '<span class="graph-detail-pill warning">In progress</span>' : ''}
       </div>
-      ${isLocked ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
     `;
   }
 
   return `
     <div class="graph-detail-kicker">Drill Node</div>
     <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-    <p class="graph-detail-copy">${isLocked ? 'The mechanism here is locked by the Fog of War. Drill to unlock.' : escHtml(data.detail || 'No mechanism extracted for this drill node yet.')}</p>
+    <p class="graph-detail-copy">${!isAvailable ? 'Unlock this cluster branch before drilling this node.' : isLocked ? 'This room is available. Drill it to prove the mechanism from memory.' : escHtml(data.detail || 'No mechanism extracted for this drill node yet.')}</p>
     <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
       ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
       ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
+      ${data.gapDescription ? `<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>` : ''}
     </div>
-    ${isLocked ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
+    ${isAvailable ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
   `;
 }
 
@@ -220,11 +422,26 @@ function detailMarkupForEdge(edge, cy) {
   `;
 }
 
-function setEmptyDetail(detailEl, source) {
+function setEmptyDetail(detailEl, source, mode = 'inspect') {
+  if (mode === 'drill-active') {
+    detailEl.innerHTML = `
+      <div class="graph-detail-kicker">Active Drill</div>
+      <h3 class="graph-detail-title">One node at a time</h3>
+      <p class="graph-detail-copy">Use the chat to reconstruct the active node from memory. The graph will update after the drill outcome lands.</p>
+    `;
+    return;
+  }
+
+  const backboneTitle = escHtml('Core Thesis');
+  const backboneDetail = escHtml(getCoreThesisDetail(source));
   detailEl.innerHTML = `
-    <div class="graph-detail-kicker">Graph View</div>
-    <h3 class="graph-detail-title">Knowledge Architecture</h3>
-    <p class="graph-detail-copy">${escHtml(getBackboneDetail(source))}</p>
+    <div class="graph-detail-kicker">Starting Room</div>
+    <h3 class="graph-detail-title">${backboneTitle}</h3>
+    <p class="graph-detail-copy">${backboneDetail}</p>
+    <div class="graph-detail-meta">
+      <span class="graph-detail-pill">Core thesis first</span>
+    </div>
+    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START WITH CORE THESIS</button>
   `;
 }
 
@@ -258,38 +475,59 @@ function clearGraphFocus(cy) {
   cy.elements().removeClass('is-focus-target');
 }
 
-function installHoverFocus(cy, detailEl) {
+function installHoverFocus(cy, detailEl, getInteractionMode) {
   cy.on('mouseover', 'node, edge', (event) => {
+    if (getInteractionMode() === 'drill-active') return;
     applyGraphFocus(cy, event.target);
+    if (getInteractionMode() !== 'inspect') return;
     detailEl.innerHTML = event.target.isNode()
       ? detailMarkupForNode(event.target)
       : detailMarkupForEdge(event.target, cy);
   });
 
   cy.on('mouseout', 'node, edge', () => {
+    if (getInteractionMode() === 'drill-active') return;
     clearGraphFocus(cy);
   });
 }
 
-function installSelection(cy, detailEl, source, onNodeSelect) {
+function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onContinue, getInteractionMode, setInteractionMode, setSelectedElement) {
   cy.on('tap', 'node', (event) => {
+    setSelectedElement({ type: 'node', id: event.target.id() });
+    if (getInteractionMode() === 'drill-active') return;
+    if (getInteractionMode() === 'post-drill') {
+      setInteractionMode('inspect');
+    }
     detailEl.innerHTML = detailMarkupForNode(event.target);
+    const data = event.target.data();
     const drillBtn = detailEl.querySelector('.trigger-drill');
     if (drillBtn) {
       drillBtn.addEventListener('click', () => {
-        onNodeSelect?.(event.target.data());
+        onNodeSelect?.(data);
       });
     }
   });
 
   cy.on('tap', 'edge', (event) => {
+    setSelectedElement({ type: 'edge', id: event.target.id() });
+    if (getInteractionMode() === 'drill-active') return;
+    if (getInteractionMode() === 'post-drill') {
+      setInteractionMode('inspect');
+    }
     detailEl.innerHTML = detailMarkupForEdge(event.target, cy);
   });
 
   cy.on('tap', (event) => {
     if (event.target === cy) {
+      setSelectedElement({ type: 'node', id: defaultNodeId });
       clearGraphFocus(cy);
+      if (getInteractionMode() === 'drill-active') return;
+      if (getInteractionMode() === 'post-drill') {
+        setInteractionMode('inspect');
+      }
       setEmptyDetail(detailEl, source);
+      const drillBtn = detailEl.querySelector('.trigger-drill');
+      if (drillBtn) drillBtn.addEventListener('click', () => onNodeSelect?.(null));
     }
   });
 }
@@ -320,31 +558,47 @@ function installDragBehavior(cy) {
 
 function calculateSolarPositions(cy, center) {
   const positions = {};
+  const backboneNodes = cy.nodes('.node-backbone');
   const clusterNodes = cy.nodes('.node-cluster');
   const subnodeNodes = cy.nodes('.node-subnode');
-  const clusterCount = Math.max(clusterNodes.length, 1);
-  const clusterRadius = Math.max(120, Math.min(220, 110 + clusterCount * 10));
+  const backboneCount = Math.max(backboneNodes.length, 1);
+  const backboneRadius = Math.max(110, Math.min(170, 90 + backboneCount * 18));
 
   positions['core-thesis'] = { x: center.x, y: center.y };
 
-  clusterNodes.forEach((clusterNode, clusterIndex) => {
-    const clusterAngle = (-Math.PI / 2) + (Math.PI * 2 * clusterIndex) / clusterCount;
-    const clusterX = center.x + Math.cos(clusterAngle) * clusterRadius;
-    const clusterY = center.y + Math.sin(clusterAngle) * clusterRadius;
+  backboneNodes.forEach((backboneNode, backboneIndex) => {
+    const backboneAngle = (-Math.PI / 2) + (Math.PI * 2 * backboneIndex) / backboneCount;
+    const backboneX = center.x + Math.cos(backboneAngle) * backboneRadius;
+    const backboneY = center.y + Math.sin(backboneAngle) * backboneRadius;
+    positions[backboneNode.id()] = { x: backboneX, y: backboneY };
 
-    positions[clusterNode.id()] = { x: clusterX, y: clusterY };
+    const ownedClusters = clusterNodes.filter((clusterNode) => {
+      const owners = clusterNode.data('ownerBackbones') || [];
+      return owners.includes(backboneNode.id());
+    });
+    const ownedCount = ownedClusters.length;
+    if (!ownedCount) return;
 
-    const satellites = subnodeNodes.filter((subnode) => subnode.data('parentCluster') === clusterNode.id());
-    const satelliteCount = satellites.length;
-    if (!satelliteCount) return;
+    const clusterRadius = Math.max(88, Math.min(132, 78 + ownedCount * 8));
+    ownedClusters.forEach((clusterNode, clusterIndex) => {
+      const spread = ownedCount === 1 ? 0 : ((clusterIndex / (ownedCount - 1)) - 0.5) * 1.1;
+      const clusterAngle = backboneAngle + spread;
+      const clusterX = backboneX + Math.cos(clusterAngle) * clusterRadius;
+      const clusterY = backboneY + Math.sin(clusterAngle) * clusterRadius;
+      positions[clusterNode.id()] = { x: clusterX, y: clusterY };
 
-    const localRadius = Math.max(42, Math.min(76, 34 + satelliteCount * 4));
-    satellites.forEach((subnode, subIndex) => {
-      const subAngle = clusterAngle + (Math.PI * 2 * subIndex) / satelliteCount;
-      positions[subnode.id()] = {
-        x: clusterX + Math.cos(subAngle) * localRadius,
-        y: clusterY + Math.sin(subAngle) * localRadius,
-      };
+      const satellites = subnodeNodes.filter((subnode) => subnode.data('parentCluster') === clusterNode.id());
+      const satelliteCount = satellites.length;
+      if (!satelliteCount) return;
+
+      const localRadius = Math.max(42, Math.min(76, 34 + satelliteCount * 4));
+      satellites.forEach((subnode, subIndex) => {
+        const subAngle = clusterAngle + (Math.PI * 2 * subIndex) / satelliteCount;
+        positions[subnode.id()] = {
+          x: clusterX + Math.cos(subAngle) * localRadius,
+          y: clusterY + Math.sin(subAngle) * localRadius,
+        };
+      });
     });
   });
 
@@ -394,8 +648,8 @@ function installAmbientFloat(cy) {
         }
 
         const phase = index * 0.9;
-        const amplitudeX = node.hasClass('node-backbone') ? 2.6 : node.hasClass('node-cluster') ? 2.1 : 1.6;
-        const amplitudeY = node.hasClass('node-backbone') ? 3.8 : node.hasClass('node-cluster') ? 3.0 : 2.2;
+        const amplitudeX = node.hasClass('node-core-thesis') ? 2.6 : node.hasClass('node-backbone') ? 2.2 : node.hasClass('node-cluster') ? 2.1 : 1.6;
+        const amplitudeY = node.hasClass('node-core-thesis') ? 3.8 : node.hasClass('node-backbone') ? 3.2 : node.hasClass('node-cluster') ? 3.0 : 2.2;
         node.position({
           x: base.x + Math.sin(time * 0.72 + phase) * amplitudeX,
           y: base.y + Math.cos(time * 0.58 + phase) * amplitudeY,
@@ -438,7 +692,7 @@ function installAmbientFloat(cy) {
   };
 }
 
-export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect }) {
+export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect, onContinue }) {
   if (!container || !detailEl) return null;
 
   if (typeof window === 'undefined' || typeof window.cytoscape !== 'function') {
@@ -456,6 +710,8 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
 
   container.innerHTML = '';
   setEmptyDetail(detailEl, transformed.source);
+  const emptyDrillBtn = detailEl.querySelector('.trigger-drill');
+  if (emptyDrillBtn) emptyDrillBtn.addEventListener('click', () => onNodeSelect?.(null));
 
   const cy = window.cytoscape({
     container,
@@ -490,13 +746,23 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         },
       },
       {
-        selector: '.node-backbone',
+        selector: '.node-core-thesis',
         style: {
           width: 72,
           height: 72,
           'font-size': 12,
           'text-max-width': 200,
           'text-margin-y': 22,
+        },
+      },
+      {
+        selector: '.node-backbone',
+        style: {
+          width: 42,
+          height: 42,
+          'font-size': 10,
+          'text-max-width': 120,
+          'text-margin-y': 18,
         },
       },
       {
@@ -520,17 +786,31 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         },
       },
       {
-        selector: 'node[state = "locked"]',
+        selector: 'node[state = "locked"][available = 0]',
         style: {
           'background-color': 'rgba(255,255,255,0.18)',
           'border-color': 'rgba(124,111,205,0.18)',
           'border-style': 'dashed',
-          opacity: 0.28,
-          label: '',
-          color: 'rgba(66,60,88,0.08)',
-          'text-opacity': 0,
+          opacity: 0.35,
+          label: 'data(teaserLabel)',
+          color: 'rgba(66,60,88,0.5)',
+          'text-opacity': 0.8,
           'overlay-opacity': 0,
           events: 'no',
+        },
+      },
+      {
+        selector: 'node[state = "locked"][available = 1]',
+        style: {
+          'background-color': 'rgba(255,255,255,0.85)',
+          'border-color': 'rgba(124,111,205,0.42)',
+          'border-style': 'solid',
+          opacity: 0.9,
+          label: 'data(label)',
+          color: '#6d64a6',
+          'text-opacity': 0.92,
+          'overlay-opacity': 0.03,
+          events: 'yes',
         },
       },
       {
@@ -544,6 +824,19 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
           color: '#7c6fcd',
           'text-opacity': 1,
           'overlay-opacity': 0.06,
+        },
+      },
+      {
+        selector: 'node[state = "drilled"]',
+        style: {
+          'background-color': '#d9a14a',
+          'border-color': '#e5be78',
+          'border-style': 'solid',
+          opacity: 0.95,
+          label: 'data(label)',
+          color: '#8f5f16',
+          'text-opacity': 1,
+          'overlay-opacity': 0.04,
         },
       },
       {
@@ -562,20 +855,6 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         },
       },
       {
-        selector: '.tone-drilled',
-        style: {
-          'background-color': '#f1edff',
-          'border-color': '#7c6fcd',
-        },
-      },
-      {
-        selector: '.tone-gap',
-        style: {
-          'background-color': '#fff0f3',
-          'border-color': '#d9677d',
-        },
-      },
-      {
         selector: 'edge',
         style: {
           width: 1.4,
@@ -585,6 +864,18 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
           opacity: 0.85,
           'transition-property': 'opacity, line-color, width',
           'transition-duration': '180ms',
+        },
+      },
+      {
+        selector: 'edge[available = 0]',
+        style: {
+          opacity: 0.08,
+        },
+      },
+      {
+        selector: 'edge[available = 1]',
+        style: {
+          opacity: 0.78,
         },
       },
       {
@@ -635,6 +926,31 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         },
       },
       {
+        selector: '.is-drill-muted',
+        style: {
+          opacity: 0.05,
+          'text-opacity': 0,
+          events: 'no',
+          'background-color': '#e2e2e2',
+          'line-color': 'rgba(200, 200, 200, 0.1)',
+          'target-arrow-color': 'rgba(200, 200, 200, 0.1)',
+        },
+      },
+      {
+        selector: '.is-drill-context',
+        style: {
+          opacity: 0.44,
+          'text-opacity': 0.22,
+        },
+      },
+      {
+        selector: '.is-drill-prereq',
+        style: {
+          opacity: 0.52,
+          'text-opacity': 0.34,
+        },
+      },
+      {
         selector: '.is-focus-target',
         style: {
           'text-opacity': 1,
@@ -644,12 +960,14 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         selector: '.is-active-drill',
         style: {
           'border-color': '#7c6fcd',
-          'border-width': 3,
+          'border-width': 4,
           'background-color': '#f3efff',
+          opacity: 1,
+          'z-index': 9999,
           'overlay-color': '#7c6fcd',
           'overlay-opacity': 0.12,
           'overlay-padding': 16,
-          'text-opacity': 0.08,
+          'text-opacity': 1,
         },
       },
       {
@@ -675,16 +993,112 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   });
 
   const ambientFloat = installAmbientFloat(cy);
+  let destroyed = false;
+  let entryTimeoutId = null;
+  let updateTimeoutId = null;
+  let interactionMode = 'inspect';
+  let selectedElement = { type: 'node', id: transformed.coreId };
+
+  const clearDrillContext = () => {
+    cy.elements().removeClass('is-drill-muted');
+    cy.elements().removeClass('is-drill-context');
+    cy.elements().removeClass('is-drill-prereq');
+    cy.elements().removeClass('is-active-drill');
+  };
+
+  const applyDrillContext = (nodeId) => {
+    clearDrillContext();
+    clearGraphFocus(cy);
+    if (!nodeId) return;
+
+    const activeNode = cy.getElementById(nodeId);
+    if (!activeNode.length) return;
+
+    cy.batch(() => {
+      cy.elements().addClass('is-drill-muted');
+      activeNode.removeClass('is-drill-muted').addClass('is-active-drill');
+
+      const anchorNode = activeNode.data('type') === 'subnode' && activeNode.data('parentCluster')
+        ? cy.getElementById(activeNode.data('parentCluster'))
+        : activeNode;
+
+      if (anchorNode.length && anchorNode.id() !== activeNode.id()) {
+        anchorNode.removeClass('is-drill-muted').addClass('is-drill-context');
+      }
+
+      const structuralEdges = activeNode.connectedEdges('.edge-subnode-link');
+      structuralEdges.removeClass('is-drill-muted').addClass('is-drill-context');
+
+      const prerequisiteEdges = cy.edges('.edge-prerequisite').filter((edge) => (
+        edge.data('source') === anchorNode.id() || edge.data('target') === anchorNode.id()
+      ));
+      prerequisiteEdges.removeClass('is-drill-muted').addClass('is-drill-prereq');
+      prerequisiteEdges.connectedNodes().removeClass('is-drill-muted').addClass('is-drill-prereq');
+    });
+  };
+
+  const renderCurrentDetail = () => {
+    if (interactionMode === 'drill-active') {
+      const activeId = selectedElement.type === 'node' && selectedElement.id ? selectedElement.id : transformed.coreId;
+      const activeNode = cy.getElementById(activeId);
+      if (activeNode.length) {
+        detailEl.innerHTML = detailMarkupForNode(activeNode, 'drill-active');
+      } else {
+        setEmptyDetail(detailEl, transformed.source, 'drill-active');
+      }
+      return;
+    }
+
+    if (interactionMode === 'post-drill') {
+      const activeId = selectedElement.type === 'node' && selectedElement.id ? selectedElement.id : transformed.coreId;
+      const activeNode = cy.getElementById(activeId);
+      if (activeNode.length) {
+        detailEl.innerHTML = detailMarkupForNode(activeNode, 'post-drill');
+        const continueBtn = detailEl.querySelector('.trigger-continue');
+        if (continueBtn) continueBtn.addEventListener('click', () => onContinue?.());
+      } else {
+        setEmptyDetail(detailEl, transformed.source, 'inspect');
+      }
+      return;
+    }
+
+    if (selectedElement.type === 'node' && selectedElement.id) {
+      const node = cy.getElementById(selectedElement.id);
+      if (node.length) {
+        detailEl.innerHTML = detailMarkupForNode(node, 'inspect');
+        const data = node.data();
+        const drillBtn = detailEl.querySelector('.trigger-drill');
+        if (drillBtn) {
+          drillBtn.addEventListener('click', () => onNodeSelect?.(data));
+        }
+        return;
+      }
+    }
+
+    if (selectedElement.type === 'edge' && selectedElement.id) {
+      const edge = cy.getElementById(selectedElement.id);
+      if (edge.length) {
+        detailEl.innerHTML = detailMarkupForEdge(edge, cy);
+        return;
+      }
+    }
+
+    setEmptyDetail(detailEl, transformed.source, 'inspect');
+    const drillBtn = detailEl.querySelector('.trigger-drill');
+    if (drillBtn) drillBtn.addEventListener('click', () => onNodeSelect?.(null));
+  };
 
   const renderOrbit = (animate = false) => {
+    if (destroyed) return;
     const center = getCenter();
-    const rootNode = cy.getElementById(transformed.backboneId);
+    const rootNode = cy.getElementById(transformed.coreId);
     if (rootNode.length) rootNode.position(center);
     const positions = calculateSolarPositions(cy, center);
 
     if (animate) {
       applyEntryAnimation(cy, center);
       requestAnimationFrame(() => {
+        if (destroyed) return;
         cy.nodes().forEach((node, index) => {
           const target = positions[node.id()] || center;
           node.animate(
@@ -699,7 +1113,8 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
           );
         });
       });
-      window.setTimeout(() => {
+      entryTimeoutId = window.setTimeout(() => {
+        if (destroyed) return;
         cy.nodes().removeClass('is-entering');
         ambientFloat.captureBasePositions();
         cy.fit(cy.elements(), 50);
@@ -714,13 +1129,39 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     cy.fit(cy.elements(), 50);
   };
 
-  installHoverFocus(cy, detailEl);
-  installSelection(cy, detailEl, transformed.source, onNodeSelect);
+  installHoverFocus(cy, detailEl, () => interactionMode);
+  installSelection(
+    cy,
+    detailEl,
+    transformed.source,
+    transformed.coreId,
+    onNodeSelect,
+    onContinue,
+    () => interactionMode,
+    (nextMode) => {
+      interactionMode = nextMode;
+      const graphDetail = detailEl.closest('.graph-detail');
+      if (graphDetail) {
+        graphDetail.classList.toggle('is-drill-active', interactionMode === 'drill-active');
+        graphDetail.classList.toggle('is-post-drill', interactionMode === 'post-drill');
+      }
+      if (interactionMode === 'drill-active') {
+        applyDrillContext(selectedElement.id);
+      } else {
+        clearDrillContext();
+      }
+    },
+    (nextSelected) => {
+      selectedElement = nextSelected;
+    }
+  );
   installDragBehavior(cy);
 
-  const root = cy.getElementById(transformed.backboneId);
+  const root = cy.getElementById(transformed.coreId);
   if (root.length) {
-    detailEl.innerHTML = detailMarkupForNode(root);
+    renderCurrentDetail();
+  } else {
+    setEmptyDetail(detailEl, transformed.source, 'inspect');
   }
 
   renderOrbit(true);
@@ -728,6 +1169,9 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
 
   return {
     destroy() {
+      destroyed = true;
+      if (entryTimeoutId) window.clearTimeout(entryTimeoutId);
+      if (updateTimeoutId) window.clearTimeout(updateTimeoutId);
       ambientFloat.destroy();
       cy.destroy();
     },
@@ -735,7 +1179,27 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       cy.nodes().removeClass('is-active-drill');
       if (!nodeId) return;
       const node = cy.getElementById(nodeId);
-      if (node.length) node.addClass('is-active-drill');
+      if (node.length) {
+        selectedElement = { type: 'node', id: nodeId };
+        node.addClass('is-active-drill');
+      }
+    },
+    setInteractionMode(mode = 'inspect', nodeId = null) {
+      interactionMode = mode === 'drill-active' ? 'drill-active' : mode === 'post-drill' ? 'post-drill' : 'inspect';
+      const graphDetail = detailEl.closest('.graph-detail');
+      if (graphDetail) {
+        graphDetail.classList.toggle('is-drill-active', interactionMode === 'drill-active');
+        graphDetail.classList.toggle('is-post-drill', interactionMode === 'post-drill');
+      }
+      if (nodeId) {
+        selectedElement = { type: 'node', id: nodeId };
+      }
+      if (interactionMode === 'drill-active') {
+        applyDrillContext(selectedElement.id);
+      } else {
+        clearDrillContext();
+      }
+      renderCurrentDetail();
     },
     updateNodeState(nodeId, newState) {
       const node = cy.getElementById(nodeId);
@@ -769,13 +1233,70 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
 
       bloomLayout.run();
 
-      window.setTimeout(() => {
+      updateTimeoutId = window.setTimeout(() => {
+        if (destroyed) return;
         ambientFloat.captureBasePositions();
         cy.fit(cy.elements(), 50);
       }, 1000);
     },
     clearActiveDrillNode() {
       cy.nodes().removeClass('is-active-drill');
+      interactionMode = 'inspect';
+      const graphDetail = detailEl.closest('.graph-detail');
+      if (graphDetail) {
+        graphDetail.classList.remove('is-drill-active');
+        graphDetail.classList.remove('is-post-drill');
+      }
+      clearDrillContext();
+      renderCurrentDetail();
+    },
+    syncFromKnowledgeMap(rawData, activeNodeId = null) {
+      const next = transformKnowledgeMapToGraph(rawData);
+      let changed = false;
+
+      cy.batch(() => {
+        next.nodes.forEach((nextNode) => {
+          const node = cy.getElementById(nextNode.data.id);
+          if (!node.length) return;
+
+          if (node.data('state') !== nextNode.data.state) {
+            changed = true;
+          }
+
+          Object.entries(nextNode.data).forEach(([key, value]) => {
+            node.data(key, value);
+          });
+          node.classes(nextNode.classes);
+          if (activeNodeId && nextNode.data.id === activeNodeId) {
+            node.addClass('is-active-drill');
+          }
+        });
+      });
+
+      renderCurrentDetail();
+
+      if (changed) {
+        const bloomLayout = cy.layout({
+          name: 'cose',
+          animate: true,
+          animationDuration: 700,
+          fit: false,
+          padding: 40,
+          randomize: false,
+          componentSpacing: 80,
+          nodeRepulsion: 9000,
+          idealEdgeLength: (edge) => edge.hasClass('edge-subnode-link') ? 55 : 120,
+          edgeElasticity: (edge) => edge.hasClass('edge-subnode-link') ? 0.18 : 0.08,
+          gravity: 0.12,
+          numIter: 300,
+          initialTemp: 60,
+          coolingFactor: 0.95,
+          minTemp: 1.0,
+        });
+        bloomLayout.run();
+      }
+
+      ambientFloat.captureBasePositions();
     },
     resize() {
       renderOrbit(false);
