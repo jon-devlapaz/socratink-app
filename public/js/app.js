@@ -164,6 +164,16 @@ const App = (() => {
     scheduleTutorialRefresh();
   }
 
+  function isYouTubeUrl(value) {
+    try {
+      const parsed = new URL(value);
+      const host = parsed.hostname.toLowerCase();
+      return host.includes('youtube.com') || host.includes('youtu.be') || host.includes('youtube-nocookie.com');
+    } catch {
+      return false;
+    }
+  }
+
   // ── 12. CRUD ───────────────────────────────────────────────
   function buildContentInputUI(container, { onSubmit, onCancel, showNameField, showClipboard }) {
     let uploadedText = '';
@@ -172,16 +182,6 @@ const App = (() => {
     let fetchedUrlTitle = '';
     let fetchedUrl = '';
     let activeTab = 'paste';
-
-    function isYouTubeUrl(value) {
-      try {
-        const parsed = new URL(value);
-        const host = parsed.hostname.toLowerCase();
-        return host.includes('youtube.com') || host.includes('youtu.be') || host.includes('youtube-nocookie.com');
-      } catch {
-        return false;
-      }
-    }
 
     container.innerHTML = `
       <div class="overlay-tabs" style="margin-bottom:12px;">
