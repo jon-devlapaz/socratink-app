@@ -51,6 +51,34 @@ function getCoreThesisDetail(source) {
   return thesis || 'This node anchors the extracted concept map.';
 }
 
+function getInspectPrompt(data) {
+  if (!data) return 'Start here and rebuild the mechanism from memory.';
+
+  if (data.type === 'core') {
+    return 'What governing idea explains how this whole system behaves? Start here, then prove it from memory.';
+  }
+
+  if (data.type === 'backbone') {
+    return data.available
+      ? 'What principle governs this branch, and why does the rest of this territory depend on it?'
+      : 'Solidify the core thesis first to reveal this backbone branch.';
+  }
+
+  if (data.type === 'cluster') {
+    return data.available
+      ? 'This branch is open. The drill happens inside its rooms, not in the container itself.'
+      : 'Clear the governing dependencies to reveal this branch.';
+  }
+
+  if (data.type === 'subnode') {
+    return data.available
+      ? 'This room is available. Can you reconstruct the mechanism from memory before entering the drill?'
+      : 'Unlock this branch before drilling this room.';
+  }
+
+  return 'Choose a reachable room and rebuild it from memory.';
+}
+
 function deriveNodeState(status, gapType = null) {
   if (status === 'solid') return 'solidified';
   if (status || gapType) return 'drilled';
@@ -353,7 +381,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
     return `
       <div class="graph-detail-kicker">Core Thesis</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${escHtml(data.detail)}</p>
+      <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
         ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
@@ -367,7 +395,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
     return `
       <div class="graph-detail-kicker">Backbone Principle</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${data.available ? escHtml(data.detail) : 'Solidify the core thesis to unlock this backbone branch.'}</p>
+      <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
         ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
@@ -385,7 +413,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
     return `
       <div class="graph-detail-kicker">Cluster</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${!isAvailable ? 'Solidify the governing backbone principle to reveal this branch.' : escHtml(data.detail || 'No cluster description available yet.')}</p>
+      <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
         ${isDrilled ? '<span class="graph-detail-pill warning">In progress</span>' : ''}
@@ -396,7 +424,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
   return `
     <div class="graph-detail-kicker">Drill Node</div>
     <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-    <p class="graph-detail-copy">${!isAvailable ? 'Unlock this cluster branch before drilling this node.' : isLocked ? 'This room is available. Drill it to prove the mechanism from memory.' : escHtml(data.detail || 'No mechanism extracted for this drill node yet.')}</p>
+    <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
     <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
       ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
       ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
@@ -433,11 +461,11 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
   }
 
   const backboneTitle = escHtml('Core Thesis');
-  const backboneDetail = escHtml(getCoreThesisDetail(source));
+  const starterPrompt = escHtml('What governing idea explains how this whole system behaves? Start here, then prove it from memory.');
   detailEl.innerHTML = `
     <div class="graph-detail-kicker">Starting Room</div>
     <h3 class="graph-detail-title">${backboneTitle}</h3>
-    <p class="graph-detail-copy">${backboneDetail}</p>
+    <p class="graph-detail-copy">${starterPrompt}</p>
     <div class="graph-detail-meta">
       <span class="graph-detail-pill">Core thesis first</span>
     </div>

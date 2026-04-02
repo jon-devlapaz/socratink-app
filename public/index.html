@@ -13,12 +13,21 @@
   <link rel="icon" type="image/png" href="/favicon.png?v=4">
   <link rel="apple-touch-icon" href="/favicon.png?v=4">
   <link rel="shortcut icon" href="/favicon.png?v=4">
-  <link rel="stylesheet" href="styles.css?v=5">
+  <link rel="stylesheet" href="styles.css?v=11">
 </head>
 
 <body>
-
-
+  <script>
+    try {
+      if (localStorage.getItem('learnops-theme') === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        document.body.classList.add('night');
+        document.body.dataset.theme = 'dark';
+      }
+    } catch (err) {
+      console.warn('Theme preload skipped.', err);
+    }
+  </script>
 
 
   <!-- Backdrop (mobile only) -->
@@ -71,16 +80,54 @@
           </svg>
         </button>
       </div>
-      <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
+      <div class="main-header-right">
+        <button class="theme-toggle" id="theme-toggle" type="button" onclick="App.toggleTheme()"
+          aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+          <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="4.5"></circle>
+              <path d="M12 2.5v3"></path>
+              <path d="M12 18.5v3"></path>
+              <path d="M4.9 4.9l2.1 2.1"></path>
+              <path d="M17 17l2.1 2.1"></path>
+              <path d="M2.5 12h3"></path>
+              <path d="M18.5 12h3"></path>
+              <path d="M4.9 19.1L7 17"></path>
+              <path d="M17 7l2.1-2.1"></path>
+            </svg>
+          </span>
+          <span class="theme-toggle-track" aria-hidden="true">
+            <span class="theme-toggle-thumb"></span>
+          </span>
+          <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
+              <path d="M18 5.2v2.1"></path>
+              <path d="M16.95 6.25h2.1"></path>
+            </svg>
+          </span>
+        </button>
+        <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
+      </div>
     </header>
 
     <!-- Hero card: concept info left, crystal grid right -->
     <section class="hero-card">
 
       <div class="hero-info" id="hero-info">
-        <div class="concept-label" id="concept-label"></div>
-        <h2 id="title">socraTink</h2>
-        <p class="desc" id="desc">Add a socraTink to begin your growth.</p>
+        <div class="hero-meta-row">
+          <div class="concept-label" id="concept-label">Dashboard</div>
+          <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
+        </div>
+        <h1 class="hero-title" id="title">Add your first socraTink</h1>
+        <p class="desc hero-guidance" id="desc">Create a concept to start building your board.</p>
+        <div class="hero-actions">
+          <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
+            Add Concept
+          </button>
+        </div>
         <div id="timer-display">24:00:00</div>
 
         <!-- Action Controls (Hidden for Board-First UX) -->
@@ -179,7 +226,7 @@
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=11"></script>
+  <script type="module" src="js/app.js?v=15"></script>
 </body>
 
 </html>

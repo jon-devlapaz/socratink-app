@@ -2,19 +2,37 @@
 #grid-container {
   width:280px;
   margin: 10px auto 16px;
+  isolation: isolate;
+}
+#grid-container::before {
+  content: "";
+  position: absolute;
+  inset: 4px 10px 14px;
+  border-radius: 32px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--theme-transition-ms) var(--theme-transition-ease);
+}
+#grid-container::before {
+  background:
+    radial-gradient(circle at 50% 34%, rgba(var(--lavender-500-rgb), 0.16), transparent 40%),
+    radial-gradient(circle at 46% 58%, rgba(var(--violet-600-rgb), 0.10), transparent 54%);
+  filter: blur(16px);
 }
 #grid-svg {
   display:block;
   overflow:visible;
+  position: relative;
+  z-index: 1;
 }
 .tile-group {
   pointer-events:all;
 }
 
 /* Tile polygons */
-.tile-left  { fill:var(--tile-left);  transition:fill 0.6s ease; }
-.tile-right { fill:var(--tile-right); transition:fill 0.6s ease; }
-.tile-top   { fill:var(--tile-top);   transition:fill 0.6s ease; }
+.tile-left  { fill:var(--tile-left);  transition:fill var(--theme-transition-ms) var(--theme-transition-ease); }
+.tile-right { fill:var(--tile-right); transition:fill var(--theme-transition-ms) var(--theme-transition-ease); }
+.tile-top   { fill:var(--tile-top);   transition:fill var(--theme-transition-ms) var(--theme-transition-ease); }
 
 /* Click-catch polygon on each tile */
 .tile-hit {
@@ -29,21 +47,24 @@
   stroke:var(--primary);
   stroke-width:2.5;
   opacity:0;
-  transition:opacity 0.25s ease, stroke 0.6s ease;
+  transition:opacity 0.25s ease, stroke var(--theme-transition-ms) var(--theme-transition-ease);
   pointer-events:none;
 }
 .tile-group.selected .tile-highlight { opacity:1; }
 
 /* Empty slot */
 .tile-group.empty .tile-left,
-.tile-group.empty .tile-right { opacity:0.35; }
-.tile-group.empty .tile-top   { fill:none; }
+.tile-group.empty .tile-right { opacity:0.48; }
+.tile-group.empty .tile-top-empty {
+  fill: rgba(var(--mauve-200-rgb), 0.24);
+  transition: fill var(--theme-transition-ms) var(--theme-transition-ease), opacity var(--theme-transition-ms) var(--theme-transition-ease);
+}
 .tile-group.empty .tile-top-dash {
   fill:none;
   stroke:var(--locked);
   stroke-width:1.5;
   stroke-dasharray:4 3;
-  opacity:0.4;
+  opacity:0.58;
 }
 .tile-group.empty .tile-hit { cursor:default; }
 
@@ -55,70 +76,163 @@
 /* Animation wrapper — receives keyframe animation classes */
 .crystal-anim { transition: opacity 0.3s ease; }
 
+@media (prefers-reduced-motion: reduce) {
+  .tile-left,
+  .tile-right,
+  .tile-top,
+  .tile-highlight,
+  .crystal-instance polygon {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
+
+body.night .tile-group.empty .tile-left,
+body.night .tile-group.empty .tile-right,
+body[data-theme="dark"] .tile-group.empty .tile-left,
+body[data-theme="dark"] .tile-group.empty .tile-right {
+  opacity: 0.66;
+}
+body.night .tile-group.empty .tile-top-empty,
+body[data-theme="dark"] .tile-group.empty .tile-top-empty {
+  fill: rgba(var(--lavender-500-rgb), 0.14);
+}
+body.night #grid-container::before,
+body[data-theme="dark"] #grid-container::before {
+  opacity: 0.7;
+}
+body.night .tile-group:not(.empty),
+body[data-theme="dark"] .tile-group:not(.empty) {
+  filter: drop-shadow(0 10px 16px rgba(11, 9, 24, 0.20));
+}
+body.night .tile-group:not(.empty) .tile-top,
+body[data-theme="dark"] .tile-group:not(.empty) .tile-top {
+  filter: brightness(1.06);
+}
+body.night .tile-group.empty .tile-top-dash,
+body[data-theme="dark"] .tile-group.empty .tile-top-dash {
+  opacity: 0.82;
+  stroke-width: 1.8;
+}
+body.night .tile-group.selected .tile-highlight,
+body[data-theme="dark"] .tile-group.selected .tile-highlight {
+  stroke-width: 3;
+  filter: drop-shadow(0 0 10px rgba(var(--lavender-500-rgb), 0.18));
+}
+
 /* ── 5. Crystal state color selectors ────────────────────── */
-.crystal-instance[data-state="instantiated"] .cp-top         { fill:hsl(270,20%,68%); }
-.crystal-instance[data-state="instantiated"] .cp-upper-left  { fill:hsl(270,18%,55%); }
-.crystal-instance[data-state="instantiated"] .cp-upper-right { fill:hsl(270,16%,46%); }
-.crystal-instance[data-state="instantiated"] .cp-lower-left  { fill:hsl(270,16%,46%); }
-.crystal-instance[data-state="instantiated"] .cp-lower-right { fill:hsl(270,14%,38%); }
-.crystal-instance[data-state="instantiated"] .cp-bottom-tip  { fill:hsl(270,14%,38%); }
-.crystal-instance[data-state="instantiated"] .cp-specular    { fill:hsl(270,30%,85%); opacity:0.35; }
-.crystal-instance[data-state="instantiated"] .cp-glow        { fill:hsl(270,20%,60%); opacity:0.10; }
+.crystal-instance[data-state="instantiated"] .cp-top         { fill:var(--crystal-instantiated-top); }
+.crystal-instance[data-state="instantiated"] .cp-upper-left  { fill:var(--crystal-instantiated-upper-left); }
+.crystal-instance[data-state="instantiated"] .cp-upper-right { fill:var(--crystal-instantiated-upper-right); }
+.crystal-instance[data-state="instantiated"] .cp-lower-left  { fill:var(--crystal-instantiated-lower-left); }
+.crystal-instance[data-state="instantiated"] .cp-lower-right { fill:var(--crystal-instantiated-lower-right); }
+.crystal-instance[data-state="instantiated"] .cp-bottom-tip  { fill:var(--crystal-instantiated-bottom-tip); }
+.crystal-instance[data-state="instantiated"] .cp-specular    { fill:var(--crystal-instantiated-specular); opacity:0.35; }
+.crystal-instance[data-state="instantiated"] .cp-glow        { fill:var(--crystal-instantiated-glow); opacity:0.10; }
 
-.crystal-instance[data-state="growing"] .cp-top         { fill:hsl(280,45%,72%); }
-.crystal-instance[data-state="growing"] .cp-upper-left  { fill:hsl(275,42%,60%); }
-.crystal-instance[data-state="growing"] .cp-upper-right { fill:hsl(270,40%,50%); }
-.crystal-instance[data-state="growing"] .cp-lower-left  { fill:hsl(270,40%,46%); }
-.crystal-instance[data-state="growing"] .cp-lower-right { fill:hsl(265,38%,38%); }
-.crystal-instance[data-state="growing"] .cp-bottom-tip  { fill:hsl(265,38%,35%); }
-.crystal-instance[data-state="growing"] .cp-specular    { fill:hsl(285,60%,90%); opacity:0.70; }
-.crystal-instance[data-state="growing"] .cp-glow        { fill:hsl(275,45%,65%); opacity:0.20; }
+.crystal-instance[data-state="growing"] .cp-top         { fill:var(--crystal-growing-top); }
+.crystal-instance[data-state="growing"] .cp-upper-left  { fill:var(--crystal-growing-upper-left); }
+.crystal-instance[data-state="growing"] .cp-upper-right { fill:var(--crystal-growing-upper-right); }
+.crystal-instance[data-state="growing"] .cp-lower-left  { fill:var(--crystal-growing-lower-left); }
+.crystal-instance[data-state="growing"] .cp-lower-right { fill:var(--crystal-growing-lower-right); }
+.crystal-instance[data-state="growing"] .cp-bottom-tip  { fill:var(--crystal-growing-bottom-tip); }
+.crystal-instance[data-state="growing"] .cp-specular    { fill:var(--crystal-growing-specular); opacity:0.70; }
+.crystal-instance[data-state="growing"] .cp-glow        { fill:var(--crystal-growing-glow); opacity:0.20; }
 
-.crystal-instance[data-state="fractured"] .cp-top         { fill:hsl(275,28%,62%); }
-.crystal-instance[data-state="fractured"] .cp-upper-left  { fill:hsl(275,25%,50%); }
-.crystal-instance[data-state="fractured"] .cp-upper-right { fill:hsl(255,32%,44%); }
-.crystal-instance[data-state="fractured"] .cp-lower-left  { fill:hsl(275,22%,42%); }
-.crystal-instance[data-state="fractured"] .cp-lower-right { fill:hsl(255,28%,35%); }
-.crystal-instance[data-state="fractured"] .cp-bottom-tip  { fill:hsl(260,28%,32%); }
-.crystal-instance[data-state="fractured"] .cp-specular    { fill:hsl(275,20%,78%); opacity:0.28; }
-.crystal-instance[data-state="fractured"] .cp-glow        { fill:hsl(290,30%,50%); opacity:0.07; }
+.crystal-instance[data-state="fractured"] .cp-top         { fill:var(--crystal-fractured-top); }
+.crystal-instance[data-state="fractured"] .cp-upper-left  { fill:var(--crystal-fractured-upper-left); }
+.crystal-instance[data-state="fractured"] .cp-upper-right { fill:var(--crystal-fractured-upper-right); }
+.crystal-instance[data-state="fractured"] .cp-lower-left  { fill:var(--crystal-fractured-lower-left); }
+.crystal-instance[data-state="fractured"] .cp-lower-right { fill:var(--crystal-fractured-lower-right); }
+.crystal-instance[data-state="fractured"] .cp-bottom-tip  { fill:var(--crystal-fractured-bottom-tip); }
+.crystal-instance[data-state="fractured"] .cp-specular    { fill:var(--crystal-fractured-specular); opacity:0.28; }
+.crystal-instance[data-state="fractured"] .cp-glow        { fill:var(--crystal-fractured-glow); opacity:0.07; }
 
-.crystal-instance[data-state="hibernating"] .cp-top         { fill:hsl(260,50%,55%); }
-.crystal-instance[data-state="hibernating"] .cp-upper-left  { fill:hsl(258,48%,40%); }
-.crystal-instance[data-state="hibernating"] .cp-upper-right { fill:hsl(255,45%,32%); }
-.crystal-instance[data-state="hibernating"] .cp-lower-left  { fill:hsl(258,45%,28%); }
-.crystal-instance[data-state="hibernating"] .cp-lower-right { fill:hsl(255,42%,22%); }
-.crystal-instance[data-state="hibernating"] .cp-bottom-tip  { fill:hsl(255,42%,20%); }
-.crystal-instance[data-state="hibernating"] .cp-specular    { fill:hsl(270,60%,80%); opacity:0.50; }
+.crystal-instance[data-state="hibernating"] .cp-top         { fill:var(--crystal-hibernating-top); }
+.crystal-instance[data-state="hibernating"] .cp-upper-left  { fill:var(--crystal-hibernating-upper-left); }
+.crystal-instance[data-state="hibernating"] .cp-upper-right { fill:var(--crystal-hibernating-upper-right); }
+.crystal-instance[data-state="hibernating"] .cp-lower-left  { fill:var(--crystal-hibernating-lower-left); }
+.crystal-instance[data-state="hibernating"] .cp-lower-right { fill:var(--crystal-hibernating-lower-right); }
+.crystal-instance[data-state="hibernating"] .cp-bottom-tip  { fill:var(--crystal-hibernating-bottom-tip); }
+.crystal-instance[data-state="hibernating"] .cp-specular    { fill:var(--crystal-hibernating-specular); opacity:0.50; }
 .crystal-instance[data-state="hibernating"] .cp-glow {
-  fill:hsl(260,55%,60%);
+  fill:var(--crystal-hibernating-glow);
   animation:hibernatePulse 3s ease-in-out infinite;
 }
 
-.crystal-instance[data-state="actualized"] .cp-top         { fill:hsl(282,48%,78%); }
-.crystal-instance[data-state="actualized"] .cp-upper-left  { fill:hsl(278,45%,65%); }
-.crystal-instance[data-state="actualized"] .cp-upper-right { fill:hsl(272,42%,54%); }
-.crystal-instance[data-state="actualized"] .cp-lower-left  { fill:hsl(272,42%,50%); }
-.crystal-instance[data-state="actualized"] .cp-lower-right { fill:hsl(268,40%,42%); }
-.crystal-instance[data-state="actualized"] .cp-bottom-tip  { fill:hsl(268,40%,38%); }
-.crystal-instance[data-state="actualized"] .cp-specular    { fill:white; opacity:0.88; }
-.crystal-instance[data-state="actualized"] .cp-glow        { fill:hsl(278,50%,70%); opacity:0.30; }
+.crystal-instance[data-state="actualized"] .cp-top         { fill:var(--crystal-actualized-top); }
+.crystal-instance[data-state="actualized"] .cp-upper-left  { fill:var(--crystal-actualized-upper-left); }
+.crystal-instance[data-state="actualized"] .cp-upper-right { fill:var(--crystal-actualized-upper-right); }
+.crystal-instance[data-state="actualized"] .cp-lower-left  { fill:var(--crystal-actualized-lower-left); }
+.crystal-instance[data-state="actualized"] .cp-lower-right { fill:var(--crystal-actualized-lower-right); }
+.crystal-instance[data-state="actualized"] .cp-bottom-tip  { fill:var(--crystal-actualized-bottom-tip); }
+.crystal-instance[data-state="actualized"] .cp-specular    { fill:var(--crystal-actualized-specular); opacity:0.88; }
+.crystal-instance[data-state="actualized"] .cp-glow        { fill:var(--crystal-actualized-glow); opacity:0.30; }
 
 /* ── 6. Night mode ────────────────────────────────────────── */
-body.night {
-  --bg:           #12111e;
-  --card-bg:      #1c1a2e;
-  --text:         #ccc8e8;
-  --text-sub:     #7b78a0;
-  --primary:      #9d8fe8;
-  --locked:       #3a3756;
-  --drawer-bg:    #161428;
-  --border:       rgba(160,140,240,0.10);
-  --tile-top:     hsl(260,20%,18%);
-  --tile-left:    hsl(260,15%,13%);
-  --tile-right:   hsl(260,15%,10%);
-  --surface:      #12111e;
-  --surface-low:  #161428;
-  --surface-card: #1c1a2e;
-}
+body.night,
+body[data-theme="dark"] {
+  --surface-page-theme:        #1f1b31;
+  --surface-card-theme:        #302b49;
+  --surface-panel-theme:       rgba(var(--lavender-500-rgb), 0.18);
+  --surface-nested-theme:      rgba(var(--lavender-500-rgb), 0.24);
+  --surface-overlay-theme:     var(--ink-900);
+  --surface-overlay-theme-rgb: var(--ink-900-rgb);
 
+  --text-strong:               var(--cream-50);
+  --text-muted:                rgba(var(--cream-50-rgb), 0.72);
+  --text-on-accent:            var(--cream-50);
+  --text-on-overlay:           rgba(var(--cream-50-rgb), 0.92);
+  --text-on-overlay-sub:       rgba(var(--cream-50-rgb), 0.38);
+
+  --accent-primary:            var(--violet-600);
+  --accent-secondary:          var(--lavender-500);
+  --accent-soft:               rgba(var(--lavender-500-rgb), 0.22);
+  --accent-soft-strong:        rgba(var(--lavender-500-rgb), 0.30);
+  --accent-border:             rgba(var(--lavender-500-rgb), 0.34);
+  --accent-border-strong:      rgba(var(--lavender-500-rgb), 0.48);
+  --accent-glow:               rgba(var(--lavender-500-rgb), 0.38);
+  --accent-focus:              rgba(var(--lavender-500-rgb), 0.22);
+  --accent-shadow-sm:          0 4px 10px rgba(var(--lavender-500-rgb), 0.28);
+  --accent-shadow-md:          0 6px 14px rgba(var(--lavender-500-rgb), 0.34);
+  --accent-shadow-lg:          0 10px 24px rgba(var(--lavender-500-rgb), 0.28);
+  --accent-ring:               0 0 0 3px rgba(var(--lavender-500-rgb), 0.20);
+
+  --locked:                    rgba(var(--lavender-500-rgb), 0.52);
+  --border-subtle:             rgba(var(--cream-50-rgb), 0.14);
+  --border-strong:             rgba(var(--cream-50-rgb), 0.22);
+  --graph-tile-top:            #554f7b;
+  --graph-tile-left:           #3b3658;
+  --graph-tile-right:          #443e67;
+
+  --gradient-card-start:       rgba(66, 59, 101, 0.96);
+  --gradient-card-end:         rgba(47, 42, 74, 0.98);
+  --gradient-panel-start:      rgba(59, 53, 91, 0.94);
+  --gradient-panel-end:        rgba(45, 40, 70, 0.98);
+  --gradient-stage-accent:     rgba(var(--lavender-500-rgb), 0.22);
+  --gradient-stage-start:      rgba(72, 65, 110, 0.94);
+  --gradient-stage-end:        rgba(43, 37, 67, 0.98);
+
+  --tooltip-bg:                rgba(var(--ink-900-rgb), 0.96);
+  --tooltip-border:            rgba(var(--lavender-500-rgb), 0.42);
+
+  --beacon-highlight:          rgba(var(--cream-50-rgb), 1);
+  --beacon-mid:                rgba(var(--lavender-500-rgb), 0.96);
+  --beacon-edge:               rgba(var(--violet-600-rgb), 0.96);
+
+  /* Re-assert consumed aliases so dark mode does not depend on inherited root indirection. */
+  --bg:           var(--surface-page-theme);
+  --card-bg:      var(--surface-card-theme);
+  --text:         var(--text-strong);
+  --text-sub:     var(--text-muted);
+  --primary:      var(--accent-primary);
+  --drawer-bg:    var(--surface-panel-theme);
+  --border:       var(--border-subtle);
+  --tile-top:     var(--graph-tile-top);
+  --tile-left:    var(--graph-tile-left);
+  --tile-right:   var(--graph-tile-right);
+  --surface:      var(--surface-page-theme);
+  --surface-low:  var(--surface-panel-theme);
+  --surface-card: var(--surface-card-theme);
+  --surface-nested: var(--surface-nested-theme);
+}

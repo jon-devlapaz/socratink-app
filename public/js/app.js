@@ -10,18 +10,179 @@ import {
 
 import {
   card, titleEl, descEl, conceptLabelEl, primaryControls, drillControls,
-  consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
+  heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls, POLYGON_IDS
 } from './dom.js';
 
 const App = (() => {
+  const THEME_STORAGE_KEY = 'learnops-theme';
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
   let tutorialMode = false;
   let tutorialRefreshRaf = null;
   let activeTutorialTarget = null;
+  let themePreference = 'light';
+
+  const themeToggleEl = document.getElementById('theme-toggle');
+
+  function getStoredThemePreference() {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      return stored === 'dark' ? 'dark' : 'light';
+    } catch (err) {
+      console.warn('Theme preference unavailable.', err);
+      return 'light';
+    }
+  }
+
+  function updateThemeToggleUi(resolvedTheme) {
+    if (!themeToggleEl) return;
+    const isDark = resolvedTheme === 'dark';
+    const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+    themeToggleEl.dataset.theme = resolvedTheme;
+    themeToggleEl.setAttribute('aria-pressed', String(isDark));
+    themeToggleEl.setAttribute('aria-label', label);
+    themeToggleEl.setAttribute('title', label);
+  }
+
+  function applyThemePreference(nextPreference, { persist = true } = {}) {
+    themePreference = nextPreference === 'dark' ? 'dark' : 'light';
+    const resolvedTheme = themePreference;
+    document.body.classList.toggle('night', resolvedTheme === 'dark');
+    document.body.dataset.theme = resolvedTheme;
+    document.documentElement.dataset.theme = resolvedTheme;
+    updateThemeToggleUi(resolvedTheme);
+    if (!persist) return;
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, themePreference);
+    } catch (err) {
+      console.warn('Theme preference could not be saved.', err);
+    }
+  }
+
+  function toggleTheme() {
+    applyThemePreference(themePreference === 'dark' ? 'light' : 'dark');
+  }
+
+  function getHeroStateLabel(state) {
+    switch (state) {
+      case 'instantiated': return 'Instantiated';
+      case 'growing': return 'Growing';
+      case 'fractured': return 'Fractured';
+      case 'hibernating': return 'Consolidating';
+      case 'actualized': return 'Actualized';
+      default: return 'Board Empty';
+    }
+  }
+
+  function getHeroGuidance(concept) {
+    if (!concept) return 'Create a concept to start building your board.';
+    switch (concept.state) {
+      case 'instantiated':
+        return concept.graphData
+          ? 'Open the map to inspect structure before recall.'
+          : 'Map this concept to turn it into a usable board node.';
+      case 'growing':
+        return concept.graphData
+          ? 'Inspect the concept map, then test recall.'
+          : 'Continue by mapping this concept into a board-ready structure.';
+      case 'fractured':
+        return 'This concept needs repair through another drill.';
+      case 'hibernating':
+        return 'This concept is consolidating and cannot be drilled yet.';
+      case 'actualized':
+        return 'Review the map or revisit recall if you need a refresh.';
+      default:
+        return 'Create a concept to start building your board.';
+    }
+  }
+
+  function getHeroActionConfig(concept) {
+    if (!concept) {
+      return { label: 'Add Concept', action: 'add', disabled: false };
+    }
+    switch (concept.state) {
+      case 'instantiated':
+        return concept.graphData
+          ? { label: 'Open Map', action: 'open-map', disabled: false }
+          : { label: 'Map Concept', action: 'extract', disabled: false };
+      case 'growing':
+        return concept.graphData
+          ? { label: 'Open Map', action: 'open-map', disabled: false }
+          : { label: 'Map Concept', action: 'extract', disabled: false };
+      case 'fractured':
+        return { label: 'Start Drill', action: 'drill', disabled: false };
+      case 'hibernating':
+        return concept.graphData
+          ? { label: 'Review Map', action: 'open-map', disabled: false }
+          : { label: 'Return Later', action: 'wait', disabled: true };
+      case 'actualized':
+        return concept.graphData
+          ? { label: 'Review Map', action: 'open-map', disabled: false }
+          : { label: 'Open Board', action: 'wait', disabled: true };
+      default:
+        return { label: 'Add Concept', action: 'add', disabled: false };
+    }
+  }
+
+  function renderHero(concept) {
+    if (!concept) {
+      conceptLabelEl.textContent = 'Dashboard';
+      titleEl.textContent = 'Add your first socraTink';
+      descEl.textContent = getHeroGuidance(null);
+      if (heroStateChipEl) {
+        heroStateChipEl.textContent = 'Board Empty';
+        heroStateChipEl.dataset.state = 'empty';
+      }
+    } else {
+      conceptLabelEl.textContent = 'Selected Concept';
+      titleEl.textContent = concept.name;
+      descEl.textContent = getHeroGuidance(concept);
+      if (heroStateChipEl) {
+        heroStateChipEl.textContent = getHeroStateLabel(concept.state);
+        heroStateChipEl.dataset.state = concept.state;
+      }
+    }
+
+    if (heroPrimaryActionEl) {
+      const config = getHeroActionConfig(concept);
+      heroPrimaryActionEl.textContent = config.label;
+      heroPrimaryActionEl.dataset.action = config.action;
+      heroPrimaryActionEl.disabled = Boolean(config.disabled);
+      heroPrimaryActionEl.title = config.disabled ? 'This action is unavailable right now.' : config.label;
+    }
+  }
+
+  function runHeroAction() {
+    const concept = getActiveConcept();
+    const action = heroPrimaryActionEl?.dataset.action || (!concept ? 'add' : '');
+    if (action === 'add') {
+      showDashboard();
+      openDrawer();
+      startAddConcept();
+      requestAnimationFrame(() => {
+        addTriggerArea.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        const nameInput = addTriggerArea.querySelector('.creation-name-input');
+        if (nameInput instanceof HTMLInputElement) nameInput.focus();
+      });
+      return;
+    }
+    if (action === 'extract') {
+      extract();
+      return;
+    }
+    if (action === 'drill') {
+      drill();
+      return;
+    }
+    if (action === 'open-map') {
+      if (!concept?.graphData) return;
+      showMapView(concept);
+      setMapMode('study');
+    }
+  }
 
 
   // ── 7. Animation helpers ───────────────────────────────────
@@ -57,6 +218,7 @@ const App = (() => {
   const EMPTY_TILE = `
     <polygon class="tile-left"      points="0,40 70,80 70,90 0,50"/>
     <polygon class="tile-right"     points="140,40 70,80 70,90 140,50"/>
+    <polygon class="tile-top-empty" points="70,0 140,40 70,80 0,40"/>
     <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>
     <polygon class="tile-hit"       points="70,0 140,40 70,80 0,40"/>`;
 
@@ -433,7 +595,8 @@ const App = (() => {
       onSubmit({ text, type, filename, url, name: nameInput ? nameInput.value.trim() : null });
     }
 
-    textarea.focus();
+    if (showNameField && nameInput) nameInput.focus();
+    else textarea.focus();
     return {
       destroy() {
         if (phTimer) clearInterval(phTimer);
@@ -565,13 +728,7 @@ const App = (() => {
     const concept = loadConcepts().find(c => c.id === id);
     if (!concept) return;
 
-    // Update card info
-    conceptLabelEl.textContent = concept.name;
-    titleEl.textContent = STATES[concept.state].title;
-    descEl.textContent = STATES[concept.state].desc;
-
-    // Night mode
-    document.body.classList.toggle('night', concept.state === 'hibernating');
+    renderHero(concept);
 
     // Restore controls for this concept's state
     applyControlsForState(concept.state, concept);
@@ -605,13 +762,10 @@ const App = (() => {
     const dot = conceptListEl.querySelector(`.concept-item.active .concept-dot`);
     if (dot) dot.dataset.state = newState;
 
-    // Card text + night mode
-    titleEl.textContent = STATES[newState].title;
-    descEl.textContent = STATES[newState].desc;
-    document.body.classList.toggle('night', newState === 'hibernating');
-
     Bus.emit('state:change', { from: prevState, to: newState, tileIdx });
-    applyControlsForState(newState, getActiveConcept());
+    const activeConcept = getActiveConcept();
+    renderHero(activeConcept);
+    applyControlsForState(newState, activeConcept);
   }
 
   function applyControlsForState(state, concept) {
@@ -668,10 +822,7 @@ const App = (() => {
   function showEmptyState() {
     hideContentOverlay();
     stopTimer();
-    conceptLabelEl.textContent = '';
-    titleEl.textContent = 'socraTink';
-    descEl.textContent = 'Add your first socraTink.';
-    document.body.classList.remove('night');
+    renderHero(null);
     showControls(false, false, false, false, false);
   }
 
@@ -1282,6 +1433,8 @@ const App = (() => {
   });
 
   // Render grid first (populates polygon DOM nodes)
+  themePreference = getStoredThemePreference();
+  applyThemePreference(themePreference, { persist: false });
   bindMapModeControls();
   renderGrid();
   renderConceptList();
@@ -1294,10 +1447,7 @@ const App = (() => {
     showEmptyState();
   } else {
     setActiveId(toLoad.id);
-    conceptLabelEl.textContent = toLoad.name;
-    titleEl.textContent = STATES[toLoad.state].title;
-    descEl.textContent = STATES[toLoad.state].desc;
-    document.body.classList.toggle('night', toLoad.state === 'hibernating');
+    renderHero(toLoad);
     applyControlsForState(toLoad.state, toLoad);
     renderGrid(); // re-render to apply .selected class
   }
@@ -1889,7 +2039,8 @@ const App = (() => {
     fastForward,
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, showDashboard,
-    importStarterMap
+    importStarterMap,
+    toggleTheme, runHeroAction
   };
 
 })();
