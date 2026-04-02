@@ -24,6 +24,7 @@ const App = (() => {
   let tutorialRefreshRaf = null;
   let activeTutorialTarget = null;
   let themePreference = 'light';
+  let currentPrimaryNav = 'nav-dashboard';
 
   const themeToggleEl = document.getElementById('theme-toggle');
 
@@ -295,6 +296,15 @@ const App = (() => {
   function toggleDrawer() { drawer.dataset.open === 'true' ? closeDrawer() : openDrawer(); }
 
   if (window.innerWidth >= 900) openDrawer();
+
+  function clearSettingsPanel() {
+    const triggerArea = document.getElementById('add-trigger-area');
+    const settingsPanel = triggerArea?.querySelector('.settings-panel');
+    if (!settingsPanel) return;
+    const settingsBtn = document.getElementById('nav-settings');
+    if (settingsBtn) delete settingsBtn.dataset.engaged;
+    renderAddTrigger();
+  }
 
   // ── 11. Concept list render ────────────────────────────────
   function renderConceptList(concepts = loadConcepts()) {
@@ -678,7 +688,7 @@ const App = (() => {
             contentType: type,
             contentFilename: sourceFilename,
             sourceUrl: type === 'url' ? url : null,
-            graphData: jsonPayload
+            graphData: JSON.stringify(jsonPayload)
           };
           contentStore.set(id, sourceText);
           concepts.push(concept);
@@ -731,6 +741,7 @@ const App = (() => {
   function selectConcept(id) {
     hideContentOverlay();
     hideMapView();
+    setNavActive('nav-dashboard');
     setActiveId(id);
     const concept = loadConcepts().find(c => c.id === id);
     if (!concept) return;
@@ -1024,6 +1035,7 @@ const App = (() => {
     const graphStage = document.getElementById('graph-stage');
     const graphNodeDetail = document.getElementById('graph-node-detail');
     const heroCard = document.querySelector('.hero-card');
+    const libraryView = document.getElementById('library-view');
 
     if (!concept || !concept.graphData) return;
 
@@ -1032,6 +1044,7 @@ const App = (() => {
       data = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData) : concept.graphData;
     } catch (e) {
       console.error("Invalid JSON graphData", e);
+      alert('This concept has malformed graph data from an earlier extraction. Re-extract it or delete and recreate the concept.');
       return;
     }
 
@@ -1160,6 +1173,9 @@ const App = (() => {
       });
     }
 
+    clearSettingsPanel();
+    setNavActive('nav-dashboard');
+    if (libraryView) libraryView.classList.remove('visible');
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
     setMapShellOpen(true);
@@ -1182,6 +1198,7 @@ const App = (() => {
     if (mapView) mapView.classList.remove('visible');
     setMapShellOpen(false);
     if (heroCard) heroCard.style.display = 'flex';
+    setNavActive('nav-dashboard');
     scheduleTutorialRefresh();
   }
 
@@ -1217,9 +1234,11 @@ const App = (() => {
   }
 
   function setNavActive(id) {
-    document.querySelectorAll('.sidebar-nav-item').forEach(n => n.classList.remove('active'));
-    const el = document.getElementById(id);
-    if (el) el.classList.add('active');
+    currentPrimaryNav = id;
+    ['nav-dashboard', 'nav-library'].forEach((navId) => {
+      const el = document.getElementById(navId);
+      if (el) el.classList.toggle('active', navId === currentPrimaryNav);
+    });
   }
 
   function showDashboard() {
@@ -1228,6 +1247,7 @@ const App = (() => {
     const mapView = document.getElementById('map-view');
     const heroCard = document.querySelector('.hero-card');
 
+    clearSettingsPanel();
     if (libraryView) libraryView.classList.remove('visible');
     if (mapView) mapView.classList.remove('visible');
     setMapShellOpen(false);
@@ -1315,8 +1335,13 @@ const App = (() => {
     const heroCard = document.querySelector('.hero-card');
     const content = document.getElementById('library-content');
 
+    clearSettingsPanel();
     if (mapView) mapView.classList.remove('visible');
     setMapShellOpen(false);
+    if (currentGraphController) {
+      currentGraphController.destroy();
+      currentGraphController = null;
+    }
     const concepts = loadConcepts().filter(c => c.graphData);
 
     let html = `
@@ -1477,6 +1502,8 @@ const App = (() => {
     pending: false,
     probeCount: 0,
     nodesDrilled: 0,
+    attemptTurnCount: 0,
+    helpTurnCount: 0,
     sessionStartIso: null,
     sessionToken: 0,
   };
@@ -1651,8 +1678,8 @@ const App = (() => {
       ? JSON.parse(concept.graphData)
       : concept.graphData;
 
+    const apiKey = localStorage.getItem('gemini_key') || undefined;
     try {
-      const apiKey = localStorage.getItem('gemini_key') || undefined;
       const response = await fetch('/api/drill', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1666,6 +1693,8 @@ const App = (() => {
           session_phase: sessionPhase,
           probe_count: drillState.probeCount,
           nodes_drilled: drillState.nodesDrilled,
+          attempt_turn_count: drillState.attemptTurnCount,
+          help_turn_count: drillState.helpTurnCount,
           session_start_iso: drillState.sessionStartIso,
           api_key: apiKey,
         }),
@@ -1678,7 +1707,7 @@ const App = (() => {
 
       const data = await response.json();
       console.log(
-        `[drill] classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`
+        `[drill] answer_mode=${data?.answer_mode ?? 'null'} classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`
       );
       console.log('[drill] response', data);
       hideTypingIndicator();
@@ -1691,6 +1720,8 @@ const App = (() => {
       drillState.messages = outboundMessages;
       drillState.probeCount = data.probe_count ?? drillState.probeCount;
       drillState.nodesDrilled = data.nodes_drilled ?? drillState.nodesDrilled;
+      drillState.attemptTurnCount = data.attempt_turn_count ?? drillState.attemptTurnCount;
+      drillState.helpTurnCount = data.help_turn_count ?? drillState.helpTurnCount;
       handleDrillAssistantMessage(data.agent_response || '');
       if (data.agent_response?.trim()) {
         drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
@@ -1739,6 +1770,8 @@ const App = (() => {
     drillState.pending = false;
     drillState.probeCount = 0;
     drillState.nodesDrilled = 0;
+    drillState.attemptTurnCount = 0;
+    drillState.helpTurnCount = 0;
     drillState.sessionStartIso = new Date().toISOString();
     drillState.sessionToken += 1;
     activeDrillNode = nodeContext?.id || null;
@@ -1775,6 +1808,8 @@ const App = (() => {
     drillState.pending = false;
     drillState.probeCount = 0;
     drillState.nodesDrilled = 0;
+    drillState.attemptTurnCount = 0;
+    drillState.helpTurnCount = 0;
     drillState.sessionStartIso = null;
     if (drillUi) drillUi.style.display = 'none';
     activeDrillNode = null;
@@ -1790,10 +1825,24 @@ const App = (() => {
 
   const tutorialDirectives = [
     {
+      id: 'quick-guide',
+      sel: '#nav-guide',
+      title: 'Use Quick Guide Beacons',
+      text: 'Turn this on any time to see lightweight tips around the current screen. Hover or focus the glowing dots to read them.',
+      when: () => true,
+    },
+    {
       id: 'library',
       sel: '#nav-library',
       title: 'Open The Library',
       text: 'Use starter maps for an instant demo, or reopen concepts you have already extracted.',
+      when: () => true,
+    },
+    {
+      id: 'analytics',
+      sel: '#nav-analytics',
+      title: 'Read Your Analytics',
+      text: 'Analytics shows truthful learning state: what is solid, what is still in progress, and what you should revisit next.',
       when: () => true,
     },
     {
@@ -1860,7 +1909,9 @@ const App = (() => {
   function isTutorialTargetVisible(target) {
     if (!target || target.offsetParent === null) return false;
     const rect = target.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    if (rect.width === 0 || rect.height === 0) return false;
+    if (rect.right < 0 || rect.left > window.innerWidth || rect.bottom < 0 || rect.top > window.innerHeight) return false;
+    return true;
   }
 
   function cleanupTutorialHighlights() {
@@ -1965,6 +2016,12 @@ const App = (() => {
 
   window.addEventListener('resize', scheduleTutorialRefresh);
   window.addEventListener('scroll', scheduleTutorialRefresh, { passive: true });
+  if (drawer) {
+    drawer.addEventListener('transitionend', scheduleTutorialRefresh);
+  }
+  if (conceptListEl) {
+    conceptListEl.addEventListener('scroll', scheduleTutorialRefresh, { passive: true });
+  }
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && tutorialMode) {
       App.toggleTutorial();
@@ -2053,7 +2110,12 @@ const App = (() => {
     toggleTutorial: () => {
       tutorialMode = !tutorialMode;
       const guideBtn = document.getElementById('nav-guide');
-      if (guideBtn) guideBtn.classList.toggle('active', tutorialMode);
+      if (guideBtn) {
+        if (tutorialMode) guideBtn.dataset.engaged = 'true';
+        else delete guideBtn.dataset.engaged;
+        guideBtn.setAttribute('aria-pressed', String(tutorialMode));
+      }
+      if (window.innerWidth < 900) closeDrawer();
 
       if (!tutorialMode) {
         if (tutorialRefreshRaf) {
@@ -2084,6 +2146,18 @@ window.App = App;
 
 function startSettings() {
   const triggerArea = document.getElementById('add-trigger-area');
+  const settingsBtn = document.getElementById('nav-settings');
+  const existingPanel = triggerArea?.querySelector('.settings-panel');
+
+  if (existingPanel) {
+    if (settingsBtn) delete settingsBtn.dataset.engaged;
+    App.closeDrawer();
+    App.renderAddTrigger();
+    return;
+  }
+
+  if (settingsBtn) settingsBtn.dataset.engaged = 'true';
+  App.openDrawer();
   triggerArea.style.overflowY = 'auto';
   triggerArea.innerHTML = `
     <div class="settings-panel">
@@ -2092,7 +2166,7 @@ function startSettings() {
           <h3>Settings</h3>
           <p class="settings-subtext">Configure your pipeline integrations.</p>
         </div>
-        <button class="settings-close-btn" onclick="App.closeDrawer(); App.renderAddTrigger();" aria-label="Close settings">×</button>
+        <button class="settings-close-btn" onclick="delete document.getElementById('nav-settings')?.dataset.engaged; App.closeDrawer(); App.renderAddTrigger();" aria-label="Close settings">×</button>
       </div>
 
       <div class="settings-box">
