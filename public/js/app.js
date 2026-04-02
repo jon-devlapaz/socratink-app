@@ -66,6 +66,13 @@ const App = (() => {
     applyThemePreference(themePreference === 'dark' ? 'light' : 'dark');
   }
 
+  function setMapShellOpen(isOpen) {
+    document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
+    if (!drawerToggle) return;
+    drawerToggle.setAttribute('aria-hidden', String(isOpen));
+    drawerToggle.tabIndex = isOpen ? -1 : 0;
+  }
+
   function getHeroStateLabel(state) {
     switch (state) {
       case 'instantiated': return 'Instantiated';
@@ -1155,7 +1162,9 @@ const App = (() => {
 
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
+    setMapShellOpen(true);
     if (graphContent) graphContent.hidden = false;
+    if (window.innerWidth < 900) closeDrawer();
     setMapMode('study');
     scheduleTutorialRefresh();
   }
@@ -1163,11 +1172,15 @@ const App = (() => {
   function hideMapView() {
     const mapView = document.getElementById('map-view');
     const heroCard = document.querySelector('.hero-card');
+    if (drillState.active || drillState.pending || drillState.node) {
+      cancelDrill();
+    }
     if (currentGraphController) {
       currentGraphController.destroy();
       currentGraphController = null;
     }
     if (mapView) mapView.classList.remove('visible');
+    setMapShellOpen(false);
     if (heroCard) heroCard.style.display = 'flex';
     scheduleTutorialRefresh();
   }
@@ -1217,11 +1230,13 @@ const App = (() => {
 
     if (libraryView) libraryView.classList.remove('visible');
     if (mapView) mapView.classList.remove('visible');
+    setMapShellOpen(false);
     if (currentGraphController) {
       currentGraphController.destroy();
       currentGraphController = null;
     }
     if (heroCard) heroCard.style.display = 'flex';
+    if (window.innerWidth < 900) closeDrawer();
     scheduleTutorialRefresh();
   }
 
@@ -1296,9 +1311,12 @@ const App = (() => {
   function showLibrary() {
     setNavActive('nav-library');
     const libraryView = document.getElementById('library-view');
+    const mapView = document.getElementById('map-view');
     const heroCard = document.querySelector('.hero-card');
     const content = document.getElementById('library-content');
 
+    if (mapView) mapView.classList.remove('visible');
+    setMapShellOpen(false);
     const concepts = loadConcepts().filter(c => c.graphData);
 
     let html = `
@@ -1460,6 +1478,7 @@ const App = (() => {
     probeCount: 0,
     nodesDrilled: 0,
     sessionStartIso: null,
+    sessionToken: 0,
   };
 
   function parseConceptGraphData(concept) {
@@ -1615,6 +1634,7 @@ const App = (() => {
   async function requestDrillTurn(userText) {
     const concept = getActiveConcept();
     if (!concept || !drillState.node) return;
+    const sessionToken = drillState.sessionToken;
 
     drillState.pending = true;
     if (chatInput) chatInput.disabled = true;
@@ -1631,58 +1651,71 @@ const App = (() => {
       ? JSON.parse(concept.graphData)
       : concept.graphData;
 
-    const apiKey = localStorage.getItem('gemini_key') || undefined;
-    const response = await fetch('/api/drill', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        concept_id: concept.id,
-        node_id: drillState.node.id,
-        node_label: drillState.node.fullLabel || drillState.node.label || concept.name,
-        node_mechanism: drillState.node.detail || '',
-        knowledge_map: knowledgeMap,
-        messages: outboundMessages,
-        session_phase: sessionPhase,
-        probe_count: drillState.probeCount,
-        nodes_drilled: drillState.nodesDrilled,
-        session_start_iso: drillState.sessionStartIso,
-        api_key: apiKey,
-      }),
-    });
+    try {
+      const apiKey = localStorage.getItem('gemini_key') || undefined;
+      const response = await fetch('/api/drill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept_id: concept.id,
+          node_id: drillState.node.id,
+          node_label: drillState.node.fullLabel || drillState.node.label || concept.name,
+          node_mechanism: drillState.node.detail || '',
+          knowledge_map: knowledgeMap,
+          messages: outboundMessages,
+          session_phase: sessionPhase,
+          probe_count: drillState.probeCount,
+          nodes_drilled: drillState.nodesDrilled,
+          session_start_iso: drillState.sessionStartIso,
+          api_key: apiKey,
+        }),
+      });
 
-    if (!response.ok) {
-      const err = await response.text().catch(() => '');
-      throw new Error(`Drill request failed: ${response.status}: ${err}`);
-    }
-
-    const data = await response.json();
-    console.log(
-      `[drill] classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`
-    );
-    console.log('[drill] response', data);
-    hideTypingIndicator();
-
-    patchActiveConceptDrillOutcome(data);
-    drillState.messages = outboundMessages;
-    drillState.probeCount = data.probe_count ?? drillState.probeCount;
-    drillState.nodesDrilled = data.nodes_drilled ?? drillState.nodesDrilled;
-    handleDrillAssistantMessage(data.agent_response || '');
-    if (data.agent_response?.trim()) {
-      drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
-    }
-    drillState.pending = false;
-    const completedNodeTurn = data.routing === 'NEXT'
-      || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
-    if (chatInput) {
-      chatInput.disabled = completedNodeTurn || !!data.session_terminated;
-      if (!completedNodeTurn && !data.session_terminated) {
-        chatInput.focus();
+      if (!response.ok) {
+        const err = await response.text().catch(() => '');
+        throw new Error(`Drill request failed: ${response.status}: ${err}`);
       }
-    }
-    if (completedNodeTurn) {
-      currentGraphController?.setInteractionMode?.('post-drill', activeDrillNode);
-    } else {
-      currentGraphController?.setInteractionMode?.('drill-active', activeDrillNode);
+
+      const data = await response.json();
+      console.log(
+        `[drill] classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`
+      );
+      console.log('[drill] response', data);
+      hideTypingIndicator();
+
+      if (sessionToken !== drillState.sessionToken || !drillState.node) {
+        return;
+      }
+
+      patchActiveConceptDrillOutcome(data);
+      drillState.messages = outboundMessages;
+      drillState.probeCount = data.probe_count ?? drillState.probeCount;
+      drillState.nodesDrilled = data.nodes_drilled ?? drillState.nodesDrilled;
+      handleDrillAssistantMessage(data.agent_response || '');
+      if (data.agent_response?.trim()) {
+        drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
+      }
+      drillState.pending = false;
+      const completedNodeTurn = data.routing === 'NEXT'
+        || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
+      if (chatInput) {
+        chatInput.disabled = completedNodeTurn || !!data.session_terminated;
+        if (!completedNodeTurn && !data.session_terminated) {
+          chatInput.focus();
+        }
+      }
+      if (completedNodeTurn) {
+        currentGraphController?.setInteractionMode?.('post-drill', activeDrillNode);
+      } else {
+        currentGraphController?.setInteractionMode?.('drill-active', activeDrillNode);
+      }
+    } catch (err) {
+      hideTypingIndicator();
+      if (sessionToken !== drillState.sessionToken) {
+        return;
+      }
+      drillState.pending = false;
+      throw err;
     }
   }
 
@@ -1707,6 +1740,7 @@ const App = (() => {
     drillState.probeCount = 0;
     drillState.nodesDrilled = 0;
     drillState.sessionStartIso = new Date().toISOString();
+    drillState.sessionToken += 1;
     activeDrillNode = nodeContext?.id || null;
 
     if (drillUi) drillUi.style.display = 'flex';
@@ -1734,8 +1768,10 @@ const App = (() => {
   }
 
   function cancelDrill() {
+    drillState.sessionToken += 1;
     drillState.active = false;
     drillState.messages = [];
+    drillState.node = null;
     drillState.pending = false;
     drillState.probeCount = 0;
     drillState.nodesDrilled = 0;

@@ -65,6 +65,10 @@
   padding: 28px 40px 0;
   flex-shrink: 0;
 }
+body[data-map-open="true"] .main-header {
+  opacity: 0;
+  pointer-events: none;
+}
 .main-header-left {
   display: flex;
   align-items: center;
@@ -339,6 +343,7 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   position: absolute;
   top: 24px;
   right: 32px;
+  z-index: 3;
   background: var(--accent-soft);
   border: none;
   border-radius: 50%;
@@ -356,6 +361,11 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 .map-close-btn:hover {
   background: var(--primary-fill);
   color: var(--text-on-primary);
+}
+
+body[data-map-open="true"] .drawer-toggle {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Map Zones */
@@ -576,13 +586,17 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 /* Mobile adjustments for map and library views */
 @media (max-width: 899px) {
   .map-view { 
-    padding: 56px 24px 24px; 
+    padding: 96px 24px 24px; 
     border-radius: 0; 
     position: fixed; 
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: 2000;
     height: 100dvh;
     box-sizing: border-box;
+  }
+  .map-close-btn {
+    top: 66px;
+    right: 20px;
   }
   .library-view {
     padding: 24px 16px; 
@@ -602,9 +616,8 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   .library-vault-grid {
     grid-template-columns: 1fr;
   }
-  .map-close-btn { top: 16px; right: 16px; }
   .map-core-thesis { font-size: 17px; }
-  .map-view-shell { gap: 18px; }
+  .map-view-shell { gap: 18px; padding-top: 4px; }
   .map-mode-switch { width: 100%; }
   .map-mode-btn { flex: 1; }
   .graph-layout {
