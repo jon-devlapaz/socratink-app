@@ -1,44 +1,43 @@
-## LearnOps-tamagachi
-An attempt to automate information into understanding.
+# LearnOps-tamagachi
 
-LearnOps is a neurocognitive learning pipeline built as Agent Skills for Claude. It converts raw information (transcripts, articles, lectures) into durable knowledge through a four-stage process grounded in cognitive science.
+LearnOps-tamagachi is an MVP-stage learning product deployed on Vercel serverless.
 
-To enforce these biological constraints—especially for learners with executive function variability—the LearnOps pipeline is conceptualized as a Living Ecosystem. Concepts aren't just files in a folder; they are visual entities that grow, wilt, and hibernate based on your active recall and spacing discipline.
+The repo contains two closely related layers:
 
-## The Lifecycle Pipeline
-Each stage of the pipeline maps to a neurocognitive requirement and a physical state in the LearnOps ecosystem.
+- the hosted app: FastAPI backend plus a vanilla JS frontend in `public/`
+- the LearnOps prompt and skill assets in `learnops/` that shape extraction and drill behavior
 
-### 🌱 Stage 1 — Extract (learnops-extract)
-The Action: Recovers the causal architecture beneath a text.
+The product doctrine is stable even while implementation is still moving:
 
-The Entity: Spawns a Knowledge Seed.
+- generation before recognition
+- the graph tells the truth
+- AI should remove prep friction and increase truthful retrieval reps
+- local success does not validate hosted behavior
 
-The Science: The brain stores causal networks, not topic lists. Forcing mechanism-level syntax prevents the "Bird-Naming Fallacy" (knowing what something is called without understanding how it works).
+## Start Here
 
-### 🌿 Stage 2 — Present (learnops-present)
-The Action: Renders the extracted map as a navigable single-file HTML dashboard.
+- Read [AGENTS.md](./AGENTS.md) for repo constraints, agent routing, and workflow ownership.
+- Read [docs/project/state.md](./docs/project/state.md) for current MVP priorities and target-user signals.
+- Read [docs/theta/state.md](./docs/theta/state.md) when the task touches learning claims or product science.
+- Read [docs/drill/graph-invariants.md](./docs/drill/graph-invariants.md) before changing drill or graph behavior.
 
-The Entity: The seed grows into a Segmented Habitat.
+## Repo Shape
 
-The Science: Enforces Mayer's Segmenting Principle. The dashboard provides a spatial surface so the learner builds a mental model before entering high-friction recall.
+- `main.py` and `api/`
+  FastAPI app and Vercel entrypoint.
+- `ai_service.py`
+  Model-facing extraction and drill logic.
+- `public/`
+  Hosted frontend.
+- `learnops/`
+  Prompt assets and skill artifacts used by the product.
+- `docs/`
+  Product, drill, project, and agent workflow docs.
 
-### 🌳 / 🥀 Stage 3 — Drill (learnops-drill)
-The Action: Socratic stress-testing of the learner's understanding, node by node.
+## Local Run
 
-The Entity: The concept enters Active Recall.
+```bash
+uvicorn main:app --reload
+```
 
-If you pass: It grows stronger (🌳).
-
-If a misconception is detected: It wilts (🥀) and requires Socratic repair.
-
-The Science: Forces attempted recall before correction (The Generation Effect). The hippocampus requires a prediction error signal to encode effectively. Passive re-reading doesn't work.
-
-### 🐛💤 Stage 4 — Consolidate (Pending)
-The Action: A strict, sleep-gated verification lockout.
-
-The Entity: The concept enters Hibernation/Cocooning for ≥24 hours. You physically cannot interact with it.
-
-The Science: Synaptic consolidation requires sleep. Testing immediately after Stage 3 measures short-term accessibility, not durable retention. Once the timer ends, the concept wakes up for a final Drill to prove it survived consolidation.
-
-Why This Architecture?
-Standard trackers rely on pure discipline, which often leads to task avoidance and "shame spirals" when you fall behind. LearnOps uses a "Hibernation over Death" philosophy. If you don't interact with a concept, it doesn't die and turn your dashboard red; it simply goes dormant, waiting for you to water it with active recall when you return.
+Then open [http://localhost:8000](http://localhost:8000).

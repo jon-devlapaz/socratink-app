@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LearnOps Tamagachi** is an interactive prototype demonstrating a neurocognitive learning pipeline. The concept: raw information enters a three-stage lifecycle (Ingest → Drill → Consolidate) modeled as a living ecosystem that grows or hibernates based on learner performance.
+**LearnOps Tamagachi** is an MVP-stage hosted learning product, not just a standalone prototype. This repo contains both the deployable app and the `learnops/` prompt assets that drive extraction and drill behavior.
+
+Canonical repo identity, workflow ownership, and agent constraints live in `AGENTS.md` and `docs/project/state.md`. This file is implementation-oriented and should stay focused on runtime shape and local development details.
+
+Current product framing: AI should remove prep friction and increase truthful retrieval reps without replacing the learner's generation step.
 
 The UI maps internal JS state names to visual indicators (colored `.concept-dot` elements in the sidebar list, plus dark mode for `hibernating`):
 - `growing` — active/structurally sound
