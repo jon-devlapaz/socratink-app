@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>Internal AI Runs Dashboard</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=4">
+  <link rel="stylesheet" href="/css/variables.css?v=12">
+  <link rel="stylesheet" href="/css/ai-runs-dashboard.css?v=2">
+</head>
+<body>
+  <script>
+    try {
+      if (localStorage.getItem('learnops-theme') === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        document.body.dataset.theme = 'dark';
+      }
+    } catch (err) {
+      console.warn('Theme preload skipped.', err);
+    }
+  </script>
+
+  <div class="analytics-shell">
+    <header class="analytics-header">
+      <div>
+        <div class="analytics-kicker">Internal Analytics</div>
+        <h1>AI Runs Dashboard</h1>
+        <p>Extraction quality, drill behavior, and fixture telemetry in one place.</p>
+      </div>
+      <div class="analytics-actions">
+        <a class="analytics-link" href="/">Back To App</a>
+        <a class="analytics-link" href="/ai-runs-dashboard.html">Learner Analytics</a>
+        <button id="refresh-button" class="analytics-button" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <section class="analytics-status">
+      <div class="status-chip" id="status-chip">Loading…</div>
+      <div class="status-meta" id="status-meta"></div>
+    </section>
+
+    <section class="metric-grid" id="metric-grid"></section>
+
+    <section class="panel-grid panel-grid-two">
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Extraction</div>
+            <h2>Pipeline Health</h2>
+          </div>
+        </div>
+        <div id="extract-panel" class="panel-body"></div>
+      </article>
+
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Drill</div>
+            <h2>Loop Health</h2>
+          </div>
+        </div>
+        <div id="drill-panel" class="panel-body"></div>
+      </article>
+    </section>
+
+    <section class="panel-grid panel-grid-two">
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Distributions</div>
+            <h2>Extraction Mix</h2>
+          </div>
+        </div>
+        <div id="extract-distributions" class="panel-body"></div>
+      </article>
+
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Distributions</div>
+            <h2>Drill Mix</h2>
+          </div>
+        </div>
+        <div id="drill-distributions" class="panel-body"></div>
+      </article>
+    </section>
+
+    <section class="panel-grid panel-grid-two">
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Hotspots</div>
+            <h2>Friction Nodes</h2>
+          </div>
+        </div>
+        <div id="hotspot-nodes" class="panel-body"></div>
+      </article>
+
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Hotspots</div>
+            <h2>Friction Clusters</h2>
+          </div>
+        </div>
+        <div id="hotspot-clusters" class="panel-body"></div>
+      </article>
+    </section>
+
+    <section class="panel-grid panel-grid-two">
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Benchmarks</div>
+            <h2>Node-Type Performance</h2>
+          </div>
+        </div>
+        <div id="node-type-benchmarks" class="panel-body"></div>
+      </article>
+
+      <article class="analytics-panel">
+        <div class="panel-header">
+          <div>
+            <div class="panel-kicker">Recent Activity</div>
+            <h2>Run Feed</h2>
+          </div>
+        </div>
+        <div id="recent-events" class="panel-body"></div>
+      </article>
+    </section>
+  </div>
+
+  <script type="module" src="/js/ai-runs-dashboard.js?v=1"></script>
+</body>
+</html>

@@ -25,6 +25,8 @@ from ai_service import (
     drill_chat,
     extract_knowledge_map,
 )
+from scripts.summarize_ai_runs import build_summary_payload
+from scripts.summarize_ai_runs import build_learner_summary_payload
 
 load_dotenv()
 
@@ -80,6 +82,8 @@ class DrillRequest(BaseModel):
     session_phase: str = Field(..., max_length=20)
     probe_count: int = Field(0, ge=0, le=100)
     nodes_drilled: int = Field(0, ge=0, le=100)
+    attempt_turn_count: int = Field(0, ge=0, le=100)
+    help_turn_count: int = Field(0, ge=0, le=100)
     session_start_iso: str | None = Field(None, max_length=100)
     api_key: str | None = Field(None, max_length=200)
 
@@ -90,6 +94,31 @@ def health():
         "status": "ok",
         "server_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
     }
+
+
+@app.get("/api/analytics/ai-runs")
+def analytics_ai_runs():
+    try:
+        return build_summary_payload()
+    except Exception as err:
+        logger.exception("Failed to build AI runs analytics payload")
+        raise HTTPException(status_code=500, detail="Could not build AI runs analytics.") from err
+
+
+@app.get("/api/analytics/learner-runs")
+def analytics_learner_runs(concept_ids: str | None = None):
+    parsed_concept_ids: list[str] | None = None
+    if concept_ids:
+        parsed_concept_ids = [
+            concept_id.strip()[:100]
+            for concept_id in concept_ids.split(",")
+            if concept_id.strip()
+        ][:50]
+    try:
+        return build_learner_summary_payload(parsed_concept_ids)
+    except Exception as err:
+        logger.exception("Failed to build learner analytics payload")
+        raise HTTPException(status_code=500, detail="Could not build learner analytics.") from err
 
 
 @app.post("/api/extract")
@@ -298,6 +327,7 @@ def drill(req: DrillRequest):
         # does not live in browser state or travel over the network on every drill turn.
         result = drill_chat(
             knowledge_map=knowledge_map,
+            concept_id=req.concept_id,
             node_id=req.node_id,
             node_label=req.node_label,
             node_mechanism=req.node_mechanism,
@@ -305,6 +335,8 @@ def drill(req: DrillRequest):
             session_phase=req.session_phase,
             probe_count=req.probe_count,
             nodes_drilled=req.nodes_drilled,
+            attempt_turn_count=req.attempt_turn_count,
+            help_turn_count=req.help_turn_count,
             session_start_iso=req.session_start_iso,
             api_key=req.api_key,
         )

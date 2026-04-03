@@ -51,6 +51,48 @@ function getCoreThesisDetail(source) {
   return thesis || 'This node anchors the extracted concept map.';
 }
 
+function getStatusLabel(status) {
+  if (status === 'solid') return 'Solidified';
+  if (status === 'deep') return 'Partial mechanism';
+  if (status === 'shallow') return 'Surface recall';
+  if (status === 'misconception') return 'Misconception';
+  return status ? shortenLabel(String(status), 24) : '';
+}
+
+function getGapLabel(gapType) {
+  if (gapType === 'deep') return 'Needs one more clean pass';
+  if (gapType === 'shallow') return 'Needs a fuller mechanism';
+  if (gapType === 'misconception') return 'Needs correction';
+  return gapType ? shortenLabel(String(gapType), 28) : '';
+}
+
+function buildOutcomeMeta(data, { includeGapDescription = false } = {}) {
+  const pills = [];
+  const descriptionPills = [];
+  const statusLabel = getStatusLabel(data?.drillStatus);
+  const gapLabel = getGapLabel(data?.gapType);
+
+  if (data?.drillStatus === 'solid') {
+    pills.push(`<span class="graph-detail-pill success">${escHtml(statusLabel)}</span>`);
+  } else if (data?.state === 'drilled' || data?.drillStatus || data?.gapType) {
+    pills.push('<span class="graph-detail-pill warning">Needs revisit</span>');
+    if (gapLabel) {
+      pills.push(`<span class="graph-detail-pill">${escHtml(gapLabel)}</span>`);
+    } else if (statusLabel) {
+      pills.push(`<span class="graph-detail-pill">${escHtml(statusLabel)}</span>`);
+    }
+  }
+
+  if (includeGapDescription && data?.gapDescription) {
+    descriptionPills.push(`<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>`);
+  }
+
+  return {
+    pills: pills.join(''),
+    descriptionPills: descriptionPills.join(''),
+  };
+}
+
 function getInspectPrompt(data) {
   if (!data) return 'Start here and rebuild the mechanism from memory.';
 
@@ -335,6 +377,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
   const data = node.data();
   const isDrillActive = mode === 'drill-active';
   const isPostDrill = mode === 'post-drill';
+  const outcomeMeta = buildOutcomeMeta(data, { includeGapDescription: !isPostDrill });
 
   if (isDrillActive) {
     const kicker = data.type === 'core'
@@ -349,8 +392,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
       <p class="graph-detail-copy">Explain this from memory. The map stays in the background until the drill resolves.</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-        ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
-        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`re-drill: ${data.gapType}`)}</span>` : ''}
+        ${outcomeMeta.pills}
       </div>
     `;
   }
@@ -360,17 +402,18 @@ function detailMarkupForNode(node, mode = 'inspect') {
     const kicker = data.type === 'core'
       ? 'Core Thesis Result'
       : data.type === 'backbone'
-        ? 'Backbone Result'
+      ? 'Backbone Result'
         : data.type === 'cluster'
           ? 'Cluster Result'
           : 'Drill Result';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${isSolid ? 'Solidified. You rebuilt this from scratch.' : 'Revisit next session.'}</p>
+      <p class="graph-detail-copy">${isSolid ? 'Solidified. You rebuilt this from scratch.' : 'Attempt logged. This room is still unresolved.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-        <span class="graph-detail-pill ${isSolid ? 'success' : ''}">${escHtml(isSolid ? 'Solid' : 'Revisit next session')}</span>
-        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(data.gapType)}</span>` : ''}
+        ${isSolid
+          ? '<span class="graph-detail-pill success">Solidified</span>'
+          : outcomeMeta.pills}
       </div>
       ${data.gapDescription ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
       <button class="btn-start-drill trigger-continue" style="width:100%; margin-top: 16px;">Continue</button>
@@ -383,9 +426,8 @@ function detailMarkupForNode(node, mode = 'inspect') {
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-        ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
-        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
-        ${data.gapDescription ? `<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>` : ''}
+        ${outcomeMeta.pills}
+        ${outcomeMeta.descriptionPills}
       </div>
       <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START WITH CORE THESIS</button>
     `;
@@ -397,9 +439,8 @@ function detailMarkupForNode(node, mode = 'inspect') {
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-        ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
-        ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
-        ${data.gapDescription ? `<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>` : ''}
+        ${outcomeMeta.pills}
+        ${outcomeMeta.descriptionPills}
       </div>
       ${data.available ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
     `;
@@ -426,9 +467,8 @@ function detailMarkupForNode(node, mode = 'inspect') {
     <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
     <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
     <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-      ${data.drillStatus ? `<span class="graph-detail-pill">${escHtml(`status: ${data.drillStatus}`)}</span>` : ''}
-      ${data.gapType ? `<span class="graph-detail-pill warning">${escHtml(`gap: ${data.gapType}`)}</span>` : ''}
-      ${data.gapDescription ? `<span class="graph-detail-pill">${escHtml(data.gapDescription)}</span>` : ''}
+      ${outcomeMeta.pills}
+      ${outcomeMeta.descriptionPills}
     </div>
     ${isAvailable ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
   `;
@@ -503,14 +543,20 @@ function clearGraphFocus(cy) {
   cy.elements().removeClass('is-focus-target');
 }
 
-function installHoverFocus(cy, detailEl, getInteractionMode) {
+function syncSelectedElement(cy, selectedElement) {
+  cy.elements().removeClass('is-selection-anchor');
+  if (!selectedElement?.id) return;
+
+  const element = cy.getElementById(selectedElement.id);
+  if (element.length) {
+    element.addClass('is-selection-anchor');
+  }
+}
+
+function installHoverFocus(cy, getInteractionMode) {
   cy.on('mouseover', 'node, edge', (event) => {
     if (getInteractionMode() === 'drill-active') return;
     applyGraphFocus(cy, event.target);
-    if (getInteractionMode() !== 'inspect') return;
-    detailEl.innerHTML = event.target.isNode()
-      ? detailMarkupForNode(event.target)
-      : detailMarkupForEdge(event.target, cy);
   });
 
   cy.on('mouseout', 'node, edge', () => {
@@ -522,10 +568,7 @@ function installHoverFocus(cy, detailEl, getInteractionMode) {
 function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onContinue, getInteractionMode, setInteractionMode, setSelectedElement) {
   cy.on('tap', 'node', (event) => {
     setSelectedElement({ type: 'node', id: event.target.id() });
-    if (getInteractionMode() === 'drill-active') return;
-    if (getInteractionMode() === 'post-drill') {
-      setInteractionMode('inspect');
-    }
+    if (getInteractionMode() === 'drill-active' || getInteractionMode() === 'post-drill') return;
     detailEl.innerHTML = detailMarkupForNode(event.target);
     const data = event.target.data();
     const drillBtn = detailEl.querySelector('.trigger-drill');
@@ -538,10 +581,7 @@ function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onC
 
   cy.on('tap', 'edge', (event) => {
     setSelectedElement({ type: 'edge', id: event.target.id() });
-    if (getInteractionMode() === 'drill-active') return;
-    if (getInteractionMode() === 'post-drill') {
-      setInteractionMode('inspect');
-    }
+    if (getInteractionMode() === 'drill-active' || getInteractionMode() === 'post-drill') return;
     detailEl.innerHTML = detailMarkupForEdge(event.target, cy);
   });
 
@@ -549,10 +589,7 @@ function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onC
     if (event.target === cy) {
       setSelectedElement({ type: 'node', id: defaultNodeId });
       clearGraphFocus(cy);
-      if (getInteractionMode() === 'drill-active') return;
-      if (getInteractionMode() === 'post-drill') {
-        setInteractionMode('inspect');
-      }
+      if (getInteractionMode() === 'drill-active' || getInteractionMode() === 'post-drill') return;
       setEmptyDetail(detailEl, source);
       const drillBtn = detailEl.querySelector('.trigger-drill');
       if (drillBtn) drillBtn.addEventListener('click', () => onNodeSelect?.(null));
@@ -985,6 +1022,28 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         },
       },
       {
+        selector: 'node.is-selection-anchor',
+        style: {
+          'border-color': '#5b518f',
+          'border-width': 3,
+          'overlay-color': '#7c6fcd',
+          'overlay-opacity': 0.08,
+          'overlay-padding': 14,
+          'text-opacity': 1,
+          'z-index': 9998,
+        },
+      },
+      {
+        selector: 'edge.is-selection-anchor',
+        style: {
+          width: 2.6,
+          'line-color': 'rgba(124,111,205,0.66)',
+          'target-arrow-color': 'rgba(124,111,205,0.66)',
+          opacity: 1,
+          'z-index': 9998,
+        },
+      },
+      {
         selector: '.is-active-drill',
         style: {
           'border-color': '#7c6fcd',
@@ -1026,6 +1085,10 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   let updateTimeoutId = null;
   let interactionMode = 'inspect';
   let selectedElement = { type: 'node', id: transformed.coreId };
+  const updateSelectedElement = (nextSelected) => {
+    selectedElement = nextSelected;
+    syncSelectedElement(cy, selectedElement);
+  };
 
   const clearDrillContext = () => {
     cy.elements().removeClass('is-drill-muted');
@@ -1157,7 +1220,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     cy.fit(cy.elements(), 50);
   };
 
-  installHoverFocus(cy, detailEl, () => interactionMode);
+  installHoverFocus(cy, () => interactionMode);
   installSelection(
     cy,
     detailEl,
@@ -1179,9 +1242,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         clearDrillContext();
       }
     },
-    (nextSelected) => {
-      selectedElement = nextSelected;
-    }
+    updateSelectedElement
   );
   installDragBehavior(cy);
 
@@ -1192,6 +1253,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     setEmptyDetail(detailEl, transformed.source, 'inspect');
   }
 
+  syncSelectedElement(cy, selectedElement);
   renderOrbit(true);
   clearGraphFocus(cy);
 
@@ -1208,7 +1270,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       if (!nodeId) return;
       const node = cy.getElementById(nodeId);
       if (node.length) {
-        selectedElement = { type: 'node', id: nodeId };
+        updateSelectedElement({ type: 'node', id: nodeId });
         node.addClass('is-active-drill');
       }
     },
@@ -1220,7 +1282,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         graphDetail.classList.toggle('is-post-drill', interactionMode === 'post-drill');
       }
       if (nodeId) {
-        selectedElement = { type: 'node', id: nodeId };
+        updateSelectedElement({ type: 'node', id: nodeId });
       }
       if (interactionMode === 'drill-active') {
         applyDrillContext(selectedElement.id);
@@ -1301,6 +1363,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         });
       });
 
+      syncSelectedElement(cy, selectedElement);
       renderCurrentDetail();
 
       if (changed) {
