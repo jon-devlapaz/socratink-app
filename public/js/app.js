@@ -14,6 +14,7 @@ import {
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls, POLYGON_IDS
 } from './dom.js';
+import { recordExtractRun, recordDrillRun } from './browser-analytics.js';
 
 const App = (() => {
   const THEME_STORAGE_KEY = 'learnops-theme';
@@ -636,6 +637,8 @@ const App = (() => {
         if (concepts.length >= 4) { renderAddTrigger(); return; }
 
         const id = generateId();
+        const extractStartedAt = new Date().toISOString();
+        const extractStartedPerf = performance.now();
 
         const extractOverlay = document.createElement('div');
         extractOverlay.id = 'extract-overlay';
@@ -679,6 +682,7 @@ const App = (() => {
 
           extractOverlay.querySelector('.extract-label').textContent = 'Mapping knowledge...';
           const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
+          const durationMs = Math.round(performance.now() - extractStartedPerf);
 
           removeOverlay();
           const concept = {
@@ -690,6 +694,27 @@ const App = (() => {
             sourceUrl: type === 'url' ? url : null,
             graphData: JSON.stringify(jsonPayload)
           };
+          recordExtractRun({
+            timestamp: extractStartedAt,
+            stage: 'extract',
+            status: 'success',
+            model: 'gemini-2.5-flash',
+            prompt_version: 'extract-system-v1.txt',
+            concept_id: id,
+            source_title: name,
+            content_type: type,
+            input_chars: sourceText.length,
+            duration_ms: durationMs,
+            architecture_type: jsonPayload?.metadata?.architecture_type || 'unknown',
+            difficulty: jsonPayload?.metadata?.difficulty || 'unknown',
+            low_density: jsonPayload?.metadata?.low_density === true,
+            backbone_count: Array.isArray(jsonPayload?.backbone) ? jsonPayload.backbone.length : 0,
+            cluster_count: Array.isArray(jsonPayload?.clusters) ? jsonPayload.clusters.length : 0,
+            subnode_count: Array.isArray(jsonPayload?.clusters)
+              ? jsonPayload.clusters.reduce((sum, cluster) => sum + ((cluster?.subnodes || []).length), 0)
+              : 0,
+            run_mode: 'default',
+          });
           contentStore.set(id, sourceText);
           concepts.push(concept);
           saveConcepts(concepts);
@@ -699,6 +724,21 @@ const App = (() => {
           closeDrawer();
         } catch (err) {
           removeOverlay();
+          recordExtractRun({
+            timestamp: extractStartedAt,
+            stage: 'extract',
+            status: 'error',
+            model: 'gemini-2.5-flash',
+            prompt_version: 'extract-system-v1.txt',
+            concept_id: id,
+            source_title: name,
+            content_type: type,
+            input_chars: typeof text === 'string' ? text.length : 0,
+            duration_ms: Math.round(performance.now() - extractStartedPerf),
+            error_type: 'request_failed',
+            reason: err?.message || 'Extraction failed',
+            run_mode: 'default',
+          });
           alert('Extraction Failed: ' + err.message);
         }
       },
@@ -1527,6 +1567,28 @@ const App = (() => {
     return concepts[conceptIdx];
   }
 
+  function resolveNodeType(knowledgeMap, nodeId, fallbackType = null) {
+    if (nodeId === 'core-thesis') return 'core';
+    if ((knowledgeMap?.backbone || []).some((item) => item?.id === nodeId)) return 'backbone';
+    if ((knowledgeMap?.clusters || []).some((cluster) => cluster?.id === nodeId)) return 'cluster';
+    if ((knowledgeMap?.clusters || []).some((cluster) => (cluster?.subnodes || []).some((subnode) => subnode?.id === nodeId))) {
+      return 'subnode';
+    }
+    return fallbackType || 'unknown';
+  }
+
+  function resolveClusterId(knowledgeMap, nodeId) {
+    if (!nodeId || !knowledgeMap?.clusters) return null;
+    const directCluster = (knowledgeMap.clusters || []).find((cluster) => cluster?.id === nodeId);
+    if (directCluster) return directCluster.id;
+    for (const cluster of knowledgeMap.clusters || []) {
+      if ((cluster?.subnodes || []).some((subnode) => subnode?.id === nodeId)) {
+        return cluster.id;
+      }
+    }
+    return null;
+  }
+
   function patchActiveConceptDrillOutcome(result) {
     if (result?.routing !== 'NEXT' || !result?.node_id) {
       console.log(
@@ -1662,6 +1724,8 @@ const App = (() => {
     const concept = getActiveConcept();
     if (!concept || !drillState.node) return;
     const sessionToken = drillState.sessionToken;
+    const turnStartedAt = new Date().toISOString();
+    const turnStartedPerf = performance.now();
 
     drillState.pending = true;
     if (chatInput) chatInput.disabled = true;
@@ -1677,6 +1741,9 @@ const App = (() => {
     const knowledgeMap = typeof concept.graphData === 'string'
       ? JSON.parse(concept.graphData)
       : concept.graphData;
+    const nodeType = resolveNodeType(knowledgeMap, drillState.node.id, drillState.node.type);
+    const clusterId = resolveClusterId(knowledgeMap, drillState.node.id);
+    const nodeLabel = drillState.node.fullLabel || drillState.node.label || concept.name;
 
     const apiKey = localStorage.getItem('gemini_key') || undefined;
     try {
@@ -1686,7 +1753,7 @@ const App = (() => {
         body: JSON.stringify({
           concept_id: concept.id,
           node_id: drillState.node.id,
-          node_label: drillState.node.fullLabel || drillState.node.label || concept.name,
+          node_label: nodeLabel,
           node_mechanism: drillState.node.detail || '',
           knowledge_map: knowledgeMap,
           messages: outboundMessages,
@@ -1716,7 +1783,53 @@ const App = (() => {
         return;
       }
 
-      patchActiveConceptDrillOutcome(data);
+      const graphMutationConcept = patchActiveConceptDrillOutcome(data);
+      const graphMutated = Boolean(graphMutationConcept);
+      const uxRewardEmitted = Boolean(
+        data?.answer_mode === 'attempt'
+        && data?.classification === 'solid'
+        && (data?.response_tier != null ? Number(data.response_tier) >= 4 : true)
+      );
+      recordDrillRun({
+        timestamp: turnStartedAt,
+        stage: 'drill',
+        status: 'success',
+        model: 'gemini-2.5-flash',
+        prompt_version: 'learnops-drill-skill',
+        concept_id: concept.id,
+        node_id: drillState.node.id,
+        node_type: nodeType,
+        cluster_id: clusterId,
+        node_label: nodeLabel,
+        session_phase: sessionPhase,
+        session_start_iso: drillState.sessionStartIso,
+        message_count: outboundMessages.length,
+        latest_learner_chars: userText ? userText.length : 0,
+        answer_mode: data?.answer_mode ?? null,
+        score_eligible: data?.score_eligible ?? null,
+        help_request_reason: data?.help_request_reason ?? null,
+        probe_count_in: drillState.probeCount,
+        probe_count_out: data?.probe_count ?? drillState.probeCount,
+        nodes_drilled_in: drillState.nodesDrilled,
+        nodes_drilled_out: data?.nodes_drilled ?? drillState.nodesDrilled,
+        attempt_turn_count_in: drillState.attemptTurnCount,
+        attempt_turn_count_out: data?.attempt_turn_count ?? drillState.attemptTurnCount,
+        help_turn_count_in: drillState.helpTurnCount,
+        help_turn_count_out: data?.help_turn_count ?? drillState.helpTurnCount,
+        classification: data?.classification ?? null,
+        routing: data?.routing ?? null,
+        response_tier: data?.response_tier ?? null,
+        response_band: data?.response_band ?? null,
+        tier_reason: data?.tier_reason ?? null,
+        force_advanced: data?.force_advanced === true,
+        force_advance_mode: data?.force_advance_mode ?? null,
+        graph_mutated: graphMutated,
+        ux_reward_emitted: uxRewardEmitted,
+        session_terminated: data?.session_terminated === true,
+        termination_reason: data?.termination_reason ?? null,
+        duration_ms: Math.round(performance.now() - turnStartedPerf),
+        run_mode: 'default',
+      });
       drillState.messages = outboundMessages;
       drillState.probeCount = data.probe_count ?? drillState.probeCount;
       drillState.nodesDrilled = data.nodes_drilled ?? drillState.nodesDrilled;
@@ -1745,6 +1858,30 @@ const App = (() => {
       if (sessionToken !== drillState.sessionToken) {
         return;
       }
+      recordDrillRun({
+        timestamp: turnStartedAt,
+        stage: 'drill',
+        status: 'error',
+        model: 'gemini-2.5-flash',
+        prompt_version: 'learnops-drill-skill',
+        concept_id: concept.id,
+        node_id: drillState.node.id,
+        node_type: nodeType,
+        cluster_id: clusterId,
+        node_label: nodeLabel,
+        session_phase: sessionPhase,
+        session_start_iso: drillState.sessionStartIso,
+        message_count: outboundMessages.length,
+        latest_learner_chars: userText ? userText.length : 0,
+        probe_count_in: drillState.probeCount,
+        nodes_drilled_in: drillState.nodesDrilled,
+        attempt_turn_count_in: drillState.attemptTurnCount,
+        help_turn_count_in: drillState.helpTurnCount,
+        duration_ms: Math.round(performance.now() - turnStartedPerf),
+        error_type: 'request_failed',
+        reason: err?.message || 'Drill request failed',
+        run_mode: 'default',
+      });
       drillState.pending = false;
       throw err;
     }

@@ -1,5 +1,6 @@
 import { loadConcepts, getActiveId, setActiveId } from './store.js';
 import { escHtml, transformKnowledgeMapToGraph } from './graph-view.js?v=2';
+import { buildBrowserLearnerSummaryPayload } from './browser-analytics.js';
 
 const conceptSelect = document.getElementById('concept-select');
 const statusChip = document.getElementById('status-chip');
@@ -581,6 +582,7 @@ function renderSessionJournal(payload) {
 async function fetchLearnerHistory(concepts) {
   if (!concepts.length) {
     return {
+      source: 'empty',
       retrieval_habits: {},
       cadence: {},
       conversion_history: { recent_conversions: [] },
@@ -590,12 +592,28 @@ async function fetchLearnerHistory(concepts) {
     };
   }
 
-  const conceptIds = concepts.map((concept) => concept.id).join(',');
-  const response = await fetch(`/api/analytics/learner-runs?concept_ids=${encodeURIComponent(conceptIds)}`);
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  const conceptIds = concepts.map((concept) => concept.id);
+  const browserPayload = buildBrowserLearnerSummaryPayload(conceptIds);
+  if ((browserPayload?.retrieval_habits?.turn_count || 0) > 0) {
+    return browserPayload;
   }
-  return response.json();
+
+  try {
+    const response = await fetch(`/api/analytics/learner-runs?concept_ids=${encodeURIComponent(conceptIds.join(','))}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const payload = await response.json();
+    return {
+      source: 'server_logs',
+      ...payload,
+    };
+  } catch (error) {
+    if ((browserPayload?.retrieval_habits?.turn_count || 0) > 0) {
+      return browserPayload;
+    }
+    throw error;
+  }
 }
 
 function renderEmptyDashboard(message) {
@@ -711,14 +729,17 @@ async function loadDashboard() {
     renderCadence(payload);
     renderSessionJournal(payload);
 
+    const sourceLabel = remoteData?.source === 'browser_local_storage'
+      ? 'browser-local telemetry'
+      : 'server drill history';
     statusChip.textContent = 'Ready';
-    statusMeta.textContent = `Showing "${activeConcept.name}" from local graph truth plus filtered drill history. Last activity: ${fmtTimestamp(payload.cadence.latest_activity_at)}`;
+    statusMeta.textContent = `Showing "${activeConcept.name}" from local graph truth plus ${sourceLabel}. Last activity: ${fmtTimestamp(payload.cadence.latest_activity_at)}`;
   } catch (error) {
     console.error(error);
     statusChip.textContent = 'Load Failed';
     statusChip.dataset.tone = 'error';
     statusMeta.textContent = 'Could not load learner analytics.';
-    const errorState = 'Learner analytics failed to load. Check that your concept data and local logs are available.';
+    const errorState = 'Learner analytics failed to load. Check that your concept data and browser telemetry are available.';
     renderEmptyDashboard(errorState);
     statusChip.textContent = 'Load Failed';
     statusChip.dataset.tone = 'error';

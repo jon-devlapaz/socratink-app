@@ -88,6 +88,34 @@ class DrillRequest(BaseModel):
     api_key: str | None = Field(None, max_length=200)
 
 
+def _resolve_node_mechanism(knowledge_map: dict, node_id: str, fallback: str = "") -> str:
+    if not isinstance(knowledge_map, dict):
+        return fallback
+
+    metadata = knowledge_map.get("metadata") or {}
+    if node_id == "core-thesis":
+        return str(
+            metadata.get("core_thesis")
+            or metadata.get("thesis")
+            or fallback
+        )
+
+    for backbone in knowledge_map.get("backbone") or []:
+        if isinstance(backbone, dict) and backbone.get("id") == node_id:
+            return str(backbone.get("principle") or backbone.get("label") or fallback)
+
+    for cluster in knowledge_map.get("clusters") or []:
+        if not isinstance(cluster, dict):
+            continue
+        if cluster.get("id") == node_id:
+            return str(cluster.get("description") or cluster.get("label") or fallback)
+        for subnode in cluster.get("subnodes") or []:
+            if isinstance(subnode, dict) and subnode.get("id") == node_id:
+                return str(subnode.get("mechanism") or subnode.get("label") or fallback)
+
+    return fallback
+
+
 @app.get("/api/health")
 def health():
     return {
@@ -137,7 +165,8 @@ def extract(req: ExtractRequest):
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
     except Exception as err:
-        raise HTTPException(status_code=500, detail=str(err))
+        logger.exception("Unexpected failure in /api/extract")
+        raise HTTPException(status_code=500, detail="Unexpected server error during extraction.") from err
 
 
 def _extract_text_from_html(raw_html: str) -> str:
@@ -323,14 +352,17 @@ def drill(req: DrillRequest):
         if isinstance(knowledge_map, str):
             knowledge_map = json.loads(knowledge_map)
 
-        # TODO: Resolve mechanism server-side from knowledge_map/node_id so the answer key
-        # does not live in browser state or travel over the network on every drill turn.
+        node_mechanism = _resolve_node_mechanism(
+            knowledge_map,
+            req.node_id,
+            fallback="",
+        )
         result = drill_chat(
             knowledge_map=knowledge_map,
             concept_id=req.concept_id,
             node_id=req.node_id,
             node_label=req.node_label,
-            node_mechanism=req.node_mechanism,
+            node_mechanism=node_mechanism,
             messages=[msg.model_dump() for msg in req.messages],
             session_phase=req.session_phase,
             probe_count=req.probe_count,

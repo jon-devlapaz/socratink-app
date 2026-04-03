@@ -1,3 +1,5 @@
+import { buildBrowserAiRunsPayload } from './browser-analytics.js';
+
 const metricGrid = document.getElementById('metric-grid');
 const extractPanel = document.getElementById('extract-panel');
 const drillPanel = document.getElementById('drill-panel');
@@ -243,12 +245,22 @@ async function loadDashboard() {
   statusMeta.textContent = 'Fetching analytics payload';
 
   try {
-    const response = await fetch('/api/analytics/ai-runs');
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
+    const browserPayload = buildBrowserAiRunsPayload();
+    let payload = browserPayload;
 
-    const payload = await response.json();
+    if (
+      (browserPayload?.extract?.total_runs || 0) === 0
+      && (browserPayload?.drill?.total_runs || 0) === 0
+    ) {
+      const response = await fetch('/api/analytics/ai-runs');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      payload = {
+        source: 'server_logs',
+        ...(await response.json()),
+      };
+    }
     metricGrid.innerHTML = createMetricCards(payload);
     renderExtractPanel(payload.extract);
     renderDrillPanel(payload.drill);
@@ -274,14 +286,14 @@ async function loadDashboard() {
 
     const latestTimestamp = payload.drill.latest_run_at || payload.extract.latest_run_at;
     statusChip.textContent = 'Live';
-    statusMeta.textContent = `Last activity: ${fmtTimestamp(latestTimestamp)}`;
+    statusMeta.textContent = `Showing ${payload?.source === 'browser_local_storage' ? 'browser-local telemetry' : 'server analytics'}. Last activity: ${fmtTimestamp(latestTimestamp)}`;
   } catch (error) {
     console.error(error);
     statusChip.textContent = 'Load Failed';
     statusChip.dataset.tone = 'error';
     statusMeta.textContent = 'Could not load AI runs analytics.';
 
-    const errorState = `<div class="empty-state">Analytics payload failed to load. Confirm the backend is running and local logs are present.</div>`;
+    const errorState = `<div class="empty-state">Analytics payload failed to load. Confirm the backend is running or that browser telemetry exists for this browser profile.</div>`;
     metricGrid.innerHTML = '';
     extractPanel.innerHTML = errorState;
     drillPanel.innerHTML = errorState;
