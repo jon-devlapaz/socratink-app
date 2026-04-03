@@ -43,8 +43,8 @@
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
         onclick="App.showDashboard()">Dashboard</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)" onclick="App.showLibrary()">Library</a>
-      <a id="nav-analytics" class="sidebar-nav-item" href="javascript:void(0)" style="opacity:0.5; cursor:not-allowed;"
-        title="Analytics Module Offline">Analytics</a>
+      <a id="nav-analytics" class="sidebar-nav-item" href="/ai-runs-dashboard.html"
+        title="Open learner analytics">Analytics</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)" onclick="startSettings()">Settings</a>
       <a id="nav-guide" class="sidebar-nav-item" href="javascript:void(0)" onclick="App.toggleTutorial()">[?] Quick Guide</a>
     </nav>
@@ -181,7 +181,7 @@
 
     <!-- Map View Panel -->
     <section id="map-view" class="map-view">
-      <button class="map-close-btn" onclick="App.hideMapView()" aria-label="Close map">×</button>
+      <button class="map-close-btn" onclick="App.hideMapView()" aria-label="Close map">← Back</button>
       <div class="map-view-shell">
         <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
           <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button">Study
