@@ -1,0 +1,74 @@
+{
+  "id": "action-potential-core",
+  "title": "Action Potential Core Thesis",
+  "notes": "Use for help-vs-attempt calibration on the core thesis. This fixture is intended for terminal and dev-only tasting runs.",
+  "preferred_start_node_id": "core-thesis",
+  "source_text": "An action potential is a rapid electrical signal that neurons use to transmit information along the axon. At rest, the neuron maintains a negative membrane potential because ion concentrations are unevenly distributed and the membrane is more permeable to potassium than sodium. When incoming inputs depolarize the membrane to threshold, voltage-gated sodium channels open. Sodium rushes into the cell, causing rapid depolarization and creating the rising phase of the action potential. Very soon after opening, sodium channels inactivate, while voltage-gated potassium channels open more slowly. Potassium then flows out of the neuron, repolarizing the membrane and often driving it briefly below the resting potential in a hyperpolarization phase. During the absolute refractory period, another action potential cannot be initiated because sodium channels are inactivated. During the relative refractory period, firing is possible but requires stronger input because the membrane is still hyperpolarized. The action potential propagates forward because depolarization in one segment of membrane brings the next segment to threshold, while the segment behind it is refractory.",
+  "scripted_answers": [
+    {
+      "id": "explicit_unknown",
+      "label": "Explicit Unknown",
+      "input": "I don't know.",
+      "expected_answer_mode": "help_request",
+      "expected_routing": "SCAFFOLD"
+    },
+    {
+      "id": "explain_request",
+      "label": "Explain Request",
+      "input": "Can you explain how voltage-gated sodium channels fit into this?",
+      "expected_answer_mode": "help_request",
+      "expected_routing": "SCAFFOLD"
+    },
+    {
+      "id": "affective_confusion",
+      "label": "Affective Confusion",
+      "input": "This is confusing. I need a simpler way to think about it.",
+      "expected_answer_mode": "help_request",
+      "expected_routing": "SCAFFOLD"
+    },
+    {
+      "id": "mixed_hesitant_attempt",
+      "label": "Mixed Hesitant Attempt",
+      "input": "I'm not sure, but I think voltage-gated sodium channels are involved because once threshold is reached they open and start the signal.",
+      "expected_answer_mode": "attempt",
+      "expected_routing": "PROBE"
+    },
+    {
+      "id": "shallow_attempt",
+      "label": "Shallow Attempt",
+      "input": "An action potential is basically the signal a neuron uses to send information down the axon.",
+      "expected_answer_mode": "attempt",
+      "expected_classification": "shallow"
+    },
+    {
+      "id": "deep_attempt",
+      "label": "Deep Attempt",
+      "input": "An action potential happens when the neuron gets to threshold and sodium channels open, which depolarizes the membrane and sends the signal forward, but I am probably missing how it resets and why it only moves one way.",
+      "expected_answer_mode": "attempt",
+      "expected_classification": "deep"
+    },
+    {
+      "id": "misconception",
+      "label": "Misconception",
+      "input": "I think an action potential is just electricity passively flowing down the axon like current through a wire, and the channels are mostly there to let it pass through.",
+      "expected_answer_mode": "attempt",
+      "expected_classification": "misconception"
+    },
+    {
+      "id": "solid",
+      "label": "Solid",
+      "input": "An action potential is a rapid electrical signal neurons use to transmit information. It starts when inputs depolarize the membrane to threshold, opening voltage-gated sodium channels so sodium rushes in and causes rapid depolarization. Then sodium channels inactivate, potassium channels open, and the membrane repolarizes, while refractory periods help the signal keep moving forward down the axon.",
+      "expected_answer_mode": "attempt",
+      "expected_classification": "solid",
+      "expected_routing": "NEXT"
+    },
+    {
+      "id": "masterful_solid",
+      "label": "Masterful Solid",
+      "input": "An action potential works because depolarizing input pushes the membrane to threshold, which opens voltage-gated sodium channels and causes a rapid sodium influx. That creates the rising phase and depolarizes adjacent membrane, so the signal regenerates instead of fading. Then sodium channels inactivate and slower potassium channels repolarize and briefly hyperpolarize the membrane, while refractory periods stop the signal from moving backward and keep propagation one-way along the axon.",
+      "expected_answer_mode": "attempt",
+      "expected_classification": "solid",
+      "expected_routing": "NEXT"
+    }
+  ]
+}
