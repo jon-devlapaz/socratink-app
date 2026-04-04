@@ -1,11 +1,11 @@
-# LearnOps-tamagachi
+# socratink-app
 
-LearnOps-tamagachi is an MVP-stage learning product deployed on Vercel serverless.
+socratink-app is an MVP-stage learning product deployed on Vercel serverless.
 
 The repo contains two closely related layers:
 
 - the hosted app: FastAPI backend plus a vanilla JS frontend in `public/`
-- the LearnOps prompt and skill assets in `learnops/` that shape extraction and drill behavior
+- the socratink prompt and skill assets in `learnops/` that shape extraction and drill behavior
 
 The product doctrine is stable even while implementation is still moving:
 
