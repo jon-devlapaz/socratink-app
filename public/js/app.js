@@ -139,7 +139,7 @@ const App = (() => {
   function renderHero(concept) {
     if (!concept) {
       conceptLabelEl.textContent = 'Dashboard';
-      titleEl.textContent = 'Add your first socraTink';
+      titleEl.textContent = 'Add your first socratink';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
         heroStateChipEl.textContent = 'Board Empty';
@@ -339,7 +339,7 @@ const App = (() => {
     addTriggerArea.innerHTML = full
       ? `<div class="add-trigger disabled"><span class="add-trigger-icon">+</span>Grid full (4/4)</div>`
       : `<div class="add-trigger" id="add-trigger" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon">+</span>new socraTink
+           <span class="add-trigger-icon">+</span>new socratink
          </div>`;
     scheduleTutorialRefresh();
   }

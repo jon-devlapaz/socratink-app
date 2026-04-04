@@ -54,6 +54,9 @@
 - Decision: adopt an explicit AI value-and-risk model inside the UX framework and treat it as part of MVP product doctrine.
 - Why: the product needs a clearer shared standard for where AI is desirable and where it would break truth, fairness, privacy, or real learning.
 - Consequence: future AI features should be evaluated against generation-before-recognition, truthful graph progression, accessibility, trust, and anti-outsourcing constraints.
+- Decision: split the public web surface so the marketing site lives at `socratink.ai` and the hosted product lives at `app.socratink.ai`.
+- Why: the product now has distinct landing and app deployments, and collapsing both onto one hostname made routing and positioning ambiguous.
+- Consequence: hosted verification and future copy work should treat apex and `app.` as separate surfaces; the landing repo still needs its hardcoded app links updated to the new subdomain.
 
 ### 2026-04-03
 
@@ -64,6 +67,7 @@
 ## Environment Lessons
 
 - Local success is not deployment validation.
+- Public host split is now `socratink.ai` for landing and `app.socratink.ai` for the app.
 - Hosted YouTube transcript retrieval can fail because YouTube blocks cloud/serverless IPs.
 - Current hosted fallback for blocked YouTube transcript retrieval is manual transcript paste.
 - External ingestion work must be reviewed for SSRF risk and internal error leakage.

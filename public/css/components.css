@@ -177,6 +177,10 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 /* Sidebar brand */
 .sidebar-brand {
   padding:28px 20px 16px; flex-shrink:0;
+  display:flex; align-items:center; gap:10px;
+}
+.sidebar-brand-logo {
+  width:28px; height:28px; object-fit:contain;
 }
 .sidebar-brand-name {
   font-family:var(--font-display);

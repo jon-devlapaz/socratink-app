@@ -251,7 +251,7 @@ def extract_url(req: UrlExtractRequest):
         request = Request(
             url,
             headers={
-                "User-Agent": "Mozilla/5.0 (compatible; socraTink/1.0; +https://localhost)"
+                "User-Agent": "Mozilla/5.0 (compatible; socratink/1.0; +https://localhost)"
             },
         )
         with urlopen(request, timeout=12) as response:

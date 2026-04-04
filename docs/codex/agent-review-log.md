@@ -104,3 +104,60 @@ Template reference:
 - `Ask the orchestrator to label specialist output clearly as queried-agent output versus orchestrator synthesis in future sessions.`
 - `Ask the orchestrator to switch to runtime/browser verification immediately after a user reports a UI regression instead of continuing with unverified status claims.`
 - `Ask glenna to review the next comparable interaction for truthful completion claims, role adherence, and provenance labeling.`
+
+---
+
+# Glenna Review Entry
+
+## Date
+
+- `2026-04-03 00:54 CDT`
+
+## Workflow Traced
+
+- Landing Page Theme Refactoring and CSS Variable Alignment
+
+## Outcome Reviewed
+
+- Replaced statically mapped hex colors across the App.jsx file with semantic `var(--theme-*)` utility variables mapping to the Socratic app's night map palette. Resolved incomplete dark mode implementation bugs (missing gradient inversions and flat background rendering).
+
+## Agents Involved
+
+- `orchestrator`
+
+## Context Reviewed
+
+- `AGENTS.md`
+- `index.css`
+- `App.jsx`
+
+## What Went Well
+
+- The usage of built-in Tailwind system configuration variable mapping correctly aligned the codebase structure with the primary product app's theming behaviors avoiding brute force JavaScript toggles.
+- Reacted efficiently to visual mismatch bugs caused by standard CSS gradients by directly injecting variable-bound gradient tokens into the global scope.
+
+## Failure Modes
+
+- `[medium]` Incomplete impact analysis on initial pass: the orchestrator correctly isolated `App.jsx` elements with raw hex inputs but failed to verify custom utility classes (e.g., `.hero-gradient` and `.glass-card`) configured inside `index.css` during the initial variable mapping. This left the user with a broken dark theme.
+- `[low]` Iframe background hardcoding missed: `className="bg-white"` nested inside the App.jsx simulation preview was skipped during preliminary grep substitution script execution, breaking the immersion of the dark theme map.
+
+## Suggested Prompt Fixes
+
+- prompt change: `When refactoring statically mapped stylistic values to dynamic system properties, comprehensively review custom CSS stylesheet rule definitions for raw visual tokens instead of only scanning the JSX/DOM framework.`
+
+## Suggested Workflow Fixes
+
+- workflow change: after running a regex replacement across the application DOM, actively double-check rendering wrappers (such as `<iframe>` containers) that explicitly encode structural canvas background colors before confidently declaring theming logic complete. 
+
+## Suggested Owners
+
+- broader context extraction for custom utility styling -> `orchestrator`
+- execution of rendering wrapper checks -> `orchestrator`
+
+## Confidence
+
+- `high`
+
+## Follow-Up Prompts
+
+- `Ask the orchestrator to perform comprehensive static-token audits inside attached global stylesheets before modifying JS framework files in future aesthetic adjustments.`
