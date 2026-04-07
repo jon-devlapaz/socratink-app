@@ -643,18 +643,275 @@ const App = (() => {
         const extractOverlay = document.createElement('div');
         extractOverlay.id = 'extract-overlay';
         extractOverlay.innerHTML = `
-          <div class="extract-body">
-            <div class="extract-spinner"></div>
-            <p class="extract-label">Extracting concepts</p>
-            <p class="extract-name">${escHtml(name)}</p>
+          <canvas class="eo-particle-canvas"></canvas>
+          <div class="eo-glow-blob"></div>
+          <header class="eo-header">
+            <span class="eo-brand-dot"></span>
+            <h1 class="eo-brand">socratink</h1>
+            <span class="eo-brand-dot"></span>
+          </header>
+          <div class="eo-focal">
+            <div class="eo-radar"></div>
+            <div class="eo-ring-outer"></div>
+            <div class="eo-ring-inner"></div>
+            <svg class="eo-crystal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="54 65 92 110" overflow="hidden">
+              <defs>
+                <filter id="eo-glow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+              </defs>
+              <g class="eo-crystal-grow">
+                <!-- glow halo — soft, no drop-shadow interference -->
+                <polygon points="100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91" fill="hsl(270,55%,65%)" opacity="0.18" filter="url(#eo-glow)"/>
+                <!-- lower-left -->
+                <polygon points="100,119 69,119 83,145 100,167" fill="hsl(270,42%,52%)"/>
+                <!-- lower-right -->
+                <polygon points="100,119 100,167 117,145 131,119" fill="hsl(270,38%,42%)"/>
+                <!-- upper-left -->
+                <polygon points="100,73 79,91 69,119 100,119" fill="hsl(270,48%,62%)"/>
+                <!-- upper-right -->
+                <polygon points="100,73 100,119 131,119 121,91" fill="hsl(270,42%,52%)"/>
+                <!-- bottom-tip -->
+                <polygon points="83,145 100,167 117,145" fill="hsl(270,38%,42%)"/>
+                <!-- top — brightest face -->
+                <polygon points="100,73 79,91 100,119 121,91" fill="hsl(270,52%,74%)"/>
+                <!-- specular -->
+                <polygon points="104,77 114,94 112,85" fill="hsl(270,60%,92%)" opacity="0.7"/>
+              </g>
+            </svg>
+            <div class="eo-pill eo-pill-top">
+              <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
+              <span class="eo-status-label">Analyzing</span>
+            </div>
+            <div class="eo-pill eo-pill-bottom">
+              <span class="material-symbols-outlined eo-pill-icon">memory</span>
+              <span class="eo-concept-name">${escHtml(name)}</span>
+            </div>
           </div>
+          <div class="eo-meta-status">
+            <span class="eo-meta-text">Parsing source content...</span>
+          </div>
+          <div class="eo-tip">
+            <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory far more than re-reading the same material.&rdquo;</p>
+          </div>
+          <footer class="eo-footer">
+            <div class="eo-progress-meta">
+              <span class="eo-progress-label">Processing</span>
+              <span class="eo-progress-pct">20%</span>
+            </div>
+            <div class="eo-progress-track">
+              <div class="eo-progress-bar" style="width:20%">
+                <div class="eo-progress-shimmer"></div>
+              </div>
+            </div>
+          </footer>
         `;
         document.body.appendChild(extractOverlay);
-        requestAnimationFrame(() => extractOverlay.classList.add('visible'));
+        requestAnimationFrame(() => {
+          extractOverlay.classList.add('visible');
+          startTipCycle();
+          pgInit();
+          setCrystalScale(20);
+        });
 
-        function removeOverlay() {
-          extractOverlay.classList.remove('visible');
-          setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
+        let trickleInterval = null;
+        let tipInterval = null;
+        let metaInterval = null;
+
+        const META_STAGES = [
+          'Mapping concept graph...',
+          'Checking for contradictions...',
+          'Synthesizing relationships...',
+          'Verifying knowledge depth...',
+          'Structuring final map...',
+        ];
+
+        function setMetaStatus(text) {
+          const el = extractOverlay.querySelector('.eo-meta-text');
+          if (!el) return;
+          el.classList.add('eo-meta-exit');
+          setTimeout(() => { el.textContent = text; el.classList.remove('eo-meta-exit'); }, 260);
+        }
+
+        function startMetaCycle() {
+          let idx = 0;
+          setMetaStatus(META_STAGES[0]);
+          metaInterval = setInterval(() => {
+            idx = (idx + 1) % META_STAGES.length;
+            setMetaStatus(META_STAGES[idx]);
+          }, 3500);
+        }
+
+        const OVERLAY_TIPS = [
+          'Retrieval practice strengthens memory far more than re-reading the same material.',
+          'Spacing your reviews over time — not cramming — is what turns short-term recall into lasting knowledge.',
+          'Sleep is when your brain consolidates what you practiced. Hibernating a concept isn\u2019t stalling \u2014 it\u2019s the science.',
+          'Asking yourself questions before you have the answers is more powerful than reading answers directly.',
+          'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive review.',
+          'Metacognition \u2014 knowing what you know \u2014 is the skill that makes all other learning more efficient.',
+          'Spaced repetition is most effective when review intervals grow: short gaps early, longer gaps later.',
+        ];
+
+        function startTipCycle() {
+          let idx = 0;
+          tipInterval = setInterval(() => {
+            const tipEl = extractOverlay.querySelector('.eo-tip-text');
+            if (!tipEl) return;
+            tipEl.classList.add('eo-tip-exit');
+            setTimeout(() => {
+              idx = (idx + 1) % OVERLAY_TIPS.length;
+              tipEl.innerHTML = '\u201c' + OVERLAY_TIPS[idx] + '\u201d';
+              tipEl.classList.remove('eo-tip-exit');
+            }, 420);
+          }, 5500);
+        }
+
+        // ── Particle grid ────────────────────────────────────────────
+        const PG = {
+          SPACING: 28, DOT_R: 1.2,
+          BASE_OP: 0.14, MAX_OP: 0.38,
+          INFLUENCE: 90, MAX_PUSH: 7, EASE: 0.07, OP_EASE: 0.10,
+          SETTLE_THRESH: 0.12,
+        };
+        let pgDots = [], pgCursor = null, pgRafId = null;
+
+        function pgInit() {
+          const canvas = extractOverlay.querySelector('.eo-particle-canvas');
+          if (!canvas) return;
+          const W = canvas.offsetWidth, H = canvas.offsetHeight;
+          canvas.width = W; canvas.height = H;
+          pgDots = [];
+          for (let y = PG.SPACING / 2; y < H; y += PG.SPACING) {
+            for (let x = PG.SPACING / 2; x < W; x += PG.SPACING) {
+              pgDots.push({ ox: x, oy: y, x, y, op: PG.BASE_OP });
+            }
+          }
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'white';
+          pgDraw(ctx);
+
+          canvas.closest('#extract-overlay').addEventListener('mousemove', e => {
+            const r = canvas.getBoundingClientRect();
+            pgCursor = { x: e.clientX - r.left, y: e.clientY - r.top };
+            if (!pgRafId) pgRafId = requestAnimationFrame(() => pgTick(ctx));
+          });
+          canvas.closest('#extract-overlay').addEventListener('mouseleave', () => {
+            pgCursor = null;
+            if (!pgRafId) pgRafId = requestAnimationFrame(() => pgTick(ctx));
+          });
+        }
+
+        function pgUpdate() {
+          const cx = pgCursor ? pgCursor.x : null;
+          const cy = pgCursor ? pgCursor.y : null;
+          for (const d of pgDots) {
+            if (cx !== null) {
+              const dx = d.ox - cx, dy = d.oy - cy;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < PG.INFLUENCE && dist > 0) {
+                const s = (1 - dist / PG.INFLUENCE) * PG.MAX_PUSH;
+                d.x += (d.ox + (dx / dist) * s - d.x) * 0.18;
+                d.y += (d.oy + (dy / dist) * s - d.y) * 0.18;
+                d.op += (PG.BASE_OP + (1 - dist / PG.INFLUENCE) * (PG.MAX_OP - PG.BASE_OP) - d.op) * PG.OP_EASE;
+              } else {
+                d.x += (d.ox - d.x) * PG.EASE;
+                d.y += (d.oy - d.y) * PG.EASE;
+                d.op += (PG.BASE_OP - d.op) * PG.OP_EASE;
+              }
+            } else {
+              d.x += (d.ox - d.x) * PG.EASE;
+              d.y += (d.oy - d.y) * PG.EASE;
+              d.op += (PG.BASE_OP - d.op) * PG.OP_EASE;
+            }
+          }
+        }
+
+        function pgDraw(ctx) {
+          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+          for (const d of pgDots) {
+            ctx.globalAlpha = d.op;
+            ctx.beginPath();
+            ctx.arc(d.x, d.y, PG.DOT_R, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        function pgSettled() {
+          return pgDots.every(d =>
+            Math.abs(d.x - d.ox) < PG.SETTLE_THRESH &&
+            Math.abs(d.y - d.oy) < PG.SETTLE_THRESH &&
+            Math.abs(d.op - PG.BASE_OP) < 0.004
+          );
+        }
+
+        function pgTick(ctx) {
+          pgUpdate();
+          pgDraw(ctx);
+          if (!pgSettled()) {
+            pgRafId = requestAnimationFrame(() => pgTick(ctx));
+          } else {
+            pgRafId = null;
+          }
+        }
+        // ─────────────────────────────────────────────────────────────
+
+        function setCrystalScale(pct) {
+          const grow = extractOverlay.querySelector('.eo-crystal-grow');
+          if (!grow) return;
+          const t = pct / 100;
+          const scale = 0.025 + Math.pow(t, 2) * 0.975;
+          const opacity = 0.35 + t * 0.65;
+          grow.style.transform = `scale(${scale.toFixed(3)})`;
+          grow.style.opacity = opacity.toFixed(2);
+        }
+
+        function setOverlayProgress(pct, statusText) {
+          const bar = extractOverlay.querySelector('.eo-progress-bar');
+          const pctEl = extractOverlay.querySelector('.eo-progress-pct');
+          const statusEl = extractOverlay.querySelector('.eo-status-label');
+          if (bar) bar.style.width = pct + '%';
+          if (pctEl) pctEl.textContent = pct + '%';
+          if (statusText && statusEl) statusEl.textContent = statusText;
+          setCrystalScale(pct);
+        }
+
+        function startTrickle() {
+          let current = 65;
+          const target = 89;
+          const tickMs = 1000;
+          const increment = (target - current) / 28; // 28s matches CSS eoTrickle duration
+          trickleInterval = setInterval(() => {
+            current = Math.min(current + increment, target);
+            const pctEl = extractOverlay.querySelector('.eo-progress-pct');
+            if (pctEl) pctEl.textContent = Math.round(current) + '%';
+            setCrystalScale(Math.round(current));
+            if (current >= target) { clearInterval(trickleInterval); trickleInterval = null; }
+          }, tickMs);
+        }
+
+        function removeOverlay(success = false) {
+          if (trickleInterval) { clearInterval(trickleInterval); trickleInterval = null; }
+          if (tipInterval) { clearInterval(tipInterval); tipInterval = null; }
+          if (metaInterval) { clearInterval(metaInterval); metaInterval = null; }
+          if (pgRafId) { cancelAnimationFrame(pgRafId); pgRafId = null; }
+          if (success) {
+            extractOverlay.classList.remove('eo-mapping');
+            const bar = extractOverlay.querySelector('.eo-progress-bar');
+            const pctEl = extractOverlay.querySelector('.eo-progress-pct');
+            const statusEl = extractOverlay.querySelector('.eo-status-label');
+            if (bar) bar.style.width = '100%';
+            if (pctEl) pctEl.textContent = '100%';
+            if (statusEl) statusEl.textContent = 'Complete';
+            setCrystalScale(100);
+            setTimeout(() => {
+              extractOverlay.classList.remove('visible');
+              setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
+            }, 700);
+          } else {
+            extractOverlay.classList.remove('visible');
+            setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
+          }
         }
 
         try {
@@ -664,9 +921,8 @@ const App = (() => {
           if (type === 'url') {
             if (!url) throw new Error('No URL provided.');
             const isYouTube = isYouTubeUrl(url);
-            extractOverlay.querySelector('.extract-label').textContent = isYouTube
-              ? 'Fetching transcript...'
-              : 'Fetching page...';
+            setOverlayProgress(38, isYouTube ? 'Fetching transcript' : 'Fetching page');
+            setMetaStatus('Evaluating source structure...');
             const response = await fetch(isYouTube ? '/api/extract-youtube' : '/api/extract-url', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -680,11 +936,14 @@ const App = (() => {
 
           if (!sourceText) throw new Error('No content provided.');
 
-          extractOverlay.querySelector('.extract-label').textContent = 'Mapping knowledge...';
+          setOverlayProgress(65, 'Mapping knowledge');
+          extractOverlay.classList.add('eo-mapping');
+          startTrickle();
+          startMetaCycle();
           const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
-          removeOverlay();
+          removeOverlay(true);
           const concept = {
             id, name, state: 'growing',
             createdAt: Date.now(), timerStart: null,

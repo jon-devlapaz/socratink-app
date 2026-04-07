@@ -185,68 +185,210 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   .drill-ui { max-width: 100%; width: 100%; height: auto; min-height: 280px; }
 }
 
-/* ── 14. Extraction Overlay ───── */
+/* ── 14. Extraction Overlay ─────────────────────────────────── */
 #extract-overlay {
   position: fixed; inset: 0; z-index: 190;
   background: var(--surface-overlay-theme);
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
-  opacity: 0; transition: opacity 0.35s ease;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: space-between;
+  padding: 56px 32px 52px;
+  opacity: 0; transition: opacity 0.4s ease;
   pointer-events: none;
+  overflow: hidden;
+  user-select: none;
 }
 #extract-overlay.visible { opacity: 1; pointer-events: all; }
-/* Phase 2/3: overlay stays fully opaque — graph canvas is inside it now,
-   so the page must never bleed through. */
-#extract-overlay[data-phase="2"],
-#extract-overlay[data-phase="3"] {
-  background: var(--surface-overlay-theme);
+
+/* Particle canvas (replaces static dot grid) */
+.eo-particle-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  display: block;
 }
-/* extract-body sits above the canvas (z-index:5) so spinner/labels are always legible */
-.extract-body { position: relative; z-index: 10; text-align: center; user-select: none; pointer-events: none; }
-.extract-spinner {
-  width: 38px; height: 38px; margin: 0 auto 22px;
-  border: 2.5px solid var(--overlay-spinner-track);
-  border-top-color: var(--overlay-spinner-head);
+/* Radial ambient glow */
+.eo-glow-blob {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 580px; height: 580px;
+  background: radial-gradient(circle at center, rgba(var(--violet-600-rgb), 0.20) 0%, transparent 68%);
+  filter: blur(40px);
+  pointer-events: none; z-index: 0;
+}
+/* Brand header */
+.eo-header {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 10px;
+}
+.eo-brand {
+  font-family: var(--font-display);
+  font-size: 21px; font-weight: 800; letter-spacing: -0.02em;
+  color: var(--text-on-overlay); margin: 0;
+}
+.eo-brand-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent-primary); flex-shrink: 0;
+}
+/* Focal orb */
+.eo-focal {
+  position: relative; z-index: 1;
+  width: 272px; height: 272px;
+  display: flex; align-items: center; justify-content: center;
+}
+.eo-ring-outer {
+  position: absolute; inset: -6px;
+  border: 0.5px solid rgba(var(--mauve-200-rgb), 0.22);
   border-radius: 50%;
-  animation: extractSpin 0.75s linear infinite;
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  animation: eoRingCW 10s linear infinite;
 }
-/* Spinner retreats when nodes start appearing */
-#extract-overlay[data-phase="2"] .extract-spinner,
-#extract-overlay[data-phase="3"] .extract-spinner {
-  opacity: 0; transform: scale(0.6);
+.eo-ring-inner {
+  position: absolute; inset: 18px;
+  border: 1px solid rgba(var(--violet-600-rgb), 0.11);
+  border-radius: 50%;
+  animation: eoRingCCW 8s linear infinite;
 }
-@keyframes extractSpin { to { transform: rotate(360deg); } }
-.extract-label {
-  font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
-  color: var(--text-on-overlay); margin: 0 0 8px;
-  transition: font-size 0.5s ease, opacity 0.5s ease, transform 0.5s ease;
+/* Radar scan arc — orbits with outer ring */
+.eo-radar {
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 82%,
+    rgba(124, 95, 184, 0.04) 87%,
+    rgba(124, 95, 184, 0.28) 94%,
+    rgba(160, 130, 220, 0.55) 100%
+  );
+  animation: eoRingCW 10s linear infinite;
+  pointer-events: none; z-index: 0;
 }
-/* Label retreats to top of overlay — graph takes the full stage */
-#extract-overlay[data-phase="2"] .extract-label,
-#extract-overlay[data-phase="3"] .extract-label {
-  font-size: 11px; opacity: 0.35; letter-spacing: 0.08em; text-transform: uppercase;
-  transform: translateY(calc(-50vh + 36px));
+.eo-crystal-svg {
+  width: 80px; height: 150px; flex-shrink: 0;
+  animation: eoCrystalFloat 4s ease-in-out infinite 1.4s;
 }
-.extract-name {
-  font-size: 12px; color: var(--text-on-overlay-sub); margin: 0;
-  max-width: 280px;
+.eo-crystal-grow {
+  transform-origin: 100px 120px;
+  transform: scale(0.025);
+  opacity: 0.3;
+  transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.9s ease;
+}
+/* Status pills */
+.eo-pill {
+  position: absolute;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(var(--ink-900-rgb), 0.68);
+  border: 1px solid rgba(var(--mauve-200-rgb), 0.16);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 999px;
+  padding: 6px 14px;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
+}
+.eo-pill-top  { top: 8px;    right: 10px; }
+.eo-pill-bottom { bottom: 8px; left: 8px; }
+.eo-pill-icon {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+  font-size: 13px; color: var(--accent-secondary); flex-shrink: 0;
+}
+.eo-status-label, .eo-concept-name {
+  font-size: 9.5px; font-weight: 700;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-on-overlay-sub);
+  white-space: nowrap; max-width: 148px;
+  overflow: hidden; text-overflow: ellipsis;
   transition: opacity 0.3s ease;
 }
-#extract-overlay[data-phase="2"] .extract-name,
-#extract-overlay[data-phase="3"] .extract-name { opacity: 0; }
-/* Completion ring — expands and fades on phase 3, contained inside overlay */
-.extract-complete-ring {
-  position: absolute; top: 50%; left: 50%;
-  width: 72px; height: 72px; margin: -36px 0 0 -36px;
-  border-radius: 50%;
-  border: 1.5px solid var(--overlay-ring);
-  pointer-events: none;
-  animation: extractRingPulse 700ms ease-out forwards;
+/* Tip */
+.eo-tip {
+  position: relative; z-index: 1;
+  text-align: center; max-width: 400px;
+  padding: 0 16px;
 }
-@keyframes extractRingPulse {
-  from { transform: scale(0.4); opacity: 1; }
-  to   { transform: scale(2.8); opacity: 0; }
+.eo-tip-text {
+  font-family: var(--font-display);
+  font-size: 15px; font-weight: 600; line-height: 1.55;
+  color: rgba(var(--cream-50-rgb), 0.72);
+  margin: 0;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.eo-tip-text.eo-tip-exit {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+/* Metacognitive status line */
+.eo-meta-status {
+  position: relative; z-index: 1;
+  text-align: center; height: 18px;
+}
+.eo-meta-text {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(var(--cream-50-rgb), 0.36);
+  transition: opacity 0.25s ease;
+}
+.eo-meta-text.eo-meta-exit { opacity: 0; }
+/* Footer progress */
+.eo-footer {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 340px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.eo-progress-meta {
+  display: flex; justify-content: space-between; align-items: center; padding: 0 2px;
+}
+.eo-progress-label {
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(var(--cream-50-rgb), 0.38);
+}
+.eo-progress-pct {
+  font-family: var(--font-display);
+  font-size: 12px; font-weight: 700;
+  color: var(--accent-primary);
+  transition: color 0.3s ease;
+}
+.eo-progress-track {
+  height: 5px;
+  background: rgba(var(--mauve-200-rgb), 0.12);
+  border-radius: 999px; overflow: hidden; padding: 1px;
+}
+.eo-progress-bar {
+  height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  transition: width 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative; overflow: hidden;
+}
+/* Slow trickle during AI call phase */
+#extract-overlay.eo-mapping .eo-progress-bar {
+  transition: none;
+  animation: eoTrickle 28s linear forwards;
+}
+@keyframes eoTrickle {
+  from { width: 65%; }
+  to   { width: 89%; }
+}
+/* Re-enable transition for final jump to 100% */
+#extract-overlay:not(.eo-mapping) .eo-progress-bar {
+  transition: width 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.eo-progress-shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.28) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: eoShimmer 2.2s linear infinite;
+  border-radius: inherit;
+}
+@keyframes eoShimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+@keyframes eoRingCW  { to { transform: rotate(360deg);  } }
+@keyframes eoRingCCW { to { transform: rotate(-360deg); } }
+
+@keyframes eoCrystalFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
 }
 
 /* ── 15. Settings Panel ────── */
