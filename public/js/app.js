@@ -643,11 +643,62 @@ const App = (() => {
         const extractOverlay = document.createElement('div');
         extractOverlay.id = 'extract-overlay';
         extractOverlay.innerHTML = `
-          <div class="extract-body">
-            <div class="extract-spinner"></div>
-            <p class="extract-label">Extracting concepts</p>
-            <p class="extract-name">${escHtml(name)}</p>
+          <canvas class="eo-particle-canvas"></canvas>
+          <div class="eo-glow-blob"></div>
+          <header class="eo-header">
+            <span class="eo-brand-dot"></span>
+            <h1 class="eo-brand">socratink</h1>
+            <span class="eo-brand-dot"></span>
+          </header>
+          <div class="eo-focal">
+            <div class="eo-radar"></div>
+            <div class="eo-ring-outer"></div>
+            <div class="eo-ring-inner"></div>
+            <svg class="eo-crystal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="54 65 92 172" overflow="visible">
+              <defs>
+                <filter id="eo-glow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="3" result="blur"/>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+              </defs>
+              <g class="eo-crystal-grow">
+                <ellipse cx="100" cy="228" rx="46" ry="7" fill="rgba(60,40,120,0.18)"/>
+                <polygon points="100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91" fill="hsl(270,20%,60%)" opacity="0.13" filter="url(#eo-glow)"/>
+                <polygon points="100,119 69,119 83,145 100,167" fill="hsl(270,16%,46%)" opacity="0.90"/>
+                <polygon points="100,119 100,167 117,145 131,119" fill="hsl(270,14%,38%)" opacity="0.90"/>
+                <polygon points="100,73 79,91 69,119 100,119" fill="hsl(270,18%,55%)" opacity="0.90"/>
+                <polygon points="100,73 100,119 131,119 121,91" fill="hsl(270,16%,46%)" opacity="0.90"/>
+                <polygon points="83,145 100,167 117,145" fill="hsl(270,14%,38%)" opacity="0.90"/>
+                <polygon points="100,73 79,91 100,119 121,91" fill="hsl(270,20%,68%)" opacity="0.94"/>
+                <polygon points="104,77 114,94 112,85" fill="hsl(270,30%,85%)" opacity="0.42"/>
+              </g>
+            </svg>
+            <div class="eo-pill eo-pill-top">
+              <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
+              <span class="eo-status-label">Analyzing</span>
+            </div>
+            <div class="eo-pill eo-pill-bottom">
+              <span class="material-symbols-outlined eo-pill-icon">memory</span>
+              <span class="eo-concept-name">${escHtml(name)}</span>
+            </div>
           </div>
+          <div class="eo-meta-status">
+            <span class="eo-meta-text">Parsing source content...</span>
+          </div>
+          <div class="eo-tip">
+            <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory far more than re-reading the same material.&rdquo;</p>
+          </div>
+          <footer class="eo-footer">
+            <div class="eo-progress-meta">
+              <span class="eo-progress-label">Processing</span>
+              <span class="eo-progress-pct">20%</span>
+            </div>
+            <div class="eo-progress-track">
+              <div class="eo-progress-bar" style="width:20%">
+                <div class="eo-progress-shimmer"></div>
+              </div>
+            </div>
+          </footer>
         `;
         document.body.appendChild(extractOverlay);
         requestAnimationFrame(() => extractOverlay.classList.add('visible'));
@@ -664,9 +715,8 @@ const App = (() => {
           if (type === 'url') {
             if (!url) throw new Error('No URL provided.');
             const isYouTube = isYouTubeUrl(url);
-            extractOverlay.querySelector('.extract-label').textContent = isYouTube
-              ? 'Fetching transcript...'
-              : 'Fetching page...';
+            const metaEl = extractOverlay.querySelector('.eo-meta-text');
+            if (metaEl) metaEl.textContent = isYouTube ? 'Fetching transcript...' : 'Fetching page...';
             const response = await fetch(isYouTube ? '/api/extract-youtube' : '/api/extract-url', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -680,7 +730,8 @@ const App = (() => {
 
           if (!sourceText) throw new Error('No content provided.');
 
-          extractOverlay.querySelector('.extract-label').textContent = 'Mapping knowledge...';
+          const metaEl2 = extractOverlay.querySelector('.eo-meta-text');
+          if (metaEl2) metaEl2.textContent = 'Mapping knowledge...';
           const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
