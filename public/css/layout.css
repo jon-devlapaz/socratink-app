@@ -262,27 +262,16 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   animation: eoRingCW 10s linear infinite;
   pointer-events: none; z-index: 0;
 }
-/* Crystal SVG — replaces orb */
 .eo-crystal-svg {
-  width: 160px; height: 214px;
-  position: relative; z-index: 1;
-  overflow: visible;
-  animation: eoCrystalFloat 4s ease-in-out infinite;
-  animation-delay: 1.4s;
-  animation-fill-mode: both;
+  width: 80px; height: 150px; flex-shrink: 0;
+  animation: eoCrystalFloat 4s ease-in-out infinite 1.4s;
 }
 .eo-crystal-grow {
   transform-origin: 100px 120px;
-  animation: eoCrystalGrow 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-@keyframes eoCrystalGrow {
-  from { transform: scale(0.04); opacity: 0; }
-  10%  { opacity: 1; }
-  to   { transform: scale(1); opacity: 1; }
-}
-@keyframes eoCrystalFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-5px); }
+  transform: scale(0.025);
+  opacity: 0.3;
+  transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.9s ease;
 }
 /* Status pills */
 .eo-pill {
@@ -370,6 +359,19 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   transition: width 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative; overflow: hidden;
 }
+/* Slow trickle during AI call phase */
+#extract-overlay.eo-mapping .eo-progress-bar {
+  transition: none;
+  animation: eoTrickle 28s linear forwards;
+}
+@keyframes eoTrickle {
+  from { width: 65%; }
+  to   { width: 89%; }
+}
+/* Re-enable transition for final jump to 100% */
+#extract-overlay:not(.eo-mapping) .eo-progress-bar {
+  transition: width 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
 .eo-progress-shimmer {
   position: absolute; inset: 0;
   background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.28) 50%, transparent 100%);
@@ -383,6 +385,11 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 }
 @keyframes eoRingCW  { to { transform: rotate(360deg);  } }
 @keyframes eoRingCCW { to { transform: rotate(-360deg); } }
+
+@keyframes eoCrystalFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
 
 /* ── 15. Settings Panel ────── */
 .settings-panel { padding:16px 16px 20px; }
