@@ -20,6 +20,7 @@ DRILL_SYSTEM_BASE = DRILL_SKILL_PROMPT_PATH.read_text()
 EXTRACT_FAILURE_LOG_PATH = Path(__file__).parent / "logs/extract-invalid-json.log"
 EXTRACT_RUN_LOG_PATH = Path(__file__).parent / "logs/extract-runs.jsonl"
 DRILL_RUN_LOG_PATH = Path(__file__).parent / "logs/drill-runs.jsonl"
+DRILL_CHAT_LOG_PATH = Path(__file__).parent / "logs/drill-chat-turns.jsonl"
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 RETRYABLE_CODES = {429, 503, 500}
@@ -32,6 +33,10 @@ USER_PROMPT = (
 
 class DrillEvaluation(BaseModel):
     agent_response: str = Field(description="The conversational text shown to the user")
+    generative_commitment: Optional[bool] = Field(
+        default=None,
+        description="True if the learner made a genuine explanatory attempt.",
+    )
     answer_mode: Optional[Literal["attempt", "help_request"]] = Field(
         default=None,
         description="Whether the learner made a genuine explanatory attempt or explicitly asked for help.",
@@ -74,6 +79,7 @@ class DrillEvaluation(BaseModel):
 
 class DrillTurnResult(TypedDict):
     agent_response: str
+    generative_commitment: bool | None
     answer_mode: str | None
     score_eligible: bool
     help_request_reason: str | None
@@ -164,6 +170,16 @@ def _log_drill_run(event: dict) -> None:
         pass
 
 
+def _log_drill_chat_turn(event: dict) -> None:
+    try:
+        DRILL_CHAT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with DRILL_CHAT_LOG_PATH.open("a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except Exception:
+        # Logging must never break drill error handling.
+        pass
+
+
 def _with_telemetry_context(event: dict, telemetry_context: dict | None) -> dict:
     if not telemetry_context:
         return event
@@ -172,6 +188,16 @@ def _with_telemetry_context(event: dict, telemetry_context: dict | None) -> dict
         if key not in merged:
             merged[key] = value
     return merged
+
+
+def _serialize_drill_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
+    serialized: list[dict[str, str]] = []
+    for msg in messages or []:
+        serialized.append({
+            "role": str(msg.get("role", "unknown"))[:20],
+            "content": str(msg.get("content", "")),
+        })
+    return serialized
 
 
 def _parse_iso_timestamp(iso_string: str) -> datetime:
@@ -474,10 +500,12 @@ def _normalize_drill_evaluation(
     evaluation: DrillEvaluation,
     *,
     session_phase: str,
+    drill_mode: str,
     probe_count: int,
     latest_learner_message: str,
 ) -> DrillEvaluation:
     if session_phase == "init":
+        evaluation.generative_commitment = None
         evaluation.answer_mode = None
         evaluation.score_eligible = False
         evaluation.help_request_reason = None
@@ -493,6 +521,24 @@ def _normalize_drill_evaluation(
     has_classification = bool(evaluation.classification)
     inferred_help_request = inferred_help_request_reason is not None
     substantive_attempt = _has_substantive_attempt(latest_learner_message)
+    evaluation.generative_commitment = substantive_attempt
+
+    if drill_mode == "cold_attempt":
+        evaluation.answer_mode = "attempt" if substantive_attempt else "help_request"
+        evaluation.score_eligible = False
+        evaluation.classification = None
+        evaluation.response_tier = None
+        evaluation.response_band = None
+        evaluation.tier_reason = None
+        if not substantive_attempt:
+            evaluation.routing = "SCAFFOLD"
+            evaluation.help_request_reason = evaluation.help_request_reason or "explicit_unknown"
+            if not evaluation.gap_description:
+                evaluation.gap_description = "Learner produced zero schema; nudge to guess."
+        else:
+            evaluation.routing = "NEXT"
+            evaluation.help_request_reason = "none"
+        return evaluation
 
     if not has_classification and (evaluation.answer_mode == "help_request" or inferred_help_request) and not substantive_attempt:
         evaluation.answer_mode = "help_request"
@@ -647,11 +693,14 @@ def drill_chat(
     node_mechanism: str,
     messages: list[dict[str, str]],
     session_phase: str,
+    drill_mode: str = "re_drill",
+    re_drill_count: int = 0,
     probe_count: int = 0,
     nodes_drilled: int = 0,
     attempt_turn_count: int = 0,
     help_turn_count: int = 0,
     session_start_iso: str | None = None,
+    bypass_session_limits: bool = False,
     api_key: str | None = None,
     telemetry_context: dict | None = None,
 ) -> DrillTurnResult:
@@ -669,12 +718,59 @@ def drill_chat(
     started_perf = time.perf_counter()
     node_type = _infer_node_type(knowledge_map, node_id)
     cluster_id = _resolve_target_cluster_id(knowledge_map, node_id)
+    latest_learner_message = next(
+        (
+            msg.get("content", "").strip()
+            for msg in reversed(messages)
+            if msg.get("role") == "user" and msg.get("content", "").strip()
+        ),
+        "",
+    )
 
-    if session_phase == "turn" and session_start_iso:
+    def log_chat_turn(*, status: str, result: dict | None = None, error_type: str | None = None, reason: str | None = None) -> None:
+        _log_drill_chat_turn(_with_telemetry_context({
+            "timestamp": started_at.isoformat(),
+            "stage": "drill_chat_turn",
+            "status": status,
+            "concept_id": concept_id,
+            "node_id": node_id,
+            "node_type": node_type,
+            "cluster_id": cluster_id,
+            "node_label": node_label,
+            "node_mechanism": node_mechanism,
+            "session_phase": session_phase,
+            "session_start_iso": session_start_iso,
+            "drill_mode": drill_mode,
+            "re_drill_count_in": re_drill_count,
+            "probe_count_in": probe_count,
+            "nodes_drilled_in": nodes_drilled,
+            "attempt_turn_count_in": attempt_turn_count,
+            "help_turn_count_in": help_turn_count,
+            "message_count": len(messages),
+            "messages": _serialize_drill_messages(messages),
+            "latest_learner_message": latest_learner_message,
+            "agent_response": result.get("agent_response") if result else None,
+            "answer_mode": result.get("answer_mode") if result else None,
+            "generative_commitment": result.get("generative_commitment") if result else None,
+            "classification": result.get("classification") if result else None,
+            "routing": result.get("routing") if result else None,
+            "response_tier": result.get("response_tier") if result else None,
+            "response_band": result.get("response_band") if result else None,
+            "score_eligible": result.get("score_eligible") if result else None,
+            "graph_mutated": result.get("graph_mutated") if result else None,
+            "session_terminated": result.get("session_terminated") if result else None,
+            "termination_reason": result.get("termination_reason") if result else None,
+            "error_type": error_type,
+            "reason": reason,
+            "duration_ms": round((time.perf_counter() - started_perf) * 1000, 2),
+        }, telemetry_context))
+
+    if not bypass_session_limits and session_phase == "turn" and session_start_iso:
         session_start = _parse_iso_timestamp(session_start_iso)
-        if (datetime.now(timezone.utc) - session_start).total_seconds() >= 35 * 60:
+        if (datetime.now(timezone.utc) - session_start).total_seconds() >= 25 * 60:
             result = {
-                "agent_response": "That's 35 minutes — a good stopping point. Your progress is saved. Pick up where you left off next session.",
+                "agent_response": "That's 25 minutes — a good stopping point. Your progress is saved. Pick up where you left off next session.",
+                "generative_commitment": None,
                 "answer_mode": None,
                 "score_eligible": False,
                 "help_request_reason": None,
@@ -694,6 +790,7 @@ def drill_chat(
                 "session_terminated": True,
                 "termination_reason": "time_cap",
             }
+            log_chat_turn(status="success", result=result)
             _log_drill_run(_with_telemetry_context({
                 "timestamp": started_at.isoformat(),
                 "stage": "drill",
@@ -738,27 +835,29 @@ def drill_chat(
 
     client = _get_client(api_key)
     pruned_context = _prune_context(knowledge_map, node_id)
-    system_prompt = (
-        DRILL_SYSTEM_BASE
-        + "\n\n### Target Node (ANSWER KEY — NEVER REVEAL)\n"
-        + f"Node ID: {node_id}\n"
-        + f"Node Label: {node_label}\n"
-        + f"Mechanism: {node_mechanism}\n"
-    )
+    system_prompt_extras = "\n\n### Target Node (ANSWER KEY — NEVER REVEAL)\n"
+    system_prompt_extras += f"Node ID: {node_id}\nNode Label: {node_label}\nMechanism: {node_mechanism}\n"
+
+    if drill_mode == "cold_attempt":
+        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question, do not reveal the mechanism. Emphasize it is ok to guess. Enforce minimum generative commitment. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess. Return null for classification/tier."
+    else:
+        system_prompt_extras += f"\nMODE: RE-DRILL (Attempt {re_drill_count + 1}). Demand multi-step causal reconstruction. Vary prompt angle (e.g. self-explanation, summarization, teaching, problem-posing). Apply concrete rubric: Does response contain (a) initiating condition, (b) causal transition, and (c) resulting state? Err toward false negatives."
+        if re_drill_count >= 2:
+            system_prompt_extras += "\nBOTTLENECK RECOVERY: The learner has failed multiple re-drills on this node. Escalate scaffolding, simplify the gap, and walk them through."
+
+    system_prompt = DRILL_SYSTEM_BASE + system_prompt_extras
     history = "\n".join(
         f"{msg.get('role', 'user').upper()}: {msg.get('content', '').strip()}"
         for msg in messages
         if msg.get("content", "").strip()
     ).strip()
-    latest_learner_message = next(
-        (
-            msg.get("content", "").strip()
-            for msg in reversed(messages)
-            if msg.get("role") == "user" and msg.get("content", "").strip()
-        ),
-        "",
-    )
+
     if session_phase == "turn" and not latest_learner_message:
+        log_chat_turn(
+            status="error",
+            error_type="missing_learner_message",
+            reason="A learner message is required during turn phase.",
+        )
         raise ValueError("A learner message is required during turn phase.")
 
     if session_phase == "init":
@@ -790,6 +889,11 @@ def drill_chat(
             ),
         )
     except Exception as err:
+        log_chat_turn(
+            status="error",
+            error_type=type(err).__name__,
+            reason=str(err),
+        )
         _log_drill_run(_with_telemetry_context({
             "timestamp": started_at.isoformat(),
             "stage": "drill",
@@ -820,6 +924,11 @@ def drill_chat(
 
     evaluation = response.parsed
     if not isinstance(evaluation, DrillEvaluation):
+        log_chat_turn(
+            status="error",
+            error_type="invalid_structured_response",
+            reason="Gemini returned an invalid structured drill response.",
+        )
         _log_drill_run(_with_telemetry_context({
             "timestamp": started_at.isoformat(),
             "stage": "drill",
@@ -848,6 +957,11 @@ def drill_chat(
         }, telemetry_context))
         raise ValueError("Gemini returned an invalid structured drill response.")
     if not evaluation.agent_response.strip():
+        log_chat_turn(
+            status="error",
+            error_type="empty_agent_response",
+            reason="Gemini returned an empty drill response.",
+        )
         _log_drill_run(_with_telemetry_context({
             "timestamp": started_at.isoformat(),
             "stage": "drill",
@@ -878,6 +992,7 @@ def drill_chat(
     evaluation = _normalize_drill_evaluation(
         evaluation,
         session_phase=session_phase,
+        drill_mode=drill_mode,
         probe_count=probe_count,
         latest_learner_message=latest_learner_message,
     )
@@ -897,7 +1012,7 @@ def drill_chat(
         new_attempt_turn_count += 1
         new_probe_count = 0
         new_nodes_drilled += 1
-        if new_nodes_drilled >= 4:
+        if not bypass_session_limits and new_nodes_drilled >= 4:
             session_terminated = True
             termination_reason = "node_cap"
     elif evaluation.routing in ("PROBE", "SCAFFOLD"):
@@ -907,12 +1022,13 @@ def drill_chat(
             evaluation.routing = "NEXT"
             new_probe_count = 0
             new_nodes_drilled += 1
-            if new_nodes_drilled >= 4:
+            if not bypass_session_limits and new_nodes_drilled >= 4:
                 session_terminated = True
                 termination_reason = "node_cap"
 
     result = {
         "agent_response": evaluation.agent_response.strip(),
+        "generative_commitment": evaluation.generative_commitment,
         "answer_mode": evaluation.answer_mode,
         "score_eligible": evaluation.score_eligible,
         "help_request_reason": evaluation.help_request_reason,
@@ -985,4 +1101,5 @@ def drill_chat(
         "agent_response_chars": len(result["agent_response"]),
         "duration_ms": round((time.perf_counter() - started_perf) * 1000, 2),
     }, telemetry_context))
+    log_chat_turn(status="success", result=result)
     return result

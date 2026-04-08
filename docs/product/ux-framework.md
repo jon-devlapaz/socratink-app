@@ -6,7 +6,7 @@
 >
 > **When to read it**: Before making any change to drill UX, graph rendering, node state, AI prompt behavior, feedback copy, reward mechanics, or session flow. Before proposing any new feature.
 >
-> **What it is NOT**: It is not the implementation spec (read `progressive-disclosure.md`), the engineering invariants (read `graph-invariants.md`), or the competitive positioning (read `north-star.md`).
+> **What it is NOT**: It is not the implementation spec (read `progressive-disclosure.md`), the engineering invariants (read `../drill/engineering.md`), or the active release gate (read `../project/state.md`).
 >
 > **Key constraints an agent must never violate**:
 > - The three-phase loop is mandatory. No phase may be skipped or collapsed.

@@ -6,7 +6,7 @@
 >
 > **When to read it**: Before changing post-phase panel copy, result-state visuals, transcript policy, attribution framing on non-solid results, sensory celebration behavior, or session-ending UX.
 >
-> **What it is NOT**: It is not the routing/state implementation spec (read `progressive-disclosure.md`), the engineering invariants (read `graph-invariants.md`), or the full UX philosophy (read `ux-framework.md`).
+> **What it is NOT**: It is not the routing/state implementation spec (read `progressive-disclosure.md`), the engineering invariants (read `../drill/engineering.md`), or the full UX philosophy (read `ux-framework.md`).
 >
 > **Key constraints an agent must follow**:
 > - Five canonical result states: Primed, Solidified, Unresolved Exit, In-Progress, Session Complete. Each must look and feel distinct.

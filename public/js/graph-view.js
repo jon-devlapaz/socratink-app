@@ -52,10 +52,9 @@ function getCoreThesisDetail(source) {
 }
 
 function getStatusLabel(status) {
-  if (status === 'solid') return 'Solidified';
-  if (status === 'deep') return 'Partial mechanism';
-  if (status === 'shallow') return 'Surface recall';
-  if (status === 'misconception') return 'Misconception';
+  if (status === 'solidified' || status === 'solid') return 'Solidified';
+  if (status === 'primed') return 'Primed';
+  if (status === 'drilled') return 'Needs revisit';
   return status ? shortenLabel(String(status), 24) : '';
 }
 
@@ -72,13 +71,15 @@ function buildOutcomeMeta(data, { includeGapDescription = false } = {}) {
   const statusLabel = getStatusLabel(data?.drillStatus);
   const gapLabel = getGapLabel(data?.gapType);
 
-  if (data?.drillStatus === 'solid') {
+  if (data?.drillStatus === 'solidified' || data?.drillStatus === 'solid') {
     pills.push(`<span class="graph-detail-pill success">${escHtml(statusLabel)}</span>`);
-  } else if (data?.state === 'drilled' || data?.drillStatus || data?.gapType) {
+  } else if (data?.state === 'primed' || data?.drillStatus === 'primed') {
+    pills.push('<span class="graph-detail-pill" style="background:#e0d8f0;color:#2c1b4d;">Primed</span>');
+  } else if (data?.state === 'drilled' || data?.drillStatus === 'drilled' || data?.gapType) {
     pills.push('<span class="graph-detail-pill warning">Needs revisit</span>');
     if (gapLabel) {
       pills.push(`<span class="graph-detail-pill">${escHtml(gapLabel)}</span>`);
-    } else if (statusLabel) {
+    } else if (statusLabel && statusLabel !== 'Primed') {
       pills.push(`<span class="graph-detail-pill">${escHtml(statusLabel)}</span>`);
     }
   }
@@ -93,8 +94,31 @@ function buildOutcomeMeta(data, { includeGapDescription = false } = {}) {
   };
 }
 
+function getReachabilityPill(data) {
+  if (data?.available && data?.state === 'locked') {
+    return '<span class="graph-detail-pill success">Reachable now</span>';
+  }
+  return '';
+}
+
 function getInspectPrompt(data) {
   if (!data) return 'Start here and rebuild the mechanism from memory.';
+
+  if (data.drillPhase === 'study') {
+    return 'Study is open for this node. Re-enter the mechanism view, then return to the map when you are ready to let it incubate.';
+  }
+
+  if (data.drillStatus === 'primed') {
+    return data.type === 'core' || data.type === 'backbone'
+      ? 'Study complete. Let this idea incubate while you work another reachable branch, then return for the scored re-drill.'
+      : 'This room is primed. Work another reachable node before coming back for the scored re-drill.';
+  }
+
+  if (data.drillStatus === 'drilled') {
+    return data.type === 'core' || data.type === 'backbone'
+      ? 'This idea is still settling. Shift outward to another branch, then come back for a cleaner reconstruction.'
+      : 'This room still needs another pass. Interleave a different node, then come back for the next re-drill.';
+  }
 
   if (data.type === 'core') {
     return 'What governing idea explains how this whole system behaves? Start here, then prove it from memory.';
@@ -121,9 +145,56 @@ function getInspectPrompt(data) {
   return 'Choose a reachable room and rebuild it from memory.';
 }
 
+function getInspectHeading(data) {
+  if (!data) return '';
+  if (data.type === 'backbone') return data.label || data.fullLabel || 'Backbone Principle';
+  return data.fullLabel || data.label || '';
+}
+
+function getInspectReferenceDisclosure(data) {
+  const learnedState = data?.drillStatus === 'primed'
+    || data?.drillStatus === 'drilled'
+    || data?.drillStatus === 'solidified'
+    || data?.drillStatus === 'solid';
+  const hasReferenceText = Boolean(data?.fullLabel && data?.label && data.fullLabel !== data.label);
+  if (data?.type !== 'backbone' || !learnedState || !hasReferenceText) return '';
+
+  return `
+    <details class="graph-detail-disclosure">
+      <summary>Reference Statement</summary>
+      <div class="graph-detail-disclosure-body">${escHtml(data.fullLabel)}</div>
+    </details>
+  `;
+}
+
+function getStudyHeading(data) {
+  if (!data) return '';
+  if (data.type === 'backbone') return data.label || data.fullLabel || 'Backbone Principle';
+  return data.fullLabel || data.label || '';
+}
+
+function getStudyBodyMarkup(data) {
+  const mechanismText = data?.detail || 'Mechanism not specified.';
+  const hasBackboneReference = data?.type === 'backbone'
+    && data?.fullLabel
+    && data.fullLabel !== data.label;
+
+  if (hasBackboneReference) {
+    return `
+      <div class="graph-study-reference">
+        <div class="graph-detail-kicker">Reference Statement</div>
+        <p class="graph-detail-copy graph-study-mechanism">${escHtml(data.fullLabel)}</p>
+      </div>
+    `;
+  }
+
+  return `<p class="graph-detail-copy graph-study-mechanism">${escHtml(mechanismText)}</p>`;
+}
+
 function deriveNodeState(status, gapType = null) {
-  if (status === 'solid') return 'solidified';
-  if (status || gapType) return 'drilled';
+  if (status === 'solidified' || status === 'solid') return 'solidified';
+  if (status === 'primed') return 'primed';
+  if (status === 'drilled' || gapType) return 'drilled';
   return 'locked';
 }
 
@@ -142,9 +213,23 @@ function deriveSubnodeState(subnode) {
 function deriveClusterState(cluster) {
   const subnodes = Array.isArray(cluster?.subnodes) ? cluster.subnodes : [];
   if (!subnodes.length) return 'locked';
-  if (subnodes.every((subnode) => subnode?.drill_status === 'solid')) return 'solidified';
-  if (subnodes.some((subnode) => subnode?.drill_status || subnode?.gap_type)) return 'drilled';
+  if (subnodes.every((subnode) => subnode?.drill_status === 'solidified' || subnode?.drill_status === 'solid')) return 'solidified';
+  if (subnodes.some((subnode) => subnode?.drill_status === 'primed' || subnode?.drill_status === 'drilled' || subnode?.gap_type)) return 'drilled';
   return 'locked';
+}
+
+function isTraversalReadySubnode(subnode) {
+  return subnode?.drill_status === 'primed'
+    || subnode?.drill_status === 'drilled'
+    || subnode?.drill_status === 'solidified'
+    || subnode?.drill_status === 'solid'
+    || Boolean(subnode?.gap_type);
+}
+
+function isClusterTraversalReady(cluster) {
+  const subnodes = Array.isArray(cluster?.subnodes) ? cluster.subnodes : [];
+  if (!subnodes.length) return false;
+  return subnodes.every((subnode) => isTraversalReadySubnode(subnode));
 }
 
 export function transformKnowledgeMapToGraph(rawData) {
@@ -157,16 +242,35 @@ export function transformKnowledgeMapToGraph(rawData) {
   const coreId = 'core-thesis';
   const clusterMap = new Map();
   const coreState = deriveCoreState(source);
-  const coreSolid = source?.metadata?.drill_status === 'solid';
+  const coreUnlocked = source?.metadata?.drill_status === 'primed'
+    || source?.metadata?.drill_status === 'drilled'
+    || source?.metadata?.drill_status === 'solidified'
+    || source?.metadata?.drill_status === 'solid';
+  const coreSolid = source?.metadata?.drill_status === 'solidified' || source?.metadata?.drill_status === 'solid';
+  const unlockedBackboneIds = new Set(
+    backboneItems
+      .filter((item) => (
+        item?.drill_status === 'primed'
+        || item?.drill_status === 'drilled'
+        || item?.drill_status === 'solidified'
+        || item?.drill_status === 'solid'
+      ) && item?.id)
+      .map((item) => item.id)
+  );
   const solidBackboneIds = new Set(
     backboneItems
-      .filter((item) => item?.drill_status === 'solid' && item?.id)
+      .filter((item) => (item?.drill_status === 'solidified' || item?.drill_status === 'solid') && item?.id)
       .map((item) => item.id)
   );
   const clusterToBackbones = new Map();
   const solidClusterIds = new Set(
     clusters
       .filter((cluster) => deriveClusterState(cluster) === 'solidified' && cluster?.id)
+      .map((cluster) => cluster.id)
+  );
+  const traversalReadyClusterIds = new Set(
+    clusters
+      .filter((cluster) => isClusterTraversalReady(cluster) && cluster?.id)
       .map((cluster) => cluster.id)
   );
   const incomingPrereqs = new Map();
@@ -196,6 +300,12 @@ export function transformKnowledgeMapToGraph(rawData) {
       fullLabel: 'Core Thesis',
       detail: getCoreThesisDetail(source),
       drillStatus: source?.metadata?.drill_status || null,
+      drillPhase: source?.metadata?.drill_phase || null,
+      coldAttemptAt: source?.metadata?.cold_attempt_at || null,
+      studyCompletedAt: source?.metadata?.study_completed_at || null,
+      reDrillEligibleAfter: source?.metadata?.re_drill_eligible_after || null,
+      reDrillCount: source?.metadata?.re_drill_count || 0,
+      reDrillBand: source?.metadata?.re_drill_band || null,
       gapType: source?.metadata?.gap_type || null,
       gapDescription: source?.metadata?.gap_description || null,
       weight: 1,
@@ -206,7 +316,7 @@ export function transformKnowledgeMapToGraph(rawData) {
   backboneItems.forEach((item, index) => {
     const backboneId = item.id || `backbone-${index + 1}`;
     const backboneState = deriveBackboneState(item);
-    const backboneAvailable = coreSolid ? 1 : 0;
+    const backboneAvailable = coreUnlocked ? 1 : 0;
     const backboneLabel = shortenLabel(item.principle, 32);
 
     nodes.push({
@@ -221,6 +331,12 @@ export function transformKnowledgeMapToGraph(rawData) {
         detail: item.principle || '',
         dependentClusters: item.dependent_clusters || [],
         drillStatus: item.drill_status || null,
+        drillPhase: item.drill_phase || null,
+        coldAttemptAt: item.cold_attempt_at || null,
+        studyCompletedAt: item.study_completed_at || null,
+        reDrillEligibleAfter: item.re_drill_eligible_after || null,
+        reDrillCount: item.re_drill_count || 0,
+        reDrillBand: item.re_drill_band || null,
         gapType: item.gap_type || null,
         gapDescription: item.gap_description || null,
         weight: 0.72,
@@ -247,10 +363,10 @@ export function transformKnowledgeMapToGraph(rawData) {
     clusterMap.set(clusterId, cluster);
     const ownerBackbones = clusterToBackbones.get(clusterId) || [];
     const backboneGateOpen = ownerBackbones.length
-      ? ownerBackbones.some((backboneId) => solidBackboneIds.has(backboneId))
+      ? ownerBackbones.some((backboneId) => unlockedBackboneIds.has(backboneId))
       : coreSolid;
     const prerequisites = incomingPrereqs.get(clusterId) || [];
-    const prereqGateOpen = prerequisites.every((sourceId) => solidClusterIds.has(sourceId));
+    const prereqGateOpen = prerequisites.every((sourceId) => traversalReadyClusterIds.has(sourceId));
     const clusterAvailable = backboneGateOpen && prereqGateOpen;
     const clusterLabel = shortenLabel(cluster.label, 28);
 
@@ -317,6 +433,12 @@ export function transformKnowledgeMapToGraph(rawData) {
           parentCluster: clusterId,
           orbitLevel: 2,
           drillStatus: subnode.drill_status,
+          drillPhase: subnode.drill_phase,
+          coldAttemptAt: subnode.cold_attempt_at,
+          studyCompletedAt: subnode.study_completed_at,
+          reDrillEligibleAfter: subnode.re_drill_eligible_after,
+          reDrillCount: subnode.re_drill_count || 0,
+          reDrillBand: subnode.re_drill_band || null,
           gapType: subnode.gap_type,
           gapDescription: subnode.gap_description,
         },
@@ -373,11 +495,59 @@ export function transformKnowledgeMapToGraph(rawData) {
   return { source, nodes, edges, coreId, backboneIds: backboneItems.map((item, index) => item.id || `backbone-${index + 1}`) };
 }
 
-function detailMarkupForNode(node, mode = 'inspect') {
+function detailMarkupForNode(node, mode = 'inspect', options = {}) {
   const data = node.data();
-  const isDrillActive = mode === 'drill-active';
+  const isDrillActive = mode === 'drill-active' || mode === 'cold-attempt-active' || mode === 're-drill-active';
   const isPostDrill = mode === 'post-drill';
   const outcomeMeta = buildOutcomeMeta(data, { includeGapDescription: !isPostDrill });
+  const inspectAction = options.inspectAction || null;
+  const actionButtonClass = 'btn-start-drill graph-detail-action';
+  const inspectButtonHtml = inspectAction
+    ? `<button class="${actionButtonClass} trigger-drill" data-action-kind="${escHtml(inspectAction.kind)}">${escHtml(inspectAction.label)}</button>`
+    : '';
+  const blockedInspectHtml = inspectAction?.blocked
+    ? `
+      <div class="graph-detail-block">
+        <div class="graph-detail-kicker">${escHtml(inspectAction.blocked.headline || 'Not Yet')}</div>
+        <p class="graph-detail-copy">${escHtml(inspectAction.blocked.body)}</p>
+      </div>
+    `
+    : '';
+
+  if (mode === 'session-complete') {
+    return `
+      <div class="graph-detail-kicker">Session Complete</div>
+      <h3 class="graph-detail-title">Excellent Focus</h3>
+      <p class="graph-detail-copy">You have completed a structured study session. Spacing your learning is key to retention.</p>
+      <button class="${actionButtonClass} trigger-continue">Return to Map</button>
+    `;
+  }
+
+  if (mode === 'study') {
+    const next = options.nextNodeSuggestion;
+    const nextStepCopy = next
+      ? (next.action === 're-drill'
+          ? `Next best move: re-drill ${escHtml(next.label)}.`
+          : `Next best move: explore ${escHtml(next.label)}.`)
+      : 'Leave this node to incubate. Work on other nodes before returning to re-drill.';
+    return `
+      <div class="graph-study-shell">
+        <section class="graph-detail-surface graph-study-card">
+          <div class="graph-detail-kicker">Targeted Study</div>
+          <h3 class="graph-detail-title">${escHtml(getStudyHeading(data))}</h3>
+          ${getStudyBodyMarkup(data)}
+          <div class="graph-detail-meta graph-detail-meta-compact">
+            <span class="graph-detail-pill">Primed</span>
+          </div>
+        </section>
+        <section class="graph-detail-surface graph-study-next">
+          <div class="graph-detail-kicker">Next Step</div>
+          <p class="graph-detail-copy">${nextStepCopy}</p>
+          <button class="${actionButtonClass} trigger-continue">Return to Map</button>
+        </section>
+      </div>
+    `;
+  }
 
   if (isDrillActive) {
     const kicker = data.type === 'core'
@@ -389,8 +559,8 @@ function detailMarkupForNode(node, mode = 'inspect') {
           : 'Drill Node';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
-      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">Explain this from memory. The map stays in the background until the drill resolves.</p>
+      <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
+      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'Provide your best initial guess to unlock the study material.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
       </div>
@@ -398,7 +568,7 @@ function detailMarkupForNode(node, mode = 'inspect') {
   }
 
   if (isPostDrill) {
-    const isSolid = data.drillStatus === 'solid';
+    const isSolid = data.drillStatus === 'solidified' || data.drillStatus === 'solid';
     const kicker = data.type === 'core'
       ? 'Core Thesis Result'
       : data.type === 'backbone'
@@ -406,6 +576,11 @@ function detailMarkupForNode(node, mode = 'inspect') {
         : data.type === 'cluster'
           ? 'Cluster Result'
           : 'Drill Result';
+    const trajectoryHtml = isSolid && data.reDrillBand
+      ? `<p class="graph-detail-copy" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
+           Cold attempt: exploratory guess → Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That gap is real learning.
+         </p>`
+      : '';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
@@ -415,34 +590,45 @@ function detailMarkupForNode(node, mode = 'inspect') {
           ? '<span class="graph-detail-pill success">Solidified</span>'
           : outcomeMeta.pills}
       </div>
-      ${data.gapDescription ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
-      <button class="btn-start-drill trigger-continue" style="width:100%; margin-top: 16px;">Continue</button>
+      ${trajectoryHtml}
+      ${data.gapDescription && !isSolid ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
+      ${!isSolid ? `
+        <div class="graph-detail-block">
+            <div class="graph-detail-kicker">Revisit Study Material</div>
+            <p class="graph-detail-copy" style="opacity: 1; color: var(--text-primary);">
+               ${escHtml(data.detail || 'Mechanism not specified.')}
+            </p>
+            <button class="${actionButtonClass} trigger-reopen">Reopen Study View</button>
+        </div>
+      ` : ''}
+      <button class="${actionButtonClass} trigger-continue">Continue</button>
     `;
   }
 
   if (data.type === 'core') {
     return `
       <div class="graph-detail-kicker">Core Thesis</div>
-      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+      <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START WITH CORE THESIS</button>
+      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start With Core Thesis</button>`}
     `;
   }
 
   if (data.type === 'backbone') {
     return `
       <div class="graph-detail-kicker">Backbone Principle</div>
-      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+      <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
+      ${getInspectReferenceDisclosure(data)}
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${data.available ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
+      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start Drill</button>`) : ''}
     `;
   }
 
@@ -453,10 +639,11 @@ function detailMarkupForNode(node, mode = 'inspect') {
   if (data.type === 'cluster') {
     return `
       <div class="graph-detail-kicker">Cluster</div>
-      <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+      <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
+        ${getReachabilityPill(data)}
         ${isDrilled ? '<span class="graph-detail-pill warning">In progress</span>' : ''}
       </div>
     `;
@@ -464,13 +651,15 @@ function detailMarkupForNode(node, mode = 'inspect') {
 
   return `
     <div class="graph-detail-kicker">Drill Node</div>
-    <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
+    <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
     <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
     <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
+      ${getReachabilityPill(data)}
       ${outcomeMeta.pills}
       ${outcomeMeta.descriptionPills}
     </div>
-    ${isAvailable ? `<button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START DRILL</button>` : ''}
+    ${blockedInspectHtml}
+    ${isAvailable ? inspectButtonHtml : ''}
   `;
 }
 
@@ -508,6 +697,8 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
     <p class="graph-detail-copy">${starterPrompt}</p>
     <div class="graph-detail-meta">
       <span class="graph-detail-pill">Core thesis first</span>
+      <span class="graph-detail-pill">Bright = reachable</span>
+      <span class="graph-detail-pill">Ghosted = locked</span>
     </div>
     <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START WITH CORE THESIS</button>
   `;
@@ -555,12 +746,12 @@ function syncSelectedElement(cy, selectedElement) {
 
 function installHoverFocus(cy, getInteractionMode) {
   cy.on('mouseover', 'node, edge', (event) => {
-    if (getInteractionMode() === 'drill-active') return;
+    if (getInteractionMode() !== 'inspect') return;
     applyGraphFocus(cy, event.target);
   });
 
   cy.on('mouseout', 'node, edge', () => {
-    if (getInteractionMode() === 'drill-active') return;
+    if (getInteractionMode() !== 'inspect') return;
     clearGraphFocus(cy);
   });
 }
@@ -568,12 +759,18 @@ function installHoverFocus(cy, getInteractionMode) {
 function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onContinue, getInteractionMode, setInteractionMode, setSelectedElement) {
   cy.on('tap', 'node', (event) => {
     setSelectedElement({ type: 'node', id: event.target.id() });
-    if (getInteractionMode() === 'drill-active' || getInteractionMode() === 'post-drill') return;
-    detailEl.innerHTML = detailMarkupForNode(event.target);
+    if (getInteractionMode() !== 'inspect') return;
+    const inspectAction = window.SocratinkApp?.getNodeInspectAction?.(event.target.data()) || null;
+    detailEl.innerHTML = detailMarkupForNode(event.target, 'inspect', { inspectAction });
     const data = event.target.data();
     const drillBtn = detailEl.querySelector('.trigger-drill');
     if (drillBtn) {
       drillBtn.addEventListener('click', () => {
+        const actionKind = drillBtn.dataset.actionKind || 'start-drill';
+        if (window.SocratinkApp?.runInspectAction) {
+          window.SocratinkApp.runInspectAction(data, actionKind);
+          return;
+        }
         onNodeSelect?.(data);
       });
     }
@@ -581,7 +778,7 @@ function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onC
 
   cy.on('tap', 'edge', (event) => {
     setSelectedElement({ type: 'edge', id: event.target.id() });
-    if (getInteractionMode() === 'drill-active' || getInteractionMode() === 'post-drill') return;
+    if (getInteractionMode() !== 'inspect') return;
     detailEl.innerHTML = detailMarkupForEdge(event.target, cy);
   });
 
@@ -589,7 +786,7 @@ function installSelection(cy, detailEl, source, defaultNodeId, onNodeSelect, onC
     if (event.target === cy) {
       setSelectedElement({ type: 'node', id: defaultNodeId });
       clearGraphFocus(cy);
-      if (getInteractionMode() === 'drill-active' || getInteractionMode() === 'post-drill') return;
+      if (getInteractionMode() !== 'inspect') return;
       setEmptyDetail(detailEl, source);
       const drillBtn = detailEl.querySelector('.trigger-drill');
       if (drillBtn) drillBtn.addEventListener('click', () => onNodeSelect?.(null));
@@ -777,12 +974,13 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   setEmptyDetail(detailEl, transformed.source);
   const emptyDrillBtn = detailEl.querySelector('.trigger-drill');
   if (emptyDrillBtn) emptyDrillBtn.addEventListener('click', () => onNodeSelect?.(null));
+  const rewardTimeoutIds = [];
+  const prefersReducedMotion = Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
 
   const cy = window.cytoscape({
     container,
     elements: [...transformed.nodes, ...transformed.edges],
     layout: { name: 'preset' },
-    wheelSensitivity: 0.18,
     minZoom: 0.42,
     maxZoom: 1.8,
     style: [
@@ -853,28 +1051,57 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       {
         selector: 'node[state = "locked"][available = 0]',
         style: {
-          'background-color': 'rgba(255,255,255,0.18)',
-          'border-color': 'rgba(124,111,205,0.18)',
+          'background-color': 'rgba(255,255,255,0.08)',
+          'border-color': 'rgba(124,111,205,0.24)',
           'border-style': 'dashed',
-          opacity: 0.35,
+          'border-width': 1.5,
+          opacity: 0.22,
           label: 'data(teaserLabel)',
-          color: 'rgba(66,60,88,0.5)',
-          'text-opacity': 0.8,
+          color: 'rgba(91,84,121,0.42)',
+          'text-opacity': 0.56,
           'overlay-opacity': 0,
+          'text-outline-width': 0,
           events: 'no',
         },
       },
       {
         selector: 'node[state = "locked"][available = 1]',
         style: {
-          'background-color': 'rgba(255,255,255,0.85)',
-          'border-color': 'rgba(124,111,205,0.42)',
+          'background-color': 'rgba(252,247,255,0.99)',
+          'border-color': '#7c6fcd',
           'border-style': 'solid',
-          opacity: 0.9,
+          'border-width': 2.8,
+          opacity: 1,
           label: 'data(label)',
-          color: '#6d64a6',
-          'text-opacity': 0.92,
-          'overlay-opacity': 0.03,
+          color: '#4f4384',
+          'text-opacity': 1,
+          'overlay-opacity': 0.1,
+          'overlay-color': '#7c6fcd',
+          events: 'yes',
+        },
+      },
+      {
+        selector: '.node-cluster[state = "locked"][available = 1]',
+        style: {
+          'background-color': '#f7f2ff',
+          'border-color': '#7c6fcd',
+          'border-width': 3.2,
+          color: '#55488e',
+          opacity: 1,
+        },
+      },
+      {
+        selector: 'node[state = "primed"]',
+        style: {
+          'background-color': '#d9eef8',
+          'border-color': '#6eaed1',
+          'border-width': 2.2,
+          'border-style': 'solid',
+          opacity: 0.97,
+          label: 'data(label)',
+          color: '#215777',
+          'text-opacity': 1,
+          'overlay-opacity': 0.05,
           events: 'yes',
         },
       },
@@ -883,6 +1110,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         style: {
           'background-color': '#7c6fcd',
           'border-color': '#988be4',
+          'border-width': 2.4,
           'border-style': 'solid',
           opacity: 1,
           label: 'data(label)',
@@ -896,6 +1124,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         style: {
           'background-color': '#d9a14a',
           'border-color': '#e5be78',
+          'border-width': 2.2,
           'border-style': 'solid',
           opacity: 0.95,
           label: 'data(label)',
@@ -934,13 +1163,13 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       {
         selector: 'edge[available = 0]',
         style: {
-          opacity: 0.08,
+          opacity: 0.03,
         },
       },
       {
         selector: 'edge[available = 1]',
         style: {
-          opacity: 0.78,
+          opacity: 0.92,
         },
       },
       {
@@ -1128,25 +1357,101 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     });
   };
 
+  const syncInteractionChrome = () => {
+    const graphDetail = detailEl.closest('.graph-detail');
+    if (graphDetail) {
+      graphDetail.className = 'graph-detail';
+      if (interactionMode !== 'inspect') graphDetail.classList.add('is-' + interactionMode);
+    }
+
+    const graphLayout = detailEl.closest('.graph-layout');
+    if (graphLayout) {
+      graphLayout.className = 'graph-layout';
+      if (interactionMode !== 'inspect') graphLayout.classList.add('mode-' + interactionMode);
+    }
+  };
+
+  const clearRewardPanelClasses = () => {
+    detailEl.classList.remove('is-primed-reward-panel', 'is-solid-reward-panel');
+  };
+
+  const triggerPanelReward = (kind) => {
+    clearRewardPanelClasses();
+    const className = kind === 'solid' ? 'is-solid-reward-panel' : 'is-primed-reward-panel';
+    detailEl.classList.add(className);
+    const timeoutId = window.setTimeout(() => {
+      detailEl.classList.remove(className);
+    }, prefersReducedMotion ? 180 : (kind === 'solid' ? 920 : 760));
+    rewardTimeoutIds.push(timeoutId);
+  };
+
+  const findNextNodeSuggestion = (activeNodeId) => {
+    const now = Date.now();
+    const allNodes = cy.nodes().toArray();
+
+    // Priority 1: a primed node whose spacing window has passed (ready to re-drill)
+    const reDrillReady = allNodes.find((n) => {
+      if (n.id() === activeNodeId) return false;
+      const d = n.data();
+      if (d.drillStatus !== 'primed') return false;
+      if (d.reDrillEligibleAfter && now < new Date(d.reDrillEligibleAfter).getTime()) return false;
+      return true;
+    });
+    if (reDrillReady) {
+      return {
+        id: reDrillReady.id(),
+        label: reDrillReady.data('fullLabel') || reDrillReady.data('label'),
+        action: 're-drill',
+      };
+    }
+
+    // Priority 2: an available locked subnode for a cold attempt
+    const coldCandidate = allNodes.find((n) => {
+      if (n.id() === activeNodeId) return false;
+      const d = n.data();
+      return d.type === 'subnode' && d.state === 'locked' && d.available === 1;
+    });
+    if (coldCandidate) {
+      return {
+        id: coldCandidate.id(),
+        label: coldCandidate.data('fullLabel') || coldCandidate.data('label'),
+        action: 'explore',
+      };
+    }
+
+    return null;
+  };
+
   const renderCurrentDetail = () => {
-    if (interactionMode === 'drill-active') {
+    if (interactionMode === 'drill-active' || interactionMode === 'cold-attempt-active' || interactionMode === 're-drill-active') {
       const activeId = selectedElement.type === 'node' && selectedElement.id ? selectedElement.id : transformed.coreId;
       const activeNode = cy.getElementById(activeId);
       if (activeNode.length) {
-        detailEl.innerHTML = detailMarkupForNode(activeNode, 'drill-active');
+        detailEl.innerHTML = detailMarkupForNode(activeNode, interactionMode);
       } else {
         setEmptyDetail(detailEl, transformed.source, 'drill-active');
       }
       return;
     }
 
-    if (interactionMode === 'post-drill') {
+    if (interactionMode === 'post-drill' || interactionMode === 'study' || interactionMode === 'session-complete') {
       const activeId = selectedElement.type === 'node' && selectedElement.id ? selectedElement.id : transformed.coreId;
       const activeNode = cy.getElementById(activeId);
       if (activeNode.length) {
-        detailEl.innerHTML = detailMarkupForNode(activeNode, 'post-drill');
+        const options = interactionMode === 'study'
+          ? { nextNodeSuggestion: findNextNodeSuggestion(activeNode.id()) }
+          : {};
+        detailEl.innerHTML = detailMarkupForNode(activeNode, interactionMode, options);
         const continueBtn = detailEl.querySelector('.trigger-continue');
-        if (continueBtn) continueBtn.addEventListener('click', () => onContinue?.());
+        if (continueBtn) {
+           if (interactionMode === 'study') {
+               continueBtn.addEventListener('click', () => { window.SocratinkApp?.completeStudy?.(activeNode.id()); });
+           } else {
+               continueBtn.addEventListener('click', () => { onContinue?.(); });
+           }
+        }
+        const reopenBtn = detailEl.querySelector('.trigger-reopen');
+        if (reopenBtn) reopenBtn.addEventListener('click', () => { window.SocratinkApp?.reopenStudy?.(activeNode.data()); });
       } else {
         setEmptyDetail(detailEl, transformed.source, 'inspect');
       }
@@ -1156,11 +1461,19 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     if (selectedElement.type === 'node' && selectedElement.id) {
       const node = cy.getElementById(selectedElement.id);
       if (node.length) {
-        detailEl.innerHTML = detailMarkupForNode(node, 'inspect');
+        const inspectAction = window.SocratinkApp?.getNodeInspectAction?.(node.data()) || null;
+        detailEl.innerHTML = detailMarkupForNode(node, 'inspect', { inspectAction });
         const data = node.data();
         const drillBtn = detailEl.querySelector('.trigger-drill');
         if (drillBtn) {
-          drillBtn.addEventListener('click', () => onNodeSelect?.(data));
+          drillBtn.addEventListener('click', () => {
+            const actionKind = drillBtn.dataset.actionKind || 'start-drill';
+            if (window.SocratinkApp?.runInspectAction) {
+              window.SocratinkApp.runInspectAction(data, actionKind);
+              return;
+            }
+            onNodeSelect?.(data);
+          });
         }
         return;
       }
@@ -1231,12 +1544,8 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     () => interactionMode,
     (nextMode) => {
       interactionMode = nextMode;
-      const graphDetail = detailEl.closest('.graph-detail');
-      if (graphDetail) {
-        graphDetail.classList.toggle('is-drill-active', interactionMode === 'drill-active');
-        graphDetail.classList.toggle('is-post-drill', interactionMode === 'post-drill');
-      }
-      if (interactionMode === 'drill-active') {
+      syncInteractionChrome();
+      if (interactionMode.includes('drill') || interactionMode === 'study' || interactionMode === 'cold-attempt-active') {
         applyDrillContext(selectedElement.id);
       } else {
         clearDrillContext();
@@ -1262,6 +1571,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       destroyed = true;
       if (entryTimeoutId) window.clearTimeout(entryTimeoutId);
       if (updateTimeoutId) window.clearTimeout(updateTimeoutId);
+      rewardTimeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
       ambientFloat.destroy();
       cy.destroy();
     },
@@ -1275,16 +1585,12 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       }
     },
     setInteractionMode(mode = 'inspect', nodeId = null) {
-      interactionMode = mode === 'drill-active' ? 'drill-active' : mode === 'post-drill' ? 'post-drill' : 'inspect';
-      const graphDetail = detailEl.closest('.graph-detail');
-      if (graphDetail) {
-        graphDetail.classList.toggle('is-drill-active', interactionMode === 'drill-active');
-        graphDetail.classList.toggle('is-post-drill', interactionMode === 'post-drill');
-      }
+      interactionMode = mode;
+      syncInteractionChrome();
       if (nodeId) {
         updateSelectedElement({ type: 'node', id: nodeId });
       }
-      if (interactionMode === 'drill-active') {
+      if (interactionMode.includes('drill') || interactionMode === 'study' || interactionMode === 'cold-attempt-active') {
         applyDrillContext(selectedElement.id);
       } else {
         clearDrillContext();
@@ -1332,11 +1638,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     clearActiveDrillNode() {
       cy.nodes().removeClass('is-active-drill');
       interactionMode = 'inspect';
-      const graphDetail = detailEl.closest('.graph-detail');
-      if (graphDetail) {
-        graphDetail.classList.remove('is-drill-active');
-        graphDetail.classList.remove('is-post-drill');
-      }
+      syncInteractionChrome();
       clearDrillContext();
       renderCurrentDetail();
     },
@@ -1392,6 +1694,66 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     resize() {
       renderOrbit(false);
       cy.fit(cy.elements(), 50);
+    },
+    showBlockedMessage(headline, body) {
+      interactionMode = 'inspect';
+      syncInteractionChrome();
+      clearDrillContext();
+      detailEl.innerHTML = `
+        <div class="graph-detail-kicker">Not yet</div>
+        <h3 class="graph-detail-title">${escHtml(headline)}</h3>
+        <p class="graph-detail-copy">${escHtml(body)}</p>
+      `;
+    },
+    getNextNodeSuggestion(nodeId = null) {
+      return findNextNodeSuggestion(nodeId);
+    },
+    selectNode(nodeId) {
+      if (!nodeId) return;
+      const node = cy.getElementById(nodeId);
+      if (!node.length) return;
+      interactionMode = 'inspect';
+      syncInteractionChrome();
+      clearDrillContext();
+      updateSelectedElement({ type: 'node', id: nodeId });
+      applyGraphFocus(cy, node);
+      renderCurrentDetail();
+    },
+    flashSolidification(nodeId) {
+      const node = cy.getElementById(nodeId);
+      triggerPanelReward('solid');
+      if (!node.length || prefersReducedMotion) return;
+      node.animate(
+        { style: { 'border-width': 7, 'background-color': '#a895ea', opacity: 1 } },
+        {
+          duration: 200,
+          easing: 'ease-out-cubic',
+          complete() {
+            node.animate(
+              { style: { 'border-width': 2, 'background-color': '#7c6fcd' } },
+              { duration: 500, easing: 'ease-in-out-cubic' }
+            );
+          },
+        }
+      );
+    },
+    flashPrimed(nodeId) {
+      const node = cy.getElementById(nodeId);
+      triggerPanelReward('primed');
+      if (!node.length || prefersReducedMotion) return;
+      node.animate(
+        { style: { 'border-width': 4.4, 'background-color': '#eef8fd', opacity: 1 } },
+        {
+          duration: 160,
+          easing: 'ease-out-cubic',
+          complete() {
+            node.animate(
+              { style: { 'border-width': 2.2, 'background-color': '#d9eef8', opacity: 0.97 } },
+              { duration: 360, easing: 'ease-in-out-cubic' }
+            );
+          },
+        }
+      );
     },
   };
 }

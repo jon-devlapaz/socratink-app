@@ -63,7 +63,7 @@
 
 - Decision: the April 2026 research synthesis is complete. The three-phase node loop (cold attempt → targeted study → spaced re-drill), four-state model, and evidence-based UX framework are now codified in `docs/product/ux-framework.md`, `progressive-disclosure.md`, and `post-drill-ux-spec.md`.
 - Why: the research track produced sufficient evidence to commit to the three-phase architecture. Pretesting effect, prediction error learning, spaced retrieval, and social normalization are all supported by multiple RCTs and meta-analyses.
-- Evidence basis: full research synthesis documented in the rewritten UX framework and current-bets docs.
+- Evidence basis: full research synthesis documented in the rewritten UX framework and the current product specification.
 
 ### 2026-04-02
 

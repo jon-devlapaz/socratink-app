@@ -3,7 +3,7 @@ import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
 import { Morph, crystalPolygons } from './morph.js';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=2';
 import {
-  STATES, generateId, loadConcepts, saveConcepts,
+  STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
@@ -18,6 +18,8 @@ import { recordExtractRun, recordDrillRun } from './browser-analytics.js';
 
 const App = (() => {
   const THEME_STORAGE_KEY = 'learnops-theme';
+  const PHASE_B_SESSION_KEY = 'learnops-phase-b-session';
+  const PHASE_B_RESUME_KEY = 'learnops-phase-b-resume';
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
@@ -26,6 +28,70 @@ const App = (() => {
   let activeTutorialTarget = null;
   let themePreference = 'light';
   let currentPrimaryNav = 'nav-dashboard';
+
+  function getDefaultPhaseBSessionState() {
+    return {
+      startedAt: null,
+      nodesDrilled: 0,
+      visitedNodeIds: [],
+      retriesByNode: {},
+      events: [],
+    };
+  }
+
+  function loadPhaseBSessionState() {
+    try {
+      const raw = sessionStorage.getItem(PHASE_B_SESSION_KEY);
+      if (!raw) return getDefaultPhaseBSessionState();
+      const parsed = JSON.parse(raw);
+      const visitedNodeIds = Array.isArray(parsed?.visitedNodeIds)
+        ? parsed.visitedNodeIds.filter((id) => typeof id === 'string' && id)
+        : [];
+      return {
+        startedAt: parsed?.startedAt || null,
+        nodesDrilled: visitedNodeIds.length || (Number.isFinite(Number(parsed?.nodesDrilled)) ? Number(parsed.nodesDrilled) : 0),
+        visitedNodeIds,
+        retriesByNode: parsed?.retriesByNode && typeof parsed.retriesByNode === 'object' ? parsed.retriesByNode : {},
+        events: Array.isArray(parsed?.events) ? parsed.events : [],
+      };
+    } catch (err) {
+      console.warn('Phase B session state unavailable.', err);
+      return getDefaultPhaseBSessionState();
+    }
+  }
+
+  function persistPhaseBSessionState(sessionState) {
+    try {
+      sessionStorage.setItem(PHASE_B_SESSION_KEY, JSON.stringify(sessionState));
+    } catch (err) {
+      console.warn('Unable to persist Phase B session state.', err);
+    }
+  }
+
+  function loadPhaseBResumeState() {
+    try {
+      const raw = sessionStorage.getItem(PHASE_B_RESUME_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.conceptId || !parsed?.nodeId || parsed?.mode !== 'study') return null;
+      return parsed;
+    } catch (err) {
+      console.warn('Phase B resume state unavailable.', err);
+      return null;
+    }
+  }
+
+  function persistPhaseBResumeState(nextState = null) {
+    try {
+      if (!nextState) {
+        sessionStorage.removeItem(PHASE_B_RESUME_KEY);
+        return;
+      }
+      sessionStorage.setItem(PHASE_B_RESUME_KEY, JSON.stringify(nextState));
+    } catch (err) {
+      console.warn('Unable to persist Phase B resume state.', err);
+    }
+  }
 
   const themeToggleEl = document.getElementById('theme-toggle');
 
@@ -1481,6 +1547,7 @@ const App = (() => {
     if (graphContent) graphContent.hidden = false;
     if (window.innerWidth < 900) closeDrawer();
     setMapMode('study');
+    restoreStudyResume(concept, data);
     scheduleTutorialRefresh();
   }
 
@@ -1567,6 +1634,19 @@ const App = (() => {
     { file: 'learnops_architecture.json', name: 'LearnOps Architecture', desc: 'The Generation Effect and Socratic Graphs' },
     { file: 'sourdough_science.json', name: 'Science of Sourdough Baking', desc: 'Symbiotic fermentation, rheology, and oven spring' }
   ];
+  const STARTER_MAP_NAMES = new Set(STARTER_MAPS.map((item) => item.name));
+
+  function isStarterMapConcept(concept, graphData = null) {
+    if (!concept) return false;
+    const graph = graphData || parseConceptGraphData(concept) || {};
+    const sourceTitle = graph?.metadata?.source_title || graph?.metadata?.title || null;
+    return STARTER_MAP_NAMES.has(concept.name) || (sourceTitle ? STARTER_MAP_NAMES.has(sourceTitle) : false);
+  }
+
+  function shouldBypassSessionStops(concept, graphData = null) {
+    // Starter maps are the controlled MVP tasting environment.
+    return isStarterMapConcept(concept, graphData);
+  }
 
   async function importStarterMap(filename, conceptName) {
     try {
@@ -1789,7 +1869,15 @@ const App = (() => {
 
   // Restore selected concept
   const concepts = loadConcepts();
-  const toLoad = concepts.find(c => c.id === getActiveId()) || concepts[0] || null;
+  const pendingResumeState = loadPhaseBResumeState();
+  const resumeConcept = pendingResumeState
+    ? concepts.find((concept) => concept.id === pendingResumeState.conceptId && concept.graphData)
+    : null;
+  const toLoad = resumeConcept || concepts.find(c => c.id === getActiveId()) || concepts[0] || null;
+
+  if (pendingResumeState && !resumeConcept) {
+    persistPhaseBResumeState(null);
+  }
 
   if (!toLoad) {
     showEmptyState();
@@ -1798,27 +1886,35 @@ const App = (() => {
     renderHero(toLoad);
     applyControlsForState(toLoad.state, toLoad);
     renderGrid(); // re-render to apply .selected class
+    if (resumeConcept && resumeConcept.id === toLoad.id) {
+      showMapView(toLoad);
+    }
   }
+
+  let sessionState = loadPhaseBSessionState();
 
   let drillState = {
     active: false,
     messages: [],
     node: null,
+    logSessionId: null,
     pending: false,
     probeCount: 0,
-    nodesDrilled: 0,
     attemptTurnCount: 0,
     helpTurnCount: 0,
-    sessionStartIso: null,
     sessionToken: 0,
+    _normalizationIdx: 0,
+    sessionCompletePending: false,
   };
+
+  function createDrillLogSessionId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    return `drill-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
 
   function parseConceptGraphData(concept) {
     if (!concept?.graphData) return null;
-    if (typeof concept.graphData === 'string') {
-      return JSON.parse(concept.graphData);
-    }
-    return concept.graphData;
+    return normalizeGraphData(concept.graphData).graphData;
   }
 
   function persistActiveConceptGraphData(graphData) {
@@ -1827,9 +1923,24 @@ const App = (() => {
     const conceptIdx = concepts.findIndex((concept) => concept.id === activeId);
     if (conceptIdx === -1) return null;
 
-    concepts[conceptIdx].graphData = JSON.stringify(graphData);
+    const normalizedGraphData = normalizeGraphData(graphData).graphData;
+    concepts[conceptIdx].graphData = JSON.stringify(normalizedGraphData);
     saveConcepts(concepts);
     return concepts[conceptIdx];
+  }
+
+  function resolveNodeData(knowledgeMap, nodeId) {
+    if (nodeId === 'core-thesis') return knowledgeMap.metadata || {};
+    for (const item of knowledgeMap?.backbone || []) {
+      if (item?.id === nodeId) return item;
+    }
+    for (const cluster of knowledgeMap?.clusters || []) {
+      if (cluster?.id === nodeId) return cluster;
+      for (const subnode of cluster?.subnodes || []) {
+        if (subnode?.id === nodeId) return subnode;
+      }
+    }
+    return null;
   }
 
   function resolveNodeType(knowledgeMap, nodeId, fallbackType = null) {
@@ -1854,8 +1965,339 @@ const App = (() => {
     return null;
   }
 
-  function patchActiveConceptDrillOutcome(result) {
-    if (result?.routing !== 'NEXT' || !result?.node_id) {
+  function persistSessionState() {
+    if (!Array.isArray(sessionState.visitedNodeIds)) {
+      sessionState.visitedNodeIds = [];
+    }
+    sessionState.nodesDrilled = getSessionNodeCount();
+    persistPhaseBSessionState(sessionState);
+  }
+
+  function getSessionNodeCount() {
+    const visitedNodeIds = Array.isArray(sessionState.visitedNodeIds) ? sessionState.visitedNodeIds : [];
+    if (visitedNodeIds.length) return visitedNodeIds.length;
+    return Number.isFinite(Number(sessionState.nodesDrilled)) ? Number(sessionState.nodesDrilled) : 0;
+  }
+
+  function markNodeVisitedThisSession(nodeId) {
+    if (!nodeId) return;
+    sessionState.visitedNodeIds = Array.isArray(sessionState.visitedNodeIds) ? sessionState.visitedNodeIds : [];
+    if (sessionState.visitedNodeIds.includes(nodeId)) return;
+    sessionState.visitedNodeIds.push(nodeId);
+    sessionState.nodesDrilled = sessionState.visitedNodeIds.length;
+  }
+
+  function recordInterleavingEvent(type, conceptId, nodeId, at = new Date().toISOString()) {
+    sessionState.events = [
+      ...(sessionState.events || []),
+      { type, conceptId, nodeId, at },
+    ].slice(-100);
+    persistSessionState();
+  }
+
+  function hasInterleavingEventSince(nodeId, studyCompletedAt) {
+    if (!studyCompletedAt) return false;
+
+    const studyCompletedMs = Date.parse(studyCompletedAt);
+    if (Number.isNaN(studyCompletedMs)) return false;
+
+    if (!sessionState.startedAt) return true;
+
+    const sessionStartedMs = Date.parse(sessionState.startedAt);
+    if (Number.isNaN(sessionStartedMs) || studyCompletedMs < sessionStartedMs) {
+      return true;
+    }
+
+    return (sessionState.events || []).some((event) => {
+      if (!event?.nodeId || event.nodeId === nodeId) return false;
+      if (event.type !== 'cold_attempt_complete' && event.type !== 'study_complete') return false;
+      const eventMs = Date.parse(event.at || '');
+      return !Number.isNaN(eventMs) && eventMs > studyCompletedMs;
+    });
+  }
+
+  function isReDrillEligible(nodeData, nodeId) {
+    if (!nodeData?.re_drill_eligible_after) return false;
+
+    const eligibleAtMs = Date.parse(nodeData.re_drill_eligible_after);
+    if (Number.isNaN(eligibleAtMs) || Date.now() < eligibleAtMs) {
+      return false;
+    }
+
+    return hasInterleavingEventSince(nodeId, nodeData.study_completed_at);
+  }
+
+  function getSpacingBlockReason(nodeData, nodeId) {
+    if (!nodeData?.re_drill_eligible_after) {
+      return {
+        headline: 'Study this node first',
+        body: 'Complete the study step before you try a scored re-drill.',
+      };
+    }
+
+    const eligibleAtMs = Date.parse(nodeData.re_drill_eligible_after);
+    if (!Number.isNaN(eligibleAtMs) && Date.now() < eligibleAtMs) {
+      return {
+        headline: 'Work on another node first',
+        body: 'Your brain needs a short buffer before this re-drill counts. Review another node, then come back.',
+      };
+    }
+
+    return {
+      headline: 'Interleave one more node first',
+      body: 'Finish one other cold attempt or study step before returning here. That buffer helps the graph tell the truth.',
+    };
+  }
+
+  function getNextReachableInspectTarget(currentNodeId) {
+    const graphSuggestion = currentGraphController?.getNextNodeSuggestion?.(currentNodeId);
+    if (graphSuggestion?.id) return graphSuggestion;
+
+    const concept = getActiveConcept();
+    const graphData = parseConceptGraphData(concept) || {};
+
+    const availableBackbone = (graphData.backbone || []).find((item) => {
+      if (!item?.id || item.id === currentNodeId) return false;
+      return (
+        item.drill_status === 'primed'
+        || item.drill_status === 'drilled'
+        || item.drill_status === 'solidified'
+        || item.drill_status === 'solid'
+      );
+    });
+    if (availableBackbone) {
+      return {
+        id: availableBackbone.id,
+        label: availableBackbone.principle || 'Next branch',
+        action: 'review',
+      };
+    }
+
+    const availableCluster = (graphData.clusters || []).find((cluster) => {
+      if (!cluster?.id || cluster.id === currentNodeId) return false;
+      const ownerBackboneIds = (graphData.backbone || [])
+        .filter((item) => (item?.dependent_clusters || []).includes(cluster.id))
+        .map((item) => item.id);
+      if (!ownerBackboneIds.length) return Boolean(graphData?.metadata?.drill_status === 'solidified' || graphData?.metadata?.drill_status === 'solid');
+      return ownerBackboneIds.some((backboneId) => {
+        const backbone = (graphData.backbone || []).find((item) => item?.id === backboneId);
+        return backbone?.drill_status === 'primed'
+          || backbone?.drill_status === 'drilled'
+          || backbone?.drill_status === 'solidified'
+          || backbone?.drill_status === 'solid';
+      });
+    });
+    if (availableCluster) {
+      return {
+        id: availableCluster.id,
+        label: availableCluster.label || 'Next cluster',
+        action: 'explore',
+      };
+    }
+
+    for (const cluster of graphData.clusters || []) {
+      const candidate = (cluster?.subnodes || []).find((subnode) => {
+        if (!subnode?.id || subnode.id === currentNodeId) return false;
+        return !subnode.drill_status || subnode.drill_status === 'locked';
+      });
+      if (candidate) {
+        return {
+          id: candidate.id,
+          label: candidate.label || 'Next node',
+          action: 'explore',
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function getIncubationAction(nodeContext, nodeData) {
+    const nextTarget = getNextReachableInspectTarget(nodeContext.id);
+    const blocked = nodeContext.type === 'core' || nodeContext.type === 'backbone'
+      ? {
+          headline: 'Let this one incubate',
+          body: nextTarget
+            ? `This idea is primed. Shift to ${nextTarget.label} while this one settles, then come back for the scored re-drill.`
+            : 'This idea is primed. Shift to another reachable branch while this one settles, then come back for the scored re-drill.',
+        }
+      : getSpacingBlockReason(nodeData, nodeContext.id);
+
+    return {
+      kind: nextTarget?.id ? 'focus-next' : 'resume-study',
+      label: nextTarget?.id
+        ? (nodeContext.type === 'core' ? 'Go To Next Reachable Branch' : 'Go To Next Reachable Node')
+        : 'Review Study',
+      targetNodeId: nextTarget?.id || null,
+      blocked,
+    };
+  }
+
+  function getNodeInspectAction(nodeContext) {
+    const concept = getActiveConcept();
+    if (!concept || !nodeContext?.id) return null;
+
+    const graphData = parseConceptGraphData(concept);
+    const nodeData = resolveNodeData(graphData || {}, nodeContext.id) || {};
+    const drillStatus = nodeData.drill_status || 'locked';
+    const drillPhase = nodeData.drill_phase || null;
+    const isEligible = isReDrillEligible(nodeData, nodeContext.id);
+
+    if (!nodeContext.available) return null;
+    if (drillStatus === 'solidified') return null;
+
+    if (drillStatus === 'primed') {
+      if (drillPhase === 'study') {
+        return {
+          kind: 'resume-study',
+          label: 'Resume Study',
+        };
+      }
+      if (isEligible) {
+        return {
+          kind: 'start-redrill',
+          label: 'Start Re-Drill',
+        };
+      }
+      return getIncubationAction(nodeContext, nodeData);
+    }
+
+    if (drillStatus === 'drilled') {
+      if (isEligible) {
+        return {
+          kind: 'start-redrill',
+          label: 'Start Re-Drill',
+        };
+      }
+      return getIncubationAction(nodeContext, nodeData);
+    }
+
+    return {
+      kind: 'start-cold-attempt',
+      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Start Cold Attempt',
+    };
+  }
+
+  function runInspectAction(nodeContext, actionKind) {
+    if (!nodeContext || !actionKind) return;
+    if (actionKind === 'resume-study') {
+      reopenStudy(nodeContext);
+      return;
+    }
+    if (actionKind === 'focus-next') {
+      const nextTarget = getNextReachableInspectTarget(nodeContext.id);
+      if (nextTarget?.id) {
+        currentGraphController?.selectNode?.(nextTarget.id);
+        return;
+      }
+      reopenStudy(nodeContext);
+      return;
+    }
+    startDrill(nodeContext);
+  }
+
+  function restoreStudyResume(concept, graphData) {
+    const resumeState = loadPhaseBResumeState();
+    if (!resumeState || resumeState.conceptId !== concept?.id || resumeState.mode !== 'study') {
+      return false;
+    }
+
+    const nodeData = resolveNodeData(graphData || {}, resumeState.nodeId);
+    if (!nodeData || nodeData.drill_phase !== 'study') {
+      persistPhaseBResumeState(null);
+      return false;
+    }
+
+    activeDrillNode = resumeState.nodeId;
+    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
+    currentGraphController?.setInteractionMode?.('study', activeDrillNode);
+    setMapMode('graph');
+    return true;
+  }
+
+  function reopenStudy(nodeContext) {
+    const concept = getActiveConcept();
+    if (!concept || !nodeContext?.id) return;
+
+    activeDrillNode = nodeContext.id;
+    persistPhaseBResumeState({ conceptId: concept.id, nodeId: nodeContext.id, mode: 'study' });
+    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
+    currentGraphController?.setInteractionMode?.('study', activeDrillNode);
+    setMapMode('graph');
+  }
+
+  function completeStudy(nodeId) {
+    const concept = getActiveConcept();
+    const graphData = parseConceptGraphData(concept);
+    if (!graphData) return;
+
+    let patched = false;
+    const studyCompletedAt = new Date().toISOString();
+    const fiveMinutes = 5 * 60 * 1000;
+    const eligibleAfter = new Date(Date.now() + fiveMinutes).toISOString();
+
+    const applySpacing = (targetObj) => {
+      targetObj.study_completed_at = studyCompletedAt;
+      targetObj.drill_phase = 're_drill';
+      targetObj.re_drill_eligible_after = eligibleAfter;
+    };
+
+    if (nodeId === 'core-thesis') {
+      if (graphData.metadata) applySpacing(graphData.metadata);
+      patched = true;
+    }
+    (graphData.backbone || []).forEach((item) => {
+      if (item?.id === nodeId) {
+        applySpacing(item);
+        patched = true;
+      }
+    });
+    (graphData.clusters || []).forEach((cluster) => {
+      (cluster.subnodes || []).forEach((subnode) => {
+        if (subnode?.id === nodeId) {
+          applySpacing(subnode);
+          patched = true;
+        }
+      });
+    });
+
+    if (patched) {
+      persistActiveConceptGraphData(graphData);
+      recordInterleavingEvent('study_complete', concept.id, nodeId, studyCompletedAt);
+      currentGraphController?.syncFromKnowledgeMap?.(graphData, null);
+    }
+
+    drillState.active = false;
+    drillState.messages = [];
+    drillState.node = null;
+    drillState.logSessionId = null;
+    drillState.pending = false;
+    drillState.probeCount = 0;
+    drillState.attemptTurnCount = 0;
+    drillState.helpTurnCount = 0;
+    drillState.sessionCompletePending = false;
+    drillState.sessionToken += 1;
+    if (drillUi) drillUi.style.display = 'none';
+    if (chatHistory) chatHistory.innerHTML = '';
+    if (chatInput) {
+      chatInput.value = '';
+      chatInput.disabled = true;
+    }
+
+    persistPhaseBResumeState(null);
+    currentGraphController?.setInteractionMode?.('inspect');
+    currentGraphController?.clearActiveDrillNode?.();
+    activeDrillNode = null;
+  }
+
+  function patchActiveConceptDrillOutcome(result, drillMode) {
+    const resolvedColdAttempt = drillMode === 'cold_attempt' && result?.generative_commitment === true;
+    const isResolvedSessionComplete = result?.routing === 'SESSION_COMPLETE'
+      && (drillMode === 'cold_attempt'
+        ? result?.generative_commitment === true
+        : Boolean(result?.classification));
+
+    if ((!resolvedColdAttempt && result?.routing !== 'NEXT' && !isResolvedSessionComplete) || !result?.node_id) {
       console.log(
         `[drill->graph] no mutation node=${result?.node_id ?? 'n/a'} classification=${result?.classification ?? 'null'} routing=${result?.routing ?? 'null'}`
       );
@@ -1874,55 +2316,54 @@ const App = (() => {
 
     const drilledAt = new Date().toISOString();
     let patched = false;
+    const activeConceptId = concept.id;
+
+    const applyPhaseUpdate = (targetObj) => {
+      if (drillMode === 'cold_attempt' && result.generative_commitment === true) {
+        targetObj.drill_phase = 'study';
+        targetObj.drill_status = 'primed';
+        targetObj.cold_attempt_at = drilledAt;
+        targetObj.gap_type = null;
+        targetObj.gap_description = null;
+        recordInterleavingEvent('cold_attempt_complete', activeConceptId, result.node_id, drilledAt);
+      } else if (drillMode === 're_drill') {
+        if (result.classification === 'solid') {
+          targetObj.drill_status = 'solidified';
+          targetObj.drill_phase = null;
+          targetObj.re_drill_band = result.response_band || null;
+          targetObj.gap_type = null;
+          targetObj.gap_description = null;
+        } else if (result.classification) {
+          targetObj.re_drill_count = (targetObj.re_drill_count || 0) + 1;
+          targetObj.drill_status = 'drilled';
+          targetObj.drill_phase = null;
+          targetObj.re_drill_band = null;
+          targetObj.gap_type = result.classification;
+          targetObj.gap_description = result.gap_description || null;
+          // Spacing calculation
+          const backoffMinutes = 10 * Math.pow(2, targetObj.re_drill_count - 1);
+          targetObj.re_drill_eligible_after = new Date(Date.now() + backoffMinutes * 60000).toISOString();
+        }
+      }
+      targetObj.last_drilled = drilledAt;
+    };
 
     if (result.node_id === 'core-thesis') {
       graphData.metadata = graphData.metadata || {};
-      graphData.metadata.drill_status = result.classification || graphData.metadata.drill_status || null;
-      graphData.metadata.gap_type = result.classification && result.classification !== 'solid'
-        ? result.classification
-        : null;
-      graphData.metadata.gap_description = result.classification && result.classification !== 'solid'
-        ? (result.gap_description || null)
-        : null;
-      graphData.metadata.last_drilled = drilledAt;
+      applyPhaseUpdate(graphData.metadata);
       patched = true;
     }
 
     (graphData.backbone || []).forEach((item) => {
       if (item?.id !== result.node_id) return;
-
-      if (result.classification === 'solid') {
-        item.drill_status = 'solid';
-        item.gap_type = null;
-        item.gap_description = null;
-      } else if (result.classification) {
-        item.drill_status = result.classification;
-        item.gap_type = result.classification;
-        item.gap_description = result.gap_description || null;
-      }
-
-      item.last_drilled = drilledAt;
+      applyPhaseUpdate(item);
       patched = true;
     });
 
     (graphData.clusters || []).forEach((cluster) => {
       (cluster.subnodes || []).forEach((subnode) => {
         if (subnode?.id !== result.node_id) return;
-
-        if (result.classification === 'solid') {
-          subnode.drill_status = 'solid';
-          subnode.gap_type = null;
-          subnode.gap_description = null;
-        } else if (result.classification) {
-          subnode.drill_status = result.classification;
-          subnode.gap_type = result.classification;
-          subnode.gap_description = result.gap_description || null;
-        } else {
-          // Defensive no-op: NEXT without a classification should still record that the node was visited,
-          // but should not overwrite the prior epistemic state until the backend provides a real judgment.
-        }
-
-        subnode.last_drilled = drilledAt;
+        applyPhaseUpdate(subnode);
         patched = true;
       });
     });
@@ -1933,13 +2374,6 @@ const App = (() => {
     console.log(
       `[drill->graph] patched node=${result.node_id} classification=${result.classification ?? 'null'} routing=${result.routing ?? 'null'}`
     );
-    console.log('[drill->graph] patched node state', {
-      node_id: result.node_id,
-      classification: result.classification ?? null,
-      routing: result.routing ?? null,
-      gap_description: result.gap_description ?? null,
-    });
-    currentGraphController?.syncFromKnowledgeMap?.(graphData, activeDrillNode);
     return updatedConcept;
   }
 
@@ -2000,17 +2434,27 @@ const App = (() => {
     if (userText) {
       outboundMessages.push({ role: 'user', content: userText });
     }
+    const clientTurnIndex = outboundMessages.filter((msg) => msg?.role === 'user').length;
 
     const sessionPhase = !drillState.messages.length && !userText ? 'init' : 'turn';
 
-    const knowledgeMap = typeof concept.graphData === 'string'
-      ? JSON.parse(concept.graphData)
-      : concept.graphData;
+    const knowledgeMap = parseConceptGraphData(concept) || {};
     const nodeType = resolveNodeType(knowledgeMap, drillState.node.id, drillState.node.type);
     const clusterId = resolveClusterId(knowledgeMap, drillState.node.id);
     const nodeLabel = drillState.node.fullLabel || drillState.node.label || concept.name;
+    const bypassSessionLimits = shouldBypassSessionStops(concept, knowledgeMap);
 
     const apiKey = localStorage.getItem('gemini_key') || undefined;
+    const nodeData = resolveNodeData(knowledgeMap, drillState.node.id) || {};
+    let drillMode = 'cold_attempt';
+    let reDrillCount = nodeData.re_drill_count || 0;
+    if (
+      nodeData.drill_status === 'drilled'
+      || (nodeData.drill_status === 'primed' && nodeData.drill_phase === 're_drill')
+    ) {
+      drillMode = 're_drill';
+    }
+
     try {
       const response = await fetch('/api/drill', {
         method: 'POST',
@@ -2020,14 +2464,19 @@ const App = (() => {
           node_id: drillState.node.id,
           node_label: nodeLabel,
           node_mechanism: drillState.node.detail || '',
+          drill_session_id: drillState.logSessionId,
+          client_turn_index: clientTurnIndex,
           knowledge_map: knowledgeMap,
           messages: outboundMessages,
           session_phase: sessionPhase,
+          drill_mode: drillMode,
+          re_drill_count: reDrillCount,
           probe_count: drillState.probeCount,
-          nodes_drilled: drillState.nodesDrilled,
+          nodes_drilled: getSessionNodeCount(),
           attempt_turn_count: drillState.attemptTurnCount,
           help_turn_count: drillState.helpTurnCount,
-          session_start_iso: drillState.sessionStartIso,
+          session_start_iso: sessionState.startedAt,
+          bypass_session_limits: bypassSessionLimits,
           api_key: apiKey,
         }),
       });
@@ -2048,75 +2497,74 @@ const App = (() => {
         return;
       }
 
-      const graphMutationConcept = patchActiveConceptDrillOutcome(data);
+      const graphMutationConcept = patchActiveConceptDrillOutcome(data, drillMode);
       const graphMutated = Boolean(graphMutationConcept);
-      const uxRewardEmitted = Boolean(
-        data?.answer_mode === 'attempt'
-        && data?.classification === 'solid'
-        && (data?.response_tier != null ? Number(data.response_tier) >= 4 : true)
-      );
-      recordDrillRun({
-        timestamp: turnStartedAt,
-        stage: 'drill',
-        status: 'success',
-        model: 'gemini-2.5-flash',
-        prompt_version: 'learnops-drill-skill',
-        concept_id: concept.id,
-        node_id: drillState.node.id,
-        node_type: nodeType,
-        cluster_id: clusterId,
-        node_label: nodeLabel,
-        session_phase: sessionPhase,
-        session_start_iso: drillState.sessionStartIso,
-        message_count: outboundMessages.length,
-        latest_learner_chars: userText ? userText.length : 0,
-        answer_mode: data?.answer_mode ?? null,
-        score_eligible: data?.score_eligible ?? null,
-        help_request_reason: data?.help_request_reason ?? null,
-        probe_count_in: drillState.probeCount,
-        probe_count_out: data?.probe_count ?? drillState.probeCount,
-        nodes_drilled_in: drillState.nodesDrilled,
-        nodes_drilled_out: data?.nodes_drilled ?? drillState.nodesDrilled,
-        attempt_turn_count_in: drillState.attemptTurnCount,
-        attempt_turn_count_out: data?.attempt_turn_count ?? drillState.attemptTurnCount,
-        help_turn_count_in: drillState.helpTurnCount,
-        help_turn_count_out: data?.help_turn_count ?? drillState.helpTurnCount,
-        classification: data?.classification ?? null,
-        routing: data?.routing ?? null,
-        response_tier: data?.response_tier ?? null,
-        response_band: data?.response_band ?? null,
-        tier_reason: data?.tier_reason ?? null,
-        force_advanced: data?.force_advanced === true,
-        force_advance_mode: data?.force_advance_mode ?? null,
-        graph_mutated: graphMutated,
-        ux_reward_emitted: uxRewardEmitted,
-        session_terminated: data?.session_terminated === true,
-        termination_reason: data?.termination_reason ?? null,
-        duration_ms: Math.round(performance.now() - turnStartedPerf),
-        run_mode: 'default',
-      });
-      drillState.messages = outboundMessages;
-      drillState.probeCount = data.probe_count ?? drillState.probeCount;
-      drillState.nodesDrilled = data.nodes_drilled ?? drillState.nodesDrilled;
-      drillState.attemptTurnCount = data.attempt_turn_count ?? drillState.attemptTurnCount;
-      drillState.helpTurnCount = data.help_turn_count ?? drillState.helpTurnCount;
-      handleDrillAssistantMessage(data.agent_response || '');
-      if (data.agent_response?.trim()) {
-        drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
-      }
-      drillState.pending = false;
-      const completedNodeTurn = data.routing === 'NEXT'
-        || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
-      if (chatInput) {
-        chatInput.disabled = completedNodeTurn || !!data.session_terminated;
-        if (!completedNodeTurn && !data.session_terminated) {
-          chatInput.focus();
+
+      const handleVisualTransition = () => {
+        if (graphMutated) {
+          const freshGraphData = parseConceptGraphData(graphMutationConcept);
+          currentGraphController?.syncFromKnowledgeMap?.(freshGraphData, activeDrillNode);
         }
-      }
-      if (completedNodeTurn) {
-        currentGraphController?.setInteractionMode?.('post-drill', activeDrillNode);
+
+        drillState.messages = outboundMessages;
+        drillState.probeCount = data.probe_count ?? drillState.probeCount;
+        persistSessionState();
+        drillState.attemptTurnCount = data.attempt_turn_count ?? drillState.attemptTurnCount;
+        drillState.helpTurnCount = data.help_turn_count ?? drillState.helpTurnCount;
+        handleDrillAssistantMessage(data.agent_response || '');
+        if (data.agent_response?.trim()) {
+          drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
+        }
+        drillState.pending = false;
+        drillState.sessionCompletePending = data.routing === 'SESSION_COMPLETE' || Boolean(data.session_terminated);
+
+        const completedColdAttempt = drillMode === 'cold_attempt' && data.generative_commitment === true;
+        const completedReDrill = data.routing === 'NEXT'
+          || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
+        const completedNodeTurn = completedColdAttempt || completedReDrill;
+        if (completedColdAttempt) {
+          persistPhaseBResumeState({ conceptId: concept.id, nodeId: drillState.node.id, mode: 'study' });
+        } else if (completedReDrill) {
+          persistPhaseBResumeState(null);
+        }
+        if (chatInput) {
+          chatInput.disabled = completedNodeTurn || !!data.session_terminated;
+          if (!completedNodeTurn && !data.session_terminated) {
+            chatInput.focus();
+          }
+        }
+        if (completedNodeTurn) {
+          currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'study' : 'post-drill', activeDrillNode);
+          if (completedColdAttempt) {
+            currentGraphController?.flashPrimed?.(activeDrillNode);
+          }
+          if (drillMode === 're_drill' && data.classification === 'solid') {
+            currentGraphController?.flashSolidification?.(activeDrillNode);
+          }
+        } else {
+          currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'cold-attempt-active' : 're-drill-active', activeDrillNode);
+        }
+      };
+
+      if (drillMode === 'cold_attempt' && data.generative_commitment === true) {
+        const normalizationMessages = [
+          "Your guess just primed your brain. Now let's see what's really going on.",
+          "Most learners get this wrong the first time. That's by design.",
+          "This is how your brain prepares to learn. The struggle is the point.",
+          "That attempt just activated your semantic networks. The study material will land harder now.",
+        ];
+        const msgIdx = drillState._normalizationIdx % normalizationMessages.length;
+        drillState._normalizationIdx += 1;
+        appendBubble('ai', normalizationMessages[msgIdx]);
+        if (chatInput) chatInput.disabled = true;
+        drillState.pending = true;
+        showTypingIndicator();
+        setTimeout(() => {
+          hideTypingIndicator();
+          handleVisualTransition();
+        }, 2200);
       } else {
-        currentGraphController?.setInteractionMode?.('drill-active', activeDrillNode);
+        handleVisualTransition();
       }
     } catch (err) {
       hideTypingIndicator();
@@ -2135,11 +2583,11 @@ const App = (() => {
         cluster_id: clusterId,
         node_label: nodeLabel,
         session_phase: sessionPhase,
-        session_start_iso: drillState.sessionStartIso,
+        session_start_iso: sessionState.startedAt,
         message_count: outboundMessages.length,
         latest_learner_chars: userText ? userText.length : 0,
         probe_count_in: drillState.probeCount,
-        nodes_drilled_in: drillState.nodesDrilled,
+        nodes_drilled_in: getSessionNodeCount(),
         attempt_turn_count_in: drillState.attemptTurnCount,
         help_turn_count_in: drillState.helpTurnCount,
         duration_ms: Math.round(performance.now() - turnStartedPerf),
@@ -2156,8 +2604,8 @@ const App = (() => {
     const concept = getActiveConcept();
     if (!concept) return;
 
+    const km = parseConceptGraphData(concept) || {};
     if (!nodeContext) {
-      const km = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData || '{}') : (concept.graphData || {});
       nodeContext = { 
         id: 'core-thesis',
         type: 'core',
@@ -2166,15 +2614,66 @@ const App = (() => {
       };
     }
 
+    const nodeData = resolveNodeData(km, nodeContext.id) || {};
+    if (nodeData.drill_status === 'solidified') {
+      currentGraphController?.showBlockedMessage?.(
+        'Node already cleared',
+        'This room is already solidified. Pick an unresolved node to keep the graph truthful.'
+      );
+      return;
+    }
+
+    if (nodeData.drill_status === 'primed' && nodeData.drill_phase === 'study') {
+      reopenStudy(nodeContext);
+      return;
+    }
+
+    if ((nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled') && !isReDrillEligible(nodeData, nodeContext.id)) {
+      const blockReason = getSpacingBlockReason(nodeData, nodeContext.id);
+      currentGraphController?.showBlockedMessage?.(blockReason.headline, blockReason.body);
+      return;
+    }
+
+    const visitedNodeIds = Array.isArray(sessionState.visitedNodeIds) ? sessionState.visitedNodeIds : [];
+    const isNewSessionNode = !visitedNodeIds.includes(nodeContext.id);
+    const uniqueNodeCount = getSessionNodeCount();
+    const bypassSessionLimits = shouldBypassSessionStops(concept, km);
+
+    if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
+      currentGraphController?.showBlockedMessage?.(
+        'Session node limit reached',
+        'You\'ve drilled 4 nodes this session — a good stopping point. Spacing your retrieval across sessions improves long-term retention.'
+      );
+      return;
+    }
+
+    if (!bypassSessionLimits && sessionState.startedAt && new Date() - new Date(sessionState.startedAt) > 25 * 60 * 1000) {
+      currentGraphController?.setInteractionMode?.('session-complete', activeDrillNode);
+      return;
+    }
+
+    if (!bypassSessionLimits && (sessionState.retriesByNode[nodeContext.id] || 0) >= 3) {
+      currentGraphController?.showBlockedMessage?.(
+        'Retrieval ceiling reached',
+        'You\'ve attempted this node 3 times this session. Space your attempts — return in a future session for better consolidation.'
+      );
+      return;
+    }
+
+    if (isNewSessionNode) markNodeVisitedThisSession(nodeContext.id);
+    sessionState.retriesByNode[nodeContext.id] = (sessionState.retriesByNode[nodeContext.id] || 0) + 1;
+    if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
+    persistSessionState();
+
     drillState.active = true;
     drillState.messages = [];
     drillState.node = nodeContext;
+    drillState.logSessionId = createDrillLogSessionId();
     drillState.pending = false;
     drillState.probeCount = 0;
-    drillState.nodesDrilled = 0;
     drillState.attemptTurnCount = 0;
     drillState.helpTurnCount = 0;
-    drillState.sessionStartIso = new Date().toISOString();
+    drillState.sessionCompletePending = false;
     drillState.sessionToken += 1;
     activeDrillNode = nodeContext?.id || null;
 
@@ -2185,11 +2684,18 @@ const App = (() => {
       chatInput.disabled = true;
     }
     if (drillTitle) {
-      const label = nodeContext?.fullLabel || nodeContext?.label || concept.name;
+      const label = nodeContext?.label || nodeContext?.fullLabel || concept.name;
       drillTitle.textContent = `Drilling: ${label}`;
     }
+
+    let initialMode = 'cold-attempt-active';
+    if (nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled' || nodeData.drill_status === 'solidified') {
+      initialMode = 're-drill-active';
+    }
+    if (nodeData.drill_phase === 're_drill') initialMode = 're-drill-active';
+
     currentGraphController?.setActiveDrillNode?.(activeDrillNode);
-    currentGraphController?.setInteractionMode?.('drill-active', activeDrillNode);
+    currentGraphController?.setInteractionMode?.(initialMode, activeDrillNode);
     setMapMode('graph');
 
     requestDrillTurn().catch((err) => {
@@ -2203,16 +2709,17 @@ const App = (() => {
   }
 
   function cancelDrill() {
+    const shouldShowSessionComplete = drillState.sessionCompletePending;
     drillState.sessionToken += 1;
     drillState.active = false;
     drillState.messages = [];
     drillState.node = null;
+    drillState.logSessionId = null;
     drillState.pending = false;
     drillState.probeCount = 0;
-    drillState.nodesDrilled = 0;
     drillState.attemptTurnCount = 0;
     drillState.helpTurnCount = 0;
-    drillState.sessionStartIso = null;
+    drillState.sessionCompletePending = false;
     if (drillUi) drillUi.style.display = 'none';
     activeDrillNode = null;
     if (chatHistory) chatHistory.innerHTML = '';
@@ -2221,7 +2728,8 @@ const App = (() => {
       chatInput.disabled = true;
     }
     currentGraphController?.clearActiveDrillNode?.();
-    currentGraphController?.setInteractionMode?.('inspect');
+    currentGraphController?.setInteractionMode?.(shouldShowSessionComplete ? 'session-complete' : 'inspect');
+    persistPhaseBResumeState(null);
     scheduleTutorialRefresh();
   }
 
@@ -2532,6 +3040,10 @@ const App = (() => {
     },
 
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },
+    reopenStudy,
+    completeStudy,
+    getNodeInspectAction,
+    runInspectAction,
     deleteConcept,
     startAddConcept,
     renderAddTrigger,
@@ -2545,6 +3057,7 @@ const App = (() => {
 
 })();
 window.App = App;
+window.SocratinkApp = App;
 
 function startSettings() {
   const triggerArea = document.getElementById('add-trigger-area');

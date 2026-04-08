@@ -1,57 +1,32 @@
 # MVP Happy Path
 
-Purpose: current end-to-end tester flow for the MVP branch.
+Purpose: the narrow manual release gate for Socratink right now.
 
-Read this when:
+Use this document when:
+- deciding if the current branch is healthy enough to merge
+- running a manual smoke test
+- asking what "working loop" means for the MVP
 
-- validating whether the current MVP is healthy enough for sharing
-- running manual smoke tests
-- checking what "working" means right now for testers
-
-Read these first if you need deeper context:
-
+Read first:
 - [project/state.md](state.md)
-- [product/progressive-disclosure.md](../product/progressive-disclosure.md)
-- [drill/graph-invariants.md](../drill/graph-invariants.md)
+- [product/spec.md](../product/spec.md)
+- [drill/engineering.md](../drill/engineering.md)
+- `logs/drill-runs.jsonl`
 
-This document describes the intended end-to-end flow for today's MVP tester share.
+## Release Gate
 
-It is not the full future-state product spec.
+For this branch, a workable MVP means the thermostat starter map supports this loop without obvious breaks:
 
-It is the concrete "what should work right now" path for manual testing and bug reporting.
+1. Core Thesis cold attempt
+2. Core Thesis study and return to map
+3. Backbone cold attempt
+4. Backbone study unlocks the cluster
+5. Cluster exposes child drill rooms
+6. Child cold attempt resolves cleanly
+7. Original node can later re-drill after spacing/interleaving
+8. Graph truthfully ends in `drilled` or `solidified`
 
-## Goal
-
-A tester should be able to:
-
-1. add a concept
-2. extract a knowledge map
-3. open the graph with four node states visible
-4. begin a cold attempt on the first available node
-5. see the node become `primed` (no score shown)
-6. study the targeted material
-7. interleave with cold attempts on other nodes
-8. complete a spaced re-drill on the first node
-9. see the node become `solidified` or remain `drilled`
-10. verify the graph updates without crashing
-
-## Current Product Truth
-
-The graph is an epistemic map, not a progress tracker.
-
-Four states:
-
-- `locked` = not yet available
-- `primed` = cold attempt completed, study accessible
-- `drilled` = re-drilled but not solid
-- `solidified` = verified understanding via spaced re-drill
-
-The graph should update based on structured drill results.
-
-This document is intentionally operational.
-It should not become the source of truth for UX philosophy or low-level drill invariants.
-
-## Happy Path: Manual Test
+## Manual Test
 
 ### 1. Start The App
 
@@ -71,191 +46,102 @@ http://localhost:8000
 
 Open Settings and add a valid Gemini API key.
 
-Expected result:
+Expected:
+- drill requests succeed
+- no internal errors are exposed in the learner UI
 
-- extraction requests can succeed
-- drill requests can succeed
+### 3. Open The Thermostat Starter Map
 
-### 3. Create A Concept
+Use the built-in `Thermostat Control Loop` concept.
 
-Use the drawer flow:
+Expected:
+- graph loads without crashing
+- Core Thesis is the first reachable room
+- unreachable nodes are visibly ghosted, not deceptively clickable
 
-- paste source text or upload a supported file
-- enter a concept name
-- create the concept
+### 4. Cold Attempt On Core Thesis
 
-Expected result:
+Start Core Thesis and give a real answer.
 
-- concept is created in `growing`
-- content preview is stored
-- the concept appears in the sidebar/grid
+Expected:
+- exactly one active drill target
+- cold attempt is unscored
+- successful completion moves Core Thesis to `primed`
+- Targeted Study opens
 
-### 4. Extract The Knowledge Map
+### 5. Return From Core Thesis Study
 
-Run extraction for the concept.
+Complete study and return to the graph.
 
-Expected result:
+Expected:
+- stale drill transcript is gone
+- next reachable branch is visible
+- graph does not still offer Core Thesis as a fresh start
 
-- `/api/extract` returns a knowledge map
-- `concept.graphData` is populated
-- map view becomes available
+### 6. Cold Attempt On Backbone
 
-### 5. Open The Graph
+Start the reachable backbone room and complete the cold attempt and study.
 
-Open the map view and switch to graph mode.
+Expected:
+- backbone becomes `primed`
+- cluster opens after backbone study
+- cluster itself is inspect-only in MVP
 
-Expected result:
+### 7. Enter The Cluster
 
-- graph renders without console errors
-- core thesis node is visible
-- clusters and subnodes render with current derived states
-- four node states are visually distinguishable
-- graph should not crash when opening/closing quickly
+Select the opened cluster.
 
-### 6. Begin Cold Attempt On First Available Node
+Expected:
+- the cluster explains that the drill happens in its child rooms
+- child drill rooms are selectable
+- the graph does not dead-end here
 
-Start a cold attempt on the core thesis or a subnode.
+### 8. Cold Attempt On A Child Room
 
-Expected result:
+Start one child room such as `Temperature Comparison` or `Call For Heat`.
 
-- exactly one active drill node is highlighted
-- drill title matches the node being drilled
-- cold attempt is explicitly unscored — no classification, no tier/band, no performance metrics shown
-- backend receives that node id as the drill target
+Expected:
+- child room cold attempt resolves cleanly
+- child room can enter study
+- parent graph state stays truthful
 
-### 7. Cold Attempt Completes — Node Becomes `primed`
+### 9. Re-Drill Readiness
 
-After the cold attempt resolves:
+Return to an earlier room only after spacing and interleaving requirements are met.
 
-Expected result:
+Expected:
+- premature re-drill is blocked with truthful copy
+- eligible re-drill becomes available later
+- a strong re-drill can end in `solidified`
+- a non-solid re-drill ends in `drilled`
 
-- node state transitions to `primed`
-- study view opens with targeted material
-- no score or classification is shown to the learner
-- normalization message is displayed ("most people get this wrong the first time")
-- graph updates to show `primed` state
+## Go / No-Go Criteria
 
-### 8. Study The Targeted Material
+Ship if all are true:
+- no graph crash
+- no CTA offers an impossible action
+- no stale drill panel remains mounted after returning to map
+- no cold attempt leaks a score or classification
+- graph and side panel agree on node truth
+- cluster unlock and child-room selection work
 
-Learner reads the study view.
+Do not ship if any occur:
+- wrong node patched
+- graph remains stale after a successful transition
+- node jumps from `locked` straight to `drilled` or `solidified`
+- re-drill is offered before spacing truth is satisfied
+- cluster opens but child rooms cannot be selected
 
-Expected result:
+## Evidence To Capture
 
-- study material is targeted to the gap revealed by the cold attempt
-- study view does not offer immediate re-drill
+For each serious test run, keep:
+- `logs/drill-runs.jsonl`
+- any transcript logs that exist
+- screenshots for UI contradictions
+- a short note on where the loop felt false or blocked
 
-### 9. Interleave With Other Nodes
-
-System recommends a cold attempt on a different node (interleaving for buffer flush).
-
-Expected result:
-
-- spacing validation blocks premature re-drill on the first node
-- learner completes 1-2 more cold attempts + studies on different nodes
-- minimum ~10-15 minutes of interleaved cognitive work before re-drill becomes available
-
-### 10. Spaced Re-Drill On First Node
-
-When `re_drill_eligible_after` has passed, re-drill becomes available.
-
-Expected result:
-
-- re-drill is offered only after spacing requirement is met
-- backend receives re-drill phase context
-- backend returns structured drill result with classification
-
-### 11. Node State Updates From Re-Drill Classification
-
-Expected result:
-
-- if classification is `solid`, node becomes `solidified` — celebration feedback
-- if classification is non-solid, node becomes `drilled` — no celebration, wise feedback
-- graph updates without a full remount
-- no Cytoscape teardown error appears in console
-
-### 12. Verify Persistence And Graph Truth
-
-After the graph updates:
-
-- click around the graph
-- switch map modes
-- reopen graph view if needed
-
-Expected result:
-
-- patched node state remains visible
-- cluster state reflects subnode outcomes
-- no state is lost on graph refresh/re-render inside the current browser session
-
-## Acceptance Criteria
-
-- cold attempt produces `primed` (no score)
-- study view opens after cold attempt
-- spacing validation blocks premature re-drill
-- re-drill produces `solidified` or `drilled`
-- four states render in graph (`locked`, `primed`, `drilled`, `solidified`)
-- graph updates truthfully from persisted state
-
-## Known MVP Limitations
-
-### 1. localStorage Is The Only Persistence Layer
-
-All learner progress lives in `localStorage`. A browser clear wipes everything. No database, no auth, no server-side persistence. This is acceptable for MVP but not for retention.
-
-### 2. Spacing Validation Is Client-Side
-
-The frontend tracks `study_completed_at` and compares against current time + interleaving activity. This is bypassable. For production, spacing validation should move server-side.
-
-### 3. Mechanism Travels Over The Wire
-
-The frontend still sends `node_mechanism` to `/api/drill`. This is known design debt.
-
-### 4. Session State Lives In Browser Memory
-
-Refresh can interrupt continuity of the active drill session. Persisted graph outcomes survive because they are patched into `concept.graphData`, but in-progress chat/session state does not fully persist.
-
-### 5. Unlock Cascade Is Not Fully Built
-
-The graph reflects drill outcomes and derived cluster state, but the full downstream unlock cascade is still a follow-up slice.
-
-## What Testers Should Report
-
-Ask testers to report:
-
-- which node they were drilling
-- what phase they were in (cold attempt vs re-drill)
-- what they answered in plain language
-- whether the graph updated
-- whether the update matched their experience
-- whether spacing validation felt correct or premature/overdue
-- whether the app crashed or the graph disappeared
-- any confusing mismatch between the active drill target and the highlighted graph node
-
-## Failure Conditions
-
-The MVP should be considered unhealthy if any of these occur:
-
-- graph crashes when opening, closing, or updating
-- drill result updates the wrong node
-- graph changes but `concept.graphData` does not persist the change
-- active drill highlight does not match the node being evaluated
-- node becomes `solidified` on a non-solid classification
-- cold attempt shows a score or classification
-- re-drill is offered before spacing requirement is met
-- node transitions directly from `locked` to `drilled` or `solidified`
-- backend returns success but the graph remains stale
-
-## Minimum Demo Narrative
-
-This is the shortest coherent demo of the three-phase loop:
-
-1. Create concept
-2. Extract map
-3. Open graph
-4. Cold attempt on core thesis — node becomes `primed`
-5. Study the targeted material
-6. Cold attempt on a subnode — second node becomes `primed`
-7. Re-drill first node after spacing — node becomes `solidified` or `drilled`
-8. Show graph reflects all four states truthfully
-
-If those eight steps work, the MVP is ready for external qualitative feedback.
+Keep the release evidence with the branch:
+- `logs/drill-runs.jsonl`
+- any transcript logs that exist
+- screenshots of contradictions
+- a short merge note summarizing what passed or failed
