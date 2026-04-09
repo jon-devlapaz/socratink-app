@@ -85,6 +85,11 @@
         </button>
       </div>
       <div class="main-header-right">
+        <div class="auth-controls" id="auth-controls" hidden>
+          <span class="auth-status" id="auth-status" hidden></span>
+          <a class="auth-link" id="auth-login-link" href="/login">Save &amp; Sync</a>
+          <button class="auth-link auth-link-secondary" id="auth-logout-btn" type="button" hidden>Log Out</button>
+        </div>
         <button class="theme-toggle" id="theme-toggle" type="button" onclick="App.toggleTheme()"
           aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
           <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">

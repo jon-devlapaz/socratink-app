@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.responses import Response
 
+from auth import auth_router, build_auth_service_from_env
 from ai_service import (
     GeminiRateLimitError,
     GeminiServiceError,
@@ -32,6 +33,7 @@ from scripts.summarize_ai_runs import build_learner_summary_payload
 load_dotenv()
 
 app = FastAPI()
+app.state.auth_service = build_auth_service_from_env()
 logger = logging.getLogger(__name__)
 DRILL_CHAT_LOG_PATH = Path(__file__).parent / "logs/drill-chat-transcripts.jsonl"
 
@@ -508,6 +510,8 @@ def drill(req: DrillRequest):
         logger.exception("Unexpected failure in /api/drill for concept_id=%s node_id=%s", req.concept_id, req.node_id)
         raise HTTPException(status_code=500, detail="Unexpected server error during drill.") from err
 
+
+app.include_router(auth_router)
 
 # Serve the frontend locally. On Vercel, static files are served by the CDN.
 _public_dir = Path(__file__).parent / "public"

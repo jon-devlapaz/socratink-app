@@ -83,6 +83,54 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   opacity: 1;
 }
 
+.auth-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-status {
+  font-size: 0.82rem;
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+.auth-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(32, 38, 56, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.auth-link:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(32, 38, 56, 0.2);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.auth-link-secondary {
+  background: transparent;
+}
+
+body.night .auth-link,
+body[data-theme="dark"] .auth-link {
+  background: rgba(12, 16, 24, 0.9);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+}
+
 .hero-state-chip {
   display: inline-flex;
   align-items: center;

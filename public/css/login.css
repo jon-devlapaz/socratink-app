@@ -1,0 +1,355 @@
+:root {
+  --surface: #fdf9f5;
+  --surface-low: #f7f3ef;
+  --surface-high: #ebe7e4;
+  --surface-card: rgba(255, 255, 255, 0.76);
+  --primary: #63469d;
+  --primary-strong: #7c5fb8;
+  --secondary: #68548d;
+  --text: #1c1c19;
+  --text-muted: #7b7582;
+  --text-soft: #494551;
+  --outline-soft: rgba(203, 196, 210, 0.9);
+  --shadow-card: 0 8px 32px rgba(28, 28, 25, 0.06);
+  --shadow-ambient: 0 24px 64px rgba(28, 28, 25, 0.08);
+  --radius-card: 24px;
+  --radius-pill: 999px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(210, 187, 255, 0.34), transparent 26%),
+    radial-gradient(circle at 88% 86%, rgba(210, 187, 255, 0.26), transparent 24%),
+    linear-gradient(180deg, rgba(253, 249, 245, 0.98), rgba(249, 244, 239, 0.96));
+  color: var(--text);
+  font-family: Inter, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+#stardust-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(107, 78, 166, 0.34);
+  animation: twinkle var(--duration) ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.16);
+  }
+}
+
+.aurora {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(72px);
+  opacity: 0.18;
+  pointer-events: none;
+  z-index: 0;
+  transition: transform 160ms cubic-bezier(0.1, 0, 0.3, 1);
+}
+
+.aurora-a {
+  top: -120px;
+  left: -110px;
+  width: 420px;
+  height: 420px;
+  background: rgba(124, 95, 184, 0.52);
+}
+
+.aurora-b {
+  right: -60px;
+  bottom: -60px;
+  width: 320px;
+  height: 320px;
+  background: rgba(210, 187, 255, 0.6);
+}
+
+.aurora-c {
+  top: 34%;
+  left: 24%;
+  width: 240px;
+  height: 240px;
+  background: rgba(99, 70, 157, 0.32);
+}
+
+.login-shell {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.login-stage {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-lockup {
+  margin-bottom: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.brand-mark {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 0 22px rgba(99, 70, 157, 0.18);
+}
+
+.brand-title {
+  margin: 0;
+  font-family: Manrope, sans-serif;
+  font-size: 2.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.brand-kicker {
+  margin: 6px 0 0;
+  color: var(--secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.login-card {
+  width: 100%;
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-card);
+}
+
+.login-card-inner {
+  padding: 32px 30px 28px;
+}
+
+.auth-status-banner,
+.google-only-panel {
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.auth-status-banner,
+.google-only-panel {
+  margin-bottom: 18px;
+  padding: 12px 14px;
+  background: rgba(99, 70, 157, 0.08);
+  color: var(--text-soft);
+}
+
+.auth-status-banner.is-error {
+  background: rgba(186, 26, 26, 0.1);
+  color: #8c2323;
+}
+
+.auth-status-banner.is-success {
+  background: rgba(99, 70, 157, 0.1);
+  color: var(--primary);
+}
+
+.social-stack {
+  margin-bottom: 28px;
+}
+
+.google-button {
+  appearance: none;
+  border: 0;
+}
+
+.google-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 22px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 0 0 1px var(--outline-soft);
+  color: var(--text);
+  font-weight: 700;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.google-button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: inset 0 0 0 1px rgba(123, 117, 130, 0.34), 0 12px 28px rgba(28, 28, 25, 0.05);
+}
+
+.google-button.is-loading {
+  pointer-events: none;
+  opacity: 0.88;
+}
+
+.google-mark {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.google-only-panel {
+  padding: 16px 18px;
+}
+
+.google-only-title {
+  margin: 0;
+  color: var(--text);
+  font-family: Manrope, sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.google-only-copy {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+}
+
+.mode-copy {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+.mode-copy p {
+  margin: 0;
+}
+
+.mode-copy a {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.login-footer {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  color: rgba(123, 117, 130, 0.82);
+  font-size: 0.76rem;
+}
+
+.login-footer a:hover {
+  color: var(--primary);
+}
+
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-btn::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.35) 50%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: translateX(-150%) rotate(45deg);
+  animation: shimmer 5s linear infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-150%) rotate(45deg);
+  }
+  20%,
+  100% {
+    transform: translateX(150%) rotate(45deg);
+  }
+}
+
+@media (max-width: 600px) {
+  .login-shell {
+    padding: 24px 18px;
+  }
+
+  .login-card-inner {
+    padding: 28px 22px 24px;
+  }
+
+  .brand-title {
+    font-size: 1.8rem;
+  }
+
+  .login-footer {
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+}
