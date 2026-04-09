@@ -1,6 +1,7 @@
 # Claude Code local settings (machine-specific, not for version control)
 .claude/
 .playwright-cli/
+.firecrawl/
 
 # macOS
 .DS_Store
