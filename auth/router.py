@@ -3,16 +3,77 @@ from __future__ import annotations
 from pathlib import Path
 import logging
 from urllib.parse import urlencode
+from html import escape
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from .service import AuthConfigurationError
 
 auth_router = APIRouter()
 _login_page = Path(__file__).resolve().parent.parent / "public" / "login.html"
 logger = logging.getLogger(__name__)
+
+
+def _render_fallback_login_html(return_to: str) -> str:
+    safe_return_to = escape(sanitize_return_to_path(return_to), quote=True)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Socratink Login</title>
+  <style>
+    body {{
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #fdf9f5;
+      color: #1c1c19;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    main {{
+      width: min(420px, calc(100vw - 32px));
+      border-radius: 24px;
+      padding: 32px 28px;
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 18px 42px rgba(28, 28, 25, 0.08);
+      text-align: center;
+    }}
+    h1 {{
+      margin: 0 0 10px;
+      font-size: 1.9rem;
+      font-weight: 800;
+    }}
+    p {{
+      margin: 0 0 18px;
+      line-height: 1.5;
+      color: #494551;
+    }}
+    a {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      width: 100%;
+      border-radius: 999px;
+      background: #63469d;
+      color: #fff;
+      font-weight: 700;
+      text-decoration: none;
+    }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Socratink</h1>
+    <p>Continue with Google to sign in or create an account.</p>
+    <a href="/auth/google?return_to={safe_return_to}">Continue with Google</a>
+  </main>
+</body>
+</html>"""
 
 
 class MagicAuthSendRequest(BaseModel):
@@ -122,9 +183,13 @@ def get_current_user(request: Request):
 def login(request: Request, return_to: str | None = None):
     service = _get_auth_service(request)
     current = service.load_session(request.cookies.get(service.cookie_name))
+    sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated:
-        return RedirectResponse(url=sanitize_return_to_path(return_to), status_code=302)
-    return FileResponse(_login_page)
+        return RedirectResponse(url=sanitized_return_to, status_code=302)
+    if _login_page.exists():
+        return FileResponse(_login_page)
+    logger.error("Login page asset missing at %s; serving inline fallback", _login_page)
+    return HTMLResponse(_render_fallback_login_html(sanitized_return_to))
 
 
 @auth_router.get("/auth/google")
