@@ -7,7 +7,7 @@ import socket
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import quote, urlparse
 from urllib.request import Request as UrlRequest, urlopen
 
 from html import unescape
@@ -41,7 +41,6 @@ PROTECTED_API_PATHS = frozenset({
     "/api/drill",
     "/api/extract",
     "/api/extract-url",
-    "/api/extract-youtube",
 })
 
 _cors_origins = os.environ.get(
@@ -315,26 +314,16 @@ def _extract_text_from_html(raw_html: str) -> str:
     return cleaned.strip()
 
 
-def _extract_youtube_video_id(url: str) -> str | None:
+def _is_blocked_video_url(url: str) -> bool:
     parsed = urlparse(url)
-    host = parsed.netloc.lower()
-    path_parts = [part for part in parsed.path.split("/") if part]
-
-    if "youtu.be" in host:
-        return path_parts[0] if path_parts else None
-
-    if "youtube.com" in host or "youtube-nocookie.com" in host:
-        query = parse_qs(parsed.query)
-        if "v" in query and query["v"]:
-            return query["v"][0]
-
-        if len(path_parts) >= 2 and path_parts[0] in {"live", "shorts", "embed", "v"}:
-            return path_parts[1]
-
-        if len(path_parts) >= 2 and path_parts[0] == "watch":
-            return path_parts[1]
-
-    return None
+    host = (parsed.hostname or "").lower()
+    return (
+        host == "youtu.be"
+        or host == "youtube.com"
+        or host.endswith(".youtube.com")
+        or host == "youtube-nocookie.com"
+        or host.endswith(".youtube-nocookie.com")
+    )
 
 
 def _is_private_url(url: str) -> bool:
@@ -378,6 +367,11 @@ def extract_url(req: UrlExtractRequest):
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise HTTPException(status_code=400, detail="Enter a valid http(s) URL.")
+    if _is_blocked_video_url(url):
+        raise HTTPException(
+            status_code=400,
+            detail="Video links are not supported in this deployment. Paste the text directly instead.",
+        )
     if _is_private_url(url):
         raise HTTPException(status_code=400, detail="Cannot fetch internal addresses.")
 
@@ -424,55 +418,6 @@ def extract_url(req: UrlExtractRequest):
         raise HTTPException(status_code=422, detail="Could not extract enough readable text from that page.")
 
     return {"url": url, "title": title[:200], "text": text[:500_000]}
-
-
-@app.post("/api/extract-youtube")
-def extract_youtube(req: UrlExtractRequest):
-    url = req.url.strip()
-    video_id = _extract_youtube_video_id(url)
-    if not video_id:
-        raise HTTPException(status_code=400, detail="Enter a valid YouTube video URL.")
-
-    try:
-        from youtube_transcript_api import YouTubeTranscriptApi
-        from youtube_transcript_api._errors import (
-            IpBlocked,
-            NoTranscriptFound,
-            RequestBlocked,
-            TranscriptsDisabled,
-            VideoUnavailable,
-        )
-    except ImportError:
-        raise HTTPException(status_code=503, detail="YouTube transcript support is not installed on the server.")
-
-    try:
-        transcript_list = YouTubeTranscriptApi().fetch(video_id)
-        text = " ".join(segment.text for segment in transcript_list).strip()
-    except (RequestBlocked, IpBlocked) as err:
-        logger.exception("YouTube transcript fetch blocked for video_id=%s", video_id)
-        raise HTTPException(
-            status_code=503,
-            detail="YouTube blocked transcript retrieval from the hosted server. Paste the transcript text manually instead.",
-        ) from err
-    except (NoTranscriptFound, TranscriptsDisabled, VideoUnavailable) as err:
-        logger.exception("YouTube transcript unavailable for video_id=%s", video_id)
-        raise HTTPException(
-            status_code=422,
-            detail="This video does not have a retrievable public transcript. Paste the transcript text manually instead.",
-        ) from err
-    except Exception as err:
-        logger.exception("YouTube transcript fetch failed for video_id=%s", video_id)
-        raise HTTPException(status_code=502, detail="Could not fetch YouTube transcript.") from err
-
-    if len(text) < 100:
-        raise HTTPException(status_code=422, detail="Transcript was too short or unavailable.")
-
-    return {
-        "url": url,
-        "title": f"YouTube Transcript {video_id}",
-        "text": text[:500_000],
-        "video_id": video_id,
-    }
 
 
 @app.post("/api/drill")

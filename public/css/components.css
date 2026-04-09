@@ -314,6 +314,48 @@ body[data-theme="dark"] .auth-link {
 .add-trigger:hover { color:var(--primary); background-color:var(--border); }
 .add-trigger-icon { font-size:16px; color:var(--primary); flex-shrink:0; }
 .add-trigger.disabled { opacity:0.4; cursor:not-allowed; }
+.add-trigger-card {
+  width: calc(100% - 24px);
+  margin: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--accent-soft-strong);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--gradient-card-start) 0%, var(--gradient-card-end) 100%);
+  box-shadow: var(--shadow-soft);
+  text-align: left;
+  gap: 12px;
+}
+.add-trigger-card .add-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  font-size: 17px;
+}
+.add-trigger-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.add-trigger-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.add-trigger-copy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-sub);
+}
+.add-trigger-card:hover {
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-hover);
+}
 
 #tile-tooltip {
   position: absolute;
@@ -611,6 +653,51 @@ body[data-theme="dark"] .auth-link {
   display:flex; flex-direction:column; gap:10px;
   padding:12px 16px 16px; border-top:1px solid var(--border);
 }
+.creation-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 0 4px;
+}
+.creation-intro-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.creation-intro-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+.creation-intro-title {
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--text);
+}
+.creation-intro-copy {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-sub);
+}
+.creation-capacity-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-strong);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .creation-section-label {
   font-size:11px; font-weight:700; letter-spacing:0.6px;
   text-transform:uppercase; color:var(--text-sub); margin-top:2px;
@@ -624,6 +711,39 @@ body[data-theme="dark"] .auth-link {
 }
 .creation-name-input:focus { border-color:var(--primary); }
 .creation-name-input::placeholder { color:var(--text-sub); }
+.creation-source-meta {
+  margin: -2px 0 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-soft-strong);
+}
+.creation-source-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.creation-source-copy {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-sub);
+}
+.creation-validation {
+  margin: -2px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+}
 .creation-footer { display:flex; gap:8px; margin-top:2px; }
 .creation-cancel {
   background:none; border:1px solid var(--border); color:var(--text-sub);
@@ -663,6 +783,20 @@ body[data-theme="dark"] .auth-link {
   opacity: 0.5;
 }
 .graph-preview-btn:hover { color:var(--primary); opacity:1; }
+
+@media (max-width: 899px) {
+  .add-trigger-card {
+    width: calc(100% - 20px);
+    margin: 10px;
+  }
+  .creation-intro-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .creation-capacity-pill {
+    align-self: flex-start;
+  }
+}
 
 .btn-start-drill {
   background: var(--accent-soft); 

@@ -411,18 +411,32 @@ const App = (() => {
     addTriggerArea.style.overflowY = '';
     const full = loadConcepts().length >= 4;
     addTriggerArea.innerHTML = full
-      ? `<div class="add-trigger disabled"><span class="add-trigger-icon">+</span>Grid full (4/4)</div>`
-      : `<div class="add-trigger" id="add-trigger" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon">+</span>new socratink
-         </div>`;
+      ? `<button class="add-trigger add-trigger-card disabled" type="button" disabled aria-disabled="true">
+           <span class="add-trigger-icon">+</span>
+           <span class="add-trigger-body">
+             <span class="add-trigger-title">Vault full</span>
+             <span class="add-trigger-copy">You have 4 of 4 tinks active. Remove one to add another.</span>
+           </span>
+         </button>`
+      : `<button class="add-trigger add-trigger-card" id="add-trigger" type="button" onclick="App.startAddConcept()">
+           <span class="add-trigger-icon">+</span>
+           <span class="add-trigger-body">
+             <span class="add-trigger-title">Add a New Tink</span>
+             <span class="add-trigger-copy">Paste text, import a URL, or upload a file to map a fresh concept.</span>
+           </span>
+         </button>`;
     scheduleTutorialRefresh();
   }
 
-  function isYouTubeUrl(value) {
+  function isBlockedVideoUrl(value) {
     try {
       const parsed = new URL(value);
       const host = parsed.hostname.toLowerCase();
-      return host.includes('youtube.com') || host.includes('youtu.be') || host.includes('youtube-nocookie.com');
+      return host === 'youtu.be'
+        || host === 'youtube.com'
+        || host.endsWith('.youtube.com')
+        || host === 'youtube-nocookie.com'
+        || host.endsWith('.youtube-nocookie.com');
     } catch {
       return false;
     }
@@ -436,13 +450,34 @@ const App = (() => {
     let fetchedUrlTitle = '';
     let fetchedUrl = '';
     let activeTab = 'paste';
+    const usedSlots = loadConcepts().length;
 
     container.innerHTML = `
+      ${showNameField ? `
+        <div class="creation-intro">
+          <div class="creation-intro-row">
+            <div>
+              <div class="creation-intro-kicker">Add a New Tink</div>
+              <div class="creation-intro-title">Turn raw material into a drillable concept map.</div>
+            </div>
+            <div class="creation-capacity-pill">${Math.min(usedSlots, 4)}/4 active</div>
+          </div>
+          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format for this learner artifact.</p>
+        </div>
+        <span class="creation-section-label">Name this concept</span>
+        <input class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
+      ` : ''}
       <div class="overlay-tabs" style="margin-bottom:12px;">
         <button class="overlay-tab active" data-tab="paste">${showNameField ? 'Text' : 'Paste'}</button>
         <button class="overlay-tab" data-tab="url">URL</button>
         <button class="overlay-tab" data-tab="upload">${showNameField ? 'File' : 'Upload'}</button>
       </div>
+      ${showNameField ? `
+        <div class="creation-source-meta">
+          <span class="creation-source-chip" data-role="source-chip">Text Paste</span>
+          <p class="creation-source-copy" data-role="source-copy">Paste notes, an article excerpt, a transcript, or any raw text you want Socratink to structure.</p>
+        </div>
+      ` : ''}
       <div class="overlay-panel" data-panel="paste">
         <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article…' : 'Paste content here…'}"></textarea>
         ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button><button class="wiki-random-btn" type="button">🔬 Random Science</button><button class="graph-preview-btn" type="button">⚡ Preview Graph</button></div>' : ''}
@@ -454,18 +489,15 @@ const App = (() => {
       <div class="overlay-panel" data-panel="upload" style="display:none">
         <div class="overlay-dropzone">
           Drop a file or click to browse<br>
-          <span style="font-size:11px;opacity:0.65">.txt &nbsp; .md &nbsp; .pdf</span>
+          <span style="font-size:11px;opacity:0.65">.txt &nbsp; .md &nbsp; .pdf &nbsp; up to 2MB</span>
         </div>
         <input type="file" accept=".txt,.md,.pdf" style="display:none">
         <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
-      ${showNameField ? `
-        <span class="creation-section-label">Name this concept</span>
-        <input class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
-      ` : ''}
+      ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name and choose a source to continue.</p>' : ''}
       <div class="${showNameField ? 'creation-footer' : 'overlay-footer'}">
         <button class="${showNameField ? 'creation-cancel' : 'overlay-cancel'}">Cancel</button>
-        <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Add Concept →' : 'Extract →'}</button>
+        <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Map from Text' : 'Extract →'}</button>
       </div>
     `;
 
@@ -481,19 +513,74 @@ const App = (() => {
     const wikiRandomBtn = container.querySelector('.wiki-random-btn');
     const graphPreviewBtn = container.querySelector('.graph-preview-btn');
     const nameInput = container.querySelector('.creation-name-input');
+    const sourceChip = container.querySelector('[data-role="source-chip"]');
+    const sourceCopy = container.querySelector('[data-role="source-copy"]');
+    const validationNote = container.querySelector('[data-role="validation-note"]');
     const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
 
+    function getActiveTabMeta() {
+      if (activeTab === 'url') {
+        return {
+          label: 'Import URL',
+          chip: 'URL Import',
+          copy: 'Bring in an article or text page that can be fetched directly by the app.',
+          action: showNameField ? 'Import URL' : 'Extract →',
+          missing: 'Add a source URL before mapping.',
+        };
+      }
+      if (activeTab === 'upload') {
+        return {
+          label: 'Upload File',
+          chip: 'File Upload',
+          copy: 'Use this for notes, markdown, or PDFs when the learner already has source material saved locally.',
+          action: showNameField ? 'Upload and Map' : 'Extract →',
+          missing: 'Upload a file before mapping.',
+        };
+      }
+      return {
+        label: 'Text Paste',
+        chip: 'Text Paste',
+        copy: 'Paste notes, an article excerpt, a transcript, or any raw text you want Socratink to structure.',
+        action: showNameField ? 'Map from Text' : 'Extract →',
+        missing: 'Paste source text before mapping.',
+      };
+    }
+
+    function updateComposerMeta() {
+      const meta = getActiveTabMeta();
+      if (sourceChip) sourceChip.textContent = meta.chip;
+      if (sourceCopy) sourceCopy.textContent = meta.copy;
+      if (submitBtn) submitBtn.textContent = meta.action;
+    }
+
     function hasContent() {
       if (activeTab === 'paste') return textarea.value.trim().length > 0;
-      if (activeTab === 'url') return urlInput.value.trim().length > 0;
+      if (activeTab === 'url') {
+        const rawUrl = urlInput.value.trim();
+        return rawUrl.length > 0 && !isBlockedVideoUrl(rawUrl);
+      }
       return uploadedText.length > 0;
     }
     function checkSubmitEnabled() {
+      const blockedVideoUrl = activeTab === 'url' && isBlockedVideoUrl(urlInput.value.trim());
+      const ready = showNameField
+        ? (!blockedVideoUrl && hasContent() && nameInput.value.trim().length > 0)
+        : hasContent();
+      submitBtn.disabled = !ready;
       if (showNameField) {
-        submitBtn.disabled = !(hasContent() && nameInput.value.trim().length > 0);
-      } else {
-        submitBtn.disabled = !hasContent();
+        if (!validationNote) return;
+        if (blockedVideoUrl) {
+          validationNote.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
+        } else if (!nameInput.value.trim() && !hasContent()) {
+          validationNote.textContent = 'Add a concept name and choose a source to continue.';
+        } else if (!nameInput.value.trim()) {
+          validationNote.textContent = 'Add a concept name before mapping.';
+        } else if (!hasContent()) {
+          validationNote.textContent = getActiveTabMeta().missing;
+        } else {
+          validationNote.textContent = 'Ready to map this concept.';
+        }
       }
     }
 
@@ -502,23 +589,49 @@ const App = (() => {
         activeTab = tab.dataset.tab;
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
         panels.forEach(p => { p.style.display = p.dataset.panel === activeTab ? '' : 'none'; });
+        updateComposerMeta();
         checkSubmitEnabled();
       });
     });
 
     let phTimer = null;
+    let namePhTimer = null;
     if (showNameField) {
       const PLACEHOLDERS = [
         'Paste a Wikipedia article…', 'Paste a research paper…',
         'Paste a meeting transcript…', 'Paste a textbook chapter…', 'Paste lecture notes…'
       ];
+      const NAME_PLACEHOLDERS = [
+        'Metacognition',
+        'Tornadoes',
+        'Neuroscience',
+        'Photosynthesis',
+        'Game Theory',
+        'Plate Tectonics',
+        'Cognitive Biases',
+        'Black Holes',
+        'Impressionism',
+        'Natural Selection',
+        'Supply and Demand',
+        'Cell Division',
+        'The French Revolution',
+      ];
       let phIdx = 0;
+      let namePhIdx = 0;
       phTimer = setInterval(() => {
         if (!document.contains(textarea)) { clearInterval(phTimer); return; }
         if (textarea.value.length > 0) return;
         phIdx = (phIdx + 1) % PLACEHOLDERS.length;
         textarea.placeholder = PLACEHOLDERS[phIdx];
       }, 2500);
+      if (nameInput) {
+        namePhTimer = setInterval(() => {
+          if (!document.contains(nameInput)) { clearInterval(namePhTimer); return; }
+          if (nameInput.value.length > 0) return;
+          namePhIdx = (namePhIdx + 1) % NAME_PLACEHOLDERS.length;
+          nameInput.placeholder = `e.g. ${NAME_PLACEHOLDERS[namePhIdx]}`;
+        }, 2500);
+      }
     }
 
     if (showClipboard && pasteClipBtn) {
@@ -599,8 +712,14 @@ const App = (() => {
         fetchedUrlTitle = '';
         fetchedUrl = '';
         if (urlFeedback) {
+          const rawUrl = urlInput.value.trim();
           urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback';
-          urlFeedback.textContent = '';
+          if (rawUrl && isBlockedVideoUrl(rawUrl)) {
+            urlFeedback.classList.add('error');
+            urlFeedback.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
+          } else {
+            urlFeedback.textContent = '';
+          }
         }
         checkSubmitEnabled();
       });
@@ -614,6 +733,7 @@ const App = (() => {
         if (e.key === 'Enter' && !submitBtn.disabled) { e.preventDefault(); doSubmit(); }
         if (e.key === 'Escape') {
           if (phTimer) clearInterval(phTimer);
+          if (namePhTimer) clearInterval(namePhTimer);
           onCancel();
         }
       });
@@ -647,16 +767,16 @@ const App = (() => {
         (errMsg, fallbackText, filename) => {
           feedback.className = 'overlay-dropfeedback error';
           feedback.textContent = errMsg;
-          if (fallbackText !== undefined) {
-            uploadedText = fallbackText; uploadedFilename = filename;
-            checkSubmitEnabled();
-          }
+          uploadedText = '';
+          uploadedFilename = '';
+          checkSubmitEnabled();
         }
       );
     }
 
     cancelBtn.addEventListener('click', () => {
       if (phTimer) clearInterval(phTimer);
+      if (namePhTimer) clearInterval(namePhTimer);
       onCancel();
     });
 
@@ -689,9 +809,12 @@ const App = (() => {
 
     if (showNameField && nameInput) nameInput.focus();
     else textarea.focus();
+    updateComposerMeta();
+    checkSubmitEnabled();
     return {
       destroy() {
         if (phTimer) clearInterval(phTimer);
+        if (namePhTimer) clearInterval(namePhTimer);
         container.innerHTML = '';
       }
     };
@@ -993,10 +1116,12 @@ const App = (() => {
 
           if (type === 'url') {
             if (!url) throw new Error('No URL provided.');
-            const isYouTube = isYouTubeUrl(url);
-            setOverlayProgress(38, isYouTube ? 'Fetching transcript' : 'Fetching page');
+            if (isBlockedVideoUrl(url)) {
+              throw new Error('Video links are not supported in this build. Paste notes or transcript text instead.');
+            }
+            setOverlayProgress(38, 'Fetching page');
             setMetaStatus('Evaluating source structure...');
-            const response = await fetch(isYouTube ? '/api/extract-youtube' : '/api/extract-url', {
+            const response = await fetch('/api/extract-url', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ url })
@@ -1276,7 +1401,7 @@ const App = (() => {
           }
           onSuccess(extractedText.trim(), file.name);
         } catch (err) {
-          onError('Could not natively extract text from this PDF. Try pasting the content manually.', '[PDF Parsing Error]', file.name);
+          onError('Could not natively extract text from this PDF. Try pasting the content manually.');
         }
       };
       fileReader.readAsArrayBuffer(file);
@@ -2797,7 +2922,7 @@ const App = (() => {
       id: 'concept-inputs',
       sel: '.creation-form .overlay-tabs',
       title: 'Choose Your Input',
-      text: 'Use Text for pasted notes, URL for article pages or YouTube links with transcripts, and File for .txt, .md, or .pdf uploads up to 2MB.',
+      text: 'Use Text for pasted notes, URL for article pages, and File for .txt, .md, or .pdf uploads up to 2MB.',
       when: () => !!document.querySelector('.creation-form')
         && !document.getElementById('map-view')?.classList.contains('visible')
         && !document.getElementById('library-view')?.classList.contains('visible'),
