@@ -5,6 +5,7 @@ updated: 2026-04-08
 sources: [../sources/drill-chat-log-thermostat-session-1.md]
 related: [../doctrine/generation-before-recognition.md, finding-drill-chat-coverage-gap.md]
 basis: inferred
+confidence: medium
 workflow_status: resolved
 flags: [hypothesis]
 ---

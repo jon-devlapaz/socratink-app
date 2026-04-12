@@ -11,8 +11,8 @@ Use this template when initializing a new Socratink internal product-memory know
 
 ## Purpose
 
-This knowledge base exists to help Socratink improve from durable compiled product memory.
-It compiles doctrine, mechanisms, decisions, issues, experiments, findings, syntheses,
+This knowledge base exists to help Socratink improve from durable product memory.
+It distills doctrine, mechanisms, decisions, issues, experiments, findings, syntheses,
 and log-derived evidence into a persistent markdown substrate.
 
 ## Architecture
@@ -74,7 +74,6 @@ All curated pages must include:
 title: "Page Title"
 type: doctrine | mechanism | decision | issue | experiment | finding | source | synthesis
 updated: YYYY-MM-DD
-sources: [relative/path.md]
 related: [relative/path.md]
 basis: sourced | inferred
 workflow_status: {type-specific value}
@@ -83,21 +82,34 @@ flags: [hypothesis, open-question, contradiction]
 ```
 
 Additional fields:
+- Non-source pages require:
+
+```yaml
+sources: [relative source page or repo doc path.md]
+confidence: high | medium | low | speculative
+```
+
 - Decision records require:
 
 ```yaml
 review_after: YYYY-MM-DD
 ```
 
+Any curated page may include `review_after`; stats report stale pages by type, while the validator requires it only on decision records.
+
 - Source pages require:
 
 ```yaml
 source_kind: product-doc | research-note | drill-chat-log | drill-run-log | drill-turn-log | product-chat-log | test-replay-log | bug-report | screenshot | experiment-note
 raw_artifacts: [raw/path.ext]
-log_surface: drill | {other-surface}
+log_surface: drill | replay | none
 evaluated_sessions: N
 evaluated_runs: N
 ```
+
+Source pages may use `sources: []`, but their primary provenance lives in `raw_artifacts`.
+
+Use `basis` for provenance mode and `confidence` for claim strength. Do not replace one with the other.
 
 ## Workflow Status Rules
 
@@ -152,8 +164,9 @@ If Socratink has a conversational or test surface without instrumentation, list 
 ### Ingest
 1. Read the new raw artifact.
 2. Read `wiki/index.md` and relevant existing pages.
-3. Create or update source pages and any affected doctrine/mechanism/record/synthesis pages.
-4. Update `wiki/index.md` and append to `wiki/log.md`.
+3. Create or update a source page.
+4. Add derived doctrine/mechanism/record/synthesis pages only when the artifact changes doctrine, mechanism, release risk, decision state, instrumentation truth, or active MVP priorities.
+5. Update `wiki/index.md` and append to `wiki/log.md`.
 
 ### Evaluate Logs
 1. Ingest Socratink chat/test log artifacts.

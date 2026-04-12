@@ -2,9 +2,10 @@
 title: "External Audit Triage Loop"
 type: mechanism
 updated: 2026-04-08
-sources: [../records/decision-external-audit-promotion-policy.md]
+sources: [../../../docs/project/state.md, ../../../docs/project/operations.md, ../../../docs/product/spec.md]
 related: [../records/decision-external-audit-promotion-policy.md]
 basis: inferred
+confidence: medium
 workflow_status: active
 flags: []
 ---

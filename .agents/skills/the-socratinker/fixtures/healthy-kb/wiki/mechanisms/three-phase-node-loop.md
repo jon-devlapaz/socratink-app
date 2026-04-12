@@ -5,6 +5,7 @@ updated: 2026-04-08
 sources: [../sources/drill-chat-log-thermostat-session-1.md]
 related: [../doctrine/generation-before-recognition.md, ../records/decision-time-gate-policy.md]
 basis: sourced
+confidence: high
 workflow_status: active
 flags: []
 ---

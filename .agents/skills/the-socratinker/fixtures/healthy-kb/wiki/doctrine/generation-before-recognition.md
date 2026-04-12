@@ -2,9 +2,10 @@
 title: "Generation Before Recognition"
 type: doctrine
 updated: 2026-04-08
-sources: [sources/drill-chat-log-thermostat-session-1.md]
+sources: [../sources/drill-chat-log-thermostat-session-1.md]
 related: [../mechanisms/three-phase-node-loop.md, ../syntheses/spacing-needs-interleaving.md]
 basis: sourced
+confidence: high
 workflow_status: active
 flags: []
 ---

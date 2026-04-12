@@ -16,6 +16,28 @@ All filenames are lowercase, hyphen-separated, and ASCII only.
 | Synthesis | `wiki/syntheses/` | `{slug}.md` | `spacing-vs-interleaving-tradeoffs.md` |
 | Coverage Manifest | `wiki/` | `log-coverage.md` | `log-coverage.md` |
 
+## Artifact Routing
+
+When ingesting new evidence, register the raw artifact before compiling pages.
+
+| Artifact | Raw Directory | Source Kind | Likely Derived Page |
+|----------|---------------|-------------|---------------------|
+| Product doc, spec, doctrine note | `raw/product-docs/` | `product-doc` | doctrine, mechanism, decision, or synthesis |
+| Research note or paper summary | `raw/research-notes/` | `research-note` | mechanism or synthesis |
+| Drill chat transcript | `raw/drill-chat-logs/` | `drill-chat-log` | finding, issue, or synthesis |
+| Drill run or turn log | `raw/drill-chat-logs/` | `drill-run-log` or `drill-turn-log` | finding or issue |
+| Product chat or external critique | `raw/product-chat-logs/` | `product-chat-log` | finding, issue, decision, or synthesis |
+| Test or replay trace | `raw/test-replay-logs/` | `test-replay-log` | finding or issue |
+| Bug report | `raw/bug-reports/` | `bug-report` | issue |
+| Screenshot | `raw/screenshots/` | `screenshot` | finding or issue |
+| Experiment note | `raw/experiment-notes/` | `experiment-note` | experiment or synthesis |
+
+## Promotion Threshold
+
+Every meaningful artifact should get at most one source page by default. Add a derived page only when the artifact changes doctrine, mechanism, release risk, decision state, instrumentation truth, or active MVP priorities.
+
+Do not turn every artifact into active work. Promote to the active queue only when the implication is validated against repo evidence and affects the current MVP release gate.
+
 ## Shared Frontmatter
 
 All curated pages must include:
@@ -25,7 +47,6 @@ All curated pages must include:
 title: "Page Title"
 type: doctrine | mechanism | decision | issue | experiment | finding | source | synthesis
 updated: YYYY-MM-DD
-sources: [relative/path.md]
 related: [relative/path.md]
 basis: sourced | inferred
 workflow_status: {type-specific value}
@@ -40,19 +61,33 @@ flags: [hypothesis, open-question, contradiction]
 
 ### Additional fields
 
+**Non-source pages**
+```yaml
+sources: [relative source page or repo doc path.md]
+confidence: high | medium | low | speculative
+```
+
+Use `basis` for provenance mode and `confidence` for claim strength. Keep `basis: sourced | inferred` binary; use `confidence: speculative` when a product implication depends mainly on hypothesis/speculation.
+
 **Decision records**
 ```yaml
 review_after: YYYY-MM-DD
 ```
 
+Any curated page may include `review_after`; stats report stale pages by type, while the validator requires it only on decision records.
+
 **Source pages**
 ```yaml
 source_kind: product-doc | research-note | drill-chat-log | drill-run-log | drill-turn-log | product-chat-log | test-replay-log | bug-report | screenshot | experiment-note
 raw_artifacts: [raw/path.ext]
-log_surface: drill | {other-surface}
+log_surface: drill | replay | none
 evaluated_sessions: N
 evaluated_runs: N
 ```
+
+Source pages may use `sources: []`, but their primary provenance lives in `raw_artifacts`.
+
+Use `log_surface: none` for source pages that are not direct evidence from instrumented Socratink surfaces, including product docs, research notes, bug reports, screenshots, and external critiques.
 
 ## Page Bodies
 
@@ -226,3 +261,16 @@ Body:
 4. Findings/issues/experiments derived from logs should reference the relevant source page(s), not only the raw path.
 5. Contradictions must be surfaced through `flags`, not hidden in prose.
 6. `basis: mixed` is never allowed.
+7. On non-source pages, `sources` is evidence provenance: use `wiki/sources/*` pages or repo docs, not arbitrary cross-links.
+8. On source pages, `raw_artifacts` is the primary provenance field; keep derived pages in `related`, not `sources`.
+
+## Health-Check Rubric
+
+Use this for semantic and epistemic review beyond deterministic linting:
+- Stale claims: compiled pages contradict `docs/project/state.md`, `docs/theta/state.md`, or current logs.
+- Hidden contradictions: prose names a conflict but frontmatter lacks `flags: [contradiction]`.
+- Weak provenance: product implications are not traceable to a source page or repo doc.
+- Over-promotion: active queue items are not validated, release-relevant, or small enough to act on.
+- Orphaned sources: source pages preserve raw artifacts but no compiled implication explains why they matter.
+- Missing instrumentation: expected chat/test surfaces are absent from `wiki/log-coverage.md`.
+- Basis drift: a page mixes direct evidence and inference without choosing `basis: sourced` or `basis: inferred` and separating the rest in prose.

@@ -2,14 +2,14 @@
 title: "ChatGPT Repo Audit 2026-04-08"
 type: source
 updated: 2026-04-08
-sources: [../records/issue-replay-coverage-below-truth-bar.md]
+sources: []
 related: [../records/issue-replay-coverage-below-truth-bar.md, ../syntheses/external-audit-confirms-mvp-priors.md]
 basis: sourced
 workflow_status: active
 flags: []
 source_kind: product-chat-log
 raw_artifacts: [raw/product-chat-logs/2026-04-08-chatgpt-repo-audit.md]
-log_surface: product
+log_surface: none
 evaluated_sessions: 0
 evaluated_runs: 0
 ---

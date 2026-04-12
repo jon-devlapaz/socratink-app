@@ -5,6 +5,7 @@ updated: 2026-04-08
 sources: [../sources/drill-chat-log-thermostat-session-1.md]
 related: [issue-session-complete-drops-outcome.md, ../syntheses/spacing-needs-interleaving.md]
 basis: sourced
+confidence: high
 workflow_status: open
 flags: [open-question]
 ---

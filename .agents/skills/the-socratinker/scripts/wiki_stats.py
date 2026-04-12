@@ -19,6 +19,7 @@ class WikiStats:
     page_counts: dict = field(default_factory=dict)
     unresolved_issues: int = 0
     stale_decisions: int = 0
+    stale_pages_by_type: dict = field(default_factory=dict)
     contradiction_flags: int = 0
     open_question_flags: int = 0
     hypothesis_flags: int = 0
@@ -31,6 +32,7 @@ class WikiStats:
     chat_surfaces_instrumented: int = 0
     test_surfaces_expected: int = 0
     test_surfaces_instrumented: int = 0
+    missing_instrumentation: list[str] = field(default_factory=list)
     evaluated_sessions: int = 0
     evaluated_runs: int = 0
 
@@ -50,6 +52,7 @@ class WikiStats:
                 "",
                 f"Unresolved issues: {self.unresolved_issues}",
                 f"Stale decisions: {self.stale_decisions}",
+                f"Stale curated pages: {sum(self.stale_pages_by_type.values())} ({format_counts(self.stale_pages_by_type)})",
                 f"Contradiction flags: {self.contradiction_flags}",
                 f"Open-question flags: {self.open_question_flags}",
                 f"Hypothesis flags: {self.hypothesis_flags}",
@@ -60,6 +63,7 @@ class WikiStats:
                 "",
                 f"Chat surface coverage: {self.chat_surfaces_instrumented}/{self.chat_surfaces_expected}",
                 f"Test surface coverage: {self.test_surfaces_instrumented}/{self.test_surfaces_expected}",
+                f"Missing instrumentation: {len(self.missing_instrumentation)} ({', '.join(self.missing_instrumentation) if self.missing_instrumentation else 'none'})",
                 f"Evaluated sessions: {self.evaluated_sessions}",
                 f"Evaluated runs: {self.evaluated_runs}",
             ]
@@ -106,7 +110,8 @@ def curated_pages(wiki_dir: Path) -> list[Path]:
 def count_raw_files(raw_dir: Path) -> int:
     if not raw_dir.exists():
         return 0
-    return sum(1 for path in raw_dir.rglob("*") if path.is_file() and not path.name.startswith("."))
+    ignored_names = {"README.md", "CLAUDE.md", ".gitkeep"}
+    return sum(1 for path in raw_dir.rglob("*") if path.is_file() and not path.name.startswith(".") and path.name not in ignored_names)
 
 
 def to_int(value) -> int:
@@ -116,11 +121,18 @@ def to_int(value) -> int:
         return 0
 
 
+def format_counts(counts: dict) -> str:
+    if not counts:
+        return "none"
+    return ", ".join(f"{key}: {value}" for key, value in sorted(counts.items()))
+
+
 def gather_stats(kb_root: Path) -> WikiStats:
     stats = WikiStats()
     wiki_dir = kb_root / "wiki"
     stats.raw_source_files = count_raw_files(kb_root / "raw")
     page_counts = Counter()
+    stale_pages_by_type = Counter()
     referenced_raw = set()
     external_refs = set()
     today = date.today()
@@ -137,7 +149,10 @@ def gather_stats(kb_root: Path) -> WikiStats:
         stats.provenance_total_pages += 1
 
         sources = frontmatter.get("sources", [])
+        raw_artifacts = frontmatter.get("raw_artifacts", [])
         if isinstance(sources, list) and sources:
+            stats.provenance_covered_pages += 1
+        elif page_type == "source" and isinstance(raw_artifacts, list) and raw_artifacts:
             stats.provenance_covered_pages += 1
 
         flags = frontmatter.get("flags", [])
@@ -147,20 +162,22 @@ def gather_stats(kb_root: Path) -> WikiStats:
             stats.hypothesis_flags += sum(1 for flag in flags if flag == "hypothesis")
 
         workflow_status = frontmatter.get("workflow_status")
+        review_after = frontmatter.get("review_after")
+        if review_after:
+            try:
+                stale = date.fromisoformat(review_after) < today
+            except ValueError:
+                stale = False
+            if stale:
+                stale_pages_by_type[page_type] += 1
+
         if page_type == "issue" and workflow_status == "open":
             stats.unresolved_issues += 1
         if page_type == "decision" and workflow_status == "open":
-            review_after = frontmatter.get("review_after")
-            if review_after:
-                try:
-                    stale = date.fromisoformat(review_after) < today
-                except ValueError:
-                    stale = False
-                if stale:
-                    stats.stale_decisions += 1
+            if review_after and stale:
+                stats.stale_decisions += 1
 
         if page_type == "source":
-            raw_artifacts = frontmatter.get("raw_artifacts", [])
             if isinstance(raw_artifacts, list):
                 for artifact in raw_artifacts:
                     if isinstance(artifact, str) and artifact.startswith("raw/"):
@@ -171,6 +188,7 @@ def gather_stats(kb_root: Path) -> WikiStats:
             stats.evaluated_runs += to_int(frontmatter.get("evaluated_runs"))
 
     stats.page_counts = dict(page_counts)
+    stats.stale_pages_by_type = dict(stale_pages_by_type)
     stats.referenced_raw_artifacts = len(referenced_raw)
     stats.external_artifact_refs = len(external_refs)
 
@@ -189,6 +207,9 @@ def gather_stats(kb_root: Path) -> WikiStats:
             stats.test_surfaces_expected = len(expected_test)
         if isinstance(instrumented_test, list):
             stats.test_surfaces_instrumented = len(instrumented_test)
+        missing_instrumentation = coverage.get("missing_instrumentation", [])
+        if isinstance(missing_instrumentation, list):
+            stats.missing_instrumentation = missing_instrumentation
 
     return stats
 

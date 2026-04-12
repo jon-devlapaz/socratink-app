@@ -5,6 +5,7 @@ updated: 2026-04-08
 sources: [../sources/drill-chat-log-thermostat-session-1.md]
 related: [../mechanisms/three-phase-node-loop.md, issue-session-complete-drops-outcome.md]
 basis: inferred
+confidence: high
 workflow_status: open
 flags: [open-question]
 review_after: 2026-05-01

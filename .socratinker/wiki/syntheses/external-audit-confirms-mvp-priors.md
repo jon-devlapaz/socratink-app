@@ -5,6 +5,7 @@ updated: 2026-04-08
 sources: [../sources/product-chat-log-chatgpt-repo-audit-2026-04-08.md]
 related: [../records/issue-replay-coverage-below-truth-bar.md, ../records/decision-external-audit-promotion-policy.md]
 basis: inferred
+confidence: medium
 workflow_status: open
 flags: []
 ---

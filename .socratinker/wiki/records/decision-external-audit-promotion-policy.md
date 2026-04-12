@@ -2,9 +2,10 @@
 title: "External Audit Promotion Policy"
 type: decision
 updated: 2026-04-08
-sources: [../mechanisms/external-audit-triage-loop.md]
+sources: [../../../docs/project/state.md, ../../../docs/project/operations.md, ../../../docs/product/spec.md]
 related: [../mechanisms/external-audit-triage-loop.md]
 basis: inferred
+confidence: high
 workflow_status: resolved
 flags: []
 review_after: 2026-05-01

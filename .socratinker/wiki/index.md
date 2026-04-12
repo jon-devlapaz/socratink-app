@@ -12,6 +12,8 @@
 
 ## Sources
 - [ChatGPT Repo Audit 2026-04-08](sources/product-chat-log-chatgpt-repo-audit-2026-04-08.md) — External repo evaluation stored as a raw artifact plus curated source page
+- [Happy Path Workflow for Human Memory Recall](sources/research-note-happy-path-workflow-human-memory-recall-product.md) — Secondary research note on recall-first product workflow and feedback patterns
 
 ## Syntheses
 - [External Audit Confirms MVP Priors](syntheses/external-audit-confirms-mvp-priors.md) — The audit mostly confirms existing repo truths and should narrow rather than expand active work
+- [Recall Happy Path Supports MVP Loop](syntheses/recall-happy-path-supports-mvp-loop.md) — Recall happy path reinforces the existing cold attempt, targeted study, and spaced re-drill loop
