@@ -16,3 +16,17 @@ __pycache__/
 logs/
 tmp/
 output/
+
+# Local agent and knowledge-base context
+.agents/
+.codex/
+.socratinker/
+.vscode/
+AGENTS.md
+CLAUDE.md
+docs/
+learnops/
+
+# Local deployment and environment state
+.vercel
+.env*.local
