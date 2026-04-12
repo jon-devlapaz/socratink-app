@@ -26,6 +26,11 @@ AGENTS.md
 CLAUDE.md
 docs/
 learnops/
+scripts/run-checks.sh
+scripts/smoke_test_codex_context.py
+scripts/eval-pull
+scripts/export_socratinker_vercel_logs.py
+tests/test_socratinker_drill_telemetry.py
 
 # Local deployment and environment state
 .vercel
