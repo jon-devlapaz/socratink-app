@@ -1,4 +1,3 @@
-# .codex/agents/theta.toml
 name = "theta"
 description = "Science researcher focused on the neurocognitive science behind our product."
 developer_instructions = """

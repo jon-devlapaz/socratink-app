@@ -6,35 +6,32 @@ approval_policy = "on-request"
 name = "socratink"
 default_agent = "orchestrator"
 
-# These repo-root paths are mirrored under `.codex/` so both repo-root and
-# config-file-relative resolvers can find the same bootstrap docs.
 [paths]
-bootstrap = "docs/codex/session-bootstrap.md"
+bootstrap = "docs/codex/onboarding.md"
 project_state = "docs/project/state.md"
 
 
 [agents.orchestrator]
-config_file = "agents/orchestrator.toml"
+config_file = ".agents/codex/orchestrator.toml"
 
 [agents.theta]
-config_file = "agents/theta.toml"
+config_file = ".agents/codex/theta.toml"
 
 [agents.sherlock]
-config_file = "agents/sherlock.toml"
+config_file = ".agents/codex/sherlock.toml"
 
 [agents.elliot]
-config_file = "agents/elliot.toml"
+config_file = ".agents/codex/elliot.toml"
 
 [agents.rob]
-config_file = "agents/rob.toml"
+config_file = ".agents/codex/rob.toml"
 
 [agents.thurman]
-config_file = "agents/thurman.toml"
+config_file = ".agents/codex/thurman.toml"
 
 [agents.glenna]
-config_file = "agents/glenna.toml"
+config_file = ".agents/codex/glenna.toml"
 
-# The skill directory is likewise mirrored under `.codex/.agents/skills`.
 [skills]
 directory = ".agents/skills"
 
