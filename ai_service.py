@@ -14,9 +14,12 @@ from pydantic import BaseModel, Field
 MODEL       = "gemini-2.5-flash"
 EXTRACT_TEMPERATURE = 0.2
 DRILL_TEMPERATURE = 0.2
-SKILL_PROMPT_PATH = Path(__file__).parent / "learnops/skills/learnops-extract/extract-system-v1.txt"
-DRILL_SKILL_PROMPT_PATH = Path(__file__).parent / "learnops/skills/learnops-drill/SKILL.md"
-DRILL_SYSTEM_BASE = DRILL_SKILL_PROMPT_PATH.read_text()
+PROMPT_DIR = Path(__file__).parent / "app_prompts"
+EXTRACT_PROMPT_PATH = PROMPT_DIR / "extract-system-v1.txt"
+DRILL_PROMPT_PATH = PROMPT_DIR / "drill-system-v1.md"
+EXTRACT_PROMPT_VERSION = "extract-system-v1"
+DRILL_PROMPT_VERSION = "drill-system-v1"
+DRILL_SYSTEM_BASE = DRILL_PROMPT_PATH.read_text()
 EXTRACT_FAILURE_LOG_PATH = Path(__file__).parent / "logs/extract-invalid-json.log"
 EXTRACT_RUN_LOG_PATH = Path(__file__).parent / "logs/extract-runs.jsonl"
 DRILL_RUN_LOG_PATH = Path(__file__).parent / "logs/drill-runs.jsonl"
@@ -588,7 +591,7 @@ def extract_knowledge_map(
         model=MODEL,
         contents=USER_PROMPT.format(text=raw_text),
         config=types.GenerateContentConfig(
-            system_instruction=SKILL_PROMPT_PATH.read_text(),
+            system_instruction=EXTRACT_PROMPT_PATH.read_text(),
             temperature=EXTRACT_TEMPERATURE,
         ),
     )
@@ -605,7 +608,7 @@ def extract_knowledge_map(
             "error_type": "empty_response",
             "reason": str(err),
             "model": MODEL,
-            "prompt_version": SKILL_PROMPT_PATH.name,
+            "prompt_version": EXTRACT_PROMPT_VERSION,
             "input_chars": len(raw_text),
             "raw_response_chars": len(raw_response or ""),
             "duration_ms": round((time.perf_counter() - started_perf) * 1000, 2),
@@ -627,7 +630,7 @@ def extract_knowledge_map(
             "error_type": "invalid_json",
             "reason": f"{err.msg} at line {err.lineno} column {err.colno}",
             "model": MODEL,
-            "prompt_version": SKILL_PROMPT_PATH.name,
+            "prompt_version": EXTRACT_PROMPT_VERSION,
             "input_chars": len(raw_text),
             "raw_response_chars": len(raw_response or ""),
             "cleaned_response_chars": len(cleaned),
@@ -650,7 +653,7 @@ def extract_knowledge_map(
             "error_type": "schema_validation",
             "reason": str(err),
             "model": MODEL,
-            "prompt_version": SKILL_PROMPT_PATH.name,
+            "prompt_version": EXTRACT_PROMPT_VERSION,
             "input_chars": len(raw_text),
             "raw_response_chars": len(raw_response or ""),
             "cleaned_response_chars": len(cleaned),
@@ -663,7 +666,7 @@ def extract_knowledge_map(
         "stage": "extract",
         "status": "success",
         "model": MODEL,
-        "prompt_version": SKILL_PROMPT_PATH.name,
+        "prompt_version": EXTRACT_PROMPT_VERSION,
         "input_chars": len(raw_text),
         "raw_response_chars": len(raw_response or ""),
         "cleaned_response_chars": len(cleaned),
@@ -796,7 +799,7 @@ def drill_chat(
                 "stage": "drill",
                 "status": "success",
                 "model": MODEL,
-                "prompt_version": DRILL_SKILL_PROMPT_PATH.name,
+                "prompt_version": DRILL_PROMPT_VERSION,
                 "concept_id": concept_id,
                 "node_id": node_id,
                 "node_type": node_type,
@@ -901,7 +904,7 @@ def drill_chat(
             "error_type": type(err).__name__,
             "reason": str(err),
             "model": MODEL,
-            "prompt_version": DRILL_SKILL_PROMPT_PATH.name,
+            "prompt_version": DRILL_PROMPT_VERSION,
             "concept_id": concept_id,
             "node_id": node_id,
             "node_type": node_type,
@@ -936,7 +939,7 @@ def drill_chat(
             "error_type": "invalid_structured_response",
             "reason": "Gemini returned an invalid structured drill response.",
             "model": MODEL,
-            "prompt_version": DRILL_SKILL_PROMPT_PATH.name,
+            "prompt_version": DRILL_PROMPT_VERSION,
             "concept_id": concept_id,
             "node_id": node_id,
             "node_type": node_type,
@@ -969,7 +972,7 @@ def drill_chat(
             "error_type": "empty_agent_response",
             "reason": "Gemini returned an empty drill response.",
             "model": MODEL,
-            "prompt_version": DRILL_SKILL_PROMPT_PATH.name,
+            "prompt_version": DRILL_PROMPT_VERSION,
             "concept_id": concept_id,
             "node_id": node_id,
             "node_type": node_type,
@@ -1065,7 +1068,7 @@ def drill_chat(
         "stage": "drill",
         "status": "success",
         "model": MODEL,
-        "prompt_version": DRILL_SKILL_PROMPT_PATH.name,
+        "prompt_version": DRILL_PROMPT_VERSION,
         "concept_id": concept_id,
         "node_id": node_id,
         "node_type": node_type,

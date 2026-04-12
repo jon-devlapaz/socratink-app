@@ -1,4 +1,0 @@
-interface:
-  display_name: "The Socratinker"
-  short_description: "Socratink internal product memory"
-  default_prompt: "Use $the-socratinker to ingest product evidence, evaluate logs, and update Socratink's internal product-memory wiki."

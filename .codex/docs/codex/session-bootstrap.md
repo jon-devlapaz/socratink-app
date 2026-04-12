@@ -1,1 +1,0 @@
-../../../docs/codex/session-bootstrap.md

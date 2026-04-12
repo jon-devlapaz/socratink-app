@@ -3,7 +3,7 @@
   "framework": null,
   "functions": {
     "api/index.py": {
-      "includeFiles": "{public/**,learnops/**}"
+      "includeFiles": "{public/**,app_prompts/**}"
     }
   },
   "rewrites": [
