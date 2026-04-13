@@ -9,17 +9,21 @@ from typing import Literal, Optional, TypedDict
 from google import genai
 from google.genai.errors import APIError
 from google.genai import types
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 MODEL       = "gemini-2.5-flash"
 EXTRACT_TEMPERATURE = 0.2
 DRILL_TEMPERATURE = 0.2
+REPAIR_REPS_TEMPERATURE = 0.2
 PROMPT_DIR = Path(__file__).parent / "app_prompts"
 EXTRACT_PROMPT_PATH = PROMPT_DIR / "extract-system-v1.txt"
 DRILL_PROMPT_PATH = PROMPT_DIR / "drill-system-v1.md"
+REPAIR_REPS_PROMPT_PATH = PROMPT_DIR / "repair-reps-system-v1.md"
 EXTRACT_PROMPT_VERSION = "extract-system-v1"
 DRILL_PROMPT_VERSION = "drill-system-v1"
+REPAIR_REPS_PROMPT_VERSION = "repair-reps-system-v1"
 DRILL_SYSTEM_BASE = DRILL_PROMPT_PATH.read_text()
+REPAIR_REPS_SYSTEM_BASE = REPAIR_REPS_PROMPT_PATH.read_text()
 EXTRACT_FAILURE_LOG_PATH = Path(__file__).parent / "logs/extract-invalid-json.log"
 EXTRACT_RUN_LOG_PATH = Path(__file__).parent / "logs/extract-runs.jsonl"
 DRILL_RUN_LOG_PATH = Path(__file__).parent / "logs/drill-runs.jsonl"
@@ -80,6 +84,38 @@ class DrillEvaluation(BaseModel):
     )
 
 
+class RepairRep(BaseModel):
+    id: str = Field(description="Stable identifier for this rep within the generated set")
+    kind: Literal["missing_bridge", "next_step", "cause_effect"] = Field(
+        description="The causal micro-practice shape."
+    )
+    prompt: str = Field(description="Typed causal prompt shown before the answer bridge is revealed.")
+    target_bridge: str = Field(description="Short model bridge revealed only after the learner types.")
+    feedback_cue: str = Field(description="Short comparison cue after the bridge is revealed.")
+
+
+class RepairRepsEvaluation(BaseModel):
+    reps: list[RepairRep] = Field(
+        description="Exactly three typed causal repair reps.",
+        min_length=3,
+        max_length=3,
+    )
+
+
+class _StrictRepairRep(RepairRep):
+    model_config = ConfigDict(extra="forbid")
+
+
+class _StrictRepairRepsEvaluation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    reps: list[_StrictRepairRep] = Field(
+        description="Exactly three typed causal repair reps.",
+        min_length=3,
+        max_length=3,
+    )
+
+
 class DrillTurnResult(TypedDict):
     agent_response: str
     generative_commitment: bool | None
@@ -101,6 +137,12 @@ class DrillTurnResult(TypedDict):
     ux_reward_emitted: bool
     session_terminated: bool
     termination_reason: str | None
+
+
+class RepairRepsResult(TypedDict):
+    node_id: str
+    prompt_version: str
+    reps: list[dict[str, str]]
 
 
 class MissingAPIKeyError(ValueError):
@@ -685,6 +727,111 @@ def extract_knowledge_map(
         ),
     }, telemetry_context))
     return knowledge_map
+
+
+def _validate_repair_reps_result(evaluation: RepairRepsEvaluation, *, expected_count: int) -> None:
+    if len(evaluation.reps) != expected_count:
+        raise ValueError(f"Repair reps response must include exactly {expected_count} reps.")
+
+    seen_ids: set[str] = set()
+    for index, rep in enumerate(evaluation.reps, start=1):
+        rep_id = rep.id.strip()
+        if not rep_id:
+            raise ValueError(f"Repair rep {index} is missing an id.")
+        if rep_id in seen_ids:
+            raise ValueError(f"Repair rep id is duplicated: {rep_id}")
+        seen_ids.add(rep_id)
+
+        if not rep.prompt.strip():
+            raise ValueError(f"Repair rep {index} is missing a prompt.")
+        if not rep.target_bridge.strip():
+            raise ValueError(f"Repair rep {index} is missing a target bridge.")
+        if not rep.feedback_cue.strip():
+            raise ValueError(f"Repair rep {index} is missing a feedback cue.")
+
+
+def _parse_repair_reps_response(response) -> RepairRepsEvaluation:
+    raw_text = getattr(response, "text", None)
+    if raw_text:
+        try:
+            strict = _StrictRepairRepsEvaluation.model_validate_json(raw_text)
+        except Exception as err:
+            raise ValueError("Gemini returned an invalid structured repair reps response.") from err
+        return RepairRepsEvaluation.model_validate(strict.model_dump())
+
+    evaluation = getattr(response, "parsed", None)
+    if isinstance(evaluation, RepairRepsEvaluation):
+        return evaluation
+    if isinstance(evaluation, dict):
+        try:
+            strict = _StrictRepairRepsEvaluation.model_validate(evaluation)
+        except Exception as err:
+            raise ValueError("Gemini returned an invalid structured repair reps response.") from err
+        return RepairRepsEvaluation.model_validate(strict.model_dump())
+    raise ValueError("Gemini returned an invalid structured repair reps response.")
+
+
+def generate_repair_reps(
+    *,
+    knowledge_map: dict,
+    concept_id: str | None = None,
+    node_id: str,
+    node_label: str,
+    node_mechanism: str,
+    gap_type: str | None = None,
+    gap_description: str | None = None,
+    count: int = 3,
+    api_key: str | None = None,
+) -> RepairRepsResult:
+    _validate_knowledge_map(knowledge_map)
+    if not _knowledge_map_has_node(knowledge_map, node_id):
+        raise ValueError(f"Unknown node_id: {node_id}")
+    if count != 3:
+        raise ValueError("Repair Reps MVP requires exactly 3 reps.")
+
+    client = _get_client(api_key)
+    pruned_context = _prune_context(knowledge_map, node_id)
+    prompt = (
+        "Generate exactly three Repair Reps for the target node. "
+        "Each rep must require typed causal reconstruction and must not use term-definition review, "
+        "multiple choice, or mastery/progression language.\n\n"
+        f"Concept ID: {concept_id or 'unknown'}\n"
+        f"Target node:\n- id: {node_id}\n- label: {node_label}\n"
+        f"Mechanism answer key:\n{node_mechanism}\n\n"
+        f"Known gap type: {gap_type or 'none'}\n"
+        f"Known gap description: {gap_description or 'none'}\n\n"
+        f"Pruned knowledge map JSON:\n{json.dumps(pruned_context)}"
+    )
+
+    response = _call_gemini_with_retry(
+        client,
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=REPAIR_REPS_SYSTEM_BASE,
+            temperature=REPAIR_REPS_TEMPERATURE,
+            response_mime_type="application/json",
+            response_schema=RepairRepsEvaluation,
+        ),
+    )
+
+    evaluation = _parse_repair_reps_response(response)
+    _validate_repair_reps_result(evaluation, expected_count=count)
+
+    return {
+        "node_id": node_id,
+        "prompt_version": REPAIR_REPS_PROMPT_VERSION,
+        "reps": [
+            {
+                "id": rep.id.strip(),
+                "kind": rep.kind,
+                "prompt": rep.prompt.strip(),
+                "target_bridge": rep.target_bridge.strip(),
+                "feedback_cue": rep.feedback_cue.strip(),
+            }
+            for rep in evaluation.reps
+        ],
+    }
 
 
 def drill_chat(
