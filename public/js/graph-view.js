@@ -506,6 +506,16 @@ function repairProgressMarkup({ currentIndex = -1, total = 3, complete = false }
   `;
 }
 
+function repairContextStripMarkup({ nodeLabel = 'this node', phaseLabel = 'Repair Reps' } = {}) {
+  return `
+    <div class="graph-repair-context-strip">
+      <span>${escHtml(nodeLabel)}</span>
+      <span>${escHtml(phaseLabel)}</span>
+      <span>Practice only</span>
+    </div>
+  `;
+}
+
 function repairKindLabel(kind) {
   if (kind === 'missing_bridge') return 'Bridge';
   if (kind === 'next_step') return 'Next Step';
@@ -548,19 +558,24 @@ function repairRepsMarkupForNode(data, repairState = {}) {
 
   if (status === 'loading') {
     return `
-      <div class="graph-detail-kicker">Repair Reps</div>
-      ${repairProgressMarkup({ currentIndex: -1, total: 3 })}
-      <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
-      <p class="graph-detail-copy">Building three causal reps for this node. This is practice, not mastery credit.</p>
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
+      <section class="graph-detail-surface graph-repair-card">
+        <div class="graph-detail-kicker">Repair Reps</div>
+        ${repairProgressMarkup({ currentIndex: -1, total: 3 })}
+        <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
+        <p class="graph-detail-copy">Building three causal reps for this node. This is practice, not mastery credit.</p>
+      </section>
     `;
   }
 
   if (status === 'error') {
     return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
       <div class="graph-detail-kicker">Repair Reps</div>
       <h3 class="graph-detail-title">Reps did not load</h3>
       <p class="graph-detail-copy">${escHtml(state.error || 'Repair Reps could not load. Reopen study and try again later.')}</p>
       <button class="${actionButtonClass} trigger-reopen">Reopen Study</button>
+      <button class="${actionButtonClass} trigger-repair-exit graph-detail-secondary-action graph-repair-secondary-action">Back to graph</button>
     `;
   }
 
@@ -579,13 +594,14 @@ function repairRepsMarkupForNode(data, repairState = {}) {
       }).join('')
       : '';
     return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps complete' })}
       <div class="graph-repair-complete">
         <div class="graph-detail-kicker">Repair Reps</div>
         ${repairProgressMarkup({ currentIndex: 2, total: Math.max(reps.length, 3), complete: true })}
         <h3 class="graph-detail-title">Practice logged</h3>
         ${summaryRows ? `<div class="graph-repair-summary">${summaryRows}</div>` : ''}
-        <p class="graph-detail-copy">The graph still waits for a spaced re-drill.</p>
-        <button class="${actionButtonClass} trigger-repair-exit">Return to Map</button>
+        <p class="graph-detail-copy">These reps are saved. Graph progress comes from the next re-drill.</p>
+        <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
       </div>
     `;
   }
@@ -595,10 +611,11 @@ function repairRepsMarkupForNode(data, repairState = {}) {
   const rep = reps[currentIndex] || null;
   if (!rep) {
     return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
       <div class="graph-detail-kicker">Repair Reps</div>
       <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
       <p class="graph-detail-copy">Repair Reps are not ready for this node yet.</p>
-      <button class="${actionButtonClass} trigger-repair-exit">Return to Map</button>
+      <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
     `;
   }
 
@@ -606,30 +623,31 @@ function repairRepsMarkupForNode(data, repairState = {}) {
   const typedAnswer = revealed ? escHtml(state.currentAnswer || '') : '';
   const ratingSelected = Boolean(state.ratingSelected || state.ratings?.[currentIndex]);
   return `
+    ${repairContextStripMarkup({ nodeLabel, phaseLabel: `Repair Rep ${currentIndex + 1} of ${reps.length}` })}
     <div class="graph-study-shell graph-repair-shell">
       <section class="graph-detail-surface graph-repair-card ${state.isDealing ? 'is-dealing' : ''}">
-        <div class="graph-detail-kicker">Repair Rep ${currentIndex + 1} of ${reps.length}</div>
         ${repairProgressMarkup({ currentIndex, total: reps.length })}
-        <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
+        <div class="graph-detail-kicker">Causal bridge</div>
         <p class="graph-detail-copy">${escHtml(rep.prompt)}</p>
-        ${revealed ? '<div class="graph-detail-kicker">Your bridge</div>' : ''}
-        <textarea class="graph-repair-input" rows="4" ${revealed ? 'readonly' : 'placeholder="Type the causal link in your own words"'}>${typedAnswer}</textarea>
+        <div class="graph-detail-kicker">Your bridge</div>
+        <textarea class="graph-repair-input" rows="4" ${revealed ? 'readonly' : ''}>${typedAnswer}</textarea>
+        ${revealed ? '' : '<p class="graph-detail-copy graph-repair-helper">Trace the causal link in one or two sentences.</p>'}
         ${revealed ? `
           <div class="graph-repair-bridge ${state.isRevealing ? 'is-revealing' : ''}">
-            <div class="graph-detail-kicker">Target bridge</div>
+            <div class="graph-detail-kicker">Reference bridge</div>
             <p class="graph-detail-copy">${escHtml(rep.target_bridge)}</p>
-            <p class="graph-detail-copy">${escHtml(rep.feedback_cue)}</p>
+            <p class="graph-detail-copy graph-repair-compare-cue">Compare the link, not the wording.</p>
           </div>
           ${repairRatingMarkup(state, currentIndex)}
         ` : ''}
       </section>
-      <section class="graph-detail-surface graph-study-next">
-        <p class="graph-detail-copy">Repair Reps do not change graph state. Come back for the scored re-drill after spacing.</p>
+      <section class="graph-detail-surface graph-study-next graph-repair-next">
+        <p class="graph-detail-copy graph-repair-truth-line">Practice only. Graph progress comes from re-drill.</p>
         ${revealed
           ? (ratingSelected
             ? `<button class="${actionButtonClass} trigger-repair-next">${currentIndex + 1 >= reps.length ? 'Finish Reps' : 'Next Rep'}</button>`
             : '<p class="graph-detail-copy graph-repair-rating-hint">Choose the closest comparison before moving on.</p>')
-          : `<button class="${actionButtonClass} trigger-repair-reveal">Reveal Bridge</button>`}
+          : `<button class="${actionButtonClass} trigger-repair-reveal" disabled>Show reference bridge</button>`}
       </section>
     </div>
   `;
@@ -1599,6 +1617,14 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
           const answer = detailEl.querySelector('.graph-repair-input')?.value || '';
           window.SocratinkApp?.revealRepairRep?.(answer);
         });
+        const repairInput = detailEl.querySelector('.graph-repair-input');
+        if (repairRevealBtn && repairInput) {
+          const syncRevealReadiness = () => {
+            repairRevealBtn.disabled = !repairInput.value.trim();
+          };
+          syncRevealReadiness();
+          repairInput.addEventListener('input', syncRevealReadiness);
+        }
         const repairNextBtn = detailEl.querySelector('.trigger-repair-next');
         if (repairNextBtn) repairNextBtn.addEventListener('click', () => { window.SocratinkApp?.nextRepairRep?.(); });
         detailEl.querySelectorAll('.trigger-repair-rate').forEach((btn) => {
