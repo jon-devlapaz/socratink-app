@@ -1,7 +1,7 @@
 import { Bus } from './bus.js';
 import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
 import { Morph, crystalPolygons } from './morph.js';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=2';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=3';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=3';
 import {
@@ -22,9 +22,11 @@ const App = (() => {
   const THEME_STORAGE_KEY = 'learnops-theme';
   const PHASE_B_SESSION_KEY_PREFIX = 'learnops-phase-b-session';
   const PHASE_B_RESUME_KEY = 'learnops-phase-b-resume';
+  const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
+  let repairRepsState = null;
   let tutorialMode = false;
   let tutorialRefreshRaf = null;
   let activeTutorialTarget = null;
@@ -1213,6 +1215,7 @@ const App = (() => {
     setTimeout(() => {
       const concepts = loadConcepts().filter(c => c.id !== id);
       saveConcepts(concepts);
+      clearRepairRepsStateForConcept(id);
 
       if (getActiveId() === id) {
         if (concepts.length > 0) { selectConcept(concepts[0].id); }
@@ -1785,7 +1788,8 @@ const App = (() => {
     { file: 'mrna_vaccine.json', name: 'mRNA Vaccine Mechanism', desc: 'Lipid nanoparticles and ribosomal translation' },
     { file: 'options_trading.json', name: 'Options Trading Fundamentals', desc: 'Leveraged asymmetry and Theta decay' },
     { file: 'learnops_architecture.json', name: 'LearnOps Architecture', desc: 'The Generation Effect and Socratic Graphs' },
-    { file: 'sourdough_science.json', name: 'Science of Sourdough Baking', desc: 'Symbiotic fermentation, rheology, and oven spring' }
+    { file: 'sourdough_science.json', name: 'Science of Sourdough Baking', desc: 'Symbiotic fermentation, rheology, and oven spring' },
+    { file: 'socratink_strategy.json', name: 'Socratink Strategy', desc: 'The Theta mechanism, Cold Attempts, and spaced mastery loops' }
   ];
   const STARTER_MAP_NAMES = new Set(STARTER_MAPS.map((item) => item.name));
 
@@ -2182,6 +2186,73 @@ const App = (() => {
     return hasInterleavingEventSince(nodeId, nodeData.study_completed_at);
   }
 
+  function isRepairRepsEligible(nodeData) {
+    return (
+      (nodeData?.drill_status === 'primed' && nodeData?.drill_phase === 're_drill')
+      || nodeData?.drill_status === 'drilled'
+    );
+  }
+
+  function loadRepairRepsHistory() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(REPAIR_REPS_STORE_KEY) || '{}');
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveRepairRepsHistory(history) {
+    localStorage.setItem(REPAIR_REPS_STORE_KEY, JSON.stringify(history || {}));
+  }
+
+  const REPAIR_REP_RATING_VALUES = new Set(['close_match', 'partial', 'missed']);
+
+  function recordRepairRepsCompletion({ conceptId, nodeId, repCount, promptVersion, gapType, answerLengths, ratings }) {
+    if (!conceptId || !nodeId) return;
+    const history = loadRepairRepsHistory();
+    const key = `${conceptId}::${nodeId}`;
+    const entries = Array.isArray(history[key]) ? history[key] : [];
+    history[key] = [
+      ...entries,
+      {
+        completed_at: new Date().toISOString(),
+        rep_count: repCount,
+        prompt_version: promptVersion,
+        gap_type: gapType || null,
+        answer_lengths: Array.isArray(answerLengths) ? answerLengths : [],
+        ratings: Array.isArray(ratings) ? ratings : [],
+      },
+    ].slice(-20);
+    saveRepairRepsHistory(history);
+  }
+
+  function clearRepairRepsStateForConcept(conceptId) {
+    if (repairRepsState?.conceptId === conceptId) {
+      repairRepsState = null;
+    }
+    const history = loadRepairRepsHistory();
+    const prefix = `${conceptId}::`;
+    let changed = false;
+    Object.keys(history).forEach((key) => {
+      if (!key.startsWith(prefix)) return;
+      delete history[key];
+      changed = true;
+    });
+    if (changed) saveRepairRepsHistory(history);
+  }
+
+  function getRepairRepsState(nodeId = null) {
+    if (!repairRepsState) return null;
+    if (nodeId && repairRepsState.nodeId !== nodeId) return null;
+    return repairRepsState;
+  }
+
+  function setRepairRepsState(nextState) {
+    repairRepsState = nextState;
+    currentGraphController?.setInteractionMode?.('repair-reps', nextState?.nodeId || activeDrillNode);
+  }
+
   function getSpacingBlockReason(nodeData, nodeId) {
     if (!nodeData?.re_drill_eligible_after) {
       return {
@@ -2284,6 +2355,9 @@ const App = (() => {
         ? (nodeContext.type === 'core' ? 'Go To Next Reachable Branch' : 'Go To Next Reachable Node')
         : 'Review Study',
       targetNodeId: nextTarget?.id || null,
+      secondaryAction: isRepairRepsEligible(nodeData)
+        ? { kind: 'start-repair-reps', label: 'Start Repair Reps' }
+        : null,
       blocked,
     };
   }
@@ -2312,6 +2386,9 @@ const App = (() => {
         return {
           kind: 'start-redrill',
           label: 'Start Re-Drill',
+          secondaryAction: isRepairRepsEligible(nodeData)
+            ? { kind: 'start-repair-reps', label: 'Start Repair Reps' }
+            : null,
         };
       }
       return getIncubationAction(nodeContext, nodeData);
@@ -2322,6 +2399,9 @@ const App = (() => {
         return {
           kind: 'start-redrill',
           label: 'Start Re-Drill',
+          secondaryAction: isRepairRepsEligible(nodeData)
+            ? { kind: 'start-repair-reps', label: 'Start Repair Reps' }
+            : null,
         };
       }
       return getIncubationAction(nodeContext, nodeData);
@@ -2335,6 +2415,10 @@ const App = (() => {
 
   function runInspectAction(nodeContext, actionKind) {
     if (!nodeContext || !actionKind) return;
+    if (actionKind === 'start-repair-reps') {
+      startRepairReps(nodeContext);
+      return;
+    }
     if (actionKind === 'resume-study') {
       reopenStudy(nodeContext);
       return;
@@ -2368,6 +2452,184 @@ const App = (() => {
     currentGraphController?.setInteractionMode?.('study', activeDrillNode);
     setMapMode('graph');
     return true;
+  }
+
+  async function startRepairReps(nodeContext) {
+    const concept = getActiveConcept();
+    if (!concept || !nodeContext?.id) return;
+
+    const graphData = parseConceptGraphData(concept);
+    const nodeData = resolveNodeData(graphData || {}, nodeContext.id) || {};
+    if (!isRepairRepsEligible(nodeData)) {
+      currentGraphController?.showBlockedMessage?.(
+        'Repair Reps are not ready',
+        'Finish targeted study first, or return after a non-solid re-drill. Repair work never changes graph mastery.'
+      );
+      return;
+    }
+
+    const nodeLabel = nodeContext.fullLabel || nodeContext.label || concept.name || 'Repair target';
+    activeDrillNode = nodeContext.id;
+    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
+    setMapMode('graph');
+    setRepairRepsState({
+      status: 'loading',
+      conceptId: concept.id,
+      nodeId: nodeContext.id,
+      nodeLabel,
+      gapType: nodeData.gap_type || null,
+      promptVersion: null,
+      reps: [],
+      currentIndex: 0,
+      revealed: false,
+      currentAnswer: '',
+      answerLengths: [],
+      ratings: [],
+      ratingSelected: false,
+      isDealing: false,
+      isRevealing: false,
+      error: null,
+    });
+
+    try {
+      const response = await fetch('/api/repair-reps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept_id: concept.id,
+          node_id: nodeContext.id,
+          node_label: nodeLabel,
+          knowledge_map: graphData || {},
+          gap_type: nodeData.gap_type || null,
+          gap_description: nodeData.gap_description || null,
+          count: 3,
+          api_key: localStorage.getItem('gemini_key') || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`Repair Reps request failed: ${response.status}: ${errText}`);
+      }
+
+      const payload = await response.json();
+      const reps = Array.isArray(payload?.reps) ? payload.reps : [];
+      if (reps.length !== 3) {
+        throw new Error('Repair Reps returned an incomplete practice set.');
+      }
+
+      setRepairRepsState({
+        status: 'ready',
+        conceptId: concept.id,
+        nodeId: nodeContext.id,
+        nodeLabel,
+        gapType: nodeData.gap_type || null,
+        promptVersion: payload.prompt_version || 'repair-reps-system-v1',
+        reps,
+        currentIndex: 0,
+        revealed: false,
+        currentAnswer: '',
+        answerLengths: [],
+        ratings: [],
+        ratingSelected: false,
+        isDealing: true,
+        isRevealing: false,
+        error: null,
+      });
+    } catch (err) {
+      console.error(err);
+      setRepairRepsState({
+        status: 'error',
+        conceptId: concept.id,
+        nodeId: nodeContext.id,
+        nodeLabel,
+        gapType: nodeData.gap_type || null,
+        promptVersion: null,
+        reps: [],
+        currentIndex: 0,
+        revealed: false,
+        currentAnswer: '',
+        answerLengths: [],
+        ratings: [],
+        ratingSelected: false,
+        isDealing: false,
+        isRevealing: false,
+        error: 'Repair Reps could not load. Reopen study and try again later.',
+      });
+    }
+  }
+
+  function revealRepairRep(answerText = '') {
+    if (!repairRepsState || repairRepsState.status !== 'ready') return;
+    const answer = String(answerText || '').trim();
+    if (!answer) return;
+    const answerLengths = [...(repairRepsState.answerLengths || [])];
+    answerLengths[repairRepsState.currentIndex || 0] = answer.length;
+    setRepairRepsState({
+      ...repairRepsState,
+      revealed: true,
+      currentAnswer: answer,
+      answerLengths,
+      ratingSelected: Boolean(repairRepsState.ratings?.[repairRepsState.currentIndex || 0]),
+      isDealing: false,
+      isRevealing: true,
+    });
+  }
+
+  function rateRepairRep(rating) {
+    if (!repairRepsState || repairRepsState.status !== 'ready' || !repairRepsState.revealed) return;
+    if (!REPAIR_REP_RATING_VALUES.has(rating)) return;
+    const currentIndex = repairRepsState.currentIndex || 0;
+    const ratings = [...(repairRepsState.ratings || [])];
+    ratings[currentIndex] = rating;
+    setRepairRepsState({
+      ...repairRepsState,
+      ratings,
+      ratingSelected: true,
+      isDealing: false,
+      isRevealing: false,
+    });
+  }
+
+  function nextRepairRep() {
+    if (!repairRepsState || repairRepsState.status !== 'ready') return;
+    if (!repairRepsState.revealed || !repairRepsState.ratingSelected) return;
+    const nextIndex = (repairRepsState.currentIndex || 0) + 1;
+    if (nextIndex >= (repairRepsState.reps || []).length) {
+      recordRepairRepsCompletion({
+        conceptId: repairRepsState.conceptId,
+        nodeId: repairRepsState.nodeId,
+        repCount: repairRepsState.reps.length,
+        promptVersion: repairRepsState.promptVersion,
+        gapType: repairRepsState.gapType,
+        answerLengths: repairRepsState.answerLengths,
+        ratings: repairRepsState.ratings,
+      });
+      setRepairRepsState({
+        ...repairRepsState,
+        status: 'complete',
+        revealed: true,
+        isDealing: false,
+        isRevealing: false,
+      });
+      return;
+    }
+
+    setRepairRepsState({
+      ...repairRepsState,
+      currentIndex: nextIndex,
+      revealed: false,
+      currentAnswer: '',
+      ratingSelected: false,
+      isDealing: true,
+      isRevealing: false,
+    });
+  }
+
+  function exitRepairReps() {
+    repairRepsState = null;
+    activeDrillNode = null;
+    currentGraphController?.clearActiveDrillNode?.();
   }
 
   function reopenStudy(nodeContext) {
@@ -3468,6 +3730,12 @@ const App = (() => {
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },
     reopenStudy,
     completeStudy,
+    startRepairReps,
+    getRepairRepsState,
+    revealRepairRep,
+    rateRepairRep,
+    nextRepairRep,
+    exitRepairReps,
     getNodeInspectAction,
     runInspectAction,
     deleteConcept,

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# BML: Build — runs extract + drill against a fixture in the terminal.
+# Use for local validation of AI pipeline behavior before merge.
+# Telemetry tagged run_mode=fixture to distinguish from real sessions.
 
 from __future__ import annotations
 
@@ -13,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from ai_service import drill_chat, extract_knowledge_map
+from ai_service import DrillTurnResult, drill_chat, extract_knowledge_map
 
 FIXTURE_DIR = REPO_ROOT / "public/data/taste-fixtures"
 
@@ -174,7 +177,7 @@ def select_scripted_answer(scripted_answers: list[dict], token: str) -> dict | N
     return None
 
 
-def render_turn_result(result: dict, answer: dict | None = None) -> None:
+def render_turn_result(result: DrillTurnResult, answer: dict | None = None) -> None:
     print("\n== Drill Result ==")
     print(f"answer_mode: {result.get('answer_mode')}")
     print(f"score_eligible: {result.get('score_eligible')}")

@@ -26,6 +26,7 @@ from ai_service import (
     MissingAPIKeyError,
     drill_chat,
     extract_knowledge_map,
+    generate_repair_reps,
 )
 from scripts.summarize_ai_runs import build_summary_payload
 from scripts.summarize_ai_runs import build_learner_summary_payload
@@ -41,6 +42,7 @@ PROTECTED_API_PATHS = frozenset({
     "/api/drill",
     "/api/extract",
     "/api/extract-url",
+    "/api/repair-reps",
 })
 
 _cors_origins = os.environ.get(
@@ -162,6 +164,17 @@ class DrillRequest(BaseModel):
     help_turn_count: int = Field(0, ge=0, le=100)
     session_start_iso: str | None = Field(None, max_length=100)
     bypass_session_limits: bool = False
+    api_key: str | None = Field(None, max_length=200)
+
+
+class RepairRepsRequest(BaseModel):
+    concept_id: str = Field(..., max_length=100)
+    node_id: str = Field(..., max_length=200)
+    node_label: str = Field(..., max_length=500)
+    knowledge_map: dict | str
+    gap_type: str | None = Field(None, max_length=100)
+    gap_description: str | None = Field(None, max_length=1_000)
+    count: int = Field(3, ge=3, le=3)
     api_key: str | None = Field(None, max_length=200)
 
 
@@ -523,6 +536,56 @@ def drill(req: DrillRequest):
         ))
         logger.exception("Unexpected failure in /api/drill for concept_id=%s node_id=%s", req.concept_id, req.node_id)
         raise HTTPException(status_code=500, detail="Unexpected server error during drill.") from err
+
+
+@app.post("/api/repair-reps")
+def repair_reps(req: RepairRepsRequest):
+    if not req.node_id.strip():
+        raise HTTPException(status_code=400, detail="No node_id provided.")
+
+    try:
+        knowledge_map = req.knowledge_map
+        if isinstance(knowledge_map, str):
+            knowledge_map = json.loads(knowledge_map)
+
+        node_mechanism = _resolve_node_mechanism(
+            knowledge_map,
+            req.node_id,
+            fallback="",
+        )
+        result = generate_repair_reps(
+            knowledge_map=knowledge_map,
+            concept_id=req.concept_id,
+            node_id=req.node_id,
+            node_label=req.node_label,
+            node_mechanism=node_mechanism,
+            gap_type=req.gap_type,
+            gap_description=req.gap_description,
+            count=req.count,
+            api_key=req.api_key,
+        )
+        return {"concept_id": req.concept_id, **result}
+    except MissingAPIKeyError as err:
+        raise HTTPException(status_code=401, detail=str(err))
+    except GeminiRateLimitError as err:
+        raise HTTPException(status_code=429, detail=str(err))
+    except GeminiServiceError as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    except json.JSONDecodeError as err:
+        raise HTTPException(status_code=400, detail="Invalid knowledge_map JSON.") from err
+    except ValueError as err:
+        reason = str(err)
+        if (
+            reason.startswith("Unknown node_id:")
+            or reason.startswith("Repair Reps MVP requires")
+            or reason.startswith("knowledge_map")
+        ):
+            raise HTTPException(status_code=400, detail=reason) from err
+        logger.exception("Repair reps generation failed for concept_id=%s node_id=%s", req.concept_id, req.node_id)
+        raise HTTPException(status_code=502, detail="Repair Reps generation failed. Please retry.") from err
+    except Exception as err:
+        logger.exception("Unexpected failure in /api/repair-reps for concept_id=%s node_id=%s", req.concept_id, req.node_id)
+        raise HTTPException(status_code=500, detail="Unexpected server error during Repair Reps.") from err
 
 
 app.include_router(auth_router)

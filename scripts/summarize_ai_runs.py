@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# BML: Measure — compiles extract + drill JSONL logs into operator and learner analytics.
+# Imported by main.py for /api/analytics/* endpoints. Also runs standalone as CLI.
 
 from __future__ import annotations
 
@@ -66,7 +68,7 @@ def latest_timestamp(rows: list[dict]) -> str | None:
     timestamps = [row.get("timestamp") for row in rows if row.get("timestamp")]
     if not timestamps:
         return None
-    return max(timestamps)
+    return max(t for t in timestamps if t is not None)
 
 
 def parse_timestamp(value: str | None) -> datetime:

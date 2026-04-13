@@ -495,6 +495,164 @@ export function transformKnowledgeMapToGraph(rawData) {
   return { source, nodes, edges, coreId, backboneIds: backboneItems.map((item, index) => item.id || `backbone-${index + 1}`) };
 }
 
+function repairProgressMarkup({ currentIndex = -1, total = 3, complete = false } = {}) {
+  const dotCount = Math.max(Number(total) || 3, 3);
+  return `
+    <div class="graph-repair-progress" aria-label="Repair Reps progress">
+      ${Array.from({ length: dotCount }, (_, index) => (
+        `<span class="graph-repair-dot ${complete || currentIndex >= index ? 'is-done' : ''}"></span>`
+      )).join('')}
+    </div>
+  `;
+}
+
+function repairContextStripMarkup({ nodeLabel = 'this node', phaseLabel = 'Repair Reps' } = {}) {
+  return `
+    <div class="graph-repair-context-strip">
+      <span>${escHtml(nodeLabel)}</span>
+      <span>${escHtml(phaseLabel)}</span>
+      <span>Practice only</span>
+    </div>
+  `;
+}
+
+function repairKindLabel(kind) {
+  if (kind === 'missing_bridge') return 'Bridge';
+  if (kind === 'next_step') return 'Next Step';
+  if (kind === 'cause_effect') return 'Cause -> Effect';
+  return 'Repair';
+}
+
+function repairRatingLabel(rating) {
+  if (rating === 'close_match') return 'Close match';
+  if (rating === 'partial') return 'Partly linked';
+  if (rating === 'missed') return 'Missed the link';
+  return 'Not rated';
+}
+
+function repairRatingMarkup(state, currentIndex) {
+  const ratings = Array.isArray(state.ratings) ? state.ratings : [];
+  const selected = ratings[currentIndex] || '';
+  const button = (rating, label) => `
+    <button class="graph-repair-rating-btn trigger-repair-rate ${selected === rating ? 'is-selected' : ''}" data-rating="${rating}">
+      ${escHtml(label)}
+    </button>
+  `;
+  return `
+    <div class="graph-repair-rating">
+      <div class="graph-detail-kicker">How close was your bridge?</div>
+      <div class="graph-repair-rating-group">
+        ${button('close_match', 'Close match')}
+        ${button('partial', 'Partly linked')}
+        ${button('missed', 'Missed the link')}
+      </div>
+    </div>
+  `;
+}
+
+function repairRepsMarkupForNode(data, repairState = {}) {
+  const state = repairState || {};
+  const actionButtonClass = 'btn-start-drill graph-detail-action';
+  const nodeLabel = state.nodeLabel || data.fullLabel || data.label || 'this node';
+  const status = state.status || 'idle';
+
+  if (status === 'loading') {
+    return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
+      <section class="graph-detail-surface graph-repair-card">
+        <div class="graph-detail-kicker">Repair Reps</div>
+        ${repairProgressMarkup({ currentIndex: -1, total: 3 })}
+        <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
+        <p class="graph-detail-copy">Building three causal reps for this node. This is practice, not mastery credit.</p>
+      </section>
+    `;
+  }
+
+  if (status === 'error') {
+    return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
+      <div class="graph-detail-kicker">Repair Reps</div>
+      <h3 class="graph-detail-title">Reps did not load</h3>
+      <p class="graph-detail-copy">${escHtml(state.error || 'Repair Reps could not load. Reopen study and try again later.')}</p>
+      <button class="${actionButtonClass} trigger-reopen">Reopen Study</button>
+      <button class="${actionButtonClass} trigger-repair-exit graph-detail-secondary-action graph-repair-secondary-action">Back to graph</button>
+    `;
+  }
+
+  if (status === 'complete') {
+    const reps = Array.isArray(state.reps) ? state.reps : [];
+    const ratings = Array.isArray(state.ratings) ? state.ratings : [];
+    const summaryRows = reps.length
+      ? reps.map((rep, index) => {
+        const rating = ratings[index] || '';
+        return `
+          <div class="graph-repair-summary-row">
+            <span class="graph-detail-pill">${escHtml(repairKindLabel(rep.kind))}</span>
+            <span class="graph-repair-summary-rating ${escHtml(rating)}">${escHtml(repairRatingLabel(rating))}</span>
+          </div>
+        `;
+      }).join('')
+      : '';
+    return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps complete' })}
+      <div class="graph-repair-complete">
+        <div class="graph-detail-kicker">Repair Reps</div>
+        ${repairProgressMarkup({ currentIndex: 2, total: Math.max(reps.length, 3), complete: true })}
+        <h3 class="graph-detail-title">Practice logged</h3>
+        ${summaryRows ? `<div class="graph-repair-summary">${summaryRows}</div>` : ''}
+        <p class="graph-detail-copy">These reps are saved. Graph progress comes from the next re-drill.</p>
+        <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
+      </div>
+    `;
+  }
+
+  const reps = Array.isArray(state.reps) ? state.reps : [];
+  const currentIndex = Math.min(Math.max(Number(state.currentIndex || 0), 0), Math.max(reps.length - 1, 0));
+  const rep = reps[currentIndex] || null;
+  if (!rep) {
+    return `
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
+      <div class="graph-detail-kicker">Repair Reps</div>
+      <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
+      <p class="graph-detail-copy">Repair Reps are not ready for this node yet.</p>
+      <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
+    `;
+  }
+
+  const revealed = Boolean(state.revealed);
+  const typedAnswer = revealed ? escHtml(state.currentAnswer || '') : '';
+  const ratingSelected = Boolean(state.ratingSelected || state.ratings?.[currentIndex]);
+  return `
+    ${repairContextStripMarkup({ nodeLabel, phaseLabel: `Repair Rep ${currentIndex + 1} of ${reps.length}` })}
+    <div class="graph-study-shell graph-repair-shell">
+      <section class="graph-detail-surface graph-repair-card ${state.isDealing ? 'is-dealing' : ''}">
+        ${repairProgressMarkup({ currentIndex, total: reps.length })}
+        <div class="graph-detail-kicker">Causal bridge</div>
+        <p class="graph-detail-copy">${escHtml(rep.prompt)}</p>
+        <div class="graph-detail-kicker">Your bridge</div>
+        <textarea class="graph-repair-input" rows="4" ${revealed ? 'readonly' : ''}>${typedAnswer}</textarea>
+        ${revealed ? '' : '<p class="graph-detail-copy graph-repair-helper">Trace the causal link in one or two sentences.</p>'}
+        ${revealed ? `
+          <div class="graph-repair-bridge ${state.isRevealing ? 'is-revealing' : ''}">
+            <div class="graph-detail-kicker">Reference bridge</div>
+            <p class="graph-detail-copy">${escHtml(rep.target_bridge)}</p>
+            <p class="graph-detail-copy graph-repair-compare-cue">Compare the link, not the wording.</p>
+          </div>
+          ${repairRatingMarkup(state, currentIndex)}
+        ` : ''}
+      </section>
+      <section class="graph-detail-surface graph-study-next graph-repair-next">
+        <p class="graph-detail-copy graph-repair-truth-line">Practice only. Graph progress comes from re-drill.</p>
+        ${revealed
+          ? (ratingSelected
+            ? `<button class="${actionButtonClass} trigger-repair-next">${currentIndex + 1 >= reps.length ? 'Finish Reps' : 'Next Rep'}</button>`
+            : '<p class="graph-detail-copy graph-repair-rating-hint">Choose the closest comparison before moving on.</p>')
+          : `<button class="${actionButtonClass} trigger-repair-reveal" disabled>Show reference bridge</button>`}
+      </section>
+    </div>
+  `;
+}
+
 function detailMarkupForNode(node, mode = 'inspect', options = {}) {
   const data = node.data();
   const isDrillActive = mode === 'drill-active' || mode === 'cold-attempt-active' || mode === 're-drill-active';
@@ -504,6 +662,12 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
   const actionButtonClass = 'btn-start-drill graph-detail-action';
   const inspectButtonHtml = inspectAction
     ? `<button class="${actionButtonClass} trigger-drill" data-action-kind="${escHtml(inspectAction.kind)}">${escHtml(inspectAction.label)}</button>`
+    : '';
+  const secondaryActionClass = inspectAction?.secondaryAction?.kind === 'start-repair-reps'
+    ? ' graph-repair-secondary-action'
+    : '';
+  const secondaryInspectButtonHtml = inspectAction?.secondaryAction
+    ? `<button class="${actionButtonClass} trigger-drill graph-detail-secondary-action${secondaryActionClass}" data-action-kind="${escHtml(inspectAction.secondaryAction.kind)}">${escHtml(inspectAction.secondaryAction.label)}</button>`
     : '';
   const blockedInspectHtml = inspectAction?.blocked
     ? `
@@ -521,6 +685,10 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       <p class="graph-detail-copy">You have completed a structured study session. Spacing your learning is key to retention.</p>
       <button class="${actionButtonClass} trigger-continue">Return to Map</button>
     `;
+  }
+
+  if (mode === 'repair-reps') {
+    return repairRepsMarkupForNode(data, options.repairRepsState || {});
   }
 
   if (mode === 'study') {
@@ -599,6 +767,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
                ${escHtml(data.detail || 'Mechanism not specified.')}
             </p>
             <button class="${actionButtonClass} trigger-reopen">Reopen Study View</button>
+            <button class="${actionButtonClass} trigger-repair graph-detail-secondary-action graph-repair-secondary-action">Start Repair Reps</button>
         </div>
       ` : ''}
       <button class="${actionButtonClass} trigger-continue">Continue</button>
@@ -615,6 +784,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.descriptionPills}
       </div>
       ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start With Core Thesis</button>`}
+      ${secondaryInspectButtonHtml}
     `;
   }
 
@@ -629,6 +799,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.descriptionPills}
       </div>
       ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start Drill</button>`) : ''}
+      ${data.available ? secondaryInspectButtonHtml : ''}
     `;
   }
 
@@ -660,6 +831,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     </div>
     ${blockedInspectHtml}
     ${isAvailable ? inspectButtonHtml : ''}
+    ${isAvailable ? secondaryInspectButtonHtml : ''}
   `;
 }
 
@@ -1418,13 +1590,15 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       return;
     }
 
-    if (interactionMode === 'post-drill' || interactionMode === 'study' || interactionMode === 'session-complete') {
+    if (interactionMode === 'post-drill' || interactionMode === 'study' || interactionMode === 'session-complete' || interactionMode === 'repair-reps') {
       const activeId = selectedElement.type === 'node' && selectedElement.id ? selectedElement.id : transformed.coreId;
       const activeNode = cy.getElementById(activeId);
       if (activeNode.length) {
         const options = interactionMode === 'study'
           ? { nextNodeSuggestion: findNextNodeSuggestion(activeNode.id()) }
-          : {};
+          : interactionMode === 'repair-reps'
+            ? { repairRepsState: window.SocratinkApp?.getRepairRepsState?.(activeNode.id()) || null }
+            : {};
         detailEl.innerHTML = detailMarkupForNode(activeNode, interactionMode, options);
         const continueBtn = detailEl.querySelector('.trigger-continue');
         if (continueBtn) {
@@ -1436,6 +1610,30 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         }
         const reopenBtn = detailEl.querySelector('.trigger-reopen');
         if (reopenBtn) reopenBtn.addEventListener('click', () => { window.SocratinkApp?.reopenStudy?.(activeNode.data()); });
+        const repairBtn = detailEl.querySelector('.trigger-repair');
+        if (repairBtn) repairBtn.addEventListener('click', () => { window.SocratinkApp?.startRepairReps?.(activeNode.data()); });
+        const repairRevealBtn = detailEl.querySelector('.trigger-repair-reveal');
+        if (repairRevealBtn) repairRevealBtn.addEventListener('click', () => {
+          const answer = detailEl.querySelector('.graph-repair-input')?.value || '';
+          window.SocratinkApp?.revealRepairRep?.(answer);
+        });
+        const repairInput = detailEl.querySelector('.graph-repair-input');
+        if (repairRevealBtn && repairInput) {
+          const syncRevealReadiness = () => {
+            repairRevealBtn.disabled = !repairInput.value.trim();
+          };
+          syncRevealReadiness();
+          repairInput.addEventListener('input', syncRevealReadiness);
+        }
+        const repairNextBtn = detailEl.querySelector('.trigger-repair-next');
+        if (repairNextBtn) repairNextBtn.addEventListener('click', () => { window.SocratinkApp?.nextRepairRep?.(); });
+        detailEl.querySelectorAll('.trigger-repair-rate').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            window.SocratinkApp?.rateRepairRep?.(btn.dataset.rating);
+          });
+        });
+        const repairExitBtn = detailEl.querySelector('.trigger-repair-exit');
+        if (repairExitBtn) repairExitBtn.addEventListener('click', () => { window.SocratinkApp?.exitRepairReps?.(); });
       } else {
         setEmptyDetail(detailEl, transformed.source, 'inspect');
       }
@@ -1448,8 +1646,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         const inspectAction = window.SocratinkApp?.getNodeInspectAction?.(node.data()) || null;
         detailEl.innerHTML = detailMarkupForNode(node, 'inspect', { inspectAction });
         const data = node.data();
-        const drillBtn = detailEl.querySelector('.trigger-drill');
-        if (drillBtn) {
+        detailEl.querySelectorAll('.trigger-drill').forEach((drillBtn) => {
           drillBtn.addEventListener('click', () => {
             const actionKind = drillBtn.dataset.actionKind || 'start-drill';
             if (window.SocratinkApp?.runInspectAction) {
@@ -1458,7 +1655,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
             }
             onNodeSelect?.(data);
           });
-        }
+        });
         return;
       }
     }
@@ -1529,7 +1726,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     (nextMode) => {
       interactionMode = nextMode;
       syncInteractionChrome();
-      if (interactionMode.includes('drill') || interactionMode === 'study' || interactionMode === 'cold-attempt-active') {
+      if (interactionMode.includes('drill') || interactionMode === 'study' || interactionMode === 'cold-attempt-active' || interactionMode === 'repair-reps') {
         applyDrillContext(selectedElement.id);
       } else {
         clearDrillContext();
@@ -1574,7 +1771,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       if (nodeId) {
         updateSelectedElement({ type: 'node', id: nodeId });
       }
-      if (interactionMode.includes('drill') || interactionMode === 'study' || interactionMode === 'cold-attempt-active') {
+      if (interactionMode.includes('drill') || interactionMode === 'study' || interactionMode === 'cold-attempt-active' || interactionMode === 'repair-reps') {
         applyDrillContext(selectedElement.id);
       } else {
         clearDrillContext();
