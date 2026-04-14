@@ -1282,11 +1282,15 @@ body[data-map-open="true"] .drawer-toggle {
   .graph-layout.mode-study { grid-template-columns: 1fr; }
   .graph-layout.mode-repair-reps { grid-template-columns: 1fr; }
   .graph-stage-wrap { min-height: 460px; height: 460px; }
-  .graph-layout.mode-repair-reps .graph-stage-wrap { display: none; }
+  .graph-layout.mode-repair-reps .graph-stage-wrap,
+  .graph-layout.is-drilling .graph-stage-wrap { display: none; }
+  
   .graph-detail { min-height: 420px; height: 420px; }
   .graph-detail.is-study { padding: 18px; }
+  
+  .graph-layout.is-drilling .graph-detail,
   .graph-detail.is-repair-reps {
-    min-height: 520px;
+    min-height: calc(100vh - 130px);
     height: auto;
     padding: 18px;
   }

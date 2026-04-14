@@ -1709,6 +1709,7 @@ const App = (() => {
       currentGraphController.destroy();
       currentGraphController = null;
     }
+    document.querySelector('.graph-layout')?.classList.remove('is-drilling');
     if (mapView) mapView.classList.remove('visible');
     setMapShellOpen(false);
     if (heroCard) heroCard.style.display = showHero ? 'flex' : 'none';
@@ -3118,6 +3119,7 @@ const App = (() => {
     currentGraphController?.setActiveDrillNode?.(activeDrillNode);
     currentGraphController?.setInteractionMode?.(initialMode, activeDrillNode);
     setMapMode('graph');
+    document.querySelector('.graph-layout')?.classList.add('is-drilling');
 
     requestDrillTurn().catch((err) => {
       console.error(err);
@@ -3138,10 +3140,10 @@ const App = (() => {
     drillState.logSessionId = null;
     drillState.pending = false;
     drillState.probeCount = 0;
-    drillState.attemptTurnCount = 0;
     drillState.helpTurnCount = 0;
     drillState.sessionCompletePending = false;
     if (drillUi) drillUi.style.display = 'none';
+    document.querySelector('.graph-layout')?.classList.remove('is-drilling');
     activeDrillNode = null;
     if (chatHistory) chatHistory.innerHTML = '';
     if (chatInput) {
