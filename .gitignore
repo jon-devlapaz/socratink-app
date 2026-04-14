@@ -20,7 +20,7 @@ output/
 # Local agent and knowledge-base context
 .agents/
 .codex/
-.socratinker/
+.socratink-brain/
 .vscode/
 AGENTS.md
 CLAUDE.md
@@ -29,8 +29,8 @@ learnops/
 scripts/run-checks.sh
 scripts/smoke_test_codex_context.py
 scripts/eval-pull
-scripts/export_socratinker_vercel_logs.py
-tests/test_socratinker_drill_telemetry.py
+scripts/export_socratink_brain_vercel_logs.py
+tests/test_socratink_brain_drill_telemetry.py
 
 # Local deployment and environment state
 .vercel

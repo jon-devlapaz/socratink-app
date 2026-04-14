@@ -182,24 +182,11 @@ body[data-theme="dark"] .auth-link {
 }
 
 @media (max-width: 899px) {
+  /* #1 — Theme toggle belongs in Settings, not floating over the bottom nav */
   .theme-toggle {
-    right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    grid-template-columns: 12px 46px 12px;
-    gap: 7px;
-    padding: 6px 9px;
+    display: none !important;
   }
-  .theme-toggle-track {
-    width: 46px;
-    height: 26px;
-  }
-  .theme-toggle-thumb {
-    width: 20px;
-    height: 20px;
-  }
-  .theme-toggle[data-theme="dark"] .theme-toggle-thumb {
-    transform: translateX(20px);
-  }
+
   .hero-state-chip {
     min-height: 26px;
     padding: 4px 10px;
@@ -207,6 +194,18 @@ body[data-theme="dark"] .auth-link {
   .hero-primary-action {
     width: 100%;
     justify-content: center;
+  }
+  
+  /* #2 — Auth controls off the learning surface on mobile */
+  .auth-controls {
+    display: none !important;
+  }
+
+  /* #9 — Library card touch feedback */
+  .library-card-starter:active,
+  .library-card-vault:active {
+    transform: scale(0.97);
+    transition-duration: 0.08s;
   }
 }
 

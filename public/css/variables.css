@@ -101,6 +101,16 @@
   /* Typography */
   --font-display:     'Manrope', -apple-system, sans-serif;
   --font-body:        'Inter', -apple-system, sans-serif;
+  
+  --text-xs:          clamp(0.7rem, 0.65rem + 0.25vw, 0.8rem);
+  --text-sm:          clamp(0.8rem, 0.75rem + 0.35vw, 0.95rem);
+  --text-base:        clamp(0.95rem, 0.85rem + 0.5vw, 1.1rem);
+  --text-lg:          clamp(1.1rem, 1rem + 0.6vw, 1.25rem);
+  --text-xl:          clamp(1.25rem, 1.1rem + 0.75vw, 1.4rem);
+  --text-2xl:         clamp(1.5rem, 1.3rem + 1vw, 1.75rem);
+  --text-3xl:         clamp(1.8rem, 1.6rem + 1.25vw, 2.25rem);
+  --text-4xl:         clamp(2.25rem, 1.9rem + 1.75vw, 2.8rem);
+
   /* Shadows */
   --shadow-ambient:   0 40px 100px rgba(44,51,62,0.05), 0 2px 8px rgba(44,51,62,0.04);
   --shadow-card:      0 8px 32px rgba(var(--violet-600-rgb), 0.10), 0 1px 4px rgba(0,0,0,0.04);

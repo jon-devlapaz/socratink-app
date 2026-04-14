@@ -46,12 +46,12 @@
     },
     {
       "id": "c2",
-      "label": "Phase 2: The Socratinker Audit",
+      "label": "Phase 2: Socratink Brain Audit",
       "subnodes": [
         {
           "id": "c2_s1",
           "label": "Truth-Bar Validation",
-          "mechanism": "The 'Socratinker' meta-layer audits drill transcripts to ensure the AI follows the 'Sparse Contract.' It detects 'Answer Leakage'—where the AI accidentally gives the solution—and marks those runs as 'Truth-Bar Violations' to prevent false mastery signaling in the graph.",
+          "mechanism": "The 'Socratink Brain' meta-layer audits drill transcripts to ensure the AI follows the 'Sparse Contract.' It detects 'Answer Leakage'—where the AI accidentally gives the solution—and marks those runs as 'Truth-Bar Violations' to prevent false mastery signaling in the graph.",
           "drill_status": null,
           "gap_type": null,
           "gap_description": null,
@@ -60,7 +60,7 @@
         {
           "id": "c2_s2",
           "label": "Build-Measure-Learn Loop",
-          "mechanism": "Every drill run is treated as a Lean Startup experiment. We 'Build' the drill, 'Measure' the telemetry (logs), and 'Learn' by updating the Socratinker Wiki. This prevents 'feature bloat' and keeps the engineering team focused on the 'Value Hypothesis' of truthful learning.",
+          "mechanism": "Every drill run is treated as a Lean Startup experiment. We 'Build' the drill, 'Measure' the telemetry (logs), and 'Learn' by updating the Socratink Brain Wiki. This prevents 'feature bloat' and keeps the engineering team focused on the 'Value Hypothesis' of truthful learning.",
           "drill_status": null,
           "gap_type": null,
           "gap_description": null,
@@ -89,7 +89,7 @@
       {
         "from": "c1",
         "to": "c2",
-        "rationale": "One must understand why failure is necessary (Cold Attempt) before they can appreciate the need for an audit (Socratinker) to verify that failure was overcome truthfully."
+        "rationale": "One must understand why failure is necessary (Cold Attempt) before they can appreciate the need for an audit (Socratink Brain) to verify that failure was overcome truthfully."
       },
       {
         "from": "c2",
