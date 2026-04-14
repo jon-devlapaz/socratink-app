@@ -226,7 +226,7 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 52px 20px 80px; /* safe padding for 320px phones, extra bottom padding for nav */
+    padding: 86px 20px 80px; /* safe padding for mobile, increased top padding for wrapping auth buttons */
     margin: 0;
     border-radius: 24px;
     box-shadow: var(--shadow-card);
