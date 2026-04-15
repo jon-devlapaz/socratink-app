@@ -17,15 +17,55 @@ logs/
 tmp/
 output/
 
-# Local agent and knowledge-base context
-.agents/
+# Local agent runtime context
 .codex/
-.socratink-brain/
+.claude/
 .vscode/
-AGENTS.md
 CLAUDE.md
-docs/
 learnops/
+
+# Track durable repo doctrine and Socratink Brain operating docs.
+!AGENTS.md
+!docs/
+!docs/**
+docs/**/.DS_Store
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/socratink-brain/
+!.agents/skills/socratink-brain/**
+
+# Track compiled Socratink Brain memory and only promoted raw evidence.
+.socratink-brain/*
+!.socratink-brain/CLAUDE.md
+!.socratink-brain/ACTIVE.md
+!.socratink-brain/wiki/
+!.socratink-brain/wiki/**
+!.socratink-brain/raw/
+.socratink-brain/raw/*
+!.socratink-brain/raw/drill-chat-logs/
+.socratink-brain/raw/drill-chat-logs/*
+!.socratink-brain/raw/drill-chat-logs/2026-04-12-drill-chat-turns-action-potential-fixture.jsonl
+!.socratink-brain/raw/drill-chat-logs/2026-04-12-drill-runs-action-potential-fixture.jsonl
+!.socratink-brain/raw/drill-chat-logs/2026-04-12T213919Z-vercel-drill-chat-events.jsonl
+!.socratink-brain/raw/drill-chat-logs/2026-04-12T220040Z-vercel-drill-chat-events.jsonl
+!.socratink-brain/raw/drill-chat-logs/2026-04-12T220130Z-vercel-drill-chat-events.jsonl
+!.socratink-brain/raw/drill-chat-logs/2026-04-12T220245Z-vercel-drill-chat-events.jsonl
+!.socratink-brain/raw/product-chat-logs/
+.socratink-brain/raw/product-chat-logs/*
+!.socratink-brain/raw/product-chat-logs/README.md
+!.socratink-brain/raw/product-chat-logs/2026-04-08-chatgpt-repo-audit-provenance-note.md
+!.socratink-brain/raw/product-chat-logs/2026-04-14-cluster-hosted-rebuild-run-feature-idea.md
+!.socratink-brain/raw/product-chat-logs/2026-04-14-rob-ethical-gamification-vision.md
+!.socratink-brain/raw/product-docs/
+.socratink-brain/raw/product-docs/*
+!.socratink-brain/raw/product-docs/socratink-llm-kb-mempalace-prd.md
+!.socratink-brain/raw/research-notes/
+.socratink-brain/raw/research-notes/*
+!.socratink-brain/raw/research-notes/happy-path-workflow-human-memory-recall-product.md
+
+# Local-only checks and exports unless promoted into tracked scripts/tests.
 scripts/run-checks.sh
 scripts/smoke_test_codex_context.py
 scripts/eval-pull
