@@ -284,25 +284,41 @@ input {
   color: var(--text);
 }
 
-.mode-copy {
-  margin-top: 28px;
+.coffee-button {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
-  color: var(--text-soft);
-  font-size: 0.92rem;
-  text-align: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  background: rgba(99, 70, 157, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.16);
+  color: #4f378b;
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
 }
 
-.mode-copy p {
-  margin: 0;
-  max-width: 18ch;
-}
-
-.mode-copy a {
+.coffee-button:hover {
+  transform: translateY(-1px);
+  background: rgba(99, 70, 157, 0.11);
+  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.3), 0 10px 22px rgba(99, 70, 157, 0.08);
   color: var(--primary);
-  font-weight: 700;
+}
+
+.coffee-button:focus-visible {
+  outline: 2px solid rgba(99, 70, 157, 0.58);
+  outline-offset: 3px;
+  background: rgba(99, 70, 157, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.32), 0 0 0 5px rgba(99, 70, 157, 0.1);
+}
+
+.coffee-cup {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 
 .shimmer-btn {

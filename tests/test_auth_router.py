@@ -109,7 +109,9 @@ class AuthRouterTests(unittest.TestCase):
         self.assertIn("Socratink - The Socratic Canvas", response.text)
         self.assertIn("Continue with Google", response.text)
         self.assertIn("Continue as Guest", response.text)
-        self.assertIn("Choose Google sign-in or continue as guest to enter Socratink.", response.text)
+        self.assertIn("Buy me a coffee", response.text)
+        self.assertIn("https://buymeacoffee.com/socratink", response.text)
+        self.assertIn("coffee-button", response.text)
         self.assertNotIn("Email Address", response.text)
 
     def test_login_page_renders_without_file_assets(self):
