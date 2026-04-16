@@ -711,6 +711,10 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   color: var(--text-on-primary);
 }
 
+body[data-map-open="true"] .main-header-left {
+  position: relative;
+  z-index: 50;
+}
 body[data-map-open="true"] .drawer-toggle {
   opacity: 1;
   pointer-events: auto;
