@@ -56,6 +56,11 @@
     overflow-y: auto;
   }
 
+  /* Center hero card when dashboard is the only visible view */
+  #card.dashboard-only {
+    justify-content: center;
+  }
+
   /* Hide bottom nav on desktop */
   .bottom-nav {
     display: none !important;
@@ -88,8 +93,7 @@ body[data-map-open="true"] .main-header {
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--text-sub);
 }
 
@@ -102,7 +106,7 @@ body[data-map-open="true"] .main-header {
   gap: 32px;
   background: var(--surface-card);
   border-radius: var(--radius-hero);
-  padding: 52px 56px;
+  padding: 48px 52px;
   margin: 24px 40px 32px;
   box-shadow: var(--shadow-ambient);
   transition: background-color var(--theme-transition-ms) var(--theme-transition-ease);
@@ -143,6 +147,10 @@ body[data-map-open="true"] .main-header {
 /* ─── Night mode — hero card picks up CSS variable overrides ── */
 body.night .hero-card,
 body[data-theme="dark"] .hero-card { background-color: var(--card-bg); }
+body.night .settings-page-card,
+body[data-theme="dark"] .settings-page-card {
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+}
 body.night #card,
 body[data-theme="dark"] #card { background-color: var(--bg); }
 
@@ -241,7 +249,7 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
     gap: 8px;
     padding: 56px 20px 80px; /* auth controls hidden on mobile so less top padding needed */
     margin: 0;
-    border-radius: 24px;
+    border-radius: var(--radius-hero);
     box-shadow: var(--shadow-card);
     background: var(--surface-card);
     position: relative;
@@ -501,9 +509,9 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 
 /* Section header: label + status dot */
 .settings-section-header { display:flex; align-items:center; gap:7px; margin-bottom:11px; }
-.settings-box h4 { margin:0; font-size:10px; font-weight:700; letter-spacing:0.7px; text-transform:uppercase; color:var(--text-sub); transition:color var(--theme-transition-ms) var(--theme-transition-ease); }
+.settings-box h4 { margin:0; font-size:10px; font-weight:700; letter-spacing:0.02em; color:var(--text-sub); transition:color var(--theme-transition-ms) var(--theme-transition-ease); }
 .settings-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; background:var(--locked); transition:background-color 0.3s ease, box-shadow 0.3s ease; }
-.settings-dot.connected { background:var(--success); box-shadow:0 0 5px var(--success); }
+.settings-dot.connected { background:var(--primary); box-shadow:0 0 5px var(--accent-glow); }
 .settings-dot.error     { background:var(--danger);  box-shadow:0 0 4px var(--danger); }
 
 /* Input + eye toggle */
@@ -537,7 +545,8 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 .settings-actions { display:flex; gap:8px; margin-top:12px; }
 .settings-test  {
   background:transparent; color:var(--primary);
-  border:1.5px solid var(--primary);
+  border:1.5px solid var(--accent-border-strong);
+  border-radius:var(--radius-btn);
 }
 .settings-test:hover:not(:disabled) { background:var(--accent-soft); opacity:1; }
 .settings-test:disabled { background:transparent; color:var(--locked); border-color:var(--locked); opacity:1; }
@@ -610,7 +619,7 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   display: grid;
   gap: 14px;
   padding: 22px;
-  border-radius: 22px;
+  border-radius: var(--radius-card);
   background: linear-gradient(180deg, rgba(var(--white-rgb), 0.9), rgba(var(--cream-50-rgb), 0.84));
   border: 1px solid var(--border);
   box-shadow: var(--shadow-card);
@@ -647,8 +656,8 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 }
 
 .settings-badge.success {
-  background: rgba(67, 178, 103, 0.14);
-  color: var(--success);
+  background: var(--accent-soft);
+  color: var(--primary);
 }
 
 .settings-badge.danger {
@@ -672,7 +681,7 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   overflow-y: auto;
   padding: 40px 56px;
   text-align: left;
-  border-radius: var(--radius-hero);
+  border-radius: var(--radius-card);
 }
 .map-view.visible {
   display: flex;
@@ -724,7 +733,7 @@ body[data-map-open="true"] .drawer-toggle {
 .map-badge.diff { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
 .map-low-density { font-size: 12px; color: var(--text-sub); font-style: italic; opacity: 0.8; margin-top: 8px; }
 
-.map-section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.map-section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.02em; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
 
 .map-backbone-item { background: var(--surface-card); border-left: 3px solid var(--primary); padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 8px; box-shadow: 0 2px 8px rgba(var(--ink-900-rgb), 0.02); }
 
@@ -818,7 +827,7 @@ body[data-map-open="true"] .drawer-toggle {
 .graph-detail {
   background: var(--surface-card);
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   box-shadow: var(--shadow-soft);
   min-height: 0;
 }
@@ -964,8 +973,7 @@ body[data-map-open="true"] .drawer-toggle {
   color: var(--primary);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 .graph-detail-disclosure summary::-webkit-details-marker {
   display: none;

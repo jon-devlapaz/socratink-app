@@ -54,8 +54,7 @@ body[data-drawer-open="true"] #card {
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--text-sub);
   min-height: 14px;
   transition: color var(--theme-transition-ms) var(--theme-transition-ease);
@@ -97,6 +96,34 @@ button:active:not(:disabled) { transform: scale(0.97); opacity: 0.9; box-shadow:
 button:disabled { background-color:var(--locked); cursor:not-allowed; transform:none; opacity:1; }
 .btn-fail { background-color:var(--danger); }
 .btn-pass { background-color:var(--success); }
+
+/* Tier 2 — Secondary (outlined) */
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 1.5px solid var(--accent-border-strong);
+  box-shadow: none;
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--primary);
+  transform: translateY(-1px);
+  box-shadow: none;
+}
+
+/* Tier 3 — Ghost (text only) */
+.btn-ghost {
+  background: none;
+  color: var(--text-sub);
+  border: none;
+  box-shadow: none;
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--primary);
+  background: var(--accent-soft);
+  transform: none;
+  box-shadow: none;
+}
 
 /* Touch target minimum — mobile only */
 @media (max-width: 899px) {

@@ -1726,10 +1726,12 @@ const App = (() => {
     const libraryView = document.getElementById('library-view');
     const analyticsView = document.getElementById('analytics-view');
     const settingsView = document.getElementById('settings-view');
+    const card = document.getElementById('card');
     if (heroCard) heroCard.style.display = 'none';
     if (libraryView) libraryView.classList.remove('visible');
     if (analyticsView) analyticsView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
+    if (card) card.classList.remove('dashboard-only');
   }
 
   function setMapMode(mode = 'study') {
@@ -1778,11 +1780,13 @@ const App = (() => {
   function showDashboard() {
     setNavActive('nav-dashboard');
     const heroCard = document.querySelector('.hero-card');
+    const card = document.getElementById('card');
 
     clearSettingsPanel();
     teardownMapView();
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
+    if (card) card.classList.add('dashboard-only');
     if (window.innerWidth < 900) closeDrawer();
     scheduleTutorialRefresh();
   }
@@ -3622,7 +3626,7 @@ const App = (() => {
           statusBox.textContent = data.server_key_configured
             ? 'Backend reachable. Server-managed Gemini access is available.'
             : 'Backend reachable. Add a local Gemini key below or configure one on the server.';
-          statusBox.style.color = 'var(--success)';
+          statusBox.style.color = 'var(--primary)';
         }
       } catch (err) {
         console.warn('Backend health check failed.', err);
@@ -3652,7 +3656,7 @@ const App = (() => {
       }
       localStorage.setItem('gemini_key', nextValue);
       keyStatus.textContent = 'Key saved to this browser.';
-      keyStatus.style.color = 'var(--success)';
+      keyStatus.style.color = 'var(--primary)';
       refreshAiAccessUi({
         backendReachable: backendBadge?.textContent === 'Connected',
         serverKeyConfigured: aiBadge?.textContent === 'Server key active',
