@@ -234,19 +234,38 @@ a { color: inherit; text-decoration: none; }
   box-shadow: inset 0 0 0 1px rgba(123, 117, 130, 0.3), 0 10px 24px rgba(28, 28, 25, 0.04);
   color: var(--text);
 }
-.mode-copy {
-  margin-top: 28px;
+.coffee-button {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
-  color: var(--text-soft);
-  font-size: 0.92rem;
-  text-align: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  background: rgba(99, 70, 157, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.16);
+  color: #4f378b;
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
 }
-.mode-copy p {
-  margin: 0;
-  max-width: 18ch;
+.coffee-button:hover {
+  transform: translateY(-1px);
+  background: rgba(99, 70, 157, 0.11);
+  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.3), 0 10px 22px rgba(99, 70, 157, 0.08);
+  color: var(--primary);
+}
+.coffee-button:focus-visible {
+  outline: 2px solid rgba(99, 70, 157, 0.58);
+  outline-offset: 3px;
+  background: rgba(99, 70, 157, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.32), 0 0 0 5px rgba(99, 70, 157, 0.1);
+}
+.coffee-cup {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 .shimmer-btn {
   position: relative;
@@ -294,16 +313,6 @@ function setBanner(message, kind = "default") {
   banner.hidden = false;
   banner.textContent = message;
   banner.className = `auth-status-banner${kind === "error" ? " is-error" : kind === "success" ? " is-success" : ""}`;
-}
-function setMode(mode) {
-  const body = document.body;
-  const modeCopy = document.getElementById("mode-copy-text");
-  if (!body || !modeCopy) return;
-  const resolved = mode === "signup" ? "signup" : "signin";
-  body.dataset.mode = resolved;
-  modeCopy.textContent = resolved === "signup"
-    ? "Choose Google sign-up or continue as guest to enter Socratink."
-    : "Choose Google sign-in or continue as guest to enter Socratink.";
 }
 function applyAuthErrorFromQuery() {
   const authError = qs("auth_error");
@@ -358,7 +367,6 @@ async function fetchSession() {
 async function bootstrap() {
   initStardust();
   initParallax();
-  setMode(qs("mode"));
   applyAuthErrorFromQuery();
   const googleLink = document.getElementById("google-login-link");
   const googleLabel = document.getElementById("google-label");
@@ -466,9 +474,15 @@ def _render_login_html() -> str:
             <a id="guest-continue-link" class="guest-button" href="/">
               Continue as Guest
             </a>
-          </div>
-          <div class="mode-copy">
-            <p id="mode-copy-text">Choose Google sign-in or continue as guest to enter Socratink.</p>
+            <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer">
+              <svg class="coffee-cup" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6.75 8.5h8.5v5.25a4.25 4.25 0 0 1-8.5 0V8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                <path d="M15.25 10h1.25a2 2 0 0 1 0 4h-1.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+              </svg>
+              Buy me a coffee
+            </a>
           </div>
         </div>
       </section>

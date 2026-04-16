@@ -21,20 +21,6 @@ function setBanner(message, kind = "default") {
   banner.className = `auth-status-banner${kind === "error" ? " is-error" : kind === "success" ? " is-success" : ""}`;
 }
 
-function setMode(mode) {
-  const body = document.body;
-  const modeCopy = document.getElementById("mode-copy-text");
-  if (!body || !modeCopy) return;
-
-  const resolved = mode === "signup" ? "signup" : "signin";
-  body.dataset.mode = resolved;
-  if (resolved === "signup") {
-    modeCopy.textContent = "Choose Google sign-up or continue as guest to enter Socratink.";
-  } else {
-    modeCopy.textContent = "Choose Google sign-in or continue as guest to enter Socratink.";
-  }
-}
-
 function applyAuthErrorFromQuery() {
   const authError = qs("auth_error");
   if (!authError) return;
@@ -116,7 +102,6 @@ async function postJson(url, payload) {
 async function bootstrap() {
   initStardust();
   initParallax();
-  setMode(qs("mode"));
   applyAuthErrorFromQuery();
 
   const googleLink = document.getElementById("google-login-link");
