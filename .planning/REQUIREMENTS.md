@@ -26,6 +26,7 @@ Requirements for launch readiness — smooth core loop, persistent data, guided 
 - [ ] **DATA-01**: User's concepts (knowledge maps) are stored in Supabase Postgres as JSONB
 - [ ] **DATA-02**: User's drill state (node epistemic states, re-drill counts, timestamps) is persisted in Supabase
 - [ ] **DATA-03**: User can close browser, return later, and find all concepts and drill progress intact
+- [ ] **DATA-04**: Concepts and drill state auto-save on every mutation (matching current localStorage behavior)
 
 ### Onboarding
 
@@ -64,14 +65,13 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### Data Persistence
 
-- **DATA-04**: Concepts auto-save on every user action (not just explicit save)
 - **DATA-05**: Migration utility to move existing localStorage data to Supabase
 - **DATA-06**: User can access their concepts from any device (cross-device sync)
 - **DATA-07**: User can export their concept data
 
 ### Analytics
 
-- **ANLY-03**: Activation funnel tracked (concept_created → drill_started → drill_completed → return_visit)
+- **ANLY-03**: Activation funnel tracked (concept_created -> drill_started -> drill_completed -> return_visit)
 - **ANLY-04**: Time-to-first-loop metric measured per user
 - **ANLY-05**: Drop-off detection (where in the flow users stop)
 - **ANLY-06**: Analytics dashboard for reviewing user behavior patterns
@@ -105,36 +105,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | — | Pending |
-| INFRA-02 | — | Pending |
-| INFRA-03 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| ONBD-01 | — | Pending |
-| ONBD-02 | — | Pending |
-| ONBD-03 | — | Pending |
-| ONBD-04 | — | Pending |
-| ONBD-05 | — | Pending |
-| ONBD-06 | — | Pending |
-| ANLY-01 | — | Pending |
-| ANLY-02 | — | Pending |
-| MOBL-01 | — | Pending |
-| MOBL-02 | — | Pending |
-| UX-01 | — | Pending |
-| UX-02 | — | Pending |
-| UX-03 | — | Pending |
+| INFRA-01 | Phase 1 | Pending |
+| INFRA-02 | Phase 1 | Pending |
+| INFRA-03 | Phase 1 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| AUTH-05 | Phase 2 | Pending |
+| DATA-01 | Phase 3 | Pending |
+| DATA-02 | Phase 4 | Pending |
+| DATA-03 | Phase 4 | Pending |
+| DATA-04 | Phase 3 | Pending |
+| ONBD-01 | Phase 6 | Pending |
+| ONBD-02 | Phase 6 | Pending |
+| ONBD-03 | Phase 7 | Pending |
+| ONBD-04 | Phase 7 | Pending |
+| ONBD-05 | Phase 7 | Pending |
+| ONBD-06 | Phase 6 | Pending |
+| ANLY-01 | Phase 5 | Pending |
+| ANLY-02 | Phase 5 | Pending |
+| MOBL-01 | Phase 8 | Pending |
+| MOBL-02 | Phase 8 | Pending |
+| UX-01 | Phase 9 | Pending |
+| UX-02 | Phase 9 | Pending |
+| UX-03 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24
+- v1 requirements: 25 total
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-15*
-*Last updated: 2026-04-15 after initial definition*
+*Last updated: 2026-04-15 after roadmap creation*
