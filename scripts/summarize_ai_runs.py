@@ -81,20 +81,32 @@ def extract_summary(rows: list[dict]) -> dict:
     success_rows = [row for row in rows if row.get("status") == "success"]
     error_rows = [row for row in rows if row.get("status") == "error"]
 
-    architecture = Counter(row.get("architecture_type") or "unknown" for row in success_rows)
+    architecture = Counter(
+        row.get("architecture_type") or "unknown" for row in success_rows
+    )
     difficulty = Counter(row.get("difficulty") or "unknown" for row in success_rows)
     error_types = Counter(row.get("error_type") or "unknown" for row in error_rows)
-    source_titles = Counter(row.get("source_title") or "unknown" for row in success_rows)
+    source_titles = Counter(
+        row.get("source_title") or "unknown" for row in success_rows
+    )
 
     return {
         "total_runs": len(rows),
         "success_count": len(success_rows),
         "error_count": len(error_rows),
         "success_rate": pct(len(success_rows), len(rows)),
-        "avg_duration_ms": safe_mean([row.get("duration_ms", 0) for row in success_rows]),
-        "avg_cluster_count": safe_mean([row.get("cluster_count", 0) for row in success_rows]),
-        "avg_backbone_count": safe_mean([row.get("backbone_count", 0) for row in success_rows]),
-        "avg_subnode_count": safe_mean([row.get("subnode_count", 0) for row in success_rows]),
+        "avg_duration_ms": safe_mean(
+            [row.get("duration_ms", 0) for row in success_rows]
+        ),
+        "avg_cluster_count": safe_mean(
+            [row.get("cluster_count", 0) for row in success_rows]
+        ),
+        "avg_backbone_count": safe_mean(
+            [row.get("backbone_count", 0) for row in success_rows]
+        ),
+        "avg_subnode_count": safe_mean(
+            [row.get("subnode_count", 0) for row in success_rows]
+        ),
         "low_density_rate": pct(
             sum(1 for row in success_rows if row.get("low_density") is True),
             len(success_rows),
@@ -117,32 +129,58 @@ def drill_summary(rows: list[dict]) -> dict:
     help_turns = [row for row in turn_rows if row.get("answer_mode") == "help_request"]
     classified_turns = [row for row in attempt_turns if row.get("classification")]
 
-    classification = Counter(row.get("classification") or "none" for row in classified_turns)
+    classification = Counter(
+        row.get("classification") or "none" for row in classified_turns
+    )
     routing = Counter(row.get("routing") or "none" for row in turn_rows)
     node_types = Counter(row.get("node_type") or "unknown" for row in turn_rows)
     answer_modes = Counter(row.get("answer_mode") or "none" for row in turn_rows)
-    help_request_reasons = Counter(row.get("help_request_reason") or "none" for row in help_turns)
-    response_tiers = Counter(str(row.get("response_tier")) for row in attempt_turns if row.get("response_tier") is not None)
-    response_bands = Counter(row.get("response_band") or "none" for row in attempt_turns if row.get("response_band"))
-    terminations = Counter(row.get("termination_reason") or "none" for row in success_rows if row.get("session_terminated"))
+    help_request_reasons = Counter(
+        row.get("help_request_reason") or "none" for row in help_turns
+    )
+    response_tiers = Counter(
+        str(row.get("response_tier"))
+        for row in attempt_turns
+        if row.get("response_tier") is not None
+    )
+    response_bands = Counter(
+        row.get("response_band") or "none"
+        for row in attempt_turns
+        if row.get("response_band")
+    )
+    terminations = Counter(
+        row.get("termination_reason") or "none"
+        for row in success_rows
+        if row.get("session_terminated")
+    )
     error_types = Counter(row.get("error_type") or "unknown" for row in error_rows)
     run_modes = Counter(row.get("run_mode") or "default" for row in turn_rows)
 
-    solid_turns = sum(1 for row in classified_turns if row.get("classification") == "solid")
+    solid_turns = sum(
+        1 for row in classified_turns if row.get("classification") == "solid"
+    )
     non_solid_next = sum(
         1
         for row in classified_turns
         if row.get("routing") == "NEXT" and row.get("classification") != "solid"
     )
-    force_advanced = sum(1 for row in classified_turns if row.get("force_advanced") is True)
-    attempt_force_advanced = sum(1 for row in attempt_turns if row.get("force_advanced") is True)
-    help_force_advanced = sum(1 for row in help_turns if row.get("force_advanced") is True)
+    force_advanced = sum(
+        1 for row in classified_turns if row.get("force_advanced") is True
+    )
+    attempt_force_advanced = sum(
+        1 for row in attempt_turns if row.get("force_advanced") is True
+    )
+    help_force_advanced = sum(
+        1 for row in help_turns if row.get("force_advanced") is True
+    )
     one_turn_solids = sum(
         1
         for row in classified_turns
         if row.get("classification") == "solid" and row.get("probe_count_in", 0) == 0
     )
-    reward_emitted = sum(1 for row in attempt_turns if row.get("ux_reward_emitted") is True)
+    reward_emitted = sum(
+        1 for row in attempt_turns if row.get("ux_reward_emitted") is True
+    )
 
     sessions: dict[tuple[str, str, str], list[dict]] = defaultdict(list)
     for row in turn_rows:
@@ -155,12 +193,25 @@ def drill_summary(rows: list[dict]) -> dict:
     help_only_sessions = sum(
         1
         for session_rows in sessions.values()
-        if session_rows and all(row.get("answer_mode") == "help_request" for row in session_rows)
+        if session_rows
+        and all(row.get("answer_mode") == "help_request" for row in session_rows)
     )
 
-    by_node: dict[str, dict] = defaultdict(lambda: {"label": "", "turns": 0, "solid": 0, "misconception": 0, "force_advanced": 0})
-    by_cluster: dict[str, dict] = defaultdict(lambda: {"turns": 0, "solid": 0, "misconception": 0, "force_advanced": 0})
-    by_node_type: dict[str, dict] = defaultdict(lambda: {"turns": 0, "solid": 0, "non_solid": 0, "force_advanced": 0})
+    by_node: dict[str, dict] = defaultdict(
+        lambda: {
+            "label": "",
+            "turns": 0,
+            "solid": 0,
+            "misconception": 0,
+            "force_advanced": 0,
+        }
+    )
+    by_cluster: dict[str, dict] = defaultdict(
+        lambda: {"turns": 0, "solid": 0, "misconception": 0, "force_advanced": 0}
+    )
+    by_node_type: dict[str, dict] = defaultdict(
+        lambda: {"turns": 0, "solid": 0, "non_solid": 0, "force_advanced": 0}
+    )
 
     for row in classified_turns:
         node_id = row.get("node_id") or "unknown"
@@ -203,7 +254,13 @@ def drill_summary(rows: list[dict]) -> dict:
                 "force_advance_rate": pct(stats["force_advanced"], turns),
             }
         )
-    hotspot_nodes.sort(key=lambda row: (-row["force_advance_rate"], -row["misconception_rate"], row["solid_rate"]))
+    hotspot_nodes.sort(
+        key=lambda row: (
+            -row["force_advance_rate"],
+            -row["misconception_rate"],
+            row["solid_rate"],
+        )
+    )
 
     hotspot_clusters = []
     for cluster_id, stats in by_cluster.items():
@@ -219,7 +276,13 @@ def drill_summary(rows: list[dict]) -> dict:
                 "force_advance_rate": pct(stats["force_advanced"], turns),
             }
         )
-    hotspot_clusters.sort(key=lambda row: (-row["force_advance_rate"], -row["misconception_rate"], row["solid_rate"]))
+    hotspot_clusters.sort(
+        key=lambda row: (
+            -row["force_advance_rate"],
+            -row["misconception_rate"],
+            row["solid_rate"],
+        )
+    )
 
     node_type_benchmarks = []
     for node_type, stats in sorted(by_node_type.items()):
@@ -245,9 +308,15 @@ def drill_summary(rows: list[dict]) -> dict:
         "attempt_turn_count": len(attempt_turns),
         "help_turn_count": len(help_turns),
         "classified_turn_count": len(classified_turns),
-        "avg_duration_ms": safe_mean([row.get("duration_ms", 0) for row in success_rows]),
-        "avg_attempt_learner_chars": safe_mean([row.get("latest_learner_chars", 0) for row in attempt_turns]),
-        "avg_help_learner_chars": safe_mean([row.get("latest_learner_chars", 0) for row in help_turns]),
+        "avg_duration_ms": safe_mean(
+            [row.get("duration_ms", 0) for row in success_rows]
+        ),
+        "avg_attempt_learner_chars": safe_mean(
+            [row.get("latest_learner_chars", 0) for row in attempt_turns]
+        ),
+        "avg_help_learner_chars": safe_mean(
+            [row.get("latest_learner_chars", 0) for row in help_turns]
+        ),
         "latest_run_at": latest_timestamp(rows),
         "latest_turn_at": latest_timestamp(turn_rows),
         "latest_success_at": latest_timestamp(success_rows),
@@ -278,7 +347,9 @@ def drill_summary(rows: list[dict]) -> dict:
     }
 
 
-def recent_events(extract_rows: list[dict], drill_rows: list[dict], limit: int = 12) -> list[dict]:
+def recent_events(
+    extract_rows: list[dict], drill_rows: list[dict], limit: int = 12
+) -> list[dict]:
     events: list[dict] = []
 
     for row in extract_rows:
@@ -287,8 +358,12 @@ def recent_events(extract_rows: list[dict], drill_rows: list[dict], limit: int =
                 "timestamp": row.get("timestamp"),
                 "stage": "extract",
                 "status": row.get("status"),
-                "title": row.get("source_title") or row.get("fixture_title") or "Extraction",
-                "summary": row.get("reason") or row.get("architecture_type") or "Extraction run",
+                "title": row.get("source_title")
+                or row.get("fixture_title")
+                or "Extraction",
+                "summary": row.get("reason")
+                or row.get("architecture_type")
+                or "Extraction run",
                 "run_mode": row.get("run_mode") or "default",
                 "fixture_id": row.get("fixture_id"),
             }
@@ -335,16 +410,17 @@ def _normalize_concept_ids(concept_ids: list[str] | None) -> set[str]:
     if not concept_ids:
         return set()
     return {
-        str(concept_id).strip()
-        for concept_id in concept_ids
-        if str(concept_id).strip()
+        str(concept_id).strip() for concept_id in concept_ids if str(concept_id).strip()
     }
 
 
-def _filter_turn_rows(rows: list[dict], concept_ids: list[str] | None = None) -> list[dict]:
+def _filter_turn_rows(
+    rows: list[dict], concept_ids: list[str] | None = None
+) -> list[dict]:
     concept_filter = _normalize_concept_ids(concept_ids)
     return [
-        row for row in rows
+        row
+        for row in rows
         if row.get("status") == "success"
         and row.get("session_phase") == "turn"
         and (not concept_filter or str(row.get("concept_id") or "") in concept_filter)
@@ -358,7 +434,9 @@ def _days_between(now: datetime, timestamp: str | None) -> int | None:
     return max(int(delta.total_seconds() // 86400), 0)
 
 
-def _journal_outcome(row: dict, converted_node_ids: set[tuple[str, str]]) -> tuple[str, str]:
+def _journal_outcome(
+    row: dict, converted_node_ids: set[tuple[str, str]]
+) -> tuple[str, str]:
     concept_id = str(row.get("concept_id") or "")
     node_id = str(row.get("node_id") or "")
     key = (concept_id, node_id)
@@ -368,17 +446,28 @@ def _journal_outcome(row: dict, converted_node_ids: set[tuple[str, str]]) -> tup
     if answer_mode == "help_request":
         return ("Used scaffolding", "Try this node again from memory.")
     if classification == "solid" and key in converted_node_ids:
-        return ("Solidified on return", "Keep your momentum and take the next reachable node.")
+        return (
+            "Solidified on return",
+            "Keep your momentum and take the next reachable node.",
+        )
     if classification == "solid":
         return ("Verified understanding", "Advance to the next reachable node.")
     if classification == "misconception":
-        return ("Misconception caught", "Revisit this mechanism soon while the gap is fresh.")
+        return (
+            "Misconception caught",
+            "Revisit this mechanism soon while the gap is fresh.",
+        )
     if classification:
         return ("Still in progress", "Return for one more clean pass.")
-    return ("Activity logged", "Choose one reachable node and reconstruct it from memory.")
+    return (
+        "Activity logged",
+        "Choose one reachable node and reconstruct it from memory.",
+    )
 
 
-def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None) -> dict:
+def learner_summary(
+    drill_rows: list[dict], concept_ids: list[str] | None = None
+) -> dict:
     turn_rows = _filter_turn_rows(drill_rows, concept_ids)
     now = datetime.now(timezone.utc)
     recent_window = now - timedelta(days=14)
@@ -386,7 +475,11 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
 
     attempt_turns = [row for row in turn_rows if row.get("answer_mode") == "attempt"]
     help_turns = [row for row in turn_rows if row.get("answer_mode") == "help_request"]
-    recent_turns = [row for row in turn_rows if parse_timestamp(row.get("timestamp")) >= recent_window]
+    recent_turns = [
+        row
+        for row in turn_rows
+        if parse_timestamp(row.get("timestamp")) >= recent_window
+    ]
 
     session_keys = {
         (
@@ -396,20 +489,24 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
         )
         for row in turn_rows
     }
-    active_days = sorted({
-        parse_timestamp(row.get("timestamp")).date().isoformat()
-        for row in turn_rows
-        if row.get("timestamp")
-    })
+    active_days = sorted(
+        {
+            parse_timestamp(row.get("timestamp")).date().isoformat()
+            for row in turn_rows
+            if row.get("timestamp")
+        }
+    )
     active_days_last_7 = {
         parse_timestamp(row.get("timestamp")).date().isoformat()
         for row in turn_rows
-        if row.get("timestamp") and parse_timestamp(row.get("timestamp")) >= now - timedelta(days=7)
+        if row.get("timestamp")
+        and parse_timestamp(row.get("timestamp")) >= now - timedelta(days=7)
     }
     active_days_last_14 = {
         parse_timestamp(row.get("timestamp")).date().isoformat()
         for row in turn_rows
-        if row.get("timestamp") and parse_timestamp(row.get("timestamp")) >= recent_window
+        if row.get("timestamp")
+        and parse_timestamp(row.get("timestamp")) >= recent_window
     }
 
     node_history: dict[tuple[str, str], dict] = {}
@@ -423,7 +520,9 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
 
     for key, rows in grouped_rows.items():
         concept_id, node_id = key
-        ordered_rows = sorted(rows, key=lambda row: parse_timestamp(row.get("timestamp")))
+        ordered_rows = sorted(
+            rows, key=lambda row: parse_timestamp(row.get("timestamp"))
+        )
         history = {
             "concept_id": concept_id,
             "node_id": node_id,
@@ -458,7 +557,9 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
             history["attempt_count"] += 1
             history["last_attempt_at"] = timestamp or history["last_attempt_at"]
             classification = row.get("classification")
-            history["latest_classification"] = classification or history["latest_classification"]
+            history["latest_classification"] = (
+                classification or history["latest_classification"]
+            )
 
             if classification == "solid":
                 history["solid_count"] += 1
@@ -495,13 +596,17 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
         if stats["latest_classification"] not in (None, "solid")
         and (_days_between(now, stats["last_attempt_at"]) or 0) >= due_threshold_days
     ]
-    due_nodes.sort(key=lambda row: (-(row["days_since_attempt"] or 0), row["node_label"]))
+    due_nodes.sort(
+        key=lambda row: (-(row["days_since_attempt"] or 0), row["node_label"])
+    )
 
     conversion_history.sort(
         key=lambda row: parse_timestamp(row.get("converted_at")),
         reverse=True,
     )
-    journal_rows = sorted(turn_rows, key=lambda row: parse_timestamp(row.get("timestamp")), reverse=True)[:40]
+    journal_rows = sorted(
+        turn_rows, key=lambda row: parse_timestamp(row.get("timestamp")), reverse=True
+    )[:40]
     concept_stats: dict[str, dict] = {}
     concept_sessions: dict[str, set[tuple[str, str, str]]] = defaultdict(set)
 
@@ -528,7 +633,9 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
         )
         stats["turn_count"] += 1
         row_timestamp = row.get("timestamp")
-        if parse_timestamp(row_timestamp) > parse_timestamp(stats["latest_activity_at"]):
+        if parse_timestamp(row_timestamp) > parse_timestamp(
+            stats["latest_activity_at"]
+        ):
             stats["latest_activity_at"] = row_timestamp
         timestamp = parse_timestamp(row.get("timestamp"))
         if timestamp >= recent_window:
@@ -551,7 +658,8 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
                 sum(
                     1
                     for row in recent_turns
-                    if row.get("answer_mode") == "attempt" and row.get("classification") == "solid"
+                    if row.get("answer_mode") == "attempt"
+                    and row.get("classification") == "solid"
                 ),
                 sum(1 for row in recent_turns if row.get("answer_mode") == "attempt"),
             ),
@@ -576,14 +684,18 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
                 "timestamp": row.get("timestamp"),
                 "concept_id": row.get("concept_id"),
                 "node_id": row.get("node_id"),
-                "node_label": row.get("node_label") or row.get("node_id") or "Untitled node",
+                "node_label": row.get("node_label")
+                or row.get("node_id")
+                or "Untitled node",
                 "cluster_id": row.get("cluster_id"),
                 "classification": row.get("classification"),
                 "answer_mode": row.get("answer_mode"),
                 "help_request_reason": row.get("help_request_reason"),
                 "outcome_label": _journal_outcome(row, converted_node_ids)[0],
                 "next_action": _journal_outcome(row, converted_node_ids)[1],
-                "gap_label": row.get("classification") if row.get("classification") not in (None, "solid") else None,
+                "gap_label": row.get("classification")
+                if row.get("classification") not in (None, "solid")
+                else None,
             }
             for row in journal_rows
         ],
@@ -603,8 +715,12 @@ def learner_summary(drill_rows: list[dict], concept_ids: list[str] | None = None
                 **stats,
                 "session_count": len(concept_sessions.get(stats["concept_id"]) or []),
                 "active_days_last_14": len(stats["active_days_last_14"]),
-                "attempt_before_help_rate": pct(stats["attempt_turn_count"], stats["turn_count"]),
-                "verified_reconstruction_rate": pct(stats["solid_attempt_count"], stats["attempt_turn_count"]),
+                "attempt_before_help_rate": pct(
+                    stats["attempt_turn_count"], stats["turn_count"]
+                ),
+                "verified_reconstruction_rate": pct(
+                    stats["solid_attempt_count"], stats["attempt_turn_count"]
+                ),
             }
             for stats in sorted(
                 concept_stats.values(),
@@ -632,14 +748,22 @@ def render_markdown(extract_data: dict, drill_data: dict) -> str:
     lines.append("**AI Run Summary**")
     lines.append("")
     lines.append("**Extraction**")
-    lines.append(f"- Runs: {extract_data['total_runs']} ({extract_data['success_count']} success, {extract_data['error_count']} error, {extract_data['success_rate']:.1f}% success)")
+    lines.append(
+        f"- Runs: {extract_data['total_runs']} ({extract_data['success_count']} success, {extract_data['error_count']} error, {extract_data['success_rate']:.1f}% success)"
+    )
     lines.append(f"- Avg duration: {extract_data['avg_duration_ms']:.1f} ms")
-    lines.append(f"- Avg map size: {extract_data['avg_backbone_count']:.1f} backbone, {extract_data['avg_cluster_count']:.1f} clusters, {extract_data['avg_subnode_count']:.1f} subnodes")
+    lines.append(
+        f"- Avg map size: {extract_data['avg_backbone_count']:.1f} backbone, {extract_data['avg_cluster_count']:.1f} clusters, {extract_data['avg_subnode_count']:.1f} subnodes"
+    )
     lines.append(f"- Low-density success rate: {extract_data['low_density_rate']:.1f}%")
     if extract_data["architecture_distribution"]:
-        lines.append(f"- Architecture mix: {dict(extract_data['architecture_distribution'])}")
+        lines.append(
+            f"- Architecture mix: {dict(extract_data['architecture_distribution'])}"
+        )
     if extract_data["difficulty_distribution"]:
-        lines.append(f"- Difficulty mix: {dict(extract_data['difficulty_distribution'])}")
+        lines.append(
+            f"- Difficulty mix: {dict(extract_data['difficulty_distribution'])}"
+        )
     if extract_data["error_types"]:
         lines.append(f"- Error types: {dict(extract_data['error_types'])}")
     if extract_data["top_sources"]:
@@ -647,35 +771,59 @@ def render_markdown(extract_data: dict, drill_data: dict) -> str:
 
     lines.append("")
     lines.append("**Drill**")
-    lines.append(f"- Runs: {drill_data['total_runs']} ({drill_data['success_count']} success, {drill_data['error_count']} error, {drill_data['success_rate']:.1f}% success)")
-    lines.append(f"- Turns: {drill_data['turn_count']} ({drill_data['attempt_turn_count']} attempts, {drill_data['help_turn_count']} help requests)")
+    lines.append(
+        f"- Runs: {drill_data['total_runs']} ({drill_data['success_count']} success, {drill_data['error_count']} error, {drill_data['success_rate']:.1f}% success)"
+    )
+    lines.append(
+        f"- Turns: {drill_data['turn_count']} ({drill_data['attempt_turn_count']} attempts, {drill_data['help_turn_count']} help requests)"
+    )
     lines.append(f"- Scored attempt turns: {drill_data['classified_turn_count']}")
     lines.append(f"- Avg duration: {drill_data['avg_duration_ms']:.1f} ms")
-    lines.append(f"- Avg learner response length: {drill_data['avg_attempt_learner_chars']:.1f} chars on attempts, {drill_data['avg_help_learner_chars']:.1f} chars on help requests")
+    lines.append(
+        f"- Avg learner response length: {drill_data['avg_attempt_learner_chars']:.1f} chars on attempts, {drill_data['avg_help_learner_chars']:.1f} chars on help requests"
+    )
     lines.append(f"- Attempt rate: {drill_data['attempt_rate']:.1f}%")
     lines.append(f"- Help-request rate: {drill_data['help_request_rate']:.1f}%")
     lines.append(f"- Solid rate: {drill_data['solid_rate']:.1f}%")
     lines.append(f"- Non-solid NEXT rate: {drill_data['non_solid_next_rate']:.1f}%")
-    lines.append(f"- Force-advance rate: {drill_data['force_advance_rate']:.1f}% on scored attempts")
-    lines.append(f"- Attempt force-advance rate: {drill_data['attempt_force_advance_rate']:.1f}%")
-    lines.append(f"- Help force-advance rate: {drill_data['help_force_advance_rate']:.1f}%")
+    lines.append(
+        f"- Force-advance rate: {drill_data['force_advance_rate']:.1f}% on scored attempts"
+    )
+    lines.append(
+        f"- Attempt force-advance rate: {drill_data['attempt_force_advance_rate']:.1f}%"
+    )
+    lines.append(
+        f"- Help force-advance rate: {drill_data['help_force_advance_rate']:.1f}%"
+    )
     lines.append(f"- One-turn solid rate: {drill_data['one_turn_solid_rate']:.1f}%")
-    lines.append(f"- Reward emit rate: {drill_data['reward_emit_rate']:.1f}% of attempts")
+    lines.append(
+        f"- Reward emit rate: {drill_data['reward_emit_rate']:.1f}% of attempts"
+    )
     lines.append(f"- Help-only sessions: {drill_data['help_only_session_count']}")
     if drill_data["classification_distribution"]:
-        lines.append(f"- Classification mix: {dict(drill_data['classification_distribution'])}")
+        lines.append(
+            f"- Classification mix: {dict(drill_data['classification_distribution'])}"
+        )
     if drill_data["routing_distribution"]:
         lines.append(f"- Routing mix: {dict(drill_data['routing_distribution'])}")
     if drill_data["node_type_distribution"]:
         lines.append(f"- Node-type mix: {dict(drill_data['node_type_distribution'])}")
     if drill_data["answer_mode_distribution"]:
-        lines.append(f"- Answer-mode mix: {dict(drill_data['answer_mode_distribution'])}")
+        lines.append(
+            f"- Answer-mode mix: {dict(drill_data['answer_mode_distribution'])}"
+        )
     if drill_data["help_request_reason_distribution"]:
-        lines.append(f"- Help-request reasons: {dict(drill_data['help_request_reason_distribution'])}")
+        lines.append(
+            f"- Help-request reasons: {dict(drill_data['help_request_reason_distribution'])}"
+        )
     if drill_data["response_tier_distribution"]:
-        lines.append(f"- Response-tier mix: {dict(drill_data['response_tier_distribution'])}")
+        lines.append(
+            f"- Response-tier mix: {dict(drill_data['response_tier_distribution'])}"
+        )
     if drill_data["response_band_distribution"]:
-        lines.append(f"- Response-band mix: {dict(drill_data['response_band_distribution'])}")
+        lines.append(
+            f"- Response-band mix: {dict(drill_data['response_band_distribution'])}"
+        )
     if drill_data["termination_distribution"]:
         lines.append(f"- Terminations: {dict(drill_data['termination_distribution'])}")
     if drill_data["error_types"]:
@@ -713,8 +861,14 @@ def render_markdown(extract_data: dict, drill_data: dict) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Summarize extraction and drill telemetry logs.")
-    parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON instead of markdown.")
+    parser = argparse.ArgumentParser(
+        description="Summarize extraction and drill telemetry logs."
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON instead of markdown.",
+    )
     args = parser.parse_args()
 
     payload = build_summary_payload()

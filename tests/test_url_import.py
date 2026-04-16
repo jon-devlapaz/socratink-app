@@ -61,7 +61,9 @@ class UrlImportTests(unittest.TestCase):
     def test_extract_url_blocks_youtube_hosts(self):
         client = self.build_client()
 
-        response = client.post("/api/extract-url", json={"url": "https://www.youtube.com/watch?v=abc123"})
+        response = client.post(
+            "/api/extract-url", json={"url": "https://www.youtube.com/watch?v=abc123"}
+        )
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(
@@ -82,11 +84,16 @@ class UrlImportTests(unittest.TestCase):
         </html>
         """
 
-        with patch("main._is_private_url", return_value=False), patch(
-            "main.urlopen",
-            return_value=FakeUrlResponse(fake_html),
+        with (
+            patch("main._is_private_url", return_value=False),
+            patch(
+                "main.urlopen",
+                return_value=FakeUrlResponse(fake_html),
+            ),
         ):
-            response = client.post("/api/extract-url", json={"url": "https://notyoutube.com/article"})
+            response = client.post(
+                "/api/extract-url", json={"url": "https://notyoutube.com/article"}
+            )
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()

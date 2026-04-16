@@ -39,7 +39,16 @@ REQUIRED_FILES = [
 ]
 
 CURATED_DIRS = ["doctrine", "mechanisms", "records", "sources", "syntheses"]
-PAGE_TYPES = {"doctrine", "mechanism", "decision", "issue", "experiment", "finding", "source", "synthesis"}
+PAGE_TYPES = {
+    "doctrine",
+    "mechanism",
+    "decision",
+    "issue",
+    "experiment",
+    "finding",
+    "source",
+    "synthesis",
+}
 BASIS_VALUES = {"sourced", "inferred"}
 CONFIDENCE_VALUES = {"high", "medium", "low", "speculative"}
 FLAG_VALUES = {"hypothesis", "open-question", "contradiction"}
@@ -69,12 +78,27 @@ SOURCE_KIND_VALUES = {
 REQUIRED_SECTIONS = {
     "doctrine": ["## Principle", "## Evidence", "## Product Implication"],
     "mechanism": ["## Mechanism", "## Evidence", "## Product Implication"],
-    "decision": ["## Decision", "## Evidence", "## Inference", "## Product Implication"],
+    "decision": [
+        "## Decision",
+        "## Evidence",
+        "## Inference",
+        "## Product Implication",
+    ],
     "issue": ["## What Broke", "## Evidence", "## Product Implication"],
-    "experiment": ["## Change", "## Evidence", "## Inference", "## Product Implication"],
+    "experiment": [
+        "## Change",
+        "## Evidence",
+        "## Inference",
+        "## Product Implication",
+    ],
     "finding": ["## Finding", "## Evidence", "## Product Implication"],
     "source": ["## Summary", "## Raw Artifacts", "## Connections"],
-    "synthesis": ["## Pattern", "## Evidence", "## Inference", "## Product Implication"],
+    "synthesis": [
+        "## Pattern",
+        "## Evidence",
+        "## Inference",
+        "## Product Implication",
+    ],
 }
 LOG_COVERAGE_FIELDS = {
     "title",
@@ -87,7 +111,11 @@ LOG_COVERAGE_FIELDS = {
     "current_log_files",
     "missing_instrumentation",
 }
-LOG_COVERAGE_SECTIONS = ["## Current Log Adapters", "## Missing Instrumentation", "## Notes"]
+LOG_COVERAGE_SECTIONS = [
+    "## Current Log Adapters",
+    "## Missing Instrumentation",
+    "## Notes",
+]
 
 
 @dataclass
@@ -124,7 +152,11 @@ def parse_scalar(value: str):
         inner = value[1:-1].strip()
         if not inner:
             return []
-        return [item.strip().strip('"').strip("'") for item in inner.split(",") if item.strip()]
+        return [
+            item.strip().strip('"').strip("'")
+            for item in inner.split(",")
+            if item.strip()
+        ]
     return value.strip('"').strip("'")
 
 
@@ -191,26 +223,43 @@ def validate_required_structure(kb_root: Path, result: Result) -> bool:
     return result.success
 
 
-def validate_page_frontmatter(relpath: str, frontmatter: dict, content: str, result: Result) -> None:
+def validate_page_frontmatter(
+    relpath: str, frontmatter: dict, content: str, result: Result
+) -> None:
     page_type = frontmatter.get("type")
     if page_type not in PAGE_TYPES:
         result.add_issue("warning", f"{relpath} has invalid type '{page_type}'")
         return
 
-    required_fields = {"title", "type", "updated", "related", "basis", "workflow_status", "flags"}
+    required_fields = {
+        "title",
+        "type",
+        "updated",
+        "related",
+        "basis",
+        "workflow_status",
+        "flags",
+    }
     if page_type != "source":
         required_fields.add("sources")
     for field_name in sorted(required_fields - set(frontmatter.keys())):
         result.add_issue("warning", f"{relpath} missing required field '{field_name}'")
 
     if frontmatter.get("basis") not in BASIS_VALUES:
-        result.add_issue("warning", f"{relpath} has invalid basis '{frontmatter.get('basis')}'")
+        result.add_issue(
+            "warning", f"{relpath} has invalid basis '{frontmatter.get('basis')}'"
+        )
 
     if page_type != "source":
         if "confidence" not in frontmatter:
-            result.add_issue("warning", f"{relpath} missing required field 'confidence'")
+            result.add_issue(
+                "warning", f"{relpath} missing required field 'confidence'"
+            )
         elif frontmatter.get("confidence") not in CONFIDENCE_VALUES:
-            result.add_issue("warning", f"{relpath} has invalid confidence '{frontmatter.get('confidence')}'")
+            result.add_issue(
+                "warning",
+                f"{relpath} has invalid confidence '{frontmatter.get('confidence')}'",
+            )
 
     flags = frontmatter.get("flags", [])
     if not isinstance(flags, list):
@@ -221,26 +270,48 @@ def validate_page_frontmatter(relpath: str, frontmatter: dict, content: str, res
 
     workflow_status = frontmatter.get("workflow_status")
     if workflow_status not in WORKFLOW_BY_TYPE[page_type]:
-        result.add_issue("warning", f"{relpath} has invalid workflow_status '{workflow_status}' for type '{page_type}'")
+        result.add_issue(
+            "warning",
+            f"{relpath} has invalid workflow_status '{workflow_status}' for type '{page_type}'",
+        )
 
     if page_type == "decision" and not frontmatter.get("review_after"):
-        result.add_issue("warning", f"{relpath} is a decision record without review_after")
+        result.add_issue(
+            "warning", f"{relpath} is a decision record without review_after"
+        )
 
     if page_type == "source":
         if frontmatter.get("source_kind") not in SOURCE_KIND_VALUES:
-            result.add_issue("warning", f"{relpath} has invalid source_kind '{frontmatter.get('source_kind')}'")
-        for field_name in ("raw_artifacts", "log_surface", "evaluated_sessions", "evaluated_runs"):
+            result.add_issue(
+                "warning",
+                f"{relpath} has invalid source_kind '{frontmatter.get('source_kind')}'",
+            )
+        for field_name in (
+            "raw_artifacts",
+            "log_surface",
+            "evaluated_sessions",
+            "evaluated_runs",
+        ):
             if field_name not in frontmatter:
-                result.add_issue("warning", f"{relpath} source page missing {field_name}")
+                result.add_issue(
+                    "warning", f"{relpath} source page missing {field_name}"
+                )
         if frontmatter.get("log_surface") not in LOG_SURFACE_VALUES:
-            result.add_issue("warning", f"{relpath} has invalid log_surface '{frontmatter.get('log_surface')}'")
+            result.add_issue(
+                "warning",
+                f"{relpath} has invalid log_surface '{frontmatter.get('log_surface')}'",
+            )
 
     for section in REQUIRED_SECTIONS[page_type]:
         if section not in content:
-            result.add_issue("warning", f"{relpath} missing required section '{section}'")
+            result.add_issue(
+                "warning", f"{relpath} missing required section '{section}'"
+            )
 
 
-def validate_source_paths(page: Path, kb_root: Path, wiki_dir: Path, frontmatter: dict, result: Result) -> None:
+def validate_source_paths(
+    page: Path, kb_root: Path, wiki_dir: Path, frontmatter: dict, result: Result
+) -> None:
     relpath = normalize_page_rel(wiki_dir, page)
     page_type = frontmatter.get("type")
 
@@ -249,7 +320,9 @@ def validate_source_paths(page: Path, kb_root: Path, wiki_dir: Path, frontmatter
     if isinstance(sources, list) and isinstance(related, list):
         overlap = sorted(set(sources).intersection(related))
         for entry in overlap:
-            result.add_issue("warning", f"{relpath} has duplicate sources/related entry '{entry}'")
+            result.add_issue(
+                "warning", f"{relpath} has duplicate sources/related entry '{entry}'"
+            )
 
     if isinstance(sources, list):
         for source in sources:
@@ -267,25 +340,40 @@ def validate_source_paths(page: Path, kb_root: Path, wiki_dir: Path, frontmatter
                         f"{relpath} sources entry must point to a source page or repo doc: {source}",
                     )
             if not resolved.exists():
-                result.add_issue("warning", f"{relpath} sources entry does not resolve: {source}")
+                result.add_issue(
+                    "warning", f"{relpath} sources entry does not resolve: {source}"
+                )
 
     if frontmatter.get("type") == "source":
         raw_artifacts = frontmatter.get("raw_artifacts", [])
         if isinstance(raw_artifacts, list):
             for artifact in raw_artifacts:
-                if isinstance(artifact, str) and artifact.startswith("raw/") and not (kb_root / artifact).is_file():
-                    result.add_issue("warning", f"{relpath} raw_artifacts entry does not resolve to a file: {artifact}")
+                if (
+                    isinstance(artifact, str)
+                    and artifact.startswith("raw/")
+                    and not (kb_root / artifact).is_file()
+                ):
+                    result.add_issue(
+                        "warning",
+                        f"{relpath} raw_artifacts entry does not resolve to a file: {artifact}",
+                    )
 
 
-def validate_log_coverage(kb_root: Path, log_coverage_path: Path, result: Result) -> None:
+def validate_log_coverage(
+    kb_root: Path, log_coverage_path: Path, result: Result
+) -> None:
     content = log_coverage_path.read_text(encoding="utf-8")
     frontmatter = extract_frontmatter(content)
 
     for field_name in sorted(LOG_COVERAGE_FIELDS - set(frontmatter.keys())):
-        result.add_issue("warning", f"wiki/log-coverage.md missing required field '{field_name}'")
+        result.add_issue(
+            "warning", f"wiki/log-coverage.md missing required field '{field_name}'"
+        )
 
     if frontmatter.get("type") != "log-coverage":
-        result.add_issue("warning", "wiki/log-coverage.md must have type 'log-coverage'")
+        result.add_issue(
+            "warning", "wiki/log-coverage.md must have type 'log-coverage'"
+        )
 
     list_fields = (
         "expected_chat_surfaces",
@@ -298,51 +386,87 @@ def validate_log_coverage(kb_root: Path, log_coverage_path: Path, result: Result
     for field_name in list_fields:
         value = frontmatter.get(field_name)
         if value is not None and not isinstance(value, list):
-            result.add_issue("warning", f"wiki/log-coverage.md field '{field_name}' must be a list")
+            result.add_issue(
+                "warning", f"wiki/log-coverage.md field '{field_name}' must be a list"
+            )
 
     current_log_files = frontmatter.get("current_log_files", [])
     if isinstance(current_log_files, list):
         for log_file in current_log_files:
-            if isinstance(log_file, str) and log_file and not (kb_root.parent / log_file).is_file():
-                result.add_issue("info", f"wiki/log-coverage.md current_log_files entry not present in this checkout: {log_file}")
+            if (
+                isinstance(log_file, str)
+                and log_file
+                and not (kb_root.parent / log_file).is_file()
+            ):
+                result.add_issue(
+                    "info",
+                    f"wiki/log-coverage.md current_log_files entry not present in this checkout: {log_file}",
+                )
 
     for section in LOG_COVERAGE_SECTIONS:
         if section not in content:
-            result.add_issue("warning", f"wiki/log-coverage.md missing required section '{section}'")
+            result.add_issue(
+                "warning", f"wiki/log-coverage.md missing required section '{section}'"
+            )
 
 
-def validate_active_queue(kb_root: Path, wiki_dir: Path, pages: list[Path], result: Result) -> None:
+def validate_active_queue(
+    kb_root: Path, wiki_dir: Path, pages: list[Path], result: Result
+) -> None:
     active_path = kb_root / "ACTIVE.md"
     if not active_path.exists():
         return
 
     content = active_path.read_text(encoding="utf-8")
     curated_page_rels = {normalize_page_rel(wiki_dir, page) for page in pages}
-    match = re.search(r"^Current promoted items:\s*\n(?P<body>.*?)(?:\n## |\Z)", content, re.DOTALL | re.MULTILINE)
+    match = re.search(
+        r"^Current promoted items:\s*\n(?P<body>.*?)(?:\n## |\Z)",
+        content,
+        re.DOTALL | re.MULTILINE,
+    )
     if not match:
-        result.add_issue("warning", "ACTIVE.md missing 'Current promoted items:' section")
+        result.add_issue(
+            "warning", "ACTIVE.md missing 'Current promoted items:' section"
+        )
         return
 
-    bullets = [line.strip() for line in match.group("body").splitlines() if line.strip().startswith("- ")]
+    bullets = [
+        line.strip()
+        for line in match.group("body").splitlines()
+        if line.strip().startswith("- ")
+    ]
     if len(bullets) > 5:
-        result.add_issue("warning", f"ACTIVE.md has {len(bullets)} promoted items; maximum is 5")
+        result.add_issue(
+            "warning", f"ACTIVE.md has {len(bullets)} promoted items; maximum is 5"
+        )
 
     for bullet in bullets:
         links = re.findall(r"\[[^\]]+\]\(([^)]+)\)", bullet)
         if not links:
-            result.add_issue("warning", f"ACTIVE.md item missing curated wiki link: {bullet}")
+            result.add_issue(
+                "warning", f"ACTIVE.md item missing curated wiki link: {bullet}"
+            )
             continue
         for link in links:
             if not link.startswith("wiki/"):
-                result.add_issue("warning", f"ACTIVE.md item link must start with wiki/: {link}")
+                result.add_issue(
+                    "warning", f"ACTIVE.md item link must start with wiki/: {link}"
+                )
                 continue
             wiki_link = os.path.normpath(link.removeprefix("wiki/"))
             if not (kb_root / link).is_file():
-                result.add_issue("warning", f"ACTIVE.md item link does not resolve: {link}")
+                result.add_issue(
+                    "warning", f"ACTIVE.md item link does not resolve: {link}"
+                )
             elif wiki_link not in curated_page_rels:
-                result.add_issue("warning", f"ACTIVE.md item link must point to a curated wiki page: {link}")
+                result.add_issue(
+                    "warning",
+                    f"ACTIVE.md item link must point to a curated wiki page: {link}",
+                )
         if "docs/project/state.md#current-release-goal" not in bullet:
-            result.add_issue("warning", f"ACTIVE.md item missing release-goal citation: {bullet}")
+            result.add_issue(
+                "warning", f"ACTIVE.md item missing release-goal citation: {bullet}"
+            )
 
 
 def validate_reachability(wiki_dir: Path, pages: list[Path], result: Result) -> None:
@@ -356,7 +480,9 @@ def validate_reachability(wiki_dir: Path, pages: list[Path], result: Result) -> 
         if normalized in page_map:
             root_targets.add(normalized)
         elif not (wiki_dir / normalized).exists() and normalized != "log-coverage.md":
-            result.add_issue("warning", f"wiki/index.md references missing page '{normalized}'")
+            result.add_issue(
+                "warning", f"wiki/index.md references missing page '{normalized}'"
+            )
 
     for page in pages:
         relpath = normalize_page_rel(wiki_dir, page)
@@ -379,7 +505,9 @@ def validate_reachability(wiki_dir: Path, pages: list[Path], result: Result) -> 
 
     for relpath in page_map:
         if relpath not in reachable:
-            result.add_issue("warning", f"Curated page not reachable from wiki/index.md: {relpath}")
+            result.add_issue(
+                "warning", f"Curated page not reachable from wiki/index.md: {relpath}"
+            )
 
     result.stats["indexed_roots"] = len(root_targets)
     result.stats["reachable_pages"] = len(reachable)

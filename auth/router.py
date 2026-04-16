@@ -514,7 +514,9 @@ def sanitize_return_to_path(return_to: str | None) -> str:
     return candidate
 
 
-def _build_login_redirect(*, return_to: str | None = None, auth_error: str | None = None) -> str:
+def _build_login_redirect(
+    *, return_to: str | None = None, auth_error: str | None = None
+) -> str:
     query = {
         "return_to": sanitize_return_to_path(return_to),
     }
@@ -548,7 +550,9 @@ def _user_agent(request: Request) -> str | None:
     return raw[:500] if raw else None
 
 
-def _apply_session_cookie(response: Response, request: Request, sealed_session: str) -> None:
+def _apply_session_cookie(
+    response: Response, request: Request, sealed_session: str
+) -> None:
     service = _get_auth_service(request)
     response.set_cookie(
         service.cookie_name,
@@ -566,7 +570,9 @@ def _clear_session_cookie(response: Response, request: Request) -> None:
     response.delete_cookie(service.cookie_name, path="/")
 
 
-def _apply_oauth_state_cookie(response: Response, request: Request, signed_state: str) -> None:
+def _apply_oauth_state_cookie(
+    response: Response, request: Request, signed_state: str
+) -> None:
     service = _get_auth_service(request)
     response.set_cookie(
         service.oauth_state_cookie_name,
@@ -611,7 +617,9 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
     try:
         state = service.load_session(sealed_session)
     except AuthConfigurationError:
-        logger.warning("Auth session load failed because auth is not configured correctly.")
+        logger.warning(
+            "Auth session load failed because auth is not configured correctly."
+        )
         state = AuthSessionState(
             auth_enabled=service.enabled,
             authenticated=False,
@@ -669,7 +677,9 @@ def auth_google(request: Request, return_to: str | None = None):
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     try:
-        state_nonce, signed_state = service.build_oauth_state(return_to=sanitized_return_to)
+        state_nonce, signed_state = service.build_oauth_state(
+            return_to=sanitized_return_to
+        )
         authorization_url = service.get_login_url(
             base_url=_base_url(request),
             return_to=state_nonce,
@@ -704,7 +714,9 @@ def auth_callback(
     )
     return_to = verified_return_to or "/"
     if error:
-        logger.info("Auth callback returned error=%s description=%s", error, error_description)
+        logger.info(
+            "Auth callback returned error=%s description=%s", error, error_description
+        )
         response = RedirectResponse(
             url=_build_login_redirect(return_to=return_to, auth_error=error),
             status_code=302,
@@ -743,10 +755,12 @@ def auth_callback(
         )
         _clear_oauth_state_cookie(response, request)
         return response
-    except Exception as err:
+    except Exception:
         logger.exception("Auth callback code exchange failed")
         response = RedirectResponse(
-            url=_build_login_redirect(return_to=return_to, auth_error="authentication_failed"),
+            url=_build_login_redirect(
+                return_to=return_to, auth_error="authentication_failed"
+            ),
             status_code=302,
         )
         _clear_oauth_state_cookie(response, request)
@@ -772,9 +786,13 @@ def logout(request: Request):
 
 @auth_router.post("/api/auth/magic-auth/send")
 def send_magic_auth(request: Request, body: MagicAuthSendRequest):
-    raise HTTPException(status_code=503, detail="Email sign-in is not enabled in this release.")
+    raise HTTPException(
+        status_code=503, detail="Email sign-in is not enabled in this release."
+    )
 
 
 @auth_router.post("/api/auth/magic-auth/verify")
 def verify_magic_auth(request: Request, body: MagicAuthVerifyRequest):
-    raise HTTPException(status_code=503, detail="Email sign-in is not enabled in this release.")
+    raise HTTPException(
+        status_code=503, detail="Email sign-in is not enabled in this release."
+    )

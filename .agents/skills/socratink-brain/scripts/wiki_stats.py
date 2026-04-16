@@ -37,8 +37,16 @@ class WikiStats:
     evaluated_runs: int = 0
 
     def report(self) -> str:
-        provenance_rate = (self.provenance_covered_pages / self.provenance_total_pages * 100.0) if self.provenance_total_pages else 0.0
-        raw_reference_rate = (self.referenced_raw_artifacts / self.raw_source_files * 100.0) if self.raw_source_files else 0.0
+        provenance_rate = (
+            (self.provenance_covered_pages / self.provenance_total_pages * 100.0)
+            if self.provenance_total_pages
+            else 0.0
+        )
+        raw_reference_rate = (
+            (self.referenced_raw_artifacts / self.raw_source_files * 100.0)
+            if self.raw_source_files
+            else 0.0
+        )
         lines = [
             "=== Socratink Brain Stats ===",
             "",
@@ -82,7 +90,11 @@ def parse_scalar(value: str):
         inner = value[1:-1].strip()
         if not inner:
             return []
-        return [item.strip().strip('"').strip("'") for item in inner.split(",") if item.strip()]
+        return [
+            item.strip().strip('"').strip("'")
+            for item in inner.split(",")
+            if item.strip()
+        ]
     return value.strip('"').strip("'")
 
 
@@ -111,7 +123,13 @@ def count_raw_files(raw_dir: Path) -> int:
     if not raw_dir.exists():
         return 0
     ignored_names = {"README.md", "CLAUDE.md", ".gitkeep"}
-    return sum(1 for path in raw_dir.rglob("*") if path.is_file() and not path.name.startswith(".") and path.name not in ignored_names)
+    return sum(
+        1
+        for path in raw_dir.rglob("*")
+        if path.is_file()
+        and not path.name.startswith(".")
+        and path.name not in ignored_names
+    )
 
 
 def to_int(value) -> int:
@@ -152,13 +170,19 @@ def gather_stats(kb_root: Path) -> WikiStats:
         raw_artifacts = frontmatter.get("raw_artifacts", [])
         if isinstance(sources, list) and sources:
             stats.provenance_covered_pages += 1
-        elif page_type == "source" and isinstance(raw_artifacts, list) and raw_artifacts:
+        elif (
+            page_type == "source" and isinstance(raw_artifacts, list) and raw_artifacts
+        ):
             stats.provenance_covered_pages += 1
 
         flags = frontmatter.get("flags", [])
         if isinstance(flags, list):
-            stats.contradiction_flags += sum(1 for flag in flags if flag == "contradiction")
-            stats.open_question_flags += sum(1 for flag in flags if flag == "open-question")
+            stats.contradiction_flags += sum(
+                1 for flag in flags if flag == "contradiction"
+            )
+            stats.open_question_flags += sum(
+                1 for flag in flags if flag == "open-question"
+            )
             stats.hypothesis_flags += sum(1 for flag in flags if flag == "hypothesis")
 
         workflow_status = frontmatter.get("workflow_status")
