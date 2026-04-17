@@ -146,9 +146,6 @@ const App = (() => {
 
   function setMapShellOpen(isOpen) {
     document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
-    if (!drawerToggle) return;
-    drawerToggle.setAttribute('aria-hidden', String(isOpen));
-    drawerToggle.tabIndex = isOpen ? -1 : 0;
   }
 
   function getHeroStateLabel(state) {
@@ -1572,28 +1569,28 @@ const App = (() => {
     const rels = data.relationships || { domain_mechanics: [], learning_prerequisites: [] };
     const fws = data.frameworks || [];
 
-    let html = '<div class="map-zone zone-1">';
-    html += '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; margin-right: 48px;">';
-    html += `<div class="map-header-title" style="margin-bottom: 0;">${escHtml(meta.source_title || concept.name)}</div>`;
-
-    if (concept.state === 'growing' || concept.state === 'fractured') {
-      const btnText = concept.state === 'fractured' ? '✦ Repair (Drill)' : '✦ Start Drill';
-      html += `<button class="btn-start-drill" onclick="App.startDrillFromMap()" title="Interactive Drill Session">${btnText}</button>`;
+    const kickerEl = document.getElementById('concept-header-kicker');
+    const titleEl = document.getElementById('concept-header-title');
+    const summaryEl = document.getElementById('concept-header-summary');
+    const tagsEl = document.getElementById('concept-header-tags');
+    const drillBtn = document.getElementById('concept-start-drill');
+    if (kickerEl) kickerEl.textContent = getHeroStateLabel(concept.state) || 'Concept';
+    if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
+    if (summaryEl) summaryEl.textContent = meta.core_thesis || '';
+    if (tagsEl) {
+      let tagsHtml = '';
+      if (meta.architecture_type) tagsHtml += `<span class="map-badge arch">${escHtml(meta.architecture_type.replace(/_/g, ' '))}</span>`;
+      if (meta.difficulty) tagsHtml += `<span class="map-badge diff">${escHtml(meta.difficulty)}</span>`;
+      if (meta.low_density) tagsHtml += `<span class="map-low-density">Lightweight map</span>`;
+      tagsEl.innerHTML = tagsHtml;
     }
-    html += '</div>';
-
-    html += `<div class="map-core-thesis">${escHtml(meta.core_thesis || '')}</div>`;
-
-    html += '<div class="map-badges">';
-    if (meta.architecture_type) html += `<div class="map-badge arch">${escHtml(meta.architecture_type.replace(/_/g, ' '))}</div>`;
-    if (meta.difficulty) html += `<div class="map-badge diff">${escHtml(meta.difficulty)}</div>`;
-    html += '</div>';
-
-    if (meta.low_density) {
-      html += '<div class="map-low-density">Lightweight map — source had limited content.</div>';
+    if (drillBtn) {
+      const showDrill = concept.state === 'growing' || concept.state === 'fractured';
+      drillBtn.hidden = !showDrill;
+      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Drill' : 'Start Drill';
     }
 
-    html += '</div>';
+    let html = '';
 
     if (backbone.length > 0) {
       html += '<div class="map-zone zone-2">';
@@ -3622,7 +3619,7 @@ const App = (() => {
           statusBox.textContent = data.server_key_configured
             ? 'Backend reachable. Server-managed Gemini access is available.'
             : 'Backend reachable. Add a local Gemini key below or configure one on the server.';
-          statusBox.style.color = 'var(--success)';
+          statusBox.style.color = 'var(--primary)';
         }
       } catch (err) {
         console.warn('Backend health check failed.', err);
@@ -3652,7 +3649,7 @@ const App = (() => {
       }
       localStorage.setItem('gemini_key', nextValue);
       keyStatus.textContent = 'Key saved to this browser.';
-      keyStatus.style.color = 'var(--success)';
+      keyStatus.style.color = 'var(--primary)';
       refreshAiAccessUi({
         backendReachable: backendBadge?.textContent === 'Connected',
         serverKeyConfigured: aiBadge?.textContent === 'Server key active',

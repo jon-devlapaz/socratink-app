@@ -49,7 +49,9 @@ class AuthGateTests(unittest.TestCase):
         response = client.get("/ai-runs-dashboard.html", follow_redirects=False)
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["location"], "/login?return_to=%2Fai-runs-dashboard.html")
+        self.assertEqual(
+            response.headers["location"], "/login?return_to=%2Fai-runs-dashboard.html"
+        )
 
     def test_core_api_requires_guest_or_auth_entry(self):
         client = self.build_client(FakeAuthService(enabled=True))

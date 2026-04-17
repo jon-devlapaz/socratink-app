@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=auto_awesome,memory,psychology,settings&display=block"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=auto_awesome,help,memory,psychology,settings&display=block"
     rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
@@ -71,12 +71,15 @@
 
     <nav class="sidebar-nav">
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
-        onclick="App.showDashboard()">Dashboard</a>
-      <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)" onclick="App.showLibrary()">Library</a>
+        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Dashboard</a>
+      <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
+        onclick="App.showLibrary()"><span class="material-symbols-outlined">memory</span> Library</a>
       <a id="nav-analytics" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showAnalytics()" title="Open learner analytics">Analytics</a>
-      <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)" onclick="App.showSettings()">Settings</a>
-      <a id="nav-guide" class="sidebar-nav-item" href="javascript:void(0)" onclick="App.toggleTutorial()">[?] Quick Guide</a>
+        onclick="App.showAnalytics()" title="Open learner analytics"><span class="material-symbols-outlined">psychology</span> Analytics</a>
+      <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
+        onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
+      <a id="nav-guide" class="sidebar-nav-item" href="javascript:void(0)"
+        onclick="App.toggleTutorial()"><span class="material-symbols-outlined">help</span> Quick Guide</a>
     </nav>
 
     <div class="sidebar-divider"></div>
@@ -116,37 +119,40 @@
           <a class="auth-link" id="auth-login-link" href="/login">Save &amp; Sync</a>
           <button class="auth-link auth-link-secondary" id="auth-logout-btn" type="button" hidden>Log Out</button>
         </div>
-        <button class="theme-toggle" id="theme-toggle" type="button" onclick="App.toggleTheme()"
-          aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
-          <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-              stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="4.5"></circle>
-              <path d="M12 2.5v3"></path>
-              <path d="M12 18.5v3"></path>
-              <path d="M4.9 4.9l2.1 2.1"></path>
-              <path d="M17 17l2.1 2.1"></path>
-              <path d="M2.5 12h3"></path>
-              <path d="M18.5 12h3"></path>
-              <path d="M4.9 19.1L7 17"></path>
-              <path d="M17 7l2.1-2.1"></path>
-            </svg>
-          </span>
-          <span class="theme-toggle-track" aria-hidden="true">
-            <span class="theme-toggle-thumb"></span>
-          </span>
-          <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-              stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
-              <path d="M18 5.2v2.1"></path>
-              <path d="M16.95 6.25h2.1"></path>
-            </svg>
-          </span>
-        </button>
         <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
+        <button class="map-close-btn" id="map-close-btn" type="button" onclick="App.hideMapView()" aria-label="Close concept map">×</button>
       </div>
     </header>
+
+    <!-- Theme toggle — lives outside header so map-open fade doesn't hide it -->
+    <button class="theme-toggle" id="theme-toggle" type="button" onclick="App.toggleTheme()"
+      aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+      <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4.5"></circle>
+          <path d="M12 2.5v3"></path>
+          <path d="M12 18.5v3"></path>
+          <path d="M4.9 4.9l2.1 2.1"></path>
+          <path d="M17 17l2.1 2.1"></path>
+          <path d="M2.5 12h3"></path>
+          <path d="M18.5 12h3"></path>
+          <path d="M4.9 19.1L7 17"></path>
+          <path d="M17 7l2.1-2.1"></path>
+        </svg>
+      </span>
+      <span class="theme-toggle-track" aria-hidden="true">
+        <span class="theme-toggle-thumb"></span>
+      </span>
+      <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
+          <path d="M18 5.2v2.1"></path>
+          <path d="M16.95 6.25h2.1"></path>
+        </svg>
+      </span>
+    </button>
 
     <!-- Hero card: concept info left, crystal grid right -->
     <section class="hero-card">
@@ -184,7 +190,7 @@
         <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
           style="display:none;" disabled title="Consolidation is coming soon" aria-label="Consolidation coming soon">
           <svg
-            style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: #ffffff; fill: none; pointer-events: none;"
+            style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; pointer-events: none;"
             viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
@@ -385,13 +391,22 @@
 
     <!-- Map View Panel -->
     <section id="map-view" class="map-view">
-      <button class="map-close-btn" onclick="App.hideMapView()" aria-label="Close map">×</button>
       <div class="map-view-shell">
-        <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
-          <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button">Study
-            View</button>
-          <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button">Graph View</button>
-        </div>
+        <header class="concept-header" id="concept-header">
+          <div class="concept-header-main">
+            <div class="concept-header-kicker" id="concept-header-kicker"></div>
+            <h2 class="concept-header-title" id="concept-header-title"></h2>
+            <p class="concept-header-summary" id="concept-header-summary"></p>
+            <div class="concept-header-tags" id="concept-header-tags"></div>
+          </div>
+          <div class="concept-header-actions">
+            <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
+              <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Study</button>
+              <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Graph</button>
+            </div>
+            <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Drill</button>
+          </div>
+        </header>
         <div id="map-content"></div>
         <div id="graph-content" class="graph-content" hidden>
           <div class="graph-layout">

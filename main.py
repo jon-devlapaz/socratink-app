@@ -19,7 +19,12 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
-from auth import GUEST_COOKIE_NAME, GUEST_COOKIE_VALUE, auth_router, build_auth_service_from_env
+from auth import (
+    GUEST_COOKIE_NAME,
+    GUEST_COOKIE_VALUE,
+    auth_router,
+    build_auth_service_from_env,
+)
 from ai_service import (
     GeminiRateLimitError,
     GeminiServiceError,
@@ -38,12 +43,14 @@ app.state.auth_service = build_auth_service_from_env()
 logger = logging.getLogger(__name__)
 DRILL_CHAT_LOG_PATH = Path(__file__).parent / "logs/drill-chat-transcripts.jsonl"
 PROTECTED_HTML_PATHS = frozenset({"/", "/index.html"})
-PROTECTED_API_PATHS = frozenset({
-    "/api/drill",
-    "/api/extract",
-    "/api/extract-url",
-    "/api/repair-reps",
-})
+PROTECTED_API_PATHS = frozenset(
+    {
+        "/api/drill",
+        "/api/extract",
+        "/api/extract-url",
+        "/api/repair-reps",
+    }
+)
 
 _cors_origins = os.environ.get(
     "CORS_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
@@ -122,7 +129,9 @@ async def require_login_or_guest_entry(request: Request, call_next):
         if not _has_app_entry_session(request):
             if path.startswith("/api/"):
                 return JSONResponse(
-                    {"detail": "Choose Google sign-in or continue as guest before using the app."},
+                    {
+                        "detail": "Choose Google sign-in or continue as guest before using the app."
+                    },
                     status_code=401,
                 )
             return RedirectResponse(
@@ -204,12 +213,14 @@ def _build_drill_chat_event(
         "node_label": req.node_label,
         "drill_session_id": req.drill_session_id,
         "client_turn_index": req.client_turn_index,
-        "session_key": "::".join([
-            req.concept_id,
-            req.node_id,
-            req.session_start_iso or "missing",
-            req.drill_session_id or "missing",
-        ]),
+        "session_key": "::".join(
+            [
+                req.concept_id,
+                req.node_id,
+                req.session_start_iso or "missing",
+                req.drill_session_id or "missing",
+            ]
+        ),
         "session_phase": req.session_phase,
         "drill_mode": req.drill_mode,
         "session_start_iso": req.session_start_iso,
@@ -234,17 +245,15 @@ def _build_drill_chat_event(
     return event
 
 
-def _resolve_node_mechanism(knowledge_map: dict, node_id: str, fallback: str = "") -> str:
+def _resolve_node_mechanism(
+    knowledge_map: dict, node_id: str, fallback: str = ""
+) -> str:
     if not isinstance(knowledge_map, dict):
         return fallback
 
     metadata = knowledge_map.get("metadata") or {}
     if node_id == "core-thesis":
-        return str(
-            metadata.get("core_thesis")
-            or metadata.get("thesis")
-            or fallback
-        )
+        return str(metadata.get("core_thesis") or metadata.get("thesis") or fallback)
 
     for backbone in knowledge_map.get("backbone") or []:
         if isinstance(backbone, dict) and backbone.get("id") == node_id:
@@ -276,7 +285,9 @@ def analytics_ai_runs():
         return build_summary_payload()
     except Exception as err:
         logger.exception("Failed to build AI runs analytics payload")
-        raise HTTPException(status_code=500, detail="Could not build AI runs analytics.") from err
+        raise HTTPException(
+            status_code=500, detail="Could not build AI runs analytics."
+        ) from err
 
 
 @app.get("/api/analytics/learner-runs")
@@ -292,7 +303,9 @@ def analytics_learner_runs(concept_ids: str | None = None):
         return build_learner_summary_payload(parsed_concept_ids)
     except Exception as err:
         logger.exception("Failed to build learner analytics payload")
-        raise HTTPException(status_code=500, detail="Could not build learner analytics.") from err
+        raise HTTPException(
+            status_code=500, detail="Could not build learner analytics."
+        ) from err
 
 
 @app.post("/api/extract")
@@ -312,13 +325,19 @@ def extract(req: ExtractRequest):
         raise HTTPException(status_code=400, detail=str(err))
     except Exception as err:
         logger.exception("Unexpected failure in /api/extract")
-        raise HTTPException(status_code=500, detail="Unexpected server error during extraction.") from err
+        raise HTTPException(
+            status_code=500, detail="Unexpected server error during extraction."
+        ) from err
 
 
 def _extract_text_from_html(raw_html: str) -> str:
-    cleaned = re.sub(r"(?is)<(script|style|noscript|svg|iframe).*?>.*?</\1>", " ", raw_html)
+    cleaned = re.sub(
+        r"(?is)<(script|style|noscript|svg|iframe).*?>.*?</\1>", " ", raw_html
+    )
     cleaned = re.sub(r"(?i)<br\s*/?>", "\n", cleaned)
-    cleaned = re.sub(r"(?i)</(p|div|section|article|li|h1|h2|h3|h4|h5|h6|tr)>", "\n", cleaned)
+    cleaned = re.sub(
+        r"(?i)</(p|div|section|article|li|h1|h2|h3|h4|h5|h6|tr)>", "\n", cleaned
+    )
     cleaned = re.sub(r"(?s)<[^>]+>", " ", cleaned)
     cleaned = unescape(cleaned)
     cleaned = cleaned.replace("\r", "\n")
@@ -405,19 +424,25 @@ def extract_url(req: UrlExtractRequest):
 
             raw_bytes = response.read(2_000_000 + 1)
             if len(raw_bytes) > 2_000_000:
-                raise HTTPException(status_code=413, detail="Page is too large to import.")
+                raise HTTPException(
+                    status_code=413, detail="Page is too large to import."
+                )
 
             charset = response.headers.get_content_charset() or "utf-8"
             raw_text = raw_bytes.decode(charset, errors="replace")
     except HTTPException:
         raise
     except HTTPError as err:
-        raise HTTPException(status_code=502, detail=f"Source page returned HTTP {err.code}.")
+        raise HTTPException(
+            status_code=502, detail=f"Source page returned HTTP {err.code}."
+        )
     except URLError:
         raise HTTPException(status_code=502, detail="Could not fetch that URL.")
     except Exception as err:
         logger.exception("Unexpected failure in /api/extract-url for %s", url)
-        raise HTTPException(status_code=500, detail="Unexpected error while fetching that URL.") from err
+        raise HTTPException(
+            status_code=500, detail="Unexpected error while fetching that URL."
+        ) from err
 
     if "text/plain" in content_type:
         text = raw_text.strip()
@@ -428,7 +453,10 @@ def extract_url(req: UrlExtractRequest):
         text = _extract_text_from_html(raw_text)
 
     if len(text) < 200:
-        raise HTTPException(status_code=422, detail="Could not extract enough readable text from that page.")
+        raise HTTPException(
+            status_code=422,
+            detail="Could not extract enough readable text from that page.",
+        )
 
     return {"url": url, "title": title[:200], "text": text[:500_000]}
 
@@ -473,69 +501,95 @@ def drill(req: DrillRequest):
             },
         )
         response_payload = {"concept_id": req.concept_id, **result}
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="success",
-            result=response_payload,
-        ))
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="success",
+                result=response_payload,
+            )
+        )
         return response_payload
     except MissingAPIKeyError as err:
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="error",
-            error_type=type(err).__name__,
-            error_reason=str(err),
-        ))
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="error",
+                error_type=type(err).__name__,
+                error_reason=str(err),
+            )
+        )
         raise HTTPException(status_code=401, detail=str(err))
     except GeminiRateLimitError as err:
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="error",
-            error_type=type(err).__name__,
-            error_reason=str(err),
-        ))
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="error",
+                error_type=type(err).__name__,
+                error_reason=str(err),
+            )
+        )
         raise HTTPException(status_code=429, detail=str(err))
     except GeminiServiceError as err:
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="error",
-            error_type=type(err).__name__,
-            error_reason=str(err),
-        ))
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="error",
+                error_type=type(err).__name__,
+                error_reason=str(err),
+            )
+        )
         raise HTTPException(status_code=503, detail=str(err))
     except json.JSONDecodeError:
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="error",
-            error_type="JSONDecodeError",
-            error_reason="Invalid knowledge_map JSON.",
-        ))
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="error",
+                error_type="JSONDecodeError",
+                error_reason="Invalid knowledge_map JSON.",
+            )
+        )
         raise HTTPException(status_code=400, detail="Invalid knowledge_map JSON.")
     except ValueError as err:
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="error",
-            error_type=type(err).__name__,
-            error_reason=str(err),
-        ))
-        logger.exception("Drill normalization failed for concept_id=%s node_id=%s", req.concept_id, req.node_id)
-        raise HTTPException(status_code=502, detail="Drill evaluation failed. Please retry.") from err
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="error",
+                error_type=type(err).__name__,
+                error_reason=str(err),
+            )
+        )
+        logger.exception(
+            "Drill normalization failed for concept_id=%s node_id=%s",
+            req.concept_id,
+            req.node_id,
+        )
+        raise HTTPException(
+            status_code=502, detail="Drill evaluation failed. Please retry."
+        ) from err
     except Exception as err:
-        _log_drill_chat(_build_drill_chat_event(
-            req,
-            messages_in=messages_in,
-            status="error",
-            error_type=type(err).__name__,
-            error_reason=str(err),
-        ))
-        logger.exception("Unexpected failure in /api/drill for concept_id=%s node_id=%s", req.concept_id, req.node_id)
-        raise HTTPException(status_code=500, detail="Unexpected server error during drill.") from err
+        _log_drill_chat(
+            _build_drill_chat_event(
+                req,
+                messages_in=messages_in,
+                status="error",
+                error_type=type(err).__name__,
+                error_reason=str(err),
+            )
+        )
+        logger.exception(
+            "Unexpected failure in /api/drill for concept_id=%s node_id=%s",
+            req.concept_id,
+            req.node_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Unexpected server error during drill."
+        ) from err
 
 
 @app.post("/api/repair-reps")
@@ -572,7 +626,9 @@ def repair_reps(req: RepairRepsRequest):
     except GeminiServiceError as err:
         raise HTTPException(status_code=503, detail=str(err))
     except json.JSONDecodeError as err:
-        raise HTTPException(status_code=400, detail="Invalid knowledge_map JSON.") from err
+        raise HTTPException(
+            status_code=400, detail="Invalid knowledge_map JSON."
+        ) from err
     except ValueError as err:
         reason = str(err)
         if (
@@ -581,11 +637,23 @@ def repair_reps(req: RepairRepsRequest):
             or reason.startswith("knowledge_map")
         ):
             raise HTTPException(status_code=400, detail=reason) from err
-        logger.exception("Repair reps generation failed for concept_id=%s node_id=%s", req.concept_id, req.node_id)
-        raise HTTPException(status_code=502, detail="Repair Reps generation failed. Please retry.") from err
+        logger.exception(
+            "Repair reps generation failed for concept_id=%s node_id=%s",
+            req.concept_id,
+            req.node_id,
+        )
+        raise HTTPException(
+            status_code=502, detail="Repair Reps generation failed. Please retry."
+        ) from err
     except Exception as err:
-        logger.exception("Unexpected failure in /api/repair-reps for concept_id=%s node_id=%s", req.concept_id, req.node_id)
-        raise HTTPException(status_code=500, detail="Unexpected server error during Repair Reps.") from err
+        logger.exception(
+            "Unexpected failure in /api/repair-reps for concept_id=%s node_id=%s",
+            req.concept_id,
+            req.node_id,
+        )
+        raise HTTPException(
+            status_code=500, detail="Unexpected server error during Repair Reps."
+        ) from err
 
 
 app.include_router(auth_router)

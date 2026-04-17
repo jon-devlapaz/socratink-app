@@ -171,11 +171,18 @@ class RepairRepsApiTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("measured temperature to the setpoint", captured["node_mechanism"])
+        self.assertIn(
+            "measured temperature to the setpoint", captured["node_mechanism"]
+        )
         payload = response.json()
         self.assertEqual(payload["prompt_version"], "repair-reps-system-v1")
         self.assertEqual(len(payload["reps"]), 3)
-        for forbidden_field in ("routing", "classification", "score_eligible", "graph_mutated"):
+        for forbidden_field in (
+            "routing",
+            "classification",
+            "score_eligible",
+            "graph_mutated",
+        ):
             self.assertNotIn(forbidden_field, payload)
 
     def test_repair_reps_endpoint_rejects_unknown_node_id(self):
@@ -195,13 +202,20 @@ class RepairRepsApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("Unknown node_id", response.json()["detail"])
 
-    def test_repair_reps_endpoint_returns_controlled_error_for_malformed_ai_output(self):
+    def test_repair_reps_endpoint_returns_controlled_error_for_malformed_ai_output(
+        self,
+    ):
         client = self.build_client()
 
-        with patch(
-            "main.generate_repair_reps",
-            side_effect=ValueError("Repair reps response must include exactly 3 reps."),
-        ), patch("main.logger.exception"):
+        with (
+            patch(
+                "main.generate_repair_reps",
+                side_effect=ValueError(
+                    "Repair reps response must include exactly 3 reps."
+                ),
+            ),
+            patch("main.logger.exception"),
+        ):
             response = client.post(
                 "/api/repair-reps",
                 json={
@@ -214,12 +228,17 @@ class RepairRepsApiTests(unittest.TestCase):
             )
 
         self.assertEqual(response.status_code, 502)
-        self.assertEqual(response.json()["detail"], "Repair Reps generation failed. Please retry.")
+        self.assertEqual(
+            response.json()["detail"], "Repair Reps generation failed. Please retry."
+        )
 
     def test_generate_repair_reps_returns_exact_three_graph_neutral_reps(self):
-        with patch("ai_service._get_client", return_value=object()), patch(
-            "ai_service._call_gemini_with_retry",
-            return_value=FakeResponse(valid_repair_reps()),
+        with (
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=FakeResponse(valid_repair_reps()),
+            ),
         ):
             result = ai_service.generate_repair_reps(
                 knowledge_map=sample_knowledge_map(),
@@ -232,7 +251,12 @@ class RepairRepsApiTests(unittest.TestCase):
 
         self.assertEqual(result["prompt_version"], "repair-reps-system-v1")
         self.assertEqual(len(result["reps"]), 3)
-        for forbidden_field in ("routing", "classification", "score_eligible", "graph_mutated"):
+        for forbidden_field in (
+            "routing",
+            "classification",
+            "score_eligible",
+            "graph_mutated",
+        ):
             self.assertNotIn(forbidden_field, result)
 
     def test_repair_reps_gemini_schema_omits_unsupported_extra_forbid_keyword(self):
@@ -246,11 +270,16 @@ class RepairRepsApiTests(unittest.TestCase):
         payload["routing"] = "NEXT"
         payload["reps"][0]["score_eligible"] = True
 
-        with patch("ai_service._get_client", return_value=object()), patch(
-            "ai_service._call_gemini_with_retry",
-            return_value=FakeResponse(None, text=json.dumps(payload)),
+        with (
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=FakeResponse(None, text=json.dumps(payload)),
+            ),
         ):
-            with self.assertRaisesRegex(ValueError, "invalid structured repair reps response"):
+            with self.assertRaisesRegex(
+                ValueError, "invalid structured repair reps response"
+            ):
                 ai_service.generate_repair_reps(
                     knowledge_map=sample_knowledge_map(),
                     concept_id="thermostat",
@@ -265,9 +294,12 @@ class RepairRepsApiTests(unittest.TestCase):
             reps=valid_repair_reps().reps[:2]
         )
 
-        with patch("ai_service._get_client", return_value=object()), patch(
-            "ai_service._call_gemini_with_retry",
-            return_value=FakeResponse(undersized),
+        with (
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=FakeResponse(undersized),
+            ),
         ):
             with self.assertRaisesRegex(ValueError, "exactly 3 reps"):
                 ai_service.generate_repair_reps(

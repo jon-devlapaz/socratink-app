@@ -35,7 +35,7 @@ body.analytics-page {
   justify-content: space-between;
   gap: 24px;
   padding: 28px 30px;
-  border-radius: 26px;
+  border-radius: var(--radius-hero);
 }
 
 .analytics-kicker,
@@ -43,10 +43,15 @@ body.analytics-page {
   font-family: var(--font-display);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
   color: var(--text-sub);
   margin-bottom: 10px;
+}
+.analytics-kicker {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.panel-kicker {
+  letter-spacing: 0.02em;
 }
 
 .analytics-header h1,
@@ -57,7 +62,7 @@ body.analytics-page {
 }
 
 .analytics-header h1 {
-  font-size: clamp(34px, 5vw, 52px);
+  font-size: var(--text-4xl);
   line-height: 0.96;
 }
 
@@ -85,8 +90,7 @@ body.analytics-page {
   color: var(--text-sub);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .analytics-select {
@@ -106,7 +110,7 @@ body.analytics-page {
   justify-content: center;
   min-height: 44px;
   padding: 0 16px;
-  border-radius: 14px;
+  border-radius: var(--radius-btn);
   border: 1px solid var(--accent-border);
   background: var(--primary-fill);
   color: var(--text-on-primary);
@@ -129,7 +133,7 @@ body.analytics-page {
   justify-content: space-between;
   gap: 16px;
   padding: 16px 20px;
-  border-radius: 18px;
+  border-radius: var(--radius-card);
 }
 
 .status-chip {
@@ -192,12 +196,12 @@ body.analytics-page {
 
 .metric-card,
 .analytics-panel {
-  border-radius: 22px;
+  border-radius: var(--radius-card);
 }
 
 .tip-card {
   padding: 18px 18px 20px;
-  border-radius: 22px;
+  border-radius: var(--radius-card);
   background: linear-gradient(180deg, rgba(var(--white-rgb), 0.92), rgba(var(--cream-50-rgb), 0.84));
   border: 1px solid var(--border);
   box-shadow: var(--shadow-card);
@@ -225,8 +229,7 @@ body.analytics-page {
   color: var(--text-sub);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .metric-value {
@@ -291,7 +294,7 @@ body.analytics-page {
 
 .stat-tile {
   padding: 14px;
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: rgba(var(--white-rgb), 0.72);
   border: 1px solid rgba(var(--ink-900-rgb), 0.08);
 }
@@ -300,8 +303,7 @@ body.analytics-page {
   color: var(--text-sub);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .stat-tile-value {
@@ -375,7 +377,7 @@ body.analytics-page {
 
 .list-card {
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: rgba(var(--white-rgb), 0.72);
   border: 1px solid rgba(var(--ink-900-rgb), 0.08);
 }
@@ -422,7 +424,7 @@ body.analytics-page {
   display: grid;
   gap: 6px;
   padding: 14px 16px;
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: rgba(var(--white-rgb), 0.72);
   border: 1px solid rgba(var(--ink-900-rgb), 0.08);
 }
@@ -437,8 +439,7 @@ body.analytics-page {
 .event-stage {
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--text-sub);
 }
 
@@ -552,4 +553,18 @@ body.analytics-page {
   .stat-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── Dark mode: swap hardcoded light gradients for theme-aware ones ── */
+body.night .analytics-header,
+body.night .analytics-panel,
+body.night .analytics-status,
+body.night .metric-card,
+body.night .tip-card,
+body[data-theme="dark"] .analytics-header,
+body[data-theme="dark"] .analytics-panel,
+body[data-theme="dark"] .analytics-status,
+body[data-theme="dark"] .metric-card,
+body[data-theme="dark"] .tip-card {
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
 }

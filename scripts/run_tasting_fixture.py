@@ -81,7 +81,9 @@ def resolve_node(knowledge_map: dict, node_id: str | None) -> dict:
                     "type": "subnode",
                 }
 
-    raise KeyError(f"Could not resolve node_id={target_id} from extracted knowledge map.")
+    raise KeyError(
+        f"Could not resolve node_id={target_id} from extracted knowledge map."
+    )
 
 
 def flatten_nodes(knowledge_map: dict) -> list[dict]:
@@ -126,7 +128,9 @@ def flatten_nodes(knowledge_map: dict) -> list[dict]:
 def print_map_summary(knowledge_map: dict) -> None:
     metadata = knowledge_map.get("metadata") or {}
     print("\n== Extraction Summary ==")
-    print(f"Title: {metadata.get('source_title') or metadata.get('title') or 'unknown'}")
+    print(
+        f"Title: {metadata.get('source_title') or metadata.get('title') or 'unknown'}"
+    )
     print(f"Architecture: {metadata.get('architecture_type') or 'unknown'}")
     print(f"Difficulty: {metadata.get('difficulty') or 'unknown'}")
     print(f"Backbone count: {len(knowledge_map.get('backbone') or [])}")
@@ -195,7 +199,9 @@ def render_turn_result(result: DrillTurnResult, answer: dict | None = None) -> N
     print(result.get("agent_response") or "")
 
 
-def scripted_sequence_items(scripted_answers: list[dict], sequence: str | None) -> list[dict]:
+def scripted_sequence_items(
+    scripted_answers: list[dict], sequence: str | None
+) -> list[dict]:
     if not sequence:
         return []
     if sequence.strip().lower() == "all":
@@ -215,7 +221,9 @@ def run_fixture(args: argparse.Namespace) -> int:
     fixture_id = fixture.get("id") or Path(args.fixture).stem
     fixture_title = fixture.get("title") or fixture_id
     scripted_answers = fixture.get("scripted_answers") or []
-    concept_id = f"fixture-{fixture_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    concept_id = (
+        f"fixture-{fixture_id}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+    )
 
     base_telemetry = {
         "run_mode": "fixture",
@@ -232,7 +240,9 @@ def run_fixture(args: argparse.Namespace) -> int:
     )
     print_map_summary(knowledge_map)
 
-    node = resolve_node(knowledge_map, args.node or fixture.get("preferred_start_node_id"))
+    node = resolve_node(
+        knowledge_map, args.node or fixture.get("preferred_start_node_id")
+    )
     print("\n== Drill Target ==")
     print(f"id: {node['id']}")
     print(f"type: {node['type']}")
@@ -265,7 +275,9 @@ def run_fixture(args: argparse.Namespace) -> int:
     )
     print("\n== Opening Prompt ==")
     print(init_result["agent_response"])
-    state["messages"].append({"role": "assistant", "content": init_result["agent_response"]})
+    state["messages"].append(
+        {"role": "assistant", "content": init_result["agent_response"]}
+    )
 
     auto_answers = scripted_sequence_items(scripted_answers, args.sequence)
     auto_index = 0
@@ -278,7 +290,9 @@ def run_fixture(args: argparse.Namespace) -> int:
             print(f"\n[auto] {chosen.get('label')}: {chosen.get('input')}")
             user_text = chosen.get("input") or ""
         else:
-            print("\nCommands: number = scripted answer, m = manual answer, l = list answers, q = quit")
+            print(
+                "\nCommands: number = scripted answer, m = manual answer, l = list answers, q = quit"
+            )
             command = input("> ").strip()
             if command.lower() == "q":
                 return 0
@@ -324,27 +338,50 @@ def run_fixture(args: argparse.Namespace) -> int:
             telemetry_context=turn_telemetry,
         )
         render_turn_result(result, chosen)
-        state["messages"].append({"role": "assistant", "content": result["agent_response"]})
+        state["messages"].append(
+            {"role": "assistant", "content": result["agent_response"]}
+        )
         state["probe_count"] = result.get("probe_count", state["probe_count"])
         state["nodes_drilled"] = result.get("nodes_drilled", state["nodes_drilled"])
-        state["attempt_turn_count"] = result.get("attempt_turn_count", state["attempt_turn_count"])
-        state["help_turn_count"] = result.get("help_turn_count", state["help_turn_count"])
+        state["attempt_turn_count"] = result.get(
+            "attempt_turn_count", state["attempt_turn_count"]
+        )
+        state["help_turn_count"] = result.get(
+            "help_turn_count", state["help_turn_count"]
+        )
 
         if result.get("routing") == "NEXT" or result.get("session_terminated"):
-            print("\nFixture drill resolved. Start the script again for a fresh sandbox run.")
+            print(
+                "\nFixture drill resolved. Start the script again for a fresh sandbox run."
+            )
             return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run an internal tasting fixture in the terminal.")
-    parser.add_argument("fixture", nargs="?", default="action-potential-core", help="Fixture id or path to a fixture JSON file.")
-    parser.add_argument("--list", action="store_true", help="List available fixtures and exit.")
-    parser.add_argument("--node", help="Override the fixture's preferred start node id.")
+    parser = argparse.ArgumentParser(
+        description="Run an internal tasting fixture in the terminal."
+    )
+    parser.add_argument(
+        "fixture",
+        nargs="?",
+        default="action-potential-core",
+        help="Fixture id or path to a fixture JSON file.",
+    )
+    parser.add_argument(
+        "--list", action="store_true", help="List available fixtures and exit."
+    )
+    parser.add_argument(
+        "--node", help="Override the fixture's preferred start node id."
+    )
     parser.add_argument(
         "--sequence",
         help="Comma-separated scripted answer ids/labels to auto-run, or 'all' to replay every scripted answer.",
     )
-    parser.add_argument("--api-key", default=os.environ.get("GEMINI_API_KEY"), help="Gemini API key override.")
+    parser.add_argument(
+        "--api-key",
+        default=os.environ.get("GEMINI_API_KEY"),
+        help="Gemini API key override.",
+    )
     args = parser.parse_args()
 
     if args.list:

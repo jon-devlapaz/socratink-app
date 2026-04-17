@@ -64,6 +64,7 @@ class MagicAuthStartState:
             "email": self.email,
         }
 
+
 @dataclass(slots=True)
 class OAuthState:
     nonce: str
@@ -327,7 +328,9 @@ class WorkOSAuthService:
         )
         return state.nonce, _sign_oauth_state(state, self.cookie_password or "")
 
-    def verify_oauth_state(self, *, state: str | None, signed_cookie: str | None) -> str | None:
+    def verify_oauth_state(
+        self, *, state: str | None, signed_cookie: str | None
+    ) -> str | None:
         self.require_enabled()
         if not state or not signed_cookie:
             return None
@@ -373,7 +376,9 @@ def _sign_oauth_state(payload: OAuthState, secret: str) -> str:
     return json.dumps({"payload": raw, "sig": signature}, separators=(",", ":"))
 
 
-def _verify_oauth_state(token: str, *, secret: str, max_age_seconds: int) -> OAuthState | None:
+def _verify_oauth_state(
+    token: str, *, secret: str, max_age_seconds: int
+) -> OAuthState | None:
     try:
         wrapper = json.loads(token)
         raw = wrapper["payload"]
@@ -413,10 +418,17 @@ def build_auth_service_from_env() -> WorkOSAuthService:
         client_id=_env_value("WORKOS_CLIENT_ID"),
         cookie_password=_env_value("WORKOS_COOKIE_PASSWORD"),
         cookie_name=_env_value("AUTH_COOKIE_NAME", "wos_session") or "wos_session",
-        callback_path=_env_value("AUTH_CALLBACK_PATH", "/auth/callback") or "/auth/callback",
+        callback_path=_env_value("AUTH_CALLBACK_PATH", "/auth/callback")
+        or "/auth/callback",
         cookie_secure=_env_value("AUTH_COOKIE_SECURE", "auto") or "auto",
         cookie_samesite=_env_value("AUTH_COOKIE_SAMESITE", "lax") or "lax",
-        cookie_max_age=int(_env_value("AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 14)) or str(60 * 60 * 24 * 14)),
-        oauth_state_cookie_name=_env_value("AUTH_STATE_COOKIE_NAME", "wos_oauth_state") or "wos_oauth_state",
-        oauth_state_ttl_seconds=int(_env_value("AUTH_STATE_TTL_SECONDS", str(60 * 10)) or str(60 * 10)),
+        cookie_max_age=int(
+            _env_value("AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 14))
+            or str(60 * 60 * 24 * 14)
+        ),
+        oauth_state_cookie_name=_env_value("AUTH_STATE_COOKIE_NAME", "wos_oauth_state")
+        or "wos_oauth_state",
+        oauth_state_ttl_seconds=int(
+            _env_value("AUTH_STATE_TTL_SECONDS", str(60 * 10)) or str(60 * 10)
+        ),
     )

@@ -28,14 +28,18 @@ class FakeAuthService:
             sealed_session="sealed-abc",
         )
 
-    def get_login_url(self, *, base_url: str, return_to: str | None = None, provider: str = "authkit") -> str:
+    def get_login_url(
+        self, *, base_url: str, return_to: str | None = None, provider: str = "authkit"
+    ) -> str:
         self.last_return_to = return_to
         self.last_provider = provider
         if not self.enabled:
             raise RuntimeError("disabled")
         return "https://auth.example/login"
 
-    def exchange_code(self, *, code: str, ip_address: str | None = None, user_agent: str | None = None):
+    def exchange_code(
+        self, *, code: str, ip_address: str | None = None, user_agent: str | None = None
+    ):
         return self.callback_state
 
     def load_session(self, sealed_session: str | None):
@@ -75,7 +79,9 @@ class AuthRouterTests(unittest.TestCase):
 
     def test_api_me_returns_anonymous_when_auth_disabled(self):
         service = FakeAuthService(enabled=False)
-        service.current_state = AuthSessionState(auth_enabled=False, authenticated=False)
+        service.current_state = AuthSessionState(
+            auth_enabled=False, authenticated=False
+        )
         client = build_client(service)
 
         response = client.get("/api/me")
@@ -83,21 +89,30 @@ class AuthRouterTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"auth_enabled": False, "authenticated": False, "guest_mode": False, "user": None},
+            {
+                "auth_enabled": False,
+                "authenticated": False,
+                "guest_mode": False,
+                "user": None,
+            },
         )
 
     def test_login_redirect_uses_sanitized_return_path(self):
         service = FakeAuthService(enabled=True)
         client = build_client(service)
 
-        response = client.get("/auth/google?return_to=https://evil.test", follow_redirects=False)
+        response = client.get(
+            "/auth/google?return_to=https://evil.test", follow_redirects=False
+        )
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "https://auth.example/login")
         self.assertEqual(service.last_return_to, "nonce-123")
         self.assertEqual(service.last_provider, "GoogleOAuth")
         self.assertEqual(service.last_built_oauth_state, "/")
-        self.assertIn("wos_oauth_state=signed-state-token", response.headers.get("set-cookie", ""))
+        self.assertIn(
+            "wos_oauth_state=signed-state-token", response.headers.get("set-cookie", "")
+        )
 
     def test_login_page_renders_html(self):
         service = FakeAuthService(enabled=True)
@@ -150,7 +165,10 @@ class AuthRouterTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/login?return_to=%2Flibrary&auth_error=access_denied", response.headers["location"])
+        self.assertIn(
+            "/login?return_to=%2Flibrary&auth_error=access_denied",
+            response.headers["location"],
+        )
 
     def test_callback_invalid_state_redirects_back_to_login(self):
         service = FakeAuthService(enabled=True)
@@ -164,7 +182,10 @@ class AuthRouterTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/login?return_to=%2F&auth_error=invalid_state", response.headers["location"])
+        self.assertIn(
+            "/login?return_to=%2F&auth_error=invalid_state",
+            response.headers["location"],
+        )
 
     def test_logout_clears_cookie(self):
         service = FakeAuthService(enabled=True)
@@ -190,7 +211,12 @@ class AuthRouterTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"auth_enabled": True, "authenticated": False, "guest_mode": True, "user": None},
+            {
+                "auth_enabled": True,
+                "authenticated": False,
+                "guest_mode": True,
+                "user": None,
+            },
         )
 
     def test_login_redirects_guest_sessions_back_into_app(self):
@@ -211,7 +237,9 @@ class AuthRouterTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/library")
-        self.assertIn(f"{GUEST_COOKIE_NAME}=guest", response.headers.get("set-cookie", ""))
+        self.assertIn(
+            f"{GUEST_COOKIE_NAME}=guest", response.headers.get("set-cookie", "")
+        )
 
     def test_magic_auth_send_is_disabled(self):
         service = FakeAuthService(enabled=True)
