@@ -76,6 +76,8 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | Path | Status | Binding | Purpose |
 | --- | --- | --- | --- |
 | `docs/reference/example-extraction-output.json` | reference | no | Sample extraction output for prompts and testing. Not a contract. |
+| `docs/reference/hermes-agent-concept-source.md` | reference | no | Compressed Socratink-ready source for creating a Hermes Agent documentation concept. Derived from public Nous Research Hermes Agent docs and kept under the current extraction input limit. |
+| `docs/reference/hermes-agent-docs-manifest.md` | reference | no | Full manifest of upstream Hermes Agent documentation pages, source paths, raw URLs, sizes, and headings used to build the compressed Hermes concept source. |
 
 ## Historical / Deprecated Notes
 

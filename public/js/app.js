@@ -1784,33 +1784,32 @@ const App = (() => {
     scheduleTutorialRefresh();
   }
 
-  const STARTER_MAPS = [
-    { file: 'thermostat_control.json', name: 'Thermostat Control Loop', desc: 'Simple feedback control with easy causal drill paths' },
-    { file: 'espresso_physics.json', name: 'Physics of Espresso Extraction', desc: 'Grind size, channeling, and thermodynamics' },
-    { file: 'mrna_vaccine.json', name: 'mRNA Vaccine Mechanism', desc: 'Lipid nanoparticles and ribosomal translation' },
-    { file: 'options_trading.json', name: 'Options Trading Fundamentals', desc: 'Leveraged asymmetry and Theta decay' },
-    { file: 'learnops_architecture.json', name: 'LearnOps Architecture', desc: 'The Generation Effect and Socratic Graphs' },
-    { file: 'sourdough_science.json', name: 'Science of Sourdough Baking', desc: 'Symbiotic fermentation, rheology, and oven spring' },
-    { file: 'socratink_strategy.json', name: 'Socratink Strategy', desc: 'The Theta mechanism, Cold Attempts, and spaced mastery loops' }
+  const BUILT_IN_LIBRARY_CONCEPTS = [
+    {
+      file: 'hermes_agent.json',
+      name: 'Hermes Agent',
+      kicker: 'Documentation concept',
+      summary: 'Learn the Nous Research Hermes Agent system: persistent memory, skills, tools, providers, messaging gateways, environments, automations, and safety boundaries.',
+      architecture: 'system description',
+      difficulty: 'hard',
+    },
   ];
-  const STARTER_MAP_NAMES = new Set(STARTER_MAPS.map((item) => item.name));
 
-  function isStarterMapConcept(concept, graphData = null) {
-    if (!concept) return false;
-    const graph = graphData || parseConceptGraphData(concept) || {};
-    const sourceTitle = graph?.metadata?.source_title || graph?.metadata?.title || null;
-    return STARTER_MAP_NAMES.has(concept.name) || (sourceTitle ? STARTER_MAP_NAMES.has(sourceTitle) : false);
-  }
+  async function importLibraryConcept(filename, conceptName) {
+    const concepts = loadConcepts();
+    const existingConcept = concepts.find((concept) => concept.name === conceptName && concept.graphData);
 
-  function shouldBypassSessionStops(concept, graphData = null) {
-    // Starter maps are the controlled MVP tasting environment.
-    return isStarterMapConcept(concept, graphData);
-  }
+    if (existingConcept) {
+      selectConcept(existingConcept.id);
+      hideLibrary();
+      showMapView(existingConcept);
+      setMapMode('graph');
+      return;
+    }
 
-  async function importStarterMap(filename, conceptName) {
     try {
       const response = await fetch(`/data/library/${filename}`);
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error('Library concept request failed');
       const data = await response.json();
 
       const newConcept = {
@@ -1818,10 +1817,12 @@ const App = (() => {
         name: conceptName,
         createdAt: new Date().toISOString(),
         state: 'growing',
-        graphData: JSON.stringify(data)
+        contentPreview: data?.metadata?.core_thesis || '',
+        contentType: 'library',
+        contentFilename: 'Hermes Agent documentation',
+        graphData: JSON.stringify(data),
       };
 
-      const concepts = loadConcepts();
       concepts.push(newConcept);
       saveConcepts(concepts);
 
@@ -1829,12 +1830,11 @@ const App = (() => {
       renderConceptList(concepts);
       selectConcept(newConcept.id);
       hideLibrary();
-
       showMapView(newConcept);
       setMapMode('graph');
     } catch (error) {
-      console.error('Error loading starter map:', error);
-      alert('Failed to load the starter map.');
+      console.error('Error loading library concept:', error);
+      alert('Failed to load this library concept.');
     }
   }
 
@@ -1854,7 +1854,7 @@ const App = (() => {
       ? `Source: ${concept.contentFilename}`
       : concept.contentType
         ? `Source: ${concept.contentType.toUpperCase()}`
-        : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Starter concept');
+        : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Mapped concept');
 
     return {
       thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
@@ -1875,22 +1875,35 @@ const App = (() => {
     teardownMapView();
     hidePrimaryViews();
     const concepts = loadConcepts().filter(c => c.graphData);
+    const existingConceptNames = new Set(concepts.map((concept) => concept.name));
 
     let html = `
       <div class="library-kicker">Library</div>
 
       <div class="library-section">
-        <h3 class="library-section-title">Starter Shelf</h3>
-        <p class="library-section-copy">Preloaded concepts you can drop into the vault instantly.</p>
-        <div class="library-starter-grid">
-          ${STARTER_MAPS.map(s => `
-            <div class="library-card-starter" onclick="App.importStarterMap('${s.file}', '${s.name}')">
-              <div class="library-card-kicker">Starter</div>
-              <div class="starter-card-title">${escHtml(s.name)}</div>
-              <div class="starter-card-desc">${escHtml(s.desc)}</div>
-              <div class="library-card-cta">Add to vault</div>
-            </div>
-          `).join('')}
+        <h3 class="library-section-title">Documentation Concepts</h3>
+        <p class="library-section-copy">Curated source maps you can add to your vault and drill like any other concept.</p>
+        <div class="library-vault-grid">
+          ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
+            const alreadyAdded = existingConceptNames.has(item.name);
+            return `
+              <div class="library-card library-card-vault" style="cursor:pointer;" onclick="App.importLibraryConcept('${item.file}', '${item.name}')">
+                <div class="library-card-header">
+                  <div>
+                    <div class="library-card-kicker">${escHtml(item.kicker)}</div>
+                    <span class="library-card-name">${escHtml(item.name)}</span>
+                  </div>
+                  <span class="library-card-state">${alreadyAdded ? 'In vault' : 'Ready'}</span>
+                </div>
+                <p class="library-card-summary">${escHtml(item.summary)}</p>
+                <div class="library-card-meta">
+                  <span class="library-card-pill">${escHtml(item.architecture)}</span>
+                  <span class="library-card-pill">${escHtml(item.difficulty)}</span>
+                </div>
+                <div class="library-card-cta">${alreadyAdded ? 'Open concept' : 'Add concept'}</div>
+              </div>
+            `;
+          }).join('')}
         </div>
       </div>
       
@@ -1900,7 +1913,7 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No mapped concepts yet. Add a concept on the Dashboard or pull in a Starter Map to begin.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No mapped concepts yet. Add a concept on the Dashboard to begin.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
@@ -2861,7 +2874,7 @@ const App = (() => {
     const nodeType = resolveNodeType(knowledgeMap, drillState.node.id, drillState.node.type);
     const clusterId = resolveClusterId(knowledgeMap, drillState.node.id);
     const nodeLabel = drillState.node.fullLabel || drillState.node.label || concept.name;
-    const bypassSessionLimits = shouldBypassSessionStops(concept, knowledgeMap);
+    const bypassSessionLimits = false;
 
     const apiKey = localStorage.getItem('gemini_key') || undefined;
     const nodeData = resolveNodeData(knowledgeMap, drillState.node.id) || {};
@@ -3056,7 +3069,7 @@ const App = (() => {
     const visitedNodeIds = Array.isArray(sessionState.visitedNodeIds) ? sessionState.visitedNodeIds : [];
     const isNewSessionNode = !visitedNodeIds.includes(nodeContext.id);
     const uniqueNodeCount = getSessionNodeCount();
-    const bypassSessionLimits = shouldBypassSessionStops(concept, km);
+    const bypassSessionLimits = false;
 
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
@@ -3165,7 +3178,7 @@ const App = (() => {
       id: 'library',
       sel: '#nav-library',
       title: 'Open The Library',
-      text: 'Use starter maps for an instant demo, or reopen concepts you have already extracted.',
+      text: 'Reopen concepts you have already extracted.',
       when: () => true,
     },
     {
@@ -3748,7 +3761,7 @@ const App = (() => {
     fastForward,
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, showDashboard, showAnalytics, showSettings,
-    importStarterMap,
+    importLibraryConcept,
     toggleTheme, runHeroAction
   };
 

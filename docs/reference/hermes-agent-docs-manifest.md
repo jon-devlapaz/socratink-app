@@ -1,0 +1,614 @@
+# Hermes Agent Documentation Manifest
+
+Source: https://hermes-agent.nousresearch.com/docs/
+GitHub source tree: https://github.com/NousResearch/hermes-agent/tree/main/website/docs
+Source tree SHA: `8a0c774e9efd771c317e6f158a080ea19267182b`
+Retrieved: 2026-04-18
+
+Total Markdown docs: 117
+
+## Developer Guide
+
+- [ACP Internals](https://hermes-agent.nousresearch.com/docs/developer-guide/acp-internals/)
+  - Source path: `website/docs/developer-guide/acp-internals.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/acp-internals.md
+  - Size: 4612 chars
+  - Headings: Boot flow; Major components; HermesACPAgent; SessionManager; Event bridge; Permission bridge; Tool rendering helpers; Session lifecycle
+- [Adding a Platform Adapter](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-platform-adapters/)
+  - Source path: `website/docs/developer-guide/adding-platform-adapters.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/adding-platform-adapters.md
+  - Size: 9385 chars
+  - Headings: Architecture Overview; Step-by-Step Checklist; 1. Platform Enum; 2. Adapter File; 3. Gateway Config ( gateway/config.py ); 4. Gateway Runner ( gateway/run.py ); 5. Cross-Platform Delivery; 6. CLI Integration
+- [Adding Providers](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-providers/)
+  - Source path: `website/docs/developer-guide/adding-providers.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/adding-providers.md
+  - Size: 13633 chars
+  - Headings: The mental model; Choose the implementation path first; Path A — OpenAI-compatible provider; Path B — Native provider; File checklist; Required for every built-in provider; Additional for native / non-OpenAI providers; Step 1: Pick one canonical provider id
+- [Adding Tools](https://hermes-agent.nousresearch.com/docs/developer-guide/adding-tools/)
+  - Source path: `website/docs/developer-guide/adding-tools.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/adding-tools.md
+  - Size: 6068 chars
+  - Headings: Step 1: Create the Tool File; Key Rules; Step 2: Add to a Toolset; ~~Step 3: Add Discovery Import~~ (No longer needed); Async Handlers; Handlers That Need task id; Agent-Loop Intercepted Tools; Optional: Setup Wizard Integration
+- [Agent Loop Internals](https://hermes-agent.nousresearch.com/docs/developer-guide/agent-loop/)
+  - Source path: `website/docs/developer-guide/agent-loop.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/agent-loop.md
+  - Size: 10374 chars
+  - Headings: Core Responsibilities; Two Entry Points; API Modes; Turn Lifecycle; Message Format; Message Alternation Rules; Interruptible API Calls; Tool Execution
+- [Architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture/)
+  - Source path: `website/docs/developer-guide/architecture.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/architecture.md
+  - Size: 14494 chars
+  - Headings: System Overview; Directory Structure; Data Flow; CLI Session; Gateway Message; Cron Job; Recommended Reading Order; Major Subsystems
+- [Context Compression and Caching](https://hermes-agent.nousresearch.com/docs/developer-guide/context-compression-and-caching/)
+  - Source path: `website/docs/developer-guide/context-compression-and-caching.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/context-compression-and-caching.md
+  - Size: 13916 chars
+  - Headings: Pluggable Context Engine; Dual Compression System; 1. Gateway Session Hygiene (85% threshold); 2. Agent ContextCompressor (50% threshold, configurable); Configuration; Parameter Details; Computed Values (for a 200K context model at defaults); Compression Algorithm
+- [Context Engine Plugins](https://hermes-agent.nousresearch.com/docs/developer-guide/context-engine-plugin/)
+  - Source path: `website/docs/developer-guide/context-engine-plugin.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/context-engine-plugin.md
+  - Size: 6879 chars
+  - Headings: How it works; Directory structure; The ContextEngine ABC; Class attributes your engine must maintain; Optional methods; Engine tools; Registration; Via directory (recommended)
+- [Contributing](https://hermes-agent.nousresearch.com/docs/developer-guide/contributing/)
+  - Source path: `website/docs/developer-guide/contributing.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/contributing.md
+  - Size: 7279 chars
+  - Headings: Contribution Priorities; Common contribution paths; Development Setup; Prerequisites; Clone and Install; Configure for Development; Run; Run Tests
+- [Creating Skills](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills/)
+  - Source path: `website/docs/developer-guide/creating-skills.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/creating-skills.md
+  - Size: 13588 chars
+  - Headings: Should it be a Skill or a Tool?; Skill Directory Structure; SKILL.md Format; When to Use; Quick Reference; Procedure; Pitfalls; Verification
+- [Cron Internals](https://hermes-agent.nousresearch.com/docs/developer-guide/cron-internals/)
+  - Source path: `website/docs/developer-guide/cron-internals.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/cron-internals.md
+  - Size: 9278 chars
+  - Headings: Key Files; Scheduling Model; Job Storage; Job Lifecycle States; Backward Compatibility; Scheduler Runtime; Tick Cycle; Gateway Integration
+- [Environments, Benchmarks & Data Generation](https://hermes-agent.nousresearch.com/docs/developer-guide/environments/)
+  - Source path: `website/docs/developer-guide/environments.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/environments.md
+  - Size: 20178 chars
+  - Headings: Architecture; BaseEnv (Atropos); HermesAgentBaseEnv; Concrete Environments; Core Components; Agent Loop; Tool Context; Tool Call Parsers
+- [Extending the CLI](https://hermes-agent.nousresearch.com/docs/developer-guide/extending-the-cli/)
+  - Source path: `website/docs/developer-guide/extending-the-cli.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/extending-the-cli.md
+  - Size: 6995 chars
+  - Headings: Extension points; Quick start: a wrapper CLI; Hook reference; get extra tui widgets(); register extra tui keybindings(kb, , input area); build tui layout children( widgets); Layout diagram; Tips
+- [Gateway Internals](https://hermes-agent.nousresearch.com/docs/developer-guide/gateway-internals/)
+  - Source path: `website/docs/developer-guide/gateway-internals.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/gateway-internals.md
+  - Size: 11576 chars
+  - Headings: Key Files; Architecture Overview; Message Flow; Session Key Format; Two-Level Message Guard; Authorization; DM Pairing Flow; Slash Command Dispatch
+- [Memory Provider Plugins](https://hermes-agent.nousresearch.com/docs/developer-guide/memory-provider-plugin/)
+  - Source path: `website/docs/developer-guide/memory-provider-plugin.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/memory-provider-plugin.md
+  - Size: 9103 chars
+  - Headings: Directory Structure; The MemoryProvider ABC; Required Methods; Core Lifecycle; Config; Optional Hooks; Config Schema; Save Config
+- [Prompt Assembly](https://hermes-agent.nousresearch.com/docs/developer-guide/prompt-assembly/)
+  - Source path: `website/docs/developer-guide/prompt-assembly.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/prompt-assembly.md
+  - Size: 9045 chars
+  - Headings: Cached system prompt layers; Concrete example: assembled system prompt; Persistent Memory; User Profile; Skills (mandatory); AGENTS.md; How SOUL.md appears in the prompt; How context files are injected
+- [Provider Runtime Resolution](https://hermes-agent.nousresearch.com/docs/developer-guide/provider-runtime/)
+  - Source path: `website/docs/developer-guide/provider-runtime.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/provider-runtime.md
+  - Size: 7291 chars
+  - Headings: Resolution precedence; Providers; Output of runtime resolution; Why this matters; AI Gateway; OpenRouter, AI Gateway, and custom OpenAI-compatible base URLs; Native Anthropic path; OpenAI Codex path
+- [Session Storage](https://hermes-agent.nousresearch.com/docs/developer-guide/session-storage/)
+  - Source path: `website/docs/developer-guide/session-storage.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/session-storage.md
+  - Size: 11356 chars
+  - Headings: Architecture Overview; SQLite Schema; Sessions Table; Messages Table; FTS5 Full-Text Search; Schema Version and Migrations; Write Contention Handling; Common Operations
+- [Tools Runtime](https://hermes-agent.nousresearch.com/docs/developer-guide/tools-runtime/)
+  - Source path: `website/docs/developer-guide/tools-runtime.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/tools-runtime.md
+  - Size: 10022 chars
+  - Headings: Tool registration model; How registry.register() works; Discovery: discover builtin tools(); Tool availability checking ( check fn ); Toolset resolution; How get tool definitions() filters tools; Legacy toolset names; Dispatch
+- [Trajectory Format](https://hermes-agent.nousresearch.com/docs/developer-guide/trajectory-format/)
+  - Source path: `website/docs/developer-guide/trajectory-format.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/developer-guide/trajectory-format.md
+  - Size: 8280 chars
+  - Headings: File Naming Convention; JSONL Entry Format; CLI/Interactive Format (from save trajectory ); Batch Runner Format (from batch runner.py ); Conversations Array (ShareGPT Format); Complete Example; Normalization Rules; Reasoning Content Markup
+
+## Getting Started
+
+- [Installation](https://hermes-agent.nousresearch.com/docs/getting-started/installation/)
+  - Source path: `website/docs/getting-started/installation.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/getting-started/installation.md
+  - Size: 9235 chars
+  - Headings: Quick Install; Linux / macOS / WSL2; Android / Termux; What the Installer Does; After Installation; Prerequisites; Manual Installation; Step 1: Clone the Repository
+- [Learning Path](https://hermes-agent.nousresearch.com/docs/getting-started/learning-path/)
+  - Source path: `website/docs/getting-started/learning-path.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/getting-started/learning-path.md
+  - Size: 8640 chars
+  - Headings: How to Use This Page; By Experience Level; By Use Case; "I want a CLI coding assistant"; "I want a Telegram/Discord bot"; "I want to automate tasks"; "I want to build custom tools/skills"; "I want to train models"
+- [Nix & NixOS Setup](https://hermes-agent.nousresearch.com/docs/getting-started/nix-setup/)
+  - Source path: `website/docs/getting-started/nix-setup.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/getting-started/nix-setup.md
+  - Size: 34524 chars
+  - Headings: Prerequisites; Quick Start (Any Nix User); NixOS Module; Add the Flake Input; Minimal Configuration; Verify It Works; Choosing a Deployment Mode; Configuration
+- [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart/)
+  - Source path: `website/docs/getting-started/quickstart.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/getting-started/quickstart.md
+  - Size: 10148 chars
+  - Headings: 1. Install Hermes Agent; 2. Set Up a Provider; 3. Start Chatting; 4. Try Key Features; Ask it to use the terminal; Use slash commands; Multi-line input; Interrupt the agent
+- [Android / Termux](https://hermes-agent.nousresearch.com/docs/getting-started/termux/)
+  - Source path: `website/docs/getting-started/termux.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/getting-started/termux.md
+  - Size: 6386 chars
+  - Headings: What is supported in the tested path?; What is not part of the tested path yet?; Option 1: One-line installer; Option 2: Manual install (fully explicit); 1. Update Termux and install system packages; 2. Clone Hermes; 3. Create a virtual environment; 4. Install the tested Termux bundle
+- [Updating & Uninstalling](https://hermes-agent.nousresearch.com/docs/getting-started/updating/)
+  - Source path: `website/docs/getting-started/updating.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/getting-started/updating.md
+  - Size: 5916 chars
+  - Headings: Updating; What happens during an update; Recommended Post-Update Validation; If your terminal disconnects mid-update; Checking your current version; Updating from Messaging Platforms; Manual Update; Rollback instructions
+
+## Guides And Tutorials
+
+- [Automate Anything with Cron](https://hermes-agent.nousresearch.com/docs/guides/automate-with-cron/)
+  - Source path: `website/docs/guides/automate-with-cron.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/automate-with-cron.md
+  - Size: 9730 chars
+  - Headings: Pattern 1: Website Change Monitor; Pattern 2: Weekly Report; Pattern 3: GitHub Repository Watcher; Pattern 4: Data Collection Pipeline; Pattern 5: Multi-Skill Workflow; Managing Your Jobs; Delivery Targets; Tips
+- [Automation Templates](https://hermes-agent.nousresearch.com/docs/guides/automation-templates/)
+  - Source path: `website/docs/guides/automation-templates.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/automation-templates.md
+  - Size: 19068 chars
+  - Headings: Development Workflow; Nightly Backlog Triage; Automatic PR Code Review; Docs Drift Detection; Dependency Security Audit; DevOps & Monitoring; Deploy Verification; Alert Triage
+- [AWS Bedrock](https://hermes-agent.nousresearch.com/docs/guides/aws-bedrock/)
+  - Source path: `website/docs/guides/aws-bedrock.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/aws-bedrock.md
+  - Size: 5582 chars
+  - Headings: Prerequisites; Quick Start; Configuration; Region; Guardrails; Model Discovery; Available Models; Switching Models Mid-Session
+- [Build a Hermes Plugin](https://hermes-agent.nousresearch.com/docs/guides/build-a-hermes-plugin/)
+  - Source path: `website/docs/guides/build-a-hermes-plugin.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/build-a-hermes-plugin.md
+  - Size: 25269 chars
+  - Headings: What you're building; Step 1: Create the plugin directory; Step 2: Write the manifest; Step 3: Write the tool schemas; Step 4: Write the tool handlers; Step 5: Write the registration; Step 6: Test it; Your plugin's final structure
+- [Cron Troubleshooting](https://hermes-agent.nousresearch.com/docs/guides/cron-troubleshooting/)
+  - Source path: `website/docs/guides/cron-troubleshooting.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/cron-troubleshooting.md
+  - Size: 9172 chars
+  - Headings: Jobs Not Firing; Check 1: Verify the job exists and is active; Check 2: Confirm the schedule is correct; Check 3: Is the gateway running?; Check 4: Check the system clock and timezone; Delivery Failures; Check 1: Verify the deliver target is correct; Check 2: Check [SILENT] usage
+- [Tutorial: Daily Briefing Bot](https://hermes-agent.nousresearch.com/docs/guides/daily-briefing-bot/)
+  - Source path: `website/docs/guides/daily-briefing-bot.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/daily-briefing-bot.md
+  - Size: 10033 chars
+  - Headings: What We're Building; Prerequisites; Step 1: Test the Workflow Manually; Step 2: Create the Cron Job; Option A: Natural Language (in chat); Option B: CLI Slash Command; The Golden Rule: Self-Contained Prompts; Step 3: Customize the Briefing
+- [Delegation & Parallel Work](https://hermes-agent.nousresearch.com/docs/guides/delegation-patterns/)
+  - Source path: `website/docs/guides/delegation-patterns.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/delegation-patterns.md
+  - Size: 9725 chars
+  - Headings: When to Delegate; Pattern: Parallel Research; Pattern: Code Review; Pattern: Compare Alternatives; Pattern: Multi-File Refactoring; Pattern: Gather Then Analyze; Toolset Selection; Constraints
+- [Run Local LLMs on Mac](https://hermes-agent.nousresearch.com/docs/guides/local-llm-on-mac/)
+  - Source path: `website/docs/guides/local-llm-on-mac.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/local-llm-on-mac.md
+  - Size: 9150 chars
+  - Headings: Choosing a model; Option A: llama.cpp; Install; Download the model; Start the server; Memory optimization for constrained systems; Test it; Get the model name
+- [Migrate from OpenClaw](https://hermes-agent.nousresearch.com/docs/guides/migrate-from-openclaw/)
+  - Source path: `website/docs/guides/migrate-from-openclaw.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/migrate-from-openclaw.md
+  - Size: 15053 chars
+  - Headings: Quick start; Options; What gets migrated; Persona, memory, and instructions; Skills (4 sources); Model and provider configuration; Agent behavior; Session reset policies
+- [Using Hermes as a Python Library](https://hermes-agent.nousresearch.com/docs/guides/python-library/)
+  - Source path: `website/docs/guides/python-library.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/python-library.md
+  - Size: 10137 chars
+  - Headings: Installation; Basic Usage; Full Conversation Control; Configuring Tools; Multi-turn Conversations; Saving Trajectories; Custom System Prompts; Batch Processing
+- [Tutorial: Team Telegram Assistant](https://hermes-agent.nousresearch.com/docs/guides/team-telegram-assistant/)
+  - Source path: `website/docs/guides/team-telegram-assistant.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/team-telegram-assistant.md
+  - Size: 13575 chars
+  - Headings: What We're Building; Prerequisites; Step 1: Create a Telegram Bot; Step 2: Configure the Gateway; Option A: Interactive Setup (Recommended); Option B: Manual Configuration; Finding Your User ID; Step 3: Start the Gateway
+- [Tips & Best Practices](https://hermes-agent.nousresearch.com/docs/guides/tips/)
+  - Source path: `website/docs/guides/tips.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/tips.md
+  - Size: 11897 chars
+  - Headings: Getting the Best Results; Be Specific About What You Want; Provide Context Up Front; Use Context Files for Recurring Instructions; Let the Agent Use Its Tools; Use Skills for Complex Workflows; CLI Power User Tips; Multi-Line Input
+- [Use MCP with Hermes](https://hermes-agent.nousresearch.com/docs/guides/use-mcp-with-hermes/)
+  - Source path: `website/docs/guides/use-mcp-with-hermes.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/use-mcp-with-hermes.md
+  - Size: 9723 chars
+  - Headings: When should you use MCP?; Mental model; Step 1: install MCP support; Step 2: add one server first; Step 3: verify MCP loaded; Step 4: start filtering immediately; Example: whitelist only what you want; Example: blacklist dangerous actions
+- [Use SOUL.md with Hermes](https://hermes-agent.nousresearch.com/docs/guides/use-soul-with-hermes/)
+  - Source path: `website/docs/guides/use-soul-with-hermes.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/use-soul-with-hermes.md
+  - Size: 6909 chars
+  - Headings: What SOUL.md is for; What SOUL.md is not for; Where it lives; First-run behavior; How Hermes uses it; A good first edit; Example styles; 1. Pragmatic engineer
+- [Use Voice Mode with Hermes](https://hermes-agent.nousresearch.com/docs/guides/use-voice-mode-with-hermes/)
+  - Source path: `website/docs/guides/use-voice-mode-with-hermes.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/use-voice-mode-with-hermes.md
+  - Size: 9541 chars
+  - Headings: What voice mode is good for; Choose your voice mode setup; Step 1: make sure normal Hermes works first; Step 2: install the right extras; CLI microphone + playback; Messaging platforms; Premium ElevenLabs TTS; Local NeuTTS (optional)
+- [Working with Skills](https://hermes-agent.nousresearch.com/docs/guides/work-with-skills/)
+  - Source path: `website/docs/guides/work-with-skills.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/guides/work-with-skills.md
+  - Size: 8738 chars
+  - Headings: Finding Skills; Searching for a Skill; The Skills Hub; Using a Skill; Progressive Disclosure; Installing from the Hub; Verifying Installation; Plugin-Provided Skills
+
+## Overview
+
+- [Hermes Agent Documentation](https://hermes-agent.nousresearch.com/docs/)
+  - Source path: `website/docs/index.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/index.md
+  - Size: 5378 chars
+  - Headings: What is Hermes Agent?; Quick Links; Key Features
+
+## Integrations
+
+- [Integrations](https://hermes-agent.nousresearch.com/docs/integrations/)
+  - Source path: `website/docs/integrations/index.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/integrations/index.md
+  - Size: 7295 chars
+  - Headings: AI Providers & Routing; Tool Servers (MCP); Web Search Backends; Browser Automation; Voice & TTS Providers; IDE & Editor Integration; Programmatic Access; Memory & Personalization
+- [AI Providers](https://hermes-agent.nousresearch.com/docs/integrations/providers/)
+  - Source path: `website/docs/integrations/providers.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/integrations/providers.md
+  - Size: 53847 chars
+  - Headings: Inference Providers; Google Gemini via OAuth ( google-gemini-cli ); Two Commands for Model Management; Anthropic (Native); GitHub Copilot; First-Class Chinese AI Providers; xAI (Grok) — Responses API + Prompt Caching; Ollama Cloud — Managed Ollama Models, OAuth + API Key
+
+## Reference
+
+- [CLI Commands Reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands/)
+  - Source path: `website/docs/reference/cli-commands.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/cli-commands.md
+  - Size: 34875 chars
+  - Headings: Global entrypoint; Global options; Top-level commands; hermes chat; hermes model; /model slash command (mid-session); hermes gateway; hermes setup
+- [Environment Variables](https://hermes-agent.nousresearch.com/docs/reference/environment-variables/)
+  - Source path: `website/docs/reference/environment-variables.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/environment-variables.md
+  - Size: 35279 chars
+  - Headings: LLM Providers; Provider Auth (OAuth); Tool APIs; Nous Tool Gateway; Terminal Backend; SSH Backend; Container Resources (Docker, Singularity, Modal, Daytona); Persistent Shell
+- [FAQ & Troubleshooting](https://hermes-agent.nousresearch.com/docs/reference/faq/)
+  - Source path: `website/docs/reference/faq.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/faq.md
+  - Size: 29615 chars
+  - Headings: Frequently Asked Questions; What LLM providers work with Hermes?; Does it work on Windows?; Does it work on Android / Termux?; Is my data sent anywhere?; Can I use it offline / with local models?; How much does it cost?; Can multiple people use one instance?
+- [MCP Config Reference](https://hermes-agent.nousresearch.com/docs/reference/mcp-config-reference/)
+  - Source path: `website/docs/reference/mcp-config-reference.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/mcp-config-reference.md
+  - Size: 5787 chars
+  - Headings: Root config shape; Server keys; tools policy keys; Filtering semantics; include; exclude; Precedence; Utility-tool policy
+- [Optional Skills Catalog](https://hermes-agent.nousresearch.com/docs/reference/optional-skills-catalog/)
+  - Source path: `website/docs/reference/optional-skills-catalog.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/optional-skills-catalog.md
+  - Size: 10294 chars
+  - Headings: Autonomous AI Agents; Blockchain; Communication; Creative; DevOps; Email; Health; MCP
+- [Profile Commands Reference](https://hermes-agent.nousresearch.com/docs/reference/profile-commands/)
+  - Source path: `website/docs/reference/profile-commands.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/profile-commands.md
+  - Size: 7076 chars
+  - Headings: hermes profile; hermes profile list; hermes profile use; hermes profile create; hermes profile delete; hermes profile show; hermes profile alias; hermes profile rename
+- [Bundled Skills Catalog](https://hermes-agent.nousresearch.com/docs/reference/skills-catalog/)
+  - Source path: `website/docs/reference/skills-catalog.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/skills-catalog.md
+  - Size: 29042 chars
+  - Headings: apple; autonomous-ai-agents; creative; data-science; devops; dogfood; email; gaming
+- [Slash Commands Reference](https://hermes-agent.nousresearch.com/docs/reference/slash-commands/)
+  - Source path: `website/docs/reference/slash-commands.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/slash-commands.md
+  - Size: 12132 chars
+  - Headings: Interactive CLI slash commands; Session; Configuration; Tools & Skills; Info; Exit; Dynamic CLI slash commands; Quick Commands
+- [Built-in Tools Reference](https://hermes-agent.nousresearch.com/docs/reference/tools-reference/)
+  - Source path: `website/docs/reference/tools-reference.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/tools-reference.md
+  - Size: 15862 chars
+  - Headings: browser toolset; clarify toolset; code execution toolset; cronjob toolset; delegation toolset; feishu doc toolset; feishu drive toolset; file toolset
+- [Toolsets Reference](https://hermes-agent.nousresearch.com/docs/reference/toolsets-reference/)
+  - Source path: `website/docs/reference/toolsets-reference.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/reference/toolsets-reference.md
+  - Size: 8123 chars
+  - Headings: How Toolsets Work; Configuring Toolsets; Per-session (CLI); Per-platform (config.yaml); Interactive management; Core Toolsets; Composite Toolsets; Platform Toolsets
+
+## User Guide
+
+- [Checkpoints and /rollback](https://hermes-agent.nousresearch.com/docs/user-guide/checkpoints-and-rollback/)
+  - Source path: `website/docs/user-guide/checkpoints-and-rollback.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/checkpoints-and-rollback.md
+  - Size: 6665 chars
+  - Headings: What Triggers a Checkpoint; Quick Reference; How Checkpoints Work; Configuration; Listing Checkpoints; Previewing Changes with /rollback diff; Restoring with /rollback; Single-File Restore
+- [CLI Interface](https://hermes-agent.nousresearch.com/docs/user-guide/cli/)
+  - Source path: `website/docs/user-guide/cli.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/cli.md
+  - Size: 14539 chars
+  - Headings: Running the CLI; Interface Layout; Status Bar; Session Resume Display; Keybindings; Slash Commands; Quick Commands; Preloading Skills at Launch
+- [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration/)
+  - Source path: `website/docs/user-guide/configuration.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/configuration.md
+  - Size: 61820 chars
+  - Headings: Directory Structure; Managing Configuration; Configuration Precedence; Environment Variable Substitution; Terminal Backend Configuration; Backend Overview; Local Backend; Docker Backend
+- [Docker](https://hermes-agent.nousresearch.com/docs/user-guide/docker/)
+  - Source path: `website/docs/user-guide/docker.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/docker.md
+  - Size: 9508 chars
+  - Headings: Quick start; Running in gateway mode; Running the dashboard; Running interactively (CLI chat); Persistent volumes; Environment variable forwarding; Docker Compose example; Resource limits
+- [ACP Editor Integration](https://hermes-agent.nousresearch.com/docs/user-guide/features/acp/)
+  - Source path: `website/docs/user-guide/features/acp.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/acp.md
+  - Size: 4123 chars
+  - Headings: What Hermes exposes in ACP mode; Installation; Launching the ACP server; Editor setup; VS Code; Zed; JetBrains; Registry manifest
+- [API Server](https://hermes-agent.nousresearch.com/docs/user-guide/features/api-server/)
+  - Source path: `website/docs/user-guide/features/api-server.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/api-server.md
+  - Size: 12823 chars
+  - Headings: Quick Start; 1. Enable the API server; 2. Start the gateway; 3. Connect a frontend; Endpoints; POST /v1/chat/completions; POST /v1/responses; GET /v1/responses/\{id\}
+- [Batch Processing](https://hermes-agent.nousresearch.com/docs/user-guide/features/batch-processing/)
+  - Source path: `website/docs/user-guide/features/batch-processing.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/batch-processing.md
+  - Size: 8638 chars
+  - Headings: Quick Start; Dataset Format; Configuration Options; Provider Routing (OpenRouter); Reasoning Control; Advanced Options; Toolset Distributions; Output Format
+- [Browser Automation](https://hermes-agent.nousresearch.com/docs/user-guide/features/browser/)
+  - Source path: `website/docs/user-guide/features/browser.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/browser.md
+  - Size: 15698 chars
+  - Headings: Setup; Browserbase cloud mode; Browser Use cloud mode; Firecrawl cloud mode; Camofox local mode; Local Chrome via CDP ( /browser connect ); Local browser mode; Optional Environment Variables
+- [Code Execution](https://hermes-agent.nousresearch.com/docs/user-guide/features/code-execution/)
+  - Source path: `website/docs/user-guide/features/code-execution.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/code-execution.md
+  - Size: 10141 chars
+  - Headings: How It Works; When the Agent Uses This; Practical Examples; Data Processing Pipeline; Multi-Step Web Research; Bulk File Refactoring; Build and Test Pipeline; Execution Mode
+- [Context Files](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files/)
+  - Source path: `website/docs/user-guide/features/context-files.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/context-files.md
+  - Size: 9112 chars
+  - Headings: Supported Context Files; AGENTS.md; Progressive Subdirectory Discovery; Example AGENTS.md; Architecture; Conventions; Important Notes; SOUL.md
+- [Context References](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-references/)
+  - Source path: `website/docs/user-guide/features/context-references.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/context-references.md
+  - Size: 5388 chars
+  - Headings: Supported References; Usage Examples; CLI Tab Completion; Line Ranges; Size Limits; Security; Sensitive Path Blocking; Path Traversal Protection
+- [Credential Pools](https://hermes-agent.nousresearch.com/docs/user-guide/features/credential-pools/)
+  - Source path: `website/docs/user-guide/features/credential-pools.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/credential-pools.md
+  - Size: 8421 chars
+  - Headings: How It Works; Quick Start; Interactive Management; CLI Commands; Rotation Strategies; Error Recovery; Custom Endpoint Pools; Auto-Discovery
+- [Scheduled Tasks (Cron)](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron/)
+  - Source path: `website/docs/user-guide/features/cron.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/cron.md
+  - Size: 11194 chars
+  - Headings: What cron can do now; Creating scheduled tasks; In chat with /cron; From the standalone CLI; Through natural conversation; Skill-backed cron jobs; Single skill; Multiple skills
+- [Dashboard Plugins](https://hermes-agent.nousresearch.com/docs/user-guide/features/dashboard-plugins/)
+  - Source path: `website/docs/user-guide/features/dashboard-plugins.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/dashboard-plugins.md
+  - Size: 10144 chars
+  - Headings: Quick Start; Plugin Structure; Manifest Reference; Tab Position; Available Icons; Plugin SDK; SDK Contents; Using SDK.fetchJSON
+- [Subagent Delegation](https://hermes-agent.nousresearch.com/docs/user-guide/features/delegation/)
+  - Source path: `website/docs/user-guide/features/delegation.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/delegation.md
+  - Size: 8817 chars
+  - Headings: Single Task; Parallel Batch; How Subagent Context Works; Practical Examples; Parallel Research; Code Review + Fix; Multi-File Refactoring; Batch Mode Details
+- [Fallback Providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers/)
+  - Source path: `website/docs/user-guide/features/fallback-providers.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/fallback-providers.md
+  - Size: 13320 chars
+  - Headings: Primary Model Fallback; Configuration; Supported Providers; Custom Endpoint Fallback; When Fallback Triggers; Examples; Where Fallback Works; Auxiliary Task Fallback
+- [Honcho Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/honcho/)
+  - Source path: `website/docs/user-guide/features/honcho.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/honcho.md
+  - Size: 10770 chars
+  - Headings: What Honcho Adds; Setup; Architecture; Two-Layer Context Injection; Cold/Warm Prompt Selection; Three Orthogonal Config Knobs; Dialectic Depth (Multi-Pass); Configuration Options
+- [Event Hooks](https://hermes-agent.nousresearch.com/docs/user-guide/features/hooks/)
+  - Source path: `website/docs/user-guide/features/hooks.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/hooks.md
+  - Size: 24012 chars
+  - Headings: Gateway Event Hooks; Creating a Hook; Available Events; Examples; How It Works; Plugin Hooks; Quick reference; pre tool call
+- [Image Generation](https://hermes-agent.nousresearch.com/docs/user-guide/features/image-generation/)
+  - Source path: `website/docs/user-guide/features/image-generation.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/image-generation.md
+  - Size: 6460 chars
+  - Headings: Supported Models; Setup; Get a FAL API Key; Configure and Pick a Model; GPT-Image Quality; Usage; Aspect Ratios; Automatic Upscaling
+- [MCP (Model Context Protocol)](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp/)
+  - Source path: `website/docs/user-guide/features/mcp.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/mcp.md
+  - Size: 16108 chars
+  - Headings: What MCP gives you; Quick start; Two kinds of MCP servers; Stdio servers; HTTP servers; Basic configuration reference; Common keys; Minimal stdio example
+- [Memory Providers](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers/)
+  - Source path: `website/docs/user-guide/features/memory-providers.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/memory-providers.md
+  - Size: 20808 chars
+  - Headings: Quick Start; How It Works; Available Providers; Honcho; OpenViking; Mem0; Hindsight; Holographic
+- [Persistent Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory/)
+  - Source path: `website/docs/user-guide/features/memory.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/memory.md
+  - Size: 9520 chars
+  - Headings: How It Works; How Memory Appears in the System Prompt; Memory Tool Actions; Substring Matching; Two Targets Explained; memory — Agent's Personal Notes; user — User Profile; What to Save vs Skip
+- [Features Overview](https://hermes-agent.nousresearch.com/docs/user-guide/features/overview/)
+  - Source path: `website/docs/user-guide/features/overview.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/overview.md
+  - Size: 6380 chars
+  - Headings: Core; Automation; Media & Web; Integrations; Customization
+- [Personality & SOUL.md](https://hermes-agent.nousresearch.com/docs/user-guide/features/personality/)
+  - Source path: `website/docs/user-guide/features/personality.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/personality.md
+  - Size: 8333 chars
+  - Headings: How SOUL.md works now; Important behavior; Why this design; Where to edit it; What should go in SOUL.md?; Good SOUL.md content; Example; Style
+- [Plugins](https://hermes-agent.nousresearch.com/docs/user-guide/features/plugins/)
+  - Source path: `website/docs/user-guide/features/plugins.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/plugins.md
+  - Size: 8132 chars
+  - Headings: Quick overview; Minimal working example; What plugins can do; Plugin discovery; Available hooks; Plugin types; Managing plugins; Interactive UI
+- [Provider Routing](https://hermes-agent.nousresearch.com/docs/user-guide/features/provider-routing/)
+  - Source path: `website/docs/user-guide/features/provider-routing.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/provider-routing.md
+  - Size: 5199 chars
+  - Headings: Configuration; Options; sort; only; ignore; order; require parameters; data collection
+- [RL Training](https://hermes-agent.nousresearch.com/docs/user-guide/features/rl-training/)
+  - Source path: `website/docs/user-guide/features/rl-training.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/rl-training.md
+  - Size: 8927 chars
+  - Headings: Requirements; Available Tools; Workflow; 1. Discover Environments; 2. Select and Configure; 3. Start Training; 4. Monitor Progress; 5. Stop or Get Results
+- [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills/)
+  - Source path: `website/docs/user-guide/features/skills.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/skills.md
+  - Size: 21463 chars
+  - Headings: Using Skills; Progressive Disclosure; SKILL.md Format; When to Use; Procedure; Pitfalls; Verification; Platform-Specific Skills
+- [Skins & Themes](https://hermes-agent.nousresearch.com/docs/user-guide/features/skins/)
+  - Source path: `website/docs/user-guide/features/skins.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/skins.md
+  - Size: 11276 chars
+  - Headings: Change skins; Built-in skins; Complete list of configurable keys; Colors ( colors: ); Spinner ( spinner: ); Branding ( branding: ); Other top-level keys; Custom skins
+- [Nous Tool Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway/)
+  - Source path: `website/docs/user-guide/features/tool-gateway.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/tool-gateway.md
+  - Size: 7516 chars
+  - Headings: What's Included; Eligibility; Enabling the Tool Gateway; During model setup; Via hermes tools; Manual configuration; How It Works; Precedence
+- [Tools & Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools/)
+  - Source path: `website/docs/user-guide/features/tools.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/tools.md
+  - Size: 6464 chars
+  - Headings: Available Tools; Using Toolsets; Terminal Backends; Configuration; Docker Backend; SSH Backend; Singularity/Apptainer; Modal (Serverless Cloud)
+- [Voice & TTS](https://hermes-agent.nousresearch.com/docs/user-guide/features/tts/)
+  - Source path: `website/docs/user-guide/features/tts.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/tts.md
+  - Size: 7622 chars
+  - Headings: Text-to-Speech; Platform Delivery; Configuration; Telegram Voice Bubbles & ffmpeg; Voice Message Transcription (STT); Configuration; Provider Details; Fallback Behavior
+- [Vision & Image Paste](https://hermes-agent.nousresearch.com/docs/user-guide/features/vision/)
+  - Source path: `website/docs/user-guide/features/vision.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/vision.md
+  - Size: 7923 chars
+  - Headings: How It Works; Paste Methods; /paste Command; Ctrl+V / Cmd+V (Bracketed Paste); Alt+V; Ctrl+V (Raw — Linux Only); Platform Compatibility; Platform-Specific Setup
+- [Voice Mode](https://hermes-agent.nousresearch.com/docs/user-guide/features/voice-mode/)
+  - Source path: `website/docs/user-guide/features/voice-mode.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/voice-mode.md
+  - Size: 17938 chars
+  - Headings: Prerequisites; Requirements; Python Packages; System Dependencies; API Keys; CLI Voice Mode; Quick Start; How It Works
+- [Web Dashboard](https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard/)
+  - Source path: `website/docs/user-guide/features/web-dashboard.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/features/web-dashboard.md
+  - Size: 14071 chars
+  - Headings: Quick Start; Options; Prerequisites; Pages; Status; Config; API Keys; Sessions
+- [Git Worktrees](https://hermes-agent.nousresearch.com/docs/user-guide/git-worktrees/)
+  - Source path: `website/docs/user-guide/git-worktrees.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/git-worktrees.md
+  - Size: 5495 chars
+  - Headings: Why Use Worktrees with Hermes?; Quick Start: Creating a Worktree; Running Multiple Agents in Parallel; Cleaning Up Worktrees Safely; Best Practices; Using hermes -w (Automatic Worktree Mode); Putting It All Together
+- [BlueBubbles (iMessage)](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/bluebubbles/)
+  - Source path: `website/docs/user-guide/messaging/bluebubbles.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/bluebubbles.md
+  - Size: 5081 chars
+  - Headings: Prerequisites; Setup; 1. Install BlueBubbles Server; 2. Get your Server URL and Password; 3. Configure Hermes; 4. Authorize Users; 5. Start the Gateway; How It Works
+- [DingTalk](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/dingtalk/)
+  - Source path: `website/docs/user-guide/messaging/dingtalk.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/dingtalk.md
+  - Size: 10685 chars
+  - Headings: How Hermes Behaves; Session Model in DingTalk; Prerequisites; Step 1: Create a DingTalk App; Step 2: Enable the Robot Capability; Step 3: Find Your DingTalk User ID; Step 4: Configure Hermes Agent; Option A: Interactive Setup (Recommended)
+- [Discord](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/discord/)
+  - Source path: `website/docs/user-guide/messaging/discord.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/discord.md
+  - Size: 31433 chars
+  - Headings: How Hermes Behaves; Discord Gateway Model; Session Model in Discord; Interrupts and Concurrency; Step 1: Create a Discord Application; Step 2: Create the Bot; Step 3: Enable Privileged Gateway Intents; Step 4: Get the Bot Token
+- [Email](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/email/)
+  - Source path: `website/docs/user-guide/messaging/email.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/email.md
+  - Size: 7444 chars
+  - Headings: Prerequisites; Gmail Setup; Outlook / Microsoft 365; Other Providers; Step 1: Configure Hermes; Manual Configuration; Step 2: Start the Gateway; How It Works
+- [Feishu / Lark](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/feishu/)
+  - Source path: `website/docs/user-guide/messaging/feishu.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/feishu.md
+  - Size: 22563 chars
+  - Headings: How Hermes Behaves; Step 1: Create a Feishu / Lark App; Recommended: Scan-to-Create (one command); Alternative: Manual Setup; Step 2: Choose a Connection Mode; Recommended: WebSocket mode; Optional: Webhook mode; Step 3: Configure Hermes
+- [Home Assistant](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/homeassistant/)
+  - Source path: `website/docs/user-guide/messaging/homeassistant.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/homeassistant.md
+  - Size: 8542 chars
+  - Headings: Setup; 1. Create a Long-Lived Access Token; 2. Configure Environment Variables; 3. Start the Gateway; Available Tools; ha list entities; ha get state; ha list services
+- [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/)
+  - Source path: `website/docs/user-guide/messaging/index.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/index.md
+  - Size: 16269 chars
+  - Headings: Platform Comparison; Architecture; Quick Setup; Gateway Commands; Chat Commands (Inside Messaging); Session Management; Session Persistence; Reset Policies
+- [Matrix](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/matrix/)
+  - Source path: `website/docs/user-guide/messaging/matrix.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/matrix.md
+  - Size: 25501 chars
+  - Headings: How Hermes Behaves; Session Model in Matrix; Mention and Threading Configuration; Step 1: Create a Bot Account; Option A: Register on Your Homeserver (Recommended); Option B: Use matrix.org or Another Public Homeserver; Option C: Use Your Own Account; Step 2: Get an Access Token
+- [Mattermost](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/mattermost/)
+  - Source path: `website/docs/user-guide/messaging/mattermost.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/mattermost.md
+  - Size: 12445 chars
+  - Headings: How Hermes Behaves; Session Model in Mattermost; Step 1: Enable Bot Accounts; Step 2: Create a Bot Account; Step 3: Add the Bot to Channels; Step 4: Find Your Mattermost User ID; Step 5: Configure Hermes Agent; Option A: Interactive Setup (Recommended)
+- [Open WebUI](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/open-webui/)
+  - Source path: `website/docs/user-guide/messaging/open-webui.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/open-webui.md
+  - Size: 9730 chars
+  - Headings: Architecture; Quick Setup; 1. Enable the API server; 2. Start Hermes Agent gateway; 3. Start Open WebUI; 4. Open the UI; Docker Compose Setup; Configuring via the Admin UI
+- [QQ Bot](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/qqbot/)
+  - Source path: `website/docs/user-guide/messaging/qqbot.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/qqbot.md
+  - Size: 4493 chars
+  - Headings: Prerequisites; Configuration; Interactive setup; Manual configuration; Environment Variables; Advanced Configuration; Voice Messages (STT); Troubleshooting
+- [Signal](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/signal/)
+  - Source path: `website/docs/user-guide/messaging/signal.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/signal.md
+  - Size: 8804 chars
+  - Headings: Prerequisites; Installing signal-cli; Step 1: Link Your Signal Account; Step 2: Start the signal-cli Daemon; Step 3: Configure Hermes; Manual Configuration; Access Control; DM Access
+- [Slack](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/slack/)
+  - Source path: `website/docs/user-guide/messaging/slack.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/slack.md
+  - Size: 17197 chars
+  - Headings: Step 1: Create a Slack App; Step 2: Configure Bot Token Scopes; Step 3: Enable Socket Mode; Step 4: Subscribe to Events; Step 5: Enable the Messages Tab; Step 6: Install App to Workspace; Step 7: Find User IDs for the Allowlist; Step 8: Configure Hermes
+- [SMS (Twilio)](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/sms/)
+  - Source path: `website/docs/user-guide/messaging/sms.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/sms.md
+  - Size: 6488 chars
+  - Headings: Prerequisites; Step 1: Get Your Twilio Credentials; Step 2: Configure Hermes; Interactive setup (recommended); Manual setup; Step 3: Configure Twilio Webhook; Step 4: Start the Gateway; Environment Variables
+- [Telegram](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/telegram/)
+  - Source path: `website/docs/user-guide/messaging/telegram.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/telegram.md
+  - Size: 23455 chars
+  - Headings: Step 1: Create a Bot via BotFather; Step 2: Customize Your Bot (Optional); Step 3: Privacy Mode (Critical for Groups); How to disable privacy mode; Step 4: Find Your User ID; Step 5: Configure Hermes; Option A: Interactive Setup (Recommended); Option B: Manual Configuration
+- [Webhooks](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks/)
+  - Source path: `website/docs/user-guide/messaging/webhooks.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/webhooks.md
+  - Size: 15411 chars
+  - Headings: Quick Start; Setup; Via setup wizard; Via environment variables; Verify the server; Configuring Routes { configuring-routes}; Route properties; Full example
+- [WeCom Callback (Self-Built App)](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/wecom-callback/)
+  - Source path: `website/docs/user-guide/messaging/wecom-callback.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/wecom-callback.md
+  - Size: 5315 chars
+  - Headings: How It Works; Prerequisites; Setup; 1. Create a Self-Built App in WeCom; 2. Configure Environment Variables; 3. Start the Gateway; Configuration Reference; Multi-App Routing
+- [WeCom (Enterprise WeChat)](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/wecom/)
+  - Source path: `website/docs/user-guide/messaging/wecom.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/wecom.md
+  - Size: 10999 chars
+  - Headings: Prerequisites; Setup; 1. Create an AI Bot; 2. Configure Hermes; 3. Start the gateway; Features; Configuration Options; Access Policies
+- [Weixin (WeChat)](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/weixin/)
+  - Source path: `website/docs/user-guide/messaging/weixin.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/weixin.md
+  - Size: 13837 chars
+  - Headings: Prerequisites; Setup; 1. Run the Setup Wizard; 2. Configure Environment Variables; 3. Start the Gateway; Features; Configuration Options; Access Policies
+- [WhatsApp](https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp/)
+  - Source path: `website/docs/user-guide/messaging/whatsapp.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/messaging/whatsapp.md
+  - Size: 10424 chars
+  - Headings: Two Modes; Prerequisites; Step 1: Run the Setup Wizard; Step 2: Getting a Second Phone Number (Bot Mode); Step 3: Configure Hermes; Session Persistence; Re-pairing; Voice Messages
+- [Profiles: Running Multiple Agents](https://hermes-agent.nousresearch.com/docs/user-guide/profiles/)
+  - Source path: `website/docs/user-guide/profiles.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/profiles.md
+  - Size: 6883 chars
+  - Headings: What are profiles?; Quick start; Creating a profile; Blank profile; Clone config only ( --clone ); Clone everything ( --clone-all ); Clone from a specific profile; Using profiles
+- [Security](https://hermes-agent.nousresearch.com/docs/user-guide/security/)
+  - Source path: `website/docs/user-guide/security.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/security.md
+  - Size: 23382 chars
+  - Headings: Dangerous Command Approval; Approval Modes; YOLO Mode; Approval Timeout; What Triggers Approval; Approval Flow (CLI); Approval Flow (Gateway/Messaging); Permanent Allowlist
+- [Sessions](https://hermes-agent.nousresearch.com/docs/user-guide/sessions/)
+  - Source path: `website/docs/user-guide/sessions.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/sessions.md
+  - Size: 14517 chars
+  - Headings: How Sessions Work; Session Sources; CLI Session Resume; Continue Last Session; Resume by Name; Resume Specific Session; Conversation Recap on Resume; Session Naming
+- [G0DM0D3 — Godmode Jailbreaking](https://hermes-agent.nousresearch.com/docs/user-guide/skills/godmode/)
+  - Source path: `website/docs/user-guide/skills/godmode.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/skills/godmode.md
+  - Size: 13887 chars
+  - Headings: What is G0DM0D3?; Three Attack Modes; 1. GODMODE CLASSIC — System Prompt Templates; 2. PARSELTONGUE — Input Obfuscation (33 Techniques); 3. ULTRAPLINIAN — Multi-Model Racing; Auto-Jailbreak Pipeline (Recommended); What auto-jailbreak does; Model-Specific Strategy Order
+- [Google Workspace — Gmail, Calendar, Drive, Sheets & Docs](https://hermes-agent.nousresearch.com/docs/user-guide/skills/google-workspace/)
+  - Source path: `website/docs/user-guide/skills/google-workspace.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/skills/google-workspace.md
+  - Size: 6397 chars
+  - Headings: Setup; Gmail; Searching; Reading; Sending; Custom From Header; Replying; Labels
+- [TUI](https://hermes-agent.nousresearch.com/docs/user-guide/tui/)
+  - Source path: `website/docs/user-guide/tui.md`
+  - Raw source: https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/docs/user-guide/tui.md
+  - Size: 6930 chars
+  - Headings: Launch; Why the TUI; Requirements; External prebuild; Keybindings; Slash commands; Status line; Configuration

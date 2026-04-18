@@ -15,7 +15,7 @@ Read first:
 
 ## Release Gate
 
-For this branch, a workable MVP means the thermostat starter map supports this loop without obvious breaks:
+For this branch, a workable MVP means a freshly created concept with a clear causal structure supports this loop without obvious breaks:
 
 1. Core Thesis cold attempt
 2. Core Thesis study and return to map
@@ -50,9 +50,9 @@ Expected:
 - drill requests succeed
 - no internal errors are exposed in the learner UI
 
-### 3. Open The Thermostat Starter Map
+### 3. Create Or Open A Test Concept
 
-Use the built-in `Thermostat Control Loop` concept.
+Create a concept from source material that should extract into a Core Thesis, backbone rooms, clusters, and child drill rooms, or open the curated Hermes Agent documentation concept from the Library. The previous multi-concept starter shelf has been removed while the Library model is being revamped.
 
 Expected:
 - graph loads without crashing
