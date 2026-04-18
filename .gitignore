@@ -77,3 +77,5 @@ tests/test_socratink_brain_drill_telemetry.py
 .env*.local
 
 .mcp.json
+.gm-stop-verified
+.codeinsight

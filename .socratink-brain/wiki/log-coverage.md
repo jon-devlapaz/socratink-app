@@ -1,7 +1,7 @@
 ---
 title: "Socratink Log Coverage"
 type: log-coverage
-updated: 2026-04-12
+updated: 2026-04-18
 expected_chat_surfaces: [drill]
 instrumented_chat_surfaces: [drill]
 expected_test_surfaces: [replay]
@@ -19,7 +19,7 @@ The 2026-04-12 evaluated drill artifacts in `logs/` include `logs/drill-runs.jso
 
 Hosted `/api/drill` now also emits structured `socratink_event` runtime logs for drill chat events. Summary capture is on by default; full learner/assistant transcript capture requires `SOCRATINK_CAPTURE_DRILL_TRANSCRIPTS=true` in the Vercel environment. Use `scripts/export_socratink_brain_vercel_logs.py` to convert Vercel JSON logs into `.socratink-brain/raw/drill-chat-logs/` artifacts for evaluation.
 
-The newest evaluated hosted drill-chat export, `raw/drill-chat-logs/2026-04-12T220245Z-vercel-drill-chat-events.jsonl`, contains a full production cold-attempt transcript and is byte-identical to the earlier `raw/drill-chat-logs/2026-04-12T213919Z-vercel-drill-chat-events.jsonl` export. The adjacent `2026-04-12T220040Z` and `2026-04-12T220130Z` files are zero-byte exports and should be treated as non-evidence rather than behavior regressions.
+The newest evaluated hosted drill-chat export, `raw/drill-chat-logs/2026-04-12T220245Z-vercel-drill-chat-events.jsonl`, contains a full production cold-attempt transcript and is byte-identical to the earlier `raw/drill-chat-logs/2026-04-12T213919Z-vercel-drill-chat-events.jsonl` export. Five zero-byte exports from the same day (`074207Z`, `075359Z`, `075629Z`, `220040Z`, `220130Z`) were pruned on 2026-04-18 as non-evidence — keep the signal, drop the noise. Any future zero-byte Vercel export should be treated the same way and not committed as raw evidence.
 
 ## Missing Instrumentation
 Replay test coverage is deferred to the DB milestone. The replay mechanism itself has been verified sound (deterministic persist → restore → derive). Automated regression tests will be added when the persistence layer moves from localStorage to a database.

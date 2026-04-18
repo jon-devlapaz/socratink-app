@@ -33,6 +33,7 @@ and log-derived evidence into a persistent markdown substrate.
     ├── index.md
     ├── log.md
     ├── log-coverage.md
+    ├── concepts/
     ├── doctrine/
     ├── mechanisms/
     ├── records/
@@ -56,6 +57,7 @@ and log-derived evidence into a persistent markdown substrate.
 
 ## Page Types
 
+- `concept`
 - `doctrine`
 - `mechanism`
 - `decision`
@@ -72,7 +74,7 @@ All curated pages must include:
 ```yaml
 ---
 title: "Page Title"
-type: doctrine | mechanism | decision | issue | experiment | finding | source | synthesis
+type: concept | doctrine | mechanism | decision | issue | experiment | finding | source | synthesis
 updated: YYYY-MM-DD
 related: [relative/path.md]
 basis: sourced | inferred
@@ -113,11 +115,12 @@ Use `basis` for provenance mode and `confidence` for claim strength. Do not repl
 
 ## Workflow Status Rules
 
-- `doctrine`, `mechanism`, `source`: `active | deprecated | obsolete`
+- `concept`, `doctrine`, `mechanism`, `source`: `active | deprecated | obsolete`
 - `decision`, `issue`, `experiment`, `finding`, `synthesis`: `open | resolved | obsolete`
 
 ## Required Sections By Page Type
 
+- `concept`: `## Definition`, `## Why This Matters for Socratink`
 - `doctrine`: `## Principle`, `## Evidence`, `## Product Implication`
 - `mechanism`: `## Mechanism`, `## Evidence`, `## Product Implication`
 - `decision`: `## Decision`, `## Evidence`, `## Inference`, `## Product Implication`

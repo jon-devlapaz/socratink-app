@@ -1,7 +1,14 @@
 ---
 title: "Generation Effect"
+type: concept
+updated: 2026-04-17
+sources: [../sources/research-note-generation-effect.md]
+related: [../syntheses/feedback-after-failure-required-scaffold.md, ../concepts/testing-effect.md, ../concepts/desirable-difficulty.md]
+basis: sourced
+workflow_status: active
+flags: []
+confidence: high
 domain_axes: [learning-science, product-design]
-source_count: 1
 key_researchers: [Norman Slamecka, Peter Graf, Sharon Bertsch, Robert Bjork, Nate Kornell, Manu Kapur, Janet Metcalfe]
 relevance: foundational
 ---
