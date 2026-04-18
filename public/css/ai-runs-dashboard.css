@@ -418,6 +418,7 @@ body.analytics-page {
   color: var(--primary);
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .event-item {
