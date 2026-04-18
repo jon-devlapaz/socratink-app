@@ -1,7 +1,14 @@
 ---
 title: "Zone of Proximal Development"
+type: concept
+updated: 2026-04-14
+sources: []
+related: [../concepts/desirable-difficulty.md, ../concepts/blooms-taxonomy.md]
+basis: inferred
+workflow_status: active
+flags: [open-question]
+confidence: speculative
 domain_axes: [learning-science, product-design]
-source_count: 0
 key_researchers: [Lev Vygotsky]
 relevance: foundational
 ---

@@ -1,18 +1,25 @@
 ---
 title: "Tetris Effect and Schema Consolidation"
+type: concept
+updated: 2026-04-17
+sources: [../sources/research-note-theta-tetris-effect-2026-04-17.md]
+related: [../concepts/generation-effect.md, ../concepts/spacing-effect.md, ../concepts/desirable-difficulty.md]
+basis: sourced
+workflow_status: active
+flags: []
+confidence: medium
 domain_axes: [learning-science, product-design]
-source_count: 1
 key_researchers: [Robert Stickgold]
 relevance: peripheral
 ---
 
 # Tetris Effect and Schema Consolidation
 
-## What it is
+## Definition
 
 The Tetris effect (Stickgold et al. 2000) is the involuntary intrusion of practiced schemas into hypnagogic imagery and waking perception after prolonged repetitive engagement. The mechanism is **implicit/procedural memory** — not hippocampal-dependent declarative memory. Amnesic patients showed the imagery despite no episodic recall of playing.
 
-## Why it matters for Socratink
+## Why This Matters for Socratink
 
 "Eliciting the Tetris effect" for a learning app is a reasonable product goal, but the mechanism label is inaccurate for declarative knowledge. Conceptual schemas are encoded through hippocampal-dependent networks. The procedural-memory bypass that makes the Tetris effect striking does not apply.
 

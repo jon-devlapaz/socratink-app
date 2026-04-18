@@ -1,7 +1,14 @@
 ---
 title: "Bloom's Taxonomy"
+type: concept
+updated: 2026-04-14
+sources: []
+related: [../concepts/zone-of-proximal-development.md, ../concepts/desirable-difficulty.md]
+basis: inferred
+workflow_status: active
+flags: [open-question]
+confidence: speculative
 domain_axes: [learning-science, product-design]
-source_count: 0
 key_researchers: [Benjamin Bloom, Lorin Anderson, David Krathwohl]
 relevance: foundational
 ---

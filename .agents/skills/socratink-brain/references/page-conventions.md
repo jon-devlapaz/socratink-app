@@ -6,6 +6,7 @@ All filenames are lowercase, hyphen-separated, and ASCII only.
 
 | Page Type | Directory | Pattern | Example |
 |-----------|-----------|---------|---------|
+| Concept | `wiki/concepts/` | `{slug}.md` | `generation-effect.md` |
 | Doctrine | `wiki/doctrine/` | `{slug}.md` | `generation-before-recognition.md` |
 | Mechanism | `wiki/mechanisms/` | `{slug}.md` | `three-phase-node-loop.md` |
 | Decision | `wiki/records/` | `decision-{slug}.md` | `decision-time-gate-policy.md` |
@@ -15,6 +16,8 @@ All filenames are lowercase, hyphen-separated, and ASCII only.
 | Source | `wiki/sources/` | `{source-kind}-{slug}.md` | `drill-chat-log-thermostat-session-1.md` |
 | Synthesis | `wiki/syntheses/` | `{slug}.md` | `spacing-vs-interleaving-tradeoffs.md` |
 | Coverage Manifest | `wiki/` | `log-coverage.md` | `log-coverage.md` |
+
+**Concept pages** carry founder-critical learning-science and domain knowledge that grounds UX and product doctrine (desirable difficulty, generation effect, ZPD, etc.). They are the evidence substrate that binding doctrine, mechanism, and decision pages cite. Every concept page must eventually resolve to at least one source page; until it does, mark `basis: inferred` and `confidence: speculative` so the epistemic gap is explicit.
 
 ## Artifact Routing
 
@@ -45,7 +48,7 @@ All curated pages must include:
 ```yaml
 ---
 title: "Page Title"
-type: doctrine | mechanism | decision | issue | experiment | finding | source | synthesis
+type: concept | doctrine | mechanism | decision | issue | experiment | finding | source | synthesis
 updated: YYYY-MM-DD
 related: [relative/path.md]
 basis: sourced | inferred
@@ -56,7 +59,7 @@ flags: [hypothesis, open-question, contradiction]
 
 ### Allowed `workflow_status` values
 
-- `doctrine`, `mechanism`, `source`: `active | deprecated | obsolete`
+- `concept`, `doctrine`, `mechanism`, `source`: `active | deprecated | obsolete`
 - `decision`, `issue`, `experiment`, `finding`, `synthesis`: `open | resolved | obsolete`
 
 ### Additional fields
@@ -90,6 +93,26 @@ Source pages may use `sources: []`, but their primary provenance lives in `raw_a
 Use `log_surface: none` for source pages that are not direct evidence from instrumented Socratink surfaces, including product docs, research notes, bug reports, screenshots, and external critiques.
 
 ## Page Bodies
+
+### Concept Page
+
+```markdown
+# {Title}
+
+## Definition
+{What the concept is, in domain-native language. Cite canonical researchers and paradigm-setting studies.}
+
+## Why This Matters for Socratink
+{How the concept constrains or informs UX, doctrine, or implementation. This is the load-bearing section — the reason the concept is in the KB.}
+
+## {Additional sections as needed}
+{Mechanisms, boundary conditions, open debates, design implications, failure modes, etc.}
+
+## Source
+- [{Source page title}](../sources/{source-page}.md) — short note on what it covers.
+```
+
+Concept-specific frontmatter extensions (optional): `domain_axes`, `key_researchers`, `relevance` (`foundational | peripheral`). These are descriptive, not validator-enforced.
 
 ### Doctrine Page
 

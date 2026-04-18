@@ -1,7 +1,14 @@
 ---
 title: "Testing Effect"
+type: concept
+updated: 2026-04-17
+sources: [../sources/research-note-testing-effect.md]
+related: [../syntheses/feedback-after-failure-required-scaffold.md, ../concepts/generation-effect.md, ../concepts/spacing-effect.md]
+basis: sourced
+workflow_status: active
+flags: []
+confidence: high
 domain_axes: [learning-science, product-design]
-source_count: 1
 key_researchers: [Henry Roediger, Jeffrey Karpicke, Christopher Rowland, Sara Carpenter, Robert Bjork]
 relevance: foundational
 ---

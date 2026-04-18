@@ -23,6 +23,7 @@ from pathlib import Path
 REQUIRED_DIRS = [
     "raw",
     "wiki",
+    "wiki/concepts",
     "wiki/doctrine",
     "wiki/mechanisms",
     "wiki/records",
@@ -38,8 +39,16 @@ REQUIRED_FILES = [
     "wiki/log-coverage.md",
 ]
 
-CURATED_DIRS = ["doctrine", "mechanisms", "records", "sources", "syntheses"]
+CURATED_DIRS = [
+    "concepts",
+    "doctrine",
+    "mechanisms",
+    "records",
+    "sources",
+    "syntheses",
+]
 PAGE_TYPES = {
+    "concept",
     "doctrine",
     "mechanism",
     "decision",
@@ -54,6 +63,7 @@ CONFIDENCE_VALUES = {"high", "medium", "low", "speculative"}
 FLAG_VALUES = {"hypothesis", "open-question", "contradiction"}
 LOG_SURFACE_VALUES = {"drill", "replay", "none"}
 WORKFLOW_BY_TYPE = {
+    "concept": {"active", "deprecated", "obsolete"},
     "doctrine": {"active", "deprecated", "obsolete"},
     "mechanism": {"active", "deprecated", "obsolete"},
     "source": {"active", "deprecated", "obsolete"},
@@ -76,6 +86,7 @@ SOURCE_KIND_VALUES = {
     "experiment-note",
 }
 REQUIRED_SECTIONS = {
+    "concept": ["## Definition", "## Why This Matters for Socratink"],
     "doctrine": ["## Principle", "## Evidence", "## Product Implication"],
     "mechanism": ["## Mechanism", "## Evidence", "## Product Implication"],
     "decision": [

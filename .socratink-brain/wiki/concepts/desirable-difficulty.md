@@ -1,7 +1,14 @@
 ---
 title: "Desirable Difficulty"
+type: concept
+updated: 2026-04-14
+sources: []
+related: [../concepts/generation-effect.md, ../concepts/testing-effect.md, ../concepts/spacing-effect.md, ../concepts/zone-of-proximal-development.md]
+basis: inferred
+workflow_status: active
+flags: [open-question]
+confidence: speculative
 domain_axes: [learning-science, product-design]
-source_count: 0
 key_researchers: [Robert Bjork, Elizabeth Bjork]
 relevance: foundational
 ---
