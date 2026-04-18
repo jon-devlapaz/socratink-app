@@ -66,6 +66,7 @@ docs/**/.DS_Store
 !.socratink-brain/raw/research-notes/
 .socratink-brain/raw/research-notes/*
 !.socratink-brain/raw/research-notes/happy-path-workflow-human-memory-recall-product.md
+!.socratink-brain/raw/research-notes/dunlosky2013.md
 
 # Local-only checks and exports unless promoted into tracked scripts/tests.
 scripts/run-checks.sh
