@@ -1,15 +1,15 @@
 ---
 title: "Desirable Difficulty"
 type: concept
-updated: 2026-04-14
-sources: []
+updated: 2026-04-18
+sources: [../sources/research-note-desirable-difficulty.md]
 related: [../concepts/generation-effect.md, ../concepts/testing-effect.md, ../concepts/spacing-effect.md, ../concepts/zone-of-proximal-development.md]
-basis: inferred
+basis: sourced
 workflow_status: active
-flags: [open-question]
-confidence: speculative
+flags: []
+confidence: high
 domain_axes: [learning-science, product-design]
-key_researchers: [Robert Bjork, Elizabeth Bjork]
+key_researchers: [Robert Bjork, Elizabeth Bjork, Nicholas Soderstrom]
 relevance: foundational
 ---
 
@@ -54,6 +54,14 @@ The product bet is that learners will tolerate the discomfort of desirable diffi
 - Spacing effect — drives the `drilled → solidified` transition requirement
 - Generation effect — drives the cold-attempt-first design
 
-## Sources
+## Boundary Conditions and Failure Modes
 
-(No raw sources ingested yet — seed from Bjork & Bjork 2011, "Making things hard on yourself, but in a good way")
+The framework fails or reverses when its preconditions are not met. Three are first-class product risks for Socratink:
+
+- **Expertise reversal (Kalyuga et al. 2003)** — for zero-schema novices on high-element-interactivity material, unguided difficulty imposes working-memory load without recruiting the retrieval/elaboration that drives the benefit. Socratink's cold-attempt-first invariant is miscalibrated for that subset; the cold attempt should be structured as "what do you expect / what related things do you already know" rather than a high-stakes recall demand when prior schema is genuinely absent.
+- **Metacognitive resistance (Kornell & Bjork 2008; Kirk-Johnson et al. 2019)** — learners reliably prefer fluent practice (massed, re-reading, blocked) and perceive effort as evidence of *failed* learning. This is a UX risk, not an empirical one — framing and copy must communicate that struggle is the signal of learning.
+- **UI/perceptual disfluency is not desirable difficulty** — the original disfluency-aids-learning claim failed to replicate (Rummer et al. 2016; Geller et al. 2018). Eliminate UI-level friction ruthlessly; preserve cognitive-operation-level friction (retrieval demand, generation demand, spacing gaps).
+
+## Source
+
+- [Desirable Difficulty Research Note](../sources/research-note-desirable-difficulty.md) — full mechanism review (Bjork 1994; Bjork & Bjork 1992 New Theory of Disuse; Bjork & Bjork 2011), learning-vs-performance distinction (Schmidt & Bjork 1992; Soderstrom & Bjork 2015), boundary conditions, and instrumentation proposal.
