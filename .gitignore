@@ -85,3 +85,4 @@ tests/test_socratink_brain_drill_telemetry.py
 
 # Superpowers worktrees
 .worktrees/
+.superpowers/
