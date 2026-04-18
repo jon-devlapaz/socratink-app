@@ -82,3 +82,6 @@ tests/test_socratink_brain_drill_telemetry.py
 .mcp.json
 .gm-stop-verified
 .codeinsight
+
+# Superpowers worktrees
+.worktrees/
