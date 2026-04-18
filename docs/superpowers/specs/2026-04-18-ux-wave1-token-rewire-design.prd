@@ -48,11 +48,13 @@ Wave 1 fixes the upstream token seam, deletes the downstream overrides that it r
 
 Rationale: token rewire is already the hardest-to-reverse change in this wave; bundling alias migration on top turns semantic migration into broad app-wide churn with only manual browser verification. (C) preserves delivery momentum, keeps diff reviewable, gives every existing consumer a stable compatibility bridge. Codex council confirmed. Biggest risk flagged: "deprecated" becomes decorative — mitigation is a pre-merge grep check before Wave 2.
 
-### Q2 — Guest silent-discard: **(a)+(c) hybrid + invariant guard**
+### Q2 — Guest silent-discard: **(a)+(c) hybrid + invariant guard (contract-level)**
 
 - Guest mode default: submit disabled with honest banner above form; guest can still browse starter maps
 - Signed-in failure: error banner, form populated, no concept created, retry CTA
-- **Invariant:** failed or unauthorized extraction never creates a concept. Enforced in `onSubmit` of `startAddConcept` — no `concepts.push` path reachable from 401/403 or `AIService` error.
+- **Guest mode remains authorized for basic exploration** unless the product contract changes. The banner is an honest-UX signal, not an auth-enforcement mechanism. Starter-map import is an explicit user action and is **out of scope** for the extraction invariant.
+- **Invariant (contract-level, defense-in-depth):** a failed extraction must never mutate `contentStore`, in-memory `concepts`, or persisted `concepts` (localStorage). Holds across 401, 403, 429, 500 and transport errors. Enforcement must **not rely on disabled UI state** — guard runs in the extraction success path, not the submit gate.
+- **Error surfacing** must be sanitized: user-facing banner text never leaks raw backend stack, auth header fragments, or vendor error strings.
 
 Rejected pure (b) local fallback generator because it invents a second extraction truth path that looks AI-equivalent to users and directly violates the truthful-state principle (`feedback_product_principles_to_engineering.md`). Codex council confirmed.
 
@@ -132,6 +134,13 @@ Lifecycle:
 
 All handlers reuse existing IDs/callbacks (no new JS logic).
 
+**Close-on-action behavior:**
+- Settings tap → navigate to settings view AND close drawer
+- Exit Guest tap → existing exit flow AND close drawer
+- Save & Sync tap → trigger existing sync AND close drawer on success
+- Theme toggle tap → flip theme, **drawer stays open** (user may toggle + inspect)
+- Not-signed-in user taps Save & Sync → existing sign-in prompt path (whatever desktop chrome does today)
+
 ### 6.3 `.map-back-link`
 
 ```
@@ -147,12 +156,12 @@ Each cycle = one `gm` state-machine run (PLAN → EXECUTE → EMIT → VERIFY �
 
 | Cycle | Scope | Verify |
 |---|---|---|
-| **C1** | Token rewire: expand `variables.css`, add `[data-theme="dark"] :root`, `base.css :focus-visible` | Browser: theme toggle, Tab shows ring on every stop light+dark |
-| **C2** | Pill variants + analytics wiring | Browser: 4 distinct pill colors on analytics light+dark |
+| **C1** | Token rewire: expand `variables.css`, add `[data-theme="dark"] :root`, `base.css :focus-visible` | Browser: theme toggle, Tab shows ring on every stop light+dark. **Sign-in path** also smoke-tested, not just guest. Safari-specific check on `<select>` focus ring. |
+| **C2** | Pill variants + analytics wiring | Browser: 4 distinct pill colors on analytics light+dark. **Contrast assertion:** `--node-drilled` and `--node-locked` differ by ≥20 perceptual units (WCAG ΔL*) in both themes; if not, retune drilled hue. |
 | **C3** | Override audit + deletions + crystal block move | `codesearch [data-theme="dark"]` returns only expected 5 kept blocks + the one moved block in variables.css |
 | **C4** | Mobile drawer footer | Browser resize ≤480px: footer visible with 4 actions, each ≥44px tap, theme flip persists on reload |
 | **C5** | Map-view chrome + drawer-toggle tooltip | Browser: enter map, top-left is "← Dashboard" text, click returns via setState |
-| **C6** | Creation dialog + guest banner + error banner + invariant guard | Browser: guest → banner + disabled; signed-in happy → dialog → extract OK; signed-in simulated 500 → error banner, no concept saved, Tab trapped |
+| **C6** | Creation dialog + guest banner + error banner + invariant guard | **Investigate first** `AIService.generateKnowledgeMap` return/throw contract for 401/403/429/500/transport-error. Browser: guest → banner + disabled; signed-in happy → dialog → extract OK; simulated 401/403/429/500 each → error banner, `loadConcepts().length` unchanged, `contentStore.has(id) === false`, localStorage concepts unchanged, Tab trapped, error copy sanitized (no stack/header leak). Also: theme-toggle with draft typed — draft persists. Reduced-motion: dialog fade disabled. |
 
 Cross-cycle verify: rerun baseline browser QA prompt from brainstorming chat. All 16 checks pass.
 
@@ -171,6 +180,12 @@ Cross-cycle verify: rerun baseline browser QA prompt from brainstorming chat. Al
 
 Each cycle is a separate commit. Bad cycle → `git revert <sha>`. Token rewire (C1) is the most entangled; verify in browser before C2 begins consuming new tokens. If C1 must revert, C2–C6 unwind naturally.
 
+## 9.1 Gap-analysis carve-outs (accepted scope)
+
+- **Forced-colors / Windows high-contrast mode** — not addressed this wave. Documented as known gap; revisit if a11y sweep prioritizes it.
+- **RTL / i18n** — no i18n infrastructure exists today; "← Dashboard" stays LTR. Revisit if i18n lands.
+- **Reduced-motion** — dialog fade respects it (C6 verify). Other existing transitions already honor via `crystal.css` + `App.jsx` patterns — unchanged.
+
 ## 10. Invariants preserved
 
 - `setState()` remains the sole control-state entry (dialog open/close + map-view back routed through it)
@@ -184,11 +199,16 @@ Each cycle is a separate commit. Bad cycle → `git revert <sha>`. Token rewire 
 
 | Risk | Severity | Mitigation |
 |---|---|---|
-| C1 token rewire silently regresses a view | HIGH | Per-cycle browser verify light+dark before next cycle starts; each cycle a separate commit |
-| Deprecated aliases survive indefinitely | MED | Pre-merge grep check before Wave 2; explicit Wave 2 removal ticket |
+| C1 token rewire silently regresses a view | HIGH | Per-cycle browser verify light+dark before next cycle starts; each cycle a separate commit; signed-in path covered alongside guest |
+| Deprecated aliases survive indefinitely | MED | Pre-merge grep check before Wave 2; explicit Wave 2 removal ticket; Wave 2 must also sweep JS `style.setProperty` alias calls + `login.css` out-of-scope consumers |
 | Creation dialog becomes "modalized sidebar" | MED | Composition-surface treatment: generous width, scholarly copy, no bounce, draft preservation |
-| Guest invariant guard misses a code path | HIGH | Audit every `concepts.push` call-site; explicit invariant test: simulate 401 + simulate 500 + simulate guest submit, verify `loadConcepts().length` unchanged in all three |
+| Invariant guard misses a code path | HIGH | Guard runs on extraction-success path, not submit-gate. Investigate `AIService.generateKnowledgeMap` return/throw contract before wiring. Test matrix: 401, 403, 429, 500, transport-error — each asserts `contentStore`, in-memory `concepts`, and localStorage `concepts` all unchanged. |
+| Guest UI tamper (dev tools remove `disabled`) bypasses gate | HIGH | Invariant is contract-level, not UI-state-dependent. Guest remains authorized at backend; frontend banner is honest signal only. Backend contract + guard together ensure no mutation on failure. |
+| Error message leaks sensitive detail | MED | Sanitized copy strings, never echo `err.message` directly in user-facing banner. Log raw error to console / `recordExtractRun` only. |
+| Theme toggle inside open dialog loses draft | MED | Verify draft persists across theme toggle; dialog lifecycle must not remount on theme change |
 | Focus trap breaks existing drill/tour overlays | MED | Scope focus-trap to `.creation-dialog` only; do not generalize; existing overlays unchanged |
+| `prefers-reduced-motion` ignored on dialog fade | LOW | Add `@media (prefers-reduced-motion: reduce)` rule pinning transition to 0ms |
+| Cascade order regression after crystal-block move | MED | `variables.css` must remain first-imported stylesheet; comment at file head documents invariant |
 
 ---
 
