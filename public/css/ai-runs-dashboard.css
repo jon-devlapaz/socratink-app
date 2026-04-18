@@ -24,8 +24,8 @@ body.analytics-page {
 .analytics-panel,
 .analytics-status,
 .metric-card {
-  background: linear-gradient(180deg, rgba(var(--white-rgb), 0.9), rgba(var(--cream-50-rgb), 0.82));
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
 }
 
@@ -202,8 +202,8 @@ body.analytics-page {
 .tip-card {
   padding: 18px 18px 20px;
   border-radius: var(--radius-card);
-  background: linear-gradient(180deg, rgba(var(--white-rgb), 0.92), rgba(var(--cream-50-rgb), 0.84));
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
 }
 
@@ -266,10 +266,10 @@ body.analytics-page {
   width: 32px;
   height: 32px;
   flex: 0 0 32px;
-  border: 1px solid rgba(var(--ink-900-rgb), 0.12);
+  border: 1px solid var(--border-subtle);
   border-radius: 999px;
-  background: rgba(var(--white-rgb), 0.82);
-  color: var(--primary);
+  background: var(--surface-card);
+  color: var(--accent-primary);
   font: inherit;
   font-weight: 800;
   cursor: help;
@@ -295,8 +295,8 @@ body.analytics-page {
 .stat-tile {
   padding: 14px;
   border-radius: var(--radius-card);
-  background: rgba(var(--white-rgb), 0.72);
-  border: 1px solid rgba(var(--ink-900-rgb), 0.08);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
 }
 
 .stat-tile-label {
@@ -378,8 +378,8 @@ body.analytics-page {
 .list-card {
   padding: 14px 16px;
   border-radius: var(--radius-card);
-  background: rgba(var(--white-rgb), 0.72);
-  border: 1px solid rgba(var(--ink-900-rgb), 0.08);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
 }
 
 .list-card-title-row {
@@ -425,8 +425,8 @@ body.analytics-page {
   gap: 6px;
   padding: 14px 16px;
   border-radius: var(--radius-card);
-  background: rgba(var(--white-rgb), 0.72);
-  border: 1px solid rgba(var(--ink-900-rgb), 0.08);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
 }
 
 .event-topline {
@@ -459,8 +459,8 @@ body.analytics-page {
   border-radius: 18px;
   background:
     radial-gradient(circle at top right, rgba(var(--lavender-500-rgb), 0.16), transparent 30%),
-    rgba(var(--white-rgb), 0.72);
-  border: 1px solid rgba(var(--ink-900-rgb), 0.08);
+    var(--surface-card);
+  border: 1px solid var(--border-subtle);
 }
 
 .callout-kicker {
