@@ -96,10 +96,10 @@ body.analytics-page {
 .analytics-select {
   min-height: 44px;
   padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(var(--ink-900-rgb), 0.12);
-  background: rgba(var(--white-rgb), 0.9);
-  color: var(--text);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  color: var(--text-strong);
   font: inherit;
 }
 

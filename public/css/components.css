@@ -1046,3 +1046,56 @@ body[data-theme="dark"] .auth-link {
 .chat-input:focus { border-color: var(--primary); box-shadow: var(--accent-ring); }
 .chat-input::placeholder { color: var(--text-sub); opacity: 0.7; }
 .chat-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================================
+   State pills — four learner node states + danger.
+   Consumed by analytics, graph legend, concept status rows.
+   Colors from --node-*-rgb channel tokens; no hex literals.
+   ============================================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  background: var(--pill-accent-bg);
+  color: var(--accent-primary);
+}
+.pill--solid {
+  background: rgba(var(--node-solidified-rgb), 0.14);
+  color: var(--pill-success-text);
+  border-color: rgba(var(--node-solidified-rgb), 0.24);
+}
+.pill--primed {
+  background: rgba(var(--node-primed-rgb), 0.18);
+  color: rgba(var(--ink-900-rgb), 0.82);
+  border-color: rgba(var(--node-primed-rgb), 0.30);
+}
+.pill--drilled {
+  background: rgba(var(--node-drilled-rgb), 0.18);
+  color: rgba(var(--node-drilled-rgb), 1);
+  border-color: rgba(var(--node-drilled-rgb), 0.32);
+}
+.pill--locked {
+  background: rgba(var(--node-locked-rgb), 0.32);
+  color: rgba(var(--ink-900-rgb), 0.58);
+  border-color: rgba(var(--node-locked-rgb), 0.50);
+}
+.pill--danger {
+  background: var(--pill-danger-bg);
+  color: var(--pill-danger-text);
+  border-color: rgba(224, 92, 107, 0.24);
+}
+[data-theme="dark"] .pill--primed { color: var(--cream-50); }
+[data-theme="dark"] .pill--drilled {
+  color: rgba(var(--node-drilled-rgb), 1);
+  filter: brightness(1.2);
+}
+[data-theme="dark"] .pill--locked {
+  color: rgba(var(--cream-50-rgb), 0.62);
+}
