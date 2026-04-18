@@ -7,7 +7,7 @@ basis: sourced
 workflow_status: active
 flags: []
 source_kind: drill-chat-log
-raw_artifacts: [raw/drill-chat-logs/2026-04-12T213919Z-vercel-drill-chat-events.jsonl, raw/drill-chat-logs/2026-04-12T220040Z-vercel-drill-chat-events.jsonl, raw/drill-chat-logs/2026-04-12T220130Z-vercel-drill-chat-events.jsonl, raw/drill-chat-logs/2026-04-12T220245Z-vercel-drill-chat-events.jsonl]
+raw_artifacts: [raw/drill-chat-logs/2026-04-12T213919Z-vercel-drill-chat-events.jsonl, raw/drill-chat-logs/2026-04-12T220245Z-vercel-drill-chat-events.jsonl]
 log_surface: drill
 evaluated_sessions: 1
 evaluated_runs: 0
@@ -16,7 +16,7 @@ evaluated_runs: 0
 # Hosted Modularity Cold Attempt Drill Chat Log 2026-04-12
 
 ## Summary
-This source registers the newest hosted Vercel drill-chat exports evaluated on 2026-04-12. The non-empty `2026-04-12T220245Z-vercel-drill-chat-events.jsonl` artifact is byte-identical to the earlier `2026-04-12T213919Z-vercel-drill-chat-events.jsonl` export. The intervening `2026-04-12T220040Z` and `2026-04-12T220130Z` artifacts are zero-byte exports and prove no drill behavior by themselves.
+This source registers the newest hosted Vercel drill-chat exports evaluated on 2026-04-12. The non-empty `2026-04-12T220245Z-vercel-drill-chat-events.jsonl` artifact is byte-identical to the earlier `2026-04-12T213919Z-vercel-drill-chat-events.jsonl` export. Intervening zero-byte exports (`2026-04-12T220040Z`, `2026-04-12T220130Z`, and earlier `074207Z / 075359Z / 075629Z` from the same day) were pruned on 2026-04-18 as non-evidence; the two non-empty files above remain the sole raw basis for this source.
 
 The non-empty artifact contains one production `/api/drill` cold-attempt session for concept `6623cc32-da0c-4523-a270-df8e6965c663`, node `b3`, deployment `dpl_GzXtZmfWLbfFNiCGttRXxd8zNPZW`, and commit `7507a599f7fd9a50c43e4871d9a43fea18ad79b3`. It has one init row and one user-turn row. The learner made a generative attempt about modular, interoperable agent capabilities; the service returned `routing: NEXT`, `generative_commitment: true`, `score_eligible: false`, `classification: null`, `ux_reward_emitted: false`, and `graph_mutated: true`.
 
@@ -24,8 +24,6 @@ This is hosted transcript evidence for one cold attempt. It does not cover targe
 
 ## Raw Artifacts
 - `raw/drill-chat-logs/2026-04-12T213919Z-vercel-drill-chat-events.jsonl`
-- `raw/drill-chat-logs/2026-04-12T220040Z-vercel-drill-chat-events.jsonl`
-- `raw/drill-chat-logs/2026-04-12T220130Z-vercel-drill-chat-events.jsonl`
 - `raw/drill-chat-logs/2026-04-12T220245Z-vercel-drill-chat-events.jsonl`
 
 ## Connections
