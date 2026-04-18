@@ -205,3 +205,33 @@ body[data-drawer-open="true"] .icon-collapse {
 .crystal-anim.anim-cocoon    { animation:gridCocoon    700ms ease forwards; }
 .crystal-anim.anim-actualize { animation:gridActualize 750ms ease forwards; }
 .crystal-anim.anim-repair    { animation:gridRepair    550ms ease forwards; }
+
+/* ── 9. Focus ring — a11y ────────────────────────────────── */
+/* Every interactive element inherits --accent-ring (violet light,
+   lavender dark). Form-control tags get an explicit rule because
+   some browsers strip box-shadow from input/select. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-radius: 4px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+
+/* ── 10. Reduced motion ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
