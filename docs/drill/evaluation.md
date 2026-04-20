@@ -2,7 +2,7 @@
 
 This document defines the smallest useful evaluation set for the current MVP loop.
 
-Use the `Thermostat Control Loop` starter map unless the task specifically targets extraction or ingestion.
+The old built-in starter shelf is intentionally removed while Library concepts are being revamped. For manual drill evaluation, create or reopen a concept with a clear causal structure, or use the curated Hermes Agent documentation concept now checked into the Library.
 
 ## 1. Manual Eval Set
 

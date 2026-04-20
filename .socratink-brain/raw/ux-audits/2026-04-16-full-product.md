@@ -33,7 +33,7 @@ This single change resolves findings #1, #4, #8, #14 and most of the dark-mode p
 Invisible selects, near-black Google button, unchanging hero shadow, dead `--success`/`--danger`, invisible focus rings. One root cause. Fix in stylesheet architecture, ~6 findings disappear.
 
 ### Pattern B — "Language drift between copy and UI"
-Three names for a concept ("Concept" / "Tink" / "socratink"). Settings claims a "green" status that's actually purple. Five different CTAs ("Add to vault" / "Open concept" / "Open Map" / "Start Drill" / "Start With Core Thesis") with zero shared vocabulary. One writer + design-systems pass with a glossary resolves ~4 findings.
+Three names for a concept ("Concept" / "Tink" / "socratink"). Settings claims a "green" status that's actually purple. Four different CTAs ("Open concept" / "Open Map" / "Start Drill" / "Start With Core Thesis") with zero shared vocabulary. One writer + design-systems pass with a glossary resolves ~4 findings.
 
 ### Pattern C — "Shell vs. canvas confusion"
 Sidebar used as canvas (creation form). Chrome buttons behave differently per view. Graph View is a static SVG inside a canvas-sized panel. The app hasn't decided which surface owns which job.
@@ -51,7 +51,7 @@ Sidebar used as canvas (creation form). Chrome buttons behave differently per vi
 
 ### Concept creation
 
-- [x] `[BLOCKER]` `bug` — Submission silently discards user input. Entered "Photosynthesis" + pasted body → extraction overlay → created concept was "Thermostat Control Loop" (starter seed). No error, no warning. Either disable form in guest mode with a reason, wire to local fallback generator, or surface the backend error as retry prompt.
+- [x] `[BLOCKER]` `bug` — Submission silently discarded user input into a starter seed. Fixed in Wave 1 (C6b extraction invariant `isValidKnowledgeMap` guard + `sanitizeExtractError` banner + guest-mode honest banner). Re-verify on the Hermes concept after starter-shelf removal (main cda655d).
 - [ ] `[HIGH]` `bug` — Extraction overlay doesn't lock the background. Sidebar form stays clickable during extraction; hero "Add Concept" stays enabled. Double-submit risk. Add full scrim with `backdrop-filter: blur(8px)`, `pointer-events: auto`, and `aria-busy="true"`.
 - [ ] `[HIGH]` `contract` — Creation form lives in a 264px sidebar column. Textarea is ~200px wide for article-length pastes. Move creation into a center-stage dialog (Notion/Readwise pattern).
 - [ ] `[LOW]` `best-practice` — Hero CTA stays active while creation form is open. Toggle to disabled or swap for "Cancel".
@@ -86,9 +86,7 @@ Sidebar used as canvas (creation form). Chrome buttons behave differently per vi
 
 ### Library
 
-- [ ] `[MED]` `contract` — Card variants diverge between shelves. `.library-card-starter` is transparent/no shadow/264×227; `.library-card-vault` is transparent/shadowed/829px full-row. Same family, different layouts and elevations. Unify to one grid with state-pill differentiation, or give starters a distinct "catalog" treatment.
-- [ ] `[LOW]` `polish` — "Add to vault" is a bare text link. Users expect a button.
-- [ ] `[LOW]` `polish` — Orphan 7th starter card on row 3 (3-col grid, 7 items). Balance to 6 or 9, or add a "Request a starter" CTA to square it.
+- [x] `[MED]` `contract` — Starter shelf card issues are obsolete. The old multi-concept starter shelf was removed; the Library now has one curated Hermes Agent documentation concept pending the broader Library revamp.
 
 ### Analytics
 

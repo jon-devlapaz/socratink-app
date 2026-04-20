@@ -1,0 +1,386 @@
+{
+  "metadata": {
+    "title": "Hermes Agent",
+    "source_title": "Hermes Agent Documentation",
+    "thesis": "Hermes Agent is a self-improving autonomous agent whose capability comes from combining persistent memory, reusable skills, executable tools, messaging surfaces, provider routing, deployment environments, and safety boundaries into one long-running system.",
+    "core_thesis": "Hermes Agent is a self-improving autonomous agent whose capability comes from combining persistent memory, reusable skills, executable tools, messaging surfaces, provider routing, deployment environments, and safety boundaries into one long-running system.",
+    "architecture_type": "system_description",
+    "difficulty": "hard",
+    "source_url": "https://hermes-agent.nousresearch.com/docs/",
+    "source_manifest": "docs/reference/hermes-agent-docs-manifest.md",
+    "source_tree_sha": "8a0c774e9efd771c317e6f158a080ea19267182b",
+    "governing_assumptions": [
+      "An autonomous agent becomes more useful when it can persist context and procedures across sessions.",
+      "The conversation surface, model provider, tool runtime, and execution environment can be decoupled.",
+      "Long-running agent autonomy requires explicit safety boundaries around tools, credentials, commands, and external gateways.",
+      "Developer-facing extension points are necessary because no fixed tool catalog can cover every workflow."
+    ],
+    "low_density": false
+  },
+  "backbone": [
+    {
+      "id": "b1",
+      "principle": "Hermes compounds capability by feeding persistent context, reusable skills, and executable tools back into the agent loop.",
+      "dependent_clusters": [
+        "c2",
+        "c3",
+        "c4"
+      ]
+    },
+    {
+      "id": "b2",
+      "principle": "Hermes can live outside a laptop because conversation surfaces, model providers, and execution environments are separable layers.",
+      "dependent_clusters": [
+        "c1",
+        "c5",
+        "c6"
+      ]
+    },
+    {
+      "id": "b3",
+      "principle": "Hermes stays usable as an autonomous system only when approvals, authorization, credentials, isolation, and rollback constrain its action surfaces.",
+      "dependent_clusters": [
+        "c4",
+        "c6",
+        "c7"
+      ]
+    }
+  ],
+  "clusters": [
+    {
+      "id": "c1",
+      "label": "Surfaces route conversations",
+      "description": "Hermes separates where the user talks from where the agent works. CLI, TUI, slash commands, messaging gateways, sessions, profiles, and API-compatible frontends all feed conversation turns into the same underlying agent system.",
+      "subnodes": [
+        {
+          "id": "c1_s1",
+          "label": "CLI and TUI start direct sessions",
+          "mechanism": "The terminal interface gives the user immediate control over conversation state, model selection, tools, slash commands, interruption, and session management. It is the direct entry point for configuring and driving Hermes without an external messaging platform.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c1_s2",
+          "label": "Messaging gateways preserve reach",
+          "mechanism": "The gateway lets Telegram, Discord, Slack, WhatsApp, Signal, email, SMS, Matrix, Mattermost, WeCom, Feishu, DingTalk, BlueBubbles, Home Assistant, webhooks, and API frontends deliver user turns into Hermes. The same agent can keep working on remote infrastructure while the user interacts from a convenient channel.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c1_s3",
+          "label": "Sessions and profiles separate continuity",
+          "mechanism": "Sessions preserve conversation history and platform context, while profiles let multiple independent Hermes agents keep separate configs, API keys, memory, sessions, skills, and gateways. This prevents one workspace or persona from contaminating another.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "label": "Context assembly shapes behavior",
+      "description": "Hermes builds each turn from layered context rather than from the user message alone. Configuration, provider settings, SOUL/personality, project files, context references, memories, skills, session state, and tool definitions become the operating frame for the model.",
+      "subnodes": [
+        {
+          "id": "c2_s1",
+          "label": "Configuration selects runtime defaults",
+          "mechanism": "Config files and environment variables choose providers, models, toolsets, terminal backends, memory behavior, gateway settings, and feature flags. These defaults determine what Hermes can do before any individual prompt is considered.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c2_s2",
+          "label": "Context files inject local rules",
+          "mechanism": "Files such as AGENTS.md, .hermes.md, CLAUDE.md, SOUL.md, and referenced project artifacts add persistent instructions and local knowledge to the prompt. They let a repo or user shape Hermes without changing the agent code.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c2_s3",
+          "label": "Compression preserves long work",
+          "mechanism": "Context compression and prompt caching prevent long sessions from overrunning the model window while preserving the important operating state. Gateway hygiene and agent-side compression turn sprawling histories into compact context that can continue to guide future turns.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c3",
+      "label": "Learning artifacts compound",
+      "description": "Hermes improves across time by storing durable facts, retrieving old sessions, modeling the user, and turning repeated procedures into skills. Memory answers what should be remembered, while skills answer how a recurring task should be performed.",
+      "subnodes": [
+        {
+          "id": "c3_s1",
+          "label": "Memory persists selected facts",
+          "mechanism": "Hermes can store memory in local files, session search, and external memory providers. Retrieved memories give later turns access to user preferences, prior decisions, project history, and recurring constraints.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c3_s2",
+          "label": "Session search revives prior work",
+          "mechanism": "SQLite session storage and full-text search make past conversations inspectable and reusable. Instead of treating every session as isolated, Hermes can summarize and reuse earlier trajectories when they become relevant.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c3_s3",
+          "label": "Skills turn experience into procedure",
+          "mechanism": "Skills encode reusable workflows as progressive instructions with optional files, scripts, and assets. Hermes can create or improve skills after repeated complex tasks, converting experience into procedural memory.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c4",
+      "label": "Tools execute controlled action",
+      "description": "Hermes moves from conversation to work through tools and toolsets. Built-in tools, code execution, browser control, image and voice capabilities, MCP tools, and the tool gateway expose actions, while toolsets determine which actions are available in a given mode.",
+      "subnodes": [
+        {
+          "id": "c4_s1",
+          "label": "Toolsets scope action",
+          "mechanism": "Toolsets group and filter available tools so Hermes does not expose every capability at all times. This makes the action surface match the task, platform, and safety posture.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c4_s2",
+          "label": "Code execution collapses workflows",
+          "mechanism": "Programmatic Python execution can call tools through RPC, letting Hermes combine multi-step data collection, file processing, and tool pipelines into one coherent execution turn. This reduces repeated model round trips for mechanical work.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c4_s3",
+          "label": "MCP extends tool reach",
+          "mechanism": "Model Context Protocol servers connect Hermes to external tool providers, but Hermes can filter and configure which MCP tools are loaded. MCP expands capability without forcing every integration into the core codebase.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c5",
+      "label": "Environments relocate work",
+      "description": "Hermes can run work in different terminal and deployment backends. Local shells, Docker, SSH, Daytona, Singularity, Modal, Nix, and Termux change where computation happens, what persists, and how isolated the workspace is.",
+      "subnodes": [
+        {
+          "id": "c5_s1",
+          "label": "Terminal backends separate execution",
+          "mechanism": "A terminal backend decides where commands run: on the local machine, in Docker, on SSH hosts, in Daytona, in Singularity, or in Modal. This lets the same agent interface target different compute and isolation properties.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c5_s2",
+          "label": "Serverless persistence reduces idle cost",
+          "mechanism": "Daytona and Modal let workspaces hibernate when idle and wake when needed. That gives Hermes a persistent remote work environment without requiring a laptop to remain online or a full server to stay hot.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c5_s3",
+          "label": "Packaging choices constrain setup",
+          "mechanism": "Installer scripts, Docker, Nix, NixOS modules, WSL2, macOS, Linux, and Termux each change the installation path and available dependencies. The deployment choice determines what features are practical and what platform constraints must be handled.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c6",
+      "label": "Integrations widen agency",
+      "description": "Hermes connects outward through model providers, messaging platforms, cron jobs, hooks, API servers, plugins, dashboard extensions, and optional skills. These integrations widen where Hermes can be contacted, what systems it can operate, and when it can act without a live user prompt.",
+      "subnodes": [
+        {
+          "id": "c6_s1",
+          "label": "Provider routing decouples models",
+          "mechanism": "Hermes can route inference through Nous Portal, OpenRouter, OpenAI-compatible endpoints, Anthropic, Bedrock, local servers, and other providers. Provider selection changes cost, quality, speed, fallback behavior, and credential requirements without changing the user workflow.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c6_s2",
+          "label": "Cron creates unattended action",
+          "mechanism": "Cron jobs let Hermes wake on a schedule, load skills, execute self-contained prompts, and deliver results to configured targets. Automation turns Hermes from a reactive chat agent into a periodic operator.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c6_s3",
+          "label": "Plugins add bounded extensions",
+          "mechanism": "Plugins, hooks, dashboard tabs, platform adapters, memory provider plugins, and context engine plugins add behavior at explicit extension points. This keeps customization modular instead of mixing every new behavior into the agent loop.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    },
+    {
+      "id": "c7",
+      "label": "Safety boundaries constrain power",
+      "description": "Hermes is powerful because it can execute commands, use credentials, operate tools, and communicate through gateways. The safety model constrains that power through approvals, authorization, credential pools, isolation, MCP filtering, checkpoints, rollback, and production deployment practices.",
+      "subnodes": [
+        {
+          "id": "c7_s1",
+          "label": "Approvals gate dangerous action",
+          "mechanism": "Command approval and user confirmation prevent high-risk actions from executing silently. The agent can propose work, but risky operations must cross an explicit authorization boundary.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c7_s2",
+          "label": "Credentials require scoped handling",
+          "mechanism": "API keys, OAuth tokens, provider credentials, and credential pools must be isolated from prompts and constrained to the provider or integration that needs them. Safe credential handling prevents one integration from exposing another system.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        },
+        {
+          "id": "c7_s3",
+          "label": "Rollback protects filesystem work",
+          "mechanism": "Checkpoints, rollback, git worktrees, and container isolation give Hermes a way to recover from bad edits or unsafe operations. These safeguards make agentic file and command execution less brittle.",
+          "drill_status": null,
+          "gap_type": null,
+          "gap_description": null,
+          "last_drilled": null
+        }
+      ]
+    }
+  ],
+  "relationships": {
+    "learning_prerequisites": [
+      {
+        "from": "c1",
+        "to": "c2",
+        "rationale": "A learner needs to understand how Hermes sessions and surfaces route user turns before context assembly can make sense."
+      },
+      {
+        "from": "c2",
+        "to": "c3",
+        "rationale": "Persistent learning depends on knowing what context enters a turn and how selected context can be stored, retrieved, or converted into skills."
+      },
+      {
+        "from": "c4",
+        "to": "c7",
+        "rationale": "The safety model is hard to understand before the learner sees why Hermes tools can execute real actions."
+      },
+      {
+        "from": "c5",
+        "to": "c6",
+        "rationale": "Integrations and automations become clearer after the learner understands that Hermes work can run in separable execution environments."
+      }
+    ],
+    "domain_mechanics": [
+      {
+        "from": "c2",
+        "to": "c3",
+        "type": "amplifies",
+        "mechanism": "Richer context assembly amplifies Hermes learning because memories and skills only help when they are retrieved into the prompt at the right time."
+      },
+      {
+        "from": "c3",
+        "to": "c4",
+        "type": "amplifies",
+        "mechanism": "Reusable skills amplify tool execution by turning repeated tool sequences into documented procedures the agent can load when needed."
+      },
+      {
+        "from": "c5",
+        "to": "c1",
+        "type": "causal",
+        "mechanism": "Remote and serverless environments let users keep talking through lightweight surfaces while Hermes performs work somewhere else."
+      },
+      {
+        "from": "c6",
+        "to": "c1",
+        "type": "amplifies",
+        "mechanism": "Messaging and API integrations amplify the conversation layer by increasing the number of places where user turns can enter Hermes."
+      },
+      {
+        "from": "c7",
+        "to": "c4",
+        "type": "suppresses",
+        "mechanism": "Safety boundaries suppress unsafe tool execution by requiring approvals, scoped credentials, isolation, filtering, or rollback before actions can cause damage."
+      },
+      {
+        "from": "c6",
+        "to": "c7",
+        "type": "tension",
+        "mechanism": "Broader integrations increase Hermes reach while also expanding the authorization, credential, and external attack surfaces that the safety model must constrain."
+      }
+    ]
+  },
+  "frameworks": [
+    {
+      "id": "f1",
+      "name": "Decoupled Agent Surfaces",
+      "statement": "When designing an autonomous system, separate conversation entry points, model routing, execution environments, and tool permissions so each layer can change without rewriting the others.",
+      "source_clusters": [
+        "c1",
+        "c5",
+        "c6"
+      ],
+      "external_application": "Designing an internal operations bot that can move from Slack to email or from local scripts to cloud runners without changing its core workflow."
+    },
+    {
+      "id": "f2",
+      "name": "Procedural Memory Flywheel",
+      "statement": "When a system repeats complex work, capture durable facts as memory and recurring procedures as skills so future work starts from accumulated evidence instead of a blank prompt.",
+      "source_clusters": [
+        "c2",
+        "c3",
+        "c4"
+      ],
+      "external_application": "Building a support automation system that turns repeated resolution paths into playbooks and uses past tickets to route new incidents faster."
+    },
+    {
+      "id": "f3",
+      "name": "Capability Requires Counterweight",
+      "statement": "Every new action surface should introduce a matching constraint such as approval, scoping, isolation, rollback, or auditability before the capability is treated as production-ready.",
+      "source_clusters": [
+        "c4",
+        "c6",
+        "c7"
+      ],
+      "external_application": "Approving a CI/CD automation that can deploy services only after adding environment scoping, secret isolation, manual approval, and rollback."
+    }
+  ]
+}

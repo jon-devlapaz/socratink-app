@@ -17,7 +17,7 @@ Legacy alias: `docs/codex/session-bootstrap.md` exists only to redirect older in
 ## Current Repo Reality
 - Product: socratink
 - Stage: MVP stabilization, not expansion
-- Release gate: thermostat starter-map loop
+- Release gate: freshly created concept loop or curated Hermes Agent documentation concept while the old Library starter shelf is removed
 - Core architecture: cold attempt -> targeted study -> spaced re-drill
 - Core node states: `locked -> primed -> drilled -> solidified`
 - Hosted runtime: Vercel serverless
