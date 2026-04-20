@@ -74,8 +74,34 @@ body[data-map-open="true"] .auth-controls,
 body[data-map-open="true"] .dev-skip {
   display: none !important;
 }
-body:not([data-map-open="true"]) #map-close-btn {
+/* Map-view chrome — single back control (UX-todo #10). In map view,
+   hide the ambiguous < drawer-toggle and redundant × close-btn; show
+   the explicit "← Dashboard" text link instead. */
+body[data-map-open="true"] .drawer-toggle,
+body[data-map-open="true"] .map-close-btn {
   display: none !important;
+}
+body:not([data-map-open="true"]) #map-close-btn,
+body:not([data-map-open="true"]) .map-back-link {
+  display: none !important;
+}
+.map-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--accent-primary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-standard);
+}
+.map-back-link:hover {
+  background: var(--accent-soft);
 }
 .main-header-left {
   display: flex;
