@@ -162,6 +162,85 @@ body:not([data-map-open="true"]) #map-close-btn {
     display: none;
   }
 
+  /* Drawer footer — mobile egress for theme toggle, sign-in, exit guest.
+     BLOCKER UX-todo #24 fix. Desktop hides via default rule below. */
+  .drawer-footer {
+    margin-top: auto;
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    background: rgba(var(--cream-50-rgb), 0.60);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  [data-theme="dark"] .drawer-footer {
+    background: rgba(var(--lavender-500-rgb), 0.10);
+  }
+  .drawer-theme-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .drawer-theme-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-kicker);
+    font-weight: 700;
+  }
+  .drawer-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-nested);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-strong);
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: inherit;
+    min-height: 44px;
+    min-width: 88px;
+    cursor: pointer;
+  }
+  .drawer-theme-toggle:hover {
+    border-color: var(--border-strong);
+  }
+  .drawer-signin-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-btn);
+    background: var(--accent-primary);
+    color: var(--text-on-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+  }
+  .drawer-signin-link:hover {
+    background: var(--primary-fill-hover);
+    color: var(--text-on-primary);
+  }
+  .drawer-exit-btn {
+    padding: var(--space-2) var(--space-4);
+    background: none;
+    border: 1px solid var(--border-strong);
+    color: var(--text-strong);
+    border-radius: var(--radius-btn);
+    font-size: 0.8rem;
+    font-weight: 500;
+    font-family: inherit;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .drawer-exit-btn:hover {
+    background: var(--surface-nested);
+  }
+
   /* Bottom Navigation for Mobile */
   .bottom-nav {
     display: flex;
@@ -268,6 +347,11 @@ body:not([data-map-open="true"]) #map-close-btn {
   .settings-view.visible {
     animation: viewSlideIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
+}
+
+/* Desktop hides mobile drawer footer — chrome handles theme + sign-in */
+@media (min-width: 900px) {
+  .drawer-footer { display: none; }
 }
 
 /* ── 14. Extraction Overlay ─────────────────────────────────── */

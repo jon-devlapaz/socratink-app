@@ -2043,6 +2043,7 @@ const App = (() => {
   themePreference = getStoredThemePreference();
   applyThemePreference(themePreference, { persist: false });
   void bootstrapAuthUi();
+  void refreshDrawerFooter();
   learnerAnalyticsDashboard = mountLearnerAnalyticsDashboard({
     autoLoad: false,
     onConceptChange: (nextId) => {
@@ -3715,8 +3716,31 @@ const App = (() => {
     scheduleTutorialRefresh();
   }
 
+  async function refreshDrawerFooter() {
+    let session = null;
+    try { session = await fetchAuthSession(); } catch (err) { console.warn('Drawer session fetch failed.', err); }
+    const isGuest = !!(session && session.guest_mode);
+    const authEnabled = !!(session && session.auth_enabled);
+    const exitBtn = document.getElementById('drawer-exit-btn');
+    const signinLink = document.getElementById('drawer-signin-link');
+    if (exitBtn) exitBtn.hidden = !isGuest;
+    if (signinLink) {
+      const show = isGuest && authEnabled;
+      signinLink.hidden = !show;
+      if (show) signinLink.href = buildLoginHref('/');
+    }
+  }
+
+  async function exitGuestFromDrawer() {
+    try { await logout(); } catch (err) { console.warn('Guest exit failed.', err); }
+    closeDrawer();
+    redirectToLogin('/');
+  }
+
   return {
     toggleDrawer, openDrawer, closeDrawer,
+    refreshDrawerFooter,
+    exitGuestFromDrawer,
     cancelDrill, startDrill, startDrillFromMap: () => {
       const concept = getActiveConcept();
       if (!concept?.graphData) return;

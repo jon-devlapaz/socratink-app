@@ -22,7 +22,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=19">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 
 <body>
@@ -87,6 +87,20 @@
 
     <div id="concept-list"></div>
     <div id="add-trigger-area"></div>
+
+    <!-- Drawer footer (mobile only) -->
+    <div class="drawer-footer" aria-label="Account actions">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Theme</span>
+        <button class="drawer-theme-toggle" id="drawer-theme-toggle" type="button"
+          onclick="App.toggleTheme()" aria-label="Toggle theme">
+          <span class="drawer-theme-mode">Light / Dark</span>
+        </button>
+      </div>
+      <a class="drawer-signin-link" id="drawer-signin-link" href="javascript:void(0)" hidden>Continue with Google</a>
+      <button class="drawer-exit-btn" id="drawer-exit-btn" type="button"
+        onclick="App.exitGuestFromDrawer()" hidden>Exit Guest</button>
+    </div>
 
     <!-- Close button (mobile only) -->
     <button class="drawer-close" onclick="App.closeDrawer()">×</button>
