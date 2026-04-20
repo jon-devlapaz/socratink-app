@@ -1156,13 +1156,26 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   color: var(--accent-secondary);
 }
 .creation-dialog-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  min-height: 0;
+  padding: 0;
   background: none;
   border: none;
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 1.25rem;
   line-height: 1;
-  padding: var(--space-1) var(--space-2);
   cursor: pointer;
+  box-shadow: none;
+  transition: color var(--duration-micro) var(--ease-standard), background var(--duration-micro) var(--ease-standard);
+}
+.creation-dialog-close:hover {
+  color: var(--text-strong);
+  background: var(--surface-nested);
+  transform: none;
+  box-shadow: none;
 }
 .creation-dialog-close:hover { color: var(--text-strong); }
 .creation-dialog-title {
