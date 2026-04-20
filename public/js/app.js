@@ -2434,6 +2434,7 @@ const App = (() => {
     localStorage.setItem(REPAIR_REPS_STORE_KEY, JSON.stringify(history || {}));
   }
 
+  const REPAIR_REP_PRE_CONFIDENCE_VALUES = new Set(['guessing', 'hunch', 'can_explain']);
   const REPAIR_REP_RATING_VALUES = new Set(['close_match', 'partial', 'missed']);
 
   function recordRepairRepsCompletion({ conceptId, nodeId, repCount, promptVersion, gapType, answerLengths, ratings }) {
@@ -2717,6 +2718,11 @@ const App = (() => {
       isDealing: false,
       isRevealing: false,
       error: null,
+      currentPreConfidence: null,
+      repStartedAt: null,
+      lockedAt: null,
+      preConfidences: [],
+      lockDurationsMs: [],
     });
 
     try {
@@ -2763,6 +2769,11 @@ const App = (() => {
         isDealing: true,
         isRevealing: false,
         error: null,
+        currentPreConfidence: null,
+        repStartedAt: Date.now(),
+        lockedAt: null,
+        preConfidences: [],
+        lockDurationsMs: [],
       });
     } catch (err) {
       console.error(err);
@@ -2783,24 +2794,68 @@ const App = (() => {
         isDealing: false,
         isRevealing: false,
         error: 'Repair Reps could not load. Reopen study and try again later.',
+        currentPreConfidence: null,
+        repStartedAt: null,
+        lockedAt: null,
+        preConfidences: [],
+        lockDurationsMs: [],
       });
     }
   }
 
   function revealRepairRep(answerText = '') {
     if (!repairRepsState || repairRepsState.status !== 'ready') return;
+    // Idempotency: second call on the same rep is a no-op so lockedAt,
+    // preConfidences, and lockDurationsMs are written exactly once.
+    if (repairRepsState.revealed === true) return;
     const answer = String(answerText || '').trim();
     if (!answer) return;
+    if (!REPAIR_REP_PRE_CONFIDENCE_VALUES.has(repairRepsState.currentPreConfidence)) return;
+
+    const currentIndex = repairRepsState.currentIndex || 0;
+    const lockedAt = Date.now();
+    const repStartedAt = Number.isFinite(repairRepsState.repStartedAt)
+      ? repairRepsState.repStartedAt
+      : lockedAt;
+    const lockDuration = Math.max(0, lockedAt - repStartedAt);
+
     const answerLengths = [...(repairRepsState.answerLengths || [])];
-    answerLengths[repairRepsState.currentIndex || 0] = answer.length;
+    answerLengths[currentIndex] = answer.length;
+    const preConfidences = [...(repairRepsState.preConfidences || []), repairRepsState.currentPreConfidence];
+    const lockDurationsMs = [...(repairRepsState.lockDurationsMs || []), lockDuration];
+
     setRepairRepsState({
       ...repairRepsState,
       revealed: true,
       currentAnswer: answer,
       answerLengths,
-      ratingSelected: Boolean(repairRepsState.ratings?.[repairRepsState.currentIndex || 0]),
+      preConfidences,
+      lockDurationsMs,
+      lockedAt,
+      ratingSelected: Boolean(repairRepsState.ratings?.[currentIndex]),
       isDealing: false,
       isRevealing: true,
+    });
+  }
+
+  function setRepairRepPreConfidence(value) {
+    if (!repairRepsState || repairRepsState.status !== 'ready') return;
+    // Pill is frozen post-reveal. UI also suppresses via aria-disabled + pointer-events,
+    // but gate here so direct JS calls cannot mutate the locked-in stance.
+    if (repairRepsState.revealed === true) return;
+    if (!REPAIR_REP_PRE_CONFIDENCE_VALUES.has(value)) return;
+    setRepairRepsState({
+      ...repairRepsState,
+      currentPreConfidence: value,
+    });
+  }
+
+  function setRepairRepDraft(value) {
+    if (!repairRepsState || repairRepsState.status !== 'ready') return;
+    if (repairRepsState.revealed === true) return;
+    setRepairRepsState({
+      ...repairRepsState,
+      currentAnswer: typeof value === 'string' ? value : '',
     });
   }
 
@@ -2832,6 +2887,8 @@ const App = (() => {
         gapType: repairRepsState.gapType,
         answerLengths: repairRepsState.answerLengths,
         ratings: repairRepsState.ratings,
+        preConfidences: repairRepsState.preConfidences,
+        lockDurationsMs: repairRepsState.lockDurationsMs,
       });
       setRepairRepsState({
         ...repairRepsState,
@@ -2851,6 +2908,9 @@ const App = (() => {
       ratingSelected: false,
       isDealing: true,
       isRevealing: false,
+      currentPreConfidence: null,
+      lockedAt: null,
+      repStartedAt: Date.now(),
     });
   }
 
@@ -3993,6 +4053,8 @@ const App = (() => {
     rateRepairRep,
     nextRepairRep,
     exitRepairReps,
+    setRepairRepPreConfidence,
+    setRepairRepDraft,
     getNodeInspectAction,
     runInspectAction,
     deleteConcept,
