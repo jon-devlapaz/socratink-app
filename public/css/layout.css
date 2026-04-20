@@ -142,15 +142,9 @@ body:not([data-map-open="true"]) #map-close-btn {
   }
 }
 
-/* ─── Night mode — hero card picks up CSS variable overrides ── */
-body.night .hero-card,
-body[data-theme="dark"] .hero-card { background-color: var(--card-bg); }
-body.night .settings-page-card,
-body[data-theme="dark"] .settings-page-card {
-  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
-}
-body.night #card,
-body[data-theme="dark"] #card { background-color: var(--bg); }
+/* Dark-mode overrides removed here — .hero-card, .settings-page-card,
+   and #card all consume tokens that flip via [data-theme="dark"]
+   in variables.css. Base rules are authoritative. */
 
 /* ─── Mobile (< 900px): centered-card layout ──────────────── */
 @media (max-width: 899px) {
@@ -618,8 +612,8 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   gap: 14px;
   padding: 22px;
   border-radius: var(--radius-card);
-  background: linear-gradient(180deg, rgba(var(--white-rgb), 0.9), rgba(var(--cream-50-rgb), 0.84));
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
 }
 

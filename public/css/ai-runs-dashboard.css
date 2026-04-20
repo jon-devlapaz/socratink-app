@@ -557,15 +557,6 @@ body.analytics-page {
 }
 
 /* ── Dark mode: swap hardcoded light gradients for theme-aware ones ── */
-body.night .analytics-header,
-body.night .analytics-panel,
-body.night .analytics-status,
-body.night .metric-card,
-body.night .tip-card,
-body[data-theme="dark"] .analytics-header,
-body[data-theme="dark"] .analytics-panel,
-body[data-theme="dark"] .analytics-status,
-body[data-theme="dark"] .metric-card,
-body[data-theme="dark"] .tip-card {
-  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
-}
+/* Dark-mode override removed — analytics surfaces consume
+   --gradient-card-start / --gradient-card-end via base rule above;
+   tokens flip via [data-theme="dark"] in variables.css. */
