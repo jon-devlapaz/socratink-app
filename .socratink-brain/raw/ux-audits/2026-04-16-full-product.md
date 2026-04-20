@@ -51,7 +51,7 @@ Sidebar used as canvas (creation form). Chrome buttons behave differently per vi
 
 ### Concept creation
 
-- [ ] `[BLOCKER]` `bug` — Submission silently discards user input. Entered "Photosynthesis" + pasted body → extraction overlay → created concept was "Thermostat Control Loop" (starter seed). No error, no warning. Either disable form in guest mode with a reason, wire to local fallback generator, or surface the backend error as retry prompt.
+- [x] `[BLOCKER]` `bug` — Submission silently discards user input. Entered "Photosynthesis" + pasted body → extraction overlay → created concept was "Thermostat Control Loop" (starter seed). No error, no warning. Either disable form in guest mode with a reason, wire to local fallback generator, or surface the backend error as retry prompt.
 - [ ] `[HIGH]` `bug` — Extraction overlay doesn't lock the background. Sidebar form stays clickable during extraction; hero "Add Concept" stays enabled. Double-submit risk. Add full scrim with `backdrop-filter: blur(8px)`, `pointer-events: auto`, and `aria-busy="true"`.
 - [ ] `[HIGH]` `contract` — Creation form lives in a 264px sidebar column. Textarea is ~200px wide for article-length pastes. Move creation into a center-stage dialog (Notion/Readwise pattern).
 - [ ] `[LOW]` `best-practice` — Hero CTA stays active while creation form is open. Toggle to disabled or swap for "Cancel".

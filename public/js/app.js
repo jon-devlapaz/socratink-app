@@ -11,7 +11,7 @@ import {
 } from './store.js';
 
 import {
-  card, titleEl, descEl, conceptLabelEl, primaryControls, drillControls,
+  card, titleEl, descEl, primaryControls, drillControls,
   heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls, POLYGON_IDS
@@ -236,7 +236,6 @@ const App = (() => {
 
   function renderHero(concept) {
     if (!concept) {
-      conceptLabelEl.textContent = 'Dashboard';
       titleEl.textContent = 'Add your first socratink';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
@@ -244,7 +243,6 @@ const App = (() => {
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
-      conceptLabelEl.textContent = 'Selected Concept';
       titleEl.textContent = concept.name;
       descEl.textContent = getHeroGuidance(concept);
       if (heroStateChipEl) {
@@ -435,19 +433,23 @@ const App = (() => {
     addTriggerArea.style.overflowY = '';
     const full = loadConcepts().length >= 4;
     addTriggerArea.innerHTML = full
-      ? `<button class="add-trigger add-trigger-card disabled" type="button" disabled aria-disabled="true">
-           <span class="add-trigger-icon">+</span>
-           <span class="add-trigger-body">
-             <span class="add-trigger-title">Vault full</span>
-             <span class="add-trigger-copy">You have 4 of 4 tinks active. Remove one to add another.</span>
+      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Vault full — remove a concept to add another">
+           <span class="add-trigger-icon" aria-hidden="true">
+             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+               <line x1="6" y1="2" x2="6" y2="10"/>
+               <line x1="2" y1="6" x2="10" y2="6"/>
+             </svg>
            </span>
+           <span class="add-trigger-title">vault full</span>
          </button>`
-      : `<button class="add-trigger add-trigger-card" id="add-trigger" type="button" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon">+</span>
-           <span class="add-trigger-body">
-             <span class="add-trigger-title">Add a New Tink</span>
-             <span class="add-trigger-copy">Paste text, import a URL, or upload a file to map a fresh concept.</span>
+      : `<button class="add-trigger" id="add-trigger" type="button" onclick="App.startAddConcept()">
+           <span class="add-trigger-icon" aria-hidden="true">
+             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+               <line x1="6" y1="2" x2="6" y2="10"/>
+               <line x1="2" y1="6" x2="10" y2="6"/>
+             </svg>
            </span>
+           <span class="add-trigger-title">new tink</span>
          </button>`;
     scheduleTutorialRefresh();
   }
@@ -844,12 +846,171 @@ const App = (() => {
     };
   }
 
-  function startAddConcept() {
-    addTriggerArea.style.overflowY = 'auto';
-    addTriggerArea.innerHTML = '<div class="creation-form"></div>';
-    const form = addTriggerArea.querySelector('.creation-form');
+  // ── Dialog helpers (C6a) ─────────────────────────────────────
+  let __dialogInertedNodes = [];
+  function mountCreationDialog() {
+    let node = document.getElementById('creation-dialog');
+    const firstMount = !node;
+    if (firstMount) {
+      node = document.createElement('div');
+      node.id = 'creation-dialog';
+      node.className = 'creation-dialog';
+      node.setAttribute('role', 'dialog');
+      node.setAttribute('aria-modal', 'true');
+      node.setAttribute('aria-labelledby', 'creation-dialog-title');
+      node.innerHTML = `
+        <div class="creation-dialog-scrim"></div>
+        <div class="creation-dialog-shell">
+          <div class="creation-dialog-header">
+            <span class="creation-dialog-kicker">New concept</span>
+            <button class="creation-dialog-close" type="button" aria-label="Close">×</button>
+          </div>
+          <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
+          <div class="creation-dialog-banner-slot"></div>
+          <div class="creation-dialog-content"></div>
+          <p class="creation-dialog-meta">Your words shape the path; they do not grade you.</p>
+        </div>
+      `;
+      document.body.appendChild(node);
+      node.querySelector('.creation-dialog-close').addEventListener('click', () => closeCreationDialog());
+      node.querySelector('.creation-dialog-scrim').addEventListener('click', () => closeCreationDialog());
+      node.querySelector('.creation-dialog-shell').addEventListener('keydown', trapFocusHandler);
+    }
+    node.dataset.open = 'true';
+    __dialogInertedNodes = Array.from(document.body.children).filter(
+      (el) => el !== node && !el.hasAttribute('inert')
+    );
+    __dialogInertedNodes.forEach((el) => el.setAttribute('inert', ''));
+    document.addEventListener('keydown', creationDialogKeyHandler);
+    return {
+      node,
+      shell: node.querySelector('.creation-dialog-shell'),
+      shellContent: node.querySelector('.creation-dialog-content'),
+      bannerSlot: node.querySelector('.creation-dialog-banner-slot'),
+    };
+  }
 
-    buildContentInputUI(form, {
+  function closeCreationDialog() {
+    const node = document.getElementById('creation-dialog');
+    if (!node) return;
+    node.dataset.open = 'false';
+    __dialogInertedNodes.forEach((el) => el.removeAttribute('inert'));
+    __dialogInertedNodes = [];
+    document.removeEventListener('keydown', creationDialogKeyHandler);
+    setTimeout(() => {
+      if (node.dataset.open === 'false') {
+        node.querySelector('.creation-dialog-banner-slot').innerHTML = '';
+        node.querySelector('.creation-dialog-content').innerHTML = '';
+      }
+    }, 350);
+    (window.__creationDialogTrigger || document.body).focus?.();
+  }
+
+  function creationDialogKeyHandler(e) {
+    if (e.key === 'Escape') closeCreationDialog();
+  }
+
+  function trapFocusHandler(e) {
+    if (e.key !== 'Tab') return;
+    const container = e.currentTarget;
+    const focusables = container.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  function buildGuestBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'creation-banner creation-banner--guest';
+    banner.innerHTML = `
+      <div>
+        <strong>Guest mode uses sample maps.</strong><br>
+        Sign in to extract your own content into a real knowledge map.
+      </div>
+    `;
+    return banner;
+  }
+
+  // Contract invariant — extraction success path must validate payload shape
+  // BEFORE any state mutation. Prevents BLOCKER UX-todo #4 silent-discard
+  // where an empty/malformed jsonPayload created a concept anyway.
+  function isValidKnowledgeMap(map) {
+    if (!map || typeof map !== 'object') return false;
+    if (!Array.isArray(map.backbone) || map.backbone.length === 0) return false;
+    if (!Array.isArray(map.clusters)) return false;
+    return true;
+  }
+
+  // User-facing, never echoes raw err.message — auth headers / stack
+  // fragments leak through otherwise, and browser-analytics.js:326 renders
+  // row.reason as a summary string.
+  function sanitizeExtractError(err) {
+    if (!err) return 'Something went wrong. Try again when ready.';
+    const msg = String(err.message || '');
+    if (/\b401|unauthor/i.test(msg)) return 'Sign in required to run extraction.';
+    if (/\b403|forbidden/i.test(msg)) return 'That request was not allowed.';
+    if (/\b429|rate limit/i.test(msg)) return 'Extraction service is throttled. Give it a minute and retry.';
+    if (/\b5\d{2}|server error/i.test(msg)) return 'The extraction service hiccuped. Try again when ready.';
+    if (/invalid map/i.test(msg)) return 'The extraction service returned an unexpected result. Try again when ready.';
+    return 'The network or service was unreachable. Try again when ready.';
+  }
+
+  function buildErrorBanner(sanitizedMessage) {
+    const banner = document.createElement('div');
+    banner.className = 'creation-banner creation-banner--error';
+    banner.innerHTML = `
+      <div>
+        <strong>Extraction didn't complete.</strong><br>
+        ${escHtml(sanitizedMessage)}
+      </div>
+    `;
+    return banner;
+  }
+
+  function buildGuestActions(loginHref) {
+    const row = document.createElement('div');
+    row.className = 'creation-guest-actions';
+    row.innerHTML = `
+      <button class="btn-browse-starters" type="button">Browse starter maps</button>
+      <a class="auth-link" href="${escHtml(loginHref)}">Continue with Google</a>
+    `;
+    row.querySelector('.btn-browse-starters').addEventListener('click', () => {
+      closeCreationDialog();
+      showLibrary();
+    });
+    return row;
+  }
+
+  async function startAddConcept() {
+    window.__creationDialogTrigger = document.activeElement;
+    const dialog = mountCreationDialog();
+    let isGuest = false;
+    let session = null;
+    try {
+      session = await fetchAuthSession();
+      isGuest = !!(session && session.guest_mode);
+    } catch (err) {
+      console.warn('Auth fetch failed during concept creation:', err);
+    }
+
+    if (isGuest) {
+      dialog.bannerSlot.appendChild(buildGuestBanner());
+      dialog.shellContent.appendChild(buildGuestActions(buildLoginHref('/')));
+      const firstFocusable = dialog.shell.querySelector('a, button:not([disabled])');
+      firstFocusable?.focus();
+      return;
+    }
+
+    buildContentInputUI(dialog.shellContent, {
       showNameField: true,
       showClipboard: true,
       onSubmit: async ({ text, type, filename, url, name }) => {
@@ -1165,6 +1326,14 @@ const App = (() => {
           const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
+          // INVARIANT: failed or malformed extraction must never mutate
+          // contentStore / concepts / localStorage. Guard runs BEFORE any
+          // state mutation and regardless of UI disabled state.
+          if (!isValidKnowledgeMap(jsonPayload)) {
+            removeOverlay();
+            throw new Error('Extraction returned an invalid map.');
+          }
+
           removeOverlay(true);
           const concept = {
             id, name, state: 'growing',
@@ -1202,9 +1371,11 @@ const App = (() => {
           renderGrid(concepts);
           renderConceptList(concepts);
           selectConcept(concept.id);
+          closeCreationDialog();
           closeDrawer();
         } catch (err) {
           removeOverlay();
+          const sanitized = sanitizeExtractError(err);
           recordExtractRun({
             timestamp: extractStartedAt,
             stage: 'extract',
@@ -1217,16 +1388,30 @@ const App = (() => {
             input_chars: typeof text === 'string' ? text.length : 0,
             duration_ms: Math.round(performance.now() - extractStartedPerf),
             error_type: 'request_failed',
-            reason: err?.message || 'Extraction failed',
+            // USER-VISIBLE per browser-analytics.js:326 (row.reason → summary)
+            reason: sanitized,
+            // Debug-only; never rendered to learner analytics
+            reason_raw: err?.message || null,
             run_mode: 'default',
           });
-          alert('Extraction Failed: ' + err.message);
+          console.warn('[extract] raw error (console only):', err);
+          const bannerSlot = document.querySelector('.creation-dialog-banner-slot');
+          if (bannerSlot) {
+            const existing = bannerSlot.querySelector('.creation-banner--error');
+            if (existing) existing.remove();
+            bannerSlot.appendChild(buildErrorBanner(sanitized));
+          }
+          const shellContent = document.querySelector('.creation-dialog-content');
+          shellContent?.querySelectorAll('button, input, textarea').forEach((el) => { el.disabled = false; });
         }
       },
       onCancel: () => {
-        renderAddTrigger();
+        closeCreationDialog();
       }
     });
+    // Focus first input inside dialog after mount
+    const firstInput = dialog.shell.querySelector('input:not([disabled]), textarea:not([disabled])');
+    firstInput?.focus();
     scheduleTutorialRefresh();
   }
 
@@ -1594,16 +1779,18 @@ const App = (() => {
     const rels = data.relationships || { domain_mechanics: [], learning_prerequisites: [] };
     const fws = data.frameworks || [];
 
-    const kickerEl = document.getElementById('concept-header-kicker');
     const titleEl = document.getElementById('concept-header-title');
     const summaryEl = document.getElementById('concept-header-summary');
     const tagsEl = document.getElementById('concept-header-tags');
     const drillBtn = document.getElementById('concept-start-drill');
-    if (kickerEl) kickerEl.textContent = getHeroStateLabel(concept.state) || 'Concept';
     if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
     if (summaryEl) summaryEl.textContent = meta.core_thesis || '';
     if (tagsEl) {
       let tagsHtml = '';
+      const stateLabel = getHeroStateLabel(concept.state);
+      if (stateLabel && stateLabel !== 'Board Empty') {
+        tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
+      }
       if (meta.architecture_type) tagsHtml += `<span class="map-badge arch">${escHtml(meta.architecture_type.replace(/_/g, ' '))}</span>`;
       if (meta.difficulty) tagsHtml += `<span class="map-badge diff">${escHtml(meta.difficulty)}</span>`;
       if (meta.low_density) tagsHtml += `<span class="map-low-density">Lightweight map</span>`;
@@ -2044,6 +2231,7 @@ const App = (() => {
   themePreference = getStoredThemePreference();
   applyThemePreference(themePreference, { persist: false });
   void bootstrapAuthUi();
+  void refreshDrawerFooter();
   learnerAnalyticsDashboard = mountLearnerAnalyticsDashboard({
     autoLoad: false,
     onConceptChange: (nextId) => {
@@ -3717,10 +3905,35 @@ const App = (() => {
     scheduleTutorialRefresh();
   }
 
+  async function refreshDrawerFooter() {
+    let session = null;
+    try { session = await fetchAuthSession(); } catch (err) { console.warn('Drawer session fetch failed.', err); }
+    const isGuest = !!(session && session.guest_mode);
+    const authEnabled = !!(session && session.auth_enabled);
+    const chip = document.getElementById('drawer-footer-chip');
+    const exitBtn = document.getElementById('drawer-exit-btn');
+    const signinLink = document.getElementById('drawer-signin-link');
+    if (chip) chip.hidden = !isGuest;
+    if (exitBtn) exitBtn.hidden = !isGuest;
+    if (signinLink) {
+      const show = isGuest && authEnabled;
+      signinLink.hidden = !show;
+      if (show) signinLink.href = buildLoginHref('/');
+    }
+  }
+
+  async function exitGuestFromDrawer() {
+    try { await logout(); } catch (err) { console.warn('Guest exit failed.', err); }
+    closeDrawer();
+    redirectToLogin('/');
+  }
+
   void refreshRuntimeConfig();
 
   return {
     toggleDrawer, openDrawer, closeDrawer,
+    refreshDrawerFooter,
+    exitGuestFromDrawer,
     cancelDrill, startDrill, startDrillFromMap: () => {
       const concept = getActiveConcept();
       if (!concept?.graphData) return;

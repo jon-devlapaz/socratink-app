@@ -27,6 +27,7 @@ body {
   font-size: var(--text-base);
   line-height: 1.6;
   background-color: var(--surface);
+  background-image: var(--page-background);
   color: var(--text);
   display: flex;
   align-items: center;
@@ -50,15 +51,6 @@ body[data-drawer-open="true"] #card {
   pointer-events: none;
 }
 
-.concept-label {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--text-sub);
-  min-height: 14px;
-  transition: color var(--theme-transition-ms) var(--theme-transition-ease);
-}
 .hero-title {
   font-family: var(--font-display);
   font-size: var(--text-4xl);
@@ -138,8 +130,9 @@ button:disabled { background-color:var(--locked); cursor:not-allowed; transform:
 
 .drawer-toggle {
   background:none; border:none; cursor:pointer;
-  padding:6px; border-radius:8px; color:var(--text-sub);
-  line-height:1; flex:none; width:auto;
+  padding:9px; border-radius:8px; color:var(--text-sub);
+  line-height:1; flex:none;
+  width:36px; height:36px; min-height:36px;
   transition:color 0.2s, background-color 0.2s;
 }
 .drawer-toggle:hover { color:var(--primary); background-color:var(--border); }
@@ -205,3 +198,33 @@ body[data-drawer-open="true"] .icon-collapse {
 .crystal-anim.anim-cocoon    { animation:gridCocoon    700ms ease forwards; }
 .crystal-anim.anim-actualize { animation:gridActualize 750ms ease forwards; }
 .crystal-anim.anim-repair    { animation:gridRepair    550ms ease forwards; }
+
+/* ── 9. Focus ring — a11y ────────────────────────────────── */
+/* Every interactive element inherits --accent-ring (violet light,
+   lavender dark). Form-control tags get an explicit rule because
+   some browsers strip box-shadow from input/select. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-radius: 4px;
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+
+/* ── 10. Reduced motion ──────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
