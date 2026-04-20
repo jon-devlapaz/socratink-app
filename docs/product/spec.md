@@ -94,7 +94,7 @@ The panel must be mode-pure with no content bleed.
 3. **Study**: Mechanism text + normalization message.
 4. **Re-Drill-Active**: Reconstruction demand + transcript.
 5. **Post-Re-Drill**: Result card (Solidified/Needs Revisit) + Trajectory Contrast. Sticky until `Continue`.
-6. **Session-Complete**: 25-min cap reached. Save-point copy.
+6. **Session-Complete**: Session guardrail reached. Save-point copy.
 7. **Repair-Reps**: Optional typed causal micro-practice after study completion or non-solid re-drill. No scores, no graph mutation, no interleaving credit, no mastery unlock.
 
 ### Result State UX
@@ -120,7 +120,7 @@ The panel must be mode-pure with no content bleed.
 ---
 
 ## 6. Guardrails & Constraints
-- **Session Cap**: 25 minutes default.
+- **Duration Cap**: Disabled by default in the current MVP; configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`.
 - **Node Cap**: 4 nodes per session.
 - **Retrieval Ceiling**: Max 3 successful retrievals per node per session.
 - **AI Sparse Contract**: The AI must talk less than the learner. Sparse, gap-identifying feedback only.

@@ -86,3 +86,9 @@ tests/test_socratink_brain_drill_telemetry.py
 # Superpowers worktrees
 .worktrees/
 .superpowers/
+
+# QA + tool artifacts (do not track)
+.playwright-mcp/
+*.excalidraw
+c4-mobile-*.png
+map-header-*.png
