@@ -75,7 +75,36 @@
   --gradient-stage-start:  rgba(var(--white-rgb), 0.78);
   --gradient-stage-end:    rgba(var(--cream-50-rgb), 0.96);
 
-  /* Legacy aliases for low-risk migration */
+  /* New semantic surface additions — for analytics, settings, section bands */
+  --surface-high:       #fdf9f5;
+  --surface-highest:    #fffaf6;
+
+  /* Page ambient gradients (consumed by body background) */
+  --page-bloom-primary:   radial-gradient(circle at center,
+                            rgba(var(--lavender-500-rgb), 0.14), transparent 68%);
+  --page-bloom-secondary: radial-gradient(circle at center,
+                            rgba(255, 249, 242, 0.42), transparent 62%);
+  --page-background:
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.56), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(var(--lavender-500-rgb), 0.12), transparent 24%),
+    radial-gradient(circle at 52% 100%, rgba(212, 179, 131, 0.09), transparent 30%),
+    linear-gradient(180deg,
+      rgba(255, 251, 247, 0.76),
+      rgba(var(--cream-50-rgb), 0.96) 26%,
+      var(--surface-page-theme) 100%);
+
+  /* Node state tokens — learner-facing graph states (C2 pills consume) */
+  --node-locked:        var(--mauve-200);
+  --node-primed:        var(--lavender-500);
+  --node-drilled:       #d8a867;
+  --node-solidified:    var(--success);
+
+  /* ============================================================
+     LEGACY ALIASES — DEPRECATED.
+     Wave 2 will grep-replace and remove. Do NOT introduce new
+     consumers. New components must consume --surface-*, --text-*,
+     --accent-*, --border-*, --shadow-* directly.
+     ============================================================ */
   --bg:         var(--surface-page-theme);
   --card-bg:    var(--surface-card-theme);
   --text:       var(--text-strong);
@@ -181,4 +210,135 @@
   --radius-card:      1rem;
   --radius-btn:       10px;
   --radius-sm:        0.625rem;
+  --radius-md:        0.875rem;   /* 14 — inputs, pills */
+  --radius-lg:        1.25rem;    /* 20 — primary panels */
+  --radius-xl:        1.7rem;     /* 27 — demo windows */
+  --radius-2xl:       2rem;       /* 32 — hero shells, dialogs */
+  --radius-pill:      999px;
+
+  /* 4px spacing rhythm */
+  --space-0:  0;
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Motion */
+  --ease-standard:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-micro:   140ms;
+  --duration-quick:   220ms;
+  --duration-cozy:    320ms;
+  --duration-ambient: 700ms;
+
+  /* Additional type */
+  --text-display:     clamp(3.85rem, 2.8rem + 5.2vw, 5.6rem);
+  --tracking-display: -0.03em;
+  --tracking-hero:    -0.06em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  -0.015em;
+  --tracking-wide:    0.08em;
+  --tracking-kicker:  0.18em;
+  --leading-tight:    1.15;
+  --leading-snug:     1.35;
+  --leading-normal:   1.55;
+  --leading-loose:    1.75;
+
+  /* Additional shadows */
+  --shadow-hero:      0 42px 100px rgba(var(--ink-900-rgb), 0.08);
+  --shadow-mockup:    0 32px 80px rgba(84, 68, 120, 0.16);
+
+  /* Node state rgb channels (alpha compositing for pills, glows) */
+  --node-locked-rgb:      202, 196, 206;
+  --node-primed-rgb:      141, 134, 201;
+  --node-drilled-rgb:     216, 168, 103;
+  --node-solidified-rgb:   77, 186, 138;
+}
+
+/* ============================================================
+   DARK MODE — token reassignment.
+   Single source of dark theme truth. Components consume tokens;
+   they must not re-check [data-theme="dark"] themselves.
+   Attribute set on both <html> and <body> (app.js ~L132-133),
+   so this :root-scoped selector activates via html[data-theme].
+   NOTE: variables.css MUST remain the first-imported stylesheet.
+   Re-ordering imports will break cascade order.
+   ============================================================ */
+[data-theme="dark"] {
+  --surface-page-theme: #1f1b31;
+  --surface-card-theme: #302b49;
+  --surface-panel-theme:  rgba(var(--lavender-500-rgb), 0.18);
+  --surface-nested-theme: rgba(var(--lavender-500-rgb), 0.24);
+  --surface-high:    #3b3658;
+  --surface-highest: #2d2846;
+
+  --text-strong:      var(--cream-50);
+  --text-muted:       rgba(var(--cream-50-rgb), 0.72);
+  --text-on-overlay-sub: rgba(var(--cream-50-rgb), 0.38);
+
+  --accent-soft:          rgba(var(--lavender-500-rgb), 0.22);
+  --accent-soft-strong:   rgba(var(--lavender-500-rgb), 0.30);
+  --accent-border:        rgba(var(--lavender-500-rgb), 0.34);
+  --accent-border-strong: rgba(var(--lavender-500-rgb), 0.48);
+  --accent-glow:          rgba(var(--lavender-500-rgb), 0.38);
+  --accent-focus:         rgba(var(--lavender-500-rgb), 0.22);
+  --accent-shadow-sm:     0 4px 10px rgba(var(--lavender-500-rgb), 0.28);
+  --accent-shadow-md:     0 6px 14px rgba(var(--lavender-500-rgb), 0.34);
+  --accent-shadow-lg:     0 10px 24px rgba(var(--lavender-500-rgb), 0.28);
+  --accent-ring:          0 0 0 3px rgba(var(--lavender-500-rgb), 0.20);
+
+  --border-subtle: rgba(var(--cream-50-rgb), 0.14);
+  --border-strong: rgba(var(--cream-50-rgb), 0.22);
+
+  --graph-tile-top:   #554f7b;
+  --graph-tile-left:  #3b3658;
+  --graph-tile-right: #443e67;
+
+  --gradient-card-start:  rgba(66, 59, 101, 0.96);
+  --gradient-card-end:    rgba(47, 42, 74, 0.98);
+  --gradient-panel-start: rgba(59, 53, 91, 0.94);
+  --gradient-panel-end:   rgba(45, 40, 70, 0.98);
+  --gradient-stage-accent: rgba(var(--lavender-500-rgb), 0.22);
+  --gradient-stage-start:  rgba(72, 65, 110, 0.94);
+  --gradient-stage-end:    rgba(43, 37, 67, 0.98);
+
+  --shadow-card:  0 14px 44px rgba(11, 9, 24, 0.28),
+                  0 1px 0 rgba(var(--cream-50-rgb), 0.04);
+  --shadow-soft:  0 16px 44px rgba(11, 9, 24, 0.24);
+  --shadow-hover: 0 24px 60px rgba(11, 9, 24, 0.34);
+  --shadow-hero:  0 42px 100px rgba(11, 9, 24, 0.50);
+
+  --tooltip-border: rgba(var(--lavender-500-rgb), 0.42);
+
+  --beacon-mid:  rgba(var(--lavender-500-rgb), 0.96);
+  --beacon-edge: rgba(var(--violet-600-rgb), 0.96);
+
+  --page-background:
+    radial-gradient(circle at 14% 14%, rgba(var(--lavender-500-rgb), 0.28), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(var(--violet-600-rgb),   0.24), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(66, 59, 101, 0.22), transparent 38%),
+    linear-gradient(180deg, #241f39 0%, #1f1b31 100%);
+
+  /* Legacy aliases — DEPRECATED, Wave 2 sweeps */
+  --bg:           var(--surface-page-theme);
+  --card-bg:      var(--surface-card-theme);
+  --text:         var(--text-strong);
+  --text-sub:     var(--text-muted);
+  --drawer-bg:    var(--surface-panel-theme);
+  --border:       var(--border-subtle);
+  --tile-top:     var(--graph-tile-top);
+  --tile-left:    var(--graph-tile-left);
+  --tile-right:   var(--graph-tile-right);
+  --surface:      var(--surface-page-theme);
+  --surface-low:  var(--surface-panel-theme);
+  --surface-card: var(--surface-card-theme);
+  --surface-nested: var(--surface-nested-theme);
+  --locked:       rgba(var(--lavender-500-rgb), 0.52);
 }

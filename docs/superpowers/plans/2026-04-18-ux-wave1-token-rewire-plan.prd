@@ -1,0 +1,1491 @@
+# UX Wave 1 — Token rewire + BLOCKER fixes — implementation plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: use `gm` (this repo's execution coordinator — CLAUDE.md mandates it for non-trivial code changes). Each cycle below = one `gm` run (PLAN→EXECUTE→EMIT→VERIFY→COMPLETE) terminating in its own commit. Do NOT use subagent-driven-development or inline executing-plans — they bypass gm. Steps use `- [ ]` for tracking.
+
+**Goal:** Upstream token-layer rewire + repair three `[BLOCKER]` UX bugs (#4 guest silent-discard, #17 analytics invisible select, #24 mobile no-egress) and adjacent HIGH findings (map-view chrome, creation dialog, state pills, focus ring).
+
+**Architecture:** Semantic tokens become single source of theme truth. `[data-theme="dark"] { … }` at top level reassigns the semantic tokens; components consume tokens only. Eleven override blocks deleted AFTER their base rules are rewritten to consume tokens. Three blocker bugs repaired with defense-in-depth invariant: failed extraction never mutates `contentStore`, in-memory `concepts`, or localStorage `concepts`, regardless of UI state.
+
+**Terminology correction (from review):** `setState(newState)` in `app.js:1265` is the concept-shell state mutator (`growing` / `fractured` / `hibernating` / `actualized`) — NOT a view router. View routing uses `showDashboard()` / `showLibrary()` / `showAnalytics()` / `showSettings()`. CLAUDE.md invariant #1 covers setState() for *control-state*, which is concept-level. Map-view exit uses the existing view-router functions.
+
+**Cache-busting (from review):** `public/styles.css` imports per-file `?v=NN` query versions. Every CSS edit in a cycle must bump the touched file's `?v=` in `public/styles.css`. `public/index.html:25` also carries `styles.css?v=12` — bump whenever `public/styles.css` content changes.
+
+**Sanitization contract (from review):** `recordExtractRun({ reason: … })` rows are rendered to user-visible analytics via `browser-analytics.js:326` (`row.reason || …`). Therefore raw `err.message` must NOT go into `reason`. Sanitized copy in `reason`; raw detail in `reason_raw` (never rendered) or console only.
+
+**Tech Stack:** Vanilla JS/HTML/CSS only (CLAUDE.md). No build step. `gm` state-machine coordinates execution. Browser manual verify is the verification surface (0 unit tests exist in repo).
+
+**Spec:** `docs/superpowers/specs/2026-04-18-ux-wave1-token-rewire-design.prd`
+**Canonical tokens:** `/tmp/design-ndrpUZ/socratink-design-system/project/colors_and_type.css`
+**Branch:** `worktree-ux-wave1-token-rewire`
+
+---
+
+## File touch map (across all cycles)
+
+| File | Cycle(s) | Action |
+|---|---|---|
+| `public/css/variables.css` | C1, C2, C3 | Expand token set; add `[data-theme="dark"] :root`; receive crystal.css dark block; add node-state tokens |
+| `public/css/base.css` | C1 | Add `:focus-visible` rule; add `prefers-reduced-motion` guard |
+| `public/css/components.css` | C2, C3, C6 | Add `.pill--*` variants; delete `.auth-link` dark block; add `.creation-dialog*` rules |
+| `public/css/crystal.css` | C3 | Delete L174-238 dark token block (moved to variables.css); keep L92-121 tile-geometry blocks |
+| `public/css/layout.css` | C3, C4, C5 | Delete L147 / L149-151 / L153 dark blocks; add `.drawer-footer*` rules; add `.map-back-link*` + map-view hide rules |
+| `public/css/ai-runs-dashboard.css` | C2, C3 | Wire `.analytics-select` bg to token; delete L564-570 dark block; add analytics pill variant wiring |
+| `public/index.html` | C4 | Add `.drawer-footer` markup inside `#drawer` (before L92 close button) |
+| `public/js/app.js` | C5, C6 | Replace `.map-view` drawer-toggle handler with `.map-back-link` setState call; refactor `startAddConcept` into dialog + banner variants + invariant guard |
+| `docs/superpowers/specs/*` | (existing) | Reference only; do not edit |
+
+---
+
+## Cycle C1 — Token rewire + focus ring
+
+**Goal:** `public/css/variables.css` becomes single source of theme truth. `[data-theme="dark"] :root` reassigns semantic tokens. `--ring` token + global `:focus-visible` rule. Reduced-motion guard in `base.css`.
+
+**Success signal:** Toggling theme flips every surface via token flow only. Tab-key navigation shows visible focus halo on every interactive element in light + dark. No visual regressions vs baseline.
+
+### C1 Files
+
+- **Modify** `public/css/variables.css` (expand from ~184L to ~360L)
+- **Modify** `public/css/base.css` (add `:focus-visible` + `prefers-reduced-motion`)
+
+### C1 Steps
+
+- [ ] **Step 1: Add missing semantic-token families to `public/css/variables.css`**
+
+After line 100 (inside existing `:root { ... }` block, before legacy aliases at line 78), append:
+
+```css
+  /* New semantic surface additions — for analytics, settings, section bands */
+  --surface-high:       #fdf9f5;
+  --surface-highest:    #fffaf6;
+
+  /* Page ambient gradients (consumed by body background) */
+  --page-bloom-primary:   radial-gradient(circle at center,
+                            rgba(var(--lavender-500-rgb), 0.14), transparent 68%);
+  --page-bloom-secondary: radial-gradient(circle at center,
+                            rgba(255, 249, 242, 0.42), transparent 62%);
+  --page-background:
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.56), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(var(--lavender-500-rgb), 0.12), transparent 24%),
+    radial-gradient(circle at 52% 100%, rgba(212, 179, 131, 0.09), transparent 30%),
+    linear-gradient(180deg,
+      rgba(255, 251, 247, 0.76),
+      rgba(var(--cream-50-rgb), 0.96) 26%,
+      var(--surface-page-theme) 100%);
+
+  /* Node state tokens — learner-facing graph states (wired by C2 pills + crystal) */
+  --node-locked:        var(--mauve-200);
+  --node-primed:        var(--lavender-500);
+  --node-drilled:       #d8a867;
+  --node-solidified:    var(--success);
+```
+
+- [ ] **Step 2: Add missing radius + space + motion + type scales to `variables.css`**
+
+Append inside the same `:root` block, after the shadow list (around line 122):
+
+```css
+  /* Full radii scale */
+  --radius-md:    0.875rem;   /* 14 — inputs, pills */
+  --radius-lg:    1.25rem;    /* 20 — primary panels */
+  --radius-xl:    1.7rem;     /* 27 — demo windows */
+  --radius-2xl:   2rem;       /* 32 — hero shells, dialogs */
+  --radius-pill:  999px;
+
+  /* 4px spacing rhythm */
+  --space-0:  0;
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Motion */
+  --ease-standard:  cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-micro:   140ms;
+  --duration-quick:   220ms;
+  --duration-cozy:    320ms;
+  --duration-ambient: 700ms;
+
+  /* Additional type */
+  --text-display: clamp(3.85rem, 2.8rem + 5.2vw, 5.6rem);
+  --tracking-display: -0.03em;
+  --tracking-hero:    -0.06em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  -0.015em;
+  --tracking-wide:    0.08em;
+  --tracking-kicker:  0.18em;
+  --leading-tight:  1.15;
+  --leading-snug:   1.35;
+  --leading-normal: 1.55;
+  --leading-loose:  1.75;
+
+  /* Additional shadows */
+  --shadow-hero:    0 42px 100px rgba(var(--ink-900-rgb), 0.08);
+  --shadow-mockup:  0 32px 80px rgba(84, 68, 120, 0.16);
+```
+
+- [ ] **Step 3: Add `[data-theme="dark"] :root` token reassignment block to `variables.css`**
+
+At end of file (after closing `}` of the `:root { ... }` block), append:
+
+```css
+/* ============================================================
+   DARK MODE — token reassignment.
+   Single source of dark theme truth. Components consume tokens;
+   they must not re-check [data-theme="dark"] themselves.
+   NOTE: variables.css MUST remain the first-imported stylesheet.
+   Re-ordering imports will break cascade order.
+   ============================================================ */
+[data-theme="dark"] {
+  --surface-page-theme: #1f1b31;
+  --surface-card-theme: #302b49;
+  --surface-panel-theme:  rgba(var(--lavender-500-rgb), 0.18);
+  --surface-nested-theme: rgba(var(--lavender-500-rgb), 0.24);
+  --surface-high:    #3b3658;
+  --surface-highest: #2d2846;
+
+  --text-strong:      var(--cream-50);
+  --text-muted:       rgba(var(--cream-50-rgb), 0.72);
+  --text-on-overlay-sub: rgba(var(--cream-50-rgb), 0.38);
+
+  --accent-soft:          rgba(var(--lavender-500-rgb), 0.22);
+  --accent-soft-strong:   rgba(var(--lavender-500-rgb), 0.30);
+  --accent-border:        rgba(var(--lavender-500-rgb), 0.34);
+  --accent-border-strong: rgba(var(--lavender-500-rgb), 0.48);
+  --accent-glow:          rgba(var(--lavender-500-rgb), 0.38);
+  --accent-focus:         rgba(var(--lavender-500-rgb), 0.22);
+  --accent-shadow-sm:     0 4px 10px rgba(var(--lavender-500-rgb), 0.28);
+  --accent-shadow-md:     0 6px 14px rgba(var(--lavender-500-rgb), 0.34);
+  --accent-shadow-lg:     0 10px 24px rgba(var(--lavender-500-rgb), 0.28);
+  --accent-ring:          0 0 0 3px rgba(var(--lavender-500-rgb), 0.20);
+
+  --border-subtle: rgba(var(--cream-50-rgb), 0.14);
+  --border-strong: rgba(var(--cream-50-rgb), 0.22);
+
+  --graph-tile-top:   #554f7b;
+  --graph-tile-left:  #3b3658;
+  --graph-tile-right: #443e67;
+
+  --gradient-card-start:  rgba(66, 59, 101, 0.96);
+  --gradient-card-end:    rgba(47, 42, 74, 0.98);
+  --gradient-panel-start: rgba(59, 53, 91, 0.94);
+  --gradient-panel-end:   rgba(45, 40, 70, 0.98);
+  --gradient-stage-accent: rgba(var(--lavender-500-rgb), 0.22);
+  --gradient-stage-start:  rgba(72, 65, 110, 0.94);
+  --gradient-stage-end:    rgba(43, 37, 67, 0.98);
+
+  --shadow-card:  0 14px 44px rgba(11, 9, 24, 0.28),
+                  0 1px 0 rgba(var(--cream-50-rgb), 0.04);
+  --shadow-soft:  0 16px 44px rgba(11, 9, 24, 0.24);
+  --shadow-hover: 0 24px 60px rgba(11, 9, 24, 0.34);
+  --shadow-hero:  0 42px 100px rgba(11, 9, 24, 0.50);
+
+  --tooltip-border: rgba(var(--lavender-500-rgb), 0.42);
+
+  --beacon-mid:  rgba(var(--lavender-500-rgb), 0.96);
+  --beacon-edge: rgba(var(--violet-600-rgb), 0.96);
+
+  --page-background:
+    radial-gradient(circle at 14% 14%, rgba(var(--lavender-500-rgb), 0.28), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(var(--violet-600-rgb),   0.24), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(66, 59, 101, 0.22), transparent 38%),
+    linear-gradient(180deg, #241f39 0%, #1f1b31 100%);
+
+  /* Legacy aliases — DEPRECATED, Wave 2 sweeps */
+  --bg:           var(--surface-page-theme);
+  --card-bg:      var(--surface-card-theme);
+  --text:         var(--text-strong);
+  --text-sub:     var(--text-muted);
+  --drawer-bg:    var(--surface-panel-theme);
+  --border:       var(--border-subtle);
+  --tile-top:     var(--graph-tile-top);
+  --tile-left:    var(--graph-tile-left);
+  --tile-right:   var(--graph-tile-right);
+  --surface:      var(--surface-page-theme);
+  --surface-low:  var(--surface-panel-theme);
+  --surface-card: var(--surface-card-theme);
+  --surface-nested: var(--surface-nested-theme);
+  --locked:       rgba(var(--lavender-500-rgb), 0.52);
+}
+```
+
+- [ ] **Step 4: Annotate legacy alias block in `variables.css` (lines 78-95)**
+
+Replace the existing legacy-alias comment `/* Legacy aliases for low-risk migration */` with:
+
+```css
+  /* ============================================================
+     LEGACY ALIASES — DEPRECATED.
+     Wave 2 will grep-replace and remove. Do NOT introduce new
+     consumers. New components must consume --surface-*, --text-*,
+     --accent-*, --border-*, --shadow-* directly.
+     ============================================================ */
+```
+
+- [ ] **Step 5: Add global `:focus-visible` rule to `public/css/base.css`**
+
+At end of file, append:
+
+```css
+/* ============================================================
+   Focus ring — a11y.
+   Every interactive element inherits this. No browser-default blue.
+   --accent-ring token reassigns in dark mode.
+   ============================================================ */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-radius: 4px;
+}
+
+/* Form-controls need explicit ring — some browsers strip it from input/select */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+
+/* Reduced-motion: pin short transitions to 0ms on user request */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+```
+
+- [ ] **Step 6: Bump cache-bust version for variables.css + base.css**
+
+In `public/styles.css`, change:
+```
+@import url('./css/variables.css?v=11');
+@import url('./css/base.css?v=11');
+```
+to:
+```
+@import url('./css/variables.css?v=12');
+@import url('./css/base.css?v=12');
+```
+
+In `public/index.html:25`, bump `styles.css?v=12` → `styles.css?v=13`.
+
+- [ ] **Step 7: Browser-verify (manual, uvicorn running)**
+
+```bash
+uvicorn main:app --reload
+```
+
+In browser at `http://localhost:8000`:
+1. Toggle theme — every surface flips; no element becomes invisible.
+2. Tab from page load — focus ring visible on theme-toggle, every nav item, every card, every input.
+3. Open Safari specifically — focus ring visible on `<select>` in analytics.
+4. Sign-in path smoke: log in via `/login` → guest is no longer shown; signed-in surfaces render.
+5. DevTools → `html[data-theme="dark"]` inspection confirms dark block applies when attribute is set on `html`.
+
+- [ ] **Step 8: Commit + push**
+
+```bash
+git add public/css/variables.css public/css/base.css public/styles.css public/index.html
+git commit -m "$(cat <<'EOF'
+refactor(css): rewire dark mode through :root token reassignment
+
+Expand variables.css with missing semantic tokens (surface-high,
+node states, radii/space/motion scales, text-display, tracking/leading).
+Add [data-theme="dark"] :root block reassigning tokens so components
+consume tokens only.
+
+base.css adds :focus-visible rule using --accent-ring (violet light,
+lavender dark), plus prefers-reduced-motion guard.
+
+Legacy aliases kept with DEPRECATED comments; Wave 2 sweeps.
+
+Unblocks C2 pills, C3 override deletions, C4 drawer footer, C5 map
+chrome, C6 creation dialog — all consume new tokens.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+---
+
+## Cycle C2 — State pills + analytics wiring + drilled/locked contrast
+
+**Goal:** Four analytics tile-state pills read at a glance (green solid / lavender primed / amber drilled / mauve locked + danger misconceptions). `.analytics-select` consumes `--surface-card`.
+
+### C2 Files
+
+- **Modify** `public/css/components.css` (add `.pill--*` variants)
+- **Modify** `public/css/ai-runs-dashboard.css` (wire analytics-select to token; apply pill variants)
+
+### C2 Steps
+
+- [ ] **Step 0: Add `--node-*-rgb` channel tokens to `variables.css`**
+
+In C1 the scalar `--node-*` tokens were added. For `rgba()` compositing pill backgrounds + borders, add matching `-rgb` channels. Append inside `:root` alongside the node-state tokens from C1:
+
+```css
+  /* Node state rgb channels (for alpha compositing in pills, glows) */
+  --node-locked-rgb:     202, 196, 206;   /* mauve-200 */
+  --node-primed-rgb:     141, 134, 201;   /* lavender-500 */
+  --node-drilled-rgb:    216, 168, 103;   /* warm amber */
+  --node-solidified-rgb:  77, 186, 138;   /* success green */
+```
+
+- [ ] **Step 1: Add pill variants to `components.css` (token-only, no hex literals)**
+
+Append at end of file:
+
+```css
+/* ============================================================
+   State pills — four learner node states + danger.
+   Consumed by analytics, graph legend, concept status rows.
+   Colors sourced from --node-* tokens; never hex literals.
+   ============================================================ */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  background: var(--pill-accent-bg);
+  color: var(--accent-primary);
+}
+.pill--solid {
+  background: rgba(var(--node-solidified-rgb), 0.14);
+  color: var(--pill-success-text);
+  border-color: rgba(var(--node-solidified-rgb), 0.24);
+}
+.pill--primed {
+  background: rgba(var(--node-primed-rgb), 0.18);
+  color: rgba(var(--ink-900-rgb), 0.82);
+  border-color: rgba(var(--node-primed-rgb), 0.30);
+}
+.pill--drilled {
+  background: rgba(var(--node-drilled-rgb), 0.18);
+  color: rgba(var(--node-drilled-rgb), 1);
+  border-color: rgba(var(--node-drilled-rgb), 0.32);
+}
+.pill--locked {
+  background: rgba(var(--node-locked-rgb), 0.32);
+  color: rgba(var(--ink-900-rgb), 0.58);
+  border-color: rgba(var(--node-locked-rgb), 0.50);
+}
+.pill--danger {
+  background: var(--pill-danger-bg);
+  color: var(--pill-danger-text);
+  border-color: rgba(224, 92, 107, 0.24);
+}
+[data-theme="dark"] .pill--primed {
+  color: var(--cream-50);
+}
+[data-theme="dark"] .pill--drilled {
+  color: rgba(var(--node-drilled-rgb), 1);
+  filter: brightness(1.2);
+}
+[data-theme="dark"] .pill--locked {
+  color: rgba(var(--cream-50-rgb), 0.62);
+}
+```
+
+- [ ] **Step 2: Fix `.analytics-select` background to consume token in `ai-runs-dashboard.css`**
+
+At approximately line 200 (search for `.analytics-select {`), replace:
+
+```css
+.analytics-select {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--ink-900-rgb), 0.12);
+  background: rgba(var(--white-rgb), 0.9);
+  color: var(--text);
+  font: inherit;
+}
+```
+
+with:
+
+```css
+.analytics-select {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font: inherit;
+}
+```
+
+- [ ] **Step 3: Wire analytics page pill rendering to state variants**
+
+In `public/js/learner-analytics.js` or wherever pills render, search for class string `analytics-pill` or similar. Add a class-suffix map by state:
+
+```javascript
+// Map state to pill variant class. Defensive default keeps current lavender.
+function analyticsPillClass(state) {
+  switch (state) {
+    case 'solidified': return 'pill pill--solid';
+    case 'primed':     return 'pill pill--primed';
+    case 'drilled':    return 'pill pill--drilled';
+    case 'locked':     return 'pill pill--locked';
+    case 'misconception':
+    case 'fractured':  return 'pill pill--danger';
+    default:           return 'pill';
+  }
+}
+```
+
+Apply the helper where analytics tiles render their state pill. (Exact line range requires reading `public/js/learner-analytics.js` — estimated 200-400L; grep for `pill` there first.)
+
+- [ ] **Step 4: Browser-verify**
+
+1. Navigate to `/#analytics` light mode. Four state pills show four distinct hues.
+2. Toggle dark mode. Pills still differentiate; `--node-drilled` amber and `--node-locked` mauve remain visually distinct (≥20 perceptual-units ΔL*; spot-check via DevTools color-picker or Chrome's Contrast checker).
+3. Analytics "Concept" dropdown readable in dark mode (cream text on `--surface-card`, not near-white).
+4. Focus Tab onto the select — ring visible.
+
+- [ ] **Step 5: If drilled/locked too similar in dark, retune drilled**
+
+Acceptable retune: `--node-drilled` → `#e5c18c` (lighter warm amber). Update both `variables.css` token and dark-mode override in `components.css`. Re-verify.
+
+- [ ] **Step 5a: Bump cache-bust versions for components.css + ai-runs-dashboard.css**
+
+In `public/styles.css`:
+```
+@import url('./css/components.css?v=11');   →   @import url('./css/components.css?v=12');
+@import url('./css/ai-runs-dashboard.css?v=11');   →   @import url('./css/ai-runs-dashboard.css?v=12');
+```
+Also bump `variables.css?v=12` → `?v=13` (added `--node-*-rgb` tokens). Bump `styles.css?v=` in index.html.
+
+- [ ] **Step 6: Commit + push**
+
+```bash
+git add public/css/variables.css public/css/components.css public/css/ai-runs-dashboard.css public/js/learner-analytics.js public/styles.css public/index.html
+git commit -m "$(cat <<'EOF'
+feat(ui): state-variant pills + fix analytics select invisible dark
+
+.pill--solid / --primed / --drilled / --locked / --danger variants
+consume --node-* and --success / --danger tokens. Analytics page
+wires pill class by tile state so four states differentiate at a
+glance instead of rendering uniform lavender.
+
+.analytics-select now consumes --surface-card + --text-strong so it
+flips correctly dark mode — resolves BLOCKER UX-todo #17.
+
+Drilled/locked verified ≥20 perceptual units apart in both themes.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+---
+
+## Cycle C3 — Override-block audit + crystal dark block move
+
+**Goal:** Delete 11 redundant `[data-theme="dark"]` blocks — but only AFTER rewriting their base rules to consume tokens. Base rules currently hardcode light-theme gradients (e.g., `ai-runs-dashboard.css:27` uses `rgba(--white-rgb, 0.9) → rgba(--cream-50-rgb, 0.82)`). Deleting the dark override without first rewriting the base leaves analytics surfaces cream in dark mode.
+
+Move 65-line token reassignment block from `crystal.css` to `variables.css` (already there from C1; C3 deletes the duplicate). Keep 5 component-specific blocks.
+
+**Ordering discipline: rewrite base rule → verify in both themes → delete dark override → verify again.** Per-rule, not batched.
+
+### C3 Files
+
+- **Modify** `public/css/crystal.css` (delete lines 174-238 — dark-token block)
+- **Modify** `public/css/components.css` (delete `body[data-theme="dark"] .auth-link` at L145-149)
+- **Modify** `public/css/layout.css` (delete L147 hero-card, L149-151 settings-page-card, L153 `#card` blocks)
+- **Modify** `public/css/ai-runs-dashboard.css` (delete L564-570 analytics-header/panel/status/metric-card/tip-card block)
+
+### C3 Steps
+
+- [ ] **Step 1: Delete duplicate token block from `crystal.css`**
+
+Delete lines 172-238 (the `/* ── 6. Night mode ──... */` section through closing `}` of the `[data-theme="dark"]` block). These tokens now live in `variables.css` from C1.
+
+**Keep** lines 92-121 (`.tile-group.empty`, `.tile-group.selected`, `#grid-container::before` tile geometry overrides) — these are NOT token reassignments, they're specific hex values for tile rendering not covered by tokens.
+
+- [ ] **Step 2: Delete `body[data-theme="dark"] .auth-link` from `components.css`**
+
+Delete lines 145-149 (entire block). `.auth-link` uses `--accent-primary` which flips automatically via tokens.
+
+- [ ] **Step 3: Audit layout.css base rules for hero-card / settings-page-card / #card before deleting dark blocks**
+
+For each of the three selectors, read the base rule (search in `layout.css` for `.hero-card {`, `.settings-page-card {`, `#card {`). Confirm base already uses `--surface-card` / `--card-bg` / `--surface-page` etc. — if base is token-derivable, delete dark block; if hardcoded, rewrite base first.
+
+Expected disposition:
+- `.hero-card` base at `layout.css:99` uses `background: var(--surface-card);` (token-derivable). **Delete L147 dark override.**
+- `.settings-page-card` — if base uses `linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end))` already, dark block is literally identical → **delete L149-151**. If base is different, **make base use those tokens first**, then delete.
+- `#card` base at `layout.css:44` uses `background: var(--surface-page);` — **delete L153 dark override**.
+
+Apply deletions after per-selector verify in both themes.
+
+- [ ] **Step 4a: Rewrite analytics base rule to consume tokens in `ai-runs-dashboard.css`**
+
+At line 23-30, current:
+```css
+.analytics-header,
+.analytics-panel,
+.analytics-status,
+.metric-card {
+  background: linear-gradient(180deg, rgba(var(--white-rgb), 0.9), rgba(var(--cream-50-rgb), 0.82));
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+```
+Replace background with token-derived gradient:
+```css
+.analytics-header,
+.analytics-panel,
+.analytics-status,
+.metric-card {
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+```
+`--gradient-card-start` and `--gradient-card-end` both flip in `[data-theme="dark"]`, so the base rule now handles both themes correctly.
+
+- [ ] **Step 4b: Browser-verify analytics surfaces both themes with dark override still in place**
+
+Visit `/#analytics` light mode — surfaces still cream/white gradient (visually unchanged from before, just token-derived).
+Toggle dark — surfaces show deep panel gradient (dark override is still applying `--surface-card`; new base rule now also works via tokens). Both themes correct.
+
+- [ ] **Step 4c: Delete analytics-surface dark-override block from `ai-runs-dashboard.css`**
+
+Delete lines 564-570:
+```
+body[data-theme="dark"] .analytics-header,
+body[data-theme="dark"] .analytics-panel,
+body[data-theme="dark"] .analytics-status,
+body[data-theme="dark"] .metric-card,
+body[data-theme="dark"] .tip-card {
+  background: var(--surface-card);
+}
+```
+After delete, re-verify dark mode — surfaces still render dark panel gradient via base rule's token consumption.
+
+- [ ] **Step 5: Browser-verify in both themes**
+
+Visit every route in light + dark:
+- `/#dashboard` (empty + with concepts)
+- Click concept → Map view → Graph view → back
+- `/#study` (with active concept)
+- `/#library`
+- `/#analytics`
+- `/#settings`
+
+For each: no element invisible; no flat surface where token should have applied.
+
+- [ ] **Step 6: Codesearch audit**
+
+```
+exec:codesearch
+dark theme css selectors
+```
+
+Expected hits:
+- `variables.css`: 1 block (`[data-theme="dark"]` at root)
+- `crystal.css`: 8 blocks (tile geometry at ~L92-121)
+- `components.css`: 3 blocks (`.theme-toggle[data-theme="dark"]` SVG positioning at L84-101)
+
+NOT expected: `layout.css`, `ai-runs-dashboard.css`. If hits appear there, roll back and investigate.
+
+- [ ] **Step 7a: Bump cache-bust versions**
+
+`public/styles.css`: bump `crystal.css?v=`, `components.css?v=`, `layout.css?v=`, `ai-runs-dashboard.css?v=` each by 1. Bump `index.html` `styles.css?v=` as well.
+
+- [ ] **Step 7: Commit + push**
+
+```bash
+git add public/css/crystal.css public/css/components.css public/css/layout.css public/css/ai-runs-dashboard.css public/styles.css public/index.html
+git commit -m "$(cat <<'EOF'
+refactor(css): delete redundant dark-mode override blocks
+
+Eleven override blocks now redundant — their tokens flip via the
+[data-theme=\"dark\"] :root block added in C1. Net: 16 → 5 genuinely
+component-specific blocks kept (3 theme-toggle SVG positioning, 8
+tile geometry overrides in crystal.css).
+
+The 65-line dark token block moved out of crystal.css (its token
+reassignments live in variables.css now). Tile-geometry blocks at
+crystal.css L92-121 stay — they carry specific hex values beyond
+the token system.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+---
+
+## Cycle C4 — Mobile drawer footer (BLOCKER #24, adapted scope)
+
+**Goal:** Mobile users have direct access to theme toggle + Exit Guest + "Continue with Google" sign-in affordance (UX-todo #24's "Save & Sync" item) from drawer footer. Settings already in bottom-nav.
+
+**Session-shape correction:** guest field is `session.guest_mode`, not `is_guest` (auth.js:60). Sign-in link uses `buildLoginHref('/')` (already imported at app.js:5). Show "Continue with Google" only when `session.auth_enabled === true`.
+
+### C4 Files
+
+- **Modify** `public/index.html` (add `.drawer-footer` before line 92 close button)
+- **Modify** `public/css/layout.css` (add `.drawer-footer*` rules, responsive)
+- **Modify** `public/js/app.js` (wire Exit Guest handler; theme toggle reuses existing `toggleTheme`)
+
+### C4 Steps
+
+- [ ] **Step 1: Add `.drawer-footer` markup to `public/index.html`**
+
+At line 91 (between `<div id="add-trigger-area"></div>` and the mobile close button), insert:
+
+```html
+    <!-- Drawer footer (mobile only) -->
+    <div class="drawer-footer" aria-label="Account actions">
+      <div class="drawer-theme-row">
+        <span class="drawer-theme-label">Theme</span>
+        <button class="drawer-theme-toggle" id="drawer-theme-toggle" type="button"
+          onclick="App.toggleTheme()" aria-label="Toggle theme">
+          <span class="drawer-theme-track">
+            <span class="drawer-theme-thumb"></span>
+          </span>
+          <span class="drawer-theme-mode-light">Light</span>
+          <span class="drawer-theme-mode-dark">Dark</span>
+        </button>
+      </div>
+      <a class="drawer-signin-link" id="drawer-signin-link"
+        href="javascript:void(0)" hidden>Continue with Google</a>
+      <button class="drawer-exit-btn" id="drawer-exit-btn" type="button"
+        onclick="App.exitGuestFromDrawer()" hidden>Exit Guest</button>
+    </div>
+```
+
+- [ ] **Step 2: Add drawer-footer CSS to `public/css/layout.css`**
+
+At end of the `@media (max-width: 899px)` block (search for the mobile drawer rules, approximately line 220-240), append:
+
+```css
+  /* Drawer footer — theme + exit-guest shortcut */
+  .drawer-footer {
+    margin-top: auto;
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    background: rgba(var(--cream-50-rgb), 0.60);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .drawer-theme-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .drawer-theme-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .drawer-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--surface-nested);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-strong);
+    font-size: 0.72rem;
+    font-weight: 600;
+    min-height: 44px;   /* a11y tap target */
+    min-width: 88px;
+    cursor: pointer;
+  }
+  .drawer-exit-btn {
+    padding: var(--space-2) var(--space-4);
+    background: none;
+    border: 1px solid var(--border-strong);
+    color: var(--text-strong);
+    border-radius: var(--radius-btn);
+    font-size: 0.8rem;
+    font-weight: 500;
+    min-height: 44px;
+    cursor: pointer;
+  }
+  .drawer-exit-btn:hover {
+    background: var(--surface-nested);
+  }
+```
+
+Desktop (≥900px) keep footer hidden:
+
+Add outside the media query (top-level):
+```css
+@media (min-width: 900px) {
+  .drawer-footer { display: none; }
+}
+```
+
+- [ ] **Step 3: Wire `App.exitGuestFromDrawer` handler + session-aware visibility in `public/js/app.js`**
+
+`logout`, `redirectToLogin`, `buildLoginHref`, `fetchAuthSession` already imported (line 5).
+
+Near line 3695 (inside `window.App`), add:
+
+```javascript
+exitGuestFromDrawer: async () => {
+  try {
+    await logout();
+  } catch (err) {
+    console.warn('Guest exit failed.', err);
+  }
+  closeDrawer();
+  redirectToLogin('/');
+},
+```
+
+After `bootstrapAuthUi` (or any existing session-fetch path — grep for `fetchAuthSession()` call near line 3670-3685). Render drawer footer visibility using **the real session shape** (`session.guest_mode`, `session.auth_enabled`):
+
+```javascript
+async function refreshDrawerFooter() {
+  const session = await fetchAuthSession().catch(() => null);
+  const exitBtn = document.getElementById('drawer-exit-btn');
+  const signinLink = document.getElementById('drawer-signin-link');
+  const isGuest = !!(session && session.guest_mode);
+  const authEnabled = !!(session && session.auth_enabled);
+  if (exitBtn) exitBtn.hidden = !isGuest;
+  if (signinLink) {
+    signinLink.hidden = !(isGuest && authEnabled);
+    signinLink.href = buildLoginHref('/');
+  }
+}
+```
+Invoke `refreshDrawerFooter()` once on load and whenever session state changes.
+
+- [ ] **Step 4: Browser-verify at ≤480px**
+
+DevTools device mode → iPhone 14 Pro (390×844) or narrower:
+1. Tap hamburger → drawer opens. Footer visible with Theme row + Exit Guest button.
+2. Tap theme toggle → flips; drawer stays open.
+3. Tap Exit Guest (in guest mode) → redirects to login.
+4. Sign in → revisit narrow width → Exit Guest hidden.
+5. Each tap target ≥44px (inspect in DevTools rulers).
+6. Theme persists on reload (localStorage).
+
+- [ ] **Step 4a: Bump cache-bust versions**
+
+`public/styles.css`: bump `layout.css?v=`. Bump `styles.css?v=` in index.html.
+
+- [ ] **Step 5: Commit + push**
+
+```bash
+git add public/index.html public/css/layout.css public/js/app.js public/styles.css
+git commit -m "$(cat <<'EOF'
+feat(mobile): drawer-footer with theme toggle + exit-guest shortcut
+
+Mobile users previously had no drawer-side access to theme or guest
+egress — resolves BLOCKER UX-todo #24.
+
+.drawer-footer visible only <900px, renders at bottom of drawer,
+reuses existing toggleTheme + logout handlers. Scope adjusted from
+UX-todo aspirational list: Save & Sync not a real feature, Settings
+already in bottom-nav.
+
+Exit Guest auto-hides when signed-in. Each tap target ≥44px.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+---
+
+## Cycle C5 — Map-view chrome (← Dashboard text-back)
+
+**Goal:** Map view has one unambiguous back control. `<` drawer-toggle no longer appears in map view; `×` close button removed. Single `← Dashboard` text link.
+
+**Critical correction from review:** `setState(newState)` at `app.js:1265` is the **concept-shell state mutator** (`growing`/`fractured`/`hibernating`/`actualized`) — NOT a view router. Passing an object like `{ view: 'dashboard' }` would corrupt concept state. View routing is handled by `showDashboard()` (already exposed on `window.App`, called from existing nav links at `index.html:74` and `public/index.html:47`). Map-view exit calls `showDashboard()`, which handles the route transition and tears down map state.
+
+### C5 Files
+
+- **Modify** `public/css/layout.css` (hide drawer-toggle + map-close-btn in map view; add `.map-back-link` rule)
+- **Modify** `public/js/app.js` (add `.map-back-link` click wiring in map-view render path; add `title` tooltip on drawer-toggle for UX-todo #26)
+
+### C5 Steps
+
+- [ ] **Step 1: Add map-view chrome CSS rules to `public/css/layout.css`**
+
+Search for existing `body[data-map-open="true"]` rules (around line 73-79). Replace with:
+
+```css
+/* Map view chrome — single back control */
+body[data-map-open="true"] .drawer-toggle,
+body[data-map-open="true"] .map-close-btn {
+  display: none !important;   /* both redundant in map view */
+}
+body[data-map-open="true"] .auth-controls,
+body[data-map-open="true"] .dev-skip {
+  display: none !important;
+}
+.map-back-link {
+  display: none;             /* visible only when map open */
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--accent-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius-btn);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--duration-micro) var(--ease-standard);
+}
+.map-back-link:hover {
+  background: var(--accent-soft);
+}
+body[data-map-open="true"] .map-back-link {
+  display: inline-flex;
+}
+```
+
+- [ ] **Step 2: Add `.map-back-link` DOM + click wiring in `public/js/app.js`**
+
+Search for where map-view renders its header (grep for `map-close-btn` or `data-map-open`). At the point of map-view mount, append or replace the existing close button markup:
+
+```html
+<button class="map-back-link" id="map-back-link" type="button">
+  <span aria-hidden="true">←</span>
+  <span>Dashboard</span>
+</button>
+```
+
+After DOM insertion, wire click:
+
+```javascript
+document.getElementById('map-back-link')?.addEventListener('click', () => {
+  showDashboard();
+});
+```
+
+**Respect invariant #1 correctly:** CLAUDE.md invariant #1 is about `setState()` for **concept-level control state**, not view routing. View routing uses `showDashboard()` / `showLibrary()` / etc. — these are the canonical nav entry points and mutate `data-map-open` / `data-view` attributes via their internal wiring.
+
+- [ ] **Step 3: Add `title` on the chrome drawer-toggle (UX-todo #26)**
+
+In `public/index.html` at line 101, replace:
+```html
+<button class="drawer-toggle" id="drawer-toggle" onclick="App.toggleDrawer()" aria-label="Toggle sidebar"
+  aria-expanded="false" aria-controls="drawer">
+```
+with:
+```html
+<button class="drawer-toggle" id="drawer-toggle" onclick="App.toggleDrawer()" aria-label="Toggle sidebar"
+  title="Toggle sidebar" aria-expanded="false" aria-controls="drawer">
+```
+
+- [ ] **Step 4: Sidebar stays open on desktop regardless of entry vector (UX-todo #11)**
+
+In `public/js/app.js`, search for where sidebar auto-collapse happens on map entry (search for `closeDrawer` calls in `selectConcept` or map-open paths, look near line 401, 1180). For each mobile-width check, confirm guard `if (window.innerWidth < 900) closeDrawer();` is present; add it if absent; remove any unconditional `closeDrawer()` from map-open path.
+
+Specifically at line 401 (inside map-open handler), confirm:
+```javascript
+if (window.innerWidth < 900) closeDrawer();
+```
+If it's just `closeDrawer();` without the guard, wrap it.
+
+- [ ] **Step 5: Browser-verify**
+
+1. Desktop: click a concept card → map opens with sidebar still visible, top-left reads `← Dashboard` text-link, click returns to dashboard, sidebar stayed open.
+2. Click "Open Map" from library → same behavior.
+3. Tab to `← Dashboard` → focus ring visible.
+4. Mobile <900px: click concept → sidebar closes (drawer behavior preserved), map opens with `← Dashboard`.
+5. `×` button no longer renders in map view.
+6. Concept state unchanged — inspect `localStorage.getItem('socratink:concepts')` before and after map entry/exit; each concept's `state` field (`growing`/etc.) identical.
+
+- [ ] **Step 5a: Bump cache-bust for layout.css**
+
+`public/styles.css` bump `layout.css?v=`; `public/index.html` bump `styles.css?v=`.
+
+- [ ] **Step 6: Commit + push**
+
+```bash
+git add public/css/layout.css public/js/app.js public/index.html public/styles.css
+git commit -m "$(cat <<'EOF'
+refactor(map-view): single ← Dashboard back, drop ambiguous < arrow
+
+UX-todo #10 — drawer-toggle and map-close-btn were two exits with
+two meanings inside map view. Now both hidden; a single text
+back-link replaces them.
+
+Click routes through showDashboard() — the canonical view-router
+function. setState() in this repo is the concept-shell state
+mutator, not a view router; prior draft had that wrong.
+
+UX-todo #11 — sidebar stays open on desktop regardless of entry
+vector; mobile behavior unchanged.
+
+UX-todo #26 — title=\"Toggle sidebar\" on chrome drawer-toggle.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+---
+
+## Cycle C6 — Creation dialog + guest banner + retriable error + contract invariant
+
+**Goal:** Concept creation lives in center-stage composition dialog. Guest sees honest banner (no auth enforcement). Signed-in failures produce retriable banner. Failed extraction never mutates `contentStore` / in-memory `concepts` / localStorage `concepts` regardless of UI state.
+
+**Pre-flight:** verify `AIService.generateKnowledgeMap` contract for 401/403/429/500/transport-error. Already investigated in plan authoring: fetch throws on `!response.ok` wrapping status+body in `Error(\`Server error ${status}: ${body}\`)`. Transport errors bubble as native `TypeError`. Thus try/catch around the call captures all five modes — the guard just needs to **validate success payload shape** before mutating state, and **sanitize** the error message before surfacing to user.
+
+### C6 Files
+
+- **Modify** `public/css/components.css` (add `.creation-dialog*`, `.creation-banner*` rules)
+- **Modify** `public/js/app.js` (refactor `startAddConcept` → dialog mount + banner variants + invariant guard + Tab focus-trap)
+- **Modify** `public/index.html` (optional: `<dialog>` mount point, or pure JS-injected)
+
+### C6 Steps
+
+- [ ] **Step 1: Add `.creation-dialog*` rules to `public/css/components.css`**
+
+Append at end of file:
+
+```css
+/* ============================================================
+   Creation dialog — center-stage composition surface.
+   Not a cramped modal; a reading-room canvas.
+   ============================================================ */
+.creation-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: none;
+}
+.creation-dialog[data-open="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.creation-dialog-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-backdrop);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity var(--duration-cozy) var(--ease-standard);
+}
+.creation-dialog[data-open="true"] .creation-dialog-scrim {
+  opacity: 1;
+}
+.creation-dialog-shell {
+  position: relative;
+  width: min(560px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-hero), inset 0 1px 0 rgba(var(--white-rgb), 0.78);
+  backdrop-filter: blur(18px);
+  transform: translateY(12px);
+  opacity: 0;
+  transition:
+    transform var(--duration-cozy) var(--ease-standard),
+    opacity   var(--duration-cozy) var(--ease-standard);
+}
+.creation-dialog[data-open="true"] .creation-dialog-shell {
+  transform: translateY(0);
+  opacity: 1;
+}
+.creation-dialog-kicker {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-kicker);
+  color: var(--accent-secondary);
+}
+.creation-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+.creation-dialog-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+.creation-dialog-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-strong);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 var(--space-3);
+}
+.creation-dialog-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+}
+.creation-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.creation-banner {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: 0.82rem;
+}
+.creation-banner--guest {
+  background: rgba(var(--lavender-500-rgb), 0.14);
+  border: 1px solid rgba(var(--lavender-500-rgb), 0.30);
+  color: var(--text-strong);
+}
+.creation-banner--error {
+  background: var(--pill-danger-bg);
+  border: 1px solid rgba(224, 92, 107, 0.24);
+  color: var(--pill-danger-text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .creation-dialog-scrim,
+  .creation-dialog-shell {
+    transition: none !important;
+  }
+}
+```
+
+- [ ] **Step 2: Refactor `startAddConcept` in `public/js/app.js` to mount dialog**
+
+Current implementation lives at L822-1206. Refactor the render path:
+
+Replace the sidebar-render at L823-825:
+```javascript
+addTriggerArea.style.overflowY = 'auto';
+addTriggerArea.innerHTML = '<div class="creation-form"></div>';
+const form = addTriggerArea.querySelector('.creation-form');
+```
+with a dialog mount:
+```javascript
+window.__creationDialogTrigger = document.activeElement;   // for focus-return
+const dialog = mountCreationDialog();
+const formHost = dialog.shellContent;
+const isGuest = await detectGuestMode();
+
+// NOTE: buildContentInputUI writes container.innerHTML (app.js:454). Banner
+// must go into dialog.bannerSlot (separate DOM node above the content area),
+// never prepended into formHost — the first buildContentInputUI call would
+// wipe it.
+```
+
+Then let `buildContentInputUI(formHost, …)` render as before. After it returns, render the banner into `dialog.bannerSlot`:
+
+```javascript
+dialog.bannerSlot.innerHTML = '';
+if (isGuest) {
+  dialog.bannerSlot.appendChild(buildGuestBanner());
+  // Disable submit (honest signal; not auth enforcement — guard is contract-level)
+  formHost.querySelectorAll('input, textarea, button.submit-btn, [type="submit"]').forEach((el) => {
+    el.disabled = true;
+  });
+}
+
+// Focus first enabled input (or banner link if everything is disabled)
+const firstFocusable = dialog.shell.querySelector('input:not([disabled]), textarea:not([disabled]), a, button:not([disabled])');
+firstFocusable?.focus();
+```
+
+Add helpers near `startAddConcept`:
+
+```javascript
+// Track which sibling elements we inerted so we can restore exactly what we changed.
+// The app has no single #app-root wrapper — #card, #drawer, #backdrop, #bottom-nav are all body children.
+let __dialogInertedNodes = [];
+
+function mountCreationDialog() {
+  let node = document.getElementById('creation-dialog');
+  const firstMount = !node;
+  if (firstMount) {
+    node = document.createElement('div');
+    node.id = 'creation-dialog';
+    node.className = 'creation-dialog';
+    node.setAttribute('role', 'dialog');
+    node.setAttribute('aria-modal', 'true');
+    node.setAttribute('aria-labelledby', 'creation-dialog-title');
+    node.innerHTML = `
+      <div class="creation-dialog-scrim"></div>
+      <div class="creation-dialog-shell">
+        <div class="creation-dialog-header">
+          <span class="creation-dialog-kicker">New concept</span>
+          <button class="creation-dialog-close" type="button" aria-label="Close">×</button>
+        </div>
+        <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
+        <div class="creation-dialog-banner-slot"></div>
+        <div class="creation-dialog-content"></div>
+        <p class="creation-dialog-meta">Your words shape the path; they do not grade you.</p>
+      </div>
+    `;
+    document.body.appendChild(node);
+    // Listeners bound once on first mount; they read current DOM state each time.
+    node.querySelector('.creation-dialog-close').addEventListener('click', () => closeCreationDialog());
+    node.querySelector('.creation-dialog-scrim').addEventListener('click', () => closeCreationDialog());
+    const shell = node.querySelector('.creation-dialog-shell');
+    shell.addEventListener('keydown', trapFocusHandler);
+  }
+  node.dataset.open = 'true';
+
+  // Inert every top-level body child except the dialog itself.
+  // The app is currently #drawer + #backdrop + #card + #bottom-nav, plus brand etc.
+  __dialogInertedNodes = Array.from(document.body.children).filter(
+    (el) => el !== node && !el.hasAttribute('inert')
+  );
+  __dialogInertedNodes.forEach((el) => el.setAttribute('inert', ''));
+  document.addEventListener('keydown', creationDialogKeyHandler);
+  return {
+    node,
+    shell: node.querySelector('.creation-dialog-shell'),
+    shellContent: node.querySelector('.creation-dialog-content'),
+    bannerSlot: node.querySelector('.creation-dialog-banner-slot'),
+  };
+}
+
+function closeCreationDialog() {
+  const node = document.getElementById('creation-dialog');
+  if (!node) return;
+  node.dataset.open = 'false';
+  __dialogInertedNodes.forEach((el) => el.removeAttribute('inert'));
+  __dialogInertedNodes = [];
+  document.removeEventListener('keydown', creationDialogKeyHandler);
+  setTimeout(() => {
+    if (node.dataset.open === 'false') {
+      const banner = node.querySelector('.creation-banner');
+      if (banner) banner.remove();
+      const content = node.querySelector('.creation-dialog-content');
+      if (content) content.innerHTML = '';
+    }
+  }, 350);
+  (window.__creationDialogTrigger || document.body).focus?.();
+}
+
+function trapFocusHandler(e) {
+  if (e.key !== 'Tab') return;
+  const container = e.currentTarget;
+  const focusables = container.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  );
+  if (!focusables.length) return;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function creationDialogKeyHandler(e) {
+  if (e.key === 'Escape') closeCreationDialog();
+}
+
+async function detectGuestMode() {
+  try {
+    const session = await fetchAuthSession();
+    return !!(session && session.guest_mode === true);
+  } catch {
+    return false;
+  }
+}
+
+function buildGuestBanner() {
+  const banner = document.createElement('div');
+  banner.className = 'creation-banner creation-banner--guest';
+  banner.innerHTML = `
+    <div>
+      <strong>Guest mode uses sample maps.</strong><br>
+      Sign in to extract your own content into a real knowledge map.
+      <a href="${escHtml(buildLoginHref('/'))}" style="color: var(--accent-primary); font-weight: 600;">Sign in →</a>
+    </div>
+  `;
+  return banner;
+}
+
+function buildErrorBanner(sanitizedMessage) {
+  const banner = document.createElement('div');
+  banner.className = 'creation-banner creation-banner--error';
+  banner.innerHTML = `
+    <div>
+      <strong>Extraction didn't complete.</strong><br>
+      ${escHtml(sanitizedMessage)}
+    </div>
+  `;
+  return banner;
+}
+
+function sanitizeExtractError(err) {
+  // User-facing, never echoes raw err.message — auth headers / stack fragments leak otherwise.
+  if (!err) return 'Something went wrong. Try again when ready.';
+  const msg = String(err.message || '');
+  if (/\b401|unauthor/i.test(msg)) return 'Sign in required to run extraction.';
+  if (/\b403|forbidden/i.test(msg)) return 'That request was not allowed.';
+  if (/\b429|rate limit/i.test(msg)) return 'Extraction service is throttled. Give it a minute and retry.';
+  if (/\b5\d{2}|server error/i.test(msg)) return 'The extraction service hiccuped. Try again when ready.';
+  return 'The network or service was unreachable. Try again when ready.';
+}
+```
+
+- [ ] **Step 3: Invariant guard on extraction success path**
+
+In `startAddConcept`'s `onSubmit` handler (current L830-1199), the critical section is where `jsonPayload` returns and the concept is pushed (current L1140-1177). Wrap the push path in a contract validator:
+
+Replace:
+```javascript
+const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
+const durationMs = Math.round(performance.now() - extractStartedPerf);
+
+removeOverlay(true);
+const concept = { id, name, state: 'growing', ... , graphData: JSON.stringify(jsonPayload) };
+// ...
+contentStore.set(id, sourceText);
+concepts.push(concept);
+saveConcepts(concepts);
+```
+
+with:
+
+```javascript
+const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
+const durationMs = Math.round(performance.now() - extractStartedPerf);
+
+// INVARIANT: failed extraction never mutates contentStore / concepts.
+// Validate payload shape before any state mutation.
+if (!isValidKnowledgeMap(jsonPayload)) {
+  removeOverlay();
+  throw new Error('Extraction returned an invalid map.');
+}
+
+removeOverlay(true);
+const concept = { id, name, state: 'growing', ..., graphData: JSON.stringify(jsonPayload) };
+// ...
+contentStore.set(id, sourceText);
+concepts.push(concept);
+saveConcepts(concepts);
+```
+
+Add validator helper near the top of the file (or beside `STARTER_MAPS`):
+
+```javascript
+function isValidKnowledgeMap(map) {
+  if (!map || typeof map !== 'object') return false;
+  if (!Array.isArray(map.backbone) || map.backbone.length === 0) return false;
+  if (!Array.isArray(map.clusters)) return false;
+  return true;
+}
+```
+
+- [ ] **Step 4: Sanitized error banner in dialog on failure**
+
+Replace the existing `catch (err) { ... alert(...); }` block (current L1181-1199) with:
+
+```javascript
+} catch (err) {
+  removeOverlay();
+  const sanitized = sanitizeExtractError(err);
+  recordExtractRun({
+    timestamp: extractStartedAt,
+    stage: 'extract',
+    status: 'error',
+    model: 'gemini-2.5-flash',
+    prompt_version: 'extract-system-v1',
+    concept_id: id,
+    source_title: name,
+    content_type: type,
+    input_chars: typeof text === 'string' ? text.length : 0,
+    duration_ms: Math.round(performance.now() - extractStartedPerf),
+    error_type: 'request_failed',
+    // reason is USER-VISIBLE via browser-analytics.js:326 — MUST be sanitized.
+    reason: sanitized,
+    // reason_raw is for debugging; never rendered. Add only if schema allows.
+    reason_raw: err?.message || null,
+    run_mode: 'default',
+  });
+  console.warn('[extract] raw error (console only):', err);
+  const bannerSlot = document.querySelector('.creation-dialog-banner-slot');
+  if (bannerSlot) {
+    const existing = bannerSlot.querySelector('.creation-banner--error');
+    if (existing) existing.remove();
+    bannerSlot.appendChild(buildErrorBanner(sanitized));
+  }
+  const formHost = document.querySelector('.creation-dialog-content');
+  formHost?.querySelectorAll('button, input, textarea').forEach((el) => { el.disabled = false; });
+}
+```
+
+**Caution:** if `recordExtractRun`'s stored schema does NOT accept arbitrary keys (e.g., strict validator), omit `reason_raw` entirely; console-only suffices. Grep `recordExtractRun` definition to confirm shape before adding the new field.
+
+Keep the existing non-error path's `closeCreationDialog()` call at the success branch so the dialog only closes when a concept is saved.
+
+- [ ] **Step 5: Browse-starter-maps CTA inside guest banner**
+
+`buildGuestBanner()` already renders a "Sign in →" link. Add a secondary "Browse starter maps" button beside it, wired to:
+
+```javascript
+bannerEl.querySelector('.creation-banner-browse')?.addEventListener('click', () => {
+  closeCreationDialog();
+  showLibrary();
+});
+```
+
+Guest submit disabling handled in the mount path above (Step 2), via `formHost.querySelectorAll(...).disabled = true`.
+
+- [ ] **Step 6: Focus-return trigger already captured in Step 2**
+
+`window.__creationDialogTrigger = document.activeElement` is set before `mountCreationDialog()`. Used in `closeCreationDialog` above.
+
+- [ ] **Step 7: Browser-verify matrix**
+
+Run each scenario in DevTools + browser:
+
+| Scenario | Setup | Expected |
+|---|---|---|
+| Guest happy | Guest mode | Banner visible, inputs disabled, submit disabled, "Browse starter maps" works |
+| Signed-in happy | Sign in, dialog open, paste text, Extract | Dialog closes, concept saved, grid shows it |
+| 401 | Signed-in, stub `/api/extract` to 401 | Error banner: "Sign in required to run extraction." `loadConcepts().length` unchanged. `contentStore` unchanged. Dialog stays open, draft preserved. |
+| 403 | Stub to 403 | "That request was not allowed." |
+| 429 | Stub to 429 | "Extraction service is throttled." |
+| 500 | Stub to 500 | "The extraction service hiccuped." |
+| Transport error | Offline DevTools | "The network or service was unreachable." |
+| Invalid payload | Stub to 200 with `{}` | Error banner with "try again". No concept pushed. |
+| Theme toggle mid-draft | Signed-in, type text, toggle theme | Draft persists; dialog not remounted. |
+| Reduced-motion | `prefers-reduced-motion: reduce` via DevTools rendering tab | Dialog appears without fade/slide. |
+| Tab trap | Tab from Cancel → cycles back to first input, not to sidebar | Focus stays in dialog. |
+| Esc close | Open dialog, press Esc | Dialog closes, focus returns to trigger. |
+| Inert-verify | Open dialog, try click/focus drawer or bottom-nav | All body children except dialog blocked by `inert`. |
+| Sanitized-reason check | Trigger extraction error, visit `/#analytics` | Analytics row summary shows sanitized copy, not raw stack/status. |
+
+Also run relevant pytest slice for auth + url-import regressions:
+```bash
+pytest tests/test_auth_gate.py tests/test_auth_router.py tests/test_url_import.py -v
+```
+Expected: all pass. These cover the backend contract C6 depends on (auth endpoint shape, URL import SSRF hardening).
+
+Stub via DevTools "Network" tab → right-click request → Override content. Or temporarily patch `AIService.generateKnowledgeMap` at runtime: `window.AIService.generateKnowledgeMap = async () => { throw new Error('Server error 401: unauthorized'); };`.
+
+Record raw errors in console (ok), confirm user-facing banner is sanitized (no leaked status codes, no backend strings).
+
+- [ ] **Step 8: Codesearch invariant confirmation**
+
+```
+exec:codesearch
+concepts push in app js
+```
+
+Audit every hit. Each must be:
+- Inside starter-import explicit path (allowed — explicit user action)
+- OR behind the `isValidKnowledgeMap` guard in extraction path
+- OR a test/debug surface
+
+Any other `concepts.push` without a guard → roll back and add guard.
+
+- [ ] **Step 8a: Bump cache-bust versions**
+
+`public/styles.css` bump `components.css?v=`; `public/index.html` bump `styles.css?v=`.
+
+- [ ] **Step 9: Commit + push**
+
+```bash
+git add public/css/components.css public/js/app.js public/styles.css public/index.html
+git commit -m "$(cat <<'EOF'
+feat(creation): center-stage dialog + guest banner + contract guard
+
+Move concept creation from 264px sidebar column into center-stage
+composition dialog. aria-modal, role=dialog, inert on shell while
+open, Tab trap, Esc close, focus-return to trigger. Reduced-motion
+honored.
+
+Guest mode shows honest banner (\"Guest mode uses sample maps. Sign
+in to extract your own content.\") with inputs disabled — signal,
+not auth enforcement. Guest remains authorized at backend.
+
+Invariant enforced on extraction success path (not submit gate):
+failed or invalid extraction never mutates contentStore, in-memory
+concepts, or localStorage. isValidKnowledgeMap validates payload
+shape before push. Guard holds across 401/403/429/500/transport/
+malformed-200 — test matrix verified.
+
+User-facing errors sanitized via sanitizeExtractError; raw detail
+goes to console + recordExtractRun only.
+
+Resolves BLOCKER UX-todo #4.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+git push
+```
+
+---
+
+## Post-cycle — rerun baseline browser QA prompt
+
+After C6 commits, rerun the 16-check baseline browser QA prompt from the brainstorming transcript. All 16 must pass. Any failure → triage: pre-existing issue, regression from a specific cycle (revert that cycle alone), or spec gap (file new Wave 2 item).
+
+## Rollback
+
+Each cycle = one commit. Bad cycle in isolation → `git revert <sha>`.
+
+**Important:** reverting C1 alone does NOT unwind downstream — C2–C6 depend on tokens C1 introduced (`--node-*`, `--node-*-rgb`, dark-block reassignment). Reverting C1 while C2–C6 are landed leaves a broken build. To undo C1 after downstream cycles, revert the range (`git revert C6..C1` or equivalent) or squash-revert via a compensating commit.
+
+Safest: verify each cycle in browser before the next begins. If C1 fails verify, revert immediately before starting C2.
+
+## Self-review checklist (for executing agent)
+
+- Each cycle lands as one commit, per-file `?v=` versions bumped in `public/styles.css` and `styles.css?v=` in `public/index.html`.
+- Cycle commit message references the UX-todo item(s) resolved.
+- Invariants preserved: `setState()` concept-shell mutator untouched (not used for view routing), knowledge-map drill-state source of truth, `contentStore` volatile, Gemini SDK untouched, auth routes untouched.
+- View routing uses `showDashboard()` / `showLibrary()` / etc., NOT `setState(...)`.
+- Guest detection uses `session.guest_mode`, NOT `session.is_guest`.
+- Dialog `inert` applied to body-children siblings (no `#app-root` exists), cleared exactly on close.
+- Banner inserted into `dialog.bannerSlot`, NOT prepended into `buildContentInputUI` container (which would be wiped by its own `innerHTML =`).
+- `recordExtractRun` `reason` field populated with **sanitized** copy only (it is rendered to user-visible analytics via `browser-analytics.js:326`); raw detail goes to console and, if schema allows, a never-rendered `reason_raw` field.
+- No new consumers of `--bg` / `--card-bg` / `--text` / `--primary` aliases introduced in new code written this wave.
+- Pill CSS uses `--node-*-rgb` channel tokens, not hardcoded hex.
+- Analytics base rules (and any other base rule behind a deleted dark override) were rewritten to consume tokens BEFORE the dark override was deleted — per-selector, verified in both themes.
+- Guard is on extraction-success path (`isValidKnowledgeMap`), not submit-gate — dev tools cannot bypass it by re-enabling disabled inputs.
+- Python tests run post-C6: `pytest tests/test_auth_gate.py tests/test_auth_router.py tests/test_url_import.py -v` — all pass.

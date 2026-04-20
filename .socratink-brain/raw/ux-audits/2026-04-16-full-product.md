@@ -51,7 +51,7 @@ Sidebar used as canvas (creation form). Chrome buttons behave differently per vi
 
 ### Concept creation
 
-- [ ] `[BLOCKER]` `bug` — Re-test concept submission after starter removal. Earlier audit saw user input discarded into a starter seed with no error or warning. Either disable form in guest mode with a reason, wire to local fallback generator, or surface the backend error as retry prompt.
+- [x] `[BLOCKER]` `bug` — Submission silently discarded user input into a starter seed. Fixed in Wave 1 (C6b extraction invariant `isValidKnowledgeMap` guard + `sanitizeExtractError` banner + guest-mode honest banner). Re-verify on the Hermes concept after starter-shelf removal (main cda655d).
 - [ ] `[HIGH]` `bug` — Extraction overlay doesn't lock the background. Sidebar form stays clickable during extraction; hero "Add Concept" stays enabled. Double-submit risk. Add full scrim with `backdrop-filter: blur(8px)`, `pointer-events: auto`, and `aria-busy="true"`.
 - [ ] `[HIGH]` `contract` — Creation form lives in a 264px sidebar column. Textarea is ~200px wide for article-length pastes. Move creation into a center-stage dialog (Notion/Readwise pattern).
 - [ ] `[LOW]` `best-practice` — Hero CTA stays active while creation form is open. Toggle to disabled or swap for "Cancel".

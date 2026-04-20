@@ -74,8 +74,34 @@ body[data-map-open="true"] .auth-controls,
 body[data-map-open="true"] .dev-skip {
   display: none !important;
 }
-body:not([data-map-open="true"]) #map-close-btn {
+/* Map-view chrome — single back control (UX-todo #10). In map view,
+   hide the ambiguous < drawer-toggle and redundant × close-btn; show
+   the explicit "← Dashboard" text link instead. */
+body[data-map-open="true"] .drawer-toggle,
+body[data-map-open="true"] .map-close-btn {
   display: none !important;
+}
+body:not([data-map-open="true"]) #map-close-btn,
+body:not([data-map-open="true"]) .map-back-link {
+  display: none !important;
+}
+.map-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--accent-primary);
+  background: none;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-micro) var(--ease-standard);
+}
+.map-back-link:hover {
+  background: var(--accent-soft);
 }
 .main-header-left {
   display: flex;
@@ -142,15 +168,9 @@ body:not([data-map-open="true"]) #map-close-btn {
   }
 }
 
-/* ─── Night mode — hero card picks up CSS variable overrides ── */
-body.night .hero-card,
-body[data-theme="dark"] .hero-card { background-color: var(--card-bg); }
-body.night .settings-page-card,
-body[data-theme="dark"] .settings-page-card {
-  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
-}
-body.night #card,
-body[data-theme="dark"] #card { background-color: var(--bg); }
+/* Dark-mode overrides removed here — .hero-card, .settings-page-card,
+   and #card all consume tokens that flip via [data-theme="dark"]
+   in variables.css. Base rules are authoritative. */
 
 /* ─── Mobile (< 900px): centered-card layout ──────────────── */
 @media (max-width: 899px) {
@@ -166,6 +186,163 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   /* Hide the main nav links in the drawer on mobile because they are in the bottom nav */
   #drawer .sidebar-nav {
     display: none;
+  }
+
+  /* Drawer footer — mobile egress: identity chip + branded CTA + icon rail.
+     Resolves BLOCKER UX-todo #24. Desktop hides via @media rule below. */
+  .drawer-footer {
+    margin-top: auto;
+    padding: var(--space-3) var(--space-4) var(--space-4);
+    border-top: 1px solid var(--border-subtle);
+    background: rgba(var(--cream-50-rgb), 0.60);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  [data-theme="dark"] .drawer-footer {
+    background: rgba(var(--lavender-500-rgb), 0.10);
+  }
+  /* Identity chip */
+  .drawer-footer-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    line-height: 1;
+    padding: 2px 0;
+  }
+  .drawer-footer-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    flex: 0 0 auto;
+  }
+  .drawer-footer-chip-state {
+    color: var(--text-muted);
+    opacity: 0.72;
+    font-weight: 500;
+  }
+  /* Primary CTA — Continue with Google */
+  .drawer-signin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-start;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: 12px;
+    background: var(--accent-primary);
+    color: var(--text-on-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    transition: background var(--duration-micro) var(--ease-standard);
+  }
+  .drawer-signin-link:hover {
+    background: var(--primary-fill-hover);
+    color: var(--text-on-primary);
+  }
+  .drawer-signin-glyph {
+    flex: 0 0 auto;
+    background: var(--text-on-primary);
+    border-radius: 4px;
+    padding: 2px;
+    width: 20px;
+    height: 20px;
+  }
+  .drawer-signin-label { flex: 1 1 auto; }
+  .drawer-signin-arrow {
+    flex: 0 0 auto;
+    font-size: 0.9rem;
+    opacity: 0.85;
+    transition: transform var(--duration-micro) var(--ease-standard);
+  }
+  .drawer-signin-link:hover .drawer-signin-arrow { transform: translateX(2px); }
+  /* Tertiary row — theme toggle (icon + label) + exit guest (text).
+     Horizontal padding matches the signin pill's content padding so the
+     Theme icon aligns under the Google G and Exit guest aligns under →. */
+  .drawer-footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px var(--space-4) 0;
+  }
+  .drawer-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 10px 8px;
+    min-height: 44px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    box-shadow: none;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: color var(--duration-micro) var(--ease-standard);
+  }
+  .drawer-theme-toggle:hover,
+  .drawer-theme-toggle:hover:not(:disabled),
+  .drawer-theme-toggle:active:not(:disabled) {
+    color: var(--text-strong);
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+  }
+  .drawer-theme-toggle:focus-visible {
+    outline: none;
+    box-shadow: none;
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .drawer-theme-icon { display: none; }
+  [data-theme="dark"] .drawer-theme-icon-sun { display: block; }
+  :root:not([data-theme="dark"]) .drawer-theme-icon-moon,
+  html:not([data-theme="dark"]) .drawer-theme-icon-moon { display: block; }
+  .drawer-exit-btn {
+    flex: 0 0 auto;
+    padding: 10px 8px;
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-height: 44px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: color var(--duration-micro) var(--ease-standard);
+  }
+  .drawer-exit-btn:hover,
+  .drawer-exit-btn:hover:not(:disabled),
+  .drawer-exit-btn:active:not(:disabled) {
+    color: var(--text-strong);
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+  }
+  .drawer-exit-btn:focus-visible {
+    outline: none;
+    box-shadow: none;
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* Bottom Navigation for Mobile */
@@ -274,6 +451,11 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   .settings-view.visible {
     animation: viewSlideIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
+}
+
+/* Desktop hides mobile drawer footer — chrome handles theme + sign-in */
+@media (min-width: 900px) {
+  .drawer-footer { display: none; }
 }
 
 /* ── 14. Extraction Overlay ─────────────────────────────────── */
@@ -618,8 +800,8 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   gap: 14px;
   padding: 22px;
   border-radius: var(--radius-card);
-  background: linear-gradient(180deg, rgba(var(--white-rgb), 0.9), rgba(var(--cream-50-rgb), 0.84));
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
 }
 
@@ -721,9 +903,16 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
 .map-core-thesis { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 16px; font-family: var(--font-display); letter-spacing: -0.3px; }
 
 .map-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.map-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.map-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 .map-badge.arch { background: var(--accent-soft-strong); color: var(--primary); }
 .map-badge.diff { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
+.map-badge.state { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
+.map-badge-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--text-sub); }
+.map-badge.state[data-state="instantiated"] .map-badge-dot { background: var(--crystal-instantiated-lower-right); }
+.map-badge.state[data-state="growing"] .map-badge-dot      { background: var(--crystal-growing-upper-left); }
+.map-badge.state[data-state="fractured"] .map-badge-dot    { background: var(--danger); }
+.map-badge.state[data-state="hibernating"] .map-badge-dot  { background: var(--crystal-hibernating-upper-right); }
+.map-badge.state[data-state="actualized"] .map-badge-dot   { background: var(--crystal-actualized-upper-right); box-shadow: 0 0 5px var(--crystal-actualized-upper-right); }
 .map-low-density { font-size: 12px; color: var(--text-sub); font-style: italic; opacity: 0.8; margin-top: 8px; }
 
 .map-section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.02em; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
@@ -763,7 +952,7 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   align-items: flex-start;
   justify-content: space-between;
   gap: 32px;
-  padding: 8px 0 28px;
+  padding: 56px 0 28px;
   border-bottom: 1px solid var(--border);
 }
 .concept-header-main {
@@ -772,14 +961,6 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
   flex-direction: column;
   gap: 10px;
   flex: 1 1 auto;
-}
-.concept-header-kicker {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--primary);
 }
 .concept-header-title {
   margin: 0;
@@ -1350,12 +1531,13 @@ body[data-theme="dark"] #card { background-color: var(--bg); }
     font-size: 22px;
   }
 
-  /* Concept header stacks vertically on mobile */
+  /* Concept header stacks vertically on mobile; top padding clears the
+     absolute-positioned .main-header app bar (~60-76px) */
   .concept-header {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
-    padding: 4px 0 20px;
+    padding: 64px 0 20px;
   }
   .concept-header-title { font-size: 24px; }
   .concept-header-summary { font-size: 14px; }

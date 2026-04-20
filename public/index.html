@@ -22,7 +22,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=42">
 </head>
 
 <body>
@@ -66,7 +66,7 @@
   <div id="drawer" data-open="false">
     <div class="sidebar-brand">
       <img src="/brand/socratink-mark-square.png?v=1" alt="Socratink brand mark" class="sidebar-brand-mark">
-      <span class="sidebar-brand-name">socratink</span>
+      <span class="sidebar-brand-name">socra<span class="brand-accent">tink</span></span>
     </div>
 
     <nav class="sidebar-nav">
@@ -88,6 +88,50 @@
     <div id="concept-list"></div>
     <div id="add-trigger-area"></div>
 
+    <!-- Drawer footer (mobile only) -->
+    <div class="drawer-footer" aria-label="Account actions">
+      <div class="drawer-footer-chip" id="drawer-footer-chip" hidden>
+        <span class="drawer-footer-chip-dot" aria-hidden="true"></span>
+        <span class="drawer-footer-chip-text">Guest<span class="drawer-footer-chip-sep" aria-hidden="true"> · </span><span class="drawer-footer-chip-state">unsaved</span></span>
+      </div>
+      <a class="drawer-signin-link" id="drawer-signin-link" href="javascript:void(0)" hidden>
+        <svg class="drawer-signin-glyph" aria-hidden="true" viewBox="0 0 48 48" width="18" height="18">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        <span class="drawer-signin-label">Continue with Google</span>
+        <span class="drawer-signin-arrow" aria-hidden="true">→</span>
+      </a>
+      <div class="drawer-footer-row">
+        <button class="drawer-theme-toggle" id="drawer-theme-toggle" type="button"
+          onclick="App.toggleTheme()" aria-label="Toggle theme">
+          <svg class="drawer-theme-icon drawer-theme-icon-sun" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5"></circle>
+            <path d="M12 2.5v3"></path>
+            <path d="M12 18.5v3"></path>
+            <path d="M4.9 4.9l2.1 2.1"></path>
+            <path d="M17 17l2.1 2.1"></path>
+            <path d="M2.5 12h3"></path>
+            <path d="M18.5 12h3"></path>
+            <path d="M4.9 19.1L7 17"></path>
+            <path d="M17 7l2.1-2.1"></path>
+          </svg>
+          <svg class="drawer-theme-icon drawer-theme-icon-moon" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+            aria-hidden="true">
+            <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
+          </svg>
+          <span class="drawer-theme-label">Theme</span>
+        </button>
+        <button class="drawer-exit-btn" id="drawer-exit-btn" type="button"
+          onclick="App.exitGuestFromDrawer()" hidden>Exit guest</button>
+      </div>
+    </div>
+
     <!-- Close button (mobile only) -->
     <button class="drawer-close" onclick="App.closeDrawer()">×</button>
   </div>
@@ -99,7 +143,7 @@
     <header class="main-header">
       <div class="main-header-left">
         <button class="drawer-toggle" id="drawer-toggle" onclick="App.toggleDrawer()" aria-label="Toggle sidebar"
-          aria-expanded="false" aria-controls="drawer">
+          title="Toggle sidebar" aria-expanded="false" aria-controls="drawer">
           <svg class="toggle-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <g class="icon-menu">
@@ -111,6 +155,11 @@
               <polyline points="10,4 4.5,9 10,14" />
             </g>
           </svg>
+        </button>
+        <button class="map-back-link" id="map-back-link" type="button" onclick="App.hideMapView()"
+          aria-label="Return to dashboard">
+          <span aria-hidden="true">←</span>
+          <span>Dashboard</span>
         </button>
       </div>
       <div class="main-header-right">
@@ -159,7 +208,6 @@
 
       <div class="hero-info" id="hero-info">
         <div class="hero-meta-row">
-          <div class="concept-label" id="concept-label">Dashboard</div>
           <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
         </div>
         <h1 class="hero-title" id="title">Add your first socratink</h1>
@@ -394,7 +442,6 @@
       <div class="map-view-shell">
         <header class="concept-header" id="concept-header">
           <div class="concept-header-main">
-            <div class="concept-header-kicker" id="concept-header-kicker"></div>
             <h2 class="concept-header-title" id="concept-header-title"></h2>
             <p class="concept-header-summary" id="concept-header-summary"></p>
             <div class="concept-header-tags" id="concept-header-tags"></div>
@@ -445,7 +492,7 @@
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=18"></script>
+  <script type="module" src="js/app.js?v=27"></script>
 
   <!-- Vercel Speed Insights -->
   <script>

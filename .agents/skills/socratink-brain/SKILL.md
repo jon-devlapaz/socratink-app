@@ -19,6 +19,7 @@ Default KB root:
 
 Operation router:
 - "feed this", "ingest this", "add this research/log/note" -> `ingest`
+- "theta found X", "theta-research handoff", `brain_handoff:` block present in input -> `ingest` using the handoff metadata as pre-classified input. Trust theta's `page_type`, `basis`, `confidence`, and `sources` unless they contradict existing KB state. Still register the raw artifact from `raw_artifact_path` and create the source page before the derived page.
 - "what do we know about X?", "query Socratink Brain" -> `query`
 - "evaluate these logs/traces/replays" -> `evaluate-logs`
 - "validate", "lint", "is the KB structurally healthy?" -> `lint`

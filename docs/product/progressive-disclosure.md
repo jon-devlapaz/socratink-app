@@ -13,7 +13,7 @@
 > - `primed` can only result from a cold attempt. `solidified` can only result from a spaced re-drill with `solid` classification.
 > - Spacing validation: the frontend must not offer re-drill before `re_drill_eligible_after` has passed.
 > - Cold attempts are unscored: `classification`, `score_eligible`, `response_tier` must be null/false.
-> - Session guardrails: 25-min cap, 4-node cap, 3-retrieval-per-node ceiling.
+> - Session guardrails: configurable duration cap disabled by default in the current MVP, 4-node cap, 3-retrieval-per-node ceiling.
 > - Backward compatibility: existing nodes without new fields must default gracefully.
 
 ---
@@ -366,7 +366,7 @@ Show next-horizon nodes (3-5 adjacent available items) rather than the entire re
 
 ## Session Guardrails
 
-- Hard session cap: 25 minutes default.
+- Hard wall-clock session cap: disabled by default in the current MVP; configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`.
 - Node cap: 4 nodes per session.
 - Per-node retrieval ceiling: 3 successful retrievals per node per session.
 - Session ending should feel like a save point, not a punishment.

@@ -32,6 +32,7 @@ from ai_service import (
     drill_chat,
     extract_knowledge_map,
     generate_repair_reps,
+    get_drill_session_time_limit_seconds,
 )
 from scripts.summarize_ai_runs import build_summary_payload
 from scripts.summarize_ai_runs import build_learner_summary_payload
@@ -276,6 +277,7 @@ def health():
     return {
         "status": "ok",
         "server_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
+        "drill_session_time_limit_seconds": get_drill_session_time_limit_seconds(),
     }
 
 

@@ -524,10 +524,10 @@ function renderBranchFriction(payload) {
           ${escHtml(item.owners.length ? `Backbone: ${item.owners.join(', ')}` : 'Available from the core thesis.')}
         </div>
         <div class="list-card-metrics">
-          <span class="metric-pill">Solid ${item.counts.solidified}</span>
-          <span class="metric-pill">Primed ${item.counts.primed}</span>
-          <span class="metric-pill">In progress ${item.counts.drilled}</span>
-          <span class="metric-pill">Misconceptions ${item.history.misconception_count}</span>
+          <span class="pill pill--solid">Solid ${item.counts.solidified}</span>
+          <span class="pill pill--primed">Primed ${item.counts.primed}</span>
+          <span class="pill pill--drilled">In progress ${item.counts.drilled}</span>
+          <span class="pill pill--danger">Misconceptions ${item.history.misconception_count}</span>
         </div>
       </div>
     `,

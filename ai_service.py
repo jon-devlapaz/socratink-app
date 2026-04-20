@@ -31,12 +31,29 @@ DRILL_CHAT_LOG_PATH = Path(__file__).parent / "logs/drill-chat-turns.jsonl"
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 RETRYABLE_CODES = {429, 503, 500}
+DRILL_SESSION_TIME_LIMIT_ENV = "DRILL_SESSION_TIME_LIMIT_SECONDS"
+DISABLED_TIME_LIMIT_VALUES = {"", "0", "off", "none", "null", "disabled", "false"}
 
 USER_PROMPT = (
     "Execute the full extraction pipeline on the following text and return ONLY "
     "the valid JSON object as specified in your instructions. "
     "No preamble, no explanation, no code fences — raw JSON only:\n\n{text}"
 )
+
+
+def get_drill_session_time_limit_seconds() -> int | None:
+    raw_limit = os.environ.get(DRILL_SESSION_TIME_LIMIT_ENV, "").strip().lower()
+    if raw_limit in DISABLED_TIME_LIMIT_VALUES:
+        return None
+    try:
+        limit_seconds = int(raw_limit)
+    except ValueError as exc:
+        raise ValueError(
+            f"{DRILL_SESSION_TIME_LIMIT_ENV} must be a positive integer or disabled."
+        ) from exc
+    if limit_seconds <= 0:
+        return None
+    return limit_seconds
 
 
 class DrillEvaluation(BaseModel):
@@ -1068,11 +1085,19 @@ def drill_chat(
             )
         )
 
-    if not bypass_session_limits and session_phase == "turn" and session_start_iso:
+    session_time_limit_seconds = get_drill_session_time_limit_seconds()
+    if (
+        not bypass_session_limits
+        and session_phase == "turn"
+        and session_start_iso
+        and session_time_limit_seconds is not None
+    ):
         session_start = _parse_iso_timestamp(session_start_iso)
-        if (datetime.now(timezone.utc) - session_start).total_seconds() >= 25 * 60:
+        if (
+            datetime.now(timezone.utc) - session_start
+        ).total_seconds() >= session_time_limit_seconds:
             result = {
-                "agent_response": "That's 25 minutes — a good stopping point. Your progress is saved. Pick up where you left off next session.",
+                "agent_response": "That's a good stopping point. Your progress is saved. Pick up where you left off next session.",
                 "generative_commitment": None,
                 "answer_mode": None,
                 "score_eligible": False,

@@ -18,7 +18,7 @@
 > - The AI must remain the scaffold. The learner must remain the primary generator. If the AI talks more than the learner during drill, the passive trap has been triggered.
 > - No streaks in MVP. If ever added, only as spaced session streaks that reward algorithmic adherence, not daily presence.
 > - No features that lower the mastery bar to resolve progression bottlenecks.
-> - Session cap: 25 minutes. Node cap: 4. Per-node retrieval ceiling: 3 successful retrievals per session.
+> - Duration cap: disabled by default in the current MVP. Node cap: 4. Per-node retrieval ceiling: 3 successful retrievals per session.
 
 ---
 
@@ -77,7 +77,7 @@ This lens determines what every surface in the product is actually doing:
 | Trajectory contrast | Show a progress score | Show the learner how their own metacognitive predictions were wrong — the only intervention that updates beliefs about productive struggle |
 | Normalization | Reduce anxiety | Teach the learner how to interpret difficulty — as a process feature, not an ability verdict |
 | The graph | Track completion | Surface an evidence-weighted map the learner can trust because the system only mutates mastery truth on spaced reconstruction |
-| Session cap | Prevent fatigue | Teach the learner that their brain has consolidation constraints, and that respecting them is part of how mastery works |
+| Session guardrails | Prevent fatigue | Teach the learner that their brain has consolidation constraints, and that respecting them is part of how mastery works |
 
 When evaluating any new feature, the metacognitive UX lens asks: **does this make the learner's own cognitive process more visible and more accurately interpretable?** If it only makes content easier to consume without improving the learner's self-awareness, it is cognitive UX, not metacognitive UX — and it belongs in a different product.
 
@@ -444,7 +444,7 @@ Core design constraints, not edge-case toggles:
 - 2-3 second transition beat between cold attempt and study reveal.
 - Two to three nodes in active rotation is the ceiling.
 - Periodic macro-level integration prompts.
-- Session length caps enforced.
+- Session guardrails enforced.
 
 ## Session Guardrails
 
@@ -452,9 +452,9 @@ Cognitive effectiveness of retrieval practice is subject to severe diminishing r
 
 ### Session Length
 
-- Evidence-based optimal for ADHD: 15-25 minutes.
-- Neurotypical ceiling: 40-60 minutes.
-- Default hard cap: 25 minutes. Secondary: 4 nodes.
+- Evidence-based optimal for ADHD is plausibly 15-25 minutes, but the exact duration cap is a product hypothesis.
+- Neurotypical ceiling is plausibly 40-60 minutes.
+- Current MVP default: no hard wall-clock cap. The duration cap remains configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`; node cap and retrieval ceiling remain active.
 
 ### Per-Node Retrieval Ceiling
 
@@ -605,9 +605,9 @@ Mastery-based game design provides the model for ethical magnetic engagement:
 - **Permadeath = the node stays drilled.** The node is not permanently failed. It is honestly unresolved and scheduled for return. Every failed retrieval contributes data to the spacing algorithm and the escalating scaffold path.
 - **Meta-progression = the knowledge graph.** Even a session full of non-solid results advances the meta-game. The graph records effort, adjusts difficulty, and unlocks contextual scaffolding. The learner never feels their time was wasted.
 - **High skill ceiling.** The mastery bar never lowers. `tetris`-band responses on complex mechanism nodes represent genuine cognitive achievement that most learners will reach only after multiple sessions.
-- **Enforced scarcity builds anticipation.** Session caps stop the learner while wanting is still active. Like Wordle's one puzzle per day — no streak anxiety, no monetization pressure, just anticipation.
+- **Enforced scarcity builds anticipation.** Session guardrails stop the learner while wanting is still active. Like Wordle's one puzzle per day — no streak anxiety, no monetization pressure, just anticipation.
 
-socratink enforces session caps and spacing. This is anti-compulsion by design. When the science is explained transparently and the cap is absolute, learners internalize the constraint as self-endorsed. (Laurin et al. 2012.)
+socratink enforces session guardrails and spacing. This is anti-compulsion by design. When the science is explained transparently and the guardrail is absolute, learners internalize the constraint as self-endorsed. (Laurin et al. 2012.)
 
 ## Evidence Posture
 
@@ -654,7 +654,7 @@ socratink enforces session caps and spacing. This is anti-compulsion by design. 
 - Two to three nodes is the right rotation ceiling. Calibrated to ADHD, not validated in-product.
 - The tier/band system can serve as metacognitive prediction-contrast. Informed by Pan & Rivers, not directly tested.
 - Color-state transitions carry expected affective weight. Industry convention, no experimental validation.
-- Session caps with transparent science increase return motivation. Grounded in reactance research, not tested in-product.
+- Session guardrails with transparent science increase return motivation. Grounded in reactance research, not tested in-product.
 - Minimum generative threshold prevents button-mashing without feeling punitive. Design hypothesis.
 - Guided interleaving prevents cognitive overload during context-switching. Design hypothesis.
 - Escalating scaffolding prevents deadlock without lowering the mastery bar. Informed by Load Reduction research.

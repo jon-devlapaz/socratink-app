@@ -2,7 +2,6 @@
 export const card                = document.getElementById('card');
 export const titleEl             = document.getElementById('title');
 export const descEl              = document.getElementById('desc');
-export const conceptLabelEl      = document.getElementById('concept-label');
 export const heroStateChipEl     = document.getElementById('hero-state-chip');
 export const heroPrimaryActionEl = document.getElementById('hero-primary-action');
 export const primaryControls     = document.getElementById('primary-controls');

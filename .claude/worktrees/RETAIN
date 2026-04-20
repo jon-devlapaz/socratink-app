@@ -1,0 +1,6 @@
+# Reconcile RETAIN list
+# Format: branch-or-path | reason | owner | date
+# Blank lines and # comments ignored. Paths may be relative or absolute.
+
+claude/repair-reps-slice-b | active parallel track — Repair Reps metacognitive loop spec in progress | concurrent-session | 2026-04-20
+/Users/jondev/dev/socratink/prod/socratink-app/.worktrees/repair-reps-slice-b | slice-b worktree | concurrent-session | 2026-04-20

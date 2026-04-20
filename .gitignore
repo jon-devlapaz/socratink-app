@@ -35,6 +35,8 @@ docs/**/.DS_Store
 .agents/skills/*
 !.agents/skills/socratink-brain/
 !.agents/skills/socratink-brain/**
+!.agents/skills/theta-research/
+!.agents/skills/theta-research/**
 
 # Track compiled Socratink Brain memory and only promoted raw evidence.
 .socratink-brain/*
@@ -64,6 +66,7 @@ docs/**/.DS_Store
 !.socratink-brain/raw/research-notes/
 .socratink-brain/raw/research-notes/*
 !.socratink-brain/raw/research-notes/happy-path-workflow-human-memory-recall-product.md
+!.socratink-brain/raw/research-notes/dunlosky2013.md
 
 # Local-only checks and exports unless promoted into tracked scripts/tests.
 scripts/run-checks.sh
@@ -79,3 +82,13 @@ tests/test_socratink_brain_drill_telemetry.py
 .mcp.json
 .gm-stop-verified
 .codeinsight
+
+# Superpowers worktrees
+.worktrees/
+.superpowers/
+
+# QA + tool artifacts (do not track)
+.playwright-mcp/
+*.excalidraw
+c4-mobile-*.png
+map-header-*.png
