@@ -550,6 +550,59 @@ function repairRatingMarkup(state, currentIndex) {
   `;
 }
 
+const REPAIR_PRE_CONFIDENCE_LABELS = {
+  guessing: 'Guessing',
+  hunch: 'Have a hunch',
+  can_explain: 'Can explain',
+};
+
+const REPAIR_RATING_SUMMARY_LABELS = {
+  close_match: 'Close match',
+  partial: 'Partly linked',
+  missed: 'Missed the link',
+};
+
+function repairPredictPillsMarkup(currentPreConfidence, isLocked) {
+  const selected = typeof currentPreConfidence === 'string' ? currentPreConfidence : '';
+  const lockedAttr = isLocked ? ' aria-disabled="true"' : '';
+  const lockedClass = isLocked ? ' is-locked' : '';
+  const pill = (value, label) => {
+    const checked = selected === value ? 'true' : 'false';
+    const selClass = selected === value ? ' is-selected' : '';
+    return `<button type="button" class="graph-repair-predict-pill trigger-repair-predict${selClass}" data-pre="${value}" role="radio" aria-checked="${checked}">${label}</button>`;
+  };
+  return `
+    <div class="graph-repair-predict">
+      <div class="graph-detail-kicker">Before you peek</div>
+      <div class="graph-repair-predict-group${lockedClass}" role="radiogroup" aria-label="Confidence before revealing reference"${lockedAttr}>
+        ${pill('guessing', 'Guessing')}
+        ${pill('hunch', 'Have a hunch')}
+        ${pill('can_explain', 'Can explain')}
+      </div>
+    </div>
+  `;
+}
+
+function repairCalibrationSummaryMarkup(preConfidences, ratings) {
+  const preList = Array.isArray(preConfidences) ? preConfidences : [];
+  const rateList = Array.isArray(ratings) ? ratings : [];
+  const rowCount = Math.min(preList.length, rateList.length);
+  if (rowCount === 0) return '';
+  const rows = [];
+  for (let i = 0; i < rowCount; i += 1) {
+    const preLabel = REPAIR_PRE_CONFIDENCE_LABELS[preList[i]] || 'Not recorded';
+    const rateLabel = REPAIR_RATING_SUMMARY_LABELS[rateList[i]] || 'Not recorded';
+    rows.push(`
+      <div class="graph-repair-summary-row">
+        <span class="graph-repair-summary-rep">Rep ${i + 1}</span>
+        <span class="graph-repair-summary-pair"><span class="muted">Predicted:</span> ${escHtml(preLabel)}</span>
+        <span class="graph-repair-summary-pair"><span class="muted">Rated:</span> ${escHtml(rateLabel)}</span>
+      </div>
+    `);
+  }
+  return `<div class="graph-repair-summary graph-repair-calibration">${rows.join('')}</div>`;
+}
+
 function repairRepsMarkupForNode(data, repairState = {}) {
   const state = repairState || {};
   const actionButtonClass = 'btn-start-drill graph-detail-action';
@@ -582,7 +635,9 @@ function repairRepsMarkupForNode(data, repairState = {}) {
   if (status === 'complete') {
     const reps = Array.isArray(state.reps) ? state.reps : [];
     const ratings = Array.isArray(state.ratings) ? state.ratings : [];
-    const summaryRows = reps.length
+    const preConfidences = Array.isArray(state.preConfidences) ? state.preConfidences : [];
+    const calibrationMarkup = repairCalibrationSummaryMarkup(preConfidences, ratings);
+    const legacySummaryRows = reps.length && !calibrationMarkup
       ? reps.map((rep, index) => {
         const rating = ratings[index] || '';
         return `
@@ -599,7 +654,8 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         <div class="graph-detail-kicker">Repair Reps</div>
         ${repairProgressMarkup({ currentIndex: 2, total: Math.max(reps.length, 3), complete: true })}
         <h3 class="graph-detail-title">Practice logged</h3>
-        ${summaryRows ? `<div class="graph-repair-summary">${summaryRows}</div>` : ''}
+        <p class="graph-detail-copy">Three bridge reps saved on ${escHtml(nodeLabel)}.</p>
+        ${calibrationMarkup || (legacySummaryRows ? `<div class="graph-repair-summary">${legacySummaryRows}</div>` : '')}
         <p class="graph-detail-copy">These reps are saved. Graph progress comes from the next re-drill.</p>
         <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
       </div>
@@ -620,8 +676,13 @@ function repairRepsMarkupForNode(data, repairState = {}) {
   }
 
   const revealed = Boolean(state.revealed);
-  const typedAnswer = revealed ? escHtml(state.currentAnswer || '') : '';
+  const typedAnswer = escHtml(state.currentAnswer || '');
   const ratingSelected = Boolean(state.ratingSelected || state.ratings?.[currentIndex]);
+  const preConfidence = state.currentPreConfidence || '';
+  const pillsMarkup = repairPredictPillsMarkup(preConfidence, revealed);
+  const preConfidenceValid = preConfidence === 'guessing' || preConfidence === 'hunch' || preConfidence === 'can_explain';
+  const hasAnswer = typeof state.currentAnswer === 'string' && state.currentAnswer.trim().length > 0;
+  const revealReady = preConfidenceValid && hasAnswer;
   return `
     ${repairContextStripMarkup({ nodeLabel, phaseLabel: `Repair Rep ${currentIndex + 1} of ${reps.length}` })}
     <div class="graph-study-shell graph-repair-shell">
@@ -629,8 +690,9 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         ${repairProgressMarkup({ currentIndex, total: reps.length })}
         <div class="graph-detail-kicker">Causal bridge</div>
         <p class="graph-detail-copy">${escHtml(rep.prompt)}</p>
+        ${pillsMarkup}
         <div class="graph-detail-kicker">Your bridge</div>
-        <textarea class="graph-repair-input" rows="4" ${revealed ? 'readonly' : ''}>${typedAnswer}</textarea>
+        <textarea class="graph-repair-input" rows="4" aria-describedby="repair-reveal-helper" ${revealed ? 'readonly' : ''}>${typedAnswer}</textarea>
         ${revealed ? '' : '<p class="graph-detail-copy graph-repair-helper">Trace the causal link in one or two sentences.</p>'}
         ${revealed ? `
           <div class="graph-repair-bridge ${state.isRevealing ? 'is-revealing' : ''}">
@@ -647,7 +709,10 @@ function repairRepsMarkupForNode(data, repairState = {}) {
           ? (ratingSelected
             ? `<button class="${actionButtonClass} trigger-repair-next">${currentIndex + 1 >= reps.length ? 'Finish Reps' : 'Next Rep'}</button>`
             : '<p class="graph-detail-copy graph-repair-rating-hint">Choose the closest comparison before moving on.</p>')
-          : `<button class="${actionButtonClass} trigger-repair-reveal" disabled>Show reference bridge</button>`}
+          : `
+            <button class="${actionButtonClass} trigger-repair-reveal" ${revealReady ? '' : 'disabled'} aria-describedby="repair-reveal-helper">Lock in and show reference bridge</button>
+            <p class="graph-repair-reveal-helper" id="repair-reveal-helper">Pick a stance and type your bridge to continue.</p>
+          `}
       </section>
     </div>
   `;
