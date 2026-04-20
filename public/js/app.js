@@ -819,36 +819,135 @@ const App = (() => {
     };
   }
 
-  async function startAddConcept() {
-    addTriggerArea.style.overflowY = 'auto';
-    addTriggerArea.innerHTML = '<div class="creation-form"></div>';
-    const form = addTriggerArea.querySelector('.creation-form');
+  // ── Dialog helpers (C6a) ─────────────────────────────────────
+  let __dialogInertedNodes = [];
+  function mountCreationDialog() {
+    let node = document.getElementById('creation-dialog');
+    const firstMount = !node;
+    if (firstMount) {
+      node = document.createElement('div');
+      node.id = 'creation-dialog';
+      node.className = 'creation-dialog';
+      node.setAttribute('role', 'dialog');
+      node.setAttribute('aria-modal', 'true');
+      node.setAttribute('aria-labelledby', 'creation-dialog-title');
+      node.innerHTML = `
+        <div class="creation-dialog-scrim"></div>
+        <div class="creation-dialog-shell">
+          <div class="creation-dialog-header">
+            <span class="creation-dialog-kicker">New concept</span>
+            <button class="creation-dialog-close" type="button" aria-label="Close">×</button>
+          </div>
+          <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
+          <div class="creation-dialog-banner-slot"></div>
+          <div class="creation-dialog-content"></div>
+          <p class="creation-dialog-meta">Your words shape the path; they do not grade you.</p>
+        </div>
+      `;
+      document.body.appendChild(node);
+      node.querySelector('.creation-dialog-close').addEventListener('click', () => closeCreationDialog());
+      node.querySelector('.creation-dialog-scrim').addEventListener('click', () => closeCreationDialog());
+      node.querySelector('.creation-dialog-shell').addEventListener('keydown', trapFocusHandler);
+    }
+    node.dataset.open = 'true';
+    __dialogInertedNodes = Array.from(document.body.children).filter(
+      (el) => el !== node && !el.hasAttribute('inert')
+    );
+    __dialogInertedNodes.forEach((el) => el.setAttribute('inert', ''));
+    document.addEventListener('keydown', creationDialogKeyHandler);
+    return {
+      node,
+      shell: node.querySelector('.creation-dialog-shell'),
+      shellContent: node.querySelector('.creation-dialog-content'),
+      bannerSlot: node.querySelector('.creation-dialog-banner-slot'),
+    };
+  }
 
-    try {
-      const session = await fetchAuthSession();
-      if (session?.guest_mode) {
-        form.innerHTML = `
-          <div class="creation-intro">
-            <div class="creation-intro-row">
-              <div>
-                <div class="creation-intro-kicker">Extraction Disabled</div>
-                <div class="creation-intro-title">Guest mode uses sample maps</div>
-              </div>
-            </div>
-            <p class="creation-intro-copy" style="margin-top: 8px; color: var(--text-subtle); font-size: 0.9rem; line-height: 1.4;">Guest mode uses sample maps; sign in to extract your own.</p>
-          </div>
-          <div class="creation-footer" style="margin-top: 16px; display: flex; gap: 8px;">
-            <button class="creation-cancel" type="button" onclick="App.renderAddTrigger()">Cancel</button>
-            <a class="auth-link creation-submit" href="${buildLoginHref('/')}" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Sign In</a>
-          </div>
-        `;
-        return;
+  function closeCreationDialog() {
+    const node = document.getElementById('creation-dialog');
+    if (!node) return;
+    node.dataset.open = 'false';
+    __dialogInertedNodes.forEach((el) => el.removeAttribute('inert'));
+    __dialogInertedNodes = [];
+    document.removeEventListener('keydown', creationDialogKeyHandler);
+    setTimeout(() => {
+      if (node.dataset.open === 'false') {
+        node.querySelector('.creation-dialog-banner-slot').innerHTML = '';
+        node.querySelector('.creation-dialog-content').innerHTML = '';
       }
+    }, 350);
+    (window.__creationDialogTrigger || document.body).focus?.();
+  }
+
+  function creationDialogKeyHandler(e) {
+    if (e.key === 'Escape') closeCreationDialog();
+  }
+
+  function trapFocusHandler(e) {
+    if (e.key !== 'Tab') return;
+    const container = e.currentTarget;
+    const focusables = container.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
+  function buildGuestBanner() {
+    const banner = document.createElement('div');
+    banner.className = 'creation-banner creation-banner--guest';
+    banner.innerHTML = `
+      <div>
+        <strong>Guest mode uses sample maps.</strong><br>
+        Sign in to extract your own content into a real knowledge map.
+      </div>
+    `;
+    return banner;
+  }
+
+  function buildGuestActions(loginHref) {
+    const row = document.createElement('div');
+    row.className = 'creation-guest-actions';
+    row.innerHTML = `
+      <button class="btn-browse-starters" type="button">Browse starter maps</button>
+      <a class="auth-link" href="${escHtml(loginHref)}">Continue with Google</a>
+    `;
+    row.querySelector('.btn-browse-starters').addEventListener('click', () => {
+      closeCreationDialog();
+      showLibrary();
+    });
+    return row;
+  }
+
+  async function startAddConcept() {
+    window.__creationDialogTrigger = document.activeElement;
+    const dialog = mountCreationDialog();
+    let isGuest = false;
+    let session = null;
+    try {
+      session = await fetchAuthSession();
+      isGuest = !!(session && session.guest_mode);
     } catch (err) {
       console.warn('Auth fetch failed during concept creation:', err);
     }
 
-    buildContentInputUI(form, {
+    if (isGuest) {
+      dialog.bannerSlot.appendChild(buildGuestBanner());
+      dialog.shellContent.appendChild(buildGuestActions(buildLoginHref('/')));
+      const firstFocusable = dialog.shell.querySelector('a, button:not([disabled])');
+      firstFocusable?.focus();
+      return;
+    }
+
+    buildContentInputUI(dialog.shellContent, {
       showNameField: true,
       showClipboard: true,
       onSubmit: async ({ text, type, filename, url, name }) => {
@@ -1201,6 +1300,7 @@ const App = (() => {
           renderGrid(concepts);
           renderConceptList(concepts);
           selectConcept(concept.id);
+          closeCreationDialog();
           closeDrawer();
         } catch (err) {
           removeOverlay();
@@ -1223,9 +1323,12 @@ const App = (() => {
         }
       },
       onCancel: () => {
-        renderAddTrigger();
+        closeCreationDialog();
       }
     });
+    // Focus first input inside dialog after mount
+    const firstInput = dialog.shell.querySelector('input:not([disabled]), textarea:not([disabled])');
+    firstInput?.focus();
     scheduleTutorialRefresh();
   }
 

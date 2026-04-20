@@ -138,8 +138,9 @@ button:disabled { background-color:var(--locked); cursor:not-allowed; transform:
 
 .drawer-toggle {
   background:none; border:none; cursor:pointer;
-  padding:6px; border-radius:8px; color:var(--text-sub);
-  line-height:1; flex:none; width:auto;
+  padding:9px; border-radius:8px; color:var(--text-sub);
+  line-height:1; flex:none;
+  width:36px; height:36px; min-height:36px;
   transition:color 0.2s, background-color 0.2s;
 }
 .drawer-toggle:hover { color:var(--primary); background-color:var(--border); }

@@ -1094,3 +1094,147 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 [data-theme="dark"] .pill--locked {
   color: rgba(var(--cream-50-rgb), 0.62);
 }
+
+/* ============================================================
+   Creation dialog — center-stage composition surface.
+   Not a cramped modal; a reading-room canvas.
+   Reserve: aria-modal, role=dialog, Tab focus-trap (JS), Esc close.
+   ============================================================ */
+.creation-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: none;
+}
+.creation-dialog[data-open="true"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.creation-dialog-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay-backdrop);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity var(--duration-cozy) var(--ease-standard);
+}
+.creation-dialog[data-open="true"] .creation-dialog-scrim { opacity: 1; }
+.creation-dialog-shell {
+  position: relative;
+  width: min(560px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: var(--space-6) var(--space-8);
+  background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-hero), inset 0 1px 0 rgba(var(--white-rgb), 0.78);
+  transform: translateY(12px);
+  opacity: 0;
+  transition:
+    transform var(--duration-cozy) var(--ease-standard),
+    opacity var(--duration-cozy) var(--ease-standard);
+}
+.creation-dialog[data-open="true"] .creation-dialog-shell {
+  transform: translateY(0);
+  opacity: 1;
+}
+.creation-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-1);
+}
+.creation-dialog-kicker {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-kicker);
+  color: var(--accent-secondary);
+}
+.creation-dialog-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+.creation-dialog-close:hover { color: var(--text-strong); }
+.creation-dialog-title {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--text-strong);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 var(--space-3);
+}
+.creation-dialog-banner-slot {
+  /* Empty until guest/error banner injected. Separate from content so
+     buildContentInputUI's container.innerHTML writes don't wipe banner. */
+}
+.creation-dialog-content {
+  /* buildContentInputUI renders its form here; or guest message. */
+}
+.creation-dialog-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--space-3);
+}
+.creation-banner {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.creation-banner--guest {
+  background: rgba(var(--lavender-500-rgb), 0.14);
+  border: 1px solid rgba(var(--lavender-500-rgb), 0.30);
+  color: var(--text-strong);
+}
+.creation-banner--error {
+  background: var(--pill-danger-bg);
+  border: 1px solid rgba(224, 92, 107, 0.24);
+  color: var(--pill-danger-text);
+}
+.creation-banner a {
+  color: var(--accent-primary);
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: var(--space-1);
+}
+.creation-banner a:hover { text-decoration: underline; }
+.creation-guest-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.creation-guest-actions .btn-browse-starters {
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: 1px solid var(--border-strong);
+  color: var(--text-strong);
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.creation-guest-actions .btn-browse-starters:hover { background: var(--surface-nested); }
+.creation-guest-actions .auth-link {
+  /* Continue with Google style — reuse token-consuming auth-link from C3a */
+}
+@media (prefers-reduced-motion: reduce) {
+  .creation-dialog-scrim,
+  .creation-dialog-shell {
+    transition: none !important;
+  }
+}
