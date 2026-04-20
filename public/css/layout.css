@@ -904,9 +904,16 @@ body:not([data-map-open="true"]) .map-back-link {
 .map-core-thesis { font-size: 20px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 16px; font-family: var(--font-display); letter-spacing: -0.3px; }
 
 .map-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-.map-badge { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.map-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 .map-badge.arch { background: var(--accent-soft-strong); color: var(--primary); }
 .map-badge.diff { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
+.map-badge.state { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
+.map-badge-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--text-sub); }
+.map-badge.state[data-state="instantiated"] .map-badge-dot { background: var(--crystal-instantiated-lower-right); }
+.map-badge.state[data-state="growing"] .map-badge-dot      { background: var(--crystal-growing-upper-left); }
+.map-badge.state[data-state="fractured"] .map-badge-dot    { background: var(--danger); }
+.map-badge.state[data-state="hibernating"] .map-badge-dot  { background: var(--crystal-hibernating-upper-right); }
+.map-badge.state[data-state="actualized"] .map-badge-dot   { background: var(--crystal-actualized-upper-right); box-shadow: 0 0 5px var(--crystal-actualized-upper-right); }
 .map-low-density { font-size: 12px; color: var(--text-sub); font-style: italic; opacity: 0.8; margin-top: 8px; }
 
 .map-section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); letter-spacing: 0.02em; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
@@ -946,7 +953,7 @@ body:not([data-map-open="true"]) .map-back-link {
   align-items: flex-start;
   justify-content: space-between;
   gap: 32px;
-  padding: 8px 0 28px;
+  padding: 56px 0 28px;
   border-bottom: 1px solid var(--border);
 }
 .concept-header-main {
@@ -955,14 +962,6 @@ body:not([data-map-open="true"]) .map-back-link {
   flex-direction: column;
   gap: 10px;
   flex: 1 1 auto;
-}
-.concept-header-kicker {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--primary);
 }
 .concept-header-title {
   margin: 0;
@@ -1534,12 +1533,13 @@ body:not([data-map-open="true"]) .map-back-link {
     font-size: 22px;
   }
 
-  /* Concept header stacks vertically on mobile */
+  /* Concept header stacks vertically on mobile; top padding clears the
+     absolute-positioned .main-header app bar (~60-76px) */
   .concept-header {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
-    padding: 4px 0 20px;
+    padding: 64px 0 20px;
   }
   .concept-header-title { font-size: 24px; }
   .concept-header-summary { font-size: 14px; }
