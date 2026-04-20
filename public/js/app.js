@@ -2437,11 +2437,18 @@ const App = (() => {
   const REPAIR_REP_PRE_CONFIDENCE_VALUES = new Set(['guessing', 'hunch', 'can_explain']);
   const REPAIR_REP_RATING_VALUES = new Set(['close_match', 'partial', 'missed']);
 
-  function recordRepairRepsCompletion({ conceptId, nodeId, repCount, promptVersion, gapType, answerLengths, ratings }) {
+  function recordRepairRepsCompletion({
+    conceptId, nodeId, repCount, promptVersion, gapType,
+    answerLengths, ratings, preConfidences, lockDurationsMs,
+  }) {
     if (!conceptId || !nodeId) return;
     const history = loadRepairRepsHistory();
     const key = `${conceptId}::${nodeId}`;
     const entries = Array.isArray(history[key]) ? history[key] : [];
+    // pre_confidences and lock_durations_ms are practice metadata — a
+    // calibration read-out for the learner. They MUST NOT feed scheduling,
+    // node prioritization, drill_status, or any graph-truth mutation.
+    // See spec §Invariant Boundary.
     history[key] = [
       ...entries,
       {
@@ -2451,6 +2458,8 @@ const App = (() => {
         gap_type: gapType || null,
         answer_lengths: Array.isArray(answerLengths) ? answerLengths : [],
         ratings: Array.isArray(ratings) ? ratings : [],
+        pre_confidences: Array.isArray(preConfidences) ? preConfidences : [],
+        lock_durations_ms: Array.isArray(lockDurationsMs) ? lockDurationsMs : [],
       },
     ].slice(-20);
     saveRepairRepsHistory(history);
