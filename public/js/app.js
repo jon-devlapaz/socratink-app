@@ -915,6 +915,42 @@ const App = (() => {
     return banner;
   }
 
+  // Contract invariant — extraction success path must validate payload shape
+  // BEFORE any state mutation. Prevents BLOCKER UX-todo #4 silent-discard
+  // where an empty/malformed jsonPayload created a concept anyway.
+  function isValidKnowledgeMap(map) {
+    if (!map || typeof map !== 'object') return false;
+    if (!Array.isArray(map.backbone) || map.backbone.length === 0) return false;
+    if (!Array.isArray(map.clusters)) return false;
+    return true;
+  }
+
+  // User-facing, never echoes raw err.message — auth headers / stack
+  // fragments leak through otherwise, and browser-analytics.js:326 renders
+  // row.reason as a summary string.
+  function sanitizeExtractError(err) {
+    if (!err) return 'Something went wrong. Try again when ready.';
+    const msg = String(err.message || '');
+    if (/\b401|unauthor/i.test(msg)) return 'Sign in required to run extraction.';
+    if (/\b403|forbidden/i.test(msg)) return 'That request was not allowed.';
+    if (/\b429|rate limit/i.test(msg)) return 'Extraction service is throttled. Give it a minute and retry.';
+    if (/\b5\d{2}|server error/i.test(msg)) return 'The extraction service hiccuped. Try again when ready.';
+    if (/invalid map/i.test(msg)) return 'The extraction service returned an unexpected result. Try again when ready.';
+    return 'The network or service was unreachable. Try again when ready.';
+  }
+
+  function buildErrorBanner(sanitizedMessage) {
+    const banner = document.createElement('div');
+    banner.className = 'creation-banner creation-banner--error';
+    banner.innerHTML = `
+      <div>
+        <strong>Extraction didn't complete.</strong><br>
+        ${escHtml(sanitizedMessage)}
+      </div>
+    `;
+    return banner;
+  }
+
   function buildGuestActions(loginHref) {
     const row = document.createElement('div');
     row.className = 'creation-guest-actions';
@@ -1265,6 +1301,14 @@ const App = (() => {
           const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
+          // INVARIANT: failed or malformed extraction must never mutate
+          // contentStore / concepts / localStorage. Guard runs BEFORE any
+          // state mutation and regardless of UI disabled state.
+          if (!isValidKnowledgeMap(jsonPayload)) {
+            removeOverlay();
+            throw new Error('Extraction returned an invalid map.');
+          }
+
           removeOverlay(true);
           const concept = {
             id, name, state: 'growing',
@@ -1306,6 +1350,7 @@ const App = (() => {
           closeDrawer();
         } catch (err) {
           removeOverlay();
+          const sanitized = sanitizeExtractError(err);
           recordExtractRun({
             timestamp: extractStartedAt,
             stage: 'extract',
@@ -1318,10 +1363,21 @@ const App = (() => {
             input_chars: typeof text === 'string' ? text.length : 0,
             duration_ms: Math.round(performance.now() - extractStartedPerf),
             error_type: 'request_failed',
-            reason: err?.message || 'Extraction failed',
+            // USER-VISIBLE per browser-analytics.js:326 (row.reason → summary)
+            reason: sanitized,
+            // Debug-only; never rendered to learner analytics
+            reason_raw: err?.message || null,
             run_mode: 'default',
           });
-          alert('Extraction Failed: ' + err.message);
+          console.warn('[extract] raw error (console only):', err);
+          const bannerSlot = document.querySelector('.creation-dialog-banner-slot');
+          if (bannerSlot) {
+            const existing = bannerSlot.querySelector('.creation-banner--error');
+            if (existing) existing.remove();
+            bannerSlot.appendChild(buildErrorBanner(sanitized));
+          }
+          const shellContent = document.querySelector('.creation-dialog-content');
+          shellContent?.querySelectorAll('button, input, textarea').forEach((el) => { el.disabled = false; });
         }
       },
       onCancel: () => {
