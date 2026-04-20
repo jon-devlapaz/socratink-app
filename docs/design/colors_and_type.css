@@ -1,0 +1,527 @@
+/* ============================================================
+   socratink — colors & type foundations
+   ============================================================
+   The binding primitives for socratink. Anything that reaches
+   the interface goes through these tokens.
+
+   Philosophy: "a reading room, not a dashboard."
+     cream-50 page · ink-900 text · violet-600 primary
+     lavender-500 secondary · mauve-200 neutral
+     Warm-muted jewel tones. No neon, no clinical white-on-blue.
+
+   Mirrors jon-devlapaz/socratink-app/public/css/variables.css.
+   ============================================================ */
+
+/* ---------- Fonts ------------------------------------------- */
+/* Brand faces, all self-hosted variable fonts.
+   - Geom:    display / headings / CTAs (the brand face)
+   - Manrope: available as secondary display / fallback
+   - Inter:   body copy (variable, optical sizes) */
+
+@font-face {
+  font-family: "Geom";
+  src: url("fonts/Geom-VariableFont_wght.ttf") format("truetype-variations"),
+       url("fonts/Geom-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geom";
+  src: url("fonts/Geom-Italic-VariableFont_wght.ttf") format("truetype-variations"),
+       url("fonts/Geom-Italic-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("fonts/Manrope-VariableFont_wght.ttf") format("truetype-variations"),
+       url("fonts/Manrope-VariableFont_wght.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype-variations"),
+       url("fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype-variations"),
+       url("fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ---------- Crystal state (custom) properties --------------- */
+@property --crystal-glow-opacity { syntax: "<number>"; inherits: false; initial-value: 0.10; }
+@property --crystal-glow-blur    { syntax: "<length>"; inherits: false; initial-value: 6px; }
+
+/* ===========================================================
+   1. PRIMITIVE PALETTE
+   =========================================================== */
+:root {
+  --ink-900:        #242038;   /* deep indigo — near-black, all text */
+  --violet-600:     #9067c6;   /* primary — warm violet, not neon */
+  --lavender-500:   #8d86c9;   /* secondary — dustier, cooler */
+  --mauve-200:      #cac4ce;   /* neutral / locked / muted */
+  --cream-50:       #f7ece1;   /* page — warm paper, never pure white */
+  --white:          #ffffff;
+
+  /* rgb channels for alpha compositing */
+  --ink-900-rgb:      36, 32, 56;
+  --violet-600-rgb:   144, 103, 198;
+  --lavender-500-rgb: 141, 134, 201;
+  --mauve-200-rgb:    202, 196, 206;
+  --cream-50-rgb:     247, 236, 225;
+  --white-rgb:        255, 255, 255;
+
+  /* product-specific semantics */
+  --success:        #4dba8a;   /* solidified / actualized state */
+  --danger:         #e05c6b;   /* fractured state — only for non-solid */
+  --pill-success-text: #397a59;
+  --pill-danger-text:  #bf4f68;
+}
+
+/* ===========================================================
+   2. SEMANTIC SURFACE + TEXT
+   =========================================================== */
+:root {
+  /* Surfaces — layered cream paper */
+  --surface-page:       var(--cream-50);        /* page background */
+  --surface-card:       var(--white);            /* raised surfaces, dialogs */
+  --surface-panel:      rgba(var(--mauve-200-rgb), 0.28);  /* drawers, sidebars */
+  --surface-nested:     rgba(var(--mauve-200-rgb), 0.42);  /* nested / pressed */
+  --surface-high:       #fdf9f5;                 /* section bands */
+  --surface-highest:    #fffaf6;                 /* highest elevation */
+
+  /* Text */
+  --text-strong:        var(--ink-900);
+  --text-muted:         rgba(var(--ink-900-rgb), 0.68);
+  --text-on-primary:    var(--cream-50);         /* on violet fills */
+  --text-on-accent:     var(--cream-50);
+  --text-on-overlay:    rgba(var(--cream-50-rgb), 0.92);
+  --text-on-overlay-sub:rgba(var(--cream-50-rgb), 0.78);
+
+  /* Accent system */
+  --accent-primary:     var(--violet-600);
+  --accent-secondary:   var(--lavender-500);
+  --primary-fill:       #7a59aa;                 /* buttons — deeper than violet-600 */
+  --primary-fill-hover: #70529b;
+  --accent-soft:        rgba(var(--violet-600-rgb), 0.12);
+  --accent-soft-strong: rgba(var(--violet-600-rgb), 0.18);
+  --accent-border:      rgba(var(--violet-600-rgb), 0.18);
+  --accent-border-strong: rgba(var(--violet-600-rgb), 0.30);
+  --accent-glow:        rgba(var(--violet-600-rgb), 0.24);
+  --accent-focus:       rgba(var(--violet-600-rgb), 0.16);
+  --accent-ring:        0 0 0 3px rgba(var(--violet-600-rgb), 0.14);
+
+  /* Borders */
+  --border-subtle:      rgba(var(--ink-900-rgb), 0.10);
+  --border-strong:      rgba(var(--ink-900-rgb), 0.16);
+
+  /* Warm gradients for cards / panels */
+  --gradient-card-start:  rgba(var(--white-rgb),    0.96);
+  --gradient-card-end:    rgba(var(--cream-50-rgb), 0.96);
+  --gradient-panel-start: rgba(var(--white-rgb),    0.82);
+  --gradient-panel-end:   rgba(var(--cream-50-rgb), 0.92);
+  --gradient-stage-start: rgba(var(--white-rgb),    0.78);
+  --gradient-stage-end:   rgba(var(--cream-50-rgb), 0.96);
+
+  /* Page ambient blooms (use on body::before/::after) */
+  --page-bloom-primary:   radial-gradient(circle at center,
+                            rgba(var(--lavender-500-rgb), 0.14), transparent 68%);
+  --page-bloom-secondary: radial-gradient(circle at center,
+                            rgba(255, 249, 242, 0.42), transparent 62%);
+  --page-background:
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.56), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(var(--lavender-500-rgb), 0.12), transparent 24%),
+    radial-gradient(circle at 52% 100%, rgba(212, 179, 131, 0.09), transparent 30%),
+    linear-gradient(180deg,
+      rgba(255, 251, 247, 0.76),
+      rgba(var(--cream-50-rgb), 0.96) 26%,
+      var(--surface-page) 100%);
+}
+
+/* ===========================================================
+   3. NODE / CRYSTAL STATE COLORS
+   =========================================================== */
+:root {
+  /* Learner-facing graph node states */
+  --node-locked:        var(--mauve-200);
+  --node-primed:        var(--lavender-500);     /* cold attempt done */
+  --node-drilled:       #d8a867;                 /* warm amber — worth revisiting */
+  --node-solidified:    var(--success);          /* earned, verified */
+
+  /* Crystal polygon fills — authoritative (mirrors variables.css) */
+  /* instantiated = cold / just-seen */
+  --crystal-instantiated-top:         rgba(var(--mauve-200-rgb), 0.98);
+  --crystal-instantiated-upper-left:  rgba(var(--lavender-500-rgb), 0.72);
+  --crystal-instantiated-upper-right: rgba(var(--lavender-500-rgb), 0.58);
+  --crystal-instantiated-lower-left:  rgba(var(--lavender-500-rgb), 0.58);
+  --crystal-instantiated-lower-right: rgba(var(--ink-900-rgb),     0.70);
+  --crystal-instantiated-bottom-tip:  rgba(var(--ink-900-rgb),     0.82);
+  --crystal-instantiated-specular:    rgba(var(--cream-50-rgb),    0.92);
+  --crystal-instantiated-glow:        rgba(var(--lavender-500-rgb), 0.28);
+
+  /* growing = primed, in active drill */
+  --crystal-growing-top:         rgba(var(--lavender-500-rgb), 0.88);
+  --crystal-growing-upper-left:  rgba(var(--lavender-500-rgb), 0.82);
+  --crystal-growing-upper-right: rgba(var(--violet-600-rgb),   0.82);
+  --crystal-growing-lower-left:  rgba(var(--violet-600-rgb),   0.76);
+  --crystal-growing-lower-right: rgba(var(--ink-900-rgb),      0.82);
+  --crystal-growing-bottom-tip:  rgba(var(--ink-900-rgb),      0.90);
+  --crystal-growing-specular:    rgba(var(--cream-50-rgb),     0.96);
+  --crystal-growing-glow:        rgba(var(--lavender-500-rgb), 0.34);
+
+  /* fractured = non-solid re-drill (worth revisiting, never shamed) */
+  --crystal-fractured-top:         #b77b90;
+  --crystal-fractured-upper-left:  #a06279;
+  --crystal-fractured-upper-right: #794865;
+  --crystal-fractured-lower-left:  #794865;
+  --crystal-fractured-lower-right: #5f3450;
+  --crystal-fractured-bottom-tip:  #4a263e;
+  --crystal-fractured-specular:    rgba(var(--cream-50-rgb), 0.78);
+  --crystal-fractured-glow:        rgba(224, 92, 107, 0.18);
+
+  /* hibernating = parked for spaced return */
+  --crystal-hibernating-top:         rgba(var(--lavender-500-rgb), 0.72);
+  --crystal-hibernating-upper-left:  rgba(var(--violet-600-rgb),   0.58);
+  --crystal-hibernating-upper-right: rgba(var(--ink-900-rgb),      0.92);
+  --crystal-hibernating-lower-left:  rgba(var(--ink-900-rgb),      0.94);
+  --crystal-hibernating-lower-right: rgba(var(--ink-900-rgb),      1);
+  --crystal-hibernating-bottom-tip:  rgba(var(--ink-900-rgb),      1);
+  --crystal-hibernating-specular:    rgba(var(--cream-50-rgb),     0.70);
+  --crystal-hibernating-glow:        rgba(var(--lavender-500-rgb), 0.30);
+
+  /* actualized = solidified, verified understanding */
+  --crystal-actualized-top:         rgba(var(--cream-50-rgb), 0.98);
+  --crystal-actualized-upper-left:  rgba(var(--lavender-500-rgb), 0.86);
+  --crystal-actualized-upper-right: rgba(var(--violet-600-rgb),   0.88);
+  --crystal-actualized-lower-left:  rgba(var(--violet-600-rgb),   0.82);
+  --crystal-actualized-lower-right: rgba(var(--ink-900-rgb),      0.82);
+  --crystal-actualized-bottom-tip:  rgba(var(--ink-900-rgb),      0.92);
+  --crystal-actualized-specular:    rgba(var(--cream-50-rgb),     1);
+  --crystal-actualized-glow:        rgba(var(--violet-600-rgb),   0.38);
+
+  /* Isometric tile surface (the "board") */
+  --tile-top:   rgba(var(--cream-50-rgb), 0.98);
+  --tile-left:  rgba(var(--mauve-200-rgb), 0.92);
+  --tile-right: rgba(var(--lavender-500-rgb), 0.42);
+}
+
+/* ===========================================================
+   4. SHADOWS — violet-tinted, never gray
+   =========================================================== */
+:root {
+  --shadow-ambient: 0 40px 100px rgba(44, 51, 62, 0.05),
+                    0 2px 8px rgba(44, 51, 62, 0.04);
+  --shadow-card:    0 8px 32px rgba(var(--violet-600-rgb), 0.10),
+                    0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-soft:    0 10px 30px rgba(var(--ink-900-rgb), 0.05);
+  --shadow-inline:  0 2px 10px rgba(var(--ink-900-rgb), 0.10);
+  --shadow-hover:   0 16px 32px rgba(var(--ink-900-rgb), 0.10);
+  --shadow-raised:  0 18px 34px rgba(var(--ink-900-rgb), 0.09);
+  --shadow-hero:    0 42px 100px rgba(var(--ink-900-rgb), 0.08);
+  --shadow-mockup:  0 32px 80px rgba(84, 68, 120, 0.16);
+  --shadow-border:  0 0 0 1px rgba(var(--violet-600-rgb), 0.12);
+
+  --accent-shadow-sm: 0 4px 10px rgba(var(--violet-600-rgb), 0.20);
+  --accent-shadow-md: 0 6px 14px rgba(var(--violet-600-rgb), 0.28);
+  --accent-shadow-lg: 0 10px 24px rgba(var(--violet-600-rgb), 0.18);
+}
+
+/* ===========================================================
+   5. TYPOGRAPHY
+   =========================================================== */
+:root {
+  --font-display: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body:    "Inter",   -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:    ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, monospace;
+
+  /* Fluid type — clamp(min, preferred, max) */
+  --text-xs:   clamp(0.7rem,  0.65rem + 0.25vw, 0.80rem);  /* 11 → 13 */
+  --text-sm:   clamp(0.8rem,  0.75rem + 0.35vw, 0.95rem);  /* 13 → 15 */
+  --text-base: clamp(0.95rem, 0.85rem + 0.50vw, 1.10rem);  /* 15 → 17.6 */
+  --text-lg:   clamp(1.10rem, 1.00rem + 0.60vw, 1.25rem);  /* 17.6 → 20 */
+  --text-xl:   clamp(1.25rem, 1.10rem + 0.75vw, 1.40rem);  /* 20 → 22.4 */
+  --text-2xl:  clamp(1.50rem, 1.30rem + 1.00vw, 1.75rem);  /* 24 → 28 */
+  --text-3xl:  clamp(1.80rem, 1.60rem + 1.25vw, 2.25rem);  /* 28.8 → 36 */
+  --text-4xl:  clamp(1.95rem, 1.65rem + 1.50vw, 2.40rem);  /* 31 → 38 */
+  --text-display: clamp(3.85rem, 2.8rem + 5.2vw, 5.6rem);  /* hero titles */
+
+  /* Line heights */
+  --leading-tight:  1.15;
+  --leading-snug:   1.35;
+  --leading-normal: 1.55;
+  --leading-loose:  1.75;
+
+  /* Tracking */
+  --tracking-display: -0.03em;
+  --tracking-hero:    -0.06em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  -0.015em;
+  --tracking-wide:    0.08em;
+  --tracking-kicker:  0.18em;   /* uppercase eyebrow text */
+}
+
+/* ===========================================================
+   6. SPACING, RADII, MOTION
+   =========================================================== */
+:root {
+  /* 4px base rhythm */
+  --space-0:  0;
+  --space-1:  0.25rem;   /* 4  */
+  --space-2:  0.5rem;    /* 8  */
+  --space-3:  0.75rem;   /* 12 */
+  --space-4:  1rem;      /* 16 */
+  --space-5:  1.25rem;   /* 20 */
+  --space-6:  1.5rem;    /* 24 */
+  --space-8:  2rem;      /* 32 */
+  --space-10: 2.5rem;    /* 40 */
+  --space-12: 3rem;      /* 48 */
+  --space-16: 4rem;      /* 64 */
+  --space-20: 5rem;      /* 80 */
+  --space-24: 6rem;      /* 96 */
+
+  /* Corner radii — soft, reading-room feel */
+  --radius-sm:    0.625rem;   /* 10 — small chips */
+  --radius-btn:   0.625rem;   /* 10 — buttons */
+  --radius-md:    0.875rem;   /* 14 — inputs, pills */
+  --radius-card:  1rem;       /* 16 — cards */
+  --radius-lg:    1.25rem;    /* 20 — primary panels */
+  --radius-hero:  1.25rem;    /* 20 — hero media */
+  --radius-xl:    1.7rem;     /* 27 — demo windows */
+  --radius-2xl:   2rem;       /* 32 — hero shells */
+  --radius-pill:  999px;
+
+  /* Motion */
+  --theme-transition-ms:  90ms;
+  --theme-transition-ease: linear;
+  --morph-ms:             600ms;  /* crystal fill transitions */
+  --ease-spring:          cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard:        cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-micro:       140ms;
+  --duration-quick:       220ms;
+  --duration-cozy:        320ms;
+  --duration-ambient:     700ms;
+}
+
+/* ===========================================================
+   7. SEMANTIC COMPONENT TOKENS
+   =========================================================== */
+:root {
+  /* Pills */
+  --pill-accent-bg:  rgba(var(--violet-600-rgb), 0.10);
+  --pill-success-bg: rgba(77, 186, 138, 0.12);
+  --pill-danger-bg:  rgba(224, 92, 107, 0.10);
+
+  /* Overlay */
+  --overlay-backdrop: rgba(var(--ink-900-rgb), 0.25);
+
+  /* Tooltip */
+  --tooltip-bg:       rgba(var(--ink-900-rgb), 0.96);
+  --tooltip-border:   rgba(var(--violet-600-rgb), 0.40);
+  --tooltip-shadow:   0 18px 42px rgba(10, 10, 22, 0.28);
+  --tooltip-text:     rgba(var(--cream-50-rgb), 0.92);
+  --tooltip-text-sub: rgba(var(--cream-50-rgb), 0.82);
+  --tooltip-kicker:   rgba(var(--lavender-500-rgb), 0.94);
+
+  /* Focus beacon — pulsing highlight used in tutorial */
+  --beacon-highlight: rgba(var(--cream-50-rgb), 1);
+  --beacon-mid:       rgba(var(--mauve-200-rgb), 0.96);
+  --beacon-edge:      rgba(var(--violet-600-rgb), 1);
+}
+
+/* ===========================================================
+   8. DARK MODE
+   The night shift of the reading room.
+   Deep indigo page, lavender-warmed accent.
+   =========================================================== */
+[data-theme="dark"] {
+  --surface-page:     #1f1b31;
+  --surface-card:     #302b49;
+  --surface-panel:    rgba(var(--lavender-500-rgb), 0.18);
+  --surface-nested:   rgba(var(--lavender-500-rgb), 0.24);
+  --surface-high:     #3b3658;
+  --surface-highest:  #2d2846;
+
+  --text-strong:      var(--cream-50);
+  --text-muted:       rgba(var(--cream-50-rgb), 0.72);
+
+  --accent-soft:          rgba(var(--lavender-500-rgb), 0.22);
+  --accent-soft-strong:   rgba(var(--lavender-500-rgb), 0.30);
+  --accent-border:        rgba(var(--lavender-500-rgb), 0.34);
+  --accent-border-strong: rgba(var(--lavender-500-rgb), 0.48);
+  --accent-ring:          0 0 0 3px rgba(var(--lavender-500-rgb), 0.20);
+
+  --border-subtle: rgba(var(--cream-50-rgb), 0.14);
+  --border-strong: rgba(var(--cream-50-rgb), 0.22);
+  --node-locked:   rgba(var(--lavender-500-rgb), 0.52);
+
+  --gradient-card-start:  rgba(66, 59, 101, 0.96);
+  --gradient-card-end:    rgba(47, 42, 74, 0.98);
+  --gradient-panel-start: rgba(59, 53, 91, 0.94);
+  --gradient-panel-end:   rgba(45, 40, 70, 0.98);
+
+  --shadow-card:  0 14px 44px rgba(11, 9, 24, 0.28),
+                  0 1px 0 rgba(var(--cream-50-rgb), 0.04);
+  --shadow-soft:  0 16px 44px rgba(11, 9, 24, 0.24);
+  --shadow-hover: 0 24px 60px rgba(11, 9, 24, 0.34);
+
+  --tile-top:   #554f7b;
+  --tile-left:  #3b3658;
+  --tile-right: #443e67;
+
+  --page-background:
+    radial-gradient(circle at 14% 14%, rgba(var(--lavender-500-rgb), 0.28), transparent 28%),
+    radial-gradient(circle at 82% 16%, rgba(var(--violet-600-rgb),   0.24), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(66, 59, 101, 0.22), transparent 38%),
+    linear-gradient(180deg, #241f39 0%, #1f1b31 100%);
+}
+
+/* ===========================================================
+   9. BASE ELEMENTS — semantic defaults
+   =========================================================== */
+html {
+  background: var(--surface-page);
+  color-scheme: light;
+}
+[data-theme="dark"] { color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text-strong);
+  background-color: var(--surface-page);
+  background-image: var(--page-background);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color var(--theme-transition-ms) var(--theme-transition-ease),
+    color            var(--theme-transition-ms) var(--theme-transition-ease);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  color: var(--text-strong);
+  margin: 0;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--text-display);
+  font-weight: 700;
+  letter-spacing: var(--tracking-hero);
+  line-height: 0.92;
+}
+h2 {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+}
+h3 {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+}
+h4 {
+  font-size: var(--text-xl);
+  font-weight: 500;   /* scholarly, less shouty */
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-snug);
+}
+h5 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  letter-spacing: var(--tracking-normal);
+}
+h6 {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--accent-secondary);   /* "kicker" eyebrow style */
+}
+
+p {
+  margin: 0 0 1em;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+p strong { color: var(--text-strong); }
+
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: color var(--duration-micro) var(--ease-standard);
+}
+a:hover { color: var(--primary-fill); }
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-radius: 4px;
+}
+
+code, kbd, samp, pre {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--text-strong);
+  background: var(--accent-soft);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+pre {
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  overflow-x: auto;
+  background: var(--surface-nested);
+}
+
+hr {
+  border: none;
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-8) 0;
+}
+
+blockquote {
+  margin: 0;
+  padding: var(--space-4) var(--space-6);
+  border-left: 3px solid var(--accent-border-strong);
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: var(--leading-loose);
+}
+
+::selection {
+  background: rgba(var(--violet-600-rgb), 0.20);
+  color: var(--text-strong);
+}
+
+/* ---------- Utility classes used across docs + cards ------- */
+.kicker {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--accent-secondary);
+}
+.font-display { font-family: var(--font-display); }
+.font-body    { font-family: var(--font-body); }
+.font-mono    { font-family: var(--font-mono); }
