@@ -279,9 +279,8 @@ body:not([data-map-open="true"]) .map-back-link {
     justify-content: center;
     flex: 0 0 auto;
     gap: 6px;
-    padding: 4px 2px;
-    height: 24px;
-    min-height: 24px;
+    padding: 10px 8px;
+    min-height: 44px;
     background: transparent;
     border: none;
     border-radius: 4px;
@@ -316,11 +315,11 @@ body:not([data-map-open="true"]) .map-back-link {
   html:not([data-theme="dark"]) .drawer-theme-icon-moon { display: block; }
   .drawer-exit-btn {
     flex: 0 0 auto;
-    padding: 4px 2px;
+    padding: 10px 8px;
     background: none;
     border: none;
     box-shadow: none;
-    min-height: 0;
+    min-height: 44px;
     color: var(--text-muted);
     font-size: 0.72rem;
     font-weight: 500;

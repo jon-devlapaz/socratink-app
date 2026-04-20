@@ -27,6 +27,7 @@ body {
   font-size: var(--text-base);
   line-height: 1.6;
   background-color: var(--surface);
+  background-image: var(--page-background);
   color: var(--text);
   display: flex;
   align-items: center;
