@@ -1,5 +1,5 @@
 import { loadConcepts, getActiveId, setActiveId } from './store.js';
-import { escHtml, transformKnowledgeMapToGraph } from './graph-view.js?v=4';
+import { escHtml, transformKnowledgeMapToGraph } from './graph-view.js?v=5';
 import { buildBrowserLearnerSummaryPayload } from './browser-analytics.js';
 
 let conceptSelect = null;

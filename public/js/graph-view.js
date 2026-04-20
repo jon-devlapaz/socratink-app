@@ -1677,19 +1677,48 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         if (reopenBtn) reopenBtn.addEventListener('click', () => { window.SocratinkApp?.reopenStudy?.(activeNode.data()); });
         const repairBtn = detailEl.querySelector('.trigger-repair');
         if (repairBtn) repairBtn.addEventListener('click', () => { window.SocratinkApp?.startRepairReps?.(activeNode.data()); });
-        const repairRevealBtn = detailEl.querySelector('.trigger-repair-reveal');
-        if (repairRevealBtn) repairRevealBtn.addEventListener('click', () => {
-          const answer = detailEl.querySelector('.graph-repair-input')?.value || '';
-          window.SocratinkApp?.revealRepairRep?.(answer);
-        });
+
         const repairInput = detailEl.querySelector('.graph-repair-input');
-        if (repairRevealBtn && repairInput) {
+        const repairRevealBtn = detailEl.querySelector('.trigger-repair-reveal');
+
+        // Read the current pre-confidence from app state — the render was
+        // driven by it, so it's authoritative. Re-eval of the reveal-enable
+        // predicate on every keystroke stays DOM-local (no state dispatch)
+        // to avoid destroying caret position on textarea re-render.
+        const repairState = window.SocratinkApp?.getRepairRepsState?.(activeNode.id()) || null;
+        const preConfidenceValid = repairState
+          && (repairState.currentPreConfidence === 'guessing'
+            || repairState.currentPreConfidence === 'hunch'
+            || repairState.currentPreConfidence === 'can_explain');
+
+        if (repairInput && repairRevealBtn) {
           const syncRevealReadiness = () => {
-            repairRevealBtn.disabled = !repairInput.value.trim();
+            const hasAnswer = repairInput.value.trim().length > 0;
+            repairRevealBtn.disabled = !(preConfidenceValid && hasAnswer);
           };
           syncRevealReadiness();
           repairInput.addEventListener('input', syncRevealReadiness);
         }
+
+        if (repairRevealBtn) {
+          repairRevealBtn.addEventListener('click', () => {
+            const answer = repairInput?.value || '';
+            window.SocratinkApp?.revealRepairRep?.(answer);
+          });
+        }
+
+        // Pill listeners — on click, stamp the live textarea draft into
+        // state first (so re-render preserves the in-flight answer), then
+        // set the pre-confidence. The render loop will re-render the
+        // textarea with value="${currentAnswer}" and re-highlight the pill.
+        detailEl.querySelectorAll('.trigger-repair-predict').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const liveDraft = repairInput?.value || '';
+            window.SocratinkApp?.setRepairRepDraft?.(liveDraft);
+            window.SocratinkApp?.setRepairRepPreConfidence?.(btn.dataset.pre);
+          });
+        });
+
         const repairNextBtn = detailEl.querySelector('.trigger-repair-next');
         if (repairNextBtn) repairNextBtn.addEventListener('click', () => { window.SocratinkApp?.nextRepairRep?.(); });
         detailEl.querySelectorAll('.trigger-repair-rate').forEach((btn) => {

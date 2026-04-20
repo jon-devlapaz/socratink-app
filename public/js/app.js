@@ -1,7 +1,7 @@
 import { Bus } from './bus.js';
 import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
 import { Morph, crystalPolygons } from './morph.js';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=4';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=5';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=3';
 import {
