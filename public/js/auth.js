@@ -11,18 +11,37 @@ export function redirectToLogin(returnTo = safeReturnTo()) {
   window.location.assign(buildLoginHref(returnTo));
 }
 
-export async function fetchAuthSession() {
-  const response = await fetch('/api/me', {
-    method: 'GET',
-    credentials: 'same-origin',
-    headers: {
-      Accept: 'application/json',
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Auth bootstrap failed with status ${response.status}`);
+// Module-scoped session cache. First caller fetches; subsequent callers
+// await the same in-flight promise OR the resolved value. Cleared on
+// logout so the next fetch reflects the new anonymous state.
+let __sessionPromise = null;
+
+export async function fetchAuthSession({ force = false } = {}) {
+  if (force || !__sessionPromise) {
+    __sessionPromise = (async () => {
+      const response = await fetch('/api/me', {
+        method: 'GET',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Auth bootstrap failed with status ${response.status}`);
+      }
+      return response.json();
+    })().catch((err) => {
+      // Null the cache on failure so next call retries instead of
+      // permanently returning a rejection.
+      __sessionPromise = null;
+      throw err;
+    });
   }
-  return response.json();
+  return __sessionPromise;
+}
+
+export function invalidateAuthSession() {
+  __sessionPromise = null;
 }
 
 export async function logout() {
@@ -33,6 +52,7 @@ export async function logout() {
       Accept: 'application/json',
     },
   });
+  invalidateAuthSession();
   if (!response.ok) {
     throw new Error(`Logout failed with status ${response.status}`);
   }
