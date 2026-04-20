@@ -20,6 +20,7 @@
 - [Action Potential Fixture Solid Re-Drill](records/finding-action-potential-fixture-solid-redrill.md) — Sandbox fixture evidence for one solid re-drill path, not full-loop validation
 - [Hosted Cold Attempt Transcript Evidence](records/finding-hosted-cold-attempt-transcript-evidence.md) — Production Vercel transcript evidence for one unscored cold-attempt path, not full-loop validation
 - [Replay Coverage Below Truth Bar](records/issue-replay-coverage-below-truth-bar.md) — Closed: replay mechanism verified, automated tests deferred to DB milestone
+- [Low-Utility Techniques to Avoid](records/finding-low-utility-techniques-to-avoid.md) — Rereading, highlighting, summarization, keyword mnemonic, imagery; Dunlosky 2013 names these as LOW utility; socratink must actively steer away
 
 ## Sources
 - [ChatGPT Repo Audit 2026-04-08](sources/product-chat-log-chatgpt-repo-audit-2026-04-08.md) — External repo evaluation stored as a raw artifact plus curated source page
@@ -31,6 +32,7 @@
 - [Testing Effect Research Note](sources/research-note-testing-effect.md) — Primary-source coverage of testing/retrieval-practice literature including Rowland 2014 meta-analysis and Van Gog/Sweller debate
 - [Spacing Effect Research Note](sources/research-note-spacing-effect.md) — Primary-source coverage of distributed-practice literature including Cepeda meta-analyses and the expanding-vs-uniform debate
 - [Generation Effect Research Note](sources/research-note-generation-effect.md) — Primary-source coverage of generation-effect literature including Slamecka & Graf, Bertsch meta-analysis, errorful-generation, expertise reversal counterweight
+- [Dunlosky et al. 2013 Monograph](sources/research-note-dunlosky2013.md) — Authoritative utility ranking of ten learning techniques; HIGH: practice testing + distributed practice; LOW: rereading, highlighting, summarization, keyword mnemonic, imagery-for-text
 - [Theta Research: Tetris Effect and Learning Science (2026-04-17)](sources/research-note-theta-tetris-effect-2026-04-17.md) — Neurocognitive note rejecting Tetris-effect mechanism framing for declarative learning; confirms spacing + GBR + interleaving as the real substrate
 - [Desirable Difficulty Research Note](sources/research-note-desirable-difficulty.md) — Primary-literature review (Bjork 1994; New Theory of Disuse 1992; Bjork & Bjork 2011) grounding GBR, unscored cold attempt, and spaced-re-drill-only solidification; flags expertise reversal, metacognitive resistance, and UI-disfluency non-replication as product risks
 - [Bloom's Taxonomy Research Note](sources/research-note-blooms-taxonomy.md) — Primary-literature review establishing Bloom's as pedagogical classification (not cognitive mechanism); Krathwohl 2002 weakens hierarchy claim; Stanny 2016 flags inter-rater reliability limits for using Bloom's-level as analytics key

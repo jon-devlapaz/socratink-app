@@ -166,7 +166,7 @@ Required visual treatment:
 
 Use when:
 
-- `routing === "SESSION_COMPLETE"` or session guardrails trigger (time cap, node cap)
+- `routing === "SESSION_COMPLETE"` or session guardrails trigger (configured duration cap, node cap)
 
 What it means:
 

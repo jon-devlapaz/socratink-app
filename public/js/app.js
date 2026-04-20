@@ -34,6 +34,31 @@ const App = (() => {
   let currentPrimaryNav = 'nav-dashboard';
   let learnerAnalyticsDashboard = null;
   let sessionState = getDefaultPhaseBSessionState();
+  let drillSessionTimeLimitSeconds = null;
+
+  function applyRuntimeConfig(config = {}) {
+    const limitSeconds = Number(config.drill_session_time_limit_seconds);
+    drillSessionTimeLimitSeconds = Number.isFinite(limitSeconds) && limitSeconds > 0
+      ? limitSeconds
+      : null;
+  }
+
+  async function refreshRuntimeConfig() {
+    try {
+      const response = await fetch('/api/health');
+      if (!response.ok) return;
+      applyRuntimeConfig(await response.json());
+    } catch (err) {
+      console.warn('Runtime config unavailable.', err);
+    }
+  }
+
+  function hasDrillSessionTimeLimitElapsed(startedAt) {
+    if (!drillSessionTimeLimitSeconds || !startedAt) return false;
+    const startedAtMs = Date.parse(startedAt);
+    if (Number.isNaN(startedAtMs)) return false;
+    return Date.now() - startedAtMs > drillSessionTimeLimitSeconds * 1000;
+  }
 
   function getPhaseBSessionStorageKey(conceptId = getActiveId()) {
     return conceptId ? `${PHASE_B_SESSION_KEY_PREFIX}:${conceptId}` : PHASE_B_SESSION_KEY_PREFIX;
@@ -3254,7 +3279,7 @@ const App = (() => {
       return;
     }
 
-    if (!bypassSessionLimits && sessionState.startedAt && new Date() - new Date(sessionState.startedAt) > 25 * 60 * 1000) {
+    if (!bypassSessionLimits && hasDrillSessionTimeLimitElapsed(sessionState.startedAt)) {
       currentGraphController?.setInteractionMode?.('session-complete', activeDrillNode);
       return;
     }
@@ -3798,6 +3823,7 @@ const App = (() => {
         const response = await fetch('/api/health');
         if (!response.ok) throw new Error(`Status ${response.status}`);
         const data = await response.json();
+        applyRuntimeConfig(data);
         dot?.classList.add('connected');
         dot?.classList.remove('error');
         setStatusBadge(backendBadge, 'success', 'Connected');
@@ -3901,6 +3927,8 @@ const App = (() => {
     closeDrawer();
     redirectToLogin('/');
   }
+
+  void refreshRuntimeConfig();
 
   return {
     toggleDrawer, openDrawer, closeDrawer,

@@ -26,6 +26,7 @@ The thermostat starter-map MVP loop shipped. The product is now in Build-Measure
 - Cold attempts are unscored.
 - `solidified` can only result from spaced re-drill. Study and Repair Reps must not mutate graph truth.
 - Clusters are containers in MVP, not primary drill targets.
+- The wall-clock drill duration cap is disabled by default in the current MVP and remains configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`; node and retrieval-count guardrails remain active.
 
 ## Current Priorities
 - keep graph state and persisted state aligned
