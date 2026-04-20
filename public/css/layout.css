@@ -1438,6 +1438,97 @@ body:not([data-map-open="true"]) .map-back-link {
   color: var(--text-sub);
   opacity: 1;
 }
+
+/* ── Repair Reps Slice B — pre-reveal pill + calibration summary ── */
+
+.graph-repair-predict {
+  margin-bottom: 18px;
+}
+
+.graph-repair-predict > .graph-detail-kicker {
+  margin-bottom: 8px;
+}
+
+.graph-repair-predict-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.graph-repair-predict-pill {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-strong);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--duration-micro) var(--ease-standard, ease),
+              border-color var(--duration-micro) var(--ease-standard, ease);
+}
+
+.graph-repair-predict-pill:hover {
+  border-color: var(--accent-border-strong);
+}
+
+.graph-repair-predict-pill.is-selected,
+.graph-repair-predict-pill[aria-checked="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-border-strong);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.graph-repair-predict-group.is-locked,
+.graph-repair-predict-group[aria-disabled="true"] {
+  pointer-events: none;
+}
+
+.graph-repair-predict-group.is-locked .graph-repair-predict-pill,
+.graph-repair-predict-group[aria-disabled="true"] .graph-repair-predict-pill {
+  cursor: default;
+}
+
+.graph-repair-reveal-helper {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+}
+
+.graph-repair-calibration .graph-repair-summary-row {
+  display: grid;
+  grid-template-columns: max-content 1fr 1fr;
+  gap: 10px 16px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+
+.graph-repair-calibration .graph-repair-summary-row:last-child {
+  border-bottom: none;
+}
+
+.graph-repair-summary-rep {
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+}
+
+.graph-repair-summary-pair .muted {
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-repair-predict-pill {
+    transition: none;
+  }
+}
+
 .graph-detail-meta-compact {
   margin-top: 6px;
 }

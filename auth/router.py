@@ -454,7 +454,7 @@ def _render_login_html() -> str:
       <div class="brand-lockup">
         <img src="/brand/socratink-mark-square.png?v=1" alt="Socratink brand mark" class="brand-mark">
         <h1 class="brand-title">socratink</h1>
-        <p class="brand-kicker">the intelligence app for learners</p>
+        <p class="brand-kicker">guess wrong. learn faster.</p>
       </div>
 
       <section class="login-card" aria-labelledby="login-heading">
