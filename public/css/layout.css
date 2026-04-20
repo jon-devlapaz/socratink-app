@@ -188,11 +188,11 @@ body:not([data-map-open="true"]) .map-back-link {
     display: none;
   }
 
-  /* Drawer footer — mobile egress for theme toggle, sign-in, exit guest.
-     BLOCKER UX-todo #24 fix. Desktop hides via default rule below. */
+  /* Drawer footer — mobile egress: identity chip + branded CTA + icon rail.
+     Resolves BLOCKER UX-todo #24. Desktop hides via @media rule below. */
   .drawer-footer {
     margin-top: auto;
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-3) var(--space-4) var(--space-4);
     border-top: 1px solid var(--border-subtle);
     background: rgba(var(--cream-50-rgb), 0.60);
     display: flex;
@@ -202,69 +202,148 @@ body:not([data-map-open="true"]) .map-back-link {
   [data-theme="dark"] .drawer-footer {
     background: rgba(var(--lavender-500-rgb), 0.10);
   }
-  .drawer-theme-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  .drawer-theme-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-kicker);
-    font-weight: 700;
-  }
-  .drawer-theme-toggle {
+  /* Identity chip */
+  .drawer-footer-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    border-radius: var(--radius-pill);
-    background: var(--surface-nested);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-strong);
     font-size: 0.72rem;
     font-weight: 600;
-    font-family: inherit;
-    min-height: 44px;
-    min-width: 88px;
-    cursor: pointer;
+    color: var(--text-muted);
+    letter-spacing: 0.01em;
+    line-height: 1;
+    padding: 2px 0;
   }
-  .drawer-theme-toggle:hover {
-    border-color: var(--border-strong);
+  .drawer-footer-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    flex: 0 0 auto;
   }
+  .drawer-footer-chip-state {
+    color: var(--text-muted);
+    opacity: 0.72;
+    font-weight: 500;
+  }
+  /* Primary CTA — Continue with Google */
   .drawer-signin-link {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 10px;
+    justify-content: flex-start;
     min-height: 44px;
     padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-btn);
+    border-radius: 12px;
     background: var(--accent-primary);
     color: var(--text-on-primary);
-    font-size: 0.82rem;
-    font-weight: 700;
+    font-size: 0.85rem;
+    font-weight: 600;
     text-decoration: none;
     letter-spacing: 0.01em;
+    transition: background var(--duration-micro) var(--ease-standard);
   }
   .drawer-signin-link:hover {
     background: var(--primary-fill-hover);
     color: var(--text-on-primary);
   }
-  .drawer-exit-btn {
-    padding: var(--space-2) var(--space-4);
-    background: none;
-    border: 1px solid var(--border-strong);
-    color: var(--text-strong);
-    border-radius: var(--radius-btn);
-    font-size: 0.8rem;
+  .drawer-signin-glyph {
+    flex: 0 0 auto;
+    background: var(--text-on-primary);
+    border-radius: 4px;
+    padding: 2px;
+    width: 20px;
+    height: 20px;
+  }
+  .drawer-signin-label { flex: 1 1 auto; }
+  .drawer-signin-arrow {
+    flex: 0 0 auto;
+    font-size: 0.9rem;
+    opacity: 0.85;
+    transition: transform var(--duration-micro) var(--ease-standard);
+  }
+  .drawer-signin-link:hover .drawer-signin-arrow { transform: translateX(2px); }
+  /* Tertiary row — theme toggle (icon + label) + exit guest (text).
+     Horizontal padding matches the signin pill's content padding so the
+     Theme icon aligns under the Google G and Exit guest aligns under →. */
+  .drawer-footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 2px var(--space-4) 0;
+  }
+  .drawer-theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 6px;
+    padding: 4px 2px;
+    height: 24px;
+    min-height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    box-shadow: none;
+    color: var(--text-muted);
+    font-size: 0.72rem;
     font-weight: 500;
     font-family: inherit;
-    min-height: 44px;
+    letter-spacing: 0.01em;
     cursor: pointer;
+    transition: color var(--duration-micro) var(--ease-standard);
   }
-  .drawer-exit-btn:hover {
-    background: var(--surface-nested);
+  .drawer-theme-toggle:hover,
+  .drawer-theme-toggle:hover:not(:disabled),
+  .drawer-theme-toggle:active:not(:disabled) {
+    color: var(--text-strong);
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+  }
+  .drawer-theme-toggle:focus-visible {
+    outline: none;
+    box-shadow: none;
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .drawer-theme-icon { display: none; }
+  [data-theme="dark"] .drawer-theme-icon-sun { display: block; }
+  :root:not([data-theme="dark"]) .drawer-theme-icon-moon,
+  html:not([data-theme="dark"]) .drawer-theme-icon-moon { display: block; }
+  .drawer-exit-btn {
+    flex: 0 0 auto;
+    padding: 4px 2px;
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-height: 0;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: color var(--duration-micro) var(--ease-standard);
+  }
+  .drawer-exit-btn:hover,
+  .drawer-exit-btn:hover:not(:disabled),
+  .drawer-exit-btn:active:not(:disabled) {
+    color: var(--text-strong);
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+  }
+  .drawer-exit-btn:focus-visible {
+    outline: none;
+    box-shadow: none;
+    color: var(--text-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   /* Bottom Navigation for Mobile */

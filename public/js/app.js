@@ -11,7 +11,7 @@ import {
 } from './store.js';
 
 import {
-  card, titleEl, descEl, conceptLabelEl, primaryControls, drillControls,
+  card, titleEl, descEl, primaryControls, drillControls,
   heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls, POLYGON_IDS
@@ -211,7 +211,6 @@ const App = (() => {
 
   function renderHero(concept) {
     if (!concept) {
-      conceptLabelEl.textContent = 'Dashboard';
       titleEl.textContent = 'Add your first socratink';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
@@ -219,7 +218,6 @@ const App = (() => {
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
-      conceptLabelEl.textContent = 'Selected Concept';
       titleEl.textContent = concept.name;
       descEl.textContent = getHeroGuidance(concept);
       if (heroStateChipEl) {
@@ -410,19 +408,23 @@ const App = (() => {
     addTriggerArea.style.overflowY = '';
     const full = loadConcepts().length >= 4;
     addTriggerArea.innerHTML = full
-      ? `<button class="add-trigger add-trigger-card disabled" type="button" disabled aria-disabled="true">
-           <span class="add-trigger-icon">+</span>
-           <span class="add-trigger-body">
-             <span class="add-trigger-title">Vault full</span>
-             <span class="add-trigger-copy">You have 4 of 4 tinks active. Remove one to add another.</span>
+      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Vault full — remove a concept to add another">
+           <span class="add-trigger-icon" aria-hidden="true">
+             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+               <line x1="6" y1="2" x2="6" y2="10"/>
+               <line x1="2" y1="6" x2="10" y2="6"/>
+             </svg>
            </span>
+           <span class="add-trigger-title">vault full</span>
          </button>`
-      : `<button class="add-trigger add-trigger-card" id="add-trigger" type="button" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon">+</span>
-           <span class="add-trigger-body">
-             <span class="add-trigger-title">Add a New Tink</span>
-             <span class="add-trigger-copy">Paste text, import a URL, or upload a file to map a fresh concept.</span>
+      : `<button class="add-trigger" id="add-trigger" type="button" onclick="App.startAddConcept()">
+           <span class="add-trigger-icon" aria-hidden="true">
+             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+               <line x1="6" y1="2" x2="6" y2="10"/>
+               <line x1="2" y1="6" x2="10" y2="6"/>
+             </svg>
            </span>
+           <span class="add-trigger-title">new tink</span>
          </button>`;
     scheduleTutorialRefresh();
   }
@@ -3824,8 +3826,10 @@ const App = (() => {
     try { session = await fetchAuthSession(); } catch (err) { console.warn('Drawer session fetch failed.', err); }
     const isGuest = !!(session && session.guest_mode);
     const authEnabled = !!(session && session.auth_enabled);
+    const chip = document.getElementById('drawer-footer-chip');
     const exitBtn = document.getElementById('drawer-exit-btn');
     const signinLink = document.getElementById('drawer-signin-link');
+    if (chip) chip.hidden = !isGuest;
     if (exitBtn) exitBtn.hidden = !isGuest;
     if (signinLink) {
       const show = isGuest && authEnabled;

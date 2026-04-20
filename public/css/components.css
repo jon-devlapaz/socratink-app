@@ -248,6 +248,7 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   font-family:var(--font-display);
   font-size:20px; font-weight:800; letter-spacing:-0.5px; color:var(--text);
 }
+.brand-accent { color: var(--accent-primary); }
 
 /* Sidebar navigation */
 .sidebar-nav {
@@ -284,10 +285,12 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 }
 
 .drawer-close {
-  position:absolute; top:16px; right:16px;
+  position:absolute; top:28px; right:20px;
   background:none; border:none; cursor:pointer; color:var(--text-sub);
-  font-size:18px; line-height:1; padding:4px; border-radius:6px;
-  width:auto; flex:none; transition:color 0.15s;
+  font-size:18px; line-height:1; padding:0; border-radius:8px;
+  width:32px; height:32px; min-height:32px;
+  display:inline-flex; align-items:center; justify-content:center;
+  flex:none; transition:color 0.15s;
 }
 .drawer-close:hover { color:var(--text); }
 
@@ -296,7 +299,7 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 /* ── 10. Concept list items ──────────────────────────────── */
 .concept-item {
   display:flex; align-items:center; gap:10px;
-  padding:10px 16px; cursor:pointer;
+  padding:10px 20px; cursor:pointer;
   transition:background-color 0.15s;
 }
 .concept-item:hover { background-color:var(--border); }
@@ -319,62 +322,59 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 }
 .concept-delete {
   background:none; border:none; cursor:pointer; color:transparent;
-  font-size:16px; line-height:1; padding:2px 4px; border-radius:4px;
-  flex:none; width:auto; transition:color 0.15s, background-color 0.15s;
+  font-size:16px; line-height:1; padding:0; border-radius:6px;
+  flex:none; width:26px; height:26px; min-height:26px;
+  display:inline-flex; align-items:center; justify-content:center;
+  transition:color 0.15s, background-color 0.15s;
 }
 .concept-item:hover .concept-delete { color:var(--text-sub); }
 .concept-delete:hover { color:var(--danger) !important; background-color:var(--pill-danger-bg); }
 
+/* Add-trigger — ghost row matching .concept-item vocabulary. Trailing row
+   that reads as "the last row where you can add another concept." */
 .add-trigger {
-  display:flex; align-items:center; gap:10px; padding:10px 16px;
-  cursor:pointer; color:var(--text-sub); font-size:13px;
-  border-top:1px solid var(--border); flex-shrink:0;
+  display:flex; align-items:center; gap:6px;
+  padding:10px 20px; cursor:pointer;
+  color:var(--text-muted); font-size:13px; font-weight:500;
+  background:transparent; border:none; box-shadow:none;
+  width:100%; min-height:0;
+  font-family:inherit; text-align:left;
+  letter-spacing:0.01em;
   transition:color 0.15s, background-color 0.15s;
 }
-.add-trigger:hover { color:var(--primary); background-color:var(--border); }
-.add-trigger-icon { font-size:16px; color:var(--primary); flex-shrink:0; }
-.add-trigger.disabled { opacity:0.4; cursor:not-allowed; }
-.add-trigger-card {
-  width: calc(100% - 24px);
-  margin: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--accent-soft-strong);
-  border-radius: 16px;
-  background: linear-gradient(180deg, var(--gradient-card-start) 0%, var(--gradient-card-end) 100%);
-  box-shadow: var(--shadow-soft);
-  text-align: left;
-  gap: 12px;
+.add-trigger:hover:not(:disabled),
+.add-trigger:hover:not(:disabled):not(:active) {
+  color:var(--primary);
+  background-color:var(--border);
+  box-shadow:none;
+  transform:none;
+  opacity:1;
 }
-.add-trigger-card .add-trigger-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border);
-  font-size: 17px;
+.add-trigger:active:not(:disabled) {
+  transform:none;
+  opacity:1;
+  box-shadow:none;
 }
-.add-trigger-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+.add-trigger:focus-visible {
+  outline:none;
+  box-shadow:none;
+  background-color:var(--border);
+  color:var(--primary);
 }
+.add-trigger.disabled {
+  opacity:0.45;
+  cursor:not-allowed;
+}
+.add-trigger-icon {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:12px; height:12px; flex-shrink:0;
+  color:var(--text-muted);
+  transition:color 0.15s;
+}
+.add-trigger:hover:not(:disabled) .add-trigger-icon { color:var(--primary); }
 .add-trigger-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.add-trigger-copy {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-sub);
-}
-.add-trigger-card:hover {
-  border-color: var(--accent-primary);
-  box-shadow: var(--shadow-hover);
+  flex:1; font-size:13px; color:inherit;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 
 #tile-tooltip {
