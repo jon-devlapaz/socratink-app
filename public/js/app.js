@@ -819,10 +819,34 @@ const App = (() => {
     };
   }
 
-  function startAddConcept() {
+  async function startAddConcept() {
     addTriggerArea.style.overflowY = 'auto';
     addTriggerArea.innerHTML = '<div class="creation-form"></div>';
     const form = addTriggerArea.querySelector('.creation-form');
+
+    try {
+      const session = await fetchAuthSession();
+      if (session?.guest_mode) {
+        form.innerHTML = `
+          <div class="creation-intro">
+            <div class="creation-intro-row">
+              <div>
+                <div class="creation-intro-kicker">Extraction Disabled</div>
+                <div class="creation-intro-title">Guest mode uses sample maps</div>
+              </div>
+            </div>
+            <p class="creation-intro-copy" style="margin-top: 8px; color: var(--text-subtle); font-size: 0.9rem; line-height: 1.4;">Guest mode uses sample maps; sign in to extract your own.</p>
+          </div>
+          <div class="creation-footer" style="margin-top: 16px; display: flex; gap: 8px;">
+            <button class="creation-cancel" type="button" onclick="App.renderAddTrigger()">Cancel</button>
+            <a class="auth-link creation-submit" href="${buildLoginHref('/')}" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Sign In</a>
+          </div>
+        `;
+        return;
+      }
+    } catch (err) {
+      console.warn('Auth fetch failed during concept creation:', err);
+    }
 
     buildContentInputUI(form, {
       showNameField: true,
