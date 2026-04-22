@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=auto_awesome,help,memory,psychology,settings&display=block"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=auto_awesome,help,memory,show_chart,settings&display=block"
     rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
@@ -53,8 +53,8 @@
       <span class="bottom-nav-label">Library</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showAnalytics()" id="bn-analytics">
-      <span class="material-symbols-outlined">psychology</span>
-      <span class="bottom-nav-label">Analytics</span>
+      <span class="material-symbols-outlined">show_chart</span>
+      <span class="bottom-nav-label">Your Progress</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showSettings()" id="bn-settings">
       <span class="material-symbols-outlined">settings</span>
@@ -75,7 +75,7 @@
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showLibrary()"><span class="material-symbols-outlined">memory</span> Library</a>
       <a id="nav-analytics" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showAnalytics()" title="Open learner analytics"><span class="material-symbols-outlined">psychology</span> Analytics</a>
+        onclick="App.showAnalytics()" title="Open your progress"><span class="material-symbols-outlined">show_chart</span> Your Progress</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
       <a id="nav-guide" class="sidebar-nav-item" href="javascript:void(0)"
@@ -273,8 +273,8 @@
       <div class="analytics-shell analytics-shell-embedded">
         <header class="analytics-header">
           <div>
-            <div class="analytics-kicker">Learner Analytics</div>
-            <h1>Truthful Learning Analytics</h1>
+            <div class="analytics-kicker">Progress</div>
+            <h1>Your Progress</h1>
             <p>See what is genuinely solid, what still needs a return, and what your next truthful move should be.</p>
           </div>
           <div class="analytics-actions">
@@ -492,7 +492,7 @@
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=31"></script>
+  <script type="module" src="js/app.js?v=32"></script>
 
   <!-- Vercel Speed Insights -->
   <script>
