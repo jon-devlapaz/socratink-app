@@ -481,7 +481,7 @@ def _render_login_html() -> str:
                 <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
                 <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
               </svg>
-              Buy me a coffee
+              Support the build
             </a>
           </div>
         </div>
