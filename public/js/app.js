@@ -433,14 +433,14 @@ const App = (() => {
     addTriggerArea.style.overflowY = '';
     const full = loadConcepts().length >= 4;
     addTriggerArea.innerHTML = full
-      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Vault full — remove a concept to add another">
+      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Library full — remove a concept to add another">
            <span class="add-trigger-icon" aria-hidden="true">
              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                <line x1="6" y1="2" x2="6" y2="10"/>
                <line x1="2" y1="6" x2="10" y2="6"/>
              </svg>
            </span>
-           <span class="add-trigger-title">vault full</span>
+           <span class="add-trigger-title">library full</span>
          </button>`
       : `<button class="add-trigger" id="add-trigger" type="button" onclick="App.startAddConcept()">
            <span class="add-trigger-icon" aria-hidden="true">
@@ -2094,7 +2094,7 @@ const App = (() => {
 
       <div class="library-section">
         <h3 class="library-section-title">Documentation Concepts</h3>
-        <p class="library-section-copy">Curated source maps you can add to your vault and drill like any other concept.</p>
+        <p class="library-section-copy">Curated source maps you can add to your library and drill like any other concept.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
             const alreadyAdded = existingConceptNames.has(item.name);
@@ -2105,7 +2105,7 @@ const App = (() => {
                     <div class="library-card-kicker">${escHtml(item.kicker)}</div>
                     <span class="library-card-name">${escHtml(item.name)}</span>
                   </div>
-                  <span class="library-card-state">${alreadyAdded ? 'In vault' : 'Ready'}</span>
+                  <span class="library-card-state">${alreadyAdded ? 'Mapped' : 'Ready'}</span>
                 </div>
                 <p class="library-card-summary">${escHtml(item.summary)}</p>
                 <div class="library-card-meta">
@@ -2120,7 +2120,7 @@ const App = (() => {
       </div>
       
       <div class="library-section" style="margin-top: 40px;">
-        <h3 class="library-section-title">Your Vault</h3>
+        <h3 class="library-section-title">Your Library</h3>
         <p class="library-section-copy">Mapped concepts ready to reopen and drill.</p>
     `;
 
