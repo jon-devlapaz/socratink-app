@@ -1,4 +1,0 @@
-interface:
-  display_name: "Socratink Brain"
-  short_description: "Socratink internal product memory"
-  default_prompt: "Use $socratink-brain to ingest product evidence, evaluate logs, and update Socratink's internal product-memory wiki."
