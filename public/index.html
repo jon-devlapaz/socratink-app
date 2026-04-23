@@ -217,13 +217,13 @@
     <!-- Hero card: concept info left, crystal grid right -->
     <section class="hero-card">
 
-      <div class="hero-info" id="hero-info" aria-live="polite">
+      <div class="hero-info" id="hero-info">
         <div class="hero-meta-row">
           <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
         </div>
         <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
         <h1 class="hero-title" id="title">What do you want to understand?</h1>
-        <p class="desc hero-guidance" id="desc">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
+        <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
         <div class="hero-actions">
           <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
             <span class="material-symbols-outlined hero-primary-action__icon" aria-hidden="true">add</span>
