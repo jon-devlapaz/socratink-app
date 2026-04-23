@@ -354,6 +354,9 @@ body.analytics-page {
   background: rgba(var(--ink-900-rgb), 0.08);
   overflow: hidden;
 }
+[data-theme="dark"] .bar-track {
+  background: rgba(var(--cream-50-rgb), 0.10);
+}
 
 .bar-fill {
   position: absolute;
