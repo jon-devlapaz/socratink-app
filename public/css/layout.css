@@ -136,6 +136,12 @@ body:not([data-map-open="true"]) .map-back-link {
   transition: background-color var(--theme-transition-ms) var(--theme-transition-ease);
   flex-shrink: 0;
 }
+.hero-card:has(.hero-state-chip[data-state="empty"]) {
+  grid-template-columns: 1fr;
+}
+.hero-card:has(.hero-state-chip[data-state="empty"]) #grid-container {
+  display: none;
+}
 .hero-info {
   min-width: 0;
   max-width: 460px;
