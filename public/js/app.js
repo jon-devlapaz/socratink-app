@@ -3451,7 +3451,7 @@ const App = (() => {
   const tutorialDirectives = [
     {
       id: 'quick-guide',
-      sel: '#nav-guide',
+      sel: '#quick-guide-toggle',
       title: 'Use Quick Guide Beacons',
       text: 'Turn this on any time to see lightweight tips around the current screen. Hover or focus the glowing dots to read them.',
       when: () => true,
@@ -3652,6 +3652,15 @@ const App = (() => {
       App.toggleTutorial();
     }
   });
+
+  function syncTutorialToggleUi() {
+    const guideBtn = document.getElementById('quick-guide-toggle');
+    const guideState = document.getElementById('quick-guide-state');
+    if (guideBtn) guideBtn.setAttribute('aria-pressed', String(tutorialMode));
+    if (guideState) guideState.textContent = tutorialMode ? 'On' : 'Off';
+  }
+
+  syncTutorialToggleUi();
 
   let typingIndicatorElement = null;
 
@@ -4033,12 +4042,7 @@ const App = (() => {
 
     toggleTutorial: () => {
       tutorialMode = !tutorialMode;
-      const guideBtn = document.getElementById('nav-guide');
-      if (guideBtn) {
-        if (tutorialMode) guideBtn.dataset.engaged = 'true';
-        else delete guideBtn.dataset.engaged;
-        guideBtn.setAttribute('aria-pressed', String(tutorialMode));
-      }
+      syncTutorialToggleUi();
       if (window.innerWidth < 900) closeDrawer();
 
       if (!tutorialMode) {

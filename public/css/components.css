@@ -274,6 +274,91 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   font-weight: 700;
 }
 
+.sidebar-tools {
+  padding: 6px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.sidebar-tools .sidebar-section-label {
+  padding: 0 8px 2px;
+}
+.sidebar-tool-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(var(--white-rgb), 0.55);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
+}
+[data-theme="dark"] .sidebar-tool-toggle {
+  background: rgba(var(--lavender-500-rgb), 0.08);
+}
+.sidebar-tool-toggle:hover {
+  background: var(--surface-high);
+  border-color: var(--accent-border);
+}
+.sidebar-tool-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-color: var(--accent-border-strong);
+}
+.sidebar-tool-toggle[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-border-strong);
+  color: var(--primary);
+}
+.sidebar-tool-icon {
+  font-size: 20px;
+  color: inherit;
+  flex-shrink: 0;
+}
+.sidebar-tool-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.sidebar-tool-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: inherit;
+}
+.sidebar-tool-copy {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-sub);
+}
+.sidebar-tool-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-nested);
+  color: var(--text-sub);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.sidebar-tool-toggle[aria-pressed="true"] .sidebar-tool-state {
+  background: rgba(var(--violet-600-rgb), 0.16);
+  color: var(--primary);
+}
+
 .sidebar-divider { height:1px; background:var(--border); margin:8px 12px; flex-shrink:0; }
 
 .sidebar-section-label {

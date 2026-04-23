@@ -78,9 +78,20 @@
         onclick="App.showAnalytics()" title="Open your progress"><span class="material-symbols-outlined">show_chart</span> Your Progress</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
-      <a id="nav-guide" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.toggleTutorial()"><span class="material-symbols-outlined">help</span> Quick Guide</a>
     </nav>
+
+    <div class="sidebar-tools" aria-label="Help tools">
+      <span class="sidebar-section-label">Help</span>
+      <button id="quick-guide-toggle" class="sidebar-tool-toggle" type="button" onclick="App.toggleTutorial()"
+        aria-pressed="false" aria-labelledby="quick-guide-title" aria-describedby="quick-guide-copy">
+        <span class="material-symbols-outlined sidebar-tool-icon" aria-hidden="true">help</span>
+        <span class="sidebar-tool-body">
+          <span id="quick-guide-title" class="sidebar-tool-title">Quick Guide</span>
+          <span id="quick-guide-copy" class="sidebar-tool-copy">Show hints on this screen</span>
+        </span>
+        <span id="quick-guide-state" class="sidebar-tool-state" aria-hidden="true">Off</span>
+      </button>
+    </div>
 
     <div class="sidebar-divider"></div>
     <span class="sidebar-section-label">Concepts</span>
