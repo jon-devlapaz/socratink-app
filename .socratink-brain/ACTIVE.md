@@ -58,5 +58,5 @@ Promotion rules:
 
 - Metacognitive UX expansion (split textarea, hedge-word detector, two-step reveal, Focus mode, Reflection cards, Calibration tiles) — see `raw/ux-audits/2026-04-20-repair-reps-metacog.md`. Re-promote items after current gate clears.
 - Full-product UX polish (token rewiring for dark mode, Analytics tile redesign, Library card unification, focus rings, keyboard/a11y polish) — see `raw/ux-audits/2026-04-16-full-product.md`. Re-promote after current gate clears.
-- Supabase migration (Phases 1–9) — see `.planning.post-mvp/ROADMAP.md`. This is post-Build-Measure-Learn work, not current gate work.
+- Supabase migration (Phases 1–9) — see `.planning/ROADMAP.md`. This is post-Build-Measure-Learn work, not current gate work.
 - Product-copy hygiene (Bloom attribution, 2-sigma → VanLehn, Vygotsky → Wood-Bruner-Ross) — important for doctrine integrity, not MVP release gate. Park in a dedicated doctrine-cleanup pass.

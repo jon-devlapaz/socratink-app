@@ -124,7 +124,7 @@ class AuthRouterTests(unittest.TestCase):
         self.assertIn("Socratink - The Socratic Canvas", response.text)
         self.assertIn("Continue with Google", response.text)
         self.assertIn("Continue as Guest", response.text)
-        self.assertIn("Buy me a coffee", response.text)
+        self.assertIn("Support the build", response.text)
         self.assertIn("https://buymeacoffee.com/socratink", response.text)
         self.assertIn("coffee-button", response.text)
         self.assertNotIn("Email Address", response.text)

@@ -215,7 +215,7 @@ function renderBenchmarks(items) {
 function renderRecentEvents(items) {
   recentEvents.innerHTML = createList(
     items,
-    'No analytics events yet.',
+    'No run events yet.',
     (item) => `
       <div class="event-item">
         <div class="event-topline">
@@ -242,7 +242,7 @@ function escapeHtml(value) {
 async function loadDashboard() {
   statusChip.textContent = 'Loading…';
   statusChip.dataset.tone = '';
-  statusMeta.textContent = 'Fetching analytics payload';
+  statusMeta.textContent = 'Fetching telemetry payload';
 
   try {
     const browserPayload = buildBrowserAiRunsPayload();
@@ -286,14 +286,14 @@ async function loadDashboard() {
 
     const latestTimestamp = payload.drill.latest_run_at || payload.extract.latest_run_at;
     statusChip.textContent = 'Live';
-    statusMeta.textContent = `Showing ${payload?.source === 'browser_local_storage' ? 'browser-local telemetry' : 'server analytics'}. Last activity: ${fmtTimestamp(latestTimestamp)}`;
+    statusMeta.textContent = `Showing ${payload?.source === 'browser_local_storage' ? 'browser-local telemetry' : 'server telemetry'}. Last activity: ${fmtTimestamp(latestTimestamp)}`;
   } catch (error) {
     console.error(error);
     statusChip.textContent = 'Load Failed';
     statusChip.dataset.tone = 'error';
-    statusMeta.textContent = 'Could not load AI runs analytics.';
+    statusMeta.textContent = 'Could not load AI run telemetry.';
 
-    const errorState = `<div class="empty-state">Analytics payload failed to load. Confirm the backend is running or that browser telemetry exists for this browser profile.</div>`;
+    const errorState = `<div class="empty-state">Telemetry failed to load. Confirm the backend is running or that browser telemetry exists for this browser profile.</div>`;
     metricGrid.innerHTML = '';
     extractPanel.innerHTML = errorState;
     drillPanel.innerHTML = errorState;

@@ -746,7 +746,7 @@ async function loadDashboard() {
     const activeConcept = getCurrentConcept(concepts);
 
     if (!concepts.length || !activeConcept) {
-      renderEmptyDashboard('No mapped concepts yet. Create or open a concept first, then come back for analytics.');
+      renderEmptyDashboard('No mapped concepts yet. Create or open a concept first, then come back for progress.');
       if (conceptSelect) conceptSelect.innerHTML = '';
       return;
     }
@@ -779,8 +779,8 @@ async function loadDashboard() {
     console.error(error);
     statusChip.textContent = 'Load Failed';
     statusChip.dataset.tone = 'error';
-    statusMeta.textContent = 'Could not load learner analytics.';
-    const errorState = 'Learner analytics failed to load. Check that your concept data and browser telemetry are available.';
+    statusMeta.textContent = 'Could not load your progress.';
+    const errorState = 'Your progress failed to load. Check that your concept data and browser telemetry are available.';
     renderEmptyDashboard(errorState);
     statusChip.textContent = 'Load Failed';
     statusChip.dataset.tone = 'error';
