@@ -1,7 +1,7 @@
 import { Bus } from './bus.js';
 import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
 import { Morph, crystalPolygons } from './morph.js';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=5';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
 import {
@@ -27,9 +27,6 @@ const App = (() => {
   let currentMapMode = 'study';
   let activeDrillNode = null;
   let repairRepsState = null;
-  let tutorialMode = false;
-  let tutorialRefreshRaf = null;
-  let activeTutorialTarget = null;
   let themePreference = 'light';
   let currentPrimaryNav = 'nav-dashboard';
   let learnerAnalyticsDashboard = null;
@@ -157,6 +154,7 @@ const App = (() => {
     document.body.dataset.theme = resolvedTheme;
     document.documentElement.dataset.theme = resolvedTheme;
     updateThemeToggleUi(resolvedTheme);
+    remountOpenKnowledgeGraphForTheme();
     if (!persist) return;
     try {
       localStorage.setItem(THEME_STORAGE_KEY, themePreference);
@@ -167,6 +165,78 @@ const App = (() => {
 
   function toggleTheme() {
     applyThemePreference(themePreference === 'dark' ? 'light' : 'dark');
+  }
+
+  function buildKnowledgeGraphMountConfig(rawData) {
+    const graphStage = document.getElementById('graph-stage');
+    const graphNodeDetail = document.getElementById('graph-node-detail');
+    if (!graphStage || !graphNodeDetail || !rawData) return null;
+    return {
+      container: graphStage,
+      detailEl: graphNodeDetail,
+      rawData,
+      onNodeSelect: (nodeData) => startDrill(nodeData),
+      onContinue: () => cancelDrill(),
+    };
+  }
+
+  function destroyKnowledgeGraphController() {
+    if (!currentGraphController) return;
+    currentGraphController.destroy();
+    currentGraphController = null;
+  }
+
+  function mountKnowledgeGraphController(rawData) {
+    const config = buildKnowledgeGraphMountConfig(rawData);
+    if (!config) return null;
+    currentGraphController = mountKnowledgeGraph(config);
+    return currentGraphController;
+  }
+
+  function captureKnowledgeGraphViewState() {
+    if (!currentGraphController) return null;
+    return {
+      selectedElement: currentGraphController.getSelectedElement?.() || null,
+      interactionMode: currentGraphController.getInteractionMode?.() || 'inspect',
+      activeDrillNode: currentGraphController.getActiveDrillNode?.() || activeDrillNode || null,
+    };
+  }
+
+  function restoreKnowledgeGraphViewState(viewState = null) {
+    if (!currentGraphController || !viewState) return;
+    const selectedElement = viewState.selectedElement?.id ? viewState.selectedElement : null;
+    const fallbackSelection = viewState.activeDrillNode
+      ? { type: 'node', id: viewState.activeDrillNode }
+      : null;
+    const selection = selectedElement || fallbackSelection;
+
+    if (viewState.interactionMode && viewState.interactionMode !== 'inspect') {
+      const selectedNodeId = selection?.type === 'node' ? selection.id : viewState.activeDrillNode;
+      currentGraphController.setInteractionMode?.(viewState.interactionMode, selectedNodeId || null);
+      return;
+    }
+
+    if (selection) {
+      currentGraphController.selectElement?.(selection);
+    }
+  }
+
+  function remountOpenKnowledgeGraphForTheme() {
+    const mapView = document.getElementById('map-view');
+    if (!mapView?.classList.contains('visible') || !currentGraphController) return;
+
+    const concept = getActiveConcept();
+    const rawData = concept?.graphData ? normalizeGraphData(concept.graphData).graphData : null;
+    if (!rawData) return;
+
+    const viewState = captureKnowledgeGraphViewState();
+    destroyKnowledgeGraphController();
+    mountKnowledgeGraphController(rawData);
+    restoreKnowledgeGraphViewState(viewState);
+
+    if (currentMapMode === 'graph' && currentGraphController) {
+      requestAnimationFrame(() => currentGraphController?.resize());
+    }
   }
 
   function setMapShellOpen(isOpen) {
@@ -387,13 +457,11 @@ const App = (() => {
     drawer.dataset.open = 'true';
     document.body.dataset.drawerOpen = 'true';
     if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'true');
-    scheduleTutorialRefresh();
   }
   function closeDrawer() {
     drawer.dataset.open = 'false';
     document.body.dataset.drawerOpen = 'false';
     if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
-    scheduleTutorialRefresh();
   }
   function toggleDrawer() { drawer.dataset.open === 'true' ? closeDrawer() : openDrawer(); }
 
@@ -456,7 +524,6 @@ const App = (() => {
            </span>
            <span class="add-trigger-title">new tink</span>
          </button>`;
-    scheduleTutorialRefresh();
   }
 
   function isBlockedVideoUrl(value) {
@@ -1417,7 +1484,6 @@ const App = (() => {
     // Focus first input inside dialog after mount
     const firstInput = dialog.shell.querySelector('input:not([disabled]), textarea:not([disabled])');
     firstInput?.focus();
-    scheduleTutorialRefresh();
   }
 
   function deleteConcept(id, btnEl) {
@@ -1753,8 +1819,6 @@ const App = (() => {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
     const graphContent = document.getElementById('graph-content');
-    const graphStage = document.getElementById('graph-stage');
-    const graphNodeDetail = document.getElementById('graph-node-detail');
     const heroCard = document.querySelector('.hero-card');
     const libraryView = document.getElementById('library-view');
 
@@ -1880,21 +1944,10 @@ const App = (() => {
 
     mapContent.innerHTML = html;
 
-    if (currentGraphController) {
-      currentGraphController.destroy();
-      currentGraphController = null;
-    }
+    destroyKnowledgeGraphController();
     if (drillUi) drillUi.style.display = 'none';
     if (chatHistory) chatHistory.innerHTML = '';
-    if (graphStage && graphNodeDetail) {
-      currentGraphController = mountKnowledgeGraph({
-        container: graphStage,
-        detailEl: graphNodeDetail,
-        rawData: data,
-        onNodeSelect: (nodeData) => startDrill(nodeData),
-        onContinue: () => cancelDrill(),
-      });
-    }
+    mountKnowledgeGraphController(data);
 
     clearSettingsPanel();
     setNavActive('nav-dashboard');
@@ -1910,7 +1963,6 @@ const App = (() => {
     if (window.innerWidth < 900) closeDrawer();
     setMapMode('study');
     restoreStudyResume(concept, data);
-    scheduleTutorialRefresh();
   }
 
   function teardownMapView({ showHero = false, navId = null } = {}) {
@@ -1919,16 +1971,12 @@ const App = (() => {
     if (drillState.active || drillState.pending || drillState.node) {
       cancelDrill();
     }
-    if (currentGraphController) {
-      currentGraphController.destroy();
-      currentGraphController = null;
-    }
+    destroyKnowledgeGraphController();
     document.body.classList.remove('is-drilling');
     if (mapView) mapView.classList.remove('visible');
     setMapShellOpen(false);
     if (heroCard) heroCard.style.display = showHero ? 'flex' : 'none';
     if (navId) setNavActive(navId);
-    scheduleTutorialRefresh();
   }
 
   function hideMapView() {
@@ -1963,7 +2011,6 @@ const App = (() => {
     if (currentMapMode === 'graph' && currentGraphController) {
       requestAnimationFrame(() => currentGraphController?.resize());
     }
-    scheduleTutorialRefresh();
   }
 
   function bindMapModeControls() {
@@ -1998,7 +2045,6 @@ const App = (() => {
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
     if (window.innerWidth < 900) closeDrawer();
-    scheduleTutorialRefresh();
   }
 
   const BUILT_IN_LIBRARY_CONCEPTS = [
@@ -2160,7 +2206,6 @@ const App = (() => {
 
     libraryView.classList.add('visible');
     if (window.innerWidth < 900) closeDrawer();
-    scheduleTutorialRefresh();
   }
 
   function showAnalytics() {
@@ -2171,13 +2216,11 @@ const App = (() => {
     if (analyticsView) analyticsView.classList.add('visible');
     learnerAnalyticsDashboard?.loadDashboard?.();
     if (window.innerWidth < 900) closeDrawer();
-    scheduleTutorialRefresh();
   }
 
   function hideLibrary() {
     const libraryView = document.getElementById('library-view');
     if (libraryView) libraryView.classList.remove('visible');
-    scheduleTutorialRefresh();
   }
 
   function toggleCluster(el) {
@@ -3450,222 +3493,7 @@ const App = (() => {
     currentGraphController?.clearActiveDrillNode?.();
     currentGraphController?.setInteractionMode?.(shouldShowSessionComplete ? 'session-complete' : 'inspect');
     persistPhaseBResumeState(null);
-    scheduleTutorialRefresh();
   }
-
-  const tutorialDirectives = [
-    {
-      id: 'quick-guide',
-      sel: '#quick-guide-toggle',
-      title: 'Use Quick Guide Beacons',
-      text: 'Turn this on any time to see lightweight tips around the current screen. Hover or focus the glowing dots to read them.',
-      when: () => true,
-    },
-    {
-      id: 'library',
-      sel: '#nav-library',
-      title: 'Open The Library',
-      text: 'Reopen concepts you have already extracted.',
-      when: () => true,
-    },
-    {
-      id: 'analytics',
-      sel: '#nav-analytics',
-      title: 'Read Your Progress',
-      text: 'Your Progress shows truthful learning state: what is solid, what is still in progress, and what you should revisit next.',
-      when: () => true,
-    },
-    {
-      id: 'new-concept',
-      sel: '#add-trigger',
-      title: 'Create A Concept',
-      text: 'Start here with pasted text, notes, or a PDF. This is the fastest path into extraction.',
-      when: () => !document.getElementById('map-view')?.classList.contains('visible')
-        && !document.getElementById('library-view')?.classList.contains('visible'),
-    },
-    {
-      id: 'concept-inputs',
-      sel: '.creation-form .overlay-tabs',
-      title: 'Choose Your Input',
-      text: 'Use Text for pasted notes, URL for article pages, and File for .txt, .md, or .pdf uploads up to 2MB.',
-      when: () => !!document.querySelector('.creation-form')
-        && !document.getElementById('map-view')?.classList.contains('visible')
-        && !document.getElementById('library-view')?.classList.contains('visible'),
-    },
-    {
-      id: 'drill',
-      sel: '.tile-group:not(.empty)',
-      title: 'Enter Concept Crystal',
-      text: 'Click any active crystal on your board to enter its Socratic Map and start a recall drill.',
-      when: () => !document.getElementById('map-view')?.classList.contains('visible')
-        && !!document.querySelector('.tile-group:not(.empty)'),
-    },
-    {
-      id: 'graph-view',
-      sel: '#map-mode-graph',
-      title: 'Switch To Graph View',
-      text: 'Use Graph View to see what is locked, in progress, and solidified across the map.',
-      when: () => document.getElementById('map-view')?.classList.contains('visible'),
-    },
-    {
-      id: 'graph-stage',
-      sel: '#graph-stage',
-      title: 'Inspect The Knowledge Graph',
-      text: 'Hover and click visible nodes to inspect them. A drill always targets one node at a time.',
-      when: () => {
-        const graphContent = document.getElementById('graph-content');
-        return !!graphContent && !graphContent.hidden;
-      },
-    },
-    {
-      id: 'chat-input',
-      sel: '#chat-input',
-      title: 'Answer From Memory',
-      text: 'Type your explanation in your own words. The graph updates only for the node you are drilling.',
-      when: () => drillUi?.style.display === 'flex',
-    },
-  ];
-
-  const tutorialLayerEl = document.createElement('div');
-  tutorialLayerEl.className = 'tutorial-layer';
-  document.body.appendChild(tutorialLayerEl);
-
-  const tourTooltipEl = document.createElement('div');
-  tourTooltipEl.className = 'tour-tooltip';
-  tourTooltipEl.setAttribute('role', 'dialog');
-  tourTooltipEl.setAttribute('aria-live', 'polite');
-  document.body.appendChild(tourTooltipEl);
-
-  function isTutorialTargetVisible(target) {
-    if (!target || target.offsetParent === null) return false;
-    const rect = target.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return false;
-    if (rect.right < 0 || rect.left > window.innerWidth || rect.bottom < 0 || rect.top > window.innerHeight) return false;
-    return true;
-  }
-
-  function cleanupTutorialHighlights() {
-    document.querySelectorAll('.tutorial-target').forEach((el) => el.classList.remove('tutorial-target'));
-    activeTutorialTarget = null;
-  }
-
-  function hideTooltip() {
-    cleanupTutorialHighlights();
-    tourTooltipEl.classList.remove('visible');
-    tourTooltipEl.innerHTML = '';
-  }
-
-  function positionTooltip(rect) {
-    const gap = 14;
-    const maxWidth = 280;
-    let left = rect.right + gap + window.scrollX;
-    let top = rect.top + window.scrollY;
-
-    tourTooltipEl.style.left = `${left}px`;
-    tourTooltipEl.style.top = `${top}px`;
-
-    const tooltipRect = tourTooltipEl.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    if (tooltipRect.right > viewportWidth - 16) {
-      left = rect.left + window.scrollX - Math.min(maxWidth, tooltipRect.width) - gap;
-    }
-    if (left < 16 + window.scrollX) {
-      left = Math.max(16 + window.scrollX, rect.left + window.scrollX);
-      top = rect.bottom + gap + window.scrollY;
-    }
-    if (top + tooltipRect.height > viewportHeight + window.scrollY - 16) {
-      top = Math.max(16 + window.scrollY, rect.bottom + window.scrollY - tooltipRect.height);
-    }
-
-    tourTooltipEl.style.left = `${left}px`;
-    tourTooltipEl.style.top = `${top}px`;
-  }
-
-  function showTooltipForDirective(target, directive) {
-    if (!tutorialMode || !target || !directive) return;
-
-    cleanupTutorialHighlights();
-    activeTutorialTarget = target;
-    target.classList.add('tutorial-target');
-
-    tourTooltipEl.innerHTML = `
-      <div class="tour-tooltip-kicker">Quick Guide</div>
-      <div class="tour-tooltip-title">${escHtml(directive.title)}</div>
-      <div class="tour-tooltip-body">${escHtml(directive.text)}</div>
-    `;
-    positionTooltip(target.getBoundingClientRect());
-    tourTooltipEl.classList.add('visible');
-  }
-
-  function renderBeacons() {
-    tutorialLayerEl.innerHTML = '';
-    if (!tutorialMode) return;
-
-    tutorialDirectives.forEach((directive, index) => {
-      if (directive.when && !directive.when()) return;
-      const target = document.querySelector(directive.sel);
-      if (!isTutorialTargetVisible(target)) return;
-
-      const rect = target.getBoundingClientRect();
-      const beacon = document.createElement('button');
-      beacon.type = 'button';
-      beacon.className = 'beacon';
-      beacon.setAttribute('aria-label', directive.title);
-      beacon.dataset.beaconId = directive.id || `beacon-${index}`;
-      beacon.style.left = `${rect.right + window.scrollX - 8}px`;
-      beacon.style.top = `${rect.top + window.scrollY - 6}px`;
-
-      beacon.addEventListener('mouseenter', () => showTooltipForDirective(target, directive));
-      beacon.addEventListener('focus', () => showTooltipForDirective(target, directive));
-      beacon.addEventListener('mouseleave', hideTooltip);
-      beacon.addEventListener('blur', hideTooltip);
-
-      tutorialLayerEl.appendChild(beacon);
-    });
-
-    if (activeTutorialTarget && activeTutorialTarget.classList.contains('tutorial-target')) {
-      const activeDirective = tutorialDirectives.find((directive) => document.querySelector(directive.sel) === activeTutorialTarget);
-      if (!isTutorialTargetVisible(activeTutorialTarget) || !activeDirective) {
-        hideTooltip();
-      } else {
-        positionTooltip(activeTutorialTarget.getBoundingClientRect());
-      }
-    }
-  }
-
-  function scheduleTutorialRefresh() {
-    if (!tutorialMode) return;
-    if (tutorialRefreshRaf) window.cancelAnimationFrame(tutorialRefreshRaf);
-    tutorialRefreshRaf = window.requestAnimationFrame(() => {
-      tutorialRefreshRaf = null;
-      renderBeacons();
-    });
-  }
-
-  window.addEventListener('resize', scheduleTutorialRefresh);
-  window.addEventListener('scroll', scheduleTutorialRefresh, { passive: true });
-  if (drawer) {
-    drawer.addEventListener('transitionend', scheduleTutorialRefresh);
-  }
-  if (conceptListEl) {
-    conceptListEl.addEventListener('scroll', scheduleTutorialRefresh, { passive: true });
-  }
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && tutorialMode) {
-      App.toggleTutorial();
-    }
-  });
-
-  function syncTutorialToggleUi() {
-    const guideBtn = document.getElementById('quick-guide-toggle');
-    const guideState = document.getElementById('quick-guide-state');
-    if (guideBtn) guideBtn.setAttribute('aria-pressed', String(tutorialMode));
-    if (guideState) guideState.textContent = tutorialMode ? 'On' : 'Off';
-  }
-
-  syncTutorialToggleUi();
 
   let typingIndicatorElement = null;
 
@@ -3998,7 +3826,6 @@ const App = (() => {
     if (settingsView) settingsView.classList.add('visible');
     void renderSettingsView();
     if (window.innerWidth < 900) closeDrawer();
-    scheduleTutorialRefresh();
   }
 
   async function refreshDrawerFooter() {
@@ -4043,23 +3870,6 @@ const App = (() => {
         fullLabel: 'Core Thesis',
         detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
       });
-    },
-
-    toggleTutorial: () => {
-      tutorialMode = !tutorialMode;
-      syncTutorialToggleUi();
-      if (window.innerWidth < 900) closeDrawer();
-
-      if (!tutorialMode) {
-        if (tutorialRefreshRaf) {
-          window.cancelAnimationFrame(tutorialRefreshRaf);
-          tutorialRefreshRaf = null;
-        }
-        tutorialLayerEl.innerHTML = '';
-        hideTooltip();
-        return;
-      }
-      scheduleTutorialRefresh();
     },
 
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },

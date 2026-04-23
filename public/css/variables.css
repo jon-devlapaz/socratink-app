@@ -99,6 +99,114 @@
   --node-drilled:       #d8a867;
   --node-solidified:    var(--success);
 
+  /* Knowledge graph semantic tokens — kept separate from pill state tokens
+     so Cytoscape can retheme without changing analytics/status surfaces. */
+  --graph-shell-bg:     var(--surface-card-theme);
+  --graph-shell-border: var(--border-subtle);
+  --graph-shell-shadow: var(--shadow-soft);
+
+  /* Light: paper substrate + blueprint grid + soft center bloom */
+  --graph-paper-grid-line:  rgba(36, 32, 56, 0.05);
+  --graph-paper-grid-major: rgba(36, 32, 56, 0.09);
+  --graph-paper-bloom:      rgba(141, 134, 201, 0.16);
+  --graph-stage-bg:
+    radial-gradient(ellipse 60% 50% at 50% 50%, var(--graph-paper-bloom), transparent 70%),
+    linear-gradient(var(--graph-paper-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--graph-paper-grid-line) 1px, transparent 1px),
+    linear-gradient(var(--graph-paper-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--graph-paper-grid-major) 1px, transparent 1px),
+    var(--cream-50);
+  --graph-stage-bg-size:
+    100% 100%,
+    24px 24px,
+    24px 24px,
+    120px 120px,
+    120px 120px,
+    100% 100%;
+  --graph-stage-border: var(--accent-soft);
+
+  /* Halo render mode — dark uses blurred fill, light uses stroke-only ring */
+  --graph-halo-fill: currentColor;
+  --graph-halo-blur: 0px;
+  --graph-halo-stroke-width: 2;
+
+  /* Inner core dot — deeper saturation, retains state read at any zoom */
+  --graph-node-cyan-core:  #205a78;
+  --graph-node-amber-core: #7a4a05;
+  --graph-node-solid-core: #4d2e7d;
+
+  --graph-panel-bg:     var(--surface-card-theme);
+  --graph-panel-border: var(--border-subtle);
+  --graph-panel-shadow: var(--shadow-soft);
+  --graph-panel-bloom:  radial-gradient(ellipse at 30% 0%, transparent, transparent 70%);
+  --graph-panel-seam-gradient: linear-gradient(180deg, transparent, transparent, transparent);
+  --graph-panel-seam-shadow: none;
+  --graph-star-color:   rgba(var(--ink-900-rgb), 0.22);
+  --graph-star-opacity-min: 0.05;
+  --graph-star-opacity-max: 0.18;
+  --graph-beam-duration: 2.4s;
+
+  --graph-node-base-fill:   #ffffff;
+  --graph-node-base-border: #d7d0f1;
+  --graph-node-base-text:   #423c58;
+
+  --graph-node-locked-fill:          rgba(255, 255, 255, 0.08);
+  --graph-node-locked-ring:          rgba(36, 32, 56, 0.30);
+  --graph-node-locked-text:          rgba(36, 32, 56, 0.62); /* WCAG AA on cream */
+  --graph-node-locked-opacity:       0.42;
+  --graph-node-locked-text-opacity:  1;
+
+  --graph-node-reachable-fill:            rgba(202, 196, 222, 0.85);
+  --graph-node-reachable-ring:            #5b518f;
+  --graph-node-reachable-halo:            rgba(91, 81, 143, 0.58);
+  --graph-node-reachable-text:            #36306b;
+  --graph-node-reachable-overlay-opacity: 0.10;
+
+  --graph-cluster-reachable-fill: #f7f2ff;
+  --graph-cluster-reachable-ring: #7c6fcd;
+  --graph-cluster-reachable-text: #55488e;
+
+  --graph-node-primed-fill:            #8fc7e0;
+  --graph-node-primed-ring:            #2e7ca0;
+  --graph-node-primed-halo:            rgba(46, 124, 160, 0.62);
+  --graph-node-primed-text:            #18476a;
+  --graph-node-primed-overlay-opacity: 0.05;
+
+  --graph-node-drilled-fill:            #d9a14a;
+  --graph-node-drilled-ring:            #b97718;
+  --graph-node-drilled-halo:            rgba(185, 119, 24, 0.60);
+  --graph-node-drilled-text:            #6f4708;
+  --graph-node-drilled-overlay-opacity: 0.04;
+
+  --graph-node-solid-fill:            #7c6fcd;
+  --graph-node-solid-ring:            #988be4;
+  --graph-node-solid-halo:            rgba(122, 89, 170, 0.65);
+  --graph-node-solid-text:            #7c6fcd;
+  --graph-node-solid-overlay-opacity: 0.06;
+  --graph-node-solid-flash-fill:      #a895ea;
+
+  --graph-node-active-fill:            #f3efff;
+  --graph-node-active-ring:            #7c6fcd;
+  --graph-node-active-halo:            rgba(124, 111, 205, 0.52);
+  --graph-node-active-overlay-opacity: 0.12;
+
+  --graph-node-selection-ring:            #5b518f;
+  --graph-node-selection-glow:            rgba(124, 111, 205, 0.45);
+  --graph-node-selection-overlay-opacity: 0.08;
+
+  --graph-node-primed-flash-fill: #eef8fd;
+
+  --graph-edge-base:       rgba(36, 32, 56, 0.28);
+  --graph-edge-structural: rgba(36, 32, 56, 0.28);
+  --graph-edge-subnode:    rgba(36, 32, 56, 0.18);
+  --graph-edge-lateral:    rgba(122, 89, 170, 0.55);
+  --graph-edge-prereq:     rgba(122, 89, 170, 0.55);
+  --graph-edge-domain:     rgba(114, 160, 154, 0.55);
+  --graph-edge-selection:  rgba(122, 89, 170, 0.75);
+
+  --graph-drill-muted-fill: rgba(226, 226, 226, 1);
+  --graph-drill-muted-edge: rgba(200, 200, 200, 0.10);
+
   /* ============================================================
      LEGACY ALIASES — DEPRECATED.
      Wave 2 will grep-replace and remove. Do NOT introduce new
@@ -233,10 +341,20 @@
 
   /* Motion */
   --ease-standard:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-asymmetric:  cubic-bezier(0.7, 0, 0.25, 1); /* sharp-in, long-out — "arrive and settle" */
   --duration-micro:   140ms;
   --duration-quick:   220ms;
   --duration-cozy:    320ms;
   --duration-ambient: 700ms;
+
+  /* Graph constellation motion */
+  --graph-breathe-duration:         6.5s;
+  --graph-needs-revisit-duration:   5s;
+  --graph-fresh-solid-duration:     10s;
+  --graph-pan-duration:             900ms;
+  --graph-arrival-glow-duration:    400ms;
+  --graph-beam-pulse-duration:      2.4s;
+  --graph-stars-drift-duration:     40s;
 
   /* Additional type */
   --text-display:     clamp(3.85rem, 2.8rem + 5.2vw, 5.6rem);
@@ -325,6 +443,103 @@
     radial-gradient(circle at 82% 16%, rgba(var(--violet-600-rgb),   0.24), transparent 24%),
     radial-gradient(circle at 50% 100%, rgba(66, 59, 101, 0.22), transparent 38%),
     linear-gradient(180deg, #241f39 0%, #1f1b31 100%);
+
+  --graph-shell-bg: linear-gradient(180deg, rgba(18, 12, 36, 0.94) 0%, rgba(7, 5, 15, 0.98) 100%);
+  --graph-shell-border: rgba(var(--lavender-500-rgb), 0.20);
+  --graph-shell-shadow: 0 22px 56px rgba(0, 0, 0, 0.42);
+
+  --graph-stage-bg:
+    radial-gradient(ellipse 50% 50% at 50% 40%, rgba(var(--violet-600-rgb), 0.22), transparent 60%),
+    radial-gradient(circle at 50% 50%, rgba(30, 22, 58, 0.40), transparent 50%),
+    linear-gradient(180deg, #07050f 0%, #0c0820 50%, #05030a 100%);
+  --graph-stage-bg-size: auto;
+  --graph-stage-border: rgba(var(--lavender-500-rgb), 0.20);
+
+  /* Dark: keep blurred filled halos */
+  --graph-halo-blur: 6px;
+  --graph-halo-stroke-width: 0;
+
+  /* Inner core dot — brighter against dark stage */
+  --graph-node-cyan-core:  #d6f1fb;
+  --graph-node-amber-core: #ffe5b4;
+  --graph-node-solid-core: #f1e3ff;
+
+  --graph-panel-bg:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(var(--violet-600-rgb), 0.14), transparent 70%),
+    linear-gradient(180deg, #120c24 0%, #07050f 100%);
+  --graph-panel-border: rgba(var(--violet-600-rgb), 0.26);
+  --graph-panel-shadow:
+    inset 0 1px 0 rgba(var(--cream-50-rgb), 0.04),
+    0 18px 48px rgba(0, 0, 0, 0.45);
+  --graph-panel-bloom: radial-gradient(ellipse at 30% 0%, rgba(215, 190, 255, 0.08), transparent 70%);
+  --graph-panel-seam-gradient: linear-gradient(180deg, transparent, #d7beff, transparent);
+  --graph-panel-seam-shadow: 0 0 20px 3px rgba(215, 190, 255, 0.65);
+  --graph-star-color: #f7ece1;
+  --graph-star-color-far: rgba(215, 190, 255, 0.55);
+  --graph-star-opacity-min: 0.18;
+  --graph-star-opacity-max: 0.56;
+  --graph-beam-duration: 2.4s;
+
+  --graph-node-base-fill:   rgba(18, 12, 36, 0.92);
+  --graph-node-base-border: rgba(var(--lavender-500-rgb), 0.24);
+  --graph-node-base-text:   var(--text-strong);
+
+  --graph-node-locked-fill:         rgba(var(--lavender-500-rgb), 0.46);
+  --graph-node-locked-ring:         rgba(var(--lavender-500-rgb), 0.28);
+  --graph-node-locked-text:         rgba(var(--cream-50-rgb), 0.66);
+  --graph-node-locked-opacity:      0.52;
+  --graph-node-locked-text-opacity: 0.68;
+
+  --graph-node-reachable-fill:            rgba(var(--cream-50-rgb), 0.06);
+  --graph-node-reachable-ring:            #d7beff;
+  --graph-node-reachable-halo:            rgba(215, 190, 255, 0.55);
+  --graph-node-reachable-text:            var(--text-strong);
+  --graph-node-reachable-overlay-opacity: 0.16;
+
+  --graph-cluster-reachable-fill: rgba(215, 190, 255, 0.10);
+  --graph-cluster-reachable-ring: #d7beff;
+  --graph-cluster-reachable-text: var(--text-strong);
+
+  --graph-node-primed-fill:            #9fd5ed;
+  --graph-node-primed-ring:            #9fd5ed;
+  --graph-node-primed-halo:            rgba(159, 213, 237, 0.55);
+  --graph-node-primed-text:            var(--text-strong);
+  --graph-node-primed-overlay-opacity: 0.25;
+
+  --graph-node-drilled-fill:            #f0c373;
+  --graph-node-drilled-ring:            #f0c373;
+  --graph-node-drilled-halo:            rgba(240, 195, 115, 0.50);
+  --graph-node-drilled-text:            var(--text-strong);
+  --graph-node-drilled-overlay-opacity: 0.22;
+
+  --graph-node-solid-fill:            #d7beff;
+  --graph-node-solid-ring:            #d7beff;
+  --graph-node-solid-halo:            rgba(215, 190, 255, 0.70);
+  --graph-node-solid-text:            var(--text-strong);
+  --graph-node-solid-overlay-opacity: 0.30;
+  --graph-node-solid-flash-fill:      #f0deff;
+
+  --graph-node-active-fill:            rgba(215, 190, 255, 0.18);
+  --graph-node-active-ring:            #d7beff;
+  --graph-node-active-halo:            rgba(215, 190, 255, 0.78);
+  --graph-node-active-overlay-opacity: 0.35;
+
+  --graph-node-selection-ring:            #d7beff;
+  --graph-node-selection-glow:            rgba(215, 190, 255, 0.72);
+  --graph-node-selection-overlay-opacity: 0.16;
+
+  --graph-node-primed-flash-fill: rgba(159, 213, 237, 0.92);
+
+  --graph-edge-base:       rgba(215, 190, 255, 0.45);
+  --graph-edge-structural: rgba(215, 190, 255, 0.45);
+  --graph-edge-subnode:    rgba(215, 190, 255, 0.22);
+  --graph-edge-lateral:    rgba(215, 190, 255, 0.55);
+  --graph-edge-prereq:     rgba(215, 190, 255, 0.55);
+  --graph-edge-domain:     rgba(141, 208, 200, 0.50);
+  --graph-edge-selection:  rgba(215, 190, 255, 0.76);
+
+  --graph-drill-muted-fill: rgba(var(--lavender-500-rgb), 0.18);
+  --graph-drill-muted-edge: rgba(var(--lavender-500-rgb), 0.10);
 
   /* Legacy aliases — DEPRECATED, Wave 2 sweeps */
   --bg:           var(--surface-page-theme);

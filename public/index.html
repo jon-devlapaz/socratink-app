@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,help,memory,settings,show_chart&display=block"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,close,help,info,memory,settings,show_chart&display=block"
     rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
@@ -79,19 +79,6 @@
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
     </nav>
-
-    <div class="sidebar-tools" aria-label="Help tools">
-      <span class="sidebar-section-label">Help</span>
-      <button id="quick-guide-toggle" class="sidebar-tool-toggle" type="button" onclick="App.toggleTutorial()"
-        aria-pressed="false" aria-labelledby="quick-guide-title" aria-describedby="quick-guide-copy">
-        <span class="material-symbols-outlined sidebar-tool-icon" aria-hidden="true">help</span>
-        <span class="sidebar-tool-body">
-          <span id="quick-guide-title" class="sidebar-tool-title">Quick Guide</span>
-          <span id="quick-guide-copy" class="sidebar-tool-copy">Show hints on this screen</span>
-        </span>
-        <span id="quick-guide-state" class="sidebar-tool-state" aria-hidden="true">Off</span>
-      </button>
-    </div>
 
     <div class="sidebar-divider"></div>
     <span class="sidebar-section-label">Concepts</span>
@@ -219,15 +206,40 @@
 
       <div class="hero-info" id="hero-info">
         <div class="hero-meta-row">
-          <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
+          <div class="hero-state-chip-group">
+            <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
+            <button type="button"
+                    class="help-tip-trigger js-tooltip-trigger"
+                    aria-label="What is the board?"
+                    aria-describedby="tip-board-state"
+                    data-tooltip-id="tip-board-state">
+              <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            </button>
+          </div>
         </div>
-        <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
+        <div class="hero-eyebrow-row">
+          <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
+          <button type="button"
+                  class="help-tip-trigger js-tooltip-trigger"
+                  aria-label="What is Start here?"
+                  aria-describedby="tip-start-here"
+                  data-tooltip-id="tip-start-here">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+          </button>
+        </div>
         <h1 class="hero-title" id="title">What do you want to understand?</h1>
         <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
         <div class="hero-actions">
           <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
             <span class="material-symbols-outlined hero-primary-action__icon" aria-hidden="true">add</span>
             <span class="hero-primary-action__label">Add a concept</span>
+          </button>
+          <button type="button"
+                  class="help-tip-trigger js-tooltip-trigger"
+                  aria-label="What does Add a concept do?"
+                  aria-describedby="tip-add-concept"
+                  data-tooltip-id="tip-add-concept">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
           </button>
         </div>
         <div id="timer-display">24:00:00</div>
@@ -504,8 +516,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
+  <div id="tooltip-root" aria-hidden="true"></div>
+
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=32"></script>
+  <script type="module" src="js/app.js?v=33"></script>
+  <script type="module" src="js/tooltips.js?v=4"></script>
 
   <!-- Vercel Speed Insights -->
   <script>

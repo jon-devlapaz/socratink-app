@@ -1062,18 +1062,20 @@ body:not([data-map-open="true"]) .map-back-link {
 }
 .graph-stage-wrap,
 .graph-detail {
-  background: var(--surface-card);
-  border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-soft);
   min-height: 0;
 }
 .graph-stage-wrap {
-  padding: 18px 18px 14px;
+  background: var(--graph-shell-bg);
+  border: 1px solid var(--graph-shell-border);
+  box-shadow: var(--graph-shell-shadow);
+  padding: 0;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
+  position: relative;
   transition: opacity 0.22s ease, filter 0.22s ease;
 }
 .graph-layout.mode-repair-reps .graph-stage-wrap {
@@ -1082,11 +1084,17 @@ body:not([data-map-open="true"]) .map-back-link {
   filter: saturate(0.72);
 }
 .graph-stage-header {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  right: 18px;
+  z-index: 3;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
+  pointer-events: none;
 }
 .graph-stage-kicker,
 .graph-detail-kicker {
@@ -1118,13 +1126,294 @@ body:not([data-map-open="true"]) .map-back-link {
 .graph-stage {
   flex: 1;
   min-height: 520px;
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at top left, var(--gradient-stage-accent), transparent 32%),
-    linear-gradient(180deg, var(--gradient-stage-start), var(--gradient-stage-end));
-  border: 1px solid var(--accent-soft);
+  border-radius: calc(var(--radius-card) - 1px);
+  background: var(--graph-stage-bg);
+  background-size: var(--graph-stage-bg-size, auto);
+  border: none;
+  overflow: hidden;
+  position: relative;
+}
+/* Light mode: blueprint substrate, no starfield */
+:root:not([data-theme="dark"]) .graph-stage-stars,
+:root:not([data-theme="dark"]) .graph-stage-stars-far {
+  display: none;
+}
+/* Light mode: drafting-paper inner shadow + corner ticks */
+:root:not([data-theme="dark"]) .graph-stage {
+  box-shadow: inset 0 0 80px rgba(36, 32, 56, 0.04);
+}
+:root:not([data-theme="dark"]) .graph-stage::before,
+:root:not([data-theme="dark"]) .graph-stage::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  width: 18px; height: 18px;
+  background-image:
+    linear-gradient(rgba(36, 32, 56, 0.32) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(36, 32, 56, 0.32) 1px, transparent 1px);
+  background-size: 18px 1px, 1px 18px;
+  background-position: center center;
+  background-repeat: no-repeat;
+  z-index: 2;
+}
+:root:not([data-theme="dark"]) .graph-stage::before {
+  top: 14px; left: 14px;
+}
+:root:not([data-theme="dark"]) .graph-stage::after {
+  bottom: 14px; right: 14px;
+}
+.graph-stage-stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.graph-stage-stars span {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--graph-star-color);
+  animation: graph-star-twinkle 3.6s ease-in-out infinite;
+}
+.graph-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: grab;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+.graph-svg:active { cursor: grabbing; }
+.graph-svg [data-graph-kind] {
+  cursor: pointer;
+  outline: none;
+}
+.graph-svg text {
+  pointer-events: none;
+  user-select: none;
+}
+.graph-svg .graph-beam {
+  animation: graph-beam-travel var(--graph-beam-duration) linear infinite;
+}
+@keyframes graph-star-twinkle {
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.2);
+  }
+}
+@keyframes graph-beam-travel {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -200;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
+   Constellation motion — state + focus
+   Celestial drift, never respiratory. Per-node phase offsets
+   keep breathes desynced. Locked nodes stay still on purpose.
+   ────────────────────────────────────────────────────────── */
+
+.graph-node .graph-node-body,
+.graph-node .graph-node-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Primed breathe — celestial 6.5s, capped to ~7 concurrent via data-has-motion */
+@keyframes graphPrimedBreathe {
+  0%, 100% {
+    opacity: var(--halo-rest, 0.55);
+    transform: scale(1);
+  }
+  50% {
+    opacity: calc(var(--halo-rest, 0.55) + 0.30);
+    transform: scale(1.18);
+  }
+}
+.graph-node[data-state="primed"][data-has-motion="1"] .graph-node-halo {
+  animation: graphPrimedBreathe var(--graph-breathe-duration, 6.5s) var(--ease-standard) infinite;
+  animation-delay: var(--node-phase, 0s);
+  will-change: transform, opacity;
+}
+
+/* Needs-revisit settle — asymmetric arrive/settle, 5s */
+@keyframes graphNeedsRevisitSettle {
+  0% {
+    opacity: var(--halo-rest, 0.55);
+    transform: scale(0.96);
+  }
+  18% {
+    opacity: calc(var(--halo-rest, 0.55) + 0.34);
+    transform: scale(1.20);
+  }
+  100% {
+    opacity: var(--halo-rest, 0.55);
+    transform: scale(1);
+  }
+}
+.graph-node[data-state="drilled"][data-has-motion="1"] .graph-node-halo {
+  animation: graphNeedsRevisitSettle var(--graph-needs-revisit-duration, 5s) var(--ease-asymmetric) infinite;
+  animation-delay: var(--node-phase, 0s);
+  will-change: transform, opacity;
+}
+
+/* Solidified — one-shot 10s shimmer at the moment of change, then static bright */
+@keyframes graphSolidifiedFreshShimmer {
+  0% {
+    opacity: 0.70;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  8% {
+    opacity: 0.92;
+    transform: scale(1.12);
+    filter: brightness(1.18);
+  }
+  100% {
+    opacity: 0.70;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+.graph-node[data-is-fresh-solid="1"] .graph-node-halo {
+  animation: graphSolidifiedFreshShimmer var(--graph-fresh-solid-duration, 10s) var(--ease-spring) 1 forwards;
+}
+
+/* Hover lift — halo biased over body. Quick-in, slow-out. */
+.graph-node .graph-node-body {
+  transition: transform var(--duration-quick) var(--ease-standard);
+}
+.graph-node .graph-node-halo {
+  transition: transform var(--duration-quick) var(--ease-standard),
+              opacity var(--duration-quick) var(--ease-standard);
+}
+.graph-node:not(.is-hover) .graph-node-body,
+.graph-node:not(.is-hover) .graph-node-halo {
+  transition-duration: var(--duration-cozy);
+}
+.graph-node.is-hover[data-state]:not([data-state="locked"]) .graph-node-body {
+  transform: scale(1.05);
+}
+.graph-node.is-hover[data-state]:not([data-state="locked"]) .graph-node-halo {
+  animation: none !important;
+  transform: scale(1.2);
+  opacity: calc(var(--halo-rest, 0.55) + 0.25);
+}
+
+/* Light mode: replace blurred halo fill with thin stroke ring (paper grammar). */
+:root:not([data-theme="dark"]) .graph-svg .graph-node-halo {
+  fill: none !important;
+  stroke: var(--node-halo-color, currentColor);
+  stroke-width: var(--graph-halo-stroke-width, 2);
+  filter: none !important;
+}
+:root:not([data-theme="dark"]) .graph-svg .graph-node[data-state="locked"] .graph-node-halo {
+  stroke-dasharray: 3 3;
+  stroke-width: 1.5;
+  opacity: 0.55 !important;
+}
+
+/* Inner core dot — deeper saturation, retains state read at any zoom */
+.graph-svg .graph-node-core { pointer-events: none; }
+.graph-svg .graph-node[data-state="primed"]      .graph-node-core { fill: var(--graph-node-cyan-core); }
+.graph-svg .graph-node[data-state="drilled"]     .graph-node-core { fill: var(--graph-node-amber-core); }
+.graph-svg .graph-node[data-state="solidified"]  .graph-node-core { fill: var(--graph-node-solid-core); }
+.graph-svg .graph-node[data-state="locked"]      .graph-node-core { display: none; }
+
+/* Focus ripple — concentric rings emanate from active/selected node. */
+@keyframes graphNodeRipple {
+  0%   { transform: scale(1); opacity: 0; }
+  18%  { opacity: 0.7; }
+  100% { transform: scale(var(--ripple-scale, 3.2)); opacity: 0; }
+}
+.graph-svg .graph-node-ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  vector-effect: non-scaling-stroke;
+  animation: graphNodeRipple 3s ease-out infinite;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.graph-svg .graph-node-ripple.is-delayed {
+  animation-delay: -1.5s;
+}
+
+/* Beam arrival pulse — small ring lands at target each dash cycle. Active-path only. */
+@keyframes graphBeamArrival {
+  0%, 75% {
+    r: 2;
+    opacity: 0;
+  }
+  88% {
+    r: 6;
+    opacity: 0.4;
+  }
+  100% {
+    r: 10;
+    opacity: 0;
+  }
+}
+.graph-svg .graph-beam-arrival {
+  animation: graphBeamArrival var(--graph-beam-pulse-duration, 2.4s) linear infinite;
+  pointer-events: none;
+}
+
+/* Arrival glow — bookends the 900ms camera pan on the newly-focused node */
+@keyframes graphArrivalGlow {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+.graph-node .graph-node-arrival-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  pointer-events: none;
+}
+.graph-node.is-freshly-focused .graph-node-arrival-glow {
+  animation: graphArrivalGlow var(--graph-arrival-glow-duration, 400ms) var(--ease-standard) 1 forwards;
+}
+
+/* Parallax starfield — second layer drifts very slowly. */
+.graph-stage-stars-far {
+  z-index: 0;
+}
+.graph-stage-stars-far span {
+  background: var(--graph-star-color-far, rgba(215, 190, 255, 0.55));
+  animation: graph-star-twinkle 5.2s ease-in-out infinite,
+             graphStarsDrift var(--graph-stars-drift-duration, 40s) linear infinite;
+}
+@keyframes graphStarsDrift {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-24px, 6px, 0);
+  }
 }
 .graph-detail {
+  background: var(--graph-panel-bg);
+  border: 1px solid var(--graph-panel-border);
+  box-shadow: var(--graph-panel-shadow);
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -1132,6 +1421,33 @@ body:not([data-map-open="true"]) .map-back-link {
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  position: relative;
+  isolation: isolate;
+}
+.graph-detail::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 34%;
+  width: 2px;
+  height: 28%;
+  background: var(--graph-panel-seam-gradient);
+  box-shadow: var(--graph-panel-seam-shadow);
+  pointer-events: none;
+  z-index: 0;
+}
+.graph-detail::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 120px;
+  background: var(--graph-panel-bloom);
+  pointer-events: none;
+  z-index: 0;
+}
+.graph-detail > * {
+  position: relative;
+  z-index: 1;
 }
 .graph-detail.is-cold-attempt-active .graph-node-detail,
 .graph-detail.is-re-drill-active .graph-node-detail,
@@ -1530,6 +1846,26 @@ body:not([data-map-open="true"]) .map-back-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .graph-stage-stars span,
+  .graph-stage-stars-far span {
+    animation: none;
+    opacity: 0.5;
+  }
+
+  .graph-svg .graph-beam,
+  .graph-svg .graph-beam-arrival,
+  .graph-svg .graph-node-ripple {
+    animation: none !important;
+  }
+
+  .graph-node .graph-node-halo,
+  .graph-node .graph-node-body,
+  .graph-node .graph-node-arrival-glow {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+
   .graph-repair-predict-pill {
     transition: none;
   }
