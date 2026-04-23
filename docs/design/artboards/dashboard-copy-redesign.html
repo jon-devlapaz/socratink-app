@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard · Before &amp; After</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <link rel="stylesheet" href="colors_and_type.css" />
+  <link rel="stylesheet" href="base.css" />
+
+  <style>
+    body {
+      margin: 0;
+      background: #ece6de;
+      color: var(--ink-900);
+      font-family: "Inter", system-ui, sans-serif;
+    }
+
+    /* =========================================================
+       Mock of the dashboard shell (sidebar + main)
+       Scoped to .mock so styles don't leak.
+       ========================================================= */
+    .mock, .mock * { box-sizing: border-box; }
+
+    .mock {
+      display: grid;
+      grid-template-columns: 232px 1fr;
+      background: #f4ebdf;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(141,134,201,0.14);
+      box-shadow: 0 10px 30px rgba(50,40,80,0.08);
+      width: 100%; height: 100%;
+      min-height: 520px;
+    }
+
+    /* Sidebar */
+    .sb {
+      background: rgba(255,255,255,0.6);
+      border-right: 1px solid rgba(141,134,201,0.12);
+      padding: 16px 14px;
+      display: flex; flex-direction: column; gap: 14px;
+      font-family: "Inter", sans-serif;
+    }
+    .sb-brand {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 6px; margin-bottom: 6px;
+      font-family: "Geom", serif; font-weight: 700; font-size: 19px;
+      letter-spacing: -0.01em;
+    }
+    .sb-brand .ink { color: var(--ink-900); }
+    .sb-brand .vio { color: var(--violet-600); }
+    .sb-brand svg { width: 22px; height: 22px; flex: none; }
+
+    .sb-nav {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .sb-nav .item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 10px;
+      font-size: 13.5px; font-weight: 500;
+      color: rgba(36,32,56,0.7);
+      cursor: pointer;
+    }
+    .sb-nav .item svg { width: 16px; height: 16px; flex: none; opacity: 0.72; }
+    .sb-nav .item.active {
+      background: rgba(144,103,198,0.12);
+      color: var(--violet-600);
+      font-weight: 600;
+    }
+    .sb-nav .item.active svg { opacity: 1; color: var(--violet-600); }
+
+    .sb-label {
+      padding: 6px 12px 2px;
+      font-family: "Geom", serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(36,32,56,0.38);
+    }
+
+    /* ----- HELP panel: BAD version (matches screenshot) ----- */
+    .help-bad {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 12px 14px;
+      border-radius: 10px;
+      background: #7a59aa;
+      color: #f7ece1;
+      font-size: 12.5px; font-weight: 600;
+      line-height: 1.35;
+      text-align: center;
+      cursor: pointer;
+      text-wrap: pretty;
+      box-shadow: 0 4px 14px rgba(122,89,170,0.28);
+    }
+    .help-bad svg { width: 15px; height: 15px; flex: none; opacity: 0.9; }
+
+    /* ----- HELP panel: GOOD version ----- */
+    .help-good {
+      display: flex; align-items: center;
+      gap: 10px; padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(144,103,198,0.06);
+      border: 1px solid rgba(144,103,198,0.12);
+      cursor: pointer;
+      transition: background 140ms ease;
+    }
+    .help-good:hover { background: rgba(144,103,198,0.10); }
+    .help-good .icon {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: rgba(144,103,198,0.14);
+      color: var(--violet-600);
+      display: grid; place-items: center;
+      flex: none;
+    }
+    .help-good .icon svg { width: 14px; height: 14px; }
+    .help-good .text { flex: 1; min-width: 0; }
+    .help-good .label {
+      font-size: 12.5px; font-weight: 600;
+      color: var(--ink-900);
+      letter-spacing: -0.005em;
+    }
+    .help-good .caption {
+      margin-top: 1px;
+      font-size: 10.5px;
+      color: rgba(36,32,56,0.55);
+      line-height: 1.3;
+    }
+    /* toggle switch */
+    .switch {
+      width: 28px; height: 16px; border-radius: 999px;
+      background: rgba(36,32,56,0.18);
+      position: relative; flex: none;
+      transition: background 140ms ease;
+    }
+    .switch::after {
+      content: ""; position: absolute;
+      top: 2px; left: 2px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      transition: transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .switch.on { background: var(--violet-600); }
+    .switch.on::after { transform: translateX(12px); }
+
+    /* Faded when off */
+    .help-good.off .label,
+    .help-good.off .caption,
+    .help-good.off .icon { opacity: 0.7; }
+
+    /* ===== Main column ===== */
+    .main {
+      padding: 16px 22px 22px;
+      display: flex; flex-direction: column; gap: 16px;
+      min-width: 0;
+    }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 34px;
+    }
+    .back-btn {
+      width: 34px; height: 34px; border-radius: 9px;
+      border: 1px solid rgba(144,103,198,0.25);
+      background: transparent;
+      display: grid; place-items: center;
+      color: var(--violet-600);
+      cursor: pointer;
+    }
+    .topbar-right {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12.5px;
+    }
+    .guest-label { color: rgba(36,32,56,0.55); }
+    .pill-btn {
+      padding: 7px 13px; border-radius: 999px;
+      font-size: 12.5px; font-weight: 600;
+      border: 1px solid rgba(36,32,56,0.14);
+      background: #fff; color: var(--ink-900);
+      cursor: pointer;
+    }
+    .pill-btn.ghost { background: transparent; }
+
+    /* ===== Hero card ===== */
+    .hero {
+      background: #fff;
+      border-radius: 18px;
+      padding: 40px 44px;
+      position: relative;
+      overflow: hidden;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 10px 30px rgba(80,60,120,0.06);
+    }
+    .hero .stage-art {
+      position: absolute;
+      right: 30px; bottom: 20px;
+      width: 180px; height: 150px;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+
+    /* Hero typography */
+    .hero-kicker {
+      display: inline-flex; align-items: center;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(36,32,56,0.06);
+      font-family: "Geom", serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(36,32,56,0.6);
+      width: fit-content;
+    }
+    .hero-title {
+      margin: 14px 0 0;
+      font-family: "Geom", serif;
+      font-weight: 700;
+      font-size: 34px;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      color: var(--ink-900);
+      max-width: 14ch;
+      text-wrap: balance;
+    }
+    .hero-copy {
+      margin: 10px 0 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: rgba(36,32,56,0.64);
+      max-width: 34ch;
+    }
+    .hero-cta {
+      margin-top: 22px;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 18px;
+      background: #7a59aa;
+      color: #f7ece1;
+      border: none; border-radius: 10px;
+      font-family: "Geom", serif;
+      font-weight: 600; font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 2px 0 rgba(80,50,120,0.25), 0 8px 20px rgba(122,89,170,0.25);
+      width: fit-content;
+    }
+    .hero-cta svg { width: 14px; height: 14px; }
+
+    /* Before variant accents what's problematic */
+    .mock.before .hero-title { font-size: 32px; }
+
+    /* ===== Caption row (annotates each artboard) ===== */
+    .annot {
+      margin-top: 12px;
+      font-size: 11.5px;
+      color: rgba(36,32,56,0.65);
+      line-height: 1.5;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.5);
+      border-left: 2px solid rgba(144,103,198,0.4);
+      border-radius: 4px;
+      max-width: 640px;
+    }
+    .annot b { color: var(--ink-900); }
+    .annot.bad { border-left-color: #c97f7f; }
+    .annot.good { border-left-color: #7fa57f; }
+
+    /* ===== Alternatives list ===== */
+    .alt-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .alt {
+      background: #fff;
+      border-radius: 14px;
+      padding: 22px 24px 20px;
+      box-shadow: 0 6px 18px rgba(80,60,120,0.05);
+      border: 1px solid rgba(141,134,201,0.12);
+    }
+    .alt-tag {
+      display: inline-block;
+      font-family: "Geom", serif;
+      font-size: 9.5px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--violet-600);
+      margin-bottom: 10px;
+    }
+    .alt-title {
+      font-family: "Geom", serif;
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -0.015em;
+      line-height: 1.1;
+      color: var(--ink-900);
+      margin: 0;
+      text-wrap: balance;
+    }
+    .alt-copy {
+      margin: 8px 0 16px;
+      font-size: 13px; line-height: 1.5;
+      color: rgba(36,32,56,0.64);
+    }
+    .alt-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      background: #7a59aa;
+      color: #f7ece1;
+      border: none; border-radius: 8px;
+      font-family: "Geom", serif;
+      font-weight: 600; font-size: 12px;
+      cursor: pointer;
+    }
+    .alt-note {
+      margin-top: 12px;
+      font-size: 10.5px; letter-spacing: 0.04em;
+      color: rgba(36,32,56,0.48);
+    }
+
+    /* Override default canvas artboard card bg so mocks breathe */
+    .dc-artboard { background: transparent !important; }
+  </style>
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel" data-presets="env,react">
+    // ------------------------------------------------------------
+    //  Icons — inline SVG so the file is self-contained.
+    // ------------------------------------------------------------
+    const Icon = {
+      sparkle: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
+        </svg>
+      ),
+      library: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3v18M3 12h18"/>
+        </svg>
+      ),
+      progress: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 17l5-5 4 3 8-8"/>
+        </svg>
+      ),
+      settings: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      ),
+      help: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.9.4-1 1-1 1.7"/>
+          <circle cx="12" cy="17" r=".8" fill="currentColor" stroke="none"/>
+        </svg>
+      ),
+      chevLeft: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      ),
+      plus: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      ),
+    };
+
+    // ------------------------------------------------------------
+    //  Isometric empty-board art (matches screenshot)
+    // ------------------------------------------------------------
+    const EmptyBoardArt = () => (
+      <svg className="stage-art" viewBox="0 0 200 160" fill="none">
+        <defs>
+          <pattern id="tileStroke" width="2" height="2" patternUnits="userSpaceOnUse">
+            <path d="M-1,1 l2,-2 M0,2 l2,-2 M1,3 l2,-2"
+              stroke="rgba(141,134,201,0.18)" strokeWidth="0.5"/>
+          </pattern>
+        </defs>
+        {/* Back tile */}
+        <path d="M60 40 L140 40 L180 60 L100 60 Z"
+          fill="rgba(141,134,201,0.08)" stroke="rgba(141,134,201,0.3)"
+          strokeWidth="1" strokeDasharray="3 3" />
+        {/* Front-left tile */}
+        <path d="M20 70 L100 70 L140 90 L60 90 Z"
+          fill="rgba(141,134,201,0.08)" stroke="rgba(141,134,201,0.3)"
+          strokeWidth="1" strokeDasharray="3 3" />
+        {/* Front-right tile */}
+        <path d="M100 70 L180 70 L220 90 L140 90 Z"
+          fill="rgba(141,134,201,0.06)" stroke="rgba(141,134,201,0.25)"
+          strokeWidth="1" strokeDasharray="3 3" />
+        {/* Bottom tile */}
+        <path d="M60 100 L140 100 L180 120 L100 120 Z"
+          fill="rgba(141,134,201,0.06)" stroke="rgba(141,134,201,0.25)"
+          strokeWidth="1" strokeDasharray="3 3" />
+      </svg>
+    );
+
+    // ------------------------------------------------------------
+    //  Shared chrome: Sidebar + Topbar
+    // ------------------------------------------------------------
+    const Sidebar = ({ helpVariant = 'good', helpOn = false }) => (
+      <aside className="sb">
+        <div className="sb-brand">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M12 3 L20 8 L20 16 L12 21 L4 16 L4 8 Z"
+              fill="url(#sBrand)" stroke="rgba(36,32,56,0.3)" strokeWidth="0.8"/>
+            <defs>
+              <linearGradient id="sBrand" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor="#b9a6de"/>
+                <stop offset="1" stopColor="#7a59aa"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span><span className="ink">socra</span><span className="vio">tink</span></span>
+        </div>
+
+        <nav className="sb-nav">
+          <div className="item active">{Icon.sparkle} Dashboard</div>
+          <div className="item">{Icon.library} Library</div>
+          <div className="item">{Icon.progress} Your Progress</div>
+          <div className="item">{Icon.settings} Settings</div>
+        </nav>
+
+        <div>
+          <div className="sb-label">Help</div>
+          {helpVariant === 'bad' ? (
+            <div className="help-bad">
+              {Icon.help}
+              <span>Quick Guide Show hints on this screen Off</span>
+            </div>
+          ) : (
+            <div className={'help-good ' + (helpOn ? '' : 'off')}>
+              <div className="icon">{Icon.help}</div>
+              <div className="text">
+                <div className="label">Quick Guide</div>
+                <div className="caption">Hints on this screen</div>
+              </div>
+              <div className={'switch ' + (helpOn ? 'on' : '')}></div>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="sb-label">Concepts</div>
+        </div>
+      </aside>
+    );
+
+    const Topbar = () => (
+      <div className="topbar">
+        <button className="back-btn" aria-label="Back">{Icon.chevLeft}</button>
+        <div className="topbar-right">
+          <span className="guest-label">Guest mode</span>
+          <button className="pill-btn">Save &amp; Sync</button>
+          <button className="pill-btn ghost">Exit Guest</button>
+        </div>
+      </div>
+    );
+
+    // ------------------------------------------------------------
+    //  BEFORE — exact copy of the screenshot
+    // ------------------------------------------------------------
+    const BeforeMock = () => (
+      <div className="mock before">
+        <Sidebar helpVariant="bad" />
+        <main className="main">
+          <Topbar />
+          <section className="hero">
+            <span className="hero-kicker">Board empty</span>
+            <h1 className="hero-title">Add your first socratink</h1>
+            <p className="hero-copy">Create a concept to start building your board.</p>
+            <button className="hero-cta">Add Concept</button>
+            <EmptyBoardArt />
+          </section>
+        </main>
+      </div>
+    );
+
+    // ------------------------------------------------------------
+    //  AFTER — fixes applied
+    // ------------------------------------------------------------
+    const AfterMock = () => (
+      <div className="mock after">
+        <Sidebar helpVariant="good" helpOn={false} />
+        <main className="main">
+          <Topbar />
+          <section className="hero">
+            {/* pill removed — redundant with title */}
+            <h1 className="hero-title">Start with one idea.</h1>
+            <p className="hero-copy">
+              Add a concept — we'll help you drill it until it's solid.
+            </p>
+            <button className="hero-cta">{Icon.plus} Add Concept</button>
+            <EmptyBoardArt />
+          </section>
+        </main>
+      </div>
+    );
+
+    // ------------------------------------------------------------
+    //  Alternatives board — four copy variants to compare
+    // ------------------------------------------------------------
+    const Alternatives = () => (
+      <div className="alt-list">
+        <div className="alt">
+          <div className="alt-tag">A · Action-first · recommended</div>
+          <h3 className="alt-title">Start with one idea.</h3>
+          <p className="alt-copy">Add a concept — we'll help you drill it until it's solid.</p>
+          <button className="alt-cta">{Icon.plus} Add Concept</button>
+          <div className="alt-note">Short. Verbs match the product loop (drill → solid).</div>
+        </div>
+        <div className="alt">
+          <div className="alt-tag">B · The loop</div>
+          <h3 className="alt-title">Your graph is empty.</h3>
+          <p className="alt-copy">Plant a concept. Drill it. Watch it solidify.</p>
+          <button className="alt-cta">{Icon.plus} Add Concept</button>
+          <div className="alt-note">Teaches the three-beat loop. Slightly poetic.</div>
+        </div>
+        <div className="alt">
+          <div className="alt-tag">C · Socratic · question-first</div>
+          <h3 className="alt-title">What's on your mind?</h3>
+          <p className="alt-copy">Name a concept you want to understand. We'll build from there.</p>
+          <button className="alt-cta">{Icon.plus} Add Concept</button>
+          <div className="alt-note">Best match to the Socratic brand. Warmest tone.</div>
+        </div>
+        <div className="alt">
+          <div className="alt-tag">D · Spartan</div>
+          <h3 className="alt-title">Add a concept to begin.</h3>
+          <p className="alt-copy">&nbsp;</p>
+          <button className="alt-cta">{Icon.plus} Add Concept</button>
+          <div className="alt-note">One line, no subtitle. Highest signal/clutter ratio.</div>
+        </div>
+      </div>
+    );
+
+    // ------------------------------------------------------------
+    //  HELP button close-up — isolated comparison
+    // ------------------------------------------------------------
+    const HelpCloseup = ({ variant }) => (
+      <div style={{
+        background: '#fff',
+        padding: 20,
+        borderRadius: 12,
+        border: '1px solid rgba(141,134,201,0.16)',
+        width: 260,
+      }}>
+        <div style={{
+          fontFamily: '"Geom", serif', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.16em', textTransform: 'uppercase',
+          color: 'rgba(36,32,56,0.38)', marginBottom: 10,
+        }}>Help</div>
+
+        {variant === 'bad' ? (
+          <div className="help-bad">
+            {Icon.help}
+            <span>Quick Guide Show hints on this screen Off</span>
+          </div>
+        ) : (
+          <>
+            <div className="help-good off" style={{marginBottom: 12}}>
+              <div className="icon">{Icon.help}</div>
+              <div className="text">
+                <div className="label">Quick Guide</div>
+                <div className="caption">Hints on this screen</div>
+              </div>
+              <div className="switch"></div>
+            </div>
+            <div className="help-good">
+              <div className="icon">{Icon.help}</div>
+              <div className="text">
+                <div className="label">Quick Guide</div>
+                <div className="caption">Hints on this screen</div>
+              </div>
+              <div className="switch on"></div>
+            </div>
+            <div style={{
+              fontSize: 10.5, color: 'rgba(36,32,56,0.55)',
+              marginTop: 10, lineHeight: 1.4,
+            }}>Off (top) and On (bottom).</div>
+          </>
+        )}
+      </div>
+    );
+
+    // ------------------------------------------------------------
+    //  Compose the canvas
+    // ------------------------------------------------------------
+    const App = () => (
+      <DesignCanvas title="Dashboard · Copy & Help Redesign"
+        subtitle="Before / After for the empty-state hero + the violet help button">
+        <DCSection id="hero"
+          title="1 · Full dashboard · before & after"
+          subtitle="Sidebar help + hero copy, shown at real scale side by side">
+          <DCArtboard id="before" label="Before — from screenshot"
+            width={900} height={560}>
+            <BeforeMock />
+            <div className="annot bad">
+              <b>Problems.</b> Help button is a solid-violet block competing with the
+              active "Dashboard" pill; three things crammed into one string
+              (label · description · state). Hero title treats "socratink" as a
+              countable noun; subtitle restates the title in different words;
+              "BOARD EMPTY" pill duplicates the title's job.
+            </div>
+          </DCArtboard>
+
+          <DCArtboard id="after" label="After — proposed"
+            width={900} height={560}>
+            <AfterMock />
+            <div className="annot good">
+              <b>Fixes.</b> Help becomes a quiet row with icon · label · caption · toggle;
+              background softened so the active nav item wins. Hero drops the
+              redundant pill, uses verbs from the product loop ("drill",
+              "solid"), and stops using the product name as a unit of work.
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="help"
+          title="2 · The help button, up close"
+          subtitle="Same panel, with and without the redesign">
+          <DCArtboard id="help-before" label="Before"
+            width={300} height={140}>
+            <HelpCloseup variant="bad" />
+          </DCArtboard>
+          <DCArtboard id="help-after" label="After"
+            width={300} height={220}>
+            <HelpCloseup variant="good" />
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="copy"
+          title="3 · Hero copy alternatives"
+          subtitle="Four directions — pick one, or mix the title of one with the subtitle of another">
+          <DCArtboard id="alts" label="A → D"
+            width={720} height={440}>
+            <Alternatives />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

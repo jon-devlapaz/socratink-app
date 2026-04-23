@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <title>V3 Constellation — Knowledge Graph</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Fonts (brand faces) -->
+  <style>
+    @font-face {
+      font-family: "Geom";
+      src: url("fonts/Geom-VariableFont_wght.ttf") format("truetype-variations"),
+           url("fonts/Geom-VariableFont_wght.ttf") format("truetype");
+      font-weight: 100 900; font-style: normal; font-display: swap;
+    }
+    @font-face {
+      font-family: "Inter";
+      src: url("fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype-variations"),
+           url("fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+      font-weight: 100 900; font-style: normal; font-display: swap;
+    }
+  </style>
+
+  <style>
+    /* ==========================================================
+       V3 CONSTELLATION — self-contained reference artboard.
+       Extracted from the Dark Mode Graph Lab so Claude Code (or
+       any dev reading this) can see the target aesthetic end-to-end.
+
+       Layout: 2-col grid — left = stage (svg graph), right = panel.
+       All state colors, gradients, and motion are inlined below.
+       ========================================================== */
+
+    :root {
+      /* Brand primitives (subset — only what V3 reads) */
+      --cream-50: #f7ece1;
+      --lavender-500: #8d86c9;
+      --violet-600:   #9067c6;
+
+      /* V3 palette */
+      --node-locked:       rgba(141,134,201,0.40);
+      --node-primed:       #9fd5ed;
+      --node-primed-halo:  rgba(159,213,237,0.55);
+      --node-drilled:      #f0c373;
+      --node-drilled-halo: rgba(240,195,115,0.50);
+      --node-solid:        #d7beff;
+      --node-solid-halo:   rgba(215,190,255,0.70);
+
+      --edge-structural: rgba(215,190,255,0.45);
+      --edge-cluster:    rgba(215,190,255,0.34);
+      --edge-subnode:    rgba(215,190,255,0.22);
+      --edge-locked:     rgba(141,134,201,0.15);
+      --edge-prereq:     rgba(215,190,255,0.55);
+      --edge-domain:     rgba(141,208,200,0.50);
+
+      --graph-seam-color: #d7beff;
+      --graph-seam-glow:  rgba(215,190,255,0.65);
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      background:
+        radial-gradient(circle at 20% 20%, #1b1733 0%, transparent 55%),
+        radial-gradient(circle at 80% 70%, #140e24 0%, transparent 50%),
+        #0a0716;
+      color: rgba(247,236,225,0.82);
+      font-family: "Inter", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Viewport-sized artboard wrapper */
+    .v3-wrap {
+      position: fixed; inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+      box-sizing: border-box;
+    }
+
+    .art {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 1400px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.85fr) minmax(320px, 1fr);
+      gap: 16px;
+    }
+
+    .art-stage, .art-panel {
+      border-radius: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ---- Stage ---- */
+    .art-stage {
+      background:
+        radial-gradient(ellipse 50% 50% at 50% 40%, rgba(144,103,198,0.22), transparent 60%),
+        radial-gradient(circle at 50% 50%, rgba(30,22,58,0.40), transparent 50%),
+        linear-gradient(180deg, #07050f 0%, #0c0820 50%, #05030a 100%);
+      border: 1px solid rgba(141,134,201,0.20);
+    }
+
+    /* ---- Right detail panel ---- */
+    .art-panel {
+      background:
+        radial-gradient(ellipse 80% 40% at 50% 0%, rgba(144,103,198,0.14), transparent 70%),
+        linear-gradient(180deg, #120c24 0%, #07050f 100%);
+      border: 1px solid rgba(144,103,198,0.26);
+      padding: 24px;
+      box-shadow:
+        inset 0 1px 0 rgba(247,236,225,0.04),
+        0 18px 48px rgba(0,0,0,0.45);
+      overflow: visible;   /* so the seam on ::before is not clipped */
+    }
+    .art-panel::before {
+      /* seam of light linking active node → right panel */
+      content: "";
+      position: absolute;
+      left: -1px; top: 34%; width: 2px; height: 28%;
+      background: linear-gradient(180deg, transparent, var(--graph-seam-color), transparent);
+      box-shadow: 0 0 20px 3px var(--graph-seam-glow);
+      z-index: 2;
+      pointer-events: none;
+    }
+    .art-panel::after {
+      /* soft bloom anchoring the panel title */
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 120px;
+      background: radial-gradient(ellipse at 30% 0%, rgba(215,190,255,0.08), transparent 70%);
+      pointer-events: none;
+    }
+    .art-panel > * { position: relative; z-index: 3; }
+
+    /* ---- Typography ---- */
+    .kicker {
+      font-family: "Geom", serif;
+      font-size: 10.5px; font-weight: 700;
+      letter-spacing: 0.16em; text-transform: uppercase;
+      color: rgba(141,134,201,0.78);
+    }
+    .title {
+      margin: 8px 0 0;
+      font-family: "Geom", serif;
+      font-weight: 600; font-size: 22px;
+      line-height: 1.15; letter-spacing: -0.005em;
+      color: var(--cream-50);
+    }
+    .copy {
+      margin: 10px 0 0;
+      font-size: 13px; line-height: 1.55;
+      color: rgba(247,236,225,0.64);
+      max-width: 38ch; text-wrap: pretty;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, rgba(144,103,198,0.30), rgba(167,136,216,0.30));
+      color: #e9d7ff;
+    }
+    .btn {
+      margin-top: 14px; padding: 10px 16px;
+      border-radius: 10px;
+      font-family: "Geom", serif;
+      font-weight: 700; font-size: 13px;
+      letter-spacing: 0.01em;
+      border: none; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(180deg, #a788d8 0%, #8560c0 100%);
+      color: #120c24;
+      box-shadow:
+        0 2px 0 rgba(0,0,0,0.4),
+        0 0 32px rgba(167,136,216,0.5);
+    }
+    .divider {
+      height: 1px; margin: 18px 0;
+      background: linear-gradient(90deg, transparent, rgba(141,134,201,0.22), transparent);
+    }
+
+    /* Stage header strip */
+    .stage-header {
+      position: absolute; top: 16px; left: 18px; right: 18px;
+      display: flex; justify-content: space-between; align-items: start;
+      pointer-events: none; z-index: 3;
+    }
+    .stage-header .kicker { color: rgba(141,134,201,0.62); }
+    .stage-header .title  { font-size: 19px; margin-top: 4px; }
+
+    /* Legend */
+    .legend {
+      position: absolute; bottom: 16px; left: 18px;
+      display: flex; gap: 14px;
+      font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: rgba(247,236,225,0.55);
+      z-index: 3; pointer-events: none;
+    }
+    .legend-dot { display: inline-flex; align-items: center; gap: 6px; }
+    .legend-dot::before {
+      content: ""; width: 8px; height: 8px; border-radius: 50%;
+    }
+    .dot-locked::before  { background: rgba(141,134,201,0.55); }
+    .dot-primed::before  { background: var(--node-primed); }
+    .dot-drilled::before { background: var(--node-drilled); }
+    .dot-solid::before   { background: var(--node-solid); }
+
+    /* SVG within stage */
+    .graph-svg {
+      position: relative; z-index: 1;
+      width: 100%; height: 100%;
+    }
+    .node-label {
+      font-family: "Geom", serif;
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    /* Starfield */
+    .v3-stars {
+      position: absolute; inset: 0;
+      pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .v3-stars span {
+      position: absolute;
+      width: 2px; height: 2px; border-radius: 50%;
+      background: var(--cream-50);
+      opacity: 0.4;
+      animation: twinkle 3.6s ease-in-out infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.18; transform: scale(0.8); }
+      50%      { opacity: 0.85; transform: scale(1.2); }
+    }
+    @keyframes beam-travel {
+      0%   { stroke-dashoffset: 0; }
+      100% { stroke-dashoffset: -200; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .v3-stars span { animation: none; opacity: 0.5; }
+      .graph-svg line[style*="beam-travel"] { animation: none !important; }
+    }
+  </style>
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+  <div id="root" class="v3-wrap"></div>
+
+  <!-- ==========================================================
+       Graph data (shared mock session — matches the lab).
+       ========================================================== -->
+  <script type="text/babel" data-presets="env,react">
+    const GRAPH_DATA = {
+      core: { id: 'core', label: 'Core Thesis', state: 'solid', x: 0, y: 0 },
+      backbones: [
+        { id: 'bb1', label: 'Selection Pressure', state: 'solid',  angle: -Math.PI / 2,        radius: 150 },
+        { id: 'bb2', label: 'Variation & Drift',  state: 'primed', angle: -Math.PI / 2 + 2.09, radius: 150 },
+        { id: 'bb3', label: 'Inheritance',        state: 'locked', angle: -Math.PI / 2 + 4.19, radius: 150 },
+      ],
+      clusters: [
+        { id: 'c1', label: 'Fitness landscape',  state: 'solid',   parent: 'bb1', offset: { dx: -110, dy:  -80 } },
+        { id: 'c2', label: 'Niche construction', state: 'drilled', parent: 'bb1', offset: { dx:   60, dy: -120 } },
+        { id: 'c3', label: 'Random walk',        state: 'primed',  parent: 'bb2', offset: { dx:  140, dy:   20 } },
+        { id: 'c4', label: 'Bottlenecks',        state: 'locked',  parent: 'bb3', offset: { dx:  -50, dy:  130 } },
+      ],
+      subnodes: [
+        { id: 's1',  label: 'Allele freq',    parent: 'c1', state: 'solid'   },
+        { id: 's2',  label: 'Adaptive peaks', parent: 'c1', state: 'primed'  },
+        { id: 's3',  label: 'Red Queen',      parent: 'c1', state: 'solid'   },
+        { id: 's4',  label: 'Ecosystem eng',  parent: 'c2', state: 'drilled' },
+        { id: 's5',  label: 'Beaver pond',    parent: 'c2', state: 'locked'  },
+        { id: 's6',  label: 'Stochasticity',  parent: 'c3', state: 'primed'  },
+        { id: 's7',  label: 'Neutral theory', parent: 'c3', state: 'locked'  },
+        { id: 's8',  label: 'Effective N',    parent: 'c3', state: 'locked'  },
+        { id: 's9',  label: 'Founder effect', parent: 'c4', state: 'locked'  },
+        { id: 's10', label: 'Serial founder', parent: 'c4', state: 'locked'  },
+      ],
+      lateral: [
+        { from: 'c2', to: 'c3', kind: 'prereq' },
+        { from: 'c1', to: 'c4', kind: 'domain' },
+      ],
+      active: 'core',
+    };
+
+    function layoutGraph(data, cx, cy) {
+      const positions = {};
+      positions[data.core.id] = { x: cx, y: cy };
+      data.backbones.forEach(bb => {
+        positions[bb.id] = {
+          x: cx + Math.cos(bb.angle) * bb.radius,
+          y: cy + Math.sin(bb.angle) * bb.radius,
+        };
+      });
+      data.clusters.forEach(cl => {
+        const p = positions[cl.parent];
+        positions[cl.id] = { x: p.x + cl.offset.dx, y: p.y + cl.offset.dy };
+      });
+      const byParent = {};
+      data.subnodes.forEach(sn => {
+        byParent[sn.parent] = byParent[sn.parent] || [];
+        byParent[sn.parent].push(sn);
+      });
+      Object.entries(byParent).forEach(([parentId, subs]) => {
+        const p = positions[parentId];
+        const radius = Math.max(46, 34 + subs.length * 5);
+        subs.forEach((sn, i) => {
+          const angle = (Math.PI * 2 * i) / subs.length + (Math.PI / 4);
+          positions[sn.id] = {
+            x: p.x + Math.cos(angle) * radius,
+            y: p.y + Math.sin(angle) * radius,
+          };
+        });
+      });
+      return positions;
+    }
+
+    // ======================================================
+    //  V3 — CONSTELLATION
+    //  Starfield, luminous halo nodes, animated edge beam on
+    //  the active path. Right-panel seam completes the link.
+    // ======================================================
+
+    const { useMemo } = React;
+
+    function V3Stars() {
+      const stars = useMemo(() => {
+        const arr = [];
+        for (let i = 0; i < 80; i++) {
+          arr.push({
+            x: Math.random() * 100,
+            y: Math.random() * 100,
+            size: 1 + Math.random() * 2,
+            delay: Math.random() * 4,
+            dur: 2.4 + Math.random() * 3,
+          });
+        }
+        return arr;
+      }, []);
+      return (
+        <div className="v3-stars">
+          {stars.map((s, i) => (
+            <span key={i} style={{
+              left: s.x + '%', top: s.y + '%',
+              width: s.size, height: s.size,
+              animationDelay: s.delay + 's',
+              animationDuration: s.dur + 's',
+            }} />
+          ))}
+        </div>
+      );
+    }
+
+    function V3Node({ cx, cy, r, state, active }) {
+      const palette = {
+        locked:  { core: 'rgba(141,134,201,0.4)', halo: 'rgba(141,134,201,0.18)', stroke: 'rgba(141,134,201,0.4)' },
+        primed:  { core: '#9fd5ed', halo: 'rgba(159,213,237,0.55)', stroke: '#bce4f4' },
+        drilled: { core: '#f0c373', halo: 'rgba(240,195,115,0.5)',  stroke: '#f7d69a' },
+        solid:   { core: '#d7beff', halo: 'rgba(215,190,255,0.7)',  stroke: '#ecdaff' },
+      };
+      const p = palette[state];
+      const haloR = r * 2.4;
+      return (
+        <g>
+          {state !== 'locked' && (
+            <circle cx={cx} cy={cy} r={haloR} fill={p.halo} opacity="0.55"
+              style={{ filter: 'blur(6px)' }} />
+          )}
+          {active && (
+            <circle cx={cx} cy={cy} r={r * 2.6} fill="none" stroke="#d7beff"
+              strokeWidth="1.2" opacity="0.7">
+              <animate attributeName="r"
+                values={`${r * 2};${r * 3.2};${r * 2}`}
+                dur="3.2s" repeatCount="indefinite" />
+              <animate attributeName="opacity"
+                values="0.8;0.2;0.8" dur="3.2s" repeatCount="indefinite" />
+            </circle>
+          )}
+          <circle cx={cx} cy={cy} r={r} fill={p.core} stroke={p.stroke} strokeWidth="0.8"
+            opacity={state === 'locked' ? 0.5 : 1} />
+          <circle cx={cx - r * 0.25} cy={cy - r * 0.25} r={r * 0.35}
+            fill="#ffffff" opacity={state === 'locked' ? 0.05 : 0.24} />
+        </g>
+      );
+    }
+
+    function V3Artboard() {
+      const cx = 380, cy = 280;
+      const pos = useMemo(() => layoutGraph(GRAPH_DATA, cx, cy), []);
+
+      return (
+        <div className="art v3">
+          <div className="art-stage">
+            <V3Stars />
+
+            <div className="stage-header">
+              <div>
+                <div className="kicker">Architecture</div>
+                <div className="title">Knowledge Graph</div>
+              </div>
+            </div>
+
+            <svg className="graph-svg" viewBox="0 0 760 560"
+                 preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <linearGradient id="v3-beam" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%"   stopColor="#d7beff" stopOpacity="0" />
+                  <stop offset="50%"  stopColor="#d7beff" stopOpacity="0.95" />
+                  <stop offset="100%" stopColor="#d7beff" stopOpacity="0" />
+                </linearGradient>
+                <radialGradient id="v3-core-glow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%"   stopColor="#d7beff" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#d7beff" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+
+              {/* Big halo behind core */}
+              <circle cx={pos.core.x} cy={pos.core.y} r="120" fill="url(#v3-core-glow)" />
+
+              {/* Backbone edges */}
+              {GRAPH_DATA.backbones.map(bb => {
+                const p1 = pos.core, p2 = pos[bb.id];
+                const available = bb.state !== 'locked';
+                return (
+                  <line key={'e-' + bb.id} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                    stroke={available ? 'rgba(215,190,255,0.45)' : 'rgba(141,134,201,0.15)'}
+                    strokeWidth="1.2" strokeLinecap="round" />
+                );
+              })}
+              {/* Cluster edges */}
+              {GRAPH_DATA.clusters.map(cl => {
+                const p1 = pos[cl.parent], p2 = pos[cl.id];
+                const available = cl.state !== 'locked';
+                return (
+                  <line key={'e-' + cl.id} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                    stroke={available ? 'rgba(215,190,255,0.34)' : 'rgba(141,134,201,0.10)'}
+                    strokeWidth="1" />
+                );
+              })}
+              {/* Subnode edges */}
+              {GRAPH_DATA.subnodes.map(sn => {
+                const p1 = pos[sn.parent], p2 = pos[sn.id];
+                const parentCluster = GRAPH_DATA.clusters.find(c => c.id === sn.parent);
+                const available = parentCluster && parentCluster.state !== 'locked';
+                return (
+                  <line key={'e-' + sn.id} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                    stroke={available ? 'rgba(215,190,255,0.22)' : 'rgba(141,134,201,0.06)'}
+                    strokeWidth="0.7" />
+                );
+              })}
+
+              {/* Traveling beam on active path — core → primed backbone */}
+              {(() => {
+                const target = GRAPH_DATA.backbones.find(b => b.state === 'primed');
+                if (!target) return null;
+                const p1 = pos.core, p2 = pos[target.id];
+                return (
+                  <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                    stroke="url(#v3-beam)" strokeWidth="2.5"
+                    strokeDasharray="10 180"
+                    style={{ animation: 'beam-travel 2.4s linear infinite' }} />
+                );
+              })()}
+
+              {/* Lateral dotted pathways */}
+              {GRAPH_DATA.lateral.map((l, i) => {
+                const p1 = pos[l.from], p2 = pos[l.to];
+                const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2 - 40;
+                return (
+                  <path key={'lat-' + i}
+                    d={`M ${p1.x} ${p1.y} Q ${mx} ${my} ${p2.x} ${p2.y}`}
+                    fill="none"
+                    stroke={l.kind === 'prereq'
+                      ? 'rgba(215,190,255,0.55)'
+                      : 'rgba(141,208,200,0.50)'}
+                    strokeWidth="1" strokeDasharray="2 5" />
+                );
+              })}
+
+              {/* Nodes */}
+              <V3Node cx={pos.core.x} cy={pos.core.y} r={14}
+                state={GRAPH_DATA.core.state} active />
+              {GRAPH_DATA.backbones.map(bb => (
+                <V3Node key={bb.id} cx={pos[bb.id].x} cy={pos[bb.id].y} r={9}
+                  state={bb.state} />
+              ))}
+              {GRAPH_DATA.clusters.map(cl => (
+                <V3Node key={cl.id} cx={pos[cl.id].x} cy={pos[cl.id].y} r={7}
+                  state={cl.state} />
+              ))}
+              {GRAPH_DATA.subnodes.map(sn => (
+                <V3Node key={sn.id} cx={pos[sn.id].x} cy={pos[sn.id].y} r={3.5}
+                  state={sn.state} />
+              ))}
+
+              {/* Labels */}
+              <text x={pos.core.x} y={pos.core.y + 34}
+                textAnchor="middle" className="node-label"
+                fill="#f7ece1" style={{ fontSize: 11, letterSpacing: '0.06em' }}>
+                CORE THESIS
+              </text>
+              {GRAPH_DATA.backbones.map(bb => (
+                <text key={'l-' + bb.id}
+                  x={pos[bb.id].x} y={pos[bb.id].y + 26}
+                  textAnchor="middle" className="node-label"
+                  fill={bb.state === 'locked'
+                    ? 'rgba(181,168,220,0.4)'
+                    : 'rgba(247,236,225,0.85)'}
+                  style={{ fontSize: 10 }}>
+                  {bb.label}
+                </text>
+              ))}
+            </svg>
+
+            <div className="legend">
+              <span className="legend-dot dot-locked">Locked</span>
+              <span className="legend-dot dot-primed">Primed</span>
+              <span className="legend-dot dot-drilled">Needs revisit</span>
+              <span className="legend-dot dot-solid">Solidified</span>
+            </div>
+          </div>
+
+          <div className="art-panel">
+            <div className="kicker">Core Thesis</div>
+            <h2 className="title">The Logic of Adaptation</h2>
+            <p className="copy">What governing idea explains how this whole system behaves? Start here, then prove it from memory.</p>
+            <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+              <span className="pill">✦ Solidified</span>
+            </div>
+            <button className="btn btn-primary">Re-drill Core Thesis</button>
+            <div className="divider" />
+            <div className="kicker" style={{ marginBottom: 8 }}>Active path</div>
+            <p className="copy" style={{ marginTop: 0 }}>
+              A beam connects Core Thesis → <strong style={{ color: '#bde1ef' }}>Variation &amp; Drift</strong> — the next primed branch, incubating and ready.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<V3Artboard />);
+  </script>
+</body>
+</html>
