@@ -209,9 +209,6 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow {
   display: block;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-state-chip {
-  display: none;
-}
 
 .hero-primary-action:disabled {
   background: var(--surface-nested);
@@ -1197,9 +1194,6 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   align-items: center;
   gap: var(--space-2);
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-state-chip-group {
-  display: none;
-}
 
 .help-tip-trigger {
   display: inline-flex;
@@ -1207,6 +1201,7 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   justify-content: center;
   width: 24px;
   height: 24px;
+  min-height: 24px;
   padding: 0;
   border-radius: 999px;
   background: transparent;
@@ -1235,6 +1230,79 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   outline: none;
   box-shadow: var(--accent-ring);
   border-color: var(--accent-border-strong);
+}
+
+/* Empty-state voice line + ghost graph preview */
+.hero-voice-line { display: none; margin: 0; }
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-style: italic;
+  font-weight: 400;
+  line-height: var(--leading-snug);
+  color: var(--text-sub);
+  margin: 0;
+  max-width: 420px;
+}
+
+.hero-ghost-graph { display: none; margin: 0; }
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px auto 0;
+  max-width: 380px;
+  width: 100%;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) {
+  justify-content: flex-start;
+  gap: 12px;
+  align-items: stretch;
+  text-align: center;
+  max-width: 640px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow-row,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row {
+  justify-content: center;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-actions {
+  justify-content: center;
+  width: 100%;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) .desc,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph__caption {
+  text-align: left;
+  width: 100%;
+}
+@media (min-width: 900px) {
+  .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-primary-action {
+    min-width: 200px;
+  }
+}
+.hero-ghost-graph__svg {
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  opacity: 0.32;
+  pointer-events: none;
+}
+.hero-ghost-graph__caption {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-style: italic;
+  line-height: var(--leading-snug);
+  color: var(--text-sub);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph {
+    transition: opacity var(--duration-standard, 220ms) var(--ease-standard);
+  }
 }
 
 .help-tip {

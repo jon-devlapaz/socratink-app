@@ -22,7 +22,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=44">
+  <link rel="stylesheet" href="styles.css?v=51">
 </head>
 
 <body>
@@ -154,11 +154,6 @@
             </g>
           </svg>
         </button>
-        <button class="map-back-link" id="map-back-link" type="button" onclick="App.hideMapView()"
-          aria-label="Return to dashboard">
-          <span aria-hidden="true">←</span>
-          <span>Dashboard</span>
-        </button>
       </div>
       <div class="main-header-right">
         <div class="auth-controls" id="auth-controls" hidden>
@@ -229,19 +224,33 @@
         </div>
         <h1 class="hero-title" id="title">What do you want to understand?</h1>
         <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
+        <p class="hero-voice-line">The map won't lie to you, even if you want it to.</p>
         <div class="hero-actions">
           <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
-            <span class="material-symbols-outlined hero-primary-action__icon" aria-hidden="true">add</span>
-            <span class="hero-primary-action__label">Add a concept</span>
-          </button>
-          <button type="button"
-                  class="help-tip-trigger js-tooltip-trigger"
-                  aria-label="What does Add a concept do?"
-                  aria-describedby="tip-add-concept"
-                  data-tooltip-id="tip-add-concept">
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            <span class="hero-primary-action__label">Begin</span>
           </button>
         </div>
+        <figure class="hero-ghost-graph" role="presentation" aria-hidden="true">
+          <!-- Ghost-graph preview. Center node uses --success (solidified) by design-system legend; peripherals use primed/drilled/locked. Not interactive, not user data. -->
+          <svg class="hero-ghost-graph__svg" viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
+            <g fill="none" stroke="var(--accent-primary)" stroke-width="1.2" stroke-linecap="round">
+              <line x1="160" y1="90" x2="70" y2="42"/>
+              <line x1="160" y1="90" x2="250" y2="42"/>
+              <line x1="160" y1="90" x2="54" y2="138"/>
+              <line x1="160" y1="90" x2="266" y2="138"/>
+              <line x1="160" y1="90" x2="160" y2="158"/>
+            </g>
+            <g>
+              <circle cx="160" cy="90" r="14" fill="var(--success)" stroke="var(--success)" stroke-width="1.4"/>
+              <circle cx="70" cy="42" r="9" fill="var(--accent-primary)" stroke="var(--accent-primary)" stroke-width="1.4"/>
+              <circle cx="250" cy="42" r="9" fill="var(--accent-primary)" stroke="var(--accent-primary)" stroke-width="1.4"/>
+              <circle cx="266" cy="138" r="9" fill="var(--lavender-500)" stroke="var(--lavender-500)" stroke-width="1.4"/>
+              <circle cx="54" cy="138" r="9" fill="none" stroke="var(--mauve-200)" stroke-width="1.4" stroke-dasharray="3 3"/>
+              <circle cx="160" cy="158" r="9" fill="none" stroke="var(--mauve-200)" stroke-width="1.4" stroke-dasharray="3 3"/>
+            </g>
+          </svg>
+          <figcaption class="hero-ghost-graph__caption">Your map starts empty. Each concept earns its place.</figcaption>
+        </figure>
         <div id="timer-display">24:00:00</div>
 
         <!-- Action Controls (Hidden for Board-First UX) -->
@@ -468,7 +477,6 @@
         <header class="concept-header" id="concept-header">
           <div class="concept-header-main">
             <h2 class="concept-header-title" id="concept-header-title"></h2>
-            <p class="concept-header-summary" id="concept-header-summary"></p>
             <div class="concept-header-tags" id="concept-header-tags"></div>
           </div>
           <div class="concept-header-actions">

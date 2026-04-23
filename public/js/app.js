@@ -278,7 +278,7 @@ const App = (() => {
 
   function getHeroActionConfig(concept) {
     if (!concept) {
-      return { label: 'Add a concept', action: 'add', disabled: false };
+      return { label: 'Begin', action: 'add', disabled: false };
     }
     switch (concept.state) {
       case 'instantiated':
@@ -300,7 +300,7 @@ const App = (() => {
           ? { label: 'Review Map', action: 'open-map', disabled: false }
           : { label: 'Open Board', action: 'wait', disabled: true };
       default:
-        return { label: 'Add a concept', action: 'add', disabled: false };
+        return { label: 'Begin', action: 'add', disabled: false };
     }
   }
 
@@ -1849,19 +1849,15 @@ const App = (() => {
     const fws = data.frameworks || [];
 
     const titleEl = document.getElementById('concept-header-title');
-    const summaryEl = document.getElementById('concept-header-summary');
     const tagsEl = document.getElementById('concept-header-tags');
     const drillBtn = document.getElementById('concept-start-drill');
     if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
-    if (summaryEl) summaryEl.textContent = meta.core_thesis || '';
     if (tagsEl) {
       let tagsHtml = '';
       const stateLabel = getHeroStateLabel(concept.state);
       if (stateLabel && stateLabel !== 'Board Empty') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
-      if (meta.architecture_type) tagsHtml += `<span class="map-badge arch">${escHtml(meta.architecture_type.replace(/_/g, ' '))}</span>`;
-      if (meta.difficulty) tagsHtml += `<span class="map-badge diff">${escHtml(meta.difficulty)}</span>`;
       if (meta.low_density) tagsHtml += `<span class="map-low-density">Lightweight map</span>`;
       tagsEl.innerHTML = tagsHtml;
     }
