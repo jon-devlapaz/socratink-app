@@ -183,6 +183,17 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   padding: 11px 16px;
   border-radius: var(--radius-btn);
   box-shadow: var(--accent-shadow-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.hero-primary-action__icon {
+  font-size: 18px;
+  font-variation-settings: 'FILL' 1, 'wght' 600;
+}
+.hero-info:not(:has(.hero-state-chip[data-state="empty"])) .hero-primary-action__icon {
+  display: none;
 }
 .hero-primary-action:disabled {
   background: var(--surface-nested);

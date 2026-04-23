@@ -253,7 +253,12 @@ const App = (() => {
 
     if (heroPrimaryActionEl) {
       const config = getHeroActionConfig(concept);
-      heroPrimaryActionEl.textContent = config.label;
+      const labelEl = heroPrimaryActionEl.querySelector('.hero-primary-action__label');
+      if (labelEl) {
+        labelEl.textContent = config.label;
+      } else {
+        heroPrimaryActionEl.textContent = config.label;
+      }
       heroPrimaryActionEl.dataset.action = config.action;
       heroPrimaryActionEl.disabled = Boolean(config.disabled);
       heroPrimaryActionEl.title = config.disabled ? 'This action is unavailable right now.' : config.label;

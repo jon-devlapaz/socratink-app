@@ -14,7 +14,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=auto_awesome,help,memory,settings,show_chart&display=block"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,help,memory,settings,show_chart&display=block"
     rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
@@ -225,7 +225,8 @@
         <p class="desc hero-guidance" id="desc">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
         <div class="hero-actions">
           <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
-            Add Concept
+            <span class="material-symbols-outlined hero-primary-action__icon" aria-hidden="true">add</span>
+            <span class="hero-primary-action__label">Add a concept</span>
           </button>
         </div>
         <div id="timer-display">24:00:00</div>
