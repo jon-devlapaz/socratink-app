@@ -185,7 +185,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Create a concept to start building your board.';
+    if (!concept) return "Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.";
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -202,13 +202,13 @@ const App = (() => {
       case 'actualized':
         return 'Review the map or revisit recall if you need a refresh.';
       default:
-        return 'Create a concept to start building your board.';
+        return "Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.";
     }
   }
 
   function getHeroActionConfig(concept) {
     if (!concept) {
-      return { label: 'Add Concept', action: 'add', disabled: false };
+      return { label: 'Add a concept', action: 'add', disabled: false };
     }
     switch (concept.state) {
       case 'instantiated':
@@ -230,13 +230,13 @@ const App = (() => {
           ? { label: 'Review Map', action: 'open-map', disabled: false }
           : { label: 'Open Board', action: 'wait', disabled: true };
       default:
-        return { label: 'Add Concept', action: 'add', disabled: false };
+        return { label: 'Add a concept', action: 'add', disabled: false };
     }
   }
 
   function renderHero(concept) {
     if (!concept) {
-      titleEl.textContent = 'Add your first socratink';
+      titleEl.textContent = 'What do you want to understand?';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
         heroStateChipEl.textContent = 'Board Empty';
