@@ -1,6 +1,4 @@
 import { Bus } from './bus.js';
-import { GEO, easeInOutCubic, interpCoords, coordsToPoints } from './geo.js';
-import { Morph, crystalPolygons } from './morph.js';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
@@ -14,7 +12,7 @@ import {
   card, titleEl, descEl, primaryControls, drillControls,
   heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
-  TILE_IDS, tileEls, POLYGON_IDS
+  TILE_IDS, tileEls
 } from './dom.js';
 import { recordExtractRun, recordDrillRun } from './browser-analytics.js';
 
@@ -469,7 +467,7 @@ const App = (() => {
   function playAnim(name, tileIdx) {
     const cls = ANIM_CLASSES[name];
     if (!cls) return;
-    const el = document.getElementById('crystal-anim-' + tileIdx);
+    const el = document.getElementById('concept-marker-anim-' + tileIdx);
     if (!el) return;
     function done() {
       el.classList.remove(cls);
@@ -483,6 +481,8 @@ const App = (() => {
   }
 
   // ── 8. Grid rendering ──────────────────────────────────────
+  // Dashboard tiles are inventory/navigation. The pin marks that a concept
+  // has earned a place here; it does not encode proof or mastery.
   const TILE_PLATFORM = `
     <polygon class="tile-left"  points="0,40 70,80 70,90 0,50"/>
     <polygon class="tile-right" points="140,40 70,80 70,90 140,50"/>
@@ -497,31 +497,16 @@ const App = (() => {
     <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>
     <polygon class="tile-hit"       points="70,0 140,40 70,80 0,40"/>`;
 
-  function crystalSVG(idx, state) {
-    const G = GEO[state];
-    const p = coordsToPoints;
-    // Visual paint order: glow → lower faces → upper faces → tip → top → specular
+  function conceptPinSVG(idx, state) {
     return `
-    <g class="crystal-anim" id="crystal-anim-${idx}">
-      <g class="crystal-instance" id="crystal-${idx}" data-state="${state}"
-         transform="translate(35,-39.8) scale(0.35)" style="pointer-events:none;">
-        <ellipse cx="100" cy="228" rx="46" ry="7" fill="rgba(60,40,120,0.10)"/>
-        <polygon id="c${idx}-cp-glow"        class="cp-glow"        points="${p(G[7])}" fill="hsl(270,20%,60%)" opacity="0.10" filter="url(#glow-filter)"/>
-        <polygon id="c${idx}-cp-lower-left"  class="cp-lower-left"  points="${p(G[3])}" fill="hsl(270,16%,46%)" opacity="0.82"/>
-        <polygon id="c${idx}-cp-lower-right" class="cp-lower-right" points="${p(G[4])}" fill="hsl(270,14%,38%)" opacity="0.82"/>
-        <polygon id="c${idx}-cp-upper-left"  class="cp-upper-left"  points="${p(G[1])}" fill="hsl(270,18%,55%)" opacity="0.82"/>
-        <polygon id="c${idx}-cp-upper-right" class="cp-upper-right" points="${p(G[2])}" fill="hsl(270,16%,46%)" opacity="0.82"/>
-        <polygon id="c${idx}-cp-bottom-tip"  class="cp-bottom-tip"  points="${p(G[5])}" fill="hsl(270,14%,38%)" opacity="0.82"/>
-        <polygon id="c${idx}-cp-top"         class="cp-top"         points="${p(G[0])}" fill="hsl(270,20%,68%)" opacity="0.88"/>
-        <polygon id="c${idx}-cp-specular"    class="cp-specular"    points="${p(G[6])}" fill="hsl(270,30%,85%)" opacity="0.35"/>
+    <g class="concept-marker-anim" id="concept-marker-anim-${idx}">
+      <g class="concept-pin" id="concept-pin-${idx}" data-state="${state}" style="pointer-events:none;">
+        <ellipse class="concept-pin-shadow" cx="70" cy="43" rx="17" ry="3.5"/>
+        <line class="concept-pin-line" x1="70" y1="-15" x2="70" y2="38"/>
+        <circle class="concept-pin-head" cx="70" cy="-15" r="8.5"/>
+        <circle class="concept-pin-core" cx="70" cy="-15" r="3.1"/>
       </g>
     </g>`;
-  }
-
-  function refreshPolygonRefs(tileIdx) {
-    crystalPolygons[tileIdx] = POLYGON_IDS.map(id =>
-      document.getElementById('c' + tileIdx + '-' + id)
-    );
   }
 
   function renderGrid(concepts = loadConcepts()) {
@@ -539,10 +524,8 @@ const App = (() => {
 
       if (isEmpty) {
         tileEl.innerHTML = EMPTY_TILE;
-        crystalPolygons[idx] = null;
       } else {
-        tileEl.innerHTML = TILE_PLATFORM + crystalSVG(idx, concept.state);
-        refreshPolygonRefs(idx);
+        tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state);
       }
     });
   }
@@ -1651,11 +1634,10 @@ const App = (() => {
     if (newState !== 'hibernating') patch.timerStart = null;
     updateActiveConcept(patch);
 
-    // Update crystal group's data-state (drives CSS color transitions)
-    const crystalEl = document.getElementById('crystal-' + tileIdx);
-    if (crystalEl) {
-      crystalEl.dataset.state = newState;
-      if (prevState !== newState) Morph.start(tileIdx, prevState, newState);
+    // Keep the dashboard marker in sync without turning the board into a proof/status surface.
+    const markerEl = document.getElementById('concept-pin-' + tileIdx);
+    if (markerEl) {
+      markerEl.dataset.state = newState;
     }
 
     // Update dot in list

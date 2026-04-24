@@ -30,9 +30,14 @@
 }
 
 /* Tile polygons */
-.tile-left  { fill:var(--tile-left);  transition:fill var(--theme-transition-ms) var(--theme-transition-ease); }
-.tile-right { fill:var(--tile-right); transition:fill var(--theme-transition-ms) var(--theme-transition-ease); }
-.tile-top   { fill:var(--tile-top);   transition:fill var(--theme-transition-ms) var(--theme-transition-ease); }
+.tile-left  { fill:var(--tile-left);  transition:fill var(--theme-transition-ms) var(--theme-transition-ease), opacity var(--theme-transition-ms) var(--theme-transition-ease); }
+.tile-right { fill:var(--tile-right); transition:fill var(--theme-transition-ms) var(--theme-transition-ease), opacity var(--theme-transition-ms) var(--theme-transition-ease); }
+.tile-top   {
+  fill:var(--tile-top);
+  stroke:var(--primary);
+  stroke-width:1.7;
+  transition:fill var(--theme-transition-ms) var(--theme-transition-ease), stroke var(--theme-transition-ms) var(--theme-transition-ease);
+}
 
 /* Click-catch polygon on each tile */
 .tile-hit {
@@ -44,8 +49,8 @@
 /* Selection highlight */
 .tile-highlight {
   fill:none;
-  stroke:var(--primary);
-  stroke-width:2.5;
+  stroke:rgba(var(--violet-600-rgb), 0.38);
+  stroke-width:1;
   opacity:0;
   transition:opacity 0.25s ease, stroke var(--theme-transition-ms) var(--theme-transition-ease);
   pointer-events:none;
@@ -54,19 +59,39 @@
 
 /* Empty slot */
 .tile-group.empty .tile-left,
-.tile-group.empty .tile-right { opacity:0.48; }
+.tile-group.empty .tile-right { opacity:0.34; }
 .tile-group.empty .tile-top-empty {
-  fill: rgba(var(--mauve-200-rgb), 0.24);
+  fill: rgba(var(--cream-50-rgb), 0.58);
   transition: fill var(--theme-transition-ms) var(--theme-transition-ease), opacity var(--theme-transition-ms) var(--theme-transition-ease);
 }
 .tile-group.empty .tile-top-dash {
   fill:none;
-  stroke:var(--locked);
-  stroke-width:1.5;
-  stroke-dasharray:4 3;
-  opacity:0.58;
+  stroke:rgba(var(--ink-900-rgb), 0.18);
+  stroke-width:1.2;
+  stroke-dasharray:3 4;
+  opacity:0.72;
 }
 .tile-group.empty .tile-hit { cursor:default; }
+
+/* Concept placement marker. This is intentionally not a progress/status glyph. */
+.concept-marker-anim { transition: opacity 0.3s ease, filter 0.3s ease; }
+.concept-pin-shadow {
+  fill: rgba(var(--ink-900-rgb), 0.10);
+  filter: blur(2px);
+}
+.concept-pin-line {
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.concept-pin-head {
+  fill: rgba(var(--cream-50-rgb), 0.94);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+.concept-pin-core {
+  fill: var(--primary);
+}
 
 /* Crystal instance polygons — CSS transitions for color changes */
 .crystal-instance polygon {
@@ -81,6 +106,10 @@
   .tile-right,
   .tile-top,
   .tile-highlight,
+  .concept-marker-anim,
+  .concept-pin-line,
+  .concept-pin-head,
+  .concept-pin-core,
   .crystal-instance polygon {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
@@ -116,8 +145,26 @@ body[data-theme="dark"] .tile-group.empty .tile-top-dash {
 }
 body.night .tile-group.selected .tile-highlight,
 body[data-theme="dark"] .tile-group.selected .tile-highlight {
-  stroke-width: 3;
+  stroke-width: 1.4;
   filter: drop-shadow(0 0 10px rgba(var(--lavender-500-rgb), 0.18));
+}
+body.night .concept-pin-shadow,
+body[data-theme="dark"] .concept-pin-shadow {
+  fill: rgba(7, 5, 15, 0.34);
+}
+body.night .concept-pin-line,
+body[data-theme="dark"] .concept-pin-line,
+body.night .concept-pin-head,
+body[data-theme="dark"] .concept-pin-head {
+  stroke: var(--lavender-500);
+}
+body.night .concept-pin-head,
+body[data-theme="dark"] .concept-pin-head {
+  fill: rgba(var(--ink-900-rgb), 0.82);
+}
+body.night .concept-pin-core,
+body[data-theme="dark"] .concept-pin-core {
+  fill: var(--lavender-500);
 }
 
 /* ── 5. Crystal state color selectors ────────────────────── */

@@ -193,11 +193,16 @@ body[data-drawer-open="true"] .icon-collapse {
 }
 
 /* ── 8. Transition animation classes ─────────────────────── */
-.crystal-anim.anim-emerge    { animation:gridEmerge    500ms ease forwards; }
-.crystal-anim.anim-crack     { animation:gridCrack     650ms ease forwards; }
-.crystal-anim.anim-cocoon    { animation:gridCocoon    700ms ease forwards; }
-.crystal-anim.anim-actualize { animation:gridActualize 750ms ease forwards; }
-.crystal-anim.anim-repair    { animation:gridRepair    550ms ease forwards; }
+.crystal-anim.anim-emerge,
+.concept-marker-anim.anim-emerge    { animation:gridEmerge    500ms ease forwards; }
+.crystal-anim.anim-crack,
+.concept-marker-anim.anim-crack     { animation:gridCrack     650ms ease forwards; }
+.crystal-anim.anim-cocoon,
+.concept-marker-anim.anim-cocoon    { animation:gridCocoon    700ms ease forwards; }
+.crystal-anim.anim-actualize,
+.concept-marker-anim.anim-actualize { animation:gridActualize 750ms ease forwards; }
+.crystal-anim.anim-repair,
+.concept-marker-anim.anim-repair    { animation:gridRepair    550ms ease forwards; }
 
 /* ── 9. Focus ring — a11y ────────────────────────────────── */
 /* Every interactive element inherits --accent-ring (violet light,
