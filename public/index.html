@@ -22,7 +22,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=54">
+  <link rel="stylesheet" href="styles.css?v=65">
 </head>
 
 <body>
@@ -167,199 +167,148 @@
     </header>
 
     <!-- Theme toggle — lives outside header so map-open fade doesn't hide it -->
-    <button class="theme-toggle" id="theme-toggle" type="button" onclick="App.toggleTheme()"
-      aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
-      <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4.5"></circle>
-          <path d="M12 2.5v3"></path>
-          <path d="M12 18.5v3"></path>
-          <path d="M4.9 4.9l2.1 2.1"></path>
-          <path d="M17 17l2.1 2.1"></path>
-          <path d="M2.5 12h3"></path>
-          <path d="M18.5 12h3"></path>
-          <path d="M4.9 19.1L7 17"></path>
-          <path d="M17 7l2.1-2.1"></path>
-        </svg>
-      </span>
-      <span class="theme-toggle-track" aria-hidden="true">
-        <span class="theme-toggle-thumb"></span>
-      </span>
-      <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
-          <path d="M18 5.2v2.1"></path>
-          <path d="M16.95 6.25h2.1"></path>
-        </svg>
-      </span>
-    </button>
+    <div class="theme-toggle-corner">
+      <button class="theme-toggle" id="theme-toggle" type="button" onclick="App.toggleTheme()"
+        aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+        <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4.5"></circle>
+            <path d="M12 2.5v3"></path>
+            <path d="M12 18.5v3"></path>
+            <path d="M4.9 4.9l2.1 2.1"></path>
+            <path d="M17 17l2.1 2.1"></path>
+            <path d="M2.5 12h3"></path>
+            <path d="M18.5 12h3"></path>
+            <path d="M4.9 19.1L7 17"></path>
+            <path d="M17 7l2.1-2.1"></path>
+          </svg>
+        </span>
+        <span class="theme-toggle-track" aria-hidden="true">
+          <span class="theme-toggle-thumb"></span>
+        </span>
+        <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
+            <path d="M18 5.2v2.1"></path>
+            <path d="M16.95 6.25h2.1"></path>
+          </svg>
+        </span>
+      </button>
+    </div>
 
     <!-- Hero card: concept info left, crystal grid right -->
-    <section class="hero-card">
-
-      <div class="hero-info" id="hero-info">
-        <div class="hero-meta-row">
-          <div class="hero-state-chip-group">
-            <!-- #hero-state-chip is the data-state hook that CSS :has() rules depend on.
-                 In empty state we hide the wrapping .hero-meta-row entirely (see components.css).
-                 Non-empty states render the chip text via renderHero(). -->
-            <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
-          </div>
-        </div>
-        <div class="hero-eyebrow-row">
-          <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
-        </div>
-        <h1 class="hero-title" id="title">What do you want to understand?</h1>
-        <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
-        <p class="hero-voice-line">The map won't lie to you, even if you want it to.</p>
-        <div class="hero-actions">
-          <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
-            <span class="hero-primary-action__label">Begin</span>
-          </button>
-        </div>
-        <!-- Empty-state single input: routes by input shape (short line → concept name, long/punctuated → passage). Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
-        <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <textarea class="hero-single-input__field"
-                    id="hero-single-input-field"
-                    rows="1"
-                    placeholder='e.g. "Entropy" — or paste a passage'
-                    aria-label="What do you want to understand?"></textarea>
-          <div class="hero-single-input__row">
-            <button type="button"
-                    class="hero-single-input__clipboard"
-                    id="hero-single-input-clipboard"
-                    hidden>
-              <span class="hero-single-input__clipboard-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="8" y="3" width="8" height="4" rx="1"/>
-                  <path d="M6 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1"/>
-                </svg>
-              </span>
-              <span>or pick from clipboard</span>
-            </button>
-            <button type="submit" class="hero-single-input__submit" disabled>Begin</button>
-          </div>
-          <p class="hero-single-input__reassure">The first room is small.</p>
-        </form>
-
-        <figure class="hero-ghost-graph" role="presentation" aria-hidden="true">
-          <!-- Lifted Route ghost graph: decorative preview only, not user data. Opacity is capped per layer so the input field stays primary. -->
-          <svg class="hero-ghost-graph__svg" viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
-            <g class="hero-ghost-graph__platform">
-              <ellipse cx="160" cy="151" rx="105" ry="19" fill="var(--ink-900)" opacity="0.10"/>
-              <path d="M 55 90 L 107.5 120 L 160 150 L 212.5 120 L 265 90 L 265 99 L 212.5 129 L 160 159 L 107.5 129 L 55 99 Z"
-                    fill="rgba(var(--mauve-200-rgb), 0.28)" opacity="0.28"/>
-              <g fill="rgba(var(--cream-50-rgb), 0.62)"
-                 stroke="var(--ink-900)"
-                 stroke-width="1.05"
-                 stroke-linejoin="round"
-                 stroke-dasharray="5 5"
-                 opacity="0.30">
-                <path d="M 160 30 L 212.5 60 L 160 90 L 107.5 60 Z"/>
-                <path d="M 107.5 60 L 160 90 L 107.5 120 L 55 90 Z"/>
-                <path d="M 212.5 60 L 265 90 L 212.5 120 L 160 90 Z"/>
-                <path d="M 160 90 L 212.5 120 L 160 150 L 107.5 120 Z"/>
-              </g>
-              <path d="M 160 30 L 212.5 60 L 160 90 L 107.5 60 Z"
-                    fill="rgba(var(--violet-600-rgb), 0.07)"
-                    stroke="var(--accent-primary)"
-                    stroke-width="1"
-                    stroke-dasharray="5 5"
-                    opacity="0.32"/>
-            </g>
-
-            <g class="hero-ghost-graph__edges"
-               fill="none"
-               stroke="var(--ink-900)"
-               stroke-width="1.15"
-               stroke-linecap="round"
-               stroke-linejoin="round"
-               opacity="0.30">
-              <path d="M 62 90 L 108 63 L 137 74 L 146 78"/>
-              <path d="M 174 78 L 188 68 L 207 63"/>
-              <path d="M 168 88 L 188 105 L 210 116"/>
-              <path d="M 209 121 L 184 136 L 162 148"/>
-              <path d="M 110 61 L 136 72" stroke-dasharray="4 6" opacity="0.72"/>
-            </g>
-
-            <g class="hero-ghost-graph__nodes" fill="var(--cream-50)" stroke-linecap="round" stroke-linejoin="round">
-              <g class="hero-ghost-graph__node hero-ghost-graph__node--center" opacity="0.70">
-                <ellipse cx="160" cy="82" rx="17" ry="9.5" fill="rgba(var(--cream-50-rgb), 0.58)" stroke="var(--accent-primary)" stroke-width="1.45"/>
-                <ellipse cx="160" cy="82" rx="8" ry="4.4" fill="none" stroke="var(--accent-primary)" stroke-width="1" opacity="0.62"/>
-                <ellipse cx="160" cy="88" rx="19" ry="5.2" fill="var(--accent-primary)" stroke="none" opacity="0.08"/>
-              </g>
-
-              <g class="hero-ghost-graph__node hero-ghost-graph__node--primed" opacity="0.60">
-                <ellipse cx="107.5" cy="64" rx="10" ry="3.2" fill="var(--graph-node-primed-ring)" stroke="none" opacity="0.10"/>
-                <circle cx="107.5" cy="58" r="8.8" fill="rgba(var(--cream-50-rgb), 0.55)" stroke="var(--graph-node-primed-ring)" stroke-width="1.3"/>
-                <circle cx="107.5" cy="58" r="3.6" fill="none" stroke="var(--graph-node-primed-ring)" stroke-width="0.9" opacity="0.72"/>
-              </g>
-              <g class="hero-ghost-graph__node hero-ghost-graph__node--primed" opacity="0.60">
-                <ellipse cx="212.5" cy="123" rx="10" ry="3.2" fill="var(--graph-node-primed-ring)" stroke="none" opacity="0.10"/>
-                <circle cx="212.5" cy="117" r="8.8" fill="rgba(var(--cream-50-rgb), 0.55)" stroke="var(--graph-node-primed-ring)" stroke-width="1.3"/>
-                <circle cx="212.5" cy="117" r="3.6" fill="none" stroke="var(--graph-node-primed-ring)" stroke-width="0.9" opacity="0.72"/>
-              </g>
-
-              <g class="hero-ghost-graph__node hero-ghost-graph__node--solidified" opacity="0.62">
-                <circle cx="212.5" cy="60" r="9.2" fill="rgba(var(--cream-50-rgb), 0.55)" stroke="var(--accent-primary)" stroke-width="1.3"/>
-                <circle cx="212.5" cy="60" r="3" fill="var(--accent-primary)" stroke="none" opacity="0.82"/>
-              </g>
-
-              <g class="hero-ghost-graph__node hero-ghost-graph__node--locked" opacity="0.40">
-                <circle cx="55" cy="90" r="8.6" fill="none" stroke="var(--ink-900)" stroke-width="1.2" stroke-dasharray="3 3"/>
-              </g>
-              <g class="hero-ghost-graph__node hero-ghost-graph__node--locked" opacity="0.40">
-                <circle cx="160" cy="150" r="8.6" fill="none" stroke="var(--ink-900)" stroke-width="1.2" stroke-dasharray="3 3"/>
-              </g>
-            </g>
-          </svg>
-          <figcaption class="hero-ghost-graph__caption">Your map starts empty. Each concept earns its place.</figcaption>
-        </figure>
-
-        <div id="timer-display">24:00:00</div>
-
-        <!-- Action Controls (Hidden for Board-First UX) -->
-        <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
-          <button id="btn-drill" onclick="App.drill()">3. Drill (Recall)</button>
-        </div>
-        <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
-          <button onclick="App.drillFail()">Forgot</button>
-          <button onclick="App.drillPass()">Remembered</button>
-        </div>
-        <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
-          <button onclick="App.consolidate()" disabled title="Consolidation is coming soon">Consolidate (Coming Soon)</button>
-        </div>
+    <section class="hero-card intro-page">
+      <div class="intro-particles" aria-hidden="true">
+        <canvas id="intro-particle-canvas"></canvas>
       </div>
 
-      <!-- 2×2 isometric crystal grid -->
-      <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
-        <!-- Floating Consolidate Button (appears dynamically after successful drill) -->
-        <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
-          style="display:none;" disabled title="Consolidation is coming soon" aria-label="Consolidation coming soon">
-          <svg
-            style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; pointer-events: none;"
-            viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-          </svg>
-        </button>
+      <div class="intro-content">
+        <div class="hero-info" id="hero-info">
+          <div class="hero-meta-row">
+            <div class="hero-state-chip-group">
+              <!-- #hero-state-chip is the data-state hook that CSS :has() rules depend on.
+                   In empty state we hide the wrapping .hero-meta-row entirely (see components.css).
+                   Non-empty states render the chip text via renderHero(). -->
+              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
+            </div>
+          </div>
+          <div class="hero-eyebrow-row">
+            <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
+          </div>
+          <h1 class="hero-title" id="title">What do you want to understand?</h1>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
+          <p class="hero-voice-line">The map won't lie to you, even if you want it to.</p>
+          <div class="hero-actions">
+            <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
+              <span class="hero-primary-action__label">Begin</span>
+              <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13"></path>
+                <path d="m13 6 6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+          <!-- Empty-state single input: routes by input shape (short line → concept name, long/punctuated → passage). Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
+          <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
+            <textarea class="hero-single-input__field"
+                      id="hero-single-input-field"
+                      rows="1"
+                      placeholder='e.g. "Entropy" — or paste a passage'
+                      aria-label="What do you want to understand?"></textarea>
+            <div class="hero-single-input__row">
+              <input class="hero-single-input__file"
+                     id="hero-single-input-file"
+                     type="file"
+                     accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
+                     hidden>
+              <button type="button"
+                      class="hero-single-input__attach"
+                      id="hero-single-input-attach"
+                      aria-describedby="hero-single-input-file-note"
+                      title="Attach TXT, MD, or PDF. Max 2 MB.">
+                <span class="hero-single-input__attach-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m21.4 11.1-8.7 8.7a6 6 0 0 1-8.5-8.5l8.7-8.7a4 4 0 0 1 5.7 5.7l-8.8 8.7a2 2 0 0 1-2.8-2.8l8.1-8.1"/>
+                  </svg>
+                </span>
+                <span>Attach file</span>
+              </button>
+              <button type="submit" class="hero-single-input__submit" disabled>
+                <span>Start first room</span>
+                <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h13"></path>
+                  <path d="m13 6 6 6-6 6"></path>
+                </svg>
+              </button>
+            </div>
+            <p class="hero-single-input__file-note" id="hero-single-input-file-note" aria-live="polite">TXT, MD, or PDF · max 2 MB</p>
+            <p class="hero-single-input__reassure">The first room is small.</p>
+          </form>
 
-        <svg id="grid-svg" viewBox="0 0 280 220" width="280" height="220" xmlns="http://www.w3.org/2000/svg"
-          style="overflow:visible;">
-          <defs>
-            <filter id="glow-filter" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
-          <!-- Paint order: back → front. Transforms are fixed. Content populated by renderGrid(). -->
-          <g id="tile-0" class="tile-group" transform="translate(70,45)" onclick="App.selectTile(0)"></g>
-          <g id="tile-1" class="tile-group" transform="translate(0,85)" onclick="App.selectTile(1)"></g>
-          <g id="tile-2" class="tile-group" transform="translate(140,85)" onclick="App.selectTile(2)"></g>
-          <g id="tile-3" class="tile-group" transform="translate(70,125)" onclick="App.selectTile(3)"></g>
-        </svg>
-        <div id="tile-tooltip"></div>
+          <div id="timer-display">24:00:00</div>
+
+          <!-- Action Controls (Hidden for Board-First UX) -->
+          <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
+            <button id="btn-drill" onclick="App.drill()">3. Drill (Recall)</button>
+          </div>
+          <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
+            <button onclick="App.drillFail()">Forgot</button>
+            <button onclick="App.drillPass()">Remembered</button>
+          </div>
+          <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
+            <button onclick="App.consolidate()" disabled title="Consolidation is coming soon">Consolidate (Coming Soon)</button>
+          </div>
+        </div>
+
+        <!-- 2×2 isometric crystal grid -->
+        <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
+          <!-- Floating Consolidate Button (appears dynamically after successful drill) -->
+          <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
+            style="display:none;" disabled title="Consolidation is coming soon" aria-label="Consolidation coming soon">
+            <svg
+              style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; pointer-events: none;"
+              viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+
+          <svg id="grid-svg" viewBox="0 0 280 220" width="280" height="220" xmlns="http://www.w3.org/2000/svg"
+            style="overflow:visible;">
+            <defs>
+              <filter id="glow-filter" x="-40%" y="-40%" width="180%" height="180%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
+            </defs>
+            <!-- Paint order: back → front. Transforms are fixed. Content populated by renderGrid(). -->
+            <g id="tile-0" class="tile-group" transform="translate(70,45)" onclick="App.selectTile(0)"></g>
+            <g id="tile-1" class="tile-group" transform="translate(0,85)" onclick="App.selectTile(1)"></g>
+            <g id="tile-2" class="tile-group" transform="translate(140,85)" onclick="App.selectTile(2)"></g>
+            <g id="tile-3" class="tile-group" transform="translate(70,125)" onclick="App.selectTile(3)"></g>
+          </svg>
+          <div id="tile-tooltip"></div>
+        </div>
       </div>
 
     </section>
@@ -594,7 +543,8 @@
   <div id="tooltip-root" aria-hidden="true"></div>
 
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=35"></script>
+  <script type="module" src="js/app.js?v=36"></script>
+  <script src="js/intro-particles.js?v=1"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
 
   <!-- Vercel Speed Insights -->

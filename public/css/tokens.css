@@ -1,0 +1,146 @@
+/* ============================================================
+   socratink — design tokens (login-safe subset)
+   Mirrors docs/design/colors_and_type.css — primitives + semantic
+   tokens + shadows + type scale. Self-hosts brand fonts from
+   /fonts/. Omits base element resets so this file can be safely
+   layered above page-specific CSS.
+   Source of truth: docs/design/colors_and_type.css
+   ============================================================ */
+
+@font-face {
+  font-family: "Geom";
+  src: url("/fonts/Geom-VariableFont_wght.ttf") format("truetype-variations"),
+       url("/fonts/Geom-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geom";
+  src: url("/fonts/Geom-Italic-VariableFont_wght.ttf") format("truetype-variations"),
+       url("/fonts/Geom-Italic-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-VariableFont_wght.ttf") format("truetype-variations"),
+       url("/fonts/Manrope-VariableFont_wght.ttf") format("truetype");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype-variations"),
+       url("/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype-variations"),
+       url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  --ink-900:        #242038;
+  --violet-600:     #9067c6;
+  --lavender-500:   #8d86c9;
+  --mauve-200:      #cac4ce;
+  --cream-50:       #f7ece1;
+  --white:          #ffffff;
+
+  --ink-900-rgb:      36, 32, 56;
+  --violet-600-rgb:   144, 103, 198;
+  --lavender-500-rgb: 141, 134, 201;
+  --mauve-200-rgb:    202, 196, 206;
+  --cream-50-rgb:     247, 236, 225;
+  --white-rgb:        255, 255, 255;
+
+  --success: #4dba8a;
+  --danger:  #e05c6b;
+}
+
+:root {
+  --surface-page:    var(--cream-50);
+  --surface-card:    var(--white);
+  --surface-panel:   rgba(var(--mauve-200-rgb), 0.28);
+  --surface-nested:  rgba(var(--mauve-200-rgb), 0.42);
+  --surface-high:    #fdf9f5;
+
+  --text-strong:     var(--ink-900);
+  --text-muted:      rgba(var(--ink-900-rgb), 0.68);
+  --text-on-primary: var(--cream-50);
+
+  --accent-primary:     var(--violet-600);
+  --accent-secondary:   var(--lavender-500);
+  --primary-fill:       #7a59aa;
+  --primary-fill-hover: #70529b;
+  --accent-soft:          rgba(var(--violet-600-rgb), 0.12);
+  --accent-soft-strong:   rgba(var(--violet-600-rgb), 0.18);
+  --accent-border:        rgba(var(--violet-600-rgb), 0.18);
+  --accent-border-strong: rgba(var(--violet-600-rgb), 0.30);
+  --accent-glow:          rgba(var(--violet-600-rgb), 0.24);
+  --accent-focus:         rgba(var(--violet-600-rgb), 0.16);
+  --accent-ring:          0 0 0 3px rgba(var(--violet-600-rgb), 0.14);
+
+  --border-subtle: rgba(var(--ink-900-rgb), 0.10);
+  --border-strong: rgba(var(--ink-900-rgb), 0.16);
+
+  --gradient-card-start: rgba(var(--white-rgb),    0.96);
+  --gradient-card-end:   rgba(var(--cream-50-rgb), 0.96);
+}
+
+:root {
+  --shadow-ambient: 0 40px 100px rgba(44, 51, 62, 0.05),
+                    0 2px 8px rgba(44, 51, 62, 0.04);
+  --shadow-card:    0 8px 32px rgba(var(--violet-600-rgb), 0.10),
+                    0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-hover:   0 16px 32px rgba(var(--ink-900-rgb), 0.10);
+}
+
+:root {
+  --font-display: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --text-xs:   clamp(0.7rem,  0.65rem + 0.25vw, 0.80rem);
+  --text-sm:   clamp(0.8rem,  0.75rem + 0.35vw, 0.95rem);
+  --text-base: clamp(0.95rem, 0.85rem + 0.50vw, 1.10rem);
+  --text-lg:   clamp(1.10rem, 1.00rem + 0.60vw, 1.25rem);
+  --text-xl:   clamp(1.25rem, 1.10rem + 0.75vw, 1.40rem);
+  --text-2xl:  clamp(1.50rem, 1.30rem + 1.00vw, 1.75rem);
+  --text-3xl:  clamp(1.80rem, 1.60rem + 1.25vw, 2.25rem);
+  --text-4xl:  clamp(1.95rem, 1.65rem + 1.50vw, 2.40rem);
+
+  --leading-tight:  1.15;
+  --leading-snug:   1.35;
+  --leading-normal: 1.55;
+
+  --tracking-hero:    -0.06em;
+  --tracking-display: -0.03em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:  -0.015em;
+  --tracking-wide:     0.08em;
+  --tracking-kicker:   0.18em;
+}
+
+:root {
+  --radius-sm:   0.625rem;
+  --radius-btn:  0.625rem;
+  --radius-md:   0.875rem;
+  --radius-card: 1rem;
+  --radius-lg:   1.25rem;
+  --radius-pill: 999px;
+
+  --ease-standard:  cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-micro: 140ms;
+  --duration-quick: 220ms;
+  --duration-cozy:  320ms;
+}

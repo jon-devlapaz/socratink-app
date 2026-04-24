@@ -36,6 +36,37 @@ body {
   transition: background-color var(--theme-transition-ms) var(--theme-transition-ease);
 }
 
+@media (pointer: fine) {
+  body,
+  body * {
+    cursor: var(--cursor-socratink) !important;
+  }
+
+  a,
+  button,
+  select,
+  summary,
+  label,
+  [role="button"],
+  [onclick],
+  .tile-group,
+  .bottom-nav-item,
+  .sidebar-nav-item {
+    cursor: var(--cursor-socratink-pointer) !important;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: var(--cursor-socratink) !important;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    cursor: text !important;
+  }
+}
+
 /* Mobile fallback card (overridden at desktop in section 13) */
 #card {
   background-color: transparent;
