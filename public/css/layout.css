@@ -140,7 +140,10 @@ body:not([data-map-open="true"]) .map-back-link {
   grid-template-columns: 1fr;
   align-items: start;
   justify-items: center;
-  padding-bottom: 36px;
+  padding-top: 32px;
+  padding-bottom: 32px;
+  background: transparent;
+  box-shadow: none;
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) #grid-container {
   display: none;

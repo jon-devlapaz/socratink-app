@@ -1251,9 +1251,11 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin: 6px auto 0;
-  max-width: 380px;
+  margin: 80px auto 0;
+  max-width: 304px;
   width: 100%;
+  transform: scale(0.85);
+  transform-origin: center top;
 }
 .hero-info:has(.hero-state-chip[data-state="empty"]) {
   justify-content: flex-start;
@@ -1265,13 +1267,19 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   margin-left: auto;
   margin-right: auto;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow-row,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row {
+/* Empty-state: three zones. Hide state chip + start-here tooltip; silence card surface. */
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-state-chip-group,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow-row .help-tip-trigger {
+  display: none;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow-row {
   justify-content: center;
 }
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-actions {
   justify-content: center;
   width: 100%;
+  margin-top: 88px;
 }
 .hero-info:has(.hero-state-chip[data-state="empty"]) .desc,
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line,
@@ -1287,8 +1295,7 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 .hero-ghost-graph__svg {
   width: 100%;
   height: auto;
-  max-height: 180px;
-  opacity: 0.32;
+  max-height: 144px;
   pointer-events: none;
 }
 .hero-ghost-graph__caption {
