@@ -138,6 +138,12 @@ body:not([data-map-open="true"]) .map-back-link {
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) {
   grid-template-columns: 1fr;
+  align-items: start;
+  justify-items: center;
+  padding-top: 32px;
+  padding-bottom: 36px;
+  background: transparent;
+  box-shadow: none;
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) #grid-container {
   display: none;
@@ -955,41 +961,33 @@ body:not([data-map-open="true"]) .map-back-link {
 
 .concept-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 32px;
-  padding: 56px 0 28px;
-  border-bottom: 1px solid var(--border);
+  gap: 24px;
+  padding: 20px 0 16px;
 }
 .concept-header-main {
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
   flex: 1 1 auto;
+  flex-wrap: wrap;
 }
 .concept-header-title {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 32px;
+  font-size: 26px;
   line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--text);
   font-weight: 700;
 }
-.concept-header-summary {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: var(--text-sub);
-  max-width: 62ch;
-}
-.concept-header-summary:empty { display: none; }
 .concept-header-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 2px;
 }
 .concept-header-tags:empty { display: none; }
 .concept-header-actions {
@@ -1346,6 +1344,29 @@ body:not([data-map-open="true"]) .map-back-link {
 }
 .graph-svg .graph-node-ripple.is-delayed {
   animation-delay: -1.5s;
+}
+
+/* Next-node breadcrumb — small lavender pip travels focus → suggested next. Bridge modes only.
+   Position driven by RAF in graph-view.js (CSS offset-distance animation is unreliable on SVG). */
+.graph-svg .graph-breadcrumb-pip {
+  pointer-events: none;
+  fill: var(--accent-secondary);
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+@keyframes graphBreadcrumbArrival {
+  0%   { transform: scale(1);   opacity: 0; }
+  25%  { opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.graph-svg .graph-breadcrumb-arrival {
+  transform-box: fill-box;
+  transform-origin: center;
+  vector-effect: non-scaling-stroke;
+  animation: graphBreadcrumbArrival 600ms ease-out infinite;
+  animation-delay: var(--arrival-delay, 2.88s);
+  pointer-events: none;
 }
 
 /* Beam arrival pulse — small ring lands at target each dash cycle. Active-path only. */
@@ -1862,8 +1883,16 @@ body:not([data-map-open="true"]) .map-back-link {
 
   .graph-svg .graph-beam,
   .graph-svg .graph-beam-arrival,
-  .graph-svg .graph-node-ripple {
+  .graph-svg .graph-node-ripple,
+  .graph-svg .graph-breadcrumb-pip,
+  .graph-svg .graph-breadcrumb-arrival {
     animation: none !important;
+    display: none !important;
+  }
+  .graph-svg .graph-edge.is-next-suggestion line,
+  .graph-svg .graph-edge.is-next-suggestion path {
+    stroke-dasharray: 6 4;
+    opacity: 0.72 !important;
   }
 
   .graph-node .graph-node-halo,
@@ -1978,10 +2007,9 @@ body:not([data-map-open="true"]) .map-back-link {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
-    padding: 64px 0 20px;
+    padding: 16px 0 16px;
   }
-  .concept-header-title { font-size: 24px; }
-  .concept-header-summary { font-size: 14px; }
+  .concept-header-title { font-size: 22px; }
   .concept-header-actions {
     flex-direction: column;
     align-items: stretch;

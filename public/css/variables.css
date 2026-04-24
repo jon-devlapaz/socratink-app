@@ -135,6 +135,10 @@
   --graph-node-amber-core: #7a4a05;
   --graph-node-solid-core: #4d2e7d;
 
+  /* Focus aura — small + soft on paper so it highlights the node without bleeding into siblings */
+  --graph-focus-glow-radius:  55;
+  --graph-focus-glow-opacity: 0.22;
+
   --graph-panel-bg:     var(--surface-card-theme);
   --graph-panel-border: var(--border-subtle);
   --graph-panel-shadow: var(--shadow-soft);
@@ -355,6 +359,7 @@
   --graph-arrival-glow-duration:    400ms;
   --graph-beam-pulse-duration:      2.4s;
   --graph-stars-drift-duration:     40s;
+  --graph-breadcrumb-duration:      3.6s;
 
   /* Additional type */
   --text-display:     clamp(3.85rem, 2.8rem + 5.2vw, 5.6rem);
@@ -463,6 +468,10 @@
   --graph-node-cyan-core:  #d6f1fb;
   --graph-node-amber-core: #ffe5b4;
   --graph-node-solid-core: #f1e3ff;
+
+  /* Focus aura — large + atmospheric on obsidian stage */
+  --graph-focus-glow-radius:  120;
+  --graph-focus-glow-opacity: 0.5;
 
   --graph-panel-bg:
     radial-gradient(ellipse 80% 40% at 50% 0%, rgba(var(--violet-600-rgb), 0.14), transparent 70%),

@@ -5,14 +5,7 @@ import {
 const OPEN_DELAY = 300;
 const CLOSE_DELAY = 150;
 
-const copy = {
-  'tip-add-concept':
-    "Add a topic to map. Drill it until you can reconstruct it from memory.",
-  'tip-start-here':
-    "Name one concept. Drill until you can explain it without notes.",
-  'tip-board-state':
-    "Your board fills as you add concepts. Each tile tracks one idea.",
-};
+const copy = {};
 
 const state = new Map();
 

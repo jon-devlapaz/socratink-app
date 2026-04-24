@@ -1056,6 +1056,9 @@ function getGraphThemeTokens() {
 
     drillMutedFill: readGraphStyleToken(styles, '--graph-drill-muted-fill', 'rgba(226, 226, 226, 1)'),
     drillMutedEdge: readGraphStyleToken(styles, '--graph-drill-muted-edge', 'rgba(200, 200, 200, 0.10)'),
+
+    focusGlowRadius: readGraphNumberToken(styles, '--graph-focus-glow-radius', 120),
+    focusGlowOpacity: readGraphNumberToken(styles, '--graph-focus-glow-opacity', 0.5),
   };
 }
 
@@ -1758,6 +1761,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   let freshlyFocusedNodeId = null;
   let arrivalGlowTimeoutId = null;
   let panRafId = null;
+  let breadcrumbRafId = null;
   let currentViewBox = { x: 0, y: 0, w: VIEWBOX.width, h: VIEWBOX.height };
   let model = buildModel(transformed);
   let lookup = createLookup(model);
@@ -1911,6 +1915,42 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       }
     };
     panRafId = requestAnimationFrame(tick);
+  };
+
+  const startBreadcrumbAnimation = () => {
+    if (breadcrumbRafId) { cancelAnimationFrame(breadcrumbRafId); breadcrumbRafId = null; }
+    const pip = svgEl.querySelector('.graph-breadcrumb-pip');
+    if (!pip || prefersReducedMotion) return;
+    const fromX = parseFloat(pip.dataset.fromX);
+    const fromY = parseFloat(pip.dataset.fromY);
+    const toX = parseFloat(pip.dataset.toX);
+    const toY = parseFloat(pip.dataset.toY);
+    if (!Number.isFinite(fromX + fromY + toX + toY)) return;
+    const periodMs = 3600;
+    const t0 = performance.now();
+    const tick = (now) => {
+      if (destroyed) return;
+      const live = svgEl.querySelector('.graph-breadcrumb-pip');
+      if (!live) { breadcrumbRafId = null; return; }
+      const u = ((now - t0) % periodMs) / periodMs;
+      // Travel on 0..0.85; dormant 0.85..1. Ease-in-out along travel window.
+      let progress = 0;
+      let opacity = 0;
+      if (u < 0.85) {
+        const w = u / 0.85;
+        progress = w < 0.5 ? 2 * w * w : 1 - Math.pow(-2 * w + 2, 2) / 2;
+        if (u < 0.08) opacity = u / 0.08 * 0.9;
+        else if (u > 0.75) opacity = Math.max(0, (0.85 - u) / 0.10 * 0.9);
+        else opacity = 0.9;
+      }
+      const cx = fromX + (toX - fromX) * progress;
+      const cy = fromY + (toY - fromY) * progress;
+      live.setAttribute('cx', cx.toFixed(2));
+      live.setAttribute('cy', cy.toFixed(2));
+      live.style.opacity = opacity.toFixed(3);
+      breadcrumbRafId = requestAnimationFrame(tick);
+    };
+    breadcrumbRafId = requestAnimationFrame(tick);
   };
 
   const findNextNodeSuggestion = (activeNodeId) => {
@@ -2117,6 +2157,25 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     const focusNode = model.nodeById.get(focusNodeId) || model.nodeById.get(model.coreId);
     const focusPalette = focusNode ? resolveNodePalette(graphTheme, focusNode, flashKindsByNodeId.get(focusNode.id)) : null;
 
+    const BRIDGE_MODES = new Set(['inspect', 'post-drill', 'study', 'session-complete', 'repair-reps']);
+    const breadcrumbEdge = (() => {
+      if (!BRIDGE_MODES.has(interactionMode)) return null;
+      // Skip when active drill is running — drill beam owns the edge-motion slot
+      if (DRILL_CONTEXT_MODES.has(interactionMode)) return null;
+      // Focus must be a node the learner has already engaged with (primed/drilled/solidified)
+      // so we don't nag when they're just looking at a fresh graph.
+      const focusNode = model.nodeById.get(focusNodeId);
+      const engaged = focusNode && (focusNode.state === 'primed' || focusNode.state === 'drilled' || focusNode.state === 'solidified');
+      if (!engaged) return null;
+      const suggestion = findNextNodeSuggestion(focusNodeId);
+      if (!suggestion?.id) return null;
+      return model.edges.find((edge) => (
+        edge.classes.includes('edge-structural')
+        && ((edge.source === focusNodeId && edge.target === suggestion.id)
+          || (edge.target === focusNodeId && edge.source === suggestion.id))
+      )) || null;
+    })();
+
     const beamEdge = (() => {
       if (activeDrillNodeId) {
         const parentId = model.structuralParentByNodeId.get(activeDrillNodeId) || '';
@@ -2139,11 +2198,11 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
             <stop offset="100%" stop-color="${graphTheme.nodeSelectionRing}" stop-opacity="0"></stop>
           </linearGradient>
           <radialGradient id="graph-focus-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="${focusPalette?.ring || graphTheme.nodeSelectionRing}" stop-opacity="0.5"></stop>
+            <stop offset="0%" stop-color="${focusPalette?.ring || graphTheme.nodeSelectionRing}" stop-opacity="${graphTheme.focusGlowOpacity}"></stop>
             <stop offset="100%" stop-color="${focusPalette?.ring || graphTheme.nodeSelectionRing}" stop-opacity="0"></stop>
           </radialGradient>
         </defs>
-        <circle cx="${positions.get(focusNode.id)?.x ?? VIEWBOX.centerX}" cy="${positions.get(focusNode.id)?.y ?? VIEWBOX.centerY}" r="120" fill="url(#graph-focus-glow)"></circle>`
+        <circle cx="${positions.get(focusNode.id)?.x ?? VIEWBOX.centerX}" cy="${positions.get(focusNode.id)?.y ?? VIEWBOX.centerY}" r="${graphTheme.focusGlowRadius}" fill="url(#graph-focus-glow)"></circle>`
       : '';
 
     const edgeMarkup = model.edges.map((edge, index) => {
@@ -2194,14 +2253,17 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         strokeWidth = edge.classes.includes('edge-lateral') ? 1.8 : 2.2;
       }
 
+      const isNextSuggestion = breadcrumbEdge && edge.id === breadcrumbEdge.id;
+      const edgeClass = `graph-edge${isNextSuggestion ? ' is-next-suggestion' : ''}`;
+
       if (edge.classes.includes('edge-structural')) {
-        return `<g class="graph-edge" data-graph-kind="edge" data-graph-id="${escHtml(edge.id)}" tabindex="0" role="button" aria-label="${escHtml(edge.label || edge.type || 'Connection')}">
+        return `<g class="${edgeClass}" data-graph-kind="edge" data-graph-id="${escHtml(edge.id)}" tabindex="0" role="button" aria-label="${escHtml(edge.label || edge.type || 'Connection')}">
           <line x1="${sourcePos.x}" y1="${sourcePos.y}" x2="${targetPos.x}" y2="${targetPos.y}" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linecap="round" opacity="${opacity}"></line>
           <line x1="${sourcePos.x}" y1="${sourcePos.y}" x2="${targetPos.x}" y2="${targetPos.y}" stroke="rgba(255,255,255,0.001)" stroke-width="${Math.max(strokeWidth * 10, 14)}" stroke-linecap="round" opacity="1"></line>
         </g>`;
       }
 
-      return `<g class="graph-edge" data-graph-kind="edge" data-graph-id="${escHtml(edge.id)}" tabindex="0" role="button" aria-label="${escHtml(edge.label || edge.type || 'Connection')}">
+      return `<g class="${edgeClass}" data-graph-kind="edge" data-graph-id="${escHtml(edge.id)}" tabindex="0" role="button" aria-label="${escHtml(edge.label || edge.type || 'Connection')}">
         <path d="${buildCurvePath(sourcePos, targetPos, index % 2 === 0 ? 1 : -1)}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" stroke-dasharray="${dashArray}" opacity="${opacity}"></path>
         <path d="${buildCurvePath(sourcePos, targetPos, index % 2 === 0 ? 1 : -1)}" fill="none" stroke="rgba(255,255,255,0.001)" stroke-width="14" opacity="1"></path>
       </g>`;
@@ -2217,6 +2279,22 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         return `<path class="graph-beam" d="${buildCurvePath(sourcePos, targetPos, 1)}" fill="none" stroke="url(#graph-beam-gradient)" stroke-width="2.5" stroke-dasharray="10 180"></path>${arrivalCircle}`;
       }
       return `<line class="graph-beam" x1="${sourcePos.x}" y1="${sourcePos.y}" x2="${targetPos.x}" y2="${targetPos.y}" stroke="url(#graph-beam-gradient)" stroke-width="2.5" stroke-dasharray="10 180"></line>${arrivalCircle}`;
+    })();
+
+    const breadcrumbMarkup = (() => {
+      if (!breadcrumbEdge || prefersReducedMotion) return '';
+      const src = positions.get(breadcrumbEdge.source);
+      const tgt = positions.get(breadcrumbEdge.target);
+      if (!src || !tgt) return '';
+      const from = breadcrumbEdge.source === focusNodeId ? src : tgt;
+      const to   = breadcrumbEdge.source === focusNodeId ? tgt : src;
+      // Stash endpoints on the element so RAF driver can read them without re-lookup
+      return `
+        <circle class="graph-breadcrumb-pip" r="3.2" cx="${from.x}" cy="${from.y}"
+                data-from-x="${from.x}" data-from-y="${from.y}"
+                data-to-x="${to.x}" data-to-y="${to.y}"></circle>
+        <circle class="graph-breadcrumb-arrival" cx="${to.x}" cy="${to.y}" r="10" fill="none" stroke="var(--accent-secondary)" stroke-width="1.2"></circle>
+      `;
     })();
 
     const nodeMarkup = model.nodes.map((node) => {
@@ -2305,7 +2383,8 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       </g>`;
     }).join('');
 
-    svgEl.innerHTML = `${focusGlowMarkup}${edgeMarkup}${beamMarkup}${nodeMarkup}`;
+    svgEl.innerHTML = `${focusGlowMarkup}${edgeMarkup}${beamMarkup}${breadcrumbMarkup}${nodeMarkup}`;
+    startBreadcrumbAnimation();
   };
 
   const selectGraphElement = (kind, id, { preserveMode = false } = {}) => {
@@ -2487,6 +2566,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       freshSolidIds.clear();
       if (arrivalGlowTimeoutId) window.clearTimeout(arrivalGlowTimeoutId);
       if (panRafId) cancelAnimationFrame(panRafId);
+      if (breadcrumbRafId) cancelAnimationFrame(breadcrumbRafId);
       container.removeEventListener('pointerover', handlePointerOver);
       container.removeEventListener('pointerout', handlePointerOut);
       container.removeEventListener('click', handleClick);
