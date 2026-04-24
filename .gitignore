@@ -52,6 +52,7 @@ scripts/run-checks.sh
 *.excalidraw
 c4-mobile-*.png
 map-header-*.png
+b&a/
 
 # Local knowledge-base + scratch (not for version control)
 .socratink-brain/.obsidian/
