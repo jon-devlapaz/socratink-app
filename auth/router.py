@@ -319,9 +319,9 @@ input {
 }
 
 .google-mark {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
 }
 
 .guest-button {
@@ -597,7 +597,7 @@ def _render_login_html() -> str:
   <meta name="application-name" content="Socratink">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Socratink">
-  <title>Socratink - The Socratic Canvas</title>
+  <title>socratink — the Socratic Canvas</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png?v=6">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
