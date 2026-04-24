@@ -284,7 +284,7 @@ input {
   padding: 0 22px;
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.56);
-  box-shadow: inset 0 0 0 1px var(--outline-soft);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);
   color: var(--text);
   font-weight: 700;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
@@ -293,7 +293,7 @@ input {
 .google-button:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.84);
-  box-shadow: inset 0 0 0 1px rgba(var(--mauve-200-rgb), 0.34), 0 12px 28px rgba(var(--ink-900-rgb), 0.05);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.48), 0 12px 28px rgba(var(--ink-900-rgb), 0.05);
 }
 
 .google-button:focus-visible {
@@ -315,7 +315,7 @@ input {
 .google-button.is-disabled:hover {
   transform: none;
   background: rgba(255, 255, 255, 0.56);
-  box-shadow: inset 0 0 0 1px var(--outline-soft);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);
 }
 
 .google-mark {
@@ -333,7 +333,7 @@ input {
   padding: 0 22px;
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.56);
-  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);
+  box-shadow: inset 0 0 0 1px var(--outline-soft);
   color: var(--text);
   font-weight: 700;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
@@ -342,7 +342,7 @@ input {
 .guest-button:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.78);
-  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.48), 0 10px 24px rgba(var(--ink-900-rgb), 0.05);
+  box-shadow: inset 0 0 0 1px rgba(var(--mauve-200-rgb), 0.34), 0 10px 24px rgba(var(--ink-900-rgb), 0.05);
   color: var(--text);
 }
 
@@ -404,21 +404,19 @@ input {
   padding: 0;
   border-radius: var(--radius-pill);
   background: transparent;
-  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.14);
-  color: var(--text-muted);
-  opacity: 0.75;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.22);
+  color: rgba(var(--ink-900-rgb), 0.68);
   flex: 0 0 auto;
   justify-self: auto;
   transition: transform 120ms ease, box-shadow 120ms ease,
-              background 120ms ease, color 120ms ease, opacity 120ms ease;
+              background 120ms ease, color 120ms ease;
 }
 
 .icon-chip-row .coffee-button:hover,
 .icon-chip-row .discord-link:hover {
   transform: translateY(-1px);
-  opacity: 1;
   background: rgba(var(--violet-600-rgb), 0.06);
-  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.30);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.34);
   color: var(--primary);
 }
 
@@ -636,7 +634,7 @@ def _render_login_html() -> str:
               <span id="google-label">Continue with Google</span>
             </a>
             <a id="guest-continue-link" class="guest-button" href="/">
-              Continue as Guest
+              continue as guest
             </a>
             <div class="icon-chip-row">
               <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer" aria-label="Support the build on Buy Me a Coffee">
