@@ -368,6 +368,39 @@ input {
   flex: 0 0 18px;
 }
 
+.icon-chip-row {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.icon-chip-row .coffee-button,
+.icon-chip-row .discord-link {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.14);
+  color: var(--text-muted);
+  opacity: 0.75;
+  flex: 0 0 auto;
+  justify-self: auto;
+  transition: transform 120ms ease, box-shadow 120ms ease,
+              background 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.icon-chip-row .coffee-button:hover,
+.icon-chip-row .discord-link:hover {
+  transform: translateY(-1px);
+  opacity: 1;
+  background: rgba(var(--violet-600-rgb), 0.06);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.30);
+  color: var(--primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

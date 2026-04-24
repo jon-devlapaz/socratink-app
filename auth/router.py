@@ -389,6 +389,39 @@ input {
   flex: 0 0 18px;
 }
 
+.icon-chip-row {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.icon-chip-row .coffee-button,
+.icon-chip-row .discord-link {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.14);
+  color: var(--text-muted);
+  opacity: 0.75;
+  flex: 0 0 auto;
+  justify-self: auto;
+  transition: transform 120ms ease, box-shadow 120ms ease,
+              background 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.icon-chip-row .coffee-button:hover,
+.icon-chip-row .discord-link:hover {
+  transform: translateY(-1px);
+  opacity: 1;
+  background: rgba(var(--violet-600-rgb), 0.06);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.30);
+  color: var(--primary);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -605,21 +638,21 @@ def _render_login_html() -> str:
             <a id="guest-continue-link" class="guest-button" href="/">
               Continue as Guest
             </a>
-            <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer">
-              <svg class="coffee-cup" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6.75 8.5h8.5v5.25a4.25 4.25 0 0 1-8.5 0V8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
-                <path d="M15.25 10h1.25a2 2 0 0 1 0 4h-1.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-              </svg>
-              Support the build
-            </a>
-            <a class="discord-link" href="https://discord.gg/ZEHqpC6vMx" target="_blank" rel="noopener noreferrer">
-              <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M19.54 5.34A17.3 17.3 0 0 0 15.3 4l-.2.38a12.6 12.6 0 0 0-3.1-.38 12.6 12.6 0 0 0-3.1.38L8.7 4a17.3 17.3 0 0 0-4.24 1.34C1.73 9.38.98 13.3 1.36 17.16a17.56 17.56 0 0 0 5.3 2.66l1.08-1.46a11.2 11.2 0 0 1-1.78-.86l.44-.34a12.43 12.43 0 0 0 11.2 0l.44.34c-.56.33-1.15.62-1.78.86l1.08 1.46a17.56 17.56 0 0 0 5.3-2.66c.46-4.48-.72-8.36-3.1-11.82ZM8.52 14.9c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Zm6.96 0c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Z" fill="currentColor"></path>
-              </svg>
-              Join the Discord
-            </a>
+            <div class="icon-chip-row">
+              <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer" aria-label="Support the build on Buy Me a Coffee">
+                <svg class="coffee-cup" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6.75 8.5h8.5v5.25a4.25 4.25 0 0 1-8.5 0V8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                  <path d="M15.25 10h1.25a2 2 0 0 1 0 4h-1.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                  <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                  <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+              </a>
+              <a class="discord-link" href="https://discord.gg/ZEHqpC6vMx" target="_blank" rel="noopener noreferrer" aria-label="Join the socratink Discord">
+                <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19.54 5.34A17.3 17.3 0 0 0 15.3 4l-.2.38a12.6 12.6 0 0 0-3.1-.38 12.6 12.6 0 0 0-3.1.38L8.7 4a17.3 17.3 0 0 0-4.24 1.34C1.73 9.38.98 13.3 1.36 17.16a17.56 17.56 0 0 0 5.3 2.66l1.08-1.46a11.2 11.2 0 0 1-1.78-.86l.44-.34a12.43 12.43 0 0 0 11.2 0l.44.34c-.56.33-1.15.62-1.78.86l1.08 1.46a17.56 17.56 0 0 0 5.3-2.66c.46-4.48-.72-8.36-3.1-11.82ZM8.52 14.9c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Zm6.96 0c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Z" fill="currentColor"></path>
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </section>
