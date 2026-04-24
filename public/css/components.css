@@ -1234,27 +1234,178 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 
 /* Empty-state voice line + ghost graph preview */
 .hero-voice-line { display: none; margin: 0; }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line {
-  display: block;
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-style: italic;
-  font-weight: 400;
-  line-height: var(--leading-snug);
-  color: var(--text-sub);
-  margin: 0;
-  max-width: 420px;
-}
 
 .hero-ghost-graph { display: none; margin: 0; }
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin: 6px auto 0;
-  max-width: 380px;
+  margin: 0 auto;
+  max-width: 304px;
   width: 100%;
+  opacity: 0.7;
 }
+
+/* Empty-state single input. Hidden outside empty state. */
+.hero-single-input { display: none; }
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  width: 100%;
+  max-width: 560px;
+  gap: 12px;
+  margin: 0 auto;
+}
+
+/* In empty state, hide the guidance sub-head (it re-introduces mode cognition),
+   the voice line, the primary Begin button (replaced by single-input form's own Begin),
+   the timer, and the state-chip meta row (BOARD EMPTY is redundant with the
+   invitation — the chip stays in the DOM as a :has() hook only). Keep the
+   eyebrow, title, and ghost graph. */
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-guidance,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-actions,
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row {
+  display: none;
+}
+
+.hero-single-input__field {
+  font-family: var(--font-body);
+  font-size: var(--text-md, 15px);
+  line-height: var(--leading-relaxed, 1.55);
+  color: var(--text-strong);
+  width: 100%;
+  min-height: 64px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card-sm, var(--shadow-card));
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  transition:
+    border-color var(--duration-standard, 220ms) var(--ease-standard),
+    box-shadow var(--duration-standard, 220ms) var(--ease-standard);
+}
+.hero-single-input__field::placeholder {
+  color: var(--text-sub);
+  opacity: 0.85;
+}
+.hero-single-input__field:focus-visible {
+  outline: none;
+  border-color: var(--accent-border-strong);
+  box-shadow: var(--accent-ring);
+}
+
+.hero-single-input__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-single-input__clipboard {
+  /* Link-style helper, not a second CTA. Reset the global button box-shadow
+     from base.css so it doesn't read as a pill. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-sub);
+  font-family: var(--font-body);
+  font-size: var(--text-sm, 13px);
+  cursor: pointer;
+  padding: 4px 2px;
+  border-radius: 4px;
+  flex: none;
+}
+.hero-single-input__clipboard:hover {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.hero-single-input__clipboard:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+.hero-single-input__clipboard-icon {
+  display: inline-flex;
+  align-items: center;
+  color: currentColor;
+}
+
+.hero-single-input__submit {
+  font-family: var(--font-display, inherit);
+  font-size: var(--text-sm, 14px);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-border-strong, var(--accent-primary));
+  border-radius: 10px;
+  padding: 10px 22px;
+  min-width: 120px;
+  cursor: pointer;
+  transition:
+    transform var(--duration-standard, 220ms) var(--ease-standard),
+    box-shadow var(--duration-standard, 220ms) var(--ease-standard),
+    opacity var(--duration-standard, 220ms) var(--ease-standard);
+}
+.hero-single-input__submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--accent-shadow-md);
+}
+.hero-single-input__submit:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+.hero-single-input__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hero-single-input__reassure {
+  font-family: var(--font-body);
+  font-size: var(--text-sm, 13px);
+  font-style: italic;
+  line-height: var(--leading-snug, 1.45);
+  color: var(--text-sub);
+  margin: 0;
+  text-align: center;
+}
+
+/* Three-zone vertical rhythm: question (eyebrow + H1) → action (input) → promise (ghost graph).
+   The input sits ~80px below the H1; the ghost graph sits ~100px below the input. */
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-title {
+  margin-bottom: 0;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
+  margin-top: 80px;
+}
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph {
+  margin-top: 100px;
+}
+
+@media (max-width: 720px) {
+  .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
+    margin-top: 48px;
+  }
+  .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph {
+    margin-top: 64px;
+  }
+  .hero-single-input__row {
+    flex-wrap: wrap;
+  }
+}
+
 .hero-info:has(.hero-state-chip[data-state="empty"]) {
   justify-content: flex-start;
   gap: 12px;
@@ -1273,10 +1424,8 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   justify-content: center;
   width: 100%;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .desc,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line,
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-ghost-graph__caption {
-  text-align: left;
+  text-align: center;
   width: 100%;
 }
 @media (min-width: 900px) {

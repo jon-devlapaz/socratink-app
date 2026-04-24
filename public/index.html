@@ -22,7 +22,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=51">
+  <link rel="stylesheet" href="styles.css?v=53">
 </head>
 
 <body>
@@ -202,25 +202,14 @@
       <div class="hero-info" id="hero-info">
         <div class="hero-meta-row">
           <div class="hero-state-chip-group">
+            <!-- #hero-state-chip is the data-state hook that CSS :has() rules depend on.
+                 In empty state we hide the wrapping .hero-meta-row entirely (see components.css).
+                 Non-empty states render the chip text via renderHero(). -->
             <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
-            <button type="button"
-                    class="help-tip-trigger js-tooltip-trigger"
-                    aria-label="What is the board?"
-                    aria-describedby="tip-board-state"
-                    data-tooltip-id="tip-board-state">
-              <span class="material-symbols-outlined" aria-hidden="true">info</span>
-            </button>
           </div>
         </div>
         <div class="hero-eyebrow-row">
           <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
-          <button type="button"
-                  class="help-tip-trigger js-tooltip-trigger"
-                  aria-label="What is Start here?"
-                  aria-describedby="tip-start-here"
-                  data-tooltip-id="tip-start-here">
-            <span class="material-symbols-outlined" aria-hidden="true">info</span>
-          </button>
         </div>
         <h1 class="hero-title" id="title">What do you want to understand?</h1>
         <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
@@ -230,6 +219,31 @@
             <span class="hero-primary-action__label">Begin</span>
           </button>
         </div>
+        <!-- Empty-state single input: routes by input shape (short line → concept name, long/punctuated → passage). Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
+        <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
+          <textarea class="hero-single-input__field"
+                    id="hero-single-input-field"
+                    rows="1"
+                    placeholder='e.g. "Entropy" — or paste a passage'
+                    aria-label="What do you want to understand?"></textarea>
+          <div class="hero-single-input__row">
+            <button type="button"
+                    class="hero-single-input__clipboard"
+                    id="hero-single-input-clipboard"
+                    hidden>
+              <span class="hero-single-input__clipboard-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="8" y="3" width="8" height="4" rx="1"/>
+                  <path d="M6 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1"/>
+                </svg>
+              </span>
+              <span>or pick from clipboard</span>
+            </button>
+            <button type="submit" class="hero-single-input__submit" disabled>Begin</button>
+          </div>
+          <p class="hero-single-input__reassure">The first room is small.</p>
+        </form>
+
         <figure class="hero-ghost-graph" role="presentation" aria-hidden="true">
           <!-- Ghost-graph preview. Center node uses --success (solidified) by design-system legend; peripherals use primed/drilled/locked. Not interactive, not user data. -->
           <svg class="hero-ghost-graph__svg" viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg">
@@ -251,6 +265,7 @@
           </svg>
           <figcaption class="hero-ghost-graph__caption">Your map starts empty. Each concept earns its place.</figcaption>
         </figure>
+
         <div id="timer-display">24:00:00</div>
 
         <!-- Action Controls (Hidden for Board-First UX) -->
@@ -527,7 +542,7 @@
   <div id="tooltip-root" aria-hidden="true"></div>
 
   <script src="js/ai_service.js"></script>
-  <script type="module" src="js/app.js?v=33"></script>
+  <script type="module" src="js/app.js?v=35"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
 
   <!-- Vercel Speed Insights -->

@@ -335,18 +335,67 @@ const App = (() => {
     }
   }
 
-  function runHeroAction() {
+  // Classify empty-state input: short, no newline, no sentence-final punctuation → concept name;
+  // otherwise → pasted passage. `.` `?` `!` are the signal; concept names almost never end in them.
+  function classifyHeroInput(raw) {
+    const text = (raw || '').trim();
+    if (!text) return { kind: 'empty', text: '' };
+    const hasNewline = /\n/.test(text);
+    const hasSentenceFinal = /[.?!]/.test(text);
+    if (text.length < 200 && !hasNewline && !hasSentenceFinal) {
+      return { kind: 'name', text };
+    }
+    return { kind: 'passage', text };
+  }
+
+  function runHeroAction(evtOrNothing) {
+    // Empty-state form submit path: a Submit event comes in. Classify and pre-fill the dialog.
+    if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
+      evtOrNothing.preventDefault();
+      const field = document.getElementById('hero-single-input-field');
+      const raw = field ? field.value : '';
+      const classified = classifyHeroInput(raw);
+      if (classified.kind === 'empty') return false;
+      showDashboard();
+      openDrawer();
+      // `startAddConcept` is async (awaits auth), and `buildContentInputUI` mounts the
+      // name input + textarea only after it resolves. Poll for the fields, then pre-fill.
+      startAddConcept();
+      // TODO(v2): LLM-proposed concept name. On `classified.kind === 'passage'`, run a
+      // quick LLM pass on `classified.text` to suggest a name, pre-fill it in the name
+      // field, let the user accept via Begin or edit. Out of scope for v1 due to latency
+      // and cost.
+      const deadline = performance.now() + 2000;
+      const tryFill = () => {
+        const dialog = document.getElementById('creation-dialog');
+        const nameInput = dialog?.querySelector('.creation-name-input');
+        const textarea = dialog?.querySelector('.overlay-textarea');
+        if (!nameInput || !textarea) {
+          if (performance.now() < deadline) requestAnimationFrame(tryFill);
+          return;
+        }
+        if (classified.kind === 'name') {
+          nameInput.value = classified.text;
+          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+          nameInput.focus();
+          nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
+        } else {
+          textarea.value = classified.text;
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          nameInput.focus();
+        }
+      };
+      requestAnimationFrame(tryFill);
+      return false;
+    }
+
+    // Non-empty-state path: the Begin button drives Begin/Extract/Drill/Open-map.
     const concept = getActiveConcept();
     const action = heroPrimaryActionEl?.dataset.action || (!concept ? 'add' : '');
     if (action === 'add') {
       showDashboard();
       openDrawer();
       startAddConcept();
-      requestAnimationFrame(() => {
-        addTriggerArea.scrollIntoView({ block: 'end', behavior: 'smooth' });
-        const nameInput = addTriggerArea.querySelector('.creation-name-input');
-        if (nameInput instanceof HTMLInputElement) nameInput.focus();
-      });
       return;
     }
     if (action === 'extract') {
@@ -361,6 +410,52 @@ const App = (() => {
       if (!concept?.graphData) return;
       showMapView(concept);
       setMapMode('study');
+    }
+  }
+
+  // Wire up the empty-state single input: autogrow, enable Begin on non-empty,
+  // clipboard button conditional on API availability. Called on DOMContentLoaded.
+  function initHeroSingleInput() {
+    const field = document.getElementById('hero-single-input-field');
+    if (!(field instanceof HTMLTextAreaElement)) return;
+    const form = document.getElementById('hero-single-input');
+    const submit = form?.querySelector('.hero-single-input__submit');
+    const clipBtn = document.getElementById('hero-single-input-clipboard');
+
+    const autogrow = () => {
+      field.style.height = 'auto';
+      field.style.height = Math.min(field.scrollHeight, 240) + 'px';
+    };
+    const sync = () => {
+      if (submit instanceof HTMLButtonElement) {
+        submit.disabled = field.value.trim().length === 0;
+      }
+      autogrow();
+    };
+    field.addEventListener('input', sync);
+    // Cmd/Ctrl+Enter to submit from textarea (since plain Enter adds a newline).
+    field.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && field.value.trim()) {
+        e.preventDefault();
+        form?.requestSubmit?.();
+      }
+    });
+    sync();
+
+    if (clipBtn instanceof HTMLButtonElement && navigator.clipboard?.readText) {
+      clipBtn.hidden = false;
+      clipBtn.addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          if (!text) return;
+          field.value = text;
+          sync();
+          field.focus();
+        } catch (err) {
+          // Permission denied or unavailable: stay silent, no pre-emptive prompt surface.
+          console.warn('Clipboard read failed.', err);
+        }
+      });
     }
   }
 
@@ -2300,6 +2395,7 @@ const App = (() => {
   bindMapModeControls();
   renderGrid();
   renderConceptList();
+  initHeroSingleInput();
 
   // Restore selected concept
   const concepts = loadConcepts();
