@@ -52,3 +52,8 @@ scripts/run-checks.sh
 *.excalidraw
 c4-mobile-*.png
 map-header-*.png
+
+# Local knowledge-base + scratch (not for version control)
+.socratink-brain/.obsidian/
+docs/research/
+docs/design/artboards/platform-grid-loaded-concept-mockups.html
