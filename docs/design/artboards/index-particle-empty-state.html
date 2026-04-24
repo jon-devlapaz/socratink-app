@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>socratink index particle mockup</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    :root {
+      --stage-width: min(1120px, calc(100vw - 48px));
+      --sidebar-width: 248px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 24px;
+      background: var(--page-background);
+      color: var(--text-strong);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      pointer-events: none;
+      border-radius: 50%;
+      filter: blur(38px);
+      opacity: 0.74;
+    }
+
+    body::before {
+      width: 360px;
+      height: 360px;
+      top: -120px;
+      right: 8vw;
+      background: radial-gradient(circle, rgba(var(--lavender-500-rgb), 0.24), transparent 66%);
+    }
+
+    body::after {
+      width: 420px;
+      height: 420px;
+      left: -140px;
+      bottom: -150px;
+      background: radial-gradient(circle, rgba(77, 186, 138, 0.14), transparent 68%);
+    }
+
+    .app-frame {
+      position: relative;
+      z-index: 1;
+      width: var(--stage-width);
+      min-height: min(760px, calc(100vh - 48px));
+      display: grid;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+      overflow: hidden;
+      border: 1px solid rgba(var(--ink-900-rgb), 0.10);
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(var(--white-rgb), 0.70), rgba(var(--cream-50-rgb), 0.78));
+      box-shadow:
+        0 42px 96px rgba(var(--ink-900-rgb), 0.11),
+        inset 0 1px 0 rgba(var(--white-rgb), 0.84);
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      padding: 26px 22px;
+      background:
+        linear-gradient(180deg, rgba(var(--white-rgb), 0.36), rgba(var(--mauve-200-rgb), 0.24));
+      border-right: 1px solid rgba(var(--ink-900-rgb), 0.08);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-strong);
+      font-family: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      flex: none;
+      border-radius: 9px;
+      background:
+        linear-gradient(145deg, rgba(var(--white-rgb), 0.98), rgba(var(--cream-50-rgb), 0.82));
+      box-shadow: 0 10px 22px rgba(var(--violet-600-rgb), 0.14);
+      display: grid;
+      place-items: center;
+    }
+
+    .brand-mark svg {
+      width: 18px;
+      height: 18px;
+      overflow: visible;
+    }
+
+    .brand-accent {
+      color: var(--accent-primary);
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 42px;
+      padding: 0 12px;
+      border-radius: 12px;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .nav-item.active {
+      background: rgba(var(--violet-600-rgb), 0.12);
+      color: var(--accent-primary);
+      box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.12);
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      flex: none;
+    }
+
+    .sidebar-section {
+      display: grid;
+      gap: 10px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(var(--ink-900-rgb), 0.08);
+    }
+
+    .section-label {
+      margin: 0;
+      color: rgba(var(--ink-900-rgb), 0.54);
+      font-family: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .empty-line {
+      height: 38px;
+      border-radius: 12px;
+      border: 1px dashed rgba(var(--ink-900-rgb), 0.12);
+      background: rgba(var(--white-rgb), 0.24);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      display: grid;
+      gap: 10px;
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .sync-chip {
+      width: fit-content;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: rgba(var(--white-rgb), 0.52);
+      border: 1px solid rgba(var(--ink-900-rgb), 0.08);
+      color: rgba(var(--ink-900-rgb), 0.62);
+      font-weight: 700;
+    }
+
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-secondary);
+      box-shadow: 0 0 0 4px rgba(var(--lavender-500-rgb), 0.14);
+    }
+
+    .main {
+      position: relative;
+      display: grid;
+      grid-template-rows: 68px minmax(0, 1fr);
+      min-width: 0;
+      background:
+        radial-gradient(circle at 58% 44%, rgba(var(--lavender-500-rgb), 0.13), transparent 30%),
+        linear-gradient(180deg, rgba(var(--white-rgb), 0.34), rgba(var(--cream-50-rgb), 0.18));
+    }
+
+    .main::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(rgba(var(--ink-900-rgb), 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--ink-900-rgb), 0.035) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black, transparent 74%);
+      pointer-events: none;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 26px;
+      border-bottom: 1px solid rgba(var(--ink-900-rgb), 0.07);
+      background: rgba(var(--white-rgb), 0.30);
+      backdrop-filter: blur(20px);
+    }
+
+    .menu-button,
+    .ghost-button,
+    .primary-button {
+      border: 0;
+      font: inherit;
+      cursor: default;
+    }
+
+    .menu-button {
+      width: 38px;
+      height: 38px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 12px;
+      background: rgba(var(--white-rgb), 0.56);
+      color: var(--text-muted);
+      box-shadow: 0 12px 24px rgba(var(--ink-900-rgb), 0.08);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ghost-button,
+    .primary-button {
+      min-height: 38px;
+      padding: 0 15px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ghost-button {
+      border: 1px solid rgba(var(--ink-900-rgb), 0.10);
+      background: rgba(var(--white-rgb), 0.50);
+      color: var(--text-strong);
+    }
+
+    .primary-button {
+      background: var(--primary-fill);
+      color: var(--text-on-primary);
+      box-shadow: 0 12px 24px rgba(var(--violet-600-rgb), 0.18);
+    }
+
+    .hero {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 46px 28px 58px;
+      min-height: 0;
+    }
+
+    .particle-wrap {
+      position: absolute;
+      inset: 70px 28px 28px;
+      overflow: hidden;
+      border-radius: 26px;
+      pointer-events: none;
+    }
+
+    .particle-wrap::before,
+    .particle-wrap::after {
+      content: "";
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(42px);
+      transform: translateZ(0);
+    }
+
+    .particle-wrap::before {
+      width: 260px;
+      height: 260px;
+      top: 16%;
+      left: 12%;
+      background: rgba(var(--lavender-500-rgb), 0.23);
+    }
+
+    .particle-wrap::after {
+      width: 300px;
+      height: 300px;
+      right: 10%;
+      bottom: 8%;
+      background: rgba(216, 168, 103, 0.13);
+    }
+
+    #particle-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0.92;
+    }
+
+    .question-card {
+      position: relative;
+      z-index: 2;
+      width: min(680px, 100%);
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      padding: 24px 10px 0;
+    }
+
+    .kicker {
+      margin: 0 0 18px;
+      color: var(--accent-primary);
+      font-family: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 11ch;
+      margin: 0;
+      color: var(--text-strong);
+      font-family: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: clamp(44px, 7vw, 72px);
+      font-weight: 760;
+      letter-spacing: -0.055em;
+      line-height: 0.92;
+      text-wrap: balance;
+    }
+
+    .prompt-shell {
+      width: min(590px, 100%);
+      margin-top: 72px;
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 22px;
+      border: 1px solid rgba(var(--ink-900-rgb), 0.10);
+      background:
+        linear-gradient(180deg, rgba(var(--white-rgb), 0.72), rgba(var(--cream-50-rgb), 0.50));
+      box-shadow:
+        0 28px 72px rgba(var(--ink-900-rgb), 0.10),
+        0 18px 38px rgba(var(--violet-600-rgb), 0.09),
+        inset 0 1px 0 rgba(var(--white-rgb), 0.88);
+      backdrop-filter: blur(22px);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .mock-input {
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      border-radius: 16px;
+      background: rgba(var(--white-rgb), 0.58);
+      border: 1px solid rgba(var(--ink-900-rgb), 0.09);
+      color: rgba(var(--ink-900-rgb), 0.48);
+      font-size: 15px;
+      font-weight: 600;
+      text-align: left;
+      box-shadow: inset 0 1px 0 rgba(var(--white-rgb), 0.76);
+    }
+
+    .begin-button {
+      min-width: 118px;
+      border: 0;
+      border-radius: 16px;
+      background: var(--primary-fill);
+      color: var(--text-on-primary);
+      font-family: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      box-shadow:
+        0 16px 32px rgba(var(--violet-600-rgb), 0.22),
+        inset 0 1px 0 rgba(var(--white-rgb), 0.18);
+    }
+
+    .secondary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 34px;
+      padding: 0 4px 2px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .clipboard {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .caption {
+      margin: 42px 0 0;
+      color: rgba(var(--ink-900-rgb), 0.60);
+      font-size: 14px;
+      font-style: italic;
+      font-weight: 520;
+      line-height: 1.45;
+    }
+
+    .blur-card {
+      position: absolute;
+      z-index: 1;
+      width: 180px;
+      height: 116px;
+      border-radius: 22px;
+      border: 1px solid rgba(var(--white-rgb), 0.52);
+      background: rgba(var(--white-rgb), 0.22);
+      box-shadow:
+        inset 0 1px 0 rgba(var(--white-rgb), 0.64),
+        0 28px 80px rgba(var(--ink-900-rgb), 0.08);
+      backdrop-filter: blur(20px);
+      opacity: 0.72;
+    }
+
+    .blur-card.left {
+      left: 5%;
+      bottom: 16%;
+      transform: rotate(-6deg);
+    }
+
+    .blur-card.right {
+      right: 7%;
+      top: 20%;
+      transform: rotate(5deg);
+    }
+
+    .blur-card::before,
+    .blur-card::after {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(var(--ink-900-rgb), 0.08);
+    }
+
+    .blur-card::before {
+      top: 28px;
+      width: 54%;
+    }
+
+    .blur-card::after {
+      top: 50px;
+      opacity: 0.58;
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 0;
+        overflow: auto;
+      }
+
+      .app-frame {
+        width: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        grid-template-columns: 1fr;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .main {
+        grid-template-rows: 58px minmax(0, 1fr);
+      }
+
+      .topbar {
+        padding: 0 16px;
+      }
+
+      .top-actions {
+        display: none;
+      }
+
+      .hero {
+        padding: 30px 18px 86px;
+      }
+
+      .particle-wrap {
+        inset: 58px 0 68px;
+        border-radius: 0;
+      }
+
+      h1 {
+        font-size: clamp(38px, 12vw, 58px);
+      }
+
+      .prompt-shell {
+        margin-top: 54px;
+        border-radius: 20px;
+      }
+
+      .input-row {
+        grid-template-columns: 1fr;
+      }
+
+      .begin-button {
+        min-height: 50px;
+      }
+
+      .secondary-row {
+        justify-content: center;
+        text-align: center;
+      }
+
+      .blur-card {
+        display: none;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #particle-canvas {
+        opacity: 0.72;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-frame">
+    <aside class="sidebar" aria-label="Mock sidebar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40" fill="none">
+            <path d="M20 3 31 12 34 24 20 37 6 24 9 12 20 3Z" fill="rgba(144,103,198,0.20)" stroke="var(--accent-primary)" stroke-width="2"/>
+            <path d="M20 3v34M9 12h22M6 24h28M9 12l11 12 11-12" stroke="var(--accent-primary)" stroke-width="1.4" opacity="0.82"/>
+          </svg>
+        </span>
+        <span>socra<span class="brand-accent">tink</span></span>
+      </div>
+
+      <nav class="nav" aria-label="Mock navigation">
+        <a class="nav-item active" href="#">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="m12 3 1.7 5.2L19 10l-5.3 1.8L12 17l-1.7-5.2L5 10l5.3-1.8L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+          Dashboard
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 8h10M7 12h10M7 16h6M5 4h14v16H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+          Library
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 17 9 12l4 3 7-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Your Progress
+        </a>
+        <a class="nav-item" href="#">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Z" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M19 12h2M3 12h2M12 3v2M12 19v2M17 7l1.4-1.4M5.6 18.4 7 17M7 7 5.6 5.6M18.4 18.4 17 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          Settings
+        </a>
+      </nav>
+
+      <section class="sidebar-section">
+        <p class="section-label">Concepts</p>
+        <div class="empty-line"></div>
+        <div class="empty-line"></div>
+      </section>
+
+      <div class="sidebar-footer">
+        <span class="sync-chip"><span class="sync-dot"></span> Guest mode</span>
+        <span>Your words shape the path. They do not grade you.</span>
+      </div>
+    </aside>
+
+    <section class="main" aria-label="Mock empty index view">
+      <header class="topbar">
+        <button class="menu-button" aria-label="Toggle sidebar">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M5 7h14M5 12h14M5 17h14" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div class="top-actions">
+          <button class="ghost-button">Save &amp; Sync</button>
+          <button class="primary-button">Begin</button>
+        </div>
+      </header>
+
+      <div class="hero">
+        <div class="particle-wrap" aria-hidden="true">
+          <canvas id="particle-canvas"></canvas>
+        </div>
+        <div class="blur-card left" aria-hidden="true"></div>
+        <div class="blur-card right" aria-hidden="true"></div>
+
+        <div class="question-card">
+          <p class="kicker">Start here</p>
+          <h1>What do you want to understand?</h1>
+
+          <div class="prompt-shell">
+            <div class="input-row">
+              <div class="mock-input">e.g. Entropy, price elasticity, CRISPR</div>
+              <button class="begin-button">Begin</button>
+            </div>
+            <div class="secondary-row">
+              <span class="clipboard">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <rect x="8" y="3" width="8" height="4" rx="1.2" stroke="currentColor" stroke-width="1.7"/>
+                  <path d="M6 6H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-1" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                </svg>
+                Pick from clipboard
+              </span>
+              <span>The first room is small.</span>
+            </div>
+          </div>
+
+          <p class="caption">Nothing is loaded yet. The first signal comes from your attempt.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById("particle-canvas");
+      const ctx = canvas.getContext("2d");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const pointer = { active: false, x: 0, y: 0 };
+      let width = 1;
+      let height = 1;
+      let particles = [];
+      let raf = null;
+      let last = 0;
+
+      const colors = [
+        "144,103,198",
+        "141,134,201",
+        "77,186,138",
+        "216,168,103"
+      ];
+
+      function seededRandom() {
+        let seed = 271828;
+        return () => {
+          seed = (seed * 1664525 + 1013904223) >>> 0;
+          return seed / 4294967296;
+        };
+      }
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        const nextWidth = Math.max(1, Math.round(rect.width));
+        const nextHeight = Math.max(1, Math.round(rect.height));
+        if (nextWidth === width && nextHeight === height) return;
+
+        width = nextWidth;
+        height = nextHeight;
+        const scale = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * scale);
+        canvas.height = Math.round(height * scale);
+        ctx.setTransform(scale, 0, 0, scale, 0, 0);
+
+        const rand = seededRandom();
+        const count = Math.max(42, Math.min(86, Math.round((width * height) / 7400)));
+        particles = Array.from({ length: count }, (_, index) => {
+          const x = width * (0.12 + rand() * 0.76);
+          const y = height * (0.18 + rand() * 0.64);
+          return {
+            x,
+            y,
+            homeX: x,
+            homeY: y,
+            vx: (rand() - 0.5) * 0.18,
+            vy: (rand() - 0.5) * 0.18,
+            r: 1.3 + rand() * 2.4,
+            orbit: 8 + rand() * 28,
+            phase: rand() * Math.PI * 2,
+            speed: 0.38 + rand() * 0.86,
+            color: colors[index % colors.length]
+          };
+        });
+      }
+
+      function update(now) {
+        const dt = last ? Math.min(2.2, (now - last) / 16.67) : 1;
+        last = now;
+        const t = now * 0.001;
+        const focusX = width * 0.50;
+        const focusY = height * 0.52;
+
+        for (const p of particles) {
+          const targetX = p.homeX + Math.sin(t * p.speed + p.phase) * p.orbit;
+          const targetY = p.homeY + Math.cos(t * p.speed * 0.72 + p.phase) * p.orbit * 0.44;
+          p.vx += (targetX - p.x) * 0.006 * dt;
+          p.vy += (targetY - p.y) * 0.006 * dt;
+          p.vx += (focusX - p.x) * 0.00042 * dt;
+          p.vy += (focusY - p.y) * 0.00032 * dt;
+
+          if (pointer.active) {
+            const dx = p.x - pointer.x;
+            const dy = p.y - pointer.y;
+            const distance = Math.hypot(dx, dy);
+            if (distance > 0 && distance < 132) {
+              const force = Math.pow(1 - distance / 132, 2);
+              p.vx += (dx / distance) * force * 1.8 * dt;
+              p.vy += (dy / distance) * force * 1.8 * dt;
+            }
+          }
+
+          p.vx *= Math.pow(0.92, dt);
+          p.vy *= Math.pow(0.92, dt);
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+        }
+      }
+
+      function draw(now) {
+        ctx.clearRect(0, 0, width, height);
+        ctx.lineWidth = 0.9;
+        const linkLimit = Math.max(86, Math.min(126, width * 0.16));
+
+        for (let i = 0; i < particles.length; i += 1) {
+          for (let j = i + 1; j < particles.length; j += 1) {
+            const a = particles[i];
+            const b = particles[j];
+            const distance = Math.hypot(a.x - b.x, a.y - b.y);
+            if (distance > linkLimit) continue;
+            const opacity = Math.pow(1 - distance / linkLimit, 2) * 0.20;
+            ctx.strokeStyle = `rgba(${a.color}, ${opacity})`;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+          }
+        }
+
+        for (const p of particles) {
+          const pulse = 0.75 + Math.sin(now * 0.002 + p.phase) * 0.16;
+          ctx.fillStyle = `rgba(${p.color}, 0.58)`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "rgba(247,236,225,0.70)";
+          ctx.beginPath();
+          ctx.arc(p.x - p.r * 0.18, p.y - p.r * 0.20, Math.max(0.55, p.r * 0.32), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function frame(now) {
+        resize();
+        if (!reduceMotion.matches) update(now);
+        draw(now);
+        raf = requestAnimationFrame(frame);
+      }
+
+      document.addEventListener("pointermove", (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const inside =
+          event.clientX >= rect.left &&
+          event.clientX <= rect.right &&
+          event.clientY >= rect.top &&
+          event.clientY <= rect.bottom;
+        if (!inside) {
+          pointer.active = false;
+          return;
+        }
+        pointer.active = true;
+        pointer.x = event.clientX - rect.left;
+        pointer.y = event.clientY - rect.top;
+      });
+
+      document.addEventListener("pointerleave", () => {
+        pointer.active = false;
+      });
+
+      window.addEventListener("resize", resize);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && raf) {
+          cancelAnimationFrame(raf);
+          raf = null;
+        } else if (!document.hidden && !raf) {
+          raf = requestAnimationFrame(frame);
+        }
+      });
+
+      resize();
+      raf = requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>

@@ -19,36 +19,53 @@ GUEST_COOKIE_VALUE = "guest"
 
 
 _EMBEDDED_LOGIN_CSS = """
+/* Light-only surface. Login is pre-auth chrome and always renders in the cream/ink
+   theme; dark mode is not in scope here. HTML locks the theme via `class="light"`. */
 :root {
-  --surface: #fdf9f5;
-  --surface-low: #f7f3ef;
-  --surface-high: #ebe7e4;
-  --surface-card: rgba(255, 255, 255, 0.76);
-  --primary: #63469d;
-  --primary-strong: #7c5fb8;
-  --secondary: #68548d;
-  --text: #1c1c19;
-  --text-muted: #7b7582;
-  --text-soft: #494551;
-  --outline-soft: rgba(203, 196, 210, 0.9);
-  --shadow-card: 0 8px 32px rgba(28, 28, 25, 0.06);
-  --radius-card: 24px;
-  --radius-pill: 999px;
+  /* Login-local aliases over system tokens (tokens.css loaded first). */
+  --surface-card:    rgba(255, 255, 255, 0.76);
+  --primary:         var(--violet-600);
+  --primary-strong:  var(--primary-fill);
+  --secondary:       var(--lavender-500);
+  --text:            var(--ink-900);
+  --text-muted:      rgba(var(--ink-900-rgb), 0.54);
+  --text-soft:       rgba(var(--ink-900-rgb), 0.72);
+  --outline-soft:    rgba(var(--mauve-200-rgb), 0.9);
+  --shadow-ambient:  0 24px 64px rgba(var(--ink-900-rgb), 0.08);
 }
-* { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
 body {
   position: relative;
   overflow: hidden;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 14% 18%, rgba(210, 187, 255, 0.34), transparent 26%),
-    radial-gradient(circle at 88% 86%, rgba(210, 187, 255, 0.26), transparent 24%),
-    linear-gradient(180deg, rgba(253, 249, 245, 0.98), rgba(249, 244, 239, 0.96));
+    radial-gradient(circle at 14% 18%, rgba(144, 103, 198, 0.18), transparent 30%),
+    radial-gradient(circle at 88% 86%, rgba(141, 134, 201, 0.22), transparent 28%),
+    linear-gradient(180deg, #f7ece1, #f2e3d2);
   color: var(--text);
-  font-family: Inter, sans-serif;
+  font-family: var(--font-body);
 }
-a { color: inherit; text-decoration: none; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -60,22 +77,32 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
   border: 0;
 }
+
 #stardust-container {
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 1;
 }
+
 .star {
   position: absolute;
   border-radius: 50%;
-  background: rgba(107, 78, 166, 0.34);
+  background: rgba(144, 103, 198, 0.34);
   animation: twinkle var(--duration) ease-in-out infinite;
 }
+
 @keyframes twinkle {
-  0%, 100% { opacity: 0.18; transform: scale(1); }
-  50% { opacity: 0.62; transform: scale(1.16); }
+  0%, 100% {
+    opacity: 0.18;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.16);
+  }
 }
+
 .aurora {
   position: absolute;
   border-radius: 999px;
@@ -85,27 +112,31 @@ a { color: inherit; text-decoration: none; }
   z-index: 0;
   transition: transform 160ms cubic-bezier(0.1, 0, 0.3, 1);
 }
+
 .aurora-a {
   top: -120px;
   left: -110px;
   width: 420px;
   height: 420px;
-  background: rgba(124, 95, 184, 0.52);
+  background: rgba(144, 103, 198, 0.42);
 }
+
 .aurora-b {
   right: -60px;
   bottom: -60px;
   width: 320px;
   height: 320px;
-  background: rgba(210, 187, 255, 0.6);
+  background: rgba(141, 134, 201, 0.55);
 }
+
 .aurora-c {
   top: 34%;
   left: 24%;
   width: 240px;
   height: 240px;
-  background: rgba(99, 70, 157, 0.32);
+  background: rgba(144, 103, 198, 0.28);
 }
+
 .login-shell {
   position: relative;
   z-index: 2;
@@ -115,6 +146,7 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   padding: 40px 24px;
 }
+
 .login-stage {
   width: 100%;
   max-width: 340px;
@@ -122,35 +154,78 @@ a { color: inherit; text-decoration: none; }
   flex-direction: column;
   align-items: center;
 }
+
 .brand-lockup {
   margin-bottom: 26px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
+
 .brand-mark {
-  width: 58px;
-  height: 58px;
+  width: 68px;
+  height: 68px;
   margin-bottom: 14px;
-  border-radius: 10px;
+  border-radius: 16px;
   object-fit: cover;
-  box-shadow: 0 0 22px rgba(99, 70, 157, 0.18);
+  box-shadow: 0 14px 28px rgba(var(--violet-600-rgb), 0.16);
 }
+
 .brand-title {
   margin: 0;
-  font-family: Manrope, sans-serif;
-  font-size: 2.05rem;
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: var(--tracking-hero);
 }
-.brand-kicker {
+
+.brand-title-accent {
+  color: var(--violet-600);
+}
+
+.brand-pronunciation {
   margin: 6px 0 0;
   color: var(--secondary);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
+
+.discord-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  justify-self: center;
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 120ms ease, transform 120ms ease, color 120ms ease;
+}
+
+.discord-link:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  color: var(--primary);
+}
+
+.discord-link:focus-visible {
+  opacity: 1;
+  outline: 2px solid rgba(var(--violet-600-rgb), 0.58);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.discord-mark {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .login-card {
   width: 100%;
   border-radius: var(--radius-card);
@@ -160,32 +235,46 @@ a { color: inherit; text-decoration: none; }
   -webkit-backdrop-filter: blur(18px);
   box-shadow: var(--shadow-card);
 }
-.login-card-inner { padding: 32px 30px 28px; }
+
+.login-card-inner {
+  padding: 32px 30px 28px;
+}
+
 .auth-status-banner {
   border-radius: 14px;
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.auth-status-banner {
   margin-bottom: 18px;
   padding: 12px 14px;
-  background: rgba(99, 70, 157, 0.08);
+  background: rgba(var(--violet-600-rgb), 0.08);
   color: var(--text-soft);
 }
+
 .auth-status-banner.is-error {
   background: rgba(186, 26, 26, 0.1);
   color: #8c2323;
 }
+
 .auth-status-banner.is-success {
-  background: rgba(99, 70, 157, 0.1);
+  background: rgba(var(--violet-600-rgb), 0.1);
   color: var(--primary);
 }
+
 .social-stack {
   display: grid;
   gap: 12px;
   margin-bottom: 28px;
 }
+
 .google-button {
   appearance: none;
   border: 0;
+}
+
+.google-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -195,25 +284,46 @@ a { color: inherit; text-decoration: none; }
   padding: 0 22px;
   border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.56);
-  box-shadow: inset 0 0 0 1px var(--outline-soft);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);
   color: var(--text);
   font-weight: 700;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
+
 .google-button:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.84);
-  box-shadow: inset 0 0 0 1px rgba(123, 117, 130, 0.34), 0 12px 28px rgba(28, 28, 25, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.48), 0 12px 28px rgba(var(--ink-900-rgb), 0.05);
 }
+
+.google-button:focus-visible {
+  outline: 2px solid rgba(var(--violet-600-rgb), 0.58);
+  outline-offset: 3px;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32), 0 0 0 5px rgba(var(--violet-600-rgb), 0.1);
+}
+
 .google-button.is-loading {
   pointer-events: none;
   opacity: 0.88;
 }
-.google-mark {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 20px;
+
+.google-button.is-disabled {
+  pointer-events: none;
+  opacity: 0.52;
 }
+
+.google-button.is-disabled:hover {
+  transform: none;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);
+}
+
+.google-mark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
 .guest-button {
   display: flex;
   align-items: center;
@@ -222,74 +332,128 @@ a { color: inherit; text-decoration: none; }
   min-height: 52px;
   padding: 0 22px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.36);
-  box-shadow: inset 0 0 0 1px rgba(123, 117, 130, 0.22);
-  color: var(--text-soft);
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: inset 0 0 0 1px var(--outline-soft);
+  color: var(--text);
+  font-weight: 700;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
 }
+
 .guest-button:hover {
   transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 0 0 1px rgba(123, 117, 130, 0.3), 0 10px 24px rgba(28, 28, 25, 0.04);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(var(--mauve-200-rgb), 0.34), 0 10px 24px rgba(var(--ink-900-rgb), 0.05);
   color: var(--text);
 }
+
+.guest-button:focus-visible {
+  outline: 2px solid rgba(var(--violet-600-rgb), 0.58);
+  outline-offset: 3px;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.48), 0 0 0 5px rgba(var(--violet-600-rgb), 0.1);
+}
+
 .coffee-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   padding: 0 18px;
   border-radius: var(--radius-pill);
-  background: rgba(99, 70, 157, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.16);
-  color: #4f378b;
-  font-size: 0.9rem;
-  font-weight: 650;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.14);
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease, color 160ms ease;
 }
+
 .coffee-button:hover {
   transform: translateY(-1px);
-  background: rgba(99, 70, 157, 0.11);
-  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.3), 0 10px 22px rgba(99, 70, 157, 0.08);
+  background: rgba(var(--violet-600-rgb), 0.06);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.22);
   color: var(--primary);
 }
+
 .coffee-button:focus-visible {
-  outline: 2px solid rgba(99, 70, 157, 0.58);
+  outline: 2px solid rgba(var(--violet-600-rgb), 0.58);
   outline-offset: 3px;
-  background: rgba(99, 70, 157, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(99, 70, 157, 0.32), 0 0 0 5px rgba(99, 70, 157, 0.1);
+  background: rgba(var(--violet-600-rgb), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32), 0 0 0 5px rgba(var(--violet-600-rgb), 0.1);
 }
+
 .coffee-cup {
   width: 18px;
   height: 18px;
   flex: 0 0 18px;
 }
-.shimmer-btn {
-  position: relative;
-  overflow: hidden;
+
+.icon-chip-row {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 4px;
 }
-.shimmer-btn::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(to bottom right, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0) 60%, rgba(255,255,255,0) 100%);
-  transform: translateX(-150%) rotate(45deg);
-  animation: shimmer 5s linear infinite;
+
+.icon-chip-row .coffee-button,
+.icon-chip-row .discord-link {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.22);
+  color: rgba(var(--ink-900-rgb), 0.68);
+  flex: 0 0 auto;
+  justify-self: auto;
+  transition: transform 120ms ease, box-shadow 120ms ease,
+              background 120ms ease, color 120ms ease;
 }
-@keyframes shimmer {
-  0% { transform: translateX(-150%) rotate(45deg); }
-  20%, 100% { transform: translateX(150%) rotate(45deg); }
+
+.icon-chip-row .coffee-button:hover,
+.icon-chip-row .discord-link:hover {
+  transform: translateY(-1px);
+  background: rgba(var(--violet-600-rgb), 0.06);
+  box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.34);
+  color: var(--primary);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  .star {
+    animation: none;
+    opacity: 0.34;
+  }
+
+  .aurora {
+    transition: none;
+  }
+
+  .google-button:hover,
+  .guest-button:hover,
+  .coffee-button:hover,
+  .discord-link:hover {
+    transform: none;
+  }
+}
+
 @media (max-width: 600px) {
-  .login-shell { padding: 24px 18px; }
-  .login-card-inner { padding: 28px 22px 24px; }
-  .brand-title { font-size: 1.8rem; }
+  .login-shell {
+    padding: 24px 18px;
+  }
+
+  .login-card-inner {
+    padding: 28px 22px 24px;
+  }
 }
 """
 
@@ -431,9 +595,10 @@ def _render_login_html() -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f7ece1">
   <meta name="application-name" content="Socratink">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Socratink">
-  <title>Socratink - The Socratic Canvas</title>
+  <title>socratink — the Socratic Canvas</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png?v=6">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
@@ -470,23 +635,23 @@ def _render_login_html() -> str:
               <span id="google-label">Continue with Google</span>
             </a>
             <a id="guest-continue-link" class="guest-button" href="/">
-              Continue as Guest
+              continue as guest
             </a>
-            <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer">
-              <svg class="coffee-cup" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6.75 8.5h8.5v5.25a4.25 4.25 0 0 1-8.5 0V8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
-                <path d="M15.25 10h1.25a2 2 0 0 1 0 4h-1.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-              </svg>
-              Support the build
-            </a>
-            <a class="discord-link" href="https://discord.gg/ZEHqpC6vMx" target="_blank" rel="noopener noreferrer">
-              <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M19.54 5.34A17.3 17.3 0 0 0 15.3 4l-.2.38a12.6 12.6 0 0 0-3.1-.38 12.6 12.6 0 0 0-3.1.38L8.7 4a17.3 17.3 0 0 0-4.24 1.34C1.73 9.38.98 13.3 1.36 17.16a17.56 17.56 0 0 0 5.3 2.66l1.08-1.46a11.2 11.2 0 0 1-1.78-.86l.44-.34a12.43 12.43 0 0 0 11.2 0l.44.34c-.56.33-1.15.62-1.78.86l1.08 1.46a17.56 17.56 0 0 0 5.3-2.66c.46-4.48-.72-8.36-3.1-11.82ZM8.52 14.9c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Zm6.96 0c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Z" fill="currentColor"></path>
-              </svg>
-              Join the Discord
-            </a>
+            <div class="icon-chip-row">
+              <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer" aria-label="Support the build on Buy Me a Coffee">
+                <svg class="coffee-cup" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6.75 8.5h8.5v5.25a4.25 4.25 0 0 1-8.5 0V8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                  <path d="M15.25 10h1.25a2 2 0 0 1 0 4h-1.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                  <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                  <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+                </svg>
+              </a>
+              <a class="discord-link" href="https://discord.gg/ZEHqpC6vMx" target="_blank" rel="noopener noreferrer" aria-label="Join the socratink Discord">
+                <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19.54 5.34A17.3 17.3 0 0 0 15.3 4l-.2.38a12.6 12.6 0 0 0-3.1-.38 12.6 12.6 0 0 0-3.1.38L8.7 4a17.3 17.3 0 0 0-4.24 1.34C1.73 9.38.98 13.3 1.36 17.16a17.56 17.56 0 0 0 5.3 2.66l1.08-1.46a11.2 11.2 0 0 1-1.78-.86l.44-.34a12.43 12.43 0 0 0 11.2 0l.44.34c-.56.33-1.15.62-1.78.86l1.08 1.46a17.56 17.56 0 0 0 5.3-2.66c.46-4.48-.72-8.36-3.1-11.82ZM8.52 14.9c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Zm6.96 0c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Z" fill="currentColor"></path>
+                </svg>
+              </a>
+            </div>
           </div>
         </div>
       </section>
