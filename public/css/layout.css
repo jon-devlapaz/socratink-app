@@ -141,7 +141,7 @@ body:not([data-map-open="true"]) .map-back-link {
   align-items: start;
   justify-items: center;
   padding-top: 32px;
-  padding-bottom: 32px;
+  padding-bottom: 36px;
   background: transparent;
   box-shadow: none;
 }
