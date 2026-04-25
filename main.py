@@ -105,19 +105,43 @@ def _is_protected_api_request(request: Request) -> bool:
     return path.startswith("/api/analytics/") or path in PROTECTED_API_PATHS
 
 
-def _has_app_entry_session(request: Request) -> bool:
-    if request.cookies.get(GUEST_COOKIE_NAME) == GUEST_COOKIE_VALUE:
-        return True
+def _resolve_session_state(request: Request):
+    """Returns AuthSessionState (or None if no service / disabled)."""
     service = getattr(request.app.state, "auth_service", None)
     if service is None:
-        return False
+        return None
     sealed_session = request.cookies.get(service.cookie_name)
     try:
-        state = service.load_session(sealed_session)
+        return service.load_session(sealed_session)
     except Exception:
         logger.exception("Auth session gate failed for path=%s", request.url.path)
-        return False
-    return bool(getattr(state, "authenticated", False))
+        return None
+
+
+def _has_app_entry_session(request: Request, state) -> bool:
+    if request.cookies.get(GUEST_COOKIE_NAME) == GUEST_COOKIE_VALUE:
+        return True
+    return bool(state and getattr(state, "authenticated", False))
+
+
+def _apply_writeback(request: Request, response, state) -> None:
+    """Apply refreshed sealed cookie to response if Supabase rotated tokens."""
+    if state is None:
+        return
+    service = request.app.state.auth_service
+    sealed = getattr(state, "sealed_session", None)
+    if sealed:
+        response.set_cookie(
+            service.cookie_name,
+            sealed,
+            secure=service.resolve_cookie_secure(str(request.base_url).rstrip("/")),
+            httponly=True,
+            samesite=service.cookie_samesite,
+            max_age=service.cookie_max_age,
+            path="/",
+        )
+    elif getattr(state, "should_clear_cookie", False):
+        response.delete_cookie(service.cookie_name, path="/")
 
 
 @app.middleware("http")
@@ -126,20 +150,28 @@ async def require_login_or_guest_entry(request: Request, call_next):
     if path == "/login.html":
         query = f"?{request.url.query}" if request.url.query else ""
         return RedirectResponse(url=f"/login{query}", status_code=302)
-    if _is_protected_html_request(request) or _is_protected_api_request(request):
-        if not _has_app_entry_session(request):
-            if path.startswith("/api/"):
-                return JSONResponse(
-                    {
-                        "detail": "Choose Google sign-in or continue as guest before using the app."
-                    },
-                    status_code=401,
-                )
-            return RedirectResponse(
-                url=f"/login?return_to={quote(_request_return_to(request), safe='')}",
-                status_code=302,
+
+    state = _resolve_session_state(request)
+    is_protected = _is_protected_html_request(request) or _is_protected_api_request(
+        request
+    )
+
+    if is_protected and not _has_app_entry_session(request, state):
+        if path.startswith("/api/"):
+            return JSONResponse(
+                {
+                    "detail": "Choose Google sign-in or continue as guest before using the app."
+                },
+                status_code=401,
             )
-    return await call_next(request)
+        return RedirectResponse(
+            url=f"/login?return_to={quote(_request_return_to(request), safe='')}",
+            status_code=302,
+        )
+
+    response = await call_next(request)
+    _apply_writeback(request, response, state)
+    return response
 
 
 class ExtractRequest(BaseModel):
