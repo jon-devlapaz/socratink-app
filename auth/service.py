@@ -326,7 +326,10 @@ class SupabaseAuthService:
         issuer = f"{self.supabase_url.rstrip('/')}/auth/v1"
         try:
             claims = verify_access_token(
-                tokens["access_token"], jwt_secret=self.jwt_secret, issuer=issuer
+                tokens["access_token"],
+                jwt_secret=self.jwt_secret,
+                supabase_url=self.supabase_url,
+                issuer=issuer,
             )
         except TokenExpired:
             return self._refresh_session(tokens["refresh_token"])
