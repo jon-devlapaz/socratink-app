@@ -492,6 +492,86 @@ class SupabaseAuthService:
                 f"Auth is enabled but missing: {', '.join(missing)}"
             )
 
+    def build_oauth_state(self, *, return_to: str) -> tuple[str, str, str, str]:
+        """Build (nonce, verifier, challenge, signed_state_cookie) for /auth/google."""
+        from auth.oauth_state import OAuthState, sign_state
+        from auth.pkce import challenge_from_verifier, generate_verifier
+        import secrets
+        import time
+
+        self._require_enabled()
+        assert self.session_cookie_key
+        nonce = secrets.token_urlsafe(24)
+        verifier = generate_verifier()
+        challenge = challenge_from_verifier(verifier)
+        state = OAuthState(
+            nonce=nonce,
+            return_to=return_to,
+            code_verifier=verifier,
+            issued_at=int(time.time()),
+        )
+        return nonce, verifier, challenge, sign_state(state, self.session_cookie_key)
+
+    def get_login_url(self, *, state_nonce: str, code_challenge: str) -> str:
+        from auth.supabase_urls import build_google_authorize_url
+
+        self._require_enabled()
+        assert self.supabase_url
+        return build_google_authorize_url(
+            supabase_url=self.supabase_url,
+            redirect_to=self.callback_redirect_uri(),
+            state_nonce=state_nonce,
+            code_challenge=code_challenge,
+        )
+
+    def verify_oauth_state(
+        self, *, state: str | None, signed_cookie: str | None
+    ) -> tuple[str, str] | None:
+        """Return (return_to, code_verifier) on success, else None."""
+        import secrets
+
+        from auth.oauth_state import verify_state
+
+        self._require_enabled()
+        assert self.session_cookie_key
+        if not state or not signed_cookie:
+            return None
+        decoded = verify_state(
+            signed_cookie,
+            secret=self.session_cookie_key,
+            max_age_seconds=self.oauth_state_ttl_seconds,
+        )
+        if decoded is None:
+            return None
+        if not secrets.compare_digest(decoded.nonce, state):
+            return None
+        return decoded.return_to, decoded.code_verifier
+
+    def logout(self, sealed_session: str | None) -> None:
+        # Best-effort remote sign-out; failures are not fatal because the cookie
+        # is being cleared regardless.
+        if not self.enabled or not sealed_session:
+            return
+        try:
+            tokens = self._unseal_or_none(sealed_session)
+            if tokens is None:
+                return
+            client = self._make_supabase_client()
+            client.auth.sign_out()
+        except Exception:
+            pass
+
+    def _unseal_or_none(self, sealed_session: str):
+        from cryptography.fernet import InvalidToken
+
+        from auth.session_seal import unseal_session_tokens
+
+        try:
+            assert self.session_cookie_key
+            return unseal_session_tokens(sealed_session, key=self.session_cookie_key)
+        except InvalidToken:
+            return None
+
     def _make_supabase_client(self):
         # Late import keeps test patch surface working & avoids importing supabase
         # at module load time.
