@@ -277,5 +277,63 @@ class ApiMeAndLogoutTests(unittest.TestCase):
         self.assertEqual(verify.status_code, 503)
 
 
+class AnonymousGuestTests(unittest.TestCase):
+    def test_guest_calls_sign_in_anonymously_and_sets_session_cookie(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        called = {}
+
+        def fake_anon():
+            called["yes"] = True
+            return AuthSessionState(
+                auth_enabled=True,
+                authenticated=True,
+                user=AuthUser(id="anon_uuid_456"),
+                guest_mode=True,
+                sealed_session="sealed-anon-blob",
+            )
+
+        service.sign_in_anonymously = fake_anon  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/library", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/library")
+        self.assertTrue(called.get("yes"))
+        self.assertIn(
+            "sb_session=sealed-anon-blob", response.headers.get("set-cookie", "")
+        )
+
+    def test_guest_open_redirect_sanitized(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.sign_in_anonymously = lambda: AuthSessionState(  # type: ignore[assignment]
+            auth_enabled=True,
+            authenticated=True,
+            user=AuthUser(id="anon_uuid_456"),
+            guest_mode=True,
+            sealed_session="sealed-anon-blob",
+        )
+        client = build_client(service)
+
+        response = client.get(
+            "/auth/guest?return_to=https://evil.test", follow_redirects=False
+        )
+
+        self.assertEqual(response.headers["location"], "/")
+
+    def test_guest_failure_redirects_to_login_with_error(self):
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise RuntimeError("supabase down")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -834,9 +834,33 @@ def login(request: Request, return_to: str | None = None):
 
 @auth_router.get("/auth/guest")
 def auth_guest(request: Request, return_to: str | None = None):
+    service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
+    try:
+        auth_state = service.sign_in_anonymously()
+    except AuthConfigurationError as err:
+        logger.warning("Anonymous sign-in failed (config): %s", err)
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="authentication_unavailable",
+            ),
+            status_code=302,
+        )
+    except Exception:
+        logger.exception("Anonymous sign-in failed unexpectedly")
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="authentication_failed",
+            ),
+            status_code=302,
+        )
+
     response = RedirectResponse(url=sanitized_return_to, status_code=302)
-    _apply_guest_cookie(response, request)
+    if auth_state.sealed_session:
+        _apply_session_cookie(response, request, auth_state.sealed_session)
+    _clear_guest_cookie(response)
     return response
 
 
