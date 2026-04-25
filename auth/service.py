@@ -644,13 +644,15 @@ class SupabaseAuthService:
         )
 
 
-def build_auth_service_from_env() -> WorkOSAuthService:
-    return WorkOSAuthService(
+def build_auth_service_from_env() -> "SupabaseAuthService":
+    return SupabaseAuthService(
         enabled=_env_flag("AUTH_ENABLED", False),
-        api_key=_env_value("WORKOS_API_KEY"),
-        client_id=_env_value("WORKOS_CLIENT_ID"),
-        cookie_password=_env_value("WORKOS_COOKIE_PASSWORD"),
-        cookie_name=_env_value("AUTH_COOKIE_NAME", "wos_session") or "wos_session",
+        supabase_url=_env_value("SUPABASE_URL"),
+        publishable_key=_env_value("SUPABASE_PUBLISHABLE_KEY"),
+        jwt_secret=_env_value("SUPABASE_JWT_SECRET"),
+        session_cookie_key=_env_value("SESSION_COOKIE_KEY"),
+        app_base_url=_env_value("APP_BASE_URL"),
+        cookie_name=_env_value("AUTH_COOKIE_NAME", "sb_session") or "sb_session",
         callback_path=_env_value("AUTH_CALLBACK_PATH", "/auth/callback")
         or "/auth/callback",
         cookie_secure=_env_value("AUTH_COOKIE_SECURE", "auto") or "auto",
@@ -659,8 +661,8 @@ def build_auth_service_from_env() -> WorkOSAuthService:
             _env_value("AUTH_COOKIE_MAX_AGE", str(60 * 60 * 24 * 14))
             or str(60 * 60 * 24 * 14)
         ),
-        oauth_state_cookie_name=_env_value("AUTH_STATE_COOKIE_NAME", "wos_oauth_state")
-        or "wos_oauth_state",
+        oauth_state_cookie_name=_env_value("AUTH_STATE_COOKIE_NAME", "sb_oauth_state")
+        or "sb_oauth_state",
         oauth_state_ttl_seconds=int(
             _env_value("AUTH_STATE_TTL_SECONDS", str(60 * 10)) or str(60 * 10)
         ),

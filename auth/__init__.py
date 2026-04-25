@@ -4,7 +4,7 @@ from .service import (
     AuthSessionState,
     AuthUser,
     MagicAuthStartState,
-    WorkOSAuthService,
+    SupabaseAuthService,
     build_auth_service_from_env,
 )
 
@@ -15,7 +15,7 @@ __all__ = [
     "GUEST_COOKIE_NAME",
     "GUEST_COOKIE_VALUE",
     "MagicAuthStartState",
-    "WorkOSAuthService",
+    "SupabaseAuthService",
     "auth_router",
     "build_auth_service_from_env",
 ]
