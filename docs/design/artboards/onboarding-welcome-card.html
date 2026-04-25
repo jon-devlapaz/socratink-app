@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>socratink — first-run welcome card (3 frames)</title>
+
+<!--
+  REFERENCE FOR CODEX
+  ---------------------------------------------------------------------------
+  A first-run onboarding overlay. Three frames, single card, soft dim.
+  Frame 3 is the actual composer — dismissing = first action.
+  Crystal motif morphs in frame 2 to *show* the loop.
+
+  Tokens mirror docs/design/colors_and_type.css. When porting:
+    - Use the existing tokens from public/css/variables.css; do not add new ones.
+    - Crystal state colors map to: --crystal-instantiated-* (locked),
+      --crystal-growing-* (primed), --crystal-actualized-* (solidified).
+    - Honor prefers-reduced-motion (already wired below).
+    - Persist dismissal in localStorage (key: socratink:welcome:dismissed:v1).
+      Re-openable later from a quiet "?" in sidebar (out of scope here).
+  ---------------------------------------------------------------------------
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+/* ===========================================================
+   1. TOKENS (mirror of colors_and_type.css for self-contained preview)
+   =========================================================== */
+:root {
+  --font-display: 'Manrope', system-ui, sans-serif;  /* Geom proxy */
+  --font-body:    'Inter', system-ui, sans-serif;
+
+  --ink-900: #242038;
+  --violet-600: #9067c6;
+  --lavender-500: #8d86c9;
+  --mauve-200: #cac4ce;
+  --cream-50: #f7ece1;
+  --white: #ffffff;
+
+  --ink-900-rgb: 36, 32, 56;
+  --violet-600-rgb: 144, 103, 198;
+  --lavender-500-rgb: 141, 134, 201;
+  --mauve-200-rgb: 202, 196, 206;
+  --cream-50-rgb: 247, 236, 225;
+
+  --surface-page: var(--cream-50);
+  --surface-card: var(--white);
+  --text-strong: var(--ink-900);
+  --text-muted: rgba(var(--ink-900-rgb), 0.68);
+
+  --primary-fill: #7a59aa;
+  --primary-fill-hover: #70529b;
+  --accent-soft: rgba(var(--violet-600-rgb), 0.12);
+  --accent-border: rgba(var(--violet-600-rgb), 0.18);
+  --accent-border-strong: rgba(var(--violet-600-rgb), 0.30);
+  --accent-ring: 0 0 0 3px rgba(var(--violet-600-rgb), 0.14);
+
+  --border-subtle: rgba(var(--ink-900-rgb), 0.10);
+
+  --shadow-card:   0 8px 32px rgba(var(--violet-600-rgb), 0.10),
+                   0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-raised: 0 28px 64px rgba(var(--ink-900-rgb), 0.16),
+                   0 2px 6px rgba(var(--ink-900-rgb), 0.06),
+                   inset 0 1px 0 rgba(var(--white), 0.78);
+
+  --radius-card: 1rem;
+  --radius-lg:   1.25rem;
+  --radius-btn:  0.625rem;
+  --radius-pill: 999px;
+
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring:   cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-quick: 220ms;
+  --duration-cozy:  320ms;
+  --morph-ms: 600ms;
+
+  --tracking-kicker: 0.18em;
+  --tracking-tight:  -0.02em;
+}
+
+/* ===========================================================
+   2. PAGE — fake dashboard behind the overlay so the card has
+      something to sit on. In production this is the real shell.
+   =========================================================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100vh; }
+body {
+  background:
+    radial-gradient(circle at 14% 12%, rgba(255,255,255,0.56), transparent 28%),
+    radial-gradient(circle at 88% 18%, rgba(var(--lavender-500-rgb), 0.12), transparent 24%),
+    radial-gradient(circle at 52% 100%, rgba(212,179,131,0.09), transparent 30%),
+    linear-gradient(180deg, rgba(255,251,247,0.76), rgba(var(--cream-50-rgb), 0.96) 26%, var(--surface-page) 100%);
+  color: var(--text-strong);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+.fake-shell {
+  position: fixed; inset: 0;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  filter: blur(0.5px);  /* very subtle, just to hint depth behind the card */
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}
+.fake-side {
+  background: rgba(var(--mauve-200-rgb), 0.20);
+  border-right: 1px solid var(--border-subtle);
+}
+.fake-main { padding: 56px 48px; }
+.fake-main h1 {
+  font-family: var(--font-display);
+  font-size: 36px; font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-strong); margin: 0 0 20px;
+}
+.fake-input {
+  height: 56px;
+  border-radius: 14px;
+  border: 1px solid var(--border-subtle);
+  background: var(--white);
+  max-width: 640px;
+}
+
+/* ===========================================================
+   3. OVERLAY — light dim, NOT a hard scrim.
+   =========================================================== */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(var(--ink-900-rgb), 0.18);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  animation: fadeIn 220ms var(--ease-standard);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ===========================================================
+   4. CARD
+   =========================================================== */
+.card {
+  width: min(520px, calc(100vw - 32px));
+  background: linear-gradient(180deg,
+    rgba(var(--cream-50-rgb), 0.02),
+    rgba(var(--cream-50-rgb), 0.10)),
+    var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  /* warm bloom, top-right, very faint */
+  content: '';
+  position: absolute;
+  top: -120px; right: -120px;
+  width: 320px; height: 320px;
+  border-radius: 50%;
+  background: rgba(var(--lavender-500-rgb), 0.18);
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.skip {
+  position: absolute; top: 18px; right: 22px;
+  background: none; border: none;
+  font-family: var(--font-body);
+  font-size: 12px; color: var(--text-muted);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color var(--duration-quick) var(--ease-standard);
+}
+.skip:hover { color: var(--text-strong); }
+.skip:focus-visible { outline: none; box-shadow: var(--accent-ring); }
+
+/* ===========================================================
+   5. FRAMES
+   =========================================================== */
+.frames {
+  position: relative;
+  padding: 56px 48px 36px;
+  min-height: 460px;
+}
+.frame {
+  position: absolute;
+  inset: 56px 48px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--duration-cozy) var(--ease-standard),
+    transform var(--duration-cozy) var(--ease-standard);
+  pointer-events: none;
+}
+.frame[data-active="true"] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.kicker {
+  font-family: var(--font-display);
+  font-size: 11px; font-weight: 700;
+  letter-spacing: var(--tracking-kicker);
+  text-transform: uppercase;
+  color: var(--lavender-500);
+}
+
+.lede {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-strong);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.support {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.55;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 42ch;
+  text-wrap: pretty;
+}
+
+/* Crystal stage — large in frame 1/2 */
+.crystal-stage {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 8px;
+}
+
+/* Loop labels under crystal in frame 2 */
+.loop-states {
+  display: flex; gap: 18px;
+  justify-content: center;
+  width: 100%;
+}
+.loop-state {
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  opacity: 0.5;
+  transition: opacity var(--duration-cozy) var(--ease-standard),
+              color var(--duration-cozy) var(--ease-standard);
+}
+.loop-state[data-active="true"] {
+  opacity: 1;
+  color: var(--violet-600);
+}
+
+/* Composer — frame 3 */
+.composer {
+  width: 100%;
+  background: var(--white);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 10px;
+  transition: border-color var(--duration-quick) var(--ease-standard),
+              box-shadow var(--duration-quick) var(--ease-standard);
+}
+.composer:focus-within {
+  border-color: var(--accent-border-strong);
+  box-shadow: var(--accent-ring);
+}
+.composer input {
+  flex: 1;
+  background: transparent;
+  border: none; outline: none;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--text-strong);
+}
+.composer input::placeholder { color: var(--text-muted); }
+
+/* ===========================================================
+   6. FOOTER — dots + nav
+   =========================================================== */
+.foot {
+  border-top: 1px solid var(--border-subtle);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(var(--cream-50-rgb), 0.40);
+  position: relative;
+}
+.dots { display: flex; gap: 8px; }
+.dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mauve-200);
+  border: none; padding: 0;
+  cursor: pointer;
+  transition: background-color var(--duration-quick) var(--ease-standard),
+              transform var(--duration-quick) var(--ease-standard);
+}
+.dot[data-active="true"] {
+  background: var(--violet-600);
+  transform: scale(1.2);
+}
+.dot:focus-visible { outline: none; box-shadow: var(--accent-ring); }
+
+.nav { display: flex; gap: 8px; }
+
+.btn {
+  font-family: var(--font-body);
+  font-size: 13px; font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius-btn);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--duration-quick) var(--ease-standard);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+}
+.btn-ghost:hover { color: var(--text-strong); background: var(--accent-soft); }
+.btn-primary {
+  background: var(--primary-fill);
+  color: var(--cream-50);
+  box-shadow: 0 4px 10px rgba(var(--violet-600-rgb), 0.20);
+}
+.btn-primary:hover { background: var(--primary-fill-hover); }
+.btn:focus-visible { outline: none; box-shadow: var(--accent-ring); }
+.btn:active { transform: scale(0.97); }
+
+/* ===========================================================
+   7. CRYSTAL POLYGON — inline SVG, state-driven via CSS classes.
+   Six facets (upper-left, upper-right, lower-left, lower-right,
+   specular, bottom-tip) plus a halo glow.
+   =========================================================== */
+.crystal {
+  width: 140px; height: 200px;
+  display: block;
+  filter: drop-shadow(0 18px 40px rgba(var(--violet-600-rgb), 0.18));
+  transition: filter var(--morph-ms) var(--ease-standard);
+}
+.crystal polygon,
+.crystal path {
+  transition: fill var(--morph-ms) var(--ease-standard),
+              opacity var(--morph-ms) var(--ease-standard);
+}
+
+/* Halo */
+.crystal-halo {
+  fill: rgba(var(--lavender-500-rgb), 0.18);
+  opacity: 0;
+  transition: opacity var(--morph-ms) var(--ease-standard);
+}
+
+/* --- locked (instantiated) --- */
+.crystal[data-state="locked"] .facet-ul { fill: rgba(var(--mauve-200-rgb), 0.92); }
+.crystal[data-state="locked"] .facet-ur { fill: rgba(var(--mauve-200-rgb), 0.78); }
+.crystal[data-state="locked"] .facet-ll { fill: rgba(var(--lavender-500-rgb), 0.42); }
+.crystal[data-state="locked"] .facet-lr { fill: rgba(var(--ink-900-rgb), 0.55); }
+.crystal[data-state="locked"] .specular { fill: rgba(var(--cream-50-rgb), 0.78); opacity: 0.5; }
+.crystal[data-state="locked"] .bottom-tip { fill: rgba(var(--ink-900-rgb), 0.78); }
+.crystal[data-state="locked"] .crystal-halo { opacity: 0.4; }
+
+/* --- primed (growing) --- */
+.crystal[data-state="primed"] .facet-ul { fill: rgba(var(--lavender-500-rgb), 0.88); }
+.crystal[data-state="primed"] .facet-ur { fill: rgba(var(--violet-600-rgb), 0.82); }
+.crystal[data-state="primed"] .facet-ll { fill: rgba(var(--violet-600-rgb), 0.76); }
+.crystal[data-state="primed"] .facet-lr { fill: rgba(var(--ink-900-rgb), 0.82); }
+.crystal[data-state="primed"] .specular { fill: rgba(var(--cream-50-rgb), 0.96); opacity: 0.95; }
+.crystal[data-state="primed"] .bottom-tip { fill: rgba(var(--ink-900-rgb), 0.92); }
+.crystal[data-state="primed"] .crystal-halo {
+  fill: rgba(var(--lavender-500-rgb), 0.34);
+  opacity: 0.85;
+}
+
+/* --- solidified (actualized) --- */
+.crystal[data-state="solidified"] .facet-ul { fill: rgba(var(--lavender-500-rgb), 0.86); }
+.crystal[data-state="solidified"] .facet-ur { fill: rgba(var(--violet-600-rgb), 0.92); }
+.crystal[data-state="solidified"] .facet-ll { fill: rgba(var(--violet-600-rgb), 0.82); }
+.crystal[data-state="solidified"] .facet-lr { fill: rgba(var(--ink-900-rgb), 0.88); }
+.crystal[data-state="solidified"] .specular { fill: rgba(var(--cream-50-rgb), 1); opacity: 1; }
+.crystal[data-state="solidified"] .bottom-tip { fill: rgba(var(--ink-900-rgb), 0.95); }
+.crystal[data-state="solidified"] .crystal-halo {
+  fill: rgba(var(--violet-600-rgb), 0.40);
+  opacity: 1;
+}
+.crystal[data-state="solidified"] {
+  filter: drop-shadow(0 22px 50px rgba(var(--violet-600-rgb), 0.42));
+}
+
+/* ===========================================================
+   8. REDUCED MOTION
+   =========================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .overlay, .frame, .crystal, .crystal polygon, .crystal path,
+  .crystal-halo, .loop-state, .dot, .btn, .composer {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Keep the demo page itself scroll-locked when overlay is up */
+body.locked { overflow: hidden; }
+</style>
+</head>
+
+<body class="locked">
+
+<!-- Faux dashboard behind the overlay (production: real shell) -->
+<div class="fake-shell" aria-hidden="true">
+  <div class="fake-side"></div>
+  <div class="fake-main">
+    <h1>What do you want to understand?</h1>
+    <div class="fake-input"></div>
+  </div>
+</div>
+
+<!-- ============= OVERLAY ============= -->
+<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="welcomeLede">
+  <div class="card">
+    <button class="skip" type="button" data-action="skip">skip</button>
+
+    <div class="frames">
+
+      <!-- ---------- FRAME 1 ---------- -->
+      <section class="frame" data-frame="1" data-active="true">
+        <span class="kicker">welcome</span>
+        <div class="crystal-stage">
+          <!-- crystal: locked state -->
+          <svg class="crystal" data-state="locked" viewBox="0 0 200 280" aria-hidden="true">
+            <ellipse class="crystal-halo" cx="100" cy="220" rx="80" ry="14"/>
+            <polygon class="facet-ul" points="100,20 100,140 20,140"/>
+            <polygon class="facet-ur" points="100,20 180,140 100,140"/>
+            <polygon class="facet-ll" points="100,140 20,140 100,260"/>
+            <polygon class="facet-lr" points="100,140 180,140 100,260"/>
+            <polygon class="bottom-tip" points="100,200 60,140 140,140"/>
+            <polygon class="specular" points="100,30 100,90 140,140"/>
+          </svg>
+        </div>
+        <h1 class="lede" id="welcomeLede">
+          you're inside socratink. it teaches by asking you to explain things from memory.
+        </h1>
+        <p class="support">
+          not by reading slides. not by re-watching. you'll learn by reconstructing — and the map you build will only show what you can actually do.
+        </p>
+      </section>
+
+      <!-- ---------- FRAME 2 ---------- -->
+      <section class="frame" data-frame="2">
+        <span class="kicker">how it works</span>
+        <div class="crystal-stage">
+          <svg class="crystal" data-state="locked" viewBox="0 0 200 280" aria-hidden="true">
+            <ellipse class="crystal-halo" cx="100" cy="220" rx="80" ry="14"/>
+            <polygon class="facet-ul" points="100,20 100,140 20,140"/>
+            <polygon class="facet-ur" points="100,20 180,140 100,140"/>
+            <polygon class="facet-ll" points="100,140 20,140 100,260"/>
+            <polygon class="facet-lr" points="100,140 180,140 100,260"/>
+            <polygon class="bottom-tip" points="100,200 60,140 140,140"/>
+            <polygon class="specular" points="100,30 100,90 140,140"/>
+          </svg>
+        </div>
+        <div class="loop-states">
+          <span class="loop-state" data-step="locked" data-active="true">cold attempt</span>
+          <span class="loop-state" data-step="primed">repair</span>
+          <span class="loop-state" data-step="solidified">re-drill</span>
+        </div>
+        <h1 class="lede">
+          three rooms per concept.
+        </h1>
+        <p class="support">
+          you walk in cold and try. study repairs the gap. days later you re-drill — that's the only thing that turns the crystal solid.
+        </p>
+      </section>
+
+      <!-- ---------- FRAME 3 ---------- -->
+      <section class="frame" data-frame="3">
+        <span class="kicker">begin</span>
+        <h1 class="lede">
+          name one thing you want to be able to actually explain.
+        </h1>
+        <p class="support">
+          rough is fine. the first room is small.
+        </p>
+        <div class="composer" id="composer">
+          <input type="text" placeholder="e.g. natural selection · the Krebs cycle · compound interest" />
+          <button class="btn btn-primary" type="button" data-action="begin">
+            drill this
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ============= FOOTER ============= -->
+    <div class="foot">
+      <div class="dots" role="tablist" aria-label="onboarding step">
+        <button class="dot" type="button" data-go="1" data-active="true" aria-label="step 1"></button>
+        <button class="dot" type="button" data-go="2" aria-label="step 2"></button>
+        <button class="dot" type="button" data-go="3" aria-label="step 3"></button>
+      </div>
+      <div class="nav">
+        <button class="btn btn-ghost" type="button" data-action="back" hidden>back</button>
+        <button class="btn btn-primary" type="button" data-action="next">next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   Frame controller — vanilla, ~60 lines. Port to React: useState + effect.
+   ===================================================================== */
+(function () {
+  const frames   = document.querySelectorAll('.frame');
+  const dots     = document.querySelectorAll('.dot');
+  const backBtn  = document.querySelector('[data-action="back"]');
+  const nextBtn  = document.querySelector('[data-action="next"]');
+  const skipBtn  = document.querySelector('[data-action="skip"]');
+  const beginBtn = document.querySelector('[data-action="begin"]');
+  const composerInput = document.querySelector('#composer input');
+
+  const TOTAL = frames.length;
+  let current = 1;
+  let loopTimer = null;
+
+  function showFrame(n) {
+    if (n < 1 || n > TOTAL) return;
+    current = n;
+
+    frames.forEach(f => f.dataset.active = (Number(f.dataset.frame) === n) ? 'true' : 'false');
+    dots.forEach(d   => d.dataset.active = (Number(d.dataset.go)    === n) ? 'true' : 'false');
+
+    backBtn.hidden = (n === 1);
+    nextBtn.textContent = (n === TOTAL) ? 'done' : 'next';
+
+    stopLoopAnimation();
+    if (n === 2) startLoopAnimation();
+    if (n === 3) setTimeout(() => composerInput.focus(), 360);
+  }
+
+  /* Frame 2 — crystal cycles locked → primed → solidified, ~5s loop. */
+  function startLoopAnimation() {
+    const crystal = document.querySelector('.frame[data-frame="2"] .crystal');
+    const labels  = document.querySelectorAll('.frame[data-frame="2"] .loop-state');
+    const seq = ['locked', 'primed', 'solidified'];
+    let i = 0;
+
+    function step() {
+      crystal.dataset.state = seq[i];
+      labels.forEach(l => l.dataset.active = (l.dataset.step === seq[i]) ? 'true' : 'false');
+      i = (i + 1) % seq.length;
+    }
+    step();
+    loopTimer = setInterval(step, 1700);
+  }
+  function stopLoopAnimation() {
+    if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
+  }
+
+  function dismiss() {
+    /* production: localStorage.setItem('socratink:welcome:dismissed:v1', '1'); */
+    document.querySelector('.overlay').remove();
+    document.body.classList.remove('locked');
+  }
+
+  nextBtn.addEventListener('click', () => current === TOTAL ? dismiss() : showFrame(current + 1));
+  backBtn.addEventListener('click', () => showFrame(current - 1));
+  skipBtn.addEventListener('click', dismiss);
+  beginBtn.addEventListener('click', dismiss);
+  dots.forEach(d => d.addEventListener('click', e => showFrame(Number(e.currentTarget.dataset.go))));
+
+  /* Keyboard: Esc dismisses, ←/→ navigate, Enter on composer submits + dismisses */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') dismiss();
+    if (e.key === 'ArrowRight' && current < TOTAL) showFrame(current + 1);
+    if (e.key === 'ArrowLeft'  && current > 1) showFrame(current - 1);
+  });
+  composerInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && composerInput.value.trim()) dismiss();
+  });
+})();
+</script>
+</body>
+</html>

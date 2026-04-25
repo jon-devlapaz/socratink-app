@@ -2,6 +2,7 @@ import { Bus } from './bus.js';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
+import { maybeShowFirstRunWelcome } from './welcome.js?v=5';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -21,6 +22,7 @@ const App = (() => {
   const PHASE_B_SESSION_KEY_PREFIX = 'learnops-phase-b-session';
   const PHASE_B_RESUME_KEY = 'learnops-phase-b-resume';
   const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
+  const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
@@ -30,6 +32,7 @@ const App = (() => {
   let learnerAnalyticsDashboard = null;
   let sessionState = getDefaultPhaseBSessionState();
   let drillSessionTimeLimitSeconds = null;
+  let firstColdAttemptCreedShownThisSession = false;
 
   function applyRuntimeConfig(config = {}) {
     const limitSeconds = Number(config.drill_session_time_limit_seconds);
@@ -2429,6 +2432,11 @@ const App = (() => {
     }
   }
 
+  void maybeShowFirstRunWelcome({
+    getSession: () => fetchAuthSession(),
+    shouldShow: () => loadConcepts().length === 0 && heroStateChipEl?.dataset.state === 'empty',
+  });
+
   sessionState = loadPhaseBSessionState(getActiveId());
 
   let drillState = {
@@ -3413,14 +3421,15 @@ const App = (() => {
 
       if (drillMode === 'cold_attempt' && data.generative_commitment === true) {
         const normalizationMessages = [
-          "Your guess just primed your brain. Now let's see what's really going on.",
-          "Most learners get this wrong the first time. That's by design.",
-          "This is how your brain prepares to learn. The struggle is the point.",
-          "That attempt just activated your semantic networks. The study material will land harder now.",
+          'You made the first mark. Now the room can show the gap.',
+          'That guess gives study something to work against.',
+          'The first attempt gives this room a shape.',
+          'The room stayed quiet until you tried. Now study has a target.',
         ];
         const msgIdx = drillState._normalizationIdx % normalizationMessages.length;
         drillState._normalizationIdx += 1;
         appendBubble('ai', normalizationMessages[msgIdx]);
+        appendFirstColdAttemptCreed();
         if (chatInput) chatInput.disabled = true;
         drillState.pending = true;
         showTypingIndicator();
@@ -3633,6 +3642,48 @@ const App = (() => {
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
     bubble.innerHTML = formatChatText(text);
+    chatHistory.appendChild(bubble);
+    setTimeout(() => {
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }, 50);
+  }
+
+  function shouldShowFirstColdAttemptCreed() {
+    if (firstColdAttemptCreedShownThisSession) return false;
+    firstColdAttemptCreedShownThisSession = true;
+
+    try {
+      if (localStorage.getItem(FIRST_COLD_ATTEMPT_CREED_KEY)) return false;
+      localStorage.setItem(FIRST_COLD_ATTEMPT_CREED_KEY, new Date().toISOString());
+    } catch (err) {
+      console.warn('First attempt note state could not be saved.', err);
+    }
+
+    return true;
+  }
+
+  function appendFirstColdAttemptCreed() {
+    if (!chatHistory || !shouldShowFirstColdAttemptCreed()) return;
+
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ai first-attempt-creed';
+    bubble.innerHTML = `
+      <p class="first-attempt-creed__kicker">what you just did</p>
+      <ul class="first-attempt-creed__list">
+        <li>
+          <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
+          <span><strong>You tried first.</strong> The room stayed quiet until your guess existed.</span>
+        </li>
+        <li>
+          <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
+          <span><strong>Study has a target now.</strong> Repair the gap this room exposed.</span>
+        </li>
+        <li>
+          <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
+          <span><strong>Return later.</strong> Only spaced re-drill can change the record.</span>
+        </li>
+      </ul>
+    `;
     chatHistory.appendChild(bubble);
     setTimeout(() => {
       chatHistory.scrollTop = chatHistory.scrollHeight;
