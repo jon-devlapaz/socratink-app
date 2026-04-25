@@ -830,12 +830,10 @@ def auth_google(request: Request, return_to: str | None = None):
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     try:
-        nonce, _verifier, challenge, signed_state = service.build_oauth_state(
+        _verifier, challenge, signed_state = service.build_oauth_state(
             return_to=sanitized_return_to
         )
-        authorization_url = service.get_login_url(
-            state_nonce=nonce, code_challenge=challenge
-        )
+        authorization_url = service.get_login_url(code_challenge=challenge)
     except AuthConfigurationError as err:
         logger.warning("Google auth start failed: %s", err)
         return RedirectResponse(
@@ -854,13 +852,11 @@ def auth_google(request: Request, return_to: str | None = None):
 def auth_callback(
     request: Request,
     code: str | None = None,
-    state: str | None = None,
     error: str | None = None,
     error_description: str | None = None,
 ):
     service = _get_auth_service(request)
     verified = service.verify_oauth_state(
-        state=state,
         signed_cookie=request.cookies.get(service.oauth_state_cookie_name),
     )
     return_to = verified[0] if verified else "/"

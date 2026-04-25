@@ -162,27 +162,32 @@ class SupabaseAuthService:
                 f"Auth is enabled but missing: {', '.join(missing)}"
             )
 
-    def build_oauth_state(self, *, return_to: str) -> tuple[str, str, str, str]:
-        """Build (nonce, verifier, challenge, signed_state_cookie) for /auth/google."""
+    def build_oauth_state(self, *, return_to: str) -> tuple[str, str, str]:
+        """Build (verifier, challenge, signed_state_cookie) for /auth/google.
+
+        We do NOT pass a `state` query param to Supabase — Supabase manages its
+        own JWT-encoded state cookie internally and rejects flows where our
+        nonce collides with theirs. CSRF protection comes from the HMAC-signed
+        cookie, which carries return_to + the PKCE verifier; the verifier is
+        what binds the callback to this specific session.
+        """
         from auth.oauth_state import OAuthState, sign_state
         from auth.pkce import challenge_from_verifier, generate_verifier
-        import secrets
         import time
 
         self._require_enabled()
         assert self.session_cookie_key
-        nonce = secrets.token_urlsafe(24)
         verifier = generate_verifier()
         challenge = challenge_from_verifier(verifier)
         state = OAuthState(
-            nonce=nonce,
+            nonce="",  # unused; retained in dataclass for sign/verify symmetry
             return_to=return_to,
             code_verifier=verifier,
             issued_at=int(time.time()),
         )
-        return nonce, verifier, challenge, sign_state(state, self.session_cookie_key)
+        return verifier, challenge, sign_state(state, self.session_cookie_key)
 
-    def get_login_url(self, *, state_nonce: str, code_challenge: str) -> str:
+    def get_login_url(self, *, code_challenge: str) -> str:
         from auth.supabase_urls import build_google_authorize_url
 
         self._require_enabled()
@@ -190,21 +195,23 @@ class SupabaseAuthService:
         return build_google_authorize_url(
             supabase_url=self.supabase_url,
             redirect_to=self.callback_redirect_uri(),
-            state_nonce=state_nonce,
             code_challenge=code_challenge,
         )
 
     def verify_oauth_state(
-        self, *, state: str | None, signed_cookie: str | None
+        self, *, signed_cookie: str | None
     ) -> tuple[str, str] | None:
-        """Return (return_to, code_verifier) on success, else None."""
-        import secrets
+        """Return (return_to, code_verifier) on success, else None.
 
+        CSRF binding is the HMAC over the cookie payload (validated by
+        verify_state) plus the embedded code_verifier (validated by Supabase
+        when we exchange). No URL-borne state to match.
+        """
         from auth.oauth_state import verify_state
 
         self._require_enabled()
         assert self.session_cookie_key
-        if not state or not signed_cookie:
+        if not signed_cookie:
             return None
         decoded = verify_state(
             signed_cookie,
@@ -212,8 +219,6 @@ class SupabaseAuthService:
             max_age_seconds=self.oauth_state_ttl_seconds,
         )
         if decoded is None:
-            return None
-        if not secrets.compare_digest(decoded.nonce, state):
             return None
         return decoded.return_to, decoded.code_verifier
 
