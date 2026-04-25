@@ -1,6 +1,5 @@
 """S9 + S10 + S11 — router endpoints under SupabaseAuthService.
 
-Replaces / augments tests/test_auth_router.py once WorkOS is removed.
 Uses a fake service matching the SupabaseAuthService interface.
 """
 
@@ -44,26 +43,25 @@ class FakeSupabaseAuthService:
     def build_oauth_state(self, *, return_to: str):
         self.last_built_state = return_to
         return (
-            "nonce-pkce",
             "v_pkce_verifier_value",
             "ch_pkce_challenge_value",
             "signed-state-cookie",
         )
 
-    def get_login_url(self, *, state_nonce: str, code_challenge: str) -> str:
+    def get_login_url(self, *, code_challenge: str) -> str:
         if not self.enabled:
             raise RuntimeError("disabled")
         return (
             "https://abc123.supabase.co/auth/v1/authorize"
-            f"?provider=google&state={state_nonce}&code_challenge={code_challenge}"
-            "&code_challenge_method=S256"
+            f"?provider=google&code_challenge={code_challenge}"
+            "&code_challenge_method=s256"
             "&redirect_to=http%3A%2F%2Flocalhost%3A8000%2Fauth%2Fcallback"
         )
 
-    def verify_oauth_state(self, *, state: str | None, signed_cookie: str | None):
+    def verify_oauth_state(self, *, signed_cookie: str | None):
         if not self.oauth_state_valid:
             return None
-        if state == "nonce-pkce" and signed_cookie == "signed-state-cookie":
+        if signed_cookie == "signed-state-cookie":
             return ("/library", "v_pkce_verifier_value")
         return None
 
@@ -83,6 +81,9 @@ class FakeSupabaseAuthService:
 
     def resolve_cookie_secure(self, base_url: str) -> bool:
         return base_url.startswith("https://")
+
+    def callback_redirect_uri(self) -> str:
+        return f"{self.app_base_url.rstrip('/')}{self.callback_path}"
 
 
 def build_client(service: FakeSupabaseAuthService) -> TestClient:
@@ -108,9 +109,10 @@ class GoogleAuthStartTests(unittest.TestCase):
         self.assertEqual(parsed.path, "/auth/v1/authorize")
         qs = {k: v[0] for k, v in parse_qs(parsed.query).items()}
         self.assertEqual(qs["provider"], "google")
-        self.assertEqual(qs["code_challenge_method"], "S256")
+        self.assertEqual(qs["code_challenge_method"], "s256")
         self.assertIn("code_challenge", qs)
-        self.assertEqual(qs["state"], "nonce-pkce")
+        # Supabase manages state internally; sending our own caused bad_oauth_state.
+        self.assertNotIn("state", qs)
 
     def test_state_cookie_set_with_signed_payload(self):
         service = FakeSupabaseAuthService(enabled=True)
@@ -141,7 +143,7 @@ class CallbackTests(unittest.TestCase):
         client.cookies.set(service.oauth_state_cookie_name, "signed-state-cookie")
 
         response = client.get(
-            "/auth/callback?code=abc123&state=nonce-pkce", follow_redirects=False
+            "/auth/callback?code=abc123", follow_redirects=False
         )
 
         self.assertEqual(response.status_code, 302)
@@ -165,7 +167,7 @@ class CallbackTests(unittest.TestCase):
         client.cookies.set(service.oauth_state_cookie_name, "signed-state-cookie")
 
         response = client.get(
-            "/auth/callback?code=abc&state=bad", follow_redirects=False
+            "/auth/callback?code=abc", follow_redirects=False
         )
 
         self.assertEqual(response.status_code, 302)
@@ -176,9 +178,7 @@ class CallbackTests(unittest.TestCase):
         client = build_client(service)
         client.cookies.set(service.oauth_state_cookie_name, "signed-state-cookie")
 
-        response = client.get(
-            "/auth/callback?state=nonce-pkce", follow_redirects=False
-        )
+        response = client.get("/auth/callback", follow_redirects=False)
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("auth_error=missing_code", response.headers["location"])
@@ -189,7 +189,7 @@ class CallbackTests(unittest.TestCase):
         client.cookies.set(service.oauth_state_cookie_name, "signed-state-cookie")
 
         response = client.get(
-            "/auth/callback?error=access_denied&state=nonce-pkce",
+            "/auth/callback?error=access_denied",
             follow_redirects=False,
         )
 
@@ -207,7 +207,7 @@ class CallbackTests(unittest.TestCase):
         client.cookies.set(service.oauth_state_cookie_name, "signed-state-cookie")
 
         response = client.get(
-            "/auth/callback?code=abc&state=nonce-pkce", follow_redirects=False
+            "/auth/callback?code=abc", follow_redirects=False
         )
 
         self.assertEqual(response.status_code, 302)
@@ -272,6 +272,64 @@ class ApiMeAndLogoutTests(unittest.TestCase):
         )
         self.assertEqual(send.status_code, 503)
         self.assertEqual(verify.status_code, 503)
+
+
+class AnonymousGuestTests(unittest.TestCase):
+    def test_guest_calls_sign_in_anonymously_and_sets_session_cookie(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        called = {}
+
+        def fake_anon():
+            called["yes"] = True
+            return AuthSessionState(
+                auth_enabled=True,
+                authenticated=True,
+                user=AuthUser(id="anon_uuid_456"),
+                guest_mode=True,
+                sealed_session="sealed-anon-blob",
+            )
+
+        service.sign_in_anonymously = fake_anon  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/library", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/library")
+        self.assertTrue(called.get("yes"))
+        self.assertIn(
+            "sb_session=sealed-anon-blob", response.headers.get("set-cookie", "")
+        )
+
+    def test_guest_open_redirect_sanitized(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.sign_in_anonymously = lambda: AuthSessionState(  # type: ignore[assignment]
+            auth_enabled=True,
+            authenticated=True,
+            user=AuthUser(id="anon_uuid_456"),
+            guest_mode=True,
+            sealed_session="sealed-anon-blob",
+        )
+        client = build_client(service)
+
+        response = client.get(
+            "/auth/guest?return_to=https://evil.test", follow_redirects=False
+        )
+
+        self.assertEqual(response.headers["location"], "/")
+
+    def test_guest_failure_redirects_to_login_with_error(self):
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise RuntimeError("supabase down")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
 
 
 if __name__ == "__main__":

@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 
 import ai_service
 import main
-from auth import GUEST_COOKIE_NAME
 from auth.service import AuthSessionState
 
 
@@ -109,10 +108,15 @@ class RepairRepsApiTests(unittest.TestCase):
         main.app.state.auth_service = self.original_service
 
     def build_client(self, *, guest=True) -> TestClient:
-        main.app.state.auth_service = FakeAuthService(enabled=True)
+        service = FakeAuthService(enabled=True)
+        if guest:
+            service.current_state = AuthSessionState(
+                auth_enabled=True, authenticated=True, guest_mode=True
+            )
+        main.app.state.auth_service = service
         client = TestClient(main.app)
         if guest:
-            client.cookies.set(GUEST_COOKIE_NAME, "guest")
+            client.cookies.set(service.cookie_name, "sealed-anon-blob")
         return client
 
     def test_repair_reps_api_requires_guest_or_auth_entry(self):

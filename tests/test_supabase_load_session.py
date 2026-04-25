@@ -127,5 +127,40 @@ class LoadSessionTests(unittest.TestCase):
         self.assertFalse(state.authenticated)
 
 
+class AnonymousSessionTests(unittest.TestCase):
+    def test_anonymous_session_sets_guest_mode(self):
+        svc = _make_service()
+        sealed = seal_session_tokens(
+            {
+                "access_token": jwt.encode(
+                    {
+                        "aud": "authenticated",
+                        "iss": ISSUER,
+                        "sub": "anon_uuid_456",
+                        "role": "authenticated",
+                        "iat": int(time.time()),
+                        "exp": int(time.time()) + 3600,
+                        "is_anonymous": True,
+                    },
+                    JWT_SECRET,
+                    algorithm="HS256",
+                ),
+                "refresh_token": "rt_anon",
+                "expires_at": int(time.time()) + 3600,
+            },
+            key=SESSION_KEY,
+        )
+        state = svc.load_session(sealed)
+        self.assertTrue(state.authenticated)
+        self.assertTrue(state.guest_mode)
+        self.assertEqual(state.user.id, "anon_uuid_456")
+
+    def test_authenticated_session_keeps_guest_mode_false(self):
+        svc = _make_service()
+        state = svc.load_session(_seal())
+        self.assertTrue(state.authenticated)
+        self.assertFalse(state.guest_mode)
+
+
 if __name__ == "__main__":
     unittest.main()

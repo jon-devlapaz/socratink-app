@@ -286,3 +286,100 @@ Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_JWT_SECRET`, `APP_BASE
 - Supabase JWT fields: https://supabase.com/docs/guides/auth/jwt-fields
 - Supabase sessions/refresh: https://supabase.com/docs/guides/auth/sessions
 - RFC 7636 (PKCE): https://www.rfc-editor.org/rfc/rfc7636
+
+---
+
+## Amendment 2026-04-25 — Anonymous sign-in replaces local guest cookie
+
+**Status:** approved in brainstorming session 2026-04-25
+**Supersedes:** original Goal line "Guest mode preserved" (still preserved as a UX path; mechanism changes)
+**Confidence:** HIGH — single-method scope, mirrors the existing OAuth seal/load path
+
+### What changes
+
+The original spec carried the existing `socratink_guest` local-cookie mechanism through unchanged. This amendment swaps it for **Supabase anonymous sign-in**: clicking "continue as guest" produces a real `auth.users` row (UUID, `is_anonymous=true`) sealed into the same session cookie as the Google flow. No separate guest cookie exists.
+
+**Why now (not deferred):** The auth swap is the only point at which the guest mechanism is already in flight. Folding the change in here costs one extra service method + one route-body change. Deferring means re-touching `auth/router.py` and `main.py` later, and shipping a dual-state design (real users in `auth.users` alongside fake "users" via a local cookie) — which the standing engineering principle (truthful state, no dual-state designs) explicitly rejects.
+
+**Why not deferred to the P2 database slice:** The forward-compat win — a UUID per guest, ready for RLS-bound rows once the DB lands — only materializes if the UUID exists *before* there is data to preserve. Provisioning it now costs ~30 lines; provisioning it later costs a guest-account merge migration.
+
+### New design decisions
+
+| ID | Decision | Reason |
+|----|----------|--------|
+| D9 | `SupabaseAuthService.sign_in_anonymously()` returns the same `AuthSessionState` shape as `exchange_code` and seals into the same cookie | Single seal/load path; `/auth/guest` and `/auth/callback` converge after token receipt |
+| D10 | `AuthSessionState.guest_mode` derived from the JWT `is_anonymous` claim, not from a separate cookie | Single source of truth; `socratink_guest` cookie removed entirely |
+| D11 | Anon → Google "data-preserving upgrade" via `linkIdentity` is **out of scope**. On Google sign-in for an existing anon user, the anon session is replaced with a fresh Google session; no data linking. | Upgrade-with-data-preservation only matters once a database exists with rows tied to anon UUIDs. Deferred to the P2 DB slice. Documented so the deferral is explicit, not implicit. |
+| D12 | No CAPTCHA / app-level rate limit on anon sign-in for v1. Supabase's project-level rate limits apply. | Pre-launch repo, low abuse surface. Revisit if abuse appears in telemetry. Logged in risk register. |
+
+### Slice additions
+
+| ID | Title | Adds module | Test file | Deps |
+|----|-------|-------------|-----------|------|
+| S18 | `sign_in_anonymously` service method | `auth/service.py` (`SupabaseAuthService.sign_in_anonymously`) | `tests/test_supabase_anonymous.py` (NEW) | S5, S6 |
+| S19 | `/auth/guest` router rewiring to call `sign_in_anonymously` and seal session | `auth/router.py` (replace `auth_guest` body) | `tests/test_auth_router_supabase.py` (`AnonymousGuestTests`, NEW class) | S18 |
+| S20 | `guest_mode` derived from `is_anonymous` JWT claim | `auth/jwt_verify.py`, `auth/service.py` (`load_session`) | `tests/test_jwt_verify.py` + `tests/test_supabase_load_session.py` (extend with anonymous cases) | S4, S8 |
+
+**Dependency graph insertion:** S18 follows S5 + S6, parallelizable with S7. S19 follows S18, parallelizable with S9–S11. S20 follows S4 + S8 (extends both modules with the `is_anonymous` claim path).
+
+**Execution-order insertion (after S8):**
+
+`... → S7 (+S16) → S8 → S18 → S20 → S13 → S14 → S9 → S10 → S11 → S19 → S12 → S15 → S17`
+
+### Cleanup additions to S15
+
+- Remove `GUEST_COOKIE_NAME` and `GUEST_COOKIE_VALUE` from `auth/__init__.py` exports
+- Remove `socratink_guest` cookie read at `main.py:109` (replaced by `auth_state.guest_mode`)
+- Remove guest-cookie helpers from `auth/router.py`: `_apply_guest_cookie`, `_clear_guest_cookie`, `_has_guest_session`
+- Verify: `grep -r "socratink_guest" .` returns zero hits post-cleanup
+
+### Phase 0 dashboard prerequisite addition
+
+Insert at step 3 of Phase 0:
+
+> 3a. Supabase Dashboard → Authentication → Providers → enable **"Allow anonymous sign-ins"**.
+
+### Phase 3 manual E2E checklist additions
+
+**Local:**
+- [ ] Click "continue as guest" → `/api/me` returns `authenticated: true`, `guest_mode: true`, and `user.id` is a Supabase UUID
+- [ ] Reload after anonymous sign-in → still anonymous (refresh path covers anon JWTs)
+- [ ] Anon user clicks Google → fresh Google session replaces anon session (`user.id` changes; zero data preservation expected)
+
+**Hosted:** same three checks under HTTPS / Vercel preview.
+
+**Security:**
+- [ ] Tampered anon-session cookie → unauthenticated, cookie cleared (same code path as authenticated tampered cookie)
+
+### Environment variables
+
+No additions. Anonymous sign-in uses the existing `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`.
+
+### Risk register additions
+
+| Risk | Severity | Mitigation |
+|------|----------|------------|
+| Anonymous user spam (one `auth.users` row per click) | Low | Supabase project-level rate limits per IP. Revisit if abuse appears in P2 telemetry. |
+| Abandoned anon users accumulate in `auth.users` indefinitely | Low | Out of scope for this spec; cleanup job belongs in the P2 DB slice once anon UUIDs have tied data |
+| `is_anonymous` JWT claim absent (older Supabase project) | Low | `verify_access_token()` returns `is_anonymous=False` when claim is missing; default to non-guest |
+
+### Files touched (delta from original "Files touched" section)
+
+**Modified (in addition to original list):**
+- `auth/service.py` — add `sign_in_anonymously` alongside existing methods
+- `auth/jwt_verify.py` — surface `is_anonymous` flag in verify result
+- `auth/__init__.py` — drop `GUEST_COOKIE_NAME` and `GUEST_COOKIE_VALUE` from exports
+- `auth/router.py` — `auth_guest` body rewritten; `_apply_guest_cookie` / `_clear_guest_cookie` / `_has_guest_session` deleted
+- `main.py` — guest-cookie check at line 109 replaced with `auth_state.guest_mode`
+
+**New tests:**
+- `tests/test_supabase_anonymous.py`
+- `AnonymousGuestTests` class added to `tests/test_auth_router_supabase.py`
+- Anonymous-session cases added to `tests/test_supabase_load_session.py` and `tests/test_jwt_verify.py`
+
+### Done-definition additions
+
+Append to existing list:
+- All new anonymous-path tests green
+- `grep -r "socratink_guest" .` returns zero hits
+- Manual E2E confirms anon → Google replacement creates a new `user.id` (no data preservation expected, no error)

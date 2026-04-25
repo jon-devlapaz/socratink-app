@@ -58,3 +58,5 @@ b&a/
 .socratink-brain/.obsidian/
 docs/research/
 docs/design/artboards/platform-grid-loaded-concept-mockups.html
+# Added by code-review-graph
+.code-review-graph/

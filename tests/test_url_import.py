@@ -4,7 +4,6 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 import main
-from auth import GUEST_COOKIE_NAME
 from auth.service import AuthSessionState
 
 
@@ -53,9 +52,13 @@ class UrlImportTests(unittest.TestCase):
         main.app.state.auth_service = self.original_service
 
     def build_client(self) -> TestClient:
-        main.app.state.auth_service = FakeAuthService(enabled=True)
+        service = FakeAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True, authenticated=True, guest_mode=True
+        )
+        main.app.state.auth_service = service
         client = TestClient(main.app)
-        client.cookies.set(GUEST_COOKIE_NAME, "guest")
+        client.cookies.set(service.cookie_name, "sealed-anon-blob")
         return client
 
     def test_extract_url_blocks_youtube_hosts(self):

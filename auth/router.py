@@ -705,20 +705,6 @@ def _base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
-def _client_ip(request: Request) -> str | None:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:100]
-    if request.client and request.client.host:
-        return request.client.host[:100]
-    return None
-
-
-def _user_agent(request: Request) -> str | None:
-    raw = request.headers.get("user-agent")
-    return raw[:500] if raw else None
-
-
 def _apply_session_cookie(
     response: Response, request: Request, sealed_session: str
 ) -> None:
@@ -759,40 +745,16 @@ def _clear_oauth_state_cookie(response: Response, request: Request) -> None:
     response.delete_cookie(service.oauth_state_cookie_name, path="/")
 
 
-def _has_guest_session(request: Request) -> bool:
-    return request.cookies.get(GUEST_COOKIE_NAME) == GUEST_COOKIE_VALUE
-
-
-def _apply_guest_cookie(response: Response, request: Request) -> None:
-    service = _get_auth_service(request)
-    response.set_cookie(
-        GUEST_COOKIE_NAME,
-        GUEST_COOKIE_VALUE,
-        secure=service.resolve_cookie_secure(_base_url(request)),
-        httponly=True,
-        samesite=service.cookie_samesite,
-        path="/",
-    )
-
-
-def _clear_guest_cookie(response: Response) -> None:
-    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
-
-
 def _load_current_session_state(request: Request) -> AuthSessionState:
     service = _get_auth_service(request)
     sealed_session = request.cookies.get(service.cookie_name)
-    guest_mode = _has_guest_session(request)
     try:
         state = service.load_session(sealed_session)
     except AuthConfigurationError:
-        logger.warning(
-            "Auth session load failed because auth is not configured correctly."
-        )
+        logger.warning("Auth session load failed because auth is not configured.")
         state = AuthSessionState(
             auth_enabled=service.enabled,
             authenticated=False,
-            guest_mode=guest_mode,
             should_clear_cookie=bool(sealed_session),
             error_reason="auth_unavailable",
         )
@@ -801,11 +763,9 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
         state = AuthSessionState(
             auth_enabled=service.enabled,
             authenticated=False,
-            guest_mode=guest_mode,
             should_clear_cookie=bool(sealed_session),
             error_reason="auth_session_unavailable",
         )
-    state.guest_mode = not state.authenticated and guest_mode
     return state
 
 
@@ -835,9 +795,33 @@ def login(request: Request, return_to: str | None = None):
 
 @auth_router.get("/auth/guest")
 def auth_guest(request: Request, return_to: str | None = None):
+    service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
+    try:
+        auth_state = service.sign_in_anonymously()
+    except AuthConfigurationError as err:
+        logger.warning("Anonymous sign-in failed (config): %s", err)
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="authentication_unavailable",
+            ),
+            status_code=302,
+        )
+    except Exception:
+        logger.exception("Anonymous sign-in failed unexpectedly")
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="authentication_failed",
+            ),
+            status_code=302,
+        )
+
     response = RedirectResponse(url=sanitized_return_to, status_code=302)
-    _apply_guest_cookie(response, request)
+    if auth_state.sealed_session:
+        _apply_session_cookie(response, request, auth_state.sealed_session)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response
 
 
@@ -846,14 +830,10 @@ def auth_google(request: Request, return_to: str | None = None):
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     try:
-        state_nonce, signed_state = service.build_oauth_state(
+        _verifier, challenge, signed_state = service.build_oauth_state(
             return_to=sanitized_return_to
         )
-        authorization_url = service.get_login_url(
-            base_url=_base_url(request),
-            return_to=state_nonce,
-            provider="GoogleOAuth",
-        )
+        authorization_url = service.get_login_url(code_challenge=challenge)
     except AuthConfigurationError as err:
         logger.warning("Google auth start failed: %s", err)
         return RedirectResponse(
@@ -872,16 +852,14 @@ def auth_google(request: Request, return_to: str | None = None):
 def auth_callback(
     request: Request,
     code: str | None = None,
-    state: str | None = None,
     error: str | None = None,
     error_description: str | None = None,
 ):
     service = _get_auth_service(request)
-    verified_return_to = service.verify_oauth_state(
-        state=state,
+    verified = service.verify_oauth_state(
         signed_cookie=request.cookies.get(service.oauth_state_cookie_name),
     )
-    return_to = verified_return_to or "/"
+    return_to = verified[0] if verified else "/"
     if error:
         logger.info(
             "Auth callback returned error=%s description=%s", error, error_description
@@ -899,7 +877,7 @@ def auth_callback(
         )
         _clear_oauth_state_cookie(response, request)
         return response
-    if verified_return_to is None:
+    if verified is None:
         logger.warning("Auth callback failed state verification")
         response = RedirectResponse(
             url=_build_login_redirect(return_to="/", auth_error="invalid_state"),
@@ -907,11 +885,12 @@ def auth_callback(
         )
         _clear_oauth_state_cookie(response, request)
         return response
+    return_to, code_verifier = verified
     try:
         auth_state = service.exchange_code(
             code=code,
-            ip_address=_client_ip(request),
-            user_agent=_user_agent(request),
+            code_verifier=code_verifier,
+            redirect_uri=service.callback_redirect_uri(),
         )
     except AuthConfigurationError as err:
         logger.warning("Auth callback configuration failed: %s", err)
@@ -938,7 +917,7 @@ def auth_callback(
     response = RedirectResponse(url=return_to, status_code=302)
     if auth_state.sealed_session:
         _apply_session_cookie(response, request, auth_state.sealed_session)
-    _clear_guest_cookie(response)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     _clear_oauth_state_cookie(response, request)
     return response
 
@@ -949,7 +928,7 @@ def logout(request: Request):
     service.logout(request.cookies.get(service.cookie_name))
     response = JSONResponse({"ok": True, "auth_enabled": service.enabled})
     _clear_session_cookie(response, request)
-    _clear_guest_cookie(response)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response
 
 

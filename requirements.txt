@@ -4,4 +4,6 @@ google-genai
 python-dotenv
 aiofiles
 youtube-transcript-api
-workos
+supabase
+pyjwt[crypto]
+cryptography
