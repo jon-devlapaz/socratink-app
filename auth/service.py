@@ -530,6 +530,81 @@ class SupabaseAuthService:
         )
         return self._state_from_response(response)
 
+    def load_session(self, sealed_session: str | None) -> AuthSessionState:
+        if not self.enabled:
+            return AuthSessionState(auth_enabled=False, authenticated=False)
+        if not sealed_session:
+            return AuthSessionState(
+                auth_enabled=True,
+                authenticated=False,
+                error_reason="no_session_cookie_provided",
+            )
+
+        from cryptography.fernet import InvalidToken
+
+        from auth.jwt_verify import (
+            InvalidAccessToken,
+            TokenExpired,
+            verify_access_token,
+        )
+        from auth.session_seal import unseal_session_tokens
+
+        self._require_enabled()
+        assert self.session_cookie_key and self.jwt_secret and self.supabase_url
+
+        try:
+            tokens = unseal_session_tokens(sealed_session, key=self.session_cookie_key)
+        except InvalidToken:
+            return AuthSessionState(
+                auth_enabled=True,
+                authenticated=False,
+                should_clear_cookie=True,
+                error_reason="session_cookie_invalid",
+            )
+
+        issuer = f"{self.supabase_url.rstrip('/')}/auth/v1"
+        try:
+            claims = verify_access_token(
+                tokens["access_token"], jwt_secret=self.jwt_secret, issuer=issuer
+            )
+        except TokenExpired:
+            return self._refresh_session(tokens["refresh_token"])
+        except InvalidAccessToken:
+            return AuthSessionState(
+                auth_enabled=True,
+                authenticated=False,
+                should_clear_cookie=True,
+                error_reason="access_token_invalid",
+            )
+
+        user_metadata = claims.get("user_metadata") or {}
+        # Build a minimal user-shaped object the mapper can read.
+        from types import SimpleNamespace
+
+        user = SimpleNamespace(
+            id=claims["sub"],
+            email=claims.get("email"),
+            user_metadata=user_metadata,
+        )
+        return AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=_map_supabase_user(user),
+        )
+
+    def _refresh_session(self, refresh_token: str) -> AuthSessionState:
+        try:
+            client = self._make_supabase_client()
+            response = client.auth.refresh_session(refresh_token)
+        except Exception:
+            return AuthSessionState(
+                auth_enabled=True,
+                authenticated=False,
+                should_clear_cookie=True,
+                error_reason="session_refresh_failed",
+            )
+        return self._state_from_response(response)
+
     # --- shared response → state mapping (used by exchange_code, sign_in_anonymously, refresh) ---
 
     def _state_from_response(self, response: Any) -> AuthSessionState:
