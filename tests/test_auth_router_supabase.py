@@ -84,6 +84,9 @@ class FakeSupabaseAuthService:
     def resolve_cookie_secure(self, base_url: str) -> bool:
         return base_url.startswith("https://")
 
+    def callback_redirect_uri(self) -> str:
+        return f"{self.app_base_url.rstrip('/')}{self.callback_path}"
+
 
 def build_client(service: FakeSupabaseAuthService) -> TestClient:
     app = FastAPI()

@@ -786,9 +786,7 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
     try:
         state = service.load_session(sealed_session)
     except AuthConfigurationError:
-        logger.warning(
-            "Auth session load failed because auth is not configured correctly."
-        )
+        logger.warning("Auth session load failed because auth is not configured.")
         state = AuthSessionState(
             auth_enabled=service.enabled,
             authenticated=False,
@@ -805,7 +803,8 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
             should_clear_cookie=bool(sealed_session),
             error_reason="auth_session_unavailable",
         )
-    state.guest_mode = not state.authenticated and guest_mode
+    if not state.authenticated and guest_mode:
+        state.guest_mode = True
     return state
 
 
@@ -846,13 +845,11 @@ def auth_google(request: Request, return_to: str | None = None):
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     try:
-        state_nonce, signed_state = service.build_oauth_state(
+        nonce, _verifier, challenge, signed_state = service.build_oauth_state(
             return_to=sanitized_return_to
         )
         authorization_url = service.get_login_url(
-            base_url=_base_url(request),
-            return_to=state_nonce,
-            provider="GoogleOAuth",
+            state_nonce=nonce, code_challenge=challenge
         )
     except AuthConfigurationError as err:
         logger.warning("Google auth start failed: %s", err)
@@ -877,11 +874,11 @@ def auth_callback(
     error_description: str | None = None,
 ):
     service = _get_auth_service(request)
-    verified_return_to = service.verify_oauth_state(
+    verified = service.verify_oauth_state(
         state=state,
         signed_cookie=request.cookies.get(service.oauth_state_cookie_name),
     )
-    return_to = verified_return_to or "/"
+    return_to = verified[0] if verified else "/"
     if error:
         logger.info(
             "Auth callback returned error=%s description=%s", error, error_description
@@ -899,7 +896,7 @@ def auth_callback(
         )
         _clear_oauth_state_cookie(response, request)
         return response
-    if verified_return_to is None:
+    if verified is None:
         logger.warning("Auth callback failed state verification")
         response = RedirectResponse(
             url=_build_login_redirect(return_to="/", auth_error="invalid_state"),
@@ -907,11 +904,12 @@ def auth_callback(
         )
         _clear_oauth_state_cookie(response, request)
         return response
+    return_to, code_verifier = verified
     try:
         auth_state = service.exchange_code(
             code=code,
-            ip_address=_client_ip(request),
-            user_agent=_user_agent(request),
+            code_verifier=code_verifier,
+            redirect_uri=service.callback_redirect_uri(),
         )
     except AuthConfigurationError as err:
         logger.warning("Auth callback configuration failed: %s", err)
