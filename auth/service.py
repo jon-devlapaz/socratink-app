@@ -73,14 +73,6 @@ def _env_value(name: str, default: str | None = None) -> str | None:
     return trimmed or default
 
 
-def _normalize_base_url(base_url: str) -> str:
-    return base_url.rstrip("/")
-
-
-def _build_redirect_uri(base_url: str, callback_path: str) -> str:
-    return f"{_normalize_base_url(base_url)}{callback_path}"
-
-
 def _map_supabase_user(user: Any | None) -> AuthUser | None:
     if user is None:
         return None
