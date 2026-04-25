@@ -1,6 +1,5 @@
 """S9 + S10 + S11 — router endpoints under SupabaseAuthService.
 
-Replaces / augments tests/test_auth_router.py once WorkOS is removed.
 Uses a fake service matching the SupabaseAuthService interface.
 """
 

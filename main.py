@@ -20,8 +20,6 @@ from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from auth import (
-    GUEST_COOKIE_NAME,
-    GUEST_COOKIE_VALUE,
     auth_router,
     build_auth_service_from_env,
 )
@@ -118,10 +116,12 @@ def _resolve_session_state(request: Request):
         return None
 
 
-def _has_app_entry_session(request: Request, state) -> bool:
-    if request.cookies.get(GUEST_COOKIE_NAME) == GUEST_COOKIE_VALUE:
-        return True
-    return bool(state and getattr(state, "authenticated", False))
+def _has_app_entry_session(request, state) -> bool:
+    if state is None:
+        return False
+    return bool(
+        getattr(state, "authenticated", False) or getattr(state, "guest_mode", False)
+    )
 
 
 def _apply_writeback(request: Request, response, state) -> None:

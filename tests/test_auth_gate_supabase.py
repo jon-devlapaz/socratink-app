@@ -1,7 +1,7 @@
 """S12 — middleware gate writes back refreshed session cookie.
 
-Pre-existing bug under WorkOS becomes fatal under Supabase refresh-token rotation:
-rotated tokens dropped on protected requests means the next request 401s.
+Refresh-token rotation requires that rotated tokens be written back on protected
+requests; otherwise the next request 401s.
 """
 
 import unittest
@@ -9,7 +9,6 @@ import unittest
 from fastapi.testclient import TestClient
 
 import main
-from auth import GUEST_COOKIE_NAME
 from auth.service import AuthSessionState, AuthUser
 
 
@@ -87,10 +86,16 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/login?return_to=%2F")
 
-    def test_guest_cookie_still_unlocks(self):
+    def test_anonymous_session_unlocks_gate(self):
         service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            guest_mode=True,
+            user=AuthUser(id="anon_uuid_456"),
+        )
         client = self.build_client(service)
-        client.cookies.set(GUEST_COOKIE_NAME, "guest")
+        client.cookies.set(service.cookie_name, "sealed-anon-blob")
 
         response = client.get("/", follow_redirects=False)
         self.assertEqual(response.status_code, 200)

@@ -705,20 +705,6 @@ def _base_url(request: Request) -> str:
     return str(request.base_url).rstrip("/")
 
 
-def _client_ip(request: Request) -> str | None:
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()[:100]
-    if request.client and request.client.host:
-        return request.client.host[:100]
-    return None
-
-
-def _user_agent(request: Request) -> str | None:
-    raw = request.headers.get("user-agent")
-    return raw[:500] if raw else None
-
-
 def _apply_session_cookie(
     response: Response, request: Request, sealed_session: str
 ) -> None:
@@ -759,30 +745,9 @@ def _clear_oauth_state_cookie(response: Response, request: Request) -> None:
     response.delete_cookie(service.oauth_state_cookie_name, path="/")
 
 
-def _has_guest_session(request: Request) -> bool:
-    return request.cookies.get(GUEST_COOKIE_NAME) == GUEST_COOKIE_VALUE
-
-
-def _apply_guest_cookie(response: Response, request: Request) -> None:
-    service = _get_auth_service(request)
-    response.set_cookie(
-        GUEST_COOKIE_NAME,
-        GUEST_COOKIE_VALUE,
-        secure=service.resolve_cookie_secure(_base_url(request)),
-        httponly=True,
-        samesite=service.cookie_samesite,
-        path="/",
-    )
-
-
-def _clear_guest_cookie(response: Response) -> None:
-    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
-
-
 def _load_current_session_state(request: Request) -> AuthSessionState:
     service = _get_auth_service(request)
     sealed_session = request.cookies.get(service.cookie_name)
-    guest_mode = _has_guest_session(request)
     try:
         state = service.load_session(sealed_session)
     except AuthConfigurationError:
@@ -790,7 +755,6 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
         state = AuthSessionState(
             auth_enabled=service.enabled,
             authenticated=False,
-            guest_mode=guest_mode,
             should_clear_cookie=bool(sealed_session),
             error_reason="auth_unavailable",
         )
@@ -799,12 +763,9 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
         state = AuthSessionState(
             auth_enabled=service.enabled,
             authenticated=False,
-            guest_mode=guest_mode,
             should_clear_cookie=bool(sealed_session),
             error_reason="auth_session_unavailable",
         )
-    if not state.authenticated and guest_mode:
-        state.guest_mode = True
     return state
 
 
@@ -860,7 +821,7 @@ def auth_guest(request: Request, return_to: str | None = None):
     response = RedirectResponse(url=sanitized_return_to, status_code=302)
     if auth_state.sealed_session:
         _apply_session_cookie(response, request, auth_state.sealed_session)
-    _clear_guest_cookie(response)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response
 
 
@@ -960,7 +921,7 @@ def auth_callback(
     response = RedirectResponse(url=return_to, status_code=302)
     if auth_state.sealed_session:
         _apply_session_cookie(response, request, auth_state.sealed_session)
-    _clear_guest_cookie(response)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     _clear_oauth_state_cookie(response, request)
     return response
 
@@ -971,7 +932,7 @@ def logout(request: Request):
     service.logout(request.cookies.get(service.cookie_name))
     response = JSONResponse({"ok": True, "auth_enabled": service.enabled})
     _clear_session_cookie(response, request)
-    _clear_guest_cookie(response)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response
 
 
