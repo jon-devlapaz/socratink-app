@@ -530,6 +530,12 @@ class SupabaseAuthService:
         )
         return self._state_from_response(response)
 
+    def sign_in_anonymously(self) -> AuthSessionState:
+        self._require_enabled()
+        client = self._make_supabase_client()
+        response = client.auth.sign_in_anonymously()
+        return self._state_from_response(response)
+
     def load_session(self, sealed_session: str | None) -> AuthSessionState:
         if not self.enabled:
             return AuthSessionState(auth_enabled=False, authenticated=False)
