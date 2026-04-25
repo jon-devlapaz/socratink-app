@@ -1200,6 +1200,8 @@ const App = (() => {
         const concepts = loadConcepts();
         if (concepts.length >= 4) { renderAddTrigger(); return; }
 
+        closeCreationDialog();
+
         const id = generateId();
         const extractStartedAt = new Date().toISOString();
         const extractStartedPerf = performance.now();
