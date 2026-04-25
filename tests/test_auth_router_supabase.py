@@ -54,7 +54,7 @@ class FakeSupabaseAuthService:
         return (
             "https://abc123.supabase.co/auth/v1/authorize"
             f"?provider=google&code_challenge={code_challenge}"
-            "&code_challenge_method=S256"
+            "&code_challenge_method=s256"
             "&redirect_to=http%3A%2F%2Flocalhost%3A8000%2Fauth%2Fcallback"
         )
 
@@ -109,7 +109,7 @@ class GoogleAuthStartTests(unittest.TestCase):
         self.assertEqual(parsed.path, "/auth/v1/authorize")
         qs = {k: v[0] for k, v in parse_qs(parsed.query).items()}
         self.assertEqual(qs["provider"], "google")
-        self.assertEqual(qs["code_challenge_method"], "S256")
+        self.assertEqual(qs["code_challenge_method"], "s256")
         self.assertIn("code_challenge", qs)
         # Supabase manages state internally; sending our own caused bad_oauth_state.
         self.assertNotIn("state", qs)

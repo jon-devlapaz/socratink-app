@@ -38,7 +38,9 @@ class BuildAuthorizeUrlTests(unittest.TestCase):
 
     def test_pkce_params_present(self):
         self.assertEqual(self.qs["code_challenge"], CHALLENGE)
-        self.assertEqual(self.qs["code_challenge_method"], "S256")
+        # Supabase server requires lowercase "s256" — uppercase falls through
+        # to "plain" silently and breaks the exchange.
+        self.assertEqual(self.qs["code_challenge_method"], "s256")
 
     def test_strips_trailing_slash_on_supabase_url(self):
         url = build_google_authorize_url(

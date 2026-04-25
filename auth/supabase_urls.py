@@ -25,7 +25,11 @@ def build_google_authorize_url(
             "provider": "google",
             "redirect_to": redirect_to,
             "code_challenge": code_challenge,
-            "code_challenge_method": "S256",
+            # Supabase auth server expects lowercase "s256"; uppercase "S256"
+            # silently falls through to "plain" mode and the verifier never
+            # matches the challenge at exchange time. The supabase-py SDK
+            # itself sends "s256" (gotrue_client.py:1175).
+            "code_challenge_method": "s256",
         }
     )
     return f"{base}/auth/v1/authorize?{qs}"
