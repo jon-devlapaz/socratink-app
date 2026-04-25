@@ -411,6 +411,155 @@ def _map_workos_user(user: Any | None) -> AuthUser | None:
     )
 
 
+def _map_supabase_user(user: Any | None) -> AuthUser | None:
+    if user is None:
+        return None
+    metadata = getattr(user, "user_metadata", None) or {}
+    full_name = metadata.get("full_name")
+    given = metadata.get("given_name")
+    family = metadata.get("family_name")
+
+    first_name: str | None = None
+    last_name: str | None = None
+    if isinstance(full_name, str) and full_name.strip():
+        parts = full_name.strip().split(None, 1)
+        first_name = parts[0]
+        last_name = parts[1] if len(parts) > 1 else None
+    elif isinstance(given, str) and given.strip():
+        first_name = given.strip()
+        last_name = family.strip() if isinstance(family, str) and family.strip() else None
+
+    return AuthUser(
+        id=str(getattr(user, "id", "")),
+        email=getattr(user, "email", None),
+        first_name=first_name,
+        last_name=last_name,
+    )
+
+
+class SupabaseAuthService:
+    """Server-side Supabase auth flow with sealed-cookie sessions."""
+
+    def __init__(
+        self,
+        *,
+        enabled: bool,
+        supabase_url: str | None,
+        publishable_key: str | None,
+        jwt_secret: str | None,
+        session_cookie_key: str | None,
+        app_base_url: str | None,
+        cookie_name: str = "sb_session",
+        callback_path: str = "/auth/callback",
+        cookie_secure: str = "auto",
+        cookie_samesite: str = "lax",
+        cookie_max_age: int = 60 * 60 * 24 * 14,
+        oauth_state_cookie_name: str = "sb_oauth_state",
+        oauth_state_ttl_seconds: int = 60 * 10,
+    ) -> None:
+        self.enabled = enabled
+        self.supabase_url = supabase_url
+        self.publishable_key = publishable_key
+        self.jwt_secret = jwt_secret
+        self.session_cookie_key = session_cookie_key
+        self.app_base_url = app_base_url
+        self.cookie_name = cookie_name
+        self.callback_path = callback_path
+        self.cookie_secure = cookie_secure
+        self.cookie_samesite = cookie_samesite
+        self.cookie_max_age = cookie_max_age
+        self.oauth_state_cookie_name = oauth_state_cookie_name
+        self.oauth_state_ttl_seconds = oauth_state_ttl_seconds
+
+    # --- configuration helpers ---
+
+    def _require_enabled(self) -> None:
+        if not self.enabled:
+            raise AuthConfigurationError("Auth is disabled.")
+        missing = [
+            name
+            for name, value in [
+                ("SUPABASE_URL", self.supabase_url),
+                ("SUPABASE_PUBLISHABLE_KEY", self.publishable_key),
+                ("SUPABASE_JWT_SECRET", self.jwt_secret),
+                ("SESSION_COOKIE_KEY", self.session_cookie_key),
+                ("APP_BASE_URL", self.app_base_url),
+            ]
+            if not value
+        ]
+        if missing:
+            raise AuthConfigurationError(
+                f"Auth is enabled but missing: {', '.join(missing)}"
+            )
+
+    def _make_supabase_client(self):
+        # Late import keeps test patch surface working & avoids importing supabase
+        # at module load time.
+        from auth.supabase_client import build_supabase_client
+
+        self._require_enabled()
+        assert self.supabase_url and self.publishable_key
+        return build_supabase_client(self.supabase_url, self.publishable_key)
+
+    def callback_redirect_uri(self) -> str:
+        self._require_enabled()
+        assert self.app_base_url
+        return f"{self.app_base_url.rstrip('/')}{self.callback_path}"
+
+    def resolve_cookie_secure(self, base_url: str) -> bool:
+        mode = (self.cookie_secure or "auto").strip().lower()
+        if mode == "true":
+            return True
+        if mode == "false":
+            return False
+        return base_url.rstrip("/").startswith("https://")
+
+    # --- exchange ---
+
+    def exchange_code(
+        self, *, code: str, code_verifier: str, redirect_uri: str
+    ) -> AuthSessionState:
+        self._require_enabled()
+        client = self._make_supabase_client()
+        response = client.auth.exchange_code_for_session(
+            {
+                "auth_code": code,
+                "code_verifier": code_verifier,
+                "redirect_to": redirect_uri,
+            }
+        )
+        return self._state_from_response(response)
+
+    # --- shared response → state mapping (used by exchange_code, sign_in_anonymously, refresh) ---
+
+    def _state_from_response(self, response: Any) -> AuthSessionState:
+        from auth.session_seal import seal_session_tokens
+
+        session = getattr(response, "session", None)
+        user = getattr(response, "user", None)
+        access_token = getattr(session, "access_token", None) if session else None
+        refresh_token = getattr(session, "refresh_token", None) if session else None
+        expires_at = getattr(session, "expires_at", None) if session else None
+
+        sealed = None
+        if access_token and refresh_token:
+            assert self.session_cookie_key
+            sealed = seal_session_tokens(
+                {
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                    "expires_at": expires_at,
+                },
+                key=self.session_cookie_key,
+            )
+        return AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=_map_supabase_user(user),
+            sealed_session=sealed,
+        )
+
+
 def build_auth_service_from_env() -> WorkOSAuthService:
     return WorkOSAuthService(
         enabled=_env_flag("AUTH_ENABLED", False),
