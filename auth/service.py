@@ -99,6 +99,19 @@ def _map_supabase_user(user: Any | None) -> AuthUser | None:
     )
 
 
+def _should_clear_refresh_cookie(error: Exception) -> bool:
+    import httpx
+    from supabase import AuthApiError, AuthRetryableError, AuthSessionMissingError
+
+    if isinstance(error, (AuthRetryableError, httpx.TransportError)):
+        return False
+    if isinstance(error, AuthSessionMissingError):
+        return True
+    if isinstance(error, AuthApiError):
+        return getattr(error, "status", None) in {400, 401, 403}
+    return False
+
+
 class SupabaseAuthService:
     """Server-side Supabase auth flow with sealed-cookie sessions."""
 
@@ -353,12 +366,17 @@ class SupabaseAuthService:
         try:
             client = self._make_supabase_client()
             response = client.auth.refresh_session(refresh_token)
-        except Exception:
+        except Exception as err:
+            should_clear = _should_clear_refresh_cookie(err)
             return AuthSessionState(
                 auth_enabled=True,
                 authenticated=False,
-                should_clear_cookie=True,
-                error_reason="session_refresh_failed",
+                should_clear_cookie=should_clear,
+                error_reason=(
+                    "session_refresh_invalid"
+                    if should_clear
+                    else "session_refresh_unavailable"
+                ),
             )
         return self._state_from_response(response)
 
@@ -384,11 +402,16 @@ class SupabaseAuthService:
                 },
                 key=self.session_cookie_key,
             )
-        is_anon = bool(getattr(user, "is_anonymous", False)) if user is not None else False
+        authenticated = bool(sealed)
+        is_anon = (
+            bool(getattr(user, "is_anonymous", False))
+            if authenticated and user is not None
+            else False
+        )
         return AuthSessionState(
             auth_enabled=True,
-            authenticated=True,
-            user=_map_supabase_user(user),
+            authenticated=authenticated,
+            user=_map_supabase_user(user) if authenticated else None,
             guest_mode=is_anon,
             sealed_session=sealed,
         )

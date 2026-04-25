@@ -734,7 +734,7 @@ def _apply_oauth_state_cookie(
         signed_state,
         secure=service.resolve_cookie_secure(_base_url(request)),
         httponly=True,
-        samesite=service.cookie_samesite,
+        samesite="lax",
         max_age=service.oauth_state_ttl_seconds,
         path="/",
     )
@@ -819,8 +819,16 @@ def auth_guest(request: Request, return_to: str | None = None):
         )
 
     response = RedirectResponse(url=sanitized_return_to, status_code=302)
-    if auth_state.sealed_session:
-        _apply_session_cookie(response, request, auth_state.sealed_session)
+    if not auth_state.authenticated or not auth_state.sealed_session:
+        logger.warning("Anonymous sign-in returned unauthenticated state")
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="authentication_failed",
+            ),
+            status_code=302,
+        )
+    _apply_session_cookie(response, request, auth_state.sealed_session)
     response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response
 
@@ -914,9 +922,19 @@ def auth_callback(
         _clear_oauth_state_cookie(response, request)
         return response
 
+    if not auth_state.authenticated or not auth_state.sealed_session:
+        logger.warning("Auth callback returned unauthenticated state")
+        response = RedirectResponse(
+            url=_build_login_redirect(
+                return_to=return_to, auth_error="authentication_failed"
+            ),
+            status_code=302,
+        )
+        _clear_oauth_state_cookie(response, request)
+        return response
+
     response = RedirectResponse(url=return_to, status_code=302)
-    if auth_state.sealed_session:
-        _apply_session_cookie(response, request, auth_state.sealed_session)
+    _apply_session_cookie(response, request, auth_state.sealed_session)
     response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     _clear_oauth_state_cookie(response, request)
     return response
