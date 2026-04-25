@@ -29,7 +29,14 @@ def _build_service() -> SupabaseAuthService:
     )
 
 
-def _fake_response(*, full_name: str | None = "Jon Doe", given_name: str | None = None):
+def _fake_response(
+    *,
+    full_name: str | None = "Jon Doe",
+    given_name: str | None = None,
+    session: bool = True,
+    access_token: str | None = "access.jwt.value",
+    refresh_token: str | None = "refresh-rt-value",
+):
     user_metadata = {}
     if full_name is not None:
         user_metadata["full_name"] = full_name
@@ -40,12 +47,14 @@ def _fake_response(*, full_name: str | None = "Jon Doe", given_name: str | None 
         email="learner@example.com",
         user_metadata=user_metadata,
     )
-    session = SimpleNamespace(
-        access_token="access.jwt.value",
-        refresh_token="refresh-rt-value",
-        expires_at=int(time.time()) + 3600,
-    )
-    return SimpleNamespace(user=user, session=session)
+    session_obj = None
+    if session:
+        session_obj = SimpleNamespace(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_at=int(time.time()) + 3600,
+        )
+    return SimpleNamespace(user=user, session=session_obj)
 
 
 class ExchangeCodeTests(unittest.TestCase):
@@ -61,6 +70,40 @@ class ExchangeCodeTests(unittest.TestCase):
             )
         self.assertTrue(state.authenticated)
         self.assertIsNotNone(state.sealed_session)
+
+    def test_missing_session_returns_unauthenticated_without_user(self):
+        svc = _build_service()
+        with patch.object(svc, "_make_supabase_client") as factory:
+            client = factory.return_value
+            client.auth.exchange_code_for_session.return_value = _fake_response(
+                session=False
+            )
+            state = svc.exchange_code(
+                code="abc",
+                code_verifier="ver_xyz",
+                redirect_uri="http://localhost:8000/auth/callback",
+            )
+        self.assertFalse(state.authenticated)
+        self.assertIsNone(state.sealed_session)
+        self.assertIsNone(state.user)
+        self.assertFalse(state.guest_mode)
+
+    def test_missing_token_returns_unauthenticated_without_user(self):
+        svc = _build_service()
+        with patch.object(svc, "_make_supabase_client") as factory:
+            client = factory.return_value
+            client.auth.exchange_code_for_session.return_value = _fake_response(
+                access_token=None
+            )
+            state = svc.exchange_code(
+                code="abc",
+                code_verifier="ver_xyz",
+                redirect_uri="http://localhost:8000/auth/callback",
+            )
+        self.assertFalse(state.authenticated)
+        self.assertIsNone(state.sealed_session)
+        self.assertIsNone(state.user)
+        self.assertFalse(state.guest_mode)
 
     def test_sdk_called_with_dict_argument_shape(self):
         svc = _build_service()

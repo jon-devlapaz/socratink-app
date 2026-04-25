@@ -125,6 +125,18 @@ class GoogleAuthStartTests(unittest.TestCase):
             response.headers.get("set-cookie", ""),
         )
 
+    def test_state_cookie_always_uses_lax_samesite(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.cookie_samesite = "strict"
+        client = build_client(service)
+
+        response = client.get("/auth/google", follow_redirects=False)
+
+        cookies = response.headers.get("set-cookie", "")
+        self.assertIn(f"{service.oauth_state_cookie_name}=signed-state-cookie", cookies)
+        self.assertIn("SameSite=lax", cookies)
+        self.assertNotIn("SameSite=strict", cookies)
+
     def test_open_redirect_return_to_sanitized(self):
         service = FakeSupabaseAuthService(enabled=True)
         client = build_client(service)
@@ -212,6 +224,22 @@ class CallbackTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertIn("auth_error=authentication_failed", response.headers["location"])
+
+    def test_unauthenticated_exchange_state_redirects_with_error(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.callback_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=False,
+            user=AuthUser(id="user_uuid_123", email="learner@example.com"),
+        )
+        client = build_client(service)
+        client.cookies.set(service.oauth_state_cookie_name, "signed-state-cookie")
+
+        response = client.get("/auth/callback?code=abc", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+        self.assertNotIn("sb_session=", response.headers.get("set-cookie", ""))
 
 
 class ApiMeAndLogoutTests(unittest.TestCase):
@@ -330,6 +358,21 @@ class AnonymousGuestTests(unittest.TestCase):
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
         self.assertEqual(response.status_code, 302)
         self.assertIn("auth_error=authentication_failed", response.headers["location"])
+
+    def test_guest_unauthenticated_state_redirects_without_session_cookie(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.sign_in_anonymously = lambda: AuthSessionState(  # type: ignore[assignment]
+            auth_enabled=True,
+            authenticated=False,
+            user=AuthUser(id="anon_uuid_456"),
+        )
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/library", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+        self.assertNotIn("sb_session=", response.headers.get("set-cookie", ""))
 
 
 if __name__ == "__main__":

@@ -5,8 +5,10 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import httpx
 import jwt
 from cryptography.fernet import Fernet
+from supabase import AuthApiError
 
 from auth.service import SupabaseAuthService
 from auth.session_seal import seal_session_tokens, unseal_session_tokens
@@ -102,16 +104,29 @@ class LoadSessionTests(unittest.TestCase):
         self.assertEqual(decoded["access_token"], new_access)
         self.assertEqual(decoded["refresh_token"], "rt_rotated")
 
-    def test_refresh_failure_clears_session(self):
+    def test_refresh_network_failure_preserves_session_cookie(self):
         svc = _make_service()
         sealed_in = _seal(exp_offset=-60)
         with patch.object(svc, "_make_supabase_client") as factory:
-            factory.return_value.auth.refresh_session.side_effect = RuntimeError(
-                "refresh denied"
+            factory.return_value.auth.refresh_session.side_effect = httpx.ConnectError(
+                "temporary outage"
+            )
+            state = svc.load_session(sealed_in)
+        self.assertFalse(state.authenticated)
+        self.assertFalse(state.should_clear_cookie)
+        self.assertEqual(state.error_reason, "session_refresh_unavailable")
+
+    def test_refresh_invalid_token_clears_session(self):
+        svc = _make_service()
+        sealed_in = _seal(exp_offset=-60)
+        with patch.object(svc, "_make_supabase_client") as factory:
+            factory.return_value.auth.refresh_session.side_effect = AuthApiError(
+                "refresh denied", 400, "bad_refresh_token"
             )
             state = svc.load_session(sealed_in)
         self.assertFalse(state.authenticated)
         self.assertTrue(state.should_clear_cookie)
+        self.assertEqual(state.error_reason, "session_refresh_invalid")
 
     def test_disabled_service_returns_disabled_state(self):
         svc = SupabaseAuthService(
