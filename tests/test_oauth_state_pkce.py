@@ -34,7 +34,11 @@ class SignVerifyRoundTripTests(unittest.TestCase):
 
     def test_tampered_payload_returns_none(self):
         token = sign_state(_payload(), SECRET)
-        tampered = token.replace("/library", "/evil")
+        # Token is base64url-encoded; flipping a middle character corrupts the
+        # underlying JSON payload (or its signature) — verify must reject either.
+        tampered = token[: len(token) // 2] + (
+            "A" if token[len(token) // 2] != "A" else "B"
+        ) + token[len(token) // 2 + 1 :]
         self.assertIsNone(
             verify_state(tampered, secret=SECRET, max_age_seconds=600)
         )
