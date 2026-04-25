@@ -596,6 +596,7 @@ class SupabaseAuthService:
             auth_enabled=True,
             authenticated=True,
             user=_map_supabase_user(user),
+            guest_mode=bool(claims.get("is_anonymous", False)),
         )
 
     def _refresh_session(self, refresh_token: str) -> AuthSessionState:
@@ -633,10 +634,12 @@ class SupabaseAuthService:
                 },
                 key=self.session_cookie_key,
             )
+        is_anon = bool(getattr(user, "is_anonymous", False)) if user is not None else False
         return AuthSessionState(
             auth_enabled=True,
             authenticated=True,
             user=_map_supabase_user(user),
+            guest_mode=is_anon,
             sealed_session=sealed,
         )
 

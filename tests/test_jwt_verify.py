@@ -80,5 +80,18 @@ class VerifyAccessTokenTests(unittest.TestCase):
             verify_access_token("not.a.jwt", jwt_secret=SECRET, issuer=ISSUER)
 
 
+class IsAnonymousClaimTests(unittest.TestCase):
+    def test_is_anonymous_true_surfaced_in_claims(self):
+        token = _make_token(is_anonymous=True)
+        claims = verify_access_token(token, jwt_secret=SECRET, issuer=ISSUER)
+        self.assertTrue(claims.get("is_anonymous"))
+
+    def test_is_anonymous_false_when_absent(self):
+        token = _make_token()
+        claims = verify_access_token(token, jwt_secret=SECRET, issuer=ISSUER)
+        # Treat absence as False; explicit False also acceptable.
+        self.assertFalse(claims.get("is_anonymous", False))
+
+
 if __name__ == "__main__":
     unittest.main()
