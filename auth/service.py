@@ -43,21 +43,6 @@ class AuthSessionState:
             "user": self.user.to_dict() if self.user else None,
         }
 
-
-@dataclass(slots=True)
-class MagicAuthStartState:
-    auth_enabled: bool
-    pending: bool
-    email: str | None = None
-
-    def to_public_dict(self) -> dict[str, Any]:
-        return {
-            "auth_enabled": self.auth_enabled,
-            "pending": self.pending,
-            "email": self.email,
-        }
-
-
 def _env_flag(name: str, default: bool = False) -> bool:
     raw = os.getenv(name)
     if raw is None:
