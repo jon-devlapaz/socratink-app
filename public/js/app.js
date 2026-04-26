@@ -1,4 +1,5 @@
 import { Bus } from './bus.js';
+import { generateKnowledgeMap } from './ai_service.js?v=1';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
@@ -1507,7 +1508,7 @@ const App = (() => {
           extractOverlay.classList.add('eo-mapping');
           startTrickle();
           startMetaCycle();
-          const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
+          const jsonPayload = await generateKnowledgeMap(sourceText);
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
           // INVARIANT: failed or malformed extraction must never mutate
@@ -4053,6 +4054,28 @@ const App = (() => {
   };
 
 })();
+
+// Two deliberate browser globals (HTML and graph-view bridges).
+// Removing either silently breaks production user flows — see below
+// for the inventory of readers. Any new global on `window` MUST be
+// justified the same way and added to this comment block.
+//
+// window.App — read by 18 inline onclick="App.foo()" handlers in
+// public/index.html (bottom-nav, drawer, hero CTAs, drill controls,
+// theme toggle, tile selection). HTML→JS bridge. Phase 2 keeps this
+// intentional; a future micro-phase could rewrite the inline handlers
+// as addEventListener wiring and drop the global.
+//
+// window.SocratinkApp — read by 17 call sites in graph-view.js as
+// optional-chained intents (e.g. window.SocratinkApp?.startRepairReps,
+// ?.runInspectAction, ?.completeStudy). Because every reader uses
+// optional chaining (`?.`), removing this assignment will fail
+// SILENTLY rather than throw — you would not see an error in the
+// console, but repair-reps, study-completion, and inspect flows
+// would all become no-ops. Graph-view is the renderer; it never
+// owns truth. SocratinkApp is the intent-bridge that lets Cytoscape
+// interaction events trigger app.js mutations without a circular
+// import. Phase 3 of the lego-ification roadmap formalizes this
+// contract (see docs/superpowers/plans/2026-04-26-lego-ification-roadmap.md).
 window.App = App;
 window.SocratinkApp = App;
-window.startSettings = () => App.showSettings();
