@@ -11,7 +11,14 @@ import json
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from statistics import mean
+
+from analytics._metrics import (
+    latest_timestamp,
+    parse_timestamp,
+    pct,
+    safe_mean,
+    top_counter,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -44,35 +51,6 @@ def load_jsonl(path: Path) -> list[dict]:
             if isinstance(payload, dict):
                 rows.append(payload)
     return rows
-
-
-def pct(numerator: int, denominator: int) -> float:
-    if denominator <= 0:
-        return 0.0
-    return (numerator / denominator) * 100
-
-
-def safe_mean(values: list[float | int]) -> float:
-    if not values:
-        return 0.0
-    return float(mean(values))
-
-
-def top_counter(counter: Counter, limit: int = 5) -> list[tuple[str, int]]:
-    return [(str(key), value) for key, value in counter.most_common(limit)]
-
-
-def latest_timestamp(rows: list[dict]) -> str | None:
-    timestamps = [row.get("timestamp") for row in rows if row.get("timestamp")]
-    if not timestamps:
-        return None
-    return max(t for t in timestamps if t is not None)
-
-
-def parse_timestamp(value: str | None) -> datetime:
-    if not value:
-        return datetime.min.replace(tzinfo=timezone.utc)
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 def extract_summary(rows: list[dict]) -> dict:
