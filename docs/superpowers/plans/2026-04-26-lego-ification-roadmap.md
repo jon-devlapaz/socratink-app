@@ -214,7 +214,7 @@ Imports use ad-hoc `?v=N` query strings (`graph-view.js?v=7`, `auth.js?v=2`, `ap
 4. **Convert `intro-particles.js` to `type="module"` (or leave alone).** It's a one-shot visual effect; if it doesn't set globals or have peers, no benefit to converting. Verify with grep, then decide.
 
 **Phase 2 ordering (revised):**
-- 2.1 — Convert `ai_service.js` to ESM, replace `window.AIService` in `app.js`. (~1 session)
+- 2.1 — ✅ Complete (`68383b1`). Converted `ai_service.js` to ESM; dropped `window.AIService` global; replaced the single call site in `app.js`. Bumped `app.js` cache version 41 → 42.
 - 2.2 — Audit and clean up the `window.App` / `SocratinkApp` / `startSettings` globals; drop redundancies; document the surviving bridge.
 - 2.3 — Begin intra-`app.js` extracts: API client first (cleanest leaf), then persistence, then drill state reducer.
 - 2.4 — DOM/render helpers extract.
