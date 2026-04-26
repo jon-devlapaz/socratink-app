@@ -151,7 +151,87 @@ Extract from `public/js/app.js` (4,059 LOC) into separate ES modules. **Leaf log
 - `grep` for `window.*` reads/writes across `public/js/`.
 - Decide: switch `app.js` to `type="module"` (and convert peers), or use named ES modules called from a non-module `app.js` shim. The choice changes the plan structure.
 
-**Detailed plan:** TBW.
+### Pre-flight audit results (2026-04-26)
+
+**Surprise: `app.js` is already an ES module.** `public/index.html:547` loads it as `<script type="module" src="js/app.js?v=41"></script>`, and the file's first three lines are real `import` statements pulling from `bus.js`, `graph-view.js?v=7`, and `auth.js?v=2`. The roadmap's framing of "decide ESM strategy" was based on a false premise — the strategy is already in place.
+
+The real Phase 2 problem is **finishing what's already started**:
+
+#### Module-status inventory (`public/js/`)
+
+| File | Loaded as | Exports | Imports | Notes |
+|---|---|---|---|---|
+| `app.js` | `type="module"` | 0 | 8 | SPA shell; already ESM |
+| `auth.js` | (via app.js) | 6 | 0 | Pure ESM |
+| `bus.js` | (via app.js) | 1 | 0 | Pure ESM |
+| `dom.js` | (via app.js) | 22 | 0 | Pure ESM (cached DOM lookups) |
+| `graph-view.js` | (via app.js) | 3 | 0 | Pure ESM |
+| `store.js` | (via app.js) | 11 | 0 | Pure ESM |
+| `welcome.js` | (via app.js) | 1 | 0 | Pure ESM |
+| `tooltips.js` | `type="module"` | 1 | 1 | Pure ESM |
+| `login.js` | `type="module"` | 0 | 0 | Module shell, no contracts |
+| `learner-analytics.js` | (via dashboard) | 1 | 3 | Pure ESM |
+| `browser-analytics.js` | ? | 6 | 0 | Pure ESM |
+| `ai-runs-dashboard.js` | ? | 0 | 1 | Pure ESM |
+| **`ai_service.js`** | **classic `<script>`** | **0** | **0** | **Sets `window.AIService` — implicit-global smell** |
+| **`intro-particles.js`** | **classic `<script>`** | **0** | **0** | **Visual effect; may set globals** |
+
+#### Custom `window.*` globals (the real implicit dependency surface)
+
+`app.js` reads:
+- `window.AIService.generateKnowledgeMap(...)` at line 1510 — **the only real implicit-global dependency.** Set by the classic-script `ai_service.js`.
+- `window.testGraph(name)` at line 912 — debug helper.
+- `window.__creationDialogTrigger` at lines 1088, 1176 — used as cross-render state stash. Could be a module-scope variable in `app.js` itself; a window global here is a code smell, not a dependency.
+
+`app.js` sets:
+- `window.App = App` (line 4056)
+- `window.SocratinkApp = App` (line 4057)
+- `window.startSettings = () => App.showSettings()` (line 4058)
+
+**Why these globals exist:** `public/index.html` uses `<a onclick="App.showDashboard()">` style inline handlers throughout the bottom-nav and (likely) elsewhere. Those inline handlers can only see `window.*` — they cannot import. **This is the real coupling that holds the global exports in place.** A pure ESM app.js would break every inline `onclick`.
+
+#### HTML inline scripts (in `public/index.html`)
+
+- Lines 30-39: theme preload (`localStorage.getItem('learnops-theme')` → set `dataset.theme`). Tiny, runs before module loads to avoid flash. Defensible.
+- Lines 552-554: Vercel Speed Insights stub. Standard third-party shim.
+
+Neither is a Phase 2 concern.
+
+#### Cache-busting
+
+Imports use ad-hoc `?v=N` query strings (`graph-view.js?v=7`, `auth.js?v=2`, `app.js?v=41`, etc.). Manual versioning per file. Easy to forget. Worth standardizing during Phase 2 (e.g., one global build-id) but not blocking.
+
+### Decision: ESM strategy for Phase 2
+
+**ESM is already chosen.** Phase 2 should focus on:
+
+1. **Convert `ai_service.js` from classic script to ES module.** Replace `window.AIService.generateKnowledgeMap` reads in `app.js` (and any other readers) with explicit `import`. **One real implicit-global dependency removed.** This is the highest-leverage move — likely doable in one session.
+2. **Decide what to do about `App` window globals + inline `onclick=`.** Two paths:
+   - **(a)** Keep `window.App` deliberately as the documented "HTML→JS bridge" with a 1-line shim `app.js` exports. Accept that inline `onclick` is the simpler pattern for this app. Document it as the only legitimate use of a custom window global.
+   - **(b)** Sweep through the HTML and replace every inline `onclick="App.foo()"` with `addEventListener` wired from app.js after load. Cleaner but multi-session work touching every nav button, drawer, modal trigger, etc.
+   - **Recommendation:** (a) for this phase — preserve the `App` bridge intentionally, drop the redundant `SocratinkApp` and `startSettings` globals if they're not referenced from HTML (verify with grep). (b) is a Phase 3 candidate or its own micro-phase.
+3. **Continue intra-`app.js` decomposition** — `app.js` is 4,059 LOC even though it's already a module. Extract leaf responsibilities (api client, persistence, drill state reducer) per the original roadmap. Same pattern just used for `analytics/run_summary.py`: extract leaf module → import → run smoke → commit.
+4. **Convert `intro-particles.js` to `type="module"` (or leave alone).** It's a one-shot visual effect; if it doesn't set globals or have peers, no benefit to converting. Verify with grep, then decide.
+
+**Phase 2 ordering (revised):**
+- 2.1 — Convert `ai_service.js` to ESM, replace `window.AIService` in `app.js`. (~1 session)
+- 2.2 — Audit and clean up the `window.App` / `SocratinkApp` / `startSettings` globals; drop redundancies; document the surviving bridge.
+- 2.3 — Begin intra-`app.js` extracts: API client first (cleanest leaf), then persistence, then drill state reducer.
+- 2.4 — DOM/render helpers extract.
+- (Defer: HTML inline-handler cleanup — own micro-phase if pursued.)
+
+### Audit metrics snapshot (2026-04-26)
+
+| Metric | Value | Note |
+|---|---|---|
+| `public/js/app.js` LOC | 4,059 | Phase 2 baseline |
+| `app.js` already ES module | yes | reframes scope |
+| Classic-script `.js` files | 2 (`ai_service.js`, `intro-particles.js`) | conversion candidates |
+| Custom `window.*` globals SET by app.js | 3 (`App`, `SocratinkApp`, `startSettings`) | coupling to inline `onclick=` |
+| Custom `window.*` globals READ by app.js | 1 production (`AIService`) + 2 internal-state stashes (`testGraph`, `__creationDialogTrigger`) | only `AIService` is a real cross-file dependency |
+| HTML files loading `app.js` | 1 (`public/index.html`) | single load site simplifies coordination |
+
+**Detailed plan:** TBW (when starting Phase 2 — write a per-step bite-sized plan covering at minimum task 2.1).
 
 ---
 
