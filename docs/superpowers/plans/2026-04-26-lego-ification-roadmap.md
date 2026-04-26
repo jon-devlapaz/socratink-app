@@ -215,7 +215,7 @@ Imports use ad-hoc `?v=N` query strings (`graph-view.js?v=7`, `auth.js?v=2`, `ap
 
 **Phase 2 ordering (revised):**
 - 2.1 — ✅ Complete (`68383b1`). Converted `ai_service.js` to ESM; dropped `window.AIService` global; replaced the single call site in `app.js`. Bumped `app.js` cache version 41 → 42.
-- 2.2 — Audit and clean up the `window.App` / `SocratinkApp` / `startSettings` globals; drop redundancies; document the surviving bridge.
+- 2.2 — ✅ Complete (`c7858d3`). Dropped unused `window.startSettings`. **Audit was wrong about `SocratinkApp`** — Gemini-verified that `graph-view.js` reads it 17 times via optional chaining; it's the de facto renderer→app intent bridge that Phase 3 formalizes. Both surviving globals (`App`, `SocratinkApp`) now have a documented contract above the assignment with the silent-failure risk called out explicitly. Bumped `app.js` cache version 42 → 43.
 - 2.3 — Begin intra-`app.js` extracts: API client first (cleanest leaf), then persistence, then drill state reducer.
 - 2.4 — DOM/render helpers extract.
 - (Defer: HTML inline-handler cleanup — own micro-phase if pursued.)
