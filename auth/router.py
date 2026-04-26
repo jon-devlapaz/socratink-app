@@ -15,7 +15,6 @@ _login_css = Path(__file__).resolve().parent.parent / "public" / "css" / "login.
 _login_js = Path(__file__).resolve().parent.parent / "public" / "js" / "login.js"
 logger = logging.getLogger(__name__)
 GUEST_COOKIE_NAME = "socratink_guest"
-GUEST_COOKIE_VALUE = "guest"
 
 
 _EMBEDDED_LOGIN_CSS = """
