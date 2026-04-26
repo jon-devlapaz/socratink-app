@@ -448,6 +448,7 @@ def extract_url(req: UrlExtractRequest):
                 "User-Agent": "Mozilla/5.0 (compatible; socratink/1.0; +https://localhost)"
             },
         )
+        # SECURITY: redirects are followed by default; private targets reachable via 30x. See audit-pass-1.
         with urlopen(request, timeout=12) as response:
             content_type = (response.headers.get("Content-Type") or "").lower()
             if "text/html" not in content_type and "text/plain" not in content_type:
