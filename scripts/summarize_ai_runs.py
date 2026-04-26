@@ -13,9 +13,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from analytics.run_summary import build_summary_payload  # noqa: E402
-# Re-exported so any transitional caller still importing from this module path
-# keeps working until Task 5 lands. Removed once main.py is updated.
-from analytics.run_summary import build_learner_summary_payload  # noqa: F401, E402
 
 
 def render_markdown(extract_data: dict, drill_data: dict) -> str:

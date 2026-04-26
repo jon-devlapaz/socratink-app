@@ -32,8 +32,8 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
-from scripts.summarize_ai_runs import build_summary_payload
-from scripts.summarize_ai_runs import build_learner_summary_payload
+from analytics.run_summary import build_summary_payload
+from analytics.run_summary import build_learner_summary_payload
 
 load_dotenv()
 
