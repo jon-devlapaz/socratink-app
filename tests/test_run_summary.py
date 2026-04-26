@@ -15,9 +15,7 @@ from pathlib import Path
 
 import pytest
 
-# NOTE: this import path will change in Task 3 to
-# `from analytics.run_summary import ...` — that swap is the verification.
-from scripts.summarize_ai_runs import (
+from analytics.run_summary import (
     build_summary_payload,
     build_learner_summary_payload,
 )
@@ -125,9 +123,7 @@ def synthetic_logs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str,
         "\n".join(json.dumps(row) for row in DRILL_FIXTURE) + "\n",
         encoding="utf-8",
     )
-    # Rebind whichever module currently owns the constants.
-    # In Task 3 this import path changes, but the symbol names stay the same.
-    import scripts.summarize_ai_runs as mod
+    import analytics.run_summary as mod
     monkeypatch.setattr(mod, "EXTRACT_LOG", extract_log)
     monkeypatch.setattr(mod, "DRILL_LOG", drill_log)
     monkeypatch.setattr(mod, "LOG_DIR", logs_dir)
@@ -180,7 +176,7 @@ def test_build_summary_payload_paths_match_monkeypatched(
 def test_build_summary_payload_empty_logs_returns_zero_counts(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import scripts.summarize_ai_runs as mod
+    import analytics.run_summary as mod
     empty_extract = tmp_path / "missing-extract.jsonl"
     empty_drill = tmp_path / "missing-drill.jsonl"
     monkeypatch.setattr(mod, "EXTRACT_LOG", empty_extract)
