@@ -50,10 +50,6 @@ def pct(numerator: int, denominator: int) -> float:
     return (numerator / denominator) * 100
 
 
-def fmt_pct(numerator: int, denominator: int) -> str:
-    return f"{pct(numerator, denominator):.1f}%"
-
-
 def safe_mean(values: list[float | int]) -> float:
     if not values:
         return 0.0
