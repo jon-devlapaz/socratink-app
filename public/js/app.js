@@ -1,4 +1,5 @@
 import { Bus } from './bus.js';
+import { generateKnowledgeMap } from './ai_service.js?v=1';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
@@ -1507,7 +1508,7 @@ const App = (() => {
           extractOverlay.classList.add('eo-mapping');
           startTrickle();
           startMetaCycle();
-          const jsonPayload = await window.AIService.generateKnowledgeMap(sourceText);
+          const jsonPayload = await generateKnowledgeMap(sourceText);
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
           // INVARIANT: failed or malformed extraction must never mutate
