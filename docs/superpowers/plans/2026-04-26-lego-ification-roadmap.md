@@ -16,7 +16,7 @@ Static graph analysis (2026-04-26 snapshot, commit `e6a220d`):
 
 - **869 nodes / 7,078 edges / 47 source files** across 6 communities (Leiden clustering).
 - **Cross-community coupling is already low** — only ~9 production-code edges between communities.
-- **One genuine architectural smell**: `main.py → scripts/summarize_ai_runs.py::build_summary_payload` (production importing from `scripts/`). 2 calls.
+- **One genuine architectural smell**: `main.py → scripts/summarize_ai_runs.py::{build_summary_payload, build_learner_summary_payload}` (production importing from `scripts/`). 4 call sites total — the graph reported 2 because it only saw `build_summary_payload`. Closed in Phase 1 (`75d0c6c`).
 - **The real fat is intra-file**, not inter-module:
 
 | File | Lines |
@@ -65,7 +65,7 @@ Targets (over the full roadmap):
 | `graph-view.js` LOC | 2,709 | — | < 1,200 | < 700 |
 | `ai_service.py` LOC | 1,470 | — | — | < 800 |
 | `auth/router.py` LOC | 965 | — | — | < 500 |
-| Production imports from `scripts/` | 2 | 0 | 0 | 0 |
+| Production imports from `scripts/` | 4 (graph said 2) | **0** ✅ Phase 1 | 0 | 0 |
 | New modules with implicit globals | n/a | 0 | 0 | 0 |
 | Behavior-changing regressions per session | n/a | 0 | 0 | 0 |
 
@@ -97,13 +97,13 @@ Anything else extracted "for swap-ability" is theater.
 
 ## Phase 1 — Reverse the `scripts/ → production` Smell
 
-**Status:** Ready to execute. Smallest phase; warm-up lap.
+**Status:** ✅ Complete (`75d0c6c`). Warm-up lap. See `docs/superpowers/plans/2026-04-26-phase1-extract-run-summary.md` for the executed plan.
 
-**Scope:**
-- Move `scripts/summarize_ai_runs.py::build_summary_payload` (and any data-shape helpers it depends on) into a production-owned module — proposed `analytics/run_summary.py`.
-- Update `main.py::analytics_ai_runs` to import from the new location.
-- Leave `scripts/summarize_ai_runs.py` as a thin CLI wrapper that imports from production.
-- Update tests if any reference the old path.
+**Scope (as executed):**
+- Moved both `build_summary_payload` AND `build_learner_summary_payload` (4 call sites in `main.py`, not the 2 the initial graph reported) into `analytics/run_summary.py` (740 LOC).
+- Updated `main.py:35-36` to import from `analytics.run_summary`.
+- `scripts/summarize_ai_runs.py` is now a 162-line CLI shim (was 882) that imports from `analytics.run_summary`. Includes a 3-line `sys.path` shim so `python scripts/summarize_ai_runs.py` keeps working alongside `python -m scripts.summarize_ai_runs`.
+- 8 characterization tests in `tests/test_run_summary.py` strengthened post-Gemini-review (n≥2 fixtures, exact path equality) — they pass against both the old and new module locations, proving behavior preservation.
 
 **Contract:**
 - Input: stored run / eval data (already-loaded objects, no filesystem assumptions, no request objects).
