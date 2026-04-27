@@ -38,7 +38,6 @@ load_dotenv()
 app = FastAPI()
 app.state.auth_service = build_auth_service_from_env()
 logger = logging.getLogger(__name__)
-DRILL_CHAT_LOG_PATH = Path(__file__).parent / "logs/drill-chat-transcripts.jsonl"
 PROTECTED_HTML_PATHS = frozenset({"/", "/index.html"})
 PROTECTED_API_PATHS = frozenset(
     {
@@ -216,64 +215,6 @@ class RepairRepsRequest(BaseModel):
     gap_description: str | None = Field(None, max_length=1_000)
     count: int = Field(3, ge=3, le=3)
     api_key: str | None = Field(None, max_length=200)
-
-
-def _log_drill_chat(event: dict) -> None:
-    try:
-        DRILL_CHAT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with DRILL_CHAT_LOG_PATH.open("a", encoding="utf-8") as log_file:
-            log_file.write(json.dumps(event, ensure_ascii=False) + "\n")
-    except Exception:
-        logger.exception("Failed to append drill chat transcript log")
-
-
-def _build_drill_chat_event(
-    req: DrillRequest,
-    *,
-    messages_in: list[dict],
-    status: str,
-    result: dict | None = None,
-    error_type: str | None = None,
-    error_reason: str | None = None,
-) -> dict:
-    event = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "status": status,
-        "concept_id": req.concept_id,
-        "node_id": req.node_id,
-        "node_label": req.node_label,
-        "drill_session_id": req.drill_session_id,
-        "client_turn_index": req.client_turn_index,
-        "session_key": "::".join(
-            [
-                req.concept_id,
-                req.node_id,
-                req.session_start_iso or "missing",
-                req.drill_session_id or "missing",
-            ]
-        ),
-        "session_phase": req.session_phase,
-        "drill_mode": req.drill_mode,
-        "session_start_iso": req.session_start_iso,
-        "re_drill_count_in": req.re_drill_count,
-        "probe_count_in": req.probe_count,
-        "nodes_drilled_in": req.nodes_drilled,
-        "attempt_turn_count_in": req.attempt_turn_count,
-        "help_turn_count_in": req.help_turn_count,
-        "message_count_in": len(messages_in),
-        "messages_in": messages_in,
-    }
-    if result is not None:
-        event["assistant_message"] = result.get("agent_response", "")
-        event["result"] = result
-        event["transcript"] = [
-            *messages_in,
-            {"role": "assistant", "content": result.get("agent_response", "")},
-        ]
-    if error_type or error_reason:
-        event["error_type"] = error_type
-        event["error_reason"] = error_reason
-    return event
 
 
 def _resolve_node_mechanism(
@@ -505,69 +446,16 @@ def drill(req: DrillRequest):
             },
         )
         response_payload = {"concept_id": req.concept_id, **result}
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="success",
-                result=response_payload,
-            )
-        )
         return response_payload
     except MissingAPIKeyError as err:
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="error",
-                error_type=type(err).__name__,
-                error_reason=str(err),
-            )
-        )
         raise HTTPException(status_code=401, detail=str(err))
     except GeminiRateLimitError as err:
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="error",
-                error_type=type(err).__name__,
-                error_reason=str(err),
-            )
-        )
         raise HTTPException(status_code=429, detail=str(err))
     except GeminiServiceError as err:
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="error",
-                error_type=type(err).__name__,
-                error_reason=str(err),
-            )
-        )
         raise HTTPException(status_code=503, detail=str(err))
     except json.JSONDecodeError:
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="error",
-                error_type="JSONDecodeError",
-                error_reason="Invalid knowledge_map JSON.",
-            )
-        )
         raise HTTPException(status_code=400, detail="Invalid knowledge_map JSON.")
     except ValueError as err:
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="error",
-                error_type=type(err).__name__,
-                error_reason=str(err),
-            )
-        )
         logger.exception(
             "Drill normalization failed for concept_id=%s node_id=%s",
             req.concept_id,
@@ -577,15 +465,6 @@ def drill(req: DrillRequest):
             status_code=502, detail="Drill evaluation failed. Please retry."
         ) from err
     except Exception as err:
-        _log_drill_chat(
-            _build_drill_chat_event(
-                req,
-                messages_in=messages_in,
-                status="error",
-                error_type=type(err).__name__,
-                error_reason=str(err),
-            )
-        )
         logger.exception(
             "Unexpected failure in /api/drill for concept_id=%s node_id=%s",
             req.concept_id,
