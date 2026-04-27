@@ -70,15 +70,32 @@ largest_file_loc + implicit_cross_module_globals + behavior_changing_regressions
 
 Targets (over the full roadmap):
 
-| Metric | Baseline (2026-04-26) | Phase 2 target | Phase 3 target | End-state target |
-|---|---|---|---|---|
-| `app.js` LOC | 4,059 | < 1,500 | < 1,200 | < 800 |
-| `graph-view.js` LOC | 2,709 | — | < 1,200 | < 700 |
-| `ai_service.py` LOC | 1,470 | — | — | < 800 |
-| `auth/router.py` LOC | 965 | — | — | < 500 |
-| Production imports from `scripts/` | 4 (graph said 2) | **0** ✅ Phase 1 | 0 | 0 |
-| New modules with implicit globals | n/a | 0 | 0 | 0 |
-| Behavior-changing regressions per session | n/a | 0 | 0 | 0 |
+| Metric | Baseline (2026-04-26) | Current (2026-04-27) | Phase 2 target | Phase 3 target | End-state target |
+|---|---|---|---|---|---|
+| `app.js` LOC | 4,059 | **3,965** | < 1,500 | < 1,200 | < 800 |
+| `graph-view.js` LOC | 2,709 | 2,709 | — | < 1,200 | < 700 |
+| `ai_service.py` LOC | 1,470 | **1,066** ⬇ -27% | — | — | < 800 |
+| `auth/router.py` LOC | 965 | 964 | — | — | < 500 |
+| `main.py` LOC | 699 | **548** ⬇ -22% | — | — | — |
+| Production imports from `scripts/` | 4 (graph said 2) | n/a (analytics gone) | n/a | n/a | n/a |
+| New modules with implicit globals | n/a | 0 | 0 | 0 | 0 |
+| Behavior-changing regressions per session | n/a | 0 | 0 | 0 | 0 |
+
+### Code-review-graph snapshot (2026-04-27 post-analytics-teardown)
+
+| Graph metric | 2026-04-25 baseline | 2026-04-27 | Δ |
+|---|---|---|---|
+| Files | 47 | 43 | **−4** |
+| Total nodes | 869 | 760 | **−109 (−12.5%)** |
+| Total edges | 7,078 | 5,757 | **−1,321 (−18.7%)** |
+| Functions | 660 | 556 | **−104** |
+| CALLS edges | 5,358 | 4,164 | **−1,194** |
+| Risk score (overall) | 1.00 (Phase 1 commit) | 0.00 | clean |
+| Communities | 6 | 6 | unchanged shape |
+
+**Two observations:**
+1. **The big LOC wins came from analytics teardown, not lego-ification per se.** Most of `ai_service.py`'s 27% reduction is the deleted telemetry writers (`_log_extract_run`, `_log_drill_run`, `_log_drill_chat_turn`, `log_chat_turn` nested helper, 15 call sites). `main.py`'s 22% reduction is the deleted analytics endpoints + drill-chat helpers. `app.js` only dropped 2.3% because most of it was never analytics-coupled.
+2. **Communities haven't reshaped.** The graph's Leiden clustering still reports the same 6 community names with the same sizes. Likely because file-system structure (which the names derive from) hasn't shifted enough — `scripts-summary` 31 LOC is now `scripts/build_code_graph_viz.py` instead of `summarize_ai_runs.py`. The community names are stable labels, not real architectural insight; trust the file-level metrics over community names.
 
 **The win is not "more files." The win is that a future change to drill state, graph rendering, AI evaluation, auth, or telemetry has one obvious owner and one obvious contract to verify.**
 
