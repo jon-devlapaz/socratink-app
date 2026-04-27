@@ -1,0 +1,11 @@
+# Development / test dependencies. Not bundled into the Vercel function.
+# Install with: pip install -r requirements-dev.txt && playwright install chromium
+
+-r requirements.txt
+
+# Browser smoke suite (tests/e2e/)
+pytest-playwright>=0.5.0
+playwright>=1.45.0
+
+# /api/health probing in test_smoke.py
+requests>=2.31.0
