@@ -32,8 +32,6 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
-from analytics.run_summary import build_summary_payload
-from analytics.run_summary import build_learner_summary_payload
 
 load_dotenv()
 
@@ -100,7 +98,7 @@ def _is_protected_api_request(request: Request) -> bool:
         return False
     if path.startswith("/api/auth/"):
         return False
-    return path.startswith("/api/analytics/") or path in PROTECTED_API_PATHS
+    return path in PROTECTED_API_PATHS
 
 
 def _resolve_session_state(request: Request):
@@ -311,35 +309,6 @@ def health():
         "server_key_configured": bool(os.environ.get("GEMINI_API_KEY")),
         "drill_session_time_limit_seconds": get_drill_session_time_limit_seconds(),
     }
-
-
-@app.get("/api/analytics/ai-runs")
-def analytics_ai_runs():
-    try:
-        return build_summary_payload()
-    except Exception as err:
-        logger.exception("Failed to build AI runs analytics payload")
-        raise HTTPException(
-            status_code=500, detail="Could not build AI runs analytics."
-        ) from err
-
-
-@app.get("/api/analytics/learner-runs")
-def analytics_learner_runs(concept_ids: str | None = None):
-    parsed_concept_ids: list[str] | None = None
-    if concept_ids:
-        parsed_concept_ids = [
-            concept_id.strip()[:100]
-            for concept_id in concept_ids.split(",")
-            if concept_id.strip()
-        ][:50]
-    try:
-        return build_learner_summary_payload(parsed_concept_ids)
-    except Exception as err:
-        logger.exception("Failed to build learner analytics payload")
-        raise HTTPException(
-            status_code=500, detail="Could not build learner analytics."
-        ) from err
 
 
 @app.post("/api/extract")
