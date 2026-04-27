@@ -1114,25 +1114,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   40% { transform: scale(1); opacity: 1; }
 }
 
-/* Analytics help-tooltip shared sub-styles (consumed by learner-analytics). */
-.tour-tooltip-kicker {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--tooltip-kicker);
-  margin-bottom: 6px;
-}
-.tour-tooltip-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--tooltip-text);
-  margin-bottom: 6px;
-}
-.tour-tooltip-body {
-  color: var(--tooltip-text-sub);
-}
-
 .chat-input-area { flex: none; margin-top: 10px; position: relative; }
 .chat-input {
   width: 100%; height: 64px; resize: none; padding: 12px 16px;
@@ -1146,7 +1127,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 
 /* ============================================================
    State pills — four learner node states + danger.
-   Consumed by analytics, graph legend, concept status rows.
+   Consumed by graph legend and concept status rows.
    Colors from --node-*-rgb channel tokens; no hex literals.
    ============================================================ */
 .pill {
