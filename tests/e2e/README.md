@@ -42,7 +42,7 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 pytest tests/e2e/test_smoke.py -v
 
 # Production
-SOCRATINK_BASE_URL=https://socratink.com pytest tests/e2e/test_smoke.py -v
+SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
 
 # Vercel preview deployment
 SOCRATINK_BASE_URL=https://socratink-app-git-dev-fresh-jon-devlapaz.vercel.app pytest tests/e2e/test_smoke.py -v

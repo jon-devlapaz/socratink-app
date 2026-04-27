@@ -54,9 +54,14 @@ def test_health_endpoint_ok(base_url: str) -> None:
             assert isinstance(payload.get("server_key_configured"), bool), (
                 f"server_key_configured missing or wrong type: {payload}"
             )
+            # Contract per ai_service.get_drill_session_time_limit_seconds:
+            # int | None — None means "disabled by env var or unset".
             limit = payload.get("drill_session_time_limit_seconds")
-            assert isinstance(limit, int) and limit > 0, (
-                f"drill_session_time_limit_seconds invalid: {payload}"
+            assert "drill_session_time_limit_seconds" in payload, (
+                f"drill_session_time_limit_seconds key missing: {payload}"
+            )
+            assert limit is None or (isinstance(limit, int) and limit > 0), (
+                f"drill_session_time_limit_seconds must be int>0 or None: {payload}"
             )
             return
         except (requests.RequestException, AssertionError) as exc:
