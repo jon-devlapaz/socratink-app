@@ -28,7 +28,6 @@ output/
 # Local agent runtime context
 .codex/
 .vscode/
-CLAUDE.md
 learnops/
 
 # Track durable repo doctrine and docs.
