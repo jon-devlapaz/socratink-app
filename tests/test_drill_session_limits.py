@@ -92,8 +92,6 @@ class DrillSessionLimitTests(unittest.TestCase):
                 "ai_service._call_gemini_with_retry",
                 return_value=drill_response(),
             ),
-            patch("ai_service._log_drill_run"),
-            patch("ai_service._log_drill_chat_turn"),
         ):
             result = call_drill_chat(session_start_iso=old_session_start())
 
@@ -107,8 +105,6 @@ class DrillSessionLimitTests(unittest.TestCase):
             patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "1500"}),
             patch("ai_service._get_client", return_value=object()) as get_client,
             patch("ai_service._call_gemini_with_retry"),
-            patch("ai_service._log_drill_run"),
-            patch("ai_service._log_drill_chat_turn"),
         ):
             result = call_drill_chat(session_start_iso=old_session_start())
 
@@ -125,8 +121,6 @@ class DrillSessionLimitTests(unittest.TestCase):
                 "ai_service._call_gemini_with_retry",
                 return_value=drill_response(routing="NEXT", classification="solid"),
             ),
-            patch("ai_service._log_drill_run"),
-            patch("ai_service._log_drill_chat_turn"),
         ):
             result = call_drill_chat(
                 session_start_iso=old_session_start(),

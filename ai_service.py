@@ -25,9 +25,6 @@ REPAIR_REPS_PROMPT_VERSION = "repair-reps-system-v1"
 DRILL_SYSTEM_BASE = DRILL_PROMPT_PATH.read_text()
 REPAIR_REPS_SYSTEM_BASE = REPAIR_REPS_PROMPT_PATH.read_text()
 EXTRACT_FAILURE_LOG_PATH = Path(__file__).parent / "logs/extract-invalid-json.log"
-EXTRACT_RUN_LOG_PATH = Path(__file__).parent / "logs/extract-runs.jsonl"
-DRILL_RUN_LOG_PATH = Path(__file__).parent / "logs/drill-runs.jsonl"
-DRILL_CHAT_LOG_PATH = Path(__file__).parent / "logs/drill-chat-turns.jsonl"
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 RETRYABLE_CODES = {429, 503, 500}
@@ -236,46 +233,6 @@ def _log_extract_failure(
     except Exception:
         # Logging must never break extraction error handling.
         pass
-
-
-def _log_extract_run(event: dict) -> None:
-    try:
-        EXTRACT_RUN_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with EXTRACT_RUN_LOG_PATH.open("a", encoding="utf-8") as log_file:
-            log_file.write(json.dumps(event, ensure_ascii=False) + "\n")
-    except Exception:
-        # Logging must never break extraction error handling.
-        pass
-
-
-def _log_drill_run(event: dict) -> None:
-    try:
-        DRILL_RUN_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with DRILL_RUN_LOG_PATH.open("a", encoding="utf-8") as log_file:
-            log_file.write(json.dumps(event, ensure_ascii=False) + "\n")
-    except Exception:
-        # Logging must never break drill error handling.
-        pass
-
-
-def _log_drill_chat_turn(event: dict) -> None:
-    try:
-        DRILL_CHAT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with DRILL_CHAT_LOG_PATH.open("a", encoding="utf-8") as log_file:
-            log_file.write(json.dumps(event, ensure_ascii=False) + "\n")
-    except Exception:
-        # Logging must never break drill error handling.
-        pass
-
-
-def _with_telemetry_context(event: dict, telemetry_context: dict | None) -> dict:
-    if not telemetry_context:
-        return event
-    merged = dict(event)
-    for key, value in telemetry_context.items():
-        if key not in merged:
-            merged[key] = value
-    return merged
 
 
 def _serialize_drill_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -754,25 +711,6 @@ def extract_knowledge_map(
         cleaned = _clean_response(raw_response)
     except ValueError as err:
         _log_extract_failure(reason=str(err), raw_response=raw_response)
-        _log_extract_run(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "extract",
-                    "status": "error",
-                    "error_type": "empty_response",
-                    "reason": str(err),
-                    "model": MODEL,
-                    "prompt_version": EXTRACT_PROMPT_VERSION,
-                    "input_chars": len(raw_text),
-                    "raw_response_chars": len(raw_response or ""),
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
-        )
         raise
 
     try:
@@ -782,26 +720,6 @@ def extract_knowledge_map(
             reason=f"Invalid JSON: {err.msg} at line {err.lineno} column {err.colno}",
             raw_response=raw_response,
             cleaned_response=cleaned,
-        )
-        _log_extract_run(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "extract",
-                    "status": "error",
-                    "error_type": "invalid_json",
-                    "reason": f"{err.msg} at line {err.lineno} column {err.colno}",
-                    "model": MODEL,
-                    "prompt_version": EXTRACT_PROMPT_VERSION,
-                    "input_chars": len(raw_text),
-                    "raw_response_chars": len(raw_response or ""),
-                    "cleaned_response_chars": len(cleaned),
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
         )
         raise ValueError(
             f"Gemini returned invalid JSON for extraction: {err.msg}"
@@ -815,60 +733,8 @@ def extract_knowledge_map(
             raw_response=raw_response,
             cleaned_response=cleaned,
         )
-        _log_extract_run(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "extract",
-                    "status": "error",
-                    "error_type": "schema_validation",
-                    "reason": str(err),
-                    "model": MODEL,
-                    "prompt_version": EXTRACT_PROMPT_VERSION,
-                    "input_chars": len(raw_text),
-                    "raw_response_chars": len(raw_response or ""),
-                    "cleaned_response_chars": len(cleaned),
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
-        )
         raise
 
-    _log_extract_run(
-        _with_telemetry_context(
-            {
-                "timestamp": started_at.isoformat(),
-                "stage": "extract",
-                "status": "success",
-                "model": MODEL,
-                "prompt_version": EXTRACT_PROMPT_VERSION,
-                "input_chars": len(raw_text),
-                "raw_response_chars": len(raw_response or ""),
-                "cleaned_response_chars": len(cleaned),
-                "duration_ms": round((time.perf_counter() - started_perf) * 1000, 2),
-                "source_title": (knowledge_map.get("metadata") or {}).get(
-                    "source_title"
-                ),
-                "architecture_type": (knowledge_map.get("metadata") or {}).get(
-                    "architecture_type"
-                ),
-                "difficulty": (knowledge_map.get("metadata") or {}).get("difficulty"),
-                "low_density": (knowledge_map.get("metadata") or {}).get("low_density"),
-                "backbone_count": len(knowledge_map.get("backbone") or []),
-                "cluster_count": len(knowledge_map.get("clusters") or []),
-                "framework_count": len(knowledge_map.get("frameworks") or []),
-                "subnode_count": sum(
-                    len(cluster.get("subnodes") or [])
-                    for cluster in (knowledge_map.get("clusters") or [])
-                    if isinstance(cluster, dict)
-                ),
-            },
-            telemetry_context,
-        )
-    )
     return knowledge_map
 
 
@@ -1028,62 +894,6 @@ def drill_chat(
         "",
     )
 
-    def log_chat_turn(
-        *,
-        status: str,
-        result: dict | None = None,
-        error_type: str | None = None,
-        reason: str | None = None,
-    ) -> None:
-        _log_drill_chat_turn(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "drill_chat_turn",
-                    "status": status,
-                    "concept_id": concept_id,
-                    "node_id": node_id,
-                    "node_type": node_type,
-                    "cluster_id": cluster_id,
-                    "node_label": node_label,
-                    "node_mechanism": node_mechanism,
-                    "session_phase": session_phase,
-                    "session_start_iso": session_start_iso,
-                    "drill_mode": drill_mode,
-                    "re_drill_count_in": re_drill_count,
-                    "probe_count_in": probe_count,
-                    "nodes_drilled_in": nodes_drilled,
-                    "attempt_turn_count_in": attempt_turn_count,
-                    "help_turn_count_in": help_turn_count,
-                    "message_count": len(messages),
-                    "messages": _serialize_drill_messages(messages),
-                    "latest_learner_message": latest_learner_message,
-                    "agent_response": result.get("agent_response") if result else None,
-                    "answer_mode": result.get("answer_mode") if result else None,
-                    "generative_commitment": result.get("generative_commitment")
-                    if result
-                    else None,
-                    "classification": result.get("classification") if result else None,
-                    "routing": result.get("routing") if result else None,
-                    "response_tier": result.get("response_tier") if result else None,
-                    "response_band": result.get("response_band") if result else None,
-                    "score_eligible": result.get("score_eligible") if result else None,
-                    "graph_mutated": result.get("graph_mutated") if result else None,
-                    "session_terminated": result.get("session_terminated")
-                    if result
-                    else None,
-                    "termination_reason": result.get("termination_reason")
-                    if result
-                    else None,
-                    "error_type": error_type,
-                    "reason": reason,
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
-        )
 
     session_time_limit_seconds = get_drill_session_time_limit_seconds()
     if (
@@ -1118,54 +928,6 @@ def drill_chat(
                 "session_terminated": True,
                 "termination_reason": "time_cap",
             }
-            log_chat_turn(status="success", result=result)
-            _log_drill_run(
-                _with_telemetry_context(
-                    {
-                        "timestamp": started_at.isoformat(),
-                        "stage": "drill",
-                        "status": "success",
-                        "model": MODEL,
-                        "prompt_version": DRILL_PROMPT_VERSION,
-                        "concept_id": concept_id,
-                        "node_id": node_id,
-                        "node_type": node_type,
-                        "cluster_id": cluster_id,
-                        "node_label": node_label,
-                        "session_phase": session_phase,
-                        "session_start_iso": session_start_iso,
-                        "message_count": len(messages),
-                        "latest_learner_chars": 0,
-                        "answer_mode": result["answer_mode"],
-                        "score_eligible": result["score_eligible"],
-                        "help_request_reason": result["help_request_reason"],
-                        "probe_count_in": probe_count,
-                        "probe_count_out": result["probe_count"],
-                        "nodes_drilled_in": nodes_drilled,
-                        "nodes_drilled_out": result["nodes_drilled"],
-                        "attempt_turn_count_in": attempt_turn_count,
-                        "attempt_turn_count_out": result["attempt_turn_count"],
-                        "help_turn_count_in": help_turn_count,
-                        "help_turn_count_out": result["help_turn_count"],
-                        "classification": result["classification"],
-                        "routing": result["routing"],
-                        "response_tier": result["response_tier"],
-                        "response_band": result["response_band"],
-                        "tier_reason": result["tier_reason"],
-                        "counted_as_probe": False,
-                        "force_advance_mode": "none",
-                        "graph_mutated": result["graph_mutated"],
-                        "ux_reward_emitted": result["ux_reward_emitted"],
-                        "session_terminated": result["session_terminated"],
-                        "termination_reason": result["termination_reason"],
-                        "agent_response_chars": len(result["agent_response"]),
-                        "duration_ms": round(
-                            (time.perf_counter() - started_perf) * 1000, 2
-                        ),
-                    },
-                    telemetry_context,
-                )
-            )
             return result
 
     client = _get_client(api_key)
@@ -1190,11 +952,6 @@ def drill_chat(
     ).strip()
 
     if session_phase == "turn" and not latest_learner_message:
-        log_chat_turn(
-            status="error",
-            error_type="missing_learner_message",
-            reason="A learner message is required during turn phase.",
-        )
         raise ValueError("A learner message is required during turn phase.")
 
     if session_phase == "init":
@@ -1226,126 +983,12 @@ def drill_chat(
             ),
         )
     except Exception as err:
-        log_chat_turn(
-            status="error",
-            error_type=type(err).__name__,
-            reason=str(err),
-        )
-        _log_drill_run(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "drill",
-                    "status": "error",
-                    "error_type": type(err).__name__,
-                    "reason": str(err),
-                    "model": MODEL,
-                    "prompt_version": DRILL_PROMPT_VERSION,
-                    "concept_id": concept_id,
-                    "node_id": node_id,
-                    "node_type": node_type,
-                    "cluster_id": cluster_id,
-                    "node_label": node_label,
-                    "session_phase": session_phase,
-                    "session_start_iso": session_start_iso,
-                    "message_count": len(messages),
-                    "latest_learner_chars": len(latest_learner_message),
-                    "answer_mode": None,
-                    "score_eligible": False,
-                    "help_request_reason": None,
-                    "probe_count_in": probe_count,
-                    "nodes_drilled_in": nodes_drilled,
-                    "attempt_turn_count_in": attempt_turn_count,
-                    "help_turn_count_in": help_turn_count,
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
-        )
         raise
 
     evaluation = response.parsed
     if not isinstance(evaluation, DrillEvaluation):
-        log_chat_turn(
-            status="error",
-            error_type="invalid_structured_response",
-            reason="Gemini returned an invalid structured drill response.",
-        )
-        _log_drill_run(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "drill",
-                    "status": "error",
-                    "error_type": "invalid_structured_response",
-                    "reason": "Gemini returned an invalid structured drill response.",
-                    "model": MODEL,
-                    "prompt_version": DRILL_PROMPT_VERSION,
-                    "concept_id": concept_id,
-                    "node_id": node_id,
-                    "node_type": node_type,
-                    "cluster_id": cluster_id,
-                    "node_label": node_label,
-                    "session_phase": session_phase,
-                    "session_start_iso": session_start_iso,
-                    "message_count": len(messages),
-                    "latest_learner_chars": len(latest_learner_message),
-                    "answer_mode": None,
-                    "score_eligible": False,
-                    "help_request_reason": None,
-                    "probe_count_in": probe_count,
-                    "nodes_drilled_in": nodes_drilled,
-                    "attempt_turn_count_in": attempt_turn_count,
-                    "help_turn_count_in": help_turn_count,
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
-        )
         raise ValueError("Gemini returned an invalid structured drill response.")
     if not evaluation.agent_response.strip():
-        log_chat_turn(
-            status="error",
-            error_type="empty_agent_response",
-            reason="Gemini returned an empty drill response.",
-        )
-        _log_drill_run(
-            _with_telemetry_context(
-                {
-                    "timestamp": started_at.isoformat(),
-                    "stage": "drill",
-                    "status": "error",
-                    "error_type": "empty_agent_response",
-                    "reason": "Gemini returned an empty drill response.",
-                    "model": MODEL,
-                    "prompt_version": DRILL_PROMPT_VERSION,
-                    "concept_id": concept_id,
-                    "node_id": node_id,
-                    "node_type": node_type,
-                    "cluster_id": cluster_id,
-                    "node_label": node_label,
-                    "session_phase": session_phase,
-                    "session_start_iso": session_start_iso,
-                    "message_count": len(messages),
-                    "latest_learner_chars": len(latest_learner_message),
-                    "answer_mode": None,
-                    "score_eligible": False,
-                    "help_request_reason": None,
-                    "probe_count_in": probe_count,
-                    "nodes_drilled_in": nodes_drilled,
-                    "attempt_turn_count_in": attempt_turn_count,
-                    "help_turn_count_in": help_turn_count,
-                    "duration_ms": round(
-                        (time.perf_counter() - started_perf) * 1000, 2
-                    ),
-                },
-                telemetry_context,
-            )
-        )
         raise ValueError("Gemini returned an empty drill response.")
     evaluation = _normalize_drill_evaluation(
         evaluation,
@@ -1419,51 +1062,4 @@ def drill_chat(
         and result["answer_mode"] == "attempt"
         and result["routing"] in ("PROBE", "SCAFFOLD")
     )
-    _log_drill_run(
-        _with_telemetry_context(
-            {
-                "timestamp": started_at.isoformat(),
-                "stage": "drill",
-                "status": "success",
-                "model": MODEL,
-                "prompt_version": DRILL_PROMPT_VERSION,
-                "concept_id": concept_id,
-                "node_id": node_id,
-                "node_type": node_type,
-                "cluster_id": cluster_id,
-                "node_label": node_label,
-                "session_phase": session_phase,
-                "session_start_iso": session_start_iso,
-                "message_count": len(messages),
-                "latest_learner_chars": len(latest_learner_message),
-                "answer_mode": result["answer_mode"],
-                "score_eligible": result["score_eligible"],
-                "help_request_reason": result["help_request_reason"],
-                "probe_count_in": probe_count,
-                "probe_count_out": result["probe_count"],
-                "nodes_drilled_in": nodes_drilled,
-                "nodes_drilled_out": result["nodes_drilled"],
-                "attempt_turn_count_in": attempt_turn_count,
-                "attempt_turn_count_out": result["attempt_turn_count"],
-                "help_turn_count_in": help_turn_count,
-                "help_turn_count_out": result["help_turn_count"],
-                "classification": result["classification"],
-                "routing": result["routing"],
-                "response_tier": result["response_tier"],
-                "response_band": result["response_band"],
-                "tier_reason": result["tier_reason"],
-                "counted_as_probe": counted_as_probe,
-                "force_advanced": force_advanced,
-                "force_advance_mode": "attempt" if force_advanced else "none",
-                "graph_mutated": result["graph_mutated"],
-                "ux_reward_emitted": result["ux_reward_emitted"],
-                "session_terminated": result["session_terminated"],
-                "termination_reason": result["termination_reason"],
-                "agent_response_chars": len(result["agent_response"]),
-                "duration_ms": round((time.perf_counter() - started_perf) * 1000, 2),
-            },
-            telemetry_context,
-        )
-    )
-    log_chat_turn(status="success", result=result)
     return result

@@ -2,6 +2,17 @@
 
 > **Note for agentic workers:** This is a **strategic roadmap**, not a directly-executable bite-sized plan. Each phase gets its own detailed implementation plan written when picked up (use `superpowers:writing-plans`). Phases must be executed in order — Phase 1 → Phase 5 — because later phases depend on contracts established earlier.
 
+## ⚠️ Update: Analytics Removed (2026-04-27)
+
+The entire analytics surface was torn out in commits `b5ac709` (frontend), `9c973b4` (backend package + endpoints + tests), and `03d416a` (telemetry writers in ai_service.py and main.py) to clear cognitive load before fleshing out the core game loop. Total: ~3,650 LOC removed across 13 deleted files + 6 modified.
+
+**Implications for this roadmap:**
+
+- **Phase 1's `analytics/` package no longer exists.** The "scripts/ → production" rule it established still stands as roadmap doctrine, but the specific package that proved the rule is gone. Re-adding analytics later means re-instrumenting from scratch.
+- **The "Production imports from scripts/" success-metric row is no longer meaningful** (no scripts/ → production smell exists anymore — the script that caused it is also deleted). Treat that row as historical.
+- **Phase 4's reference to `scripts/run_tasting_fixture.py`** (in the "public entrypoints stay stable" section) is unaffected — that script is unrelated to the deleted analytics CLI.
+- **Phase 5's analytics work** (Section 2 of Phase 5) is voided. Telemetry no longer exists; if it returns, that's a fresh design.
+
 **Goal:** Convert the `socratink-app` god-files into small, single-responsibility modules with explicit contracts, while preserving single-repo + no-build-step deploy.
 
 **Architecture:** Browser-native ES modules on the frontend; small typed function boundaries on the backend. No new framework, no bundler, no service split. The unit of decomposition is **responsibility + contract**, not technical layer.

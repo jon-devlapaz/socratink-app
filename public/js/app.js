@@ -9,7 +9,6 @@ import {
 } from './api-client.js?v=1';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
-import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
 import { maybeShowFirstRunWelcome } from './welcome.js?v=5';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
@@ -23,7 +22,6 @@ import {
   addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls
 } from './dom.js';
-import { recordExtractRun, recordDrillRun } from './browser-analytics.js';
 
 const App = (() => {
   const THEME_STORAGE_KEY = 'learnops-theme';
@@ -37,7 +35,6 @@ const App = (() => {
   let repairRepsState = null;
   let themePreference = 'light';
   let currentPrimaryNav = 'nav-dashboard';
-  let learnerAnalyticsDashboard = null;
   let sessionState = getDefaultPhaseBSessionState();
   let drillSessionTimeLimitSeconds = null;
   let firstColdAttemptCreedShownThisSession = false;
@@ -1139,8 +1136,7 @@ const App = (() => {
   }
 
   // User-facing, never echoes raw err.message — auth headers / stack
-  // fragments leak through otherwise, and browser-analytics.js:326 renders
-  // row.reason as a summary string.
+  // fragments leak through otherwise.
   function sanitizeExtractError(err) {
     if (!err) return 'Something went wrong. Try again when ready.';
     const msg = String(err.message || '');
@@ -1528,27 +1524,6 @@ const App = (() => {
             sourceUrl: type === 'url' ? url : null,
             graphData: JSON.stringify(jsonPayload)
           };
-          recordExtractRun({
-            timestamp: extractStartedAt,
-            stage: 'extract',
-            status: 'success',
-            model: 'gemini-2.5-flash',
-            prompt_version: 'extract-system-v1',
-            concept_id: id,
-            source_title: name,
-            content_type: type,
-            input_chars: sourceText.length,
-            duration_ms: durationMs,
-            architecture_type: jsonPayload?.metadata?.architecture_type || 'unknown',
-            difficulty: jsonPayload?.metadata?.difficulty || 'unknown',
-            low_density: jsonPayload?.metadata?.low_density === true,
-            backbone_count: Array.isArray(jsonPayload?.backbone) ? jsonPayload.backbone.length : 0,
-            cluster_count: Array.isArray(jsonPayload?.clusters) ? jsonPayload.clusters.length : 0,
-            subnode_count: Array.isArray(jsonPayload?.clusters)
-              ? jsonPayload.clusters.reduce((sum, cluster) => sum + ((cluster?.subnodes || []).length), 0)
-              : 0,
-            run_mode: 'default',
-          });
           contentStore.set(id, sourceText);
           concepts.push(concept);
           saveConcepts(concepts);
@@ -1560,24 +1535,6 @@ const App = (() => {
         } catch (err) {
           removeOverlay();
           const sanitized = sanitizeExtractError(err);
-          recordExtractRun({
-            timestamp: extractStartedAt,
-            stage: 'extract',
-            status: 'error',
-            model: 'gemini-2.5-flash',
-            prompt_version: 'extract-system-v1',
-            concept_id: id,
-            source_title: name,
-            content_type: type,
-            input_chars: typeof text === 'string' ? text.length : 0,
-            duration_ms: Math.round(performance.now() - extractStartedPerf),
-            error_type: 'request_failed',
-            // USER-VISIBLE per browser-analytics.js:326 (row.reason → summary)
-            reason: sanitized,
-            // Debug-only; never rendered to learner analytics
-            reason_raw: err?.message || null,
-            run_mode: 'default',
-          });
           console.warn('[extract] raw error (console only):', err);
           const bannerSlot = document.querySelector('.creation-dialog-banner-slot');
           if (bannerSlot) {
@@ -1642,7 +1599,6 @@ const App = (() => {
     applyControlsForState(concept.state, concept);
     renderGrid();
     renderConceptList();
-    learnerAnalyticsDashboard?.loadDashboard?.();
     return concept;
   }
 
@@ -2058,10 +2014,8 @@ const App = (() => {
 
     clearSettingsPanel();
     setNavActive('nav-dashboard');
-    const analyticsView = document.getElementById('analytics-view');
     const settingsView = document.getElementById('settings-view');
     if (libraryView) libraryView.classList.remove('visible');
-    if (analyticsView) analyticsView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
@@ -2093,11 +2047,9 @@ const App = (() => {
   function hidePrimaryViews() {
     const heroCard = document.querySelector('.hero-card');
     const libraryView = document.getElementById('library-view');
-    const analyticsView = document.getElementById('analytics-view');
     const settingsView = document.getElementById('settings-view');
     if (heroCard) heroCard.style.display = 'none';
     if (libraryView) libraryView.classList.remove('visible');
-    if (analyticsView) analyticsView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
   }
 
@@ -2133,7 +2085,7 @@ const App = (() => {
 
   function setNavActive(id) {
     currentPrimaryNav = id;
-    ['nav-dashboard', 'nav-library', 'nav-analytics', 'nav-settings'].forEach((navId) => {
+    ['nav-dashboard', 'nav-library', 'nav-settings'].forEach((navId) => {
       const el = document.getElementById(navId);
       if (el) el.classList.toggle('active', navId === currentPrimaryNav);
       
@@ -2313,16 +2265,6 @@ const App = (() => {
     if (window.innerWidth < 900) closeDrawer();
   }
 
-  function showAnalytics() {
-    setNavActive('nav-analytics');
-    teardownMapView();
-    hidePrimaryViews();
-    const analyticsView = document.getElementById('analytics-view');
-    if (analyticsView) analyticsView.classList.add('visible');
-    learnerAnalyticsDashboard?.loadDashboard?.();
-    if (window.innerWidth < 900) closeDrawer();
-  }
-
   function hideLibrary() {
     const libraryView = document.getElementById('library-view');
     if (libraryView) libraryView.classList.remove('visible');
@@ -2398,14 +2340,6 @@ const App = (() => {
   applyThemePreference(themePreference, { persist: false });
   void bootstrapAuthUi();
   void refreshDrawerFooter();
-  learnerAnalyticsDashboard = mountLearnerAnalyticsDashboard({
-    autoLoad: false,
-    onConceptChange: (nextId) => {
-      if (!nextId) return;
-      activateConceptSelection(nextId);
-      setNavActive('nav-analytics');
-    },
-  });
   bindMapModeControls();
   renderGrid();
   renderConceptList();
@@ -3423,30 +3357,6 @@ const App = (() => {
       if (sessionToken !== drillState.sessionToken) {
         return;
       }
-      recordDrillRun({
-        timestamp: turnStartedAt,
-        stage: 'drill',
-        status: 'error',
-        model: 'gemini-2.5-flash',
-        prompt_version: 'drill-system-v1',
-        concept_id: concept.id,
-        node_id: drillState.node.id,
-        node_type: nodeType,
-        cluster_id: clusterId,
-        node_label: nodeLabel,
-        session_phase: sessionPhase,
-        session_start_iso: sessionState.startedAt,
-        message_count: outboundMessages.length,
-        latest_learner_chars: userText ? userText.length : 0,
-        probe_count_in: drillState.probeCount,
-        nodes_drilled_in: getSessionNodeCount(),
-        attempt_turn_count_in: drillState.attemptTurnCount,
-        help_turn_count_in: drillState.helpTurnCount,
-        duration_ms: Math.round(performance.now() - turnStartedPerf),
-        error_type: 'request_failed',
-        reason: err?.message || 'Drill request failed',
-        run_mode: 'default',
-      });
       drillState.pending = false;
       throw err;
     }
@@ -4021,7 +3931,7 @@ const App = (() => {
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
-    showLibrary, hideLibrary, showDashboard, showAnalytics, showSettings,
+    showLibrary, hideLibrary, showDashboard, showSettings,
     importLibraryConcept,
     toggleTheme, runHeroAction
   };

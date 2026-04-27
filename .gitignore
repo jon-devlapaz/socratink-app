@@ -1,5 +1,9 @@
-# Claude Code local settings (machine-specific, not for version control)
-.claude/
+# Claude Code local settings (machine-specific, not for version control).
+# Re-include the directory then ignore its contents so we can whitelist the
+# settings.example.json team-baseline template.
+!.claude/
+.claude/*
+!.claude/settings.example.json
 .playwright-cli/
 .firecrawl/
 
@@ -60,3 +64,4 @@ docs/research/
 docs/design/artboards/platform-grid-loaded-concept-mockups.html
 # Added by code-review-graph
 .code-review-graph/
+docs/code-graph.html
