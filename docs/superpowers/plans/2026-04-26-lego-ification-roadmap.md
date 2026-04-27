@@ -217,6 +217,9 @@ Imports use ad-hoc `?v=N` query strings (`graph-view.js?v=7`, `auth.js?v=2`, `ap
 - 2.1 — ✅ Complete (`68383b1`). Converted `ai_service.js` to ESM; dropped `window.AIService` global; replaced the single call site in `app.js`. Bumped `app.js` cache version 41 → 42.
 - 2.2 — ✅ Complete (`c7858d3`). Dropped unused `window.startSettings`. **Audit was wrong about `SocratinkApp`** — Gemini-verified that `graph-view.js` reads it 17 times via optional chaining; it's the de facto renderer→app intent bridge that Phase 3 formalizes. Both surviving globals (`App`, `SocratinkApp`) now have a documented contract above the assignment with the silent-failure risk called out explicitly. Bumped `app.js` cache version 42 → 43.
 - 2.3 — Begin intra-`app.js` extracts: API client first (cleanest leaf), then persistence, then drill state reducer.
+  - 2.3.1 — ✅ Complete (`dec1509`). Extracted `public/js/api-client.js` (70 LOC) with 5 exports for the socratink backend (`/api/health`, `/api/extract-url`, `/api/repair-reps`, `/api/drill`, `/data/library/${filename}`). Replaced 6 inline `fetch()` call sites in `app.js`. Module is pure — no localStorage/cookie reads. Wikipedia fetches stay inline as a separate micro-phase. Gemini caught a `payload`-vs-`data` variable-name bug in the proposal before execute. `app.js`: 4,063 → 4,054 LOC. Bumped app.js cache version 43 → 44.
+  - 2.3.2 — Persistence (localStorage reads/writes — `concept-storage.js`).
+  - 2.3.3 — Drill state reducer (pure state transitions — `drill-state.js`).
 - 2.4 — DOM/render helpers extract.
 - (Defer: HTML inline-handler cleanup — own micro-phase if pursued.)
 
