@@ -76,6 +76,10 @@ def test_health_endpoint_ok(base_url: str) -> None:
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:
     """Critical IDs are attached to the DOM after a fresh navigation."""
     clean_page.goto(base_url)
+    
+    # Fresh sessions are redirected to /login. Enter as guest to load the app shell.
+    clean_page.locator("#guest-continue-link").click()
+
     # Auto-wait via expect() — Playwright polls for visibility.
     # Drawer is desktop sidebar; bottom-nav is mobile nav. At 1280px viewport
     # at least one of them should be present in the DOM (CSS may hide it).
