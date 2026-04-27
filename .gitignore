@@ -4,6 +4,7 @@
 !.claude/
 .claude/*
 !.claude/settings.example.json
+.kiro/
 .playwright-cli/
 .firecrawl/
 
