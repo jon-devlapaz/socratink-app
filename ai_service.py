@@ -235,18 +235,6 @@ def _log_extract_failure(
         pass
 
 
-def _serialize_drill_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-    serialized: list[dict[str, str]] = []
-    for msg in messages or []:
-        serialized.append(
-            {
-                "role": str(msg.get("role", "unknown"))[:20],
-                "content": str(msg.get("content", "")),
-            }
-        )
-    return serialized
-
-
 def _parse_iso_timestamp(iso_string: str) -> datetime:
     sanitized = iso_string.replace("Z", "+00:00")
     try:
