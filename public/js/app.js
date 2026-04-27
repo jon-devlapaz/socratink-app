@@ -1,5 +1,12 @@
 import { Bus } from './bus.js';
 import { generateKnowledgeMap } from './ai_service.js?v=1';
+import {
+  getHealth,
+  extractUrl,
+  runRepairReps,
+  runDrillTurn,
+  loadLibraryConcept,
+} from './api-client.js?v=1';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
 import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
 import { mountLearnerAnalyticsDashboard } from './learner-analytics.js?v=4';
@@ -44,9 +51,7 @@ const App = (() => {
 
   async function refreshRuntimeConfig() {
     try {
-      const response = await fetch('/api/health');
-      if (!response.ok) return;
-      applyRuntimeConfig(await response.json());
+      applyRuntimeConfig(await getHealth());
     } catch (err) {
       console.warn('Runtime config unavailable.', err);
     }
@@ -1491,13 +1496,7 @@ const App = (() => {
             }
             setOverlayProgress(38, 'Fetching page');
             setMetaStatus('Evaluating source structure...');
-            const response = await fetch('/api/extract-url', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ url })
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(payload.detail || 'Failed to fetch page.');
+            const payload = await extractUrl({ url });
             sourceText = payload.text;
             sourceFilename = payload.title || url;
           }
@@ -2179,9 +2178,7 @@ const App = (() => {
     }
 
     try {
-      const response = await fetch(`/data/library/${filename}`);
-      if (!response.ok) throw new Error('Library concept request failed');
-      const data = await response.json();
+      const data = await loadLibraryConcept(filename);
 
       const newConcept = {
         id: generateId(),
@@ -2897,27 +2894,16 @@ const App = (() => {
     });
 
     try {
-      const response = await fetch('/api/repair-reps', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          concept_id: concept.id,
-          node_id: nodeContext.id,
-          node_label: nodeLabel,
-          knowledge_map: graphData || {},
-          gap_type: nodeData.gap_type || null,
-          gap_description: nodeData.gap_description || null,
-          count: 3,
-          api_key: localStorage.getItem('gemini_key') || undefined,
-        }),
+      const payload = await runRepairReps({
+        concept_id: concept.id,
+        node_id: nodeContext.id,
+        node_label: nodeLabel,
+        knowledge_map: graphData || {},
+        gap_type: nodeData.gap_type || null,
+        gap_description: nodeData.gap_description || null,
+        count: 3,
+        api_key: localStorage.getItem('gemini_key') || undefined,
       });
-
-      if (!response.ok) {
-        const errText = await response.text().catch(() => '');
-        throw new Error(`Repair Reps request failed: ${response.status}: ${errText}`);
-      }
-
-      const payload = await response.json();
       const reps = Array.isArray(payload?.reps) ? payload.reps : [];
       if (reps.length !== 3) {
         throw new Error('Repair Reps returned an incomplete practice set.');
@@ -3332,37 +3318,26 @@ const App = (() => {
     }
 
     try {
-      const response = await fetch('/api/drill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          concept_id: concept.id,
-          node_id: drillState.node.id,
-          node_label: nodeLabel,
-          node_mechanism: drillState.node.detail || '',
-          drill_session_id: drillState.logSessionId,
-          client_turn_index: clientTurnIndex,
-          knowledge_map: knowledgeMap,
-          messages: outboundMessages,
-          session_phase: sessionPhase,
-          drill_mode: drillMode,
-          re_drill_count: reDrillCount,
-          probe_count: drillState.probeCount,
-          nodes_drilled: getSessionNodeCount(),
-          attempt_turn_count: drillState.attemptTurnCount,
-          help_turn_count: drillState.helpTurnCount,
-          session_start_iso: sessionState.startedAt,
-          bypass_session_limits: bypassSessionLimits,
-          api_key: apiKey,
-        }),
+      const data = await runDrillTurn({
+        concept_id: concept.id,
+        node_id: drillState.node.id,
+        node_label: nodeLabel,
+        node_mechanism: drillState.node.detail || '',
+        drill_session_id: drillState.logSessionId,
+        client_turn_index: clientTurnIndex,
+        knowledge_map: knowledgeMap,
+        messages: outboundMessages,
+        session_phase: sessionPhase,
+        drill_mode: drillMode,
+        re_drill_count: reDrillCount,
+        probe_count: drillState.probeCount,
+        nodes_drilled: getSessionNodeCount(),
+        attempt_turn_count: drillState.attemptTurnCount,
+        help_turn_count: drillState.helpTurnCount,
+        session_start_iso: sessionState.startedAt,
+        bypass_session_limits: bypassSessionLimits,
+        api_key: apiKey,
       });
-
-      if (!response.ok) {
-        const err = await response.text().catch(() => '');
-        throw new Error(`Drill request failed: ${response.status}: ${err}`);
-      }
-
-      const data = await response.json();
       console.log(
         `[drill] answer_mode=${data?.answer_mode ?? 'null'} classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`
       );
@@ -3901,9 +3876,7 @@ const App = (() => {
         statusBox.textContent = '';
       }
       try {
-        const response = await fetch('/api/health');
-        if (!response.ok) throw new Error(`Status ${response.status}`);
-        const data = await response.json();
+        const data = await getHealth();
         applyRuntimeConfig(data);
         dot?.classList.add('connected');
         dot?.classList.remove('error');
