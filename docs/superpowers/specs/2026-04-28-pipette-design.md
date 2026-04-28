@@ -218,7 +218,7 @@ docs/pipeline/
 
 The whole `docs/pipeline/` tree is committed to git. It is documentation.
 
-If the user kills a pipeline mid-run, the folder is renamed to `<topic>-aborted/`.
+If the user kills a pipeline mid-run, the folder is renamed to `YYYY-MM-DD-HHMMSS-<topic>-aborted/` (full timestamp preserved per §5.6).
 
 ## 5. Cross-cutting concerns
 
@@ -228,7 +228,7 @@ Each user gate (soft) and automated gate (hard) is a typed hook event with expli
 
 - `approve` — proceed to next step
 - `revise` — return to current step with notes
-- `abort` — kill pipeline, rename folder to `*-aborted/`
+- `abort` — kill pipeline, rename folder to `YYYY-MM-DD-HHMMSS-<topic>-aborted/` (per §5.6)
 
 Hook events emit to `trace.jsonl`.
 
@@ -298,9 +298,14 @@ Any step can raise `NEEDS_RESEARCH` when a load-bearing claim depends on externa
 
 **Step 3 schema integration.** Step 3's verdict gains `NEEDS_RESEARCH` as a third value (alongside `PASS` and `FAIL`); see §3 Step 3 for the full schema. Unlike `FAIL`, `NEEDS_RESEARCH` does not loop back — it pauses, ingests the research, and re-runs Step 3.
 
-**Anti-loop.** A single `_research/<file>.md` can be re-raised at most twice. On the third raise, pipeline aborts with a hard error — that signals the question itself is mis-shaped, not that more research is needed.
+**Anti-loop.** Two compounded caps prevent a single step from looping indefinitely:
 
-**Counter granularity.** The 2-raise cap is per `_research/<file>.md`, not per step. If the same step needs to raise a *different* research question on a subsequent attempt, it writes a new file with a distinct slug — the new file gets its own counter. This prevents a step from repeatedly re-raising the same question while still allowing genuinely new questions. To prevent counter-bypass via slug-juggling, slugs are deterministic from the `research_question` text (e.g., kebab-cased first 8 words); identical questions resolve to the same file.
+- **Per-file cap (2).** A single `_research/<file>.md` can be re-raised at most twice. On the third raise of the same file, pipeline aborts with a hard error.
+- **Per-step cap (3).** Across an entire pipeline run, a single step (e.g., Step 3) can raise `NEEDS_RESEARCH` at most **3 times total**, regardless of whether the questions are the same or different. On the fourth raise from the same step, pipeline aborts with a hard error — even if each individual question has its own file. This defends against the failure mode where an LLM rephrases the same logical question across raises and bypasses the per-file counter via slug variation.
+
+Both caps are tracked in `trace.jsonl` and surfaced in `07-eval.md`.
+
+**Counter granularity.** The per-file counter is keyed on `_research/<file>.md`. Slugs derive deterministically from the `research_question` text (kebab-cased first 8 words after stop-word removal) so semantically-identical questions resolve to the same file. The per-step counter is keyed on the raising step number, independent of slug content — this is the load-bearing defense against slug-juggling. The deterministic-slug heuristic is a best-effort optimization; the per-step cap is the guarantee.
 
 **Resume guard.** `/pipette resume <topic>` requires an active paused pipeline for that topic. If no `_meta/.lock` (see §5.6) names the topic as paused, the command prints `"no paused pipeline for <topic>"` and exits with code 1. Resume never silently starts a fresh run.
 
@@ -310,30 +315,59 @@ Any step can raise `NEEDS_RESEARCH` when a load-bearing claim depends on externa
 
 Pipette runs are mutually exclusive within a repository. Concurrent runs would race on `_meta/UBIQUITOUS_LANGUAGE.md`, `_meta/lessons.md`, the git index during Step 5, and the cross-feature scan at Step 0.
 
-**Lockfile.** On `/pipette` start, pipette acquires `docs/pipeline/_meta/.lock` containing:
+#### Lockfile schema
+
+`docs/pipeline/_meta/.lock` is a YAML file. The orchestrator process is short-lived: a slash command invocation runs to completion, pause, or crash, and exits. The lockfile **persists across orchestrator process lifetimes** — that is the entire point of `state: paused`.
 
 ```yaml
 topic: <topic>
 folder: docs/pipeline/YYYY-MM-DD-HHMMSS-<topic>
-pid: <process id>
-started_at: <ISO 8601>
+pid: <process id of the orchestrator that last wrote this lockfile>
+pid_started_at: <ISO 8601 timestamp of when that PID's process started, captured at lock-acquire time>
+lock_written_at: <ISO 8601 timestamp of last lockfile write>
 state: running | paused
 paused_at_step: <step number, only when state=paused>
+pause_reason: <NEEDS_RESEARCH | gemini_cli_failure | hook_crash | user_initiated, only when state=paused>
 ```
 
-If the lockfile already exists when `/pipette <topic>` is invoked:
-- If `state: running` and the named PID is alive → print `"pipeline already running for <existing-topic> (pid <N>); abort or finish that run first"`, exit 1.
-- If `state: paused` → print `"a paused pipeline exists for <existing-topic>; resume it with /pipette resume <existing-topic> or abort it with /pipette abort <existing-topic>"`, exit 1.
-- If `state: running` but the named PID is dead → assume crash; rename folder to `*-crashed/`, remove lockfile, log to `trace.jsonl`, then proceed with the new run.
+#### Lockfile state machine
 
-The lockfile is released on:
-- Step 7 completion (clean finish)
-- `/pipette abort <topic>` (user-initiated)
-- Crash recovery (next `/pipette` invocation, as above)
+Three valid states the lockfile can be in when `/pipette <topic>` is invoked:
 
-`/pipette resume <topic>` updates the lockfile in place (`state: paused → running`); the lockfile is never released between pause and resume.
+| Lockfile state | PID liveness check | Action |
+|---|---|---|
+| `state: running` | Live AND `pid_started_at` matches process actual start time | "pipeline already running for `<existing-topic>` (pid `<N>`); abort or finish that run first" — exit 1 |
+| `state: running` | Live BUT `pid_started_at` does NOT match process start time | PID was reused by an unrelated process. Treat lockfile as **stale crash**; same handling as next row. |
+| `state: running` | PID dead | Crash. Rename `<folder>/` to `<folder>-crashed/` (preserving the full HHMMSS), append crash record to `trace.jsonl`, remove lockfile, then proceed with the new run. |
+| `state: paused` | (PID liveness not checked — paused means orchestrator has exited cleanly) | "a paused pipeline exists for `<existing-topic>` — resume it with `/pipette resume <existing-topic>` or discard it with `/pipette abort <existing-topic>`" — exit 1. The paused folder is preserved as-is. |
+| (no lockfile) | n/a | No active or paused pipeline. Acquire lockfile with `state: running`, proceed. |
 
-**Why a lockfile, not a queue.** Queueing concurrent runs would let users start a second pipette mid-grill on a related topic — exactly when the first run's eventual `01-grill.md` would have been useful input. Mutual exclusion is the right default; if a second topic needs work, the user finishes or aborts the first run first.
+**PID liveness with reuse defense.** Liveness is `kill -0 <pid>` (or platform equivalent). If alive, also read the process's actual start time (e.g., `ps -o lstart= -p <pid>` on macOS/Linux) and compare to `pid_started_at`. Mismatch → unrelated process reused the PID → treat as stale crash. This closes the OS-PID-reuse hole.
+
+#### Pause / resume / abort lifecycle
+
+| Action | Lockfile transition | Notes |
+|---|---|---|
+| Step transitions to next step | `state: running`, update `lock_written_at` | Heartbeat-style write, every step boundary |
+| Pause (NEEDS_RESEARCH, gemini_cli_failure, hook_crash, user-initiated) | `state: paused`, set `paused_at_step` and `pause_reason`, update `lock_written_at`, **then** orchestrator exits cleanly | The `state: paused` write must complete and fsync before exit. If the orchestrator dies before this write, the next invocation will (correctly) treat it as a crash. |
+| `/pipette resume <topic>` | Read lockfile. Require `state: paused`. Transition `state: paused → running`, update `pid`, `pid_started_at`, `lock_written_at`, write atomically, then continue from `paused_at_step`. | If `state` is anything other than `paused` (e.g., the lockfile is missing or `state: running`), exit 1 with `"no paused pipeline for <topic>"`. Resume never operates on a `running` lockfile and never starts a fresh run. |
+| Step 7 completion | Remove lockfile | Clean finish |
+| `/pipette abort <topic>` | If `state: paused`: rename folder to `<folder>-aborted/` (preserving HHMMSS), append abort record to `trace.jsonl`, remove lockfile. If `state: running` with live matching PID: refuse (`"pipeline is actively running; kill pid <N> first"`). If `state: running` with dead PID or PID-reuse: perform crash recovery (rename to `*-crashed/`) AND remove lockfile in one operation. | Abort is the user's escape hatch and must work in every state. |
+
+#### Folder naming for terminal states
+
+Folders preserve the full timestamp on rename to prevent collisions when the same topic fails repeatedly:
+
+- Aborted: `YYYY-MM-DD-HHMMSS-<topic>-aborted/`
+- Crashed: `YYYY-MM-DD-HHMMSS-<topic>-crashed/`
+
+#### Atomicity
+
+Every lockfile write is atomic: write to `_meta/.lock.tmp`, fsync, rename over `_meta/.lock`. This prevents partial writes from being mistaken for valid state on the next read.
+
+#### Why a lockfile, not a queue
+
+Queueing concurrent runs would let users start a second pipette mid-grill on a related topic — exactly when the first run's eventual `01-grill.md` would have been useful input. Mutual exclusion is the right default; if a second topic needs work, the user finishes or aborts the first run first.
 
 ## 6. Pre-ship preflight
 
