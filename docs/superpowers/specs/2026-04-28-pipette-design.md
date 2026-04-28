@@ -400,7 +400,7 @@ Pipette has hard prerequisites that must be installed and verified *before* the 
 
 If a prerequisite is missing, `pipette doctor` prints the exact install command and aborts. Pipette never silently degrades — a missing prerequisite is a hard error, not a fallback.
 
-After all prerequisites pass, run **Agentproof** (arxiv 2603.20356) against the pipeline graph as a one-time structural check. Agentproof reports that 27% of benchmark agentic workflows have structural defects (dead-end nodes, unreachable exits) and 55% violate human-gate policies. The check is cheap and catches structural bugs before they show up at runtime.
+After all prerequisites pass, run pipette's local pipeline-graph structural validator (`python -m tools.pipette.validate_pipeline_graph tools/pipette/pipeline_graph.json`) as a one-time check. The validator flags: any non-exit node with no outgoing edges, any node unreachable from `start`, any gate node missing an outgoing edge for one of its declared decision labels, and any cycle other than the explicit Step-3 jump-back loops. (The spec previously referenced "Agentproof" / "arxiv 2603.20356"; that reference was based on a misunderstanding of the PyPI `agentproof` package, which is a test-assertion library, not a workflow-graph validator.)
 
 ## 7. Naming conventions
 
