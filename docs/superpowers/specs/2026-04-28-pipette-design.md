@@ -296,3 +296,28 @@ These are not design decisions but implementation details to nail down in the pl
 | — | Reality grounding | code-review-graph MCP at Step 0, threaded into 1/2/3/4 |
 | — | Eval | Objective + self-report at Step 7; gemini grader deferred |
 | — | Name | `pipette` |
+
+## 11. Publish path (v2)
+
+Pipette is intended for public release on GitHub once v1 has been used 5–10 times in this repo and the rough edges have been ground off. This section captures what v2 needs so the work isn't lost; **none of it is in v1's scope**.
+
+### What v2 must add
+
+| Item | Purpose |
+|---|---|
+| `README.md` | What pipette is, why it exists, install steps, dependency list, one-screen example |
+| `LICENSE` (MIT) | Matches mattpocock's `skills` repo and most of the agentic-dev ecosystem |
+| `pipette.config.{json\|yaml}` | Abstracts project-specific values: push target (`no-mistakes` or another remote), smoke-runner path, severity-scale source, code-review-graph MCP location, gemini binary path. Defaults match v1's hard-codes so socratink keeps working. |
+| `examples/` | One full redacted `docs/pipeline/<topic>/` from a real run, showing every artifact a user gets |
+| Dependency-check script | `pipette doctor` — verifies no-mistakes, code-review-graph MCP, gemini CLI, mattpocock's grill-me and ubiquitous-language skills, and superpowers plugin are all installed and reachable |
+| Compatibility note | Pipette assumes Claude Code as the host. Cross-host (Codex / Gemini CLI / Cursor) is out of scope; document the assumption explicitly. |
+
+### What stays out of v2
+
+- **Multi-repo orchestration.** Each repo runs its own pipette.
+- **Cloud / async execution.** Same reason as in v1 (§2 non-goals).
+- **Vendored copies of dependencies.** Pipette installs alongside its dependencies, never bundles them.
+
+### Migration discipline
+
+When promoting v1 → v2, the only code-touching change inside socratink-app should be: replace hard-coded paths with reads from `pipette.config.*`. No behavior change. The migration is a pure refactor; the config file's defaults preserve exact v1 behavior.
