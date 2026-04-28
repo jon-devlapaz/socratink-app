@@ -24,6 +24,15 @@ _PER_FILE_CAP = 2
 _PER_STEP_CAP = 3
 
 
+def _fmt_step(step: float | int) -> float | int:
+    """Normalize float steps to int when whole (1.0 → 1, 1.5 → 1.5).
+    Keeps file names consistent regardless of whether step was typed
+    as int or float by the caller / argparse type=float."""
+    if isinstance(step, float) and step == int(step):
+        return int(step)
+    return step
+
+
 def derive_slug(question: str) -> str:
     """First 8 content words after stop-word removal, kebab-cased."""
     tokens = _NON_ALNUM.sub(" ", question.lower()).split()
@@ -46,6 +55,7 @@ def _bump_caps(folder: Path, step: float | int, file_slug: str) -> tuple[int, in
     caps = cur.get("research_caps") or {"per_step": {}, "per_file": {}}
     per_step = caps.setdefault("per_step", {})
     per_file = caps.setdefault("per_file", {})
+    step = _fmt_step(step)
     file_key = f"{step}-{file_slug}.md"
     new_file = per_file.get(file_key, 0) + 1
     new_step = per_step.get(str(step), 0) + 1
@@ -64,6 +74,7 @@ def _bump_caps(folder: Path, step: float | int, file_slug: str) -> tuple[int, in
 
 
 def write_brief(*, folder: Path, step: float | int, question: str, why: str) -> Path:
+    step = _fmt_step(step)
     s = derive_slug(question)
     _bump_caps(folder, step, s)
     rdir = folder / "_research"
@@ -92,6 +103,7 @@ def write_brief(*, folder: Path, step: float | int, question: str, why: str) -> 
 
 def write_findings(*, folder: Path, step: float | int, question: str, findings_text: str) -> Path:
     """User pastes back research findings; appended to the same file."""
+    step = _fmt_step(step)
     s = derive_slug(question)
     target = folder / "_research" / f"{step}-{s}.md"
     if not target.exists():

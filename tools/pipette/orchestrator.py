@@ -129,7 +129,9 @@ def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/."""
     from shutil import move
     ts = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
-    arch = folder / "_attempts" / f"{jump_back_to}-{ts}"
+    # Normalize float steps to int when whole (1.0 → 1, 1.5 → 1.5) for tidy dir names.
+    step_label = int(jump_back_to) if jump_back_to == int(jump_back_to) else jump_back_to
+    arch = folder / "_attempts" / f"{step_label}-{ts}"
     arch.mkdir(parents=True)
     affected = {
         1.0: ["01-grill.md", "01b-glossary-delta.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
