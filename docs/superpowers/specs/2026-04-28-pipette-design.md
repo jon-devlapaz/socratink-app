@@ -396,7 +396,7 @@ Pipette has hard prerequisites that must be installed and verified *before* the 
 | `superpowers` plugin installed | Steps 4–5 | Plugin list includes it |
 | `SubagentStop` agent-handler hook installed in `.claude/settings.json` | Step 5 deterministic gate | Settings reads back the hook |
 | Excalidraw MCP installed (only if user opts in at Step 2) | Step 2 escalation path | Conditional check |
-| Agentproof installed and runnable | Pre-ship structural check (below) | `agentproof --version` returns 0 |
+| Local pipeline-graph structural validator importable | Pre-ship structural check (below) | `python -c "from tools.pipette import validate_pipeline_graph"` exits 0 |
 
 If a prerequisite is missing, `pipette doctor` prints the exact install command and aborts. Pipette never silently degrades — a missing prerequisite is a hard error, not a fallback.
 
