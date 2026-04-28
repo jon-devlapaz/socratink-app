@@ -3,6 +3,7 @@
 #
 # Usage:
 #   bash scripts/qa-smoke.sh                     # local (http://localhost:8000)
+#   bash scripts/qa-smoke.sh local               # local (http://localhost:8000) — explicit form
 #   bash scripts/qa-smoke.sh live                # live (https://app.socratink.ai)
 #   bash scripts/qa-smoke.sh https://custom-url.com
 #   SOCRATINK_BASE_URL=... bash scripts/qa-smoke.sh
