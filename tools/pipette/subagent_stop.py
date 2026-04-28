@@ -295,10 +295,19 @@ def _check_llm_review(folder: Path, worktree: Path, task_id: str | None, pre_dis
             prompt = prompt + "\n\n[retry] missing verdict; emit canonical schema.\n" + last_stdout
             continue
         verdict = str(parsed.get("verdict", "")).lower()
-        critical = parsed.get("critical_findings") or []
-        if verdict == "deny" or (isinstance(critical, list) and len(critical) > 0):
+        critical = parsed.get("critical_findings")
+        if not isinstance(critical, list):
+            # Schema violation: critical_findings must be a list (even if empty).
+            prompt = prompt + f"\n\n[retry] critical_findings must be a list; got {type(critical).__name__}.\n" + last_stdout
+            continue
+        if verdict == "deny" or len(critical) > 0:
             first = critical[0] if critical else {"claim": "verdict: deny w/ no findings list"}
             return False, f"LLM review Critical: {first.get('claim', '<no claim>')}"
+        if verdict != "allow":
+            # Unrecognized verdict ("maybe", "lgtm", "pass", etc.). Treat as
+            # schema violation and retry — never fall through to allow.
+            prompt = prompt + f"\n\n[retry] verdict must be exactly 'allow' or 'deny'; got {verdict!r}.\n" + last_stdout
+            continue
         return True, "LLM review ok"
     return False, f"fail-closed: LLM review YAML invalid 4x; last stdout: {last_stdout[:120]!r}"
 

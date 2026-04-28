@@ -161,6 +161,40 @@ def test_gemini_unavailable_denies_fail_closed(tmp_path: Path):
     assert "fail-closed" in out["reason"].lower()
     assert "gemini" in out["reason"].lower()
 
+def test_unrecognized_verdict_string_does_not_bypass(tmp_path: Path):
+    """Codex Phase-C review caught: any LLM output that parses as YAML+dict+has-`verdict`
+    but doesn't say `deny` was treated as `allow`. e.g. `verdict: maybe` would silently
+    bypass the gate. Must retry on unrecognized verdict, then fail-closed deny after
+    retries exhausted."""
+    pipeline, folder, lock = _setup_pipeline(tmp_path)
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    _init_git_worktree(wt, commits=["test: t", "feat: x"])
+    (folder / "04-plan.md").write_text("plan body")
+    (folder / "current_task.json").write_text(json.dumps({"task_id": "t-bypass", "coverage": 0.85}))
+    # Fake gemini emits a parseable but invalid verdict — every retry returns the same
+    # garbage so eventually we exhaust retries and fail-closed deny.
+    fake = _make_fake_gemini(tmp_path, stdout="verdict: maybe\ncritical_findings: []\n")
+    rc, out = _run(cwd=wt, gemini_bin=fake, lock_path=lock)
+    assert rc == 0 and out["permissionDecision"] == "deny"
+    assert "fail-closed" in out["reason"].lower() or "llm review yaml invalid" in out["reason"].lower()
+
+
+def test_critical_findings_not_a_list_does_not_bypass(tmp_path: Path):
+    """Sibling defect of the verdict-string case. critical_findings: 'broken'
+    (a string, not a list) used to evaluate `len(critical) > 0` truthy via the
+    string's len, but the schema requires a list. Must retry."""
+    pipeline, folder, lock = _setup_pipeline(tmp_path)
+    wt = tmp_path / "wt"
+    wt.mkdir()
+    _init_git_worktree(wt, commits=["test: t", "feat: x"])
+    (folder / "04-plan.md").write_text("plan body")
+    (folder / "current_task.json").write_text(json.dumps({"task_id": "t-list", "coverage": 0.85}))
+    fake = _make_fake_gemini(tmp_path, stdout='verdict: allow\ncritical_findings: "not a list"\n')
+    rc, out = _run(cwd=wt, gemini_bin=fake, lock_path=lock)
+    assert rc == 0 and out["permissionDecision"] == "deny"
+
+
 def test_writes_decision_to_trace(tmp_path: Path):
     """Trace event written even when the hook denies (so orchestrator can read it)."""
     pipeline, folder, lock = _setup_pipeline(tmp_path)
