@@ -4,7 +4,6 @@ import logging
 import os
 import re
 import socket
-from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse

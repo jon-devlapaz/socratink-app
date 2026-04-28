@@ -2,7 +2,6 @@
 
 import base64
 import hashlib
-import re
 import unittest
 
 from auth.pkce import challenge_from_verifier, generate_verifier

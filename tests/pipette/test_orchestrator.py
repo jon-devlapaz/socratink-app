@@ -1,8 +1,6 @@
 # tests/pipette/test_orchestrator.py
-import os
-import yaml
 from pathlib import Path
-from tools.pipette.orchestrator import start, resume_run, abort_run, lock_status, archive_for_loop_back
+from tools.pipette.orchestrator import start, resume_run, abort_run, archive_for_loop_back
 
 def test_start_creates_folder_and_lock(tmp_path: Path, capsys):
     rc = start(topic="add tile drag", root=tmp_path / "pipeline")

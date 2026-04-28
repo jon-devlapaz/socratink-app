@@ -463,7 +463,7 @@ ADMIN_TODO_HTML = r"""<!doctype html>
 <body>
 <header>
   <span class="kicker">tink todo</span>
-  <span class="path">/Users/jondev/dev/socratink/todo.md</span>
+  <span class="path">{{TINK_TODO_PATH}}</span>
   <span class="mtime" id="mtime"></span>
   <span class="status" id="status"></span>
   <button id="reload" title="Re-read the file from disk">reload</button>

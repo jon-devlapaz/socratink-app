@@ -34,7 +34,9 @@ from .todo_parser import (
 logger = logging.getLogger(__name__)
 
 ADMIN_EMAIL = "jonathan10620@gmail.com"
-TINK_TODO_PATH = Path("/Users/jondev/dev/socratink/todo.md")
+# Default path for local dev, but configurable for other environments.
+DEFAULT_TODO_PATH = "/Users/jondev/dev/socratink/todo.md"
+TINK_TODO_PATH = Path(os.getenv("TINK_TODO_PATH", DEFAULT_TODO_PATH))
 
 admin_router = APIRouter()
 
@@ -120,7 +122,8 @@ class EditRequest(BaseModel):
 @admin_router.get("/admin/todo", response_class=HTMLResponse)
 def admin_todo_page(request: Request):
     _require_admin(request)
-    return HTMLResponse(ADMIN_TODO_HTML)
+    html = ADMIN_TODO_HTML.replace("{{TINK_TODO_PATH}}", str(TINK_TODO_PATH))
+    return HTMLResponse(html)
 
 
 @admin_router.get("/api/admin/todo")

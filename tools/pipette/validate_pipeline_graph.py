@@ -20,7 +20,6 @@ Checks:
 from __future__ import annotations
 import json
 from pathlib import Path
-from typing import Iterable
 
 GATE_TYPES = {"user_gate", "automated_gate"}
 EXIT_TYPES = {"exit"}

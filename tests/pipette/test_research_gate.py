@@ -52,4 +52,4 @@ def test_caps_are_persisted_in_lockfile(tmp_path: Path):
     write_brief(folder=folder, step=3, question="Foo", why="x")
     lock = yaml.safe_load((tmp_path / "pipeline" / "_meta" / ".lock").read_text())
     assert lock["research_caps"]["per_step"]["3"] == 1
-    assert lock["research_caps"]["per_file"][f"3-foo.md"] == 1
+    assert lock["research_caps"]["per_file"]["3-foo.md"] == 1
