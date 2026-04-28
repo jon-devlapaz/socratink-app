@@ -1,8 +1,5 @@
 # tests/pipette/test_doctor.py
-import subprocess
-import sys
-from unittest.mock import patch
-from tools.pipette.doctor import Check, run_checks, FIX_INSTRUCTIONS
+from tools.pipette.doctor import Check, run_checks
 
 def test_check_passes_when_command_succeeds():
     c = Check(name="x", verify=lambda: (True, ""), fix="run x")

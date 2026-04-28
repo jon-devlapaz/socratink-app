@@ -59,17 +59,29 @@ export async function logout() {
   return response.json();
 }
 
+// Admin Surface gate: server-side check at /admin/todo is the canonical
+// authority. This client-side comparison only decides whether to RENDER
+// the link; a wrong email here just hides a button (and the server would
+// 404 anyway).
+const ADMIN_EMAIL = 'jonathan10620@gmail.com';
+
 function applyAuthUi(session) {
   const controls = document.getElementById('auth-controls');
   const loginLink = document.getElementById('auth-login-link');
   const logoutBtn = document.getElementById('auth-logout-btn');
   const status = document.getElementById('auth-status');
+  const adminLink = document.getElementById('auth-admin-todo-link');
   if (!controls || !loginLink || !logoutBtn || !status) return;
 
   controls.hidden = false;
   loginLink.href = buildLoginHref();
   loginLink.textContent = 'Save & Sync';
   logoutBtn.textContent = 'Log Out';
+
+  const isAdmin =
+    session?.authenticated &&
+    session.user?.email?.toLowerCase() === ADMIN_EMAIL;
+  if (adminLink) adminLink.hidden = !isAdmin;
 
   if (session.authenticated && session.user) {
     const label = session.user.first_name || session.user.email || 'Signed in';

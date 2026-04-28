@@ -1,7 +1,7 @@
 # tools/pipette/doctor.py
 """pipette doctor — preflight per §6 of the spec."""
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import shutil
 import subprocess
 import sys

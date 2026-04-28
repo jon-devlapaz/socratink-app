@@ -5,7 +5,6 @@ import pytest
 from tools.pipette.gemini_picker import (
     invoke_gemini, GeminiYamlInvalidAfterRetries, GeminiProcessFailure,
 )
-from tools.pipette.sanity.schema import Verdict
 
 VALID_VERDICT_YAML = """
 verdict: PASS

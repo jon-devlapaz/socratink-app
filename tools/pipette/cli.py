@@ -94,7 +94,7 @@ def _build_parser() -> argparse.ArgumentParser:
     al.add_argument("--folder", required=True)
     al.add_argument("--jump-back-to", type=float, required=True, choices=[1, 2])
 
-    vf = sub.add_parser("verifier-filter", help="reads a ReviewerOutput JSON from stdin, applies 0.8 confidence filter, prints filtered JSON")
+    sub.add_parser("verifier-filter", help="reads a ReviewerOutput JSON from stdin, applies 0.8 confidence filter, prints filtered JSON")
 
     pj = sub.add_parser("parse-jump", help="strict regex validator for `--jump-to N` chat input")
     pj.add_argument("input", help="raw chat input string to validate")
@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
             # PyYAML's safe_load handles JSON natively (JSON is a YAML subset).
             data = yaml.safe_load(Path(args.brief_file).read_text())
             if not isinstance(data, dict) or "question" not in data or "why_needed" not in data:
-                print(f"pipette: --brief-file must contain `question` and `why_needed` keys", file=sys.stderr)
+                print("pipette: --brief-file must contain `question` and `why_needed` keys", file=sys.stderr)
                 return 2
             question, why = data["question"], data["why_needed"]
         else:

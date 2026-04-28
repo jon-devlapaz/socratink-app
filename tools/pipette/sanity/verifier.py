@@ -6,7 +6,6 @@
      re-scored output.
 """
 from __future__ import annotations
-import json
 from pathlib import Path
 from tools.pipette.sanity.schema import Finding, ReviewerOutput
 

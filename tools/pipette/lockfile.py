@@ -23,7 +23,7 @@ import secrets
 from typing import Any
 import yaml
 
-from tools.pipette.folder import rename_to_crashed, rename_to_aborted
+from tools.pipette.folder import rename_to_aborted
 
 
 class LockError(Exception):
