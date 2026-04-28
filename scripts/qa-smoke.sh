@@ -19,20 +19,21 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# 1. Resolve target URL: 'local', 'live', or explicit URL.
-INPUT="${1:-local}"
-
-if [ "$INPUT" = "local" ]; then
-    TARGET="http://localhost:8000"
-elif [ "$INPUT" = "live" ]; then
-    TARGET="https://app.socratink.ai"
+# 1. Resolve target URL: positional arg > SOCRATINK_BASE_URL env var > local default.
+if [ $# -ge 1 ]; then
+    INPUT="$1"
+    if [ "$INPUT" = "local" ]; then
+        TARGET="http://localhost:8000"
+    elif [ "$INPUT" = "live" ]; then
+        TARGET="https://app.socratink.ai"
+    else
+        # Allow passing an explicit URL as a fallback
+        TARGET="$INPUT"
+    fi
 else
-    # Allow passing an explicit URL as a fallback
-    TARGET="$INPUT"
+    TARGET="${SOCRATINK_BASE_URL:-http://localhost:8000}"
 fi
 
-# Override with SOCRATINK_BASE_URL env var if it's set
-TARGET="${SOCRATINK_BASE_URL:-$TARGET}"
 export SOCRATINK_BASE_URL="$TARGET"
 
 echo "[qa-smoke] target: $SOCRATINK_BASE_URL"

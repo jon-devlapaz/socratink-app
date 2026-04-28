@@ -73,12 +73,15 @@ def test_health_endpoint_ok(base_url: str) -> None:
 
 # --- 2. Homepage renders critical DOM ------------------------------------
 
+def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
+    """Navigate to base_url and bypass the /login redirect via the guest link."""
+    page.goto(base_url)
+    page.locator("#guest-continue-link").click()
+
+
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:
     """Critical IDs are attached to the DOM after a fresh navigation."""
-    clean_page.goto(base_url)
-    
-    # Fresh sessions are redirected to /login. Enter as guest to load the app shell.
-    clean_page.locator("#guest-continue-link").click()
+    _enter_app_shell_as_guest(clean_page, base_url)
 
     # Auto-wait via expect() — Playwright polls for visibility.
     # Drawer is desktop sidebar; bottom-nav is mobile nav. At 1280px viewport
@@ -101,7 +104,7 @@ def test_no_console_errors_on_first_paint(
     errors (analytics, fonts, browser extensions) are filtered out by
     the listener — only same-origin error-level messages count.
     """
-    clean_page.goto(base_url)
+    _enter_app_shell_as_guest(clean_page, base_url)
     # Settle: give the page a beat to finish any deferred error throws.
     clean_page.wait_for_load_state("networkidle")
 
@@ -126,7 +129,7 @@ def test_no_failed_critical_asset_requests(
     listener. Specific paths can be allow-listed via EXPECTED_404_PATHS in
     conftest.py.
     """
-    clean_page.goto(base_url)
+    _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.wait_for_load_state("networkidle")
 
     failed = captured["failed_requests"]
@@ -150,8 +153,8 @@ def test_theme_preloader_resilient_on_blank_localstorage(
     apply default light mode, and produce zero console errors. The IIFE has
     a try/catch but should never enter the catch on blank state.
     """
-    # clean_page already cleared storage. Navigate again to re-run the IIFE.
-    clean_page.goto(base_url)
+    # clean_page already cleared storage. Enter the app shell so the IIFE runs.
+    _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.wait_for_load_state("networkidle")
 
     errors = captured["console_errors"]
