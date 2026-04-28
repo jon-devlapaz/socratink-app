@@ -59,6 +59,10 @@ Rules:
 
 Project skills (`.claude/skills/`): `review-changes`, `explore-codebase`, `debug-issue`, `refactor-safely`. Runbook: `docs/code-review-graph-sop.md`.
 
+## /pipette
+
+User-invokable heavy-planning pipeline. Read `docs/superpowers/specs/2026-04-28-pipette-design.md` and `docs/superpowers/plans/2026-04-28-pipette.md` before invoking. `/pipette doctor` validates prerequisites; `/pipette <topic>` runs Steps −1→7 with deterministic gates and per-feature artifacts under `docs/pipeline/`. Pause/resume via `/pipette resume <topic>`; abort via `/pipette abort <topic>`.
+
 ## QA: Browser Smoke
 
 Load-bearing deploy verification. "Pushed to main" ≠ "verified."
