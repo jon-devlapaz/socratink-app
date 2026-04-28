@@ -56,6 +56,45 @@ What NOT to flag:
   those landed real fixes
 - Anything addressed in the 28 prior gemini rounds + ChatGPT audit
 
+## Documented deviations from plan-verbatim (real plan defects fixed mid-implementation)
+
+These changes deviate from the plan's literal text but are correct fixes to
+plan defects discovered during implementation. **Do NOT flag these.**
+
+1. **C3 — `test_concurrent_acquisition_only_one_wins` subprocess `-c` string.**
+   The plan's test joined statements with `;` including before a `try:` block,
+   which is a Python SyntaxError in `-c` mode. Implementer joined with `\n` so
+   the try/except parses correctly. Test semantics are identical (two procs
+   race, exactly one exits 0 and one exits 2).
+
+2. **C4 — doctor subparser added `description=` arg.** The plan's `_build_parser()`
+   only set `help=` on the doctor subparser. The test
+   `test_doctor_subcommand_exists` asserts `"preflight" in r.stdout.lower()`
+   when running `doctor --help` — but argparse's `--help` shows the
+   `description=` field, not `help=`. Implementer added `description=` so the
+   "preflight" string appears in `doctor --help` output as the test requires.
+
+3. **C5 — `test_start_refuses_when_running` capsys double-call.** The plan's
+   test had `assert "already running" in capsys.readouterr().err.lower()` AND
+   a separate `capsys.readouterr()` call earlier; the second drains the
+   buffer so the first returns empty. Implementer captured to a local
+   variable and asserted "running" in stderr (the broader match preserves
+   the original test author's intent without the double-drain bug).
+
+4. **C5 — orchestrator stub expanded from 4 functions to 8 in C4.** The plan's
+   stub at C4 had only `start, resume_run, abort_run, lock_status`, but the
+   CLI lazy-imports more (`recover_run, pause_run, finish_run,
+   archive_for_loop_back`). Implementer added the stubs so all CLI
+   subcommands resolve. C5 then replaced wholesale with the full
+   implementation. (Same total functions; just declared earlier.)
+
+5. **Lockfile race fix (commit `0e9aa82`).** Was already mentioned above —
+   the `acquire()` function now handles a concurrently-just-created-but-not-
+   yet-written lockfile by treating None/non-dict from `yaml.safe_load` as
+   "concurrent in flight" and falling through to `O_EXCL` (which loses the
+   race and raises `LockHeld`). Surfaced by 2/5 flapping on
+   `test_concurrent_acquisition_only_one_wins`; 10/10 after fix.
+
 ## Required output
 
 Emit ONE YAML object and nothing else:
