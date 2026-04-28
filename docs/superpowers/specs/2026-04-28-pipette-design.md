@@ -363,7 +363,19 @@ Folders preserve the full timestamp on rename to prevent collisions when the sam
 
 #### Atomicity
 
-Every lockfile write is atomic: write to `_meta/.lock.tmp`, fsync, rename over `_meta/.lock`. This prevents partial writes from being mistaken for valid state on the next read.
+Lockfile manipulation distinguishes **initial acquisition** (must be exclusive) from **state updates** (the lock is already held).
+
+**Initial acquisition.** Use atomic create-or-fail to prevent two concurrent `/pipette` invocations from racing on the empty-lockfile case:
+
+- Open `_meta/.lock` with `O_CREAT | O_EXCL | O_WRONLY` (or equivalent — `mkdir` of a sentinel directory works as a portable fallback). Exactly one caller wins; the other receives `EEXIST` and falls into the "lockfile exists" branch of the state machine table above.
+- Write the initial YAML, fsync, close. The lock is held atomically from `O_EXCL` success — the rename pattern is **not** used for acquisition.
+
+**State updates while holding the lock.** Use per-process temp files to avoid two unrelated callers (e.g., a resume in one terminal racing the orchestrator's own heartbeat write — should never happen under mutual exclusion, but defense-in-depth is cheap):
+
+- Write to `_meta/.lock.<pid>.<rand>.tmp` (PID + random suffix), fsync, then `rename()` over `_meta/.lock`. POSIX `rename()` is atomic on the same filesystem.
+- Never write to a static `.lock.tmp` filename — that re-introduces the TOCTOU race the `O_EXCL` step was designed to prevent.
+
+**Filesystem caveat.** Pipette assumes a POSIX local filesystem (APFS, ext4, btrfs). On NFS, FUSE, or filesystems without reliable `O_EXCL` semantics, lockfile mutual exclusion is not guaranteed; pipette must detect this at `pipette doctor` and refuse to run. Detection: attempt `O_EXCL` create on a sentinel file in `_meta/.lock-test`, then verify a second `O_EXCL` create on the same path fails synchronously.
 
 #### Why a lockfile, not a queue
 
