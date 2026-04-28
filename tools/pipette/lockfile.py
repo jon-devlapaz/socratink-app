@@ -87,7 +87,21 @@ def acquire(lock_path: Path, *, topic: str, folder: Path) -> None:
         raise FilesystemUnsupported(f"O_EXCL not reliable on {meta}; refuse to run")
 
     if lock_path.exists():
-        existing = yaml.safe_load(lock_path.read_text())
+        # Race-safe read: a concurrent acquirer may have just created the file
+        # via O_EXCL but not yet written its YAML body. yaml.safe_load on an
+        # empty or partial file returns None — treat as "concurrent in flight"
+        # and fall through to the O_EXCL attempt below, which will lose the
+        # race and raise FileExistsError → LockHeld with a clear message.
+        try:
+            existing = yaml.safe_load(lock_path.read_text())
+        except yaml.YAMLError:
+            existing = None
+        if not isinstance(existing, dict):
+            existing = None
+    else:
+        existing = None
+
+    if existing is not None:
         state = existing.get("state")
         existing_topic = existing.get("topic", "<unknown>")
         if state == "paused":
@@ -112,6 +126,9 @@ def acquire(lock_path: Path, *, topic: str, folder: Path) -> None:
                 f"a running pipeline lock exists for {existing_topic!r}; "
                 f"finish, pause, or abort that run first{stale_hint}"
             )
+        # Any other `state` value (or None): fall through to O_EXCL.
+        # The O_EXCL attempt will FAIL because the file exists, raising
+        # LockHeld with a "concurrent acquisition" message.
 
     # Atomic acquire — exactly one caller wins on race.
     # The earlier `lock_path.exists()` check is best-effort (gives nicer error
