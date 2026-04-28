@@ -98,24 +98,43 @@ def validate(graph_path: Path) -> list[str]:
     return errs
 
 
-def _find_cycles(nodes: dict, outgoing: dict[str, list[dict]]) -> Iterable[list[str]]:
-    """DFS to find simple cycles in the post-filter graph."""
+def _find_cycles(nodes: dict, outgoing: dict[str, list[dict]]) -> list[list[str]]:
+    """Recursive DFS to find simple cycles in the post-filter graph.
+
+    Tri-color DFS: GRAY = on current recursion path, BLACK = fully explored.
+    A back-edge to a GRAY node is a cycle.
+
+    A previous iterative draft marked nodes BLACK immediately after pushing
+    children — before those children were popped — so cycles through nodes
+    reachable from multiple paths went undetected (e.g., a→b→a where `a` is
+    also reachable directly from start). Codex Phase-S review caught this;
+    the recursive form preserves GRAY for the duration of child exploration.
+    """
     WHITE, GRAY, BLACK = 0, 1, 2
     color = {nid: WHITE for nid in nodes}
-    stack: list[tuple[str, list[str]]] = [("start", ["start"])] if "start" in nodes else []
-    while stack:
-        cur, path = stack.pop()
-        if color[cur] == BLACK:
-            continue
+    found: list[list[str]] = []
+
+    def dfs(cur: str, path: list[str]) -> None:
         color[cur] = GRAY
         for e in outgoing.get(cur, []):
             nxt = e["to"]
-            if color[nxt] == GRAY and nxt in path:
+            if nxt not in color:
+                continue  # edge points at unknown node; reachability check covers it
+            if color[nxt] == GRAY:
                 idx = path.index(nxt)
-                yield path[idx:] + [nxt]
+                found.append(path[idx:] + [nxt])
             elif color[nxt] == WHITE:
-                stack.append((nxt, path + [nxt]))
+                dfs(nxt, path + [nxt])
         color[cur] = BLACK
+
+    if "start" in nodes:
+        dfs("start", ["start"])
+    # Cover disconnected components — reachability check flags them as
+    # unreachable, but they may still contain cycles worth reporting.
+    for nid in nodes:
+        if color[nid] == WHITE:
+            dfs(nid, [nid])
+    return found
 
 
 if __name__ == "__main__":
