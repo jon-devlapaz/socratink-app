@@ -74,9 +74,16 @@ def test_health_endpoint_ok(base_url: str) -> None:
 # --- 2. Homepage renders critical DOM ------------------------------------
 
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
-    """Navigate to base_url and bypass the /login redirect via the guest link."""
+    """Navigate to base_url and bypass the /login redirect via the guest link.
+
+    On Vercel, static `public/index.html` takes priority over the `/api`
+    rewrite, so `/` serves the app shell directly and the FastAPI
+    require_login_or_guest_entry redirect never fires. Locally (uvicorn),
+    `/` redirects to `/login` where the guest-continue link must be clicked.
+    """
     page.goto(base_url)
-    page.locator("#guest-continue-link").click()
+    if "/login" in page.url:
+        page.locator("#guest-continue-link").click()
 
 
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:

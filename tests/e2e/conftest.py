@@ -31,7 +31,13 @@ CONSOLE_ERROR_ALLOW_LIST: tuple[re.Pattern[str], ...] = ()
 
 # URLs we expect to legitimately 404 in some environments (e.g. favicon when
 # the brand asset isn't present). Keep specific.
-EXPECTED_404_PATHS: tuple[str, ...] = ()
+#
+# /_vercel/speed-insights/script.js is injected by Vercel in production but is
+# absent on local uvicorn — both the request failure and the resulting console
+# "Failed to load resource" error are expected outside Vercel.
+EXPECTED_404_PATHS: tuple[str, ...] = (
+    "/_vercel/speed-insights/script.js",
+)
 
 
 @pytest.fixture(scope="session")
@@ -88,6 +94,8 @@ def captured(
         location = msg.location or {}
         loc_url = location.get("url", "") if isinstance(location, dict) else ""
         if loc_url and not same_origin(loc_url):
+            return
+        if loc_url and urlparse(loc_url).path in EXPECTED_404_PATHS:
             return
         console_errors.append(msg)
 
