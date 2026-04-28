@@ -30,6 +30,7 @@ Test ordering note
 Tests run in source order. `test_health_endpoint_ok` is intentionally first
 to absorb any serverless cold-start latency before the browser tests run.
 """
+
 from __future__ import annotations
 
 import time
@@ -41,6 +42,7 @@ from playwright.sync_api import Page, expect
 
 
 # --- 1. Health check (also serves as serverless warm-up) -----------------
+
 
 def test_health_endpoint_ok(base_url: str) -> None:
     """GET /api/health returns the expected shape. 3 retries with backoff."""
@@ -73,6 +75,7 @@ def test_health_endpoint_ok(base_url: str) -> None:
 
 # --- 2. Homepage renders critical DOM ------------------------------------
 
+
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     """Navigate to base_url and bypass the /login redirect via the guest link.
 
@@ -102,6 +105,7 @@ def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> No
 
 # --- 3. No console errors on first paint ---------------------------------
 
+
 def test_no_console_errors_on_first_paint(
     clean_page: Page, base_url: str, captured: dict
 ) -> None:
@@ -117,15 +121,14 @@ def test_no_console_errors_on_first_paint(
 
     errors = captured["console_errors"]
     if errors:
-        rendered = "\n".join(
-            f"  - {m.text} (at {m.location})" for m in errors
-        )
+        rendered = "\n".join(f"  - {m.text} (at {m.location})" for m in errors)
         pytest.fail(
             f"{len(errors)} same-origin console.error(s) during first paint:\n{rendered}"
         )
 
 
 # --- 4. No failed same-origin asset requests -----------------------------
+
 
 def test_no_failed_critical_asset_requests(
     clean_page: Page, base_url: str, captured: dict
@@ -141,15 +144,14 @@ def test_no_failed_critical_asset_requests(
 
     failed = captured["failed_requests"]
     if failed:
-        rendered = "\n".join(
-            f"  - {r.method} {r.url} ({r.failure})" for r in failed
-        )
+        rendered = "\n".join(f"  - {r.method} {r.url} ({r.failure})" for r in failed)
         pytest.fail(
             f"{len(failed)} same-origin request failure(s) during first paint:\n{rendered}"
         )
 
 
 # --- 5. Theme preloader is resilient to blank localStorage ---------------
+
 
 def test_theme_preloader_resilient_on_blank_localstorage(
     clean_page: Page, base_url: str, captured: dict
