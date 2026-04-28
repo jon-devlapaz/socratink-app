@@ -56,7 +56,7 @@ Run the code-review-graph MCP in this order against the topic:
 6. minimal_review_set(nodes from step 1)            → smallest review surface
 ```
 
-**Cross-feature scan:** Before producing the artifact, scan `docs/pipeline/*/00-graph-context.md` for runs whose impact-radius overlaps the current topic. Prepend a digest of their `01-grill.md` and `04-plan.md` (one paragraph each) so prior decisions are surfaced.
+**Cross-feature scan:** Before producing the artifact, scan `docs/pipeline/*/00-graph-context.md` for runs whose impact-radius overlaps the current topic. Prepend a digest of their `01-grill.md` and `04-plan.md` (one paragraph each) so prior decisions are surfaced. **Cap at the top 3 most-recent overlapping runs** to bound context growth.
 
 **Watch mode:** Pipette assumes the code-review-graph MCP runs in incremental mode via a post-commit `/graphify` hook (separate from this spec). Step 0 reads a fresh graph rather than rebuilding per run. If the graph is stale, Step 0 logs a warning and proceeds.
 
@@ -94,23 +94,28 @@ The diagram **must** use canonical glossary terms. This is a soft check at user 
 
 Replaces the original single-Gemini call with a fan-out:
 
-1. **Contracts reviewer** — reads grill + glossary + plan against real symbols from `00-graph-context.md`. Flags: invented APIs, missing dependencies, type mismatches.
+1. **Contracts reviewer** — reads grill + glossary + diagram against real symbols from `00-graph-context.md`. Flags: invented APIs, missing dependencies, type mismatches. (The plan does not yet exist at this gate; Step 4 happens after.)
 2. **Impact reviewer** — re-runs `get_affected_flows` against the proposal. Flags: missed callers, untested affected paths.
 3. **Glossary-consistency reviewer** — checks every domain term in grill + diagram against `UBIQUITOUS_LANGUAGE.md`. Flags: synonyms, undefined terms.
 4. **Test-coverage reviewer** — checks coverage map against the proposal. Flags: changes to untested code, missing test plan.
+
+**Reviewers run in parallel**, not sequentially. The latency budget for the gate is `max(reviewer_latency) + verifier_latency + picker_latency`, not the sum. Implementation must dispatch via `superpowers:dispatching-parallel-agents` (or equivalent) to honor this. Sequential dispatch is a defect, not a tradeoff.
 
 Each reviewer emits findings with a confidence score (0–1). A **verifier agent** re-checks each finding against actual code (mirroring Anthropic's verification-of-findings pattern). Only findings ≥ 0.8 confidence survive.
 
 **Gemini as picker.** Surviving findings are passed to `gemini --approval-mode plan` along with grill + glossary + diagram + graph context. Gemini emits the canonical YAML verdict:
 
 ```yaml
-verdict: PASS | FAIL
-jump_back_to: 1 | 1.5 | 2     # only if FAIL; valid targets are completed prior steps
+verdict: PASS | FAIL | NEEDS_RESEARCH
+jump_back_to: 1 | 1.5 | 2 | null     # null when PASS or NEEDS_RESEARCH
+research_brief: <inline brief, only when NEEDS_RESEARCH; see §5.5>
 notes: |
   <what's wrong, what to revise>
 ```
 
-`jump_back_to: 3` is invalid (the gate cannot loop to itself); `jump_back_to: 4` is invalid (the plan does not yet exist at the time of the gate).
+`jump_back_to: 3` is invalid (the gate cannot loop to itself); `jump_back_to: 4` is invalid (the plan does not yet exist at the time of the gate). `NEEDS_RESEARCH` does **not** loop back — it pauses the pipeline for outside input then re-runs Step 3 with the research findings in scope (see §5.5).
+
+**YAML retry.** Pipette parses Gemini's verdict against the schema. On parse failure or schema violation, retry up to 3 times with the prior bad output appended as "this output was not valid YAML for the required schema; emit only the YAML and nothing else". After 3 failed attempts, raise to user as a hard error — do not silently proceed.
 
 **Hard gate:** FAIL forces loop-back to gemini-picked step.
 
@@ -143,6 +148,8 @@ Invoke `superpowers:subagent-driven-development`. Each independent plan task is 
 **TDD enforcement.** When `coverage < threshold` for the affected modules (per Step 0), the plan must include a test commit before each implementation commit. The SubagentStop hook fails the task if `git log` shows the test commit didn't precede the impl commit.
 
 **Per-subagent gate (automatic):** SubagentStop hook gates each subagent return.
+
+**Crash recovery.** Step 5's single-task path runs in a disposable git worktree (the same machinery best-of-N uses). On crash or `abort` gate, the worktree is removed; partial commits never leak into the user's working tree. Recovery on resume re-dispatches the failed task into a fresh worktree.
 
 **Artifact:** `05-execution-log.md` (record of subagent dispatches, diffs, hook decisions, best-of-N selections) + commits.
 
@@ -186,7 +193,7 @@ docs/pipeline/
 │   ├── UBIQUITOUS_LANGUAGE.md     # project DDD glossary, updated by 1.5
 │   ├── lessons.md                 # appended by Step 7 of every run
 │   └── weekly-YYYY-MM-DD.md       # scheduled weekly aggregate eval
-└── YYYY-MM-DD-<topic>/
+└── YYYY-MM-DD-HHMMSS-<topic>/
     ├── 00-graph-context.md
     ├── 01-grill.md
     ├── 01b-glossary-delta.md
@@ -197,6 +204,8 @@ docs/pipeline/
     ├── 06-pr-link.md
     ├── 07-eval.md
     ├── trace.jsonl                # cross-cutting telemetry
+    ├── _research/                 # research-gate briefs and pasted findings (§5.5)
+    │   └── <step>-<slug>.md
     └── _attempts/                 # archived loop-back artifacts and best-of-N losers
         ├── 3-2026-04-28T14-32-00/
         └── best-of-n-<task>/
@@ -249,9 +258,64 @@ override_reason: <user one-line>
 
 Pattern matches existing `feedback_propose_then_gemini_then_execute.md` memory.
 
+### 5.5 Research Gate (cross-cutting hard stop)
+
+Any step can raise `NEEDS_RESEARCH` when a load-bearing claim depends on external/world knowledge that the agent cannot confidently produce from the codebase or training data. Most often raised by Step 3's verifier; Step 1 grill-me may also raise it.
+
+**When to raise (criteria, all must hold):**
+- The claim is about *current external state* — a third-party API surface, a library's behavior in Q1–Q2 2026, an ecosystem norm — not something derivable from the codebase or basic language semantics.
+- The agent's confidence on the claim is < 0.7.
+- The claim is *load-bearing* — answering it wrong materially changes the design or plan.
+
+**When NOT to raise:**
+- The codebase or `00-graph-context.md` already answers the question (that is Step 0's job).
+- The answer is in training data and stable (e.g. how Python's `dict` works).
+- The agent is being timid rather than genuinely uncertain.
+
+**Mechanism:**
+
+1. The raising step writes a structured research brief to `docs/pipeline/<topic>/_research/<step>-<slug>.md`:
+   ```yaml
+   raised_by_step: 3
+   raised_at: 2026-04-28T14:32:00Z
+   research_question: "Does Pinecone support hybrid search w/ metadata filters as of Q2 2026?"
+   why_needed: "Step 1 design assumes hybrid search w/ filter; verifier cannot confirm SDK supports it."
+   suggested_tools: ["Claude Research", "ChatGPT Deep Research", "Perplexity", "Gemini Deep Research"]
+   required_findings:
+     - confirmation w/ source URL and date
+     - example call pattern
+     - known gotchas / breaking changes
+   blocking: true
+   ```
+2. Pipeline pauses. Prints to chat: `"⏸  Pipeline paused at step <N>. Run deep research on docs/pipeline/<topic>/_research/<file>.md, then resume with /pipette resume <topic>"`.
+3. User runs an external deep-research tool, pastes the result back via `/pipette resume <topic>`.
+4. Pipeline appends the result to the same `_research/<file>.md` (under a `## Findings` section), then re-runs the step that raised the gate with the findings prepended to its input.
+
+**Step 3 schema integration.** Step 3's verdict gains `NEEDS_RESEARCH` as a third value (alongside `PASS` and `FAIL`); see §3 Step 3 for the full schema. Unlike `FAIL`, `NEEDS_RESEARCH` does not loop back — it pauses, ingests the research, and re-runs Step 3.
+
+**Anti-loop.** A single `_research/<file>.md` can be re-raised at most twice. On the third raise, pipeline aborts with a hard error — that signals the question itself is mis-shaped, not that more research is needed.
+
+**Eval signal.** Step 7 records: count of `NEEDS_RESEARCH` raises per run, and on resume whether the next verdict was `PASS` (research helped) or `FAIL` (research surfaced a deeper problem). Helps tune the criteria over time.
+
 ## 6. Pre-ship preflight
 
-Before Pipette v1 ships, run **Agentproof** (arxiv 2603.20356) against the pipeline graph as a one-time structural check. Agentproof reports that 27% of benchmark agentic workflows have structural defects (dead-end nodes, unreachable exits) and 55% violate human-gate policies. The check is cheap and catches structural bugs before they show up at runtime.
+Pipette has hard prerequisites that must be installed and verified *before* the slash command can ship. The plan must include a `pipette doctor` step that fails with a clear error if any of these are missing:
+
+| Prerequisite | Why | How verified |
+|---|---|---|
+| `no-mistakes` git proxy installed and configured for `socratink-app` | Step 6 push gate | `git remote get-url no-mistakes` returns success |
+| `code-review-graph` MCP wired in `.mcp.json` and reachable | Step 0 + Step 4 | `get_minimal_context_tool` returns a non-error response |
+| Post-commit `/graphify` hook installed (keeps the graph fresh) | Step 0 reads a fresh graph rather than rebuilding per run | `.git/hooks/post-commit` references graphify |
+| `gemini` CLI installed and authenticated | Step 3 picker | `gemini --version` returns 0 |
+| mattpocock `grill-me` skill present in `~/.claude/skills/` | Step 1 | Skill discovery lists it |
+| mattpocock `ubiquitous-language` skill present | Step 1.5 | Skill discovery lists it |
+| `superpowers` plugin installed | Steps 4–5 | Plugin list includes it |
+| `SubagentStop` agent-handler hook installed in `.claude/settings.json` | Step 5 deterministic gate | Settings reads back the hook |
+| Excalidraw MCP installed (only if user opts in at Step 2) | Step 2 escalation path | Conditional check |
+
+If a prerequisite is missing, `pipette doctor` prints the exact install command and aborts. Pipette never silently degrades — a missing prerequisite is a hard error, not a fallback.
+
+After all prerequisites pass, run **Agentproof** (arxiv 2603.20356) against the pipeline graph as a one-time structural check. Agentproof reports that 27% of benchmark agentic workflows have structural defects (dead-end nodes, unreachable exits) and 55% violate human-gate policies. The check is cheap and catches structural bugs before they show up at runtime.
 
 ## 7. Naming conventions
 
