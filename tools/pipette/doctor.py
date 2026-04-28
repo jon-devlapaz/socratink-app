@@ -67,6 +67,16 @@ def _verify_grill_with_docs_skill() -> tuple[bool, str]:
     runs and the skill isn't available, Step 1 fails with a clear error."""
     return True, "skill availability is verified by Claude Code at session start"
 
+
+def _verify_ubiquitous_language_skill() -> tuple[bool, str]:
+    """DEPRECATED B-revision (2026-04-28): the ubiquitous-language skill was
+    used by the now-removed Step 1.5. grill-with-docs handles glossary updates
+    inline during Step 1, so this check is no longer in CHECKS. The function
+    is kept (importable) so any out-of-tree caller of it still resolves
+    without ImportError. Always returns (True, deprecated-note)."""
+    return True, "deprecated: Step 1.5 collapsed into Step 1 (grill-with-docs)"
+
+
 def _verify_superpowers() -> tuple[bool, str]:
     base = Path.home() / ".claude" / "cowork_plugins" / "cache" / "superpowers-marketplace" / "superpowers"
     if not base.exists():

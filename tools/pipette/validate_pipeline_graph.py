@@ -9,8 +9,13 @@ Checks:
   2. Every node is reachable from `start` (no orphans).
   3. Every gate node (type ∈ {user_gate, automated_gate}) has outgoing
      edges for each label declared in its `decision` field.
-  4. The only cycles allowed are the explicit Step-3 jump-back loops
-     (gate_sanity → step_1, step_1_5_glossary, or step_2_diagram).
+  4. The only cycles allowed are the explicit jump-back / revise loops
+     declared in `ALLOWED_LOOP_BACK_EDGES`. As of B-revision (2026-04-28):
+     gate_sanity → step_1_grill (FAIL/jump_back_to=1)
+     gate_sanity → step_2_diagram (FAIL/jump_back_to=2)
+     gate_sanity → step_3_sanity (NEEDS_RESEARCH self-loop after pause+resume)
+     gate_grill / gate_diagram / gate_plan → their step (revise)
+     gate_subagent_stop → step_5_execute (deny → next subagent)
 """
 from __future__ import annotations
 import json
