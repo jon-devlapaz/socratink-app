@@ -1,8 +1,20 @@
 # Pipette — Heavy-Planning Pipeline Skill
 
-**Status:** Design approved 2026-04-28. Ready for implementation plan.
+**Status:** Design approved 2026-04-28 (v1). Implementation completed across 4 milestones; codex-reviewed; live. **B-Revision (2026-04-28, commit `ef83756`) deviates from this spec — see B-Revision note below.**
 **Trigger:** User-invoked slash command `/pipette <topic>`.
 **Install:** Project-only at `socratink-app/.claude/commands/pipette.md`.
+
+> **B-Revision (2026-04-28).** After implementation completed, the user opted to swap the Step 1 skill from `grill-me` to `grill-with-docs` (mattpocock's variant that maintains a `CONTEXT.md` glossary inline during grilling). Because `grill-with-docs` updates the glossary as part of Step 1, **Step 1.5 was collapsed into Step 1** in the live implementation. Concrete deviations from this spec:
+>
+> - **§3 Step 1** invokes `Skill: grill-with-docs` (was `grill-me`); the skill reads/writes `docs/pipeline/_meta/CONTEXT.md` inline.
+> - **§3 Step 1.5 is NO LONGER A STEP.** The `ubiquitous-language` skill is not invoked separately. Per-feature `01b-glossary-delta.md` is no longer produced.
+> - **§3 Step 3 verdict YAML:** `jump_back_to ∈ {1, 2}` (was `{1, 1.5, 2}`). Schema invariants enforced in `tools/pipette/sanity/schema.py`.
+> - **§3 Step 7 self-report keys** drop `glossary` (now part of `grill`); `gemini_jump_back_distribution` keys are `{1, 2}`.
+> - **§4 artifact folder structure:** `_meta/UBIQUITOUS_LANGUAGE.md` → `_meta/CONTEXT.md`. Per-run `01b-glossary-delta.md` no longer exists.
+> - **§6 prerequisites table:** `ubiquitous-language` skill row is deprecated; replaced with `grill-with-docs` skill row.
+> - **§10 Decisions log** add: a row "B-revision: grill-me → grill-with-docs; Step 1.5 collapsed into Step 1; CONTEXT.md replaces UBIQUITOUS_LANGUAGE.md".
+>
+> Read sections below as the v1 design. Live source of truth is `tools/pipette/` + `.claude/commands/pipette.md`. The implementation plan at [docs/superpowers/plans/2026-04-28-pipette.md](../plans/2026-04-28-pipette.md) has its own B-revision note up top with concrete file-level changes.
 
 ---
 
@@ -64,15 +76,19 @@ Run the code-review-graph MCP in this order against the topic:
 
 ### Step 1: Grill
 
-Invoke `grill-me` with `00-graph-context.md` prepended. Grill-me's existing rule applies — when a question can be answered by exploring the codebase, explore instead of asking. The graph context makes that exploration cheap.
+> **B-Revision (2026-04-28):** Live implementation invokes `Skill: grill-with-docs` (replaces `grill-me`). The skill reads/writes `docs/pipeline/_meta/CONTEXT.md` inline as decisions crystallise, absorbing what was Step 1.5 in the v1 design. Read the v1 paragraph below as historical context.
 
-**User gate (soft):** approve the grill-me design summary before advancing.
+(v1) Invoke `grill-me` with `00-graph-context.md` prepended. Grill-me's existing rule applies — when a question can be answered by exploring the codebase, explore instead of asking. The graph context makes that exploration cheap.
+
+**User gate (soft):** approve the grill design summary before advancing.
 
 **Artifact:** `01-grill.md` — design summary covering the decisions reached.
 
-### Step 1.5: Glossary delta
+### Step 1.5: Glossary delta — REMOVED (B-Revision)
 
-Invoke `ubiquitous-language` against the conversation so far. The skill writes to `UBIQUITOUS_LANGUAGE.md`; pipette intercepts the write to land at `docs/pipeline/_meta/UBIQUITOUS_LANGUAGE.md` (project-level, not feature-level).
+> **B-Revision (2026-04-28):** This step is REMOVED in the live implementation. `grill-with-docs` (Step 1) updates the project glossary inline at `docs/pipeline/_meta/CONTEXT.md`. Per-feature `01b-glossary-delta.md` is no longer produced; the glossary lives only in `_meta/CONTEXT.md`. The v1 description below is preserved for historical context.
+
+(v1) Invoke `ubiquitous-language` against the conversation so far. The skill writes to `UBIQUITOUS_LANGUAGE.md`; pipette intercepts the write to land at `docs/pipeline/_meta/UBIQUITOUS_LANGUAGE.md` (project-level, not feature-level).
 
 The per-feature folder receives `01b-glossary-delta.md` showing only the additions and changes from this run.
 
@@ -391,8 +407,8 @@ Pipette has hard prerequisites that must be installed and verified *before* the 
 | `code-review-graph` MCP wired in `.mcp.json` and reachable | Step 0 + Step 4 | `get_minimal_context_tool` returns a non-error response |
 | Post-commit `/graphify` hook installed (keeps the graph fresh) | Step 0 reads a fresh graph rather than rebuilding per run | `.git/hooks/post-commit` references graphify |
 | `gemini` CLI installed and authenticated | Step 3 picker | `gemini --version` returns 0 |
-| mattpocock `grill-me` skill present in `~/.claude/skills/` | Step 1 | Skill discovery lists it |
-| mattpocock `ubiquitous-language` skill present | Step 1.5 | Skill discovery lists it |
+| mattpocock `grill-with-docs` skill present (B-Revision; was `grill-me` in v1) | Step 1 | Skill discovery lists it. Symlink from forked skills repo: `ln -s /path/to/matt_skills/skills/engineering/grill-with-docs ~/.claude/skills/grill-with-docs` |
+| ~~mattpocock `ubiquitous-language` skill present~~ — DEPRECATED B-Revision (Step 1.5 collapsed into Step 1) | ~~Step 1.5~~ | ~~Skill discovery lists it~~ |
 | `superpowers` plugin installed | Steps 4–5 | Plugin list includes it |
 | `SubagentStop` agent-handler hook installed in `.claude/settings.json` | Step 5 deterministic gate | Settings reads back the hook |
 | Excalidraw MCP installed (only if user opts in at Step 2) | Step 2 escalation path | Conditional check |
@@ -441,10 +457,11 @@ These are not design decisions but implementation details to nail down in the pl
 | Q5 | Execute | Subagent-driven, augmented with SubagentStop hook + best-of-N |
 | Q6 | FAIL loop-back | Gemini-picked with `--jump-to` override |
 | Q7 | Install | Project-only |
-| — | Glossary | At Step 1.5, project-level + per-feature delta |
+| — | Glossary | ~~At Step 1.5, project-level + per-feature delta~~ → **B-Revision (2026-04-28):** inline at Step 1 via `grill-with-docs`; project-level `_meta/CONTEXT.md` only; per-feature delta dropped |
 | — | Reality grounding | code-review-graph MCP at Step 0, threaded into 1/2/3/4 |
 | — | Eval | Objective + self-report at Step 7; gemini grader deferred |
 | — | Name | `pipette` |
+| B | grill-me → grill-with-docs (2026-04-28) | Locked in `ef83756`. Step 1.5 collapsed into Step 1 because grill-with-docs maintains glossary inline. `jump_back_to ∈ {1, 2}` (was `{1, 1.5, 2}`). UBIQUITOUS_LANGUAGE.md → CONTEXT.md. Live code authoritative. |
 
 ## 11. Publish path (v2)
 
