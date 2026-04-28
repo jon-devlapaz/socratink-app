@@ -117,6 +117,8 @@ notes: |
 
 **YAML retry.** Pipette parses Gemini's verdict against the schema. On parse failure or schema violation, retry up to 3 times with the prior bad output appended as "this output was not valid YAML for the required schema; emit only the YAML and nothing else". After 3 failed attempts, raise to user as a hard error — do not silently proceed.
 
+**Process-level failure.** If the `gemini` CLI itself returns a non-zero exit code (auth expired, network failure, rate-limit exhausted), this is **not** a YAML retry — it is a process failure. Pipeline pauses immediately, prints the exact stderr from gemini, and instructs the user to resolve the underlying issue (re-auth, retry, etc.) and resume with `/pipette resume <topic>`. Never loop on process-level errors.
+
 **Hard gate:** FAIL forces loop-back to gemini-picked step.
 
 **Override:** User types `override` → one-line "why" prompt → memory entry `feedback_gemini_override_<topic>.md` written → pipeline proceeds to Step 4.
@@ -142,6 +144,8 @@ Invoke `superpowers:subagent-driven-development`. Each independent plan task is 
 - Runs spec-compliance + code-quality review against `04-plan.md`, using the same severity scale as the project `/review` skill (Critical / High / Medium / Low / Polish)
 - Returns `permissionDecision: deny` on any Critical finding; otherwise `allow`
 - `deny` blocks progression; pipeline pauses for user resolution
+
+**Hook crash semantics.** If the SubagentStop hook itself crashes or returns a non-zero exit code instead of a structured `permissionDecision`, pipette treats this as `deny` and pauses for user resolution. The hook's output and exit code are written to `trace.jsonl` for diagnosis. Never silently pass on hook failure — fail-closed is the only safe default for a deterministic gate.
 
 **Best-of-N for high-risk tasks (optional).** When a subagent task has `risk_score >= HIGH` (from Step 0) or coverage of the affected modules is below threshold, pipette dispatches the same task to **K=3** subagents in parallel via `superpowers:dispatching-parallel-agents` + `superpowers:using-git-worktrees`. A selector subagent compares outputs against the plan's acceptance criteria and Step 0's `minimal_review_set`, picks the best, archives the rest to `_attempts/best-of-n-<task>/`.
 
@@ -192,7 +196,8 @@ docs/pipeline/
 │   ├── CONSTITUTION.md            # hand-curated architectural constraints
 │   ├── UBIQUITOUS_LANGUAGE.md     # project DDD glossary, updated by 1.5
 │   ├── lessons.md                 # appended by Step 7 of every run
-│   └── weekly-YYYY-MM-DD.md       # scheduled weekly aggregate eval
+│   ├── weekly-YYYY-MM-DD.md       # scheduled weekly aggregate eval
+│   └── .lock                      # mutex for concurrent runs (§5.6)
 └── YYYY-MM-DD-HHMMSS-<topic>/
     ├── 00-graph-context.md
     ├── 01-grill.md
@@ -295,7 +300,40 @@ Any step can raise `NEEDS_RESEARCH` when a load-bearing claim depends on externa
 
 **Anti-loop.** A single `_research/<file>.md` can be re-raised at most twice. On the third raise, pipeline aborts with a hard error — that signals the question itself is mis-shaped, not that more research is needed.
 
+**Counter granularity.** The 2-raise cap is per `_research/<file>.md`, not per step. If the same step needs to raise a *different* research question on a subsequent attempt, it writes a new file with a distinct slug — the new file gets its own counter. This prevents a step from repeatedly re-raising the same question while still allowing genuinely new questions. To prevent counter-bypass via slug-juggling, slugs are deterministic from the `research_question` text (e.g., kebab-cased first 8 words); identical questions resolve to the same file.
+
+**Resume guard.** `/pipette resume <topic>` requires an active paused pipeline for that topic. If no `_meta/.lock` (see §5.6) names the topic as paused, the command prints `"no paused pipeline for <topic>"` and exits with code 1. Resume never silently starts a fresh run.
+
 **Eval signal.** Step 7 records: count of `NEEDS_RESEARCH` raises per run, and on resume whether the next verdict was `PASS` (research helped) or `FAIL` (research surfaced a deeper problem). Helps tune the criteria over time.
+
+### 5.6 Concurrency
+
+Pipette runs are mutually exclusive within a repository. Concurrent runs would race on `_meta/UBIQUITOUS_LANGUAGE.md`, `_meta/lessons.md`, the git index during Step 5, and the cross-feature scan at Step 0.
+
+**Lockfile.** On `/pipette` start, pipette acquires `docs/pipeline/_meta/.lock` containing:
+
+```yaml
+topic: <topic>
+folder: docs/pipeline/YYYY-MM-DD-HHMMSS-<topic>
+pid: <process id>
+started_at: <ISO 8601>
+state: running | paused
+paused_at_step: <step number, only when state=paused>
+```
+
+If the lockfile already exists when `/pipette <topic>` is invoked:
+- If `state: running` and the named PID is alive → print `"pipeline already running for <existing-topic> (pid <N>); abort or finish that run first"`, exit 1.
+- If `state: paused` → print `"a paused pipeline exists for <existing-topic>; resume it with /pipette resume <existing-topic> or abort it with /pipette abort <existing-topic>"`, exit 1.
+- If `state: running` but the named PID is dead → assume crash; rename folder to `*-crashed/`, remove lockfile, log to `trace.jsonl`, then proceed with the new run.
+
+The lockfile is released on:
+- Step 7 completion (clean finish)
+- `/pipette abort <topic>` (user-initiated)
+- Crash recovery (next `/pipette` invocation, as above)
+
+`/pipette resume <topic>` updates the lockfile in place (`state: paused → running`); the lockfile is never released between pause and resume.
+
+**Why a lockfile, not a queue.** Queueing concurrent runs would let users start a second pipette mid-grill on a related topic — exactly when the first run's eventual `01-grill.md` would have been useful input. Mutual exclusion is the right default; if a second topic needs work, the user finishes or aborts the first run first.
 
 ## 6. Pre-ship preflight
 
@@ -312,6 +350,7 @@ Pipette has hard prerequisites that must be installed and verified *before* the 
 | `superpowers` plugin installed | Steps 4–5 | Plugin list includes it |
 | `SubagentStop` agent-handler hook installed in `.claude/settings.json` | Step 5 deterministic gate | Settings reads back the hook |
 | Excalidraw MCP installed (only if user opts in at Step 2) | Step 2 escalation path | Conditional check |
+| Agentproof installed and runnable | Pre-ship structural check (below) | `agentproof --version` returns 0 |
 
 If a prerequisite is missing, `pipette doctor` prints the exact install command and aborts. Pipette never silently degrades — a missing prerequisite is a hard error, not a fallback.
 
@@ -320,7 +359,7 @@ After all prerequisites pass, run **Agentproof** (arxiv 2603.20356) against the 
 ## 7. Naming conventions
 
 - **Slash command:** `/pipette <topic>`
-- **Per-feature folder name:** `YYYY-MM-DD-<kebab-case-topic>/` (matches existing `docs/superpowers/specs/` convention)
+- **Per-feature folder name:** `YYYY-MM-DD-HHMMSS-<kebab-case-topic>/` (HHMMSS prevents same-day same-topic collisions; matches §4 artifact tree)
 - **Memory entries from override:** `feedback_gemini_override_<kebab-topic>.md`
 
 ## 8. Future work (deferred)
