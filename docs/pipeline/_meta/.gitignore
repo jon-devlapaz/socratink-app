@@ -1,0 +1,4 @@
+.lock
+.lock-test
+*.tmp
+*.lock.*.tmp
