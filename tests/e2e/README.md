@@ -37,15 +37,28 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 
 ## Running
 
+The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
+preferred entry point:
+
+```bash
+# Local — needs `uvicorn main:app --reload` in another shell
+bash scripts/qa-smoke.sh local
+
+# Production (https://app.socratink.ai)
+bash scripts/qa-smoke.sh live
+
+# Explicit URL (e.g. Vercel preview deployment)
+bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel.app
+```
+
+Raw pytest invocations (when you need flags the wrapper doesn't pass through):
+
 ```bash
 # Local — needs `uvicorn main:app --reload` in another shell
 pytest tests/e2e/test_smoke.py -v
 
-# Production
+# Against any URL via env var
 SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
-
-# Vercel preview deployment
-SOCRATINK_BASE_URL=https://socratink-app-git-dev-fresh-jon-devlapaz.vercel.app pytest tests/e2e/test_smoke.py -v
 
 # Headed (browser visible — for debugging)
 pytest tests/e2e/test_smoke.py -v --headed
@@ -53,8 +66,6 @@ pytest tests/e2e/test_smoke.py -v --headed
 # Full trace on every test (huge, debugging only)
 PWDEBUG=1 pytest tests/e2e/test_smoke.py -v
 ```
-
-The wrapper at `scripts/qa-smoke.sh` does setup + run in one command.
 
 ## Output
 
@@ -79,8 +90,10 @@ In `conftest.py`:
 
 - `CONSOLE_ERROR_ALLOW_LIST` — regex patterns of message substrings to
   ignore. Empty by default. Add only with a justifying comment / commit.
-- `EXPECTED_404_PATHS` — paths whose 404s shouldn't fail the suite (e.g.
-  `/favicon.ico` if the brand asset isn't deployed).
+- `EXPECTED_404_PATHS` — paths whose 404s shouldn't fail the suite. Defaults
+  to `("/_vercel/speed-insights/script.js",)` because Vercel injects that
+  script in production but it's absent on local uvicorn — both the request
+  failure and its console error are filtered for that path.
 
 ## Extending later
 
