@@ -4,6 +4,10 @@
 !.claude/
 .claude/*
 !.claude/settings.example.json
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/pipette.md
+!.claude/commands/pipette-weekly.md
 .kiro/
 .playwright-cli/
 .firecrawl/

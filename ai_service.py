@@ -235,18 +235,6 @@ def _log_extract_failure(
         pass
 
 
-def _serialize_drill_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-    serialized: list[dict[str, str]] = []
-    for msg in messages or []:
-        serialized.append(
-            {
-                "role": str(msg.get("role", "unknown"))[:20],
-                "content": str(msg.get("content", "")),
-            }
-        )
-    return serialized
-
-
 def _parse_iso_timestamp(iso_string: str) -> datetime:
     sanitized = iso_string.replace("Z", "+00:00")
     try:
@@ -693,8 +681,6 @@ def extract_knowledge_map(
     telemetry_context: dict | None = None,
 ) -> dict:
     client = _get_client(api_key)
-    started_at = datetime.now(timezone.utc)
-    started_perf = time.perf_counter()
 
     response = _call_gemini_with_retry(
         client,
@@ -881,10 +867,6 @@ def drill_chat(
     if session_phase == "turn" and not session_start_iso:
         raise ValueError("session_start_iso is required during turn phase.")
 
-    started_at = datetime.now(timezone.utc)
-    started_perf = time.perf_counter()
-    node_type = _infer_node_type(knowledge_map, node_id)
-    cluster_id = _resolve_target_cluster_id(knowledge_map, node_id)
     latest_learner_message = next(
         (
             msg.get("content", "").strip()
@@ -893,7 +875,6 @@ def drill_chat(
         ),
         "",
     )
-
 
     session_time_limit_seconds = get_drill_session_time_limit_seconds()
     if (
@@ -982,7 +963,7 @@ def drill_chat(
                 response_schema=DrillEvaluation,
             ),
         )
-    except Exception as err:
+    except Exception:
         raise
 
     evaluation = response.parsed
@@ -1050,16 +1031,4 @@ def drill_chat(
         "session_terminated": session_terminated,
         "termination_reason": termination_reason,
     }
-    force_advanced = (
-        session_phase == "turn"
-        and result["answer_mode"] == "attempt"
-        and result["routing"] == "NEXT"
-        and result["classification"] not in (None, "solid")
-        and probe_count >= 2
-    )
-    counted_as_probe = (
-        session_phase == "turn"
-        and result["answer_mode"] == "attempt"
-        and result["routing"] in ("PROBE", "SCAFFOLD")
-    )
     return result

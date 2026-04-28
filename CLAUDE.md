@@ -59,13 +59,19 @@ Rules:
 
 Project skills (`.claude/skills/`): `review-changes`, `explore-codebase`, `debug-issue`, `refactor-safely`. Runbook: `docs/code-review-graph-sop.md`.
 
+## /pipette
+
+User-invokable heavy-planning pipeline. Read `docs/superpowers/specs/2026-04-28-pipette-design.md` and `docs/superpowers/plans/2026-04-28-pipette.md` before invoking. `/pipette doctor` validates prerequisites; `/pipette <topic>` runs Steps −1→7 with deterministic gates and per-feature artifacts under `docs/pipeline/`. Pause/resume via `/pipette resume <topic>`; abort via `/pipette abort <topic>`.
+
 ## QA: Browser Smoke
 
 Load-bearing deploy verification. "Pushed to main" ≠ "verified."
 
 ```bash
-bash scripts/qa-smoke.sh https://app.socratink.ai     # production
-bash scripts/qa-smoke.sh                              # local (uvicorn must be running)
+bash scripts/qa-smoke.sh live                         # production (https://app.socratink.ai)
+bash scripts/qa-smoke.sh local                        # local (uvicorn must be running)
+bash scripts/qa-smoke.sh https://custom-url.com       # explicit URL
+bash scripts/qa-smoke.sh                              # local (default)
 ```
 
 Stack: pytest + playwright-python. Suite: `tests/e2e/test_smoke.py` (5 tests, ~10s warm / ~30s cold). Read-only — safe against prod.
@@ -86,7 +92,7 @@ Rules:
 
 Three entry points:
 - `/verify-deploy` (skill) — waits for Vercel to finish then runs smoke. Use after a push to confirm a specific commit is live. Wrapper: `scripts/verify-deploy.sh`.
-- `bash scripts/qa-smoke.sh <url>` — immediate smoke, no Vercel wait. Use when prod is already up and you just want a health check.
+- `bash scripts/qa-smoke.sh local|live|<url>` — immediate smoke, no Vercel wait. Use when prod is already up and you just want a health check.
 - Hourly synthetic monitor (trigger `socratink-app-qa-smoke`, id `trig_01Xkjm7rEufGE2SbTv9Eaxe7`) — runs every hour against prod. Manage at https://claude.ai/code/scheduled.
 
 Docs: `tests/e2e/README.md`.

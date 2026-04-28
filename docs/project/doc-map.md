@@ -40,9 +40,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [product/post-drill-ux-spec.md](../product/post-drill-ux-spec.md) | implementation | yes | Post-phase panel copy, result-state visuals, sensory treatment, transcript policy, tier/band trajectory display. | — |
 | [drill/engineering.md](../drill/engineering.md) | implementation | yes | Hard engineering invariants for drill/graph state coherence; pre-change checklist. | — |
 | [drill/evaluation.md](../drill/evaluation.md) | evidence | yes | Manual eval set, answer modes, obvious-break checklist, evidence capture for the thermostat loop. | — |
-| [product/repair-reps-card-stack-spec.md](../product/repair-reps-card-stack-spec.md) | implementation | yes | Card-stack visual spec for Repair Reps. Visual only; no state/API changes. | — |
-| [product/repair-reps-focused-mode-spec.md](../product/repair-reps-focused-mode-spec.md) | implementation | yes | Focused-mode layout and copy for Repair Reps. Visual/copy only. | — |
-| [product/repair-reps-self-rating-spec.md](../product/repair-reps-self-rating-spec.md) | implementation | yes | Self-rating UI, state additions, evidence schema, completion breakdown for Repair Reps. | — |
+| [product/repair-reps.md](../product/repair-reps.md) | implementation | yes | Unified implementation spec for Repair Reps (focused layout, card-stack visuals, self-rating evidence schema). | — |
 | [project/auth-rollout.md](auth-rollout.md) | implementation | yes | Auth rollout phases, release gates, test plan, deferred work. | — |
 
 ## Artifacts (Design Storyboards)
@@ -66,10 +64,11 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions. | — |
 | [codex/workflows.md](../codex/workflows.md) | workflow | yes | Hot-fix, Build-Measure-Learn, decision-log, and Glenna review workflows. | — |
 | [codex/drill-build-measure-learn.md](../codex/drill-build-measure-learn.md) | workflow | yes | Drill log → Socratink Brain evaluation → fix cycle. | — |
-| [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | workflow | yes | Socratink Brain operation router, data layers, ingest/query workflow, git tracking policy. | — |
+| [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |
 | [codex/decision-log.md](../codex/decision-log.md) | workflow | yes | Append-only architectural/product decision log. Empty template at time of writing. | — |
 | [codex/agent-review-log.md](../codex/agent-review-log.md) | workflow | yes | Append-only Glenna review log. | — |
-| [codex/session-bootstrap.md](../codex/session-bootstrap.md) | deprecated | no | Legacy alias only; redirects to `codex/onboarding.md`. | [codex/onboarding.md](../codex/onboarding.md) |
+| [superpowers/plans/2026-04-28-pipette.md](../superpowers/plans/2026-04-28-pipette.md) | workflow | yes | Load-bearing operational plan and slash-command definitions for the Pipette subsystem. | — |
+| [superpowers/specs/2026-04-28-pipette-design.md](../superpowers/specs/2026-04-28-pipette-design.md) | workflow | yes | Architecture and CLI interface spec for the Pipette orchestration subsystem. | — |
 
 ## Reference Fixtures
 
@@ -88,8 +87,6 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 
 None of these are dead. They are load-bearing for the feature they describe. They are listed here because they will create drift risk as MVP stabilization progresses and should be consolidated once current release work is stable. Do not consolidate during an active release gate.
 
-- **Three repair-reps specs** — [repair-reps-card-stack-spec.md](../product/repair-reps-card-stack-spec.md), [repair-reps-focused-mode-spec.md](../product/repair-reps-focused-mode-spec.md), [repair-reps-self-rating-spec.md](../product/repair-reps-self-rating-spec.md). Each describes a separate layer (visual, layout/copy, state/schema) of the same implemented feature. Post-MVP: fold into one `repair-reps.md` with clear subsections. Current cost: triple read path for anyone touching repair-reps behavior.
-- **`docs/codex/socratink-brain-workflow-architecture.md`** — duplicates content governed by `.socratink-brain/CLAUDE.md` and the `$socratink-brain` skill. Keep until a clean pointer replaces it. Post-MVP: collapse to a short "see skill" stub.
 - **`docs/product/starting-map-flow-artifact.md`** — design storyboard. Once the threshold flow is built, operational rules should move to a canonical `starting-map.md`; the artifact should be marked historical at that point.
 
 If a new doc is added during MVP work, register it here with `binding: yes` or `binding: no` and add it to this consolidation list if it duplicates or refines an existing binding doc.

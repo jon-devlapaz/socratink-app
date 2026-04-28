@@ -32,3 +32,15 @@ uvicorn main:app --reload
 ```
 
 Then open [http://localhost:8000](http://localhost:8000).
+
+## Testing
+
+End-to-End browser smoke tests are powered by Playwright and Pytest. To run them, make sure the development server is running in the background, or point the tests to the live production server.
+
+```bash
+# Test against local dev server (http://localhost:8000)
+bash scripts/qa-smoke.sh local
+
+# Test against the live production server (https://app.socratink.ai)
+bash scripts/qa-smoke.sh live
+```

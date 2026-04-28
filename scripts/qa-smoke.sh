@@ -3,7 +3,9 @@
 #
 # Usage:
 #   bash scripts/qa-smoke.sh                     # local (http://localhost:8000)
-#   bash scripts/qa-smoke.sh https://socratink.com
+#   bash scripts/qa-smoke.sh local               # local (http://localhost:8000) — explicit form
+#   bash scripts/qa-smoke.sh live                # live (https://app.socratink.ai)
+#   bash scripts/qa-smoke.sh https://custom-url.com
 #   SOCRATINK_BASE_URL=... bash scripts/qa-smoke.sh
 #
 # What it does:
@@ -18,8 +20,21 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
-# 1. Resolve target URL: positional arg > env var > local default.
-TARGET="${1:-${SOCRATINK_BASE_URL:-http://localhost:8000}}"
+# 1. Resolve target URL: positional arg > SOCRATINK_BASE_URL env var > local default.
+if [ $# -ge 1 ]; then
+    INPUT="$1"
+    if [ "$INPUT" = "local" ]; then
+        TARGET="http://localhost:8000"
+    elif [ "$INPUT" = "live" ]; then
+        TARGET="https://app.socratink.ai"
+    else
+        # Allow passing an explicit URL as a fallback
+        TARGET="$INPUT"
+    fi
+else
+    TARGET="${SOCRATINK_BASE_URL:-http://localhost:8000}"
+fi
+
 export SOCRATINK_BASE_URL="$TARGET"
 
 echo "[qa-smoke] target: $SOCRATINK_BASE_URL"

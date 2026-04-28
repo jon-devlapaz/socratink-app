@@ -30,6 +30,7 @@ Test ordering note
 Tests run in source order. `test_health_endpoint_ok` is intentionally first
 to absorb any serverless cold-start latency before the browser tests run.
 """
+
 from __future__ import annotations
 
 import time
@@ -41,6 +42,7 @@ from playwright.sync_api import Page, expect
 
 
 # --- 1. Health check (also serves as serverless warm-up) -----------------
+
 
 def test_health_endpoint_ok(base_url: str) -> None:
     """GET /api/health returns the expected shape. 3 retries with backoff."""
@@ -73,9 +75,24 @@ def test_health_endpoint_ok(base_url: str) -> None:
 
 # --- 2. Homepage renders critical DOM ------------------------------------
 
+
+def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
+    """Navigate to base_url and bypass the /login redirect via the guest link.
+
+    On Vercel, static `public/index.html` takes priority over the `/api`
+    rewrite, so `/` serves the app shell directly and the FastAPI
+    require_login_or_guest_entry redirect never fires. Locally (uvicorn),
+    `/` redirects to `/login` where the guest-continue link must be clicked.
+    """
+    page.goto(base_url)
+    if "/login" in page.url:
+        page.locator("#guest-continue-link").click()
+
+
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:
     """Critical IDs are attached to the DOM after a fresh navigation."""
-    clean_page.goto(base_url)
+    _enter_app_shell_as_guest(clean_page, base_url)
+
     # Auto-wait via expect() — Playwright polls for visibility.
     # Drawer is desktop sidebar; bottom-nav is mobile nav. At 1280px viewport
     # at least one of them should be present in the DOM (CSS may hide it).
@@ -88,6 +105,7 @@ def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> No
 
 # --- 3. No console errors on first paint ---------------------------------
 
+
 def test_no_console_errors_on_first_paint(
     clean_page: Page, base_url: str, captured: dict
 ) -> None:
@@ -97,21 +115,20 @@ def test_no_console_errors_on_first_paint(
     errors (analytics, fonts, browser extensions) are filtered out by
     the listener — only same-origin error-level messages count.
     """
-    clean_page.goto(base_url)
+    _enter_app_shell_as_guest(clean_page, base_url)
     # Settle: give the page a beat to finish any deferred error throws.
     clean_page.wait_for_load_state("networkidle")
 
     errors = captured["console_errors"]
     if errors:
-        rendered = "\n".join(
-            f"  - {m.text} (at {m.location})" for m in errors
-        )
+        rendered = "\n".join(f"  - {m.text} (at {m.location})" for m in errors)
         pytest.fail(
             f"{len(errors)} same-origin console.error(s) during first paint:\n{rendered}"
         )
 
 
 # --- 4. No failed same-origin asset requests -----------------------------
+
 
 def test_no_failed_critical_asset_requests(
     clean_page: Page, base_url: str, captured: dict
@@ -122,20 +139,19 @@ def test_no_failed_critical_asset_requests(
     listener. Specific paths can be allow-listed via EXPECTED_404_PATHS in
     conftest.py.
     """
-    clean_page.goto(base_url)
+    _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.wait_for_load_state("networkidle")
 
     failed = captured["failed_requests"]
     if failed:
-        rendered = "\n".join(
-            f"  - {r.method} {r.url} ({r.failure})" for r in failed
-        )
+        rendered = "\n".join(f"  - {r.method} {r.url} ({r.failure})" for r in failed)
         pytest.fail(
             f"{len(failed)} same-origin request failure(s) during first paint:\n{rendered}"
         )
 
 
 # --- 5. Theme preloader is resilient to blank localStorage ---------------
+
 
 def test_theme_preloader_resilient_on_blank_localstorage(
     clean_page: Page, base_url: str, captured: dict
@@ -146,8 +162,8 @@ def test_theme_preloader_resilient_on_blank_localstorage(
     apply default light mode, and produce zero console errors. The IIFE has
     a try/catch but should never enter the catch on blank state.
     """
-    # clean_page already cleared storage. Navigate again to re-run the IIFE.
-    clean_page.goto(base_url)
+    # clean_page already cleared storage. Enter the app shell so the IIFE runs.
+    _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.wait_for_load_state("networkidle")
 
     errors = captured["console_errors"]

@@ -34,6 +34,18 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -m tools.pipette.subagent_stop",
+            "timeout": 600
+          }
+        ]
+      }
     ]
   }
 }

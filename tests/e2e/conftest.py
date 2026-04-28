@@ -11,6 +11,7 @@ Design notes
 - The `same_origin` predicate is computed from `base_url` once per session and
   used to filter cross-origin noise (fonts, analytics, browser extensions).
 """
+
 from __future__ import annotations
 
 import os
@@ -31,7 +32,11 @@ CONSOLE_ERROR_ALLOW_LIST: tuple[re.Pattern[str], ...] = ()
 
 # URLs we expect to legitimately 404 in some environments (e.g. favicon when
 # the brand asset isn't present). Keep specific.
-EXPECTED_404_PATHS: tuple[str, ...] = ()
+#
+# /_vercel/speed-insights/script.js is injected by Vercel in production but is
+# absent on local uvicorn — both the request failure and the resulting console
+# "Failed to load resource" error are expected outside Vercel.
+EXPECTED_404_PATHS: tuple[str, ...] = ("/_vercel/speed-insights/script.js",)
 
 
 @pytest.fixture(scope="session")
@@ -66,9 +71,7 @@ def browser_context_args(browser_context_args: dict[str, Any]) -> dict[str, Any]
 
 
 @pytest.fixture
-def captured(
-    context: BrowserContext, same_origin
-) -> Iterator[dict[str, list]]:
+def captured(context: BrowserContext, same_origin) -> Iterator[dict[str, list]]:
     """Wire console-error and request-failed listeners onto the context.
 
     Returns a dict with two lists: `console_errors` and `failed_requests`.
@@ -88,6 +91,8 @@ def captured(
         location = msg.location or {}
         loc_url = location.get("url", "") if isinstance(location, dict) else ""
         if loc_url and not same_origin(loc_url):
+            return
+        if loc_url and urlparse(loc_url).path in EXPECTED_404_PATHS:
             return
         console_errors.append(msg)
 
