@@ -744,7 +744,7 @@ def _clear_oauth_state_cookie(response: Response, request: Request) -> None:
     response.delete_cookie(service.oauth_state_cookie_name, path="/")
 
 
-def _load_current_session_state(request: Request) -> AuthSessionState:
+def load_current_session_state(request: Request) -> AuthSessionState:
     service = _get_auth_service(request)
     sealed_session = request.cookies.get(service.cookie_name)
     try:
@@ -770,7 +770,7 @@ def _load_current_session_state(request: Request) -> AuthSessionState:
 
 @auth_router.get("/api/me")
 def get_current_user(request: Request):
-    state = _load_current_session_state(request)
+    state = load_current_session_state(request)
     response = JSONResponse(state.to_public_dict())
     if state.sealed_session:
         _apply_session_cookie(response, request, state.sealed_session)
@@ -781,7 +781,7 @@ def get_current_user(request: Request):
 
 @auth_router.get("/login")
 def login(request: Request, return_to: str | None = None):
-    current = _load_current_session_state(request)
+    current = load_current_session_state(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated or current.guest_mode:
         response = RedirectResponse(url=sanitized_return_to, status_code=302)
