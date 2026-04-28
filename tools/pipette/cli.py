@@ -92,7 +92,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     al = sub.add_parser("archive-for-loop-back", help="archive Step N+ artifacts to _attempts/")
     al.add_argument("--folder", required=True)
-    al.add_argument("--jump-back-to", type=float, required=True, choices=[1, 1.5, 2])
+    al.add_argument("--jump-back-to", type=float, required=True, choices=[1, 2])
 
     vf = sub.add_parser("verifier-filter", help="reads a ReviewerOutput JSON from stdin, applies 0.8 confidence filter, prints filtered JSON")
 
@@ -207,9 +207,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "parse-jump":
         import re as _re
-        m = _re.match(r"^\s*--jump-to\s+(1|1\.5|2)\s*$", args.input)
+        # B-revision (2026-04-28): jump_back_to=1.5 dropped; only 1 or 2 valid.
+        m = _re.match(r"^\s*--jump-to\s+(1|2)\s*$", args.input)
         if not m:
-            print(f"pipette: invalid jump target {args.input!r}; expected `--jump-to 1`, `--jump-to 1.5`, or `--jump-to 2`", file=sys.stderr)
+            print(f"pipette: invalid jump target {args.input!r}; expected `--jump-to 1` or `--jump-to 2`", file=sys.stderr)
             return 2
         print(m.group(1))  # stdout: just the number for caller to consume
         return 0

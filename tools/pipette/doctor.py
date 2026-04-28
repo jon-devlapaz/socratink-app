@@ -60,12 +60,12 @@ def _verify_gemini() -> tuple[bool, str]:
     r = subprocess.run(["/opt/homebrew/bin/gemini", "--version"], capture_output=True, text=True)
     return r.returncode == 0, r.stdout.strip()
 
-def _verify_grill_me_skill() -> tuple[bool, str]:
+def _verify_grill_with_docs_skill() -> tuple[bool, str]:
+    """B-revision (2026-04-28): pipette Step 1 uses `grill-with-docs` (replaces
+    `grill-me`). The skill is verified by Claude Code at session start; doctor
+    can only confirm the skill discovery contract is in place. If `/pipette`
+    runs and the skill isn't available, Step 1 fails with a clear error."""
     return True, "skill availability is verified by Claude Code at session start"
-
-def _verify_ubiquitous_language_skill() -> tuple[bool, str]:
-    p = Path.home() / ".claude" / "skills" / "ubiquitous-language" / "SKILL.md"
-    return p.exists(), str(p)
 
 def _verify_superpowers() -> tuple[bool, str]:
     base = Path.home() / ".claude" / "cowork_plugins" / "cache" / "superpowers-marketplace" / "superpowers"
@@ -119,10 +119,10 @@ CHECKS: list[Check] = [
           "Run `bash tools/pipette/install_post_commit.sh` from the repo root."),
     Check("gemini CLI", _verify_gemini,
           "Install gemini CLI: `brew install gemini-cli` (or follow upstream install). Then `gemini auth login`."),
-    Check("grill-me skill availability", _verify_grill_me_skill,
-          "Install via `claude skill add <source>` for grill-me."),
-    Check("ubiquitous-language skill installed", _verify_ubiquitous_language_skill,
-          "Install ubiquitous-language skill from mattpocock's skills repo to ~/.claude/skills/."),
+    Check("grill-with-docs skill availability", _verify_grill_with_docs_skill,
+          "Install grill-with-docs from mattpocock's skills repo "
+          "(e.g., symlink /path/to/matt_skills/skills/engineering/grill-with-docs "
+          "→ ~/.claude/skills/grill-with-docs)."),
     Check("superpowers plugin (skills present)", _verify_superpowers,
           "Install superpowers plugin: `claude plugin add superpowers`."),
     Check("SubagentStop hook wired in .claude/settings.json", _verify_subagent_stop_hook,

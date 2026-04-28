@@ -72,9 +72,12 @@ def test_full_lifecycle_against_fakes(tmp_path: Path):
     lock = yaml.safe_load((root / "_meta" / ".lock").read_text())
     assert lock["state"] == "running"
 
-    # 7. parse-jump (validates user --jump-to input)
+    # 7. parse-jump (validates user --jump-to input).
+    # B-revision (2026-04-28): only 1 or 2 valid; 1.5 dropped along with Step 1.5.
+    r = _cli("parse-jump", "--jump-to 2")
+    assert r.returncode == 0 and r.stdout.strip() == "2"
     r = _cli("parse-jump", "--jump-to 1.5")
-    assert r.returncode == 0 and r.stdout.strip() == "1.5"
+    assert r.returncode == 2  # invalid (was valid before B-revision)
     r = _cli("parse-jump", "--jump-to 3")
     assert r.returncode == 2  # invalid
 

@@ -45,14 +45,14 @@ def test_archive_for_loop_back_step_1(tmp_path: Path):
     assert (arch / "01-grill.md").exists()
     assert not (folder / "01-grill.md").exists()
 
-def test_archive_for_loop_back_step_1_5(tmp_path: Path):
+def test_archive_for_loop_back_step_1_5_no_longer_valid(tmp_path: Path):
+    """B-revision (2026-04-28): Step 1.5 was collapsed into Step 1.
+    archive_for_loop_back must reject jump_back_to=1.5 with a clear ValueError."""
+    import pytest
     folder = tmp_path / "run"
     folder.mkdir()
-    (folder / "01-grill.md").write_text("x")
-    (folder / "01b-glossary-delta.md").write_text("x")
-    arch = archive_for_loop_back(folder=folder, jump_back_to=1.5)
-    assert (folder / "01-grill.md").exists()  # NOT archived (precedes 1.5)
-    assert (arch / "01b-glossary-delta.md").exists()  # archived
+    with pytest.raises(ValueError, match="1 or 2"):
+        archive_for_loop_back(folder=folder, jump_back_to=1.5)
 
 def test_archive_for_loop_back_step_2(tmp_path: Path):
     folder = tmp_path / "run"

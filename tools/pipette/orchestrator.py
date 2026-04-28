@@ -126,18 +126,25 @@ def recover_run(*, topic: str, root: Path) -> int:
 
 
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
-    """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/."""
+    """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/.
+
+    B-revision (2026-04-28): Step 1.5 was collapsed into Step 1; grill-with-docs
+    handles glossary updates inline. jump_back_to=1.5 is no longer valid.
+    01b-glossary-delta.md is no longer produced; the glossary lives in
+    docs/pipeline/_meta/CONTEXT.md and is updated in-place during Step 1.
+    """
     from shutil import move
     ts = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
-    # Normalize float steps to int when whole (1.0 → 1, 1.5 → 1.5) for tidy dir names.
+    # Normalize float steps to int when whole (1.0 → 1) for tidy dir names.
     step_label = int(jump_back_to) if jump_back_to == int(jump_back_to) else jump_back_to
     arch = folder / "_attempts" / f"{step_label}-{ts}"
     arch.mkdir(parents=True)
     affected = {
-        1.0: ["01-grill.md", "01b-glossary-delta.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
-        1.5: ["01b-glossary-delta.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
+        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
         2.0: ["02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
     }
+    if float(jump_back_to) not in affected:
+        raise ValueError(f"jump_back_to must be 1 or 2 (B-revision dropped 1.5); got {jump_back_to!r}")
     for fname in affected[float(jump_back_to)]:
         src = folder / fname
         if src.exists():

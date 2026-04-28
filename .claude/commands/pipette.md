@@ -1,11 +1,12 @@
 ---
 name: pipette
 description: |
-  Heavy-planning pipeline. User-invokable. Runs an 8-step pipeline (graph reconnaissance →
-  grill → glossary delta → diagram → multi-agent sanity gate → plan → subagent execute →
-  no-mistakes-gated push → eval) with deterministic gates, lockfile-based mutual
-  exclusion, and per-feature artifact folders under docs/pipeline/. Use when the topic
-  warrants the ceremony — not for default brainstorming. Read the spec at
+  Heavy-planning pipeline. User-invokable. Runs a multi-step pipeline (graph reconnaissance →
+  grill-with-docs (glossary updated inline) → diagram → multi-agent sanity gate → plan →
+  subagent execute → no-mistakes-gated push → eval) with deterministic gates,
+  lockfile-based mutual exclusion, and per-feature artifact folders under
+  docs/pipeline/. Use when the topic warrants the ceremony — not for default
+  brainstorming. Read the spec at
   docs/superpowers/specs/2026-04-28-pipette-design.md before invoking on novel topics.
 user-invocable: true
 ---
@@ -21,7 +22,7 @@ Argument routing:
 
 ## Global rule: raising NEEDS_RESEARCH from any step
 
-Per spec §5.5, ANY step (most commonly Steps 1, 1.5, and 3) can raise `NEEDS_RESEARCH` when the agent or a subagent determines that a load-bearing claim depends on external/world knowledge it cannot confidently produce.
+Per spec §5.5, ANY step (most commonly Steps 1 and 3) can raise `NEEDS_RESEARCH` when the agent or a subagent determines that a load-bearing claim depends on external/world knowledge it cannot confidently produce. (B-revision 2026-04-28: Step 1.5 was collapsed into Step 1 via the `grill-with-docs` skill, so research raises from 1.5 are no longer possible.)
 
 If at any step you or a subagent need external research to proceed:
 
@@ -34,33 +35,32 @@ The anti-loop caps (per-file: 2, per-step: 3) are enforced inside the `research-
 
 ## Resume flow (re-entry after a paused pipeline)
 
-Per spec §5.5 and §5.6: resume must (a) accept pasted research findings when paused for `NEEDS_RESEARCH`, (b) flip the lockfile state to running, and (c) re-dispatch execution to the paused step. The dispatch handles ALL pause reasons — NEEDS_RESEARCH (Steps 1 / 1.5 / 3) and non-research pauses (Step 3 gemini_cli_failure, Step 5 hook_crash, any-step user_initiated).
+Per spec §5.5 and §5.6: resume must (a) accept pasted research findings when paused for `NEEDS_RESEARCH`, (b) flip the lockfile state to running, and (c) re-dispatch execution to the paused step. The dispatch handles ALL pause reasons — NEEDS_RESEARCH (Steps 1 or 3) and non-research pauses (Step 3 gemini_cli_failure, Step 5 hook_crash, any-step user_initiated).
 
 Procedure (the dispatcher branches on `pause_reason` FIRST, then on `paused_at_step`):
 
 1. Read `docs/pipeline/_meta/.lock`. If `state` is not `paused` or topic doesn't match: print the orchestrator's error (`pipette: no paused pipeline for <topic>`) and stop.
 2. Capture `paused_at_step`, `pause_reason`, and `folder` from the lockfile.
-3. **If `pause_reason == "NEEDS_RESEARCH"`** (raised by Step 1, 1.5, or 3 only):
+3. **If `pause_reason == "NEEDS_RESEARCH"`** (raised by Step 1 or 3 only; B-revision dropped Step 1.5):
    - Locate the most recent research brief in `<folder>/_research/` (sorted by mtime). Read its `research_question` from the YAML front block.
    - Ask the user to paste their research findings (or accept from a file: `/pipette resume <topic> /path/to/findings.md`).
    - Append findings via `python -m tools.pipette research-findings --folder=<folder> --step=<paused_at_step> --question=<research_question> --findings-file=<file>`.
-   - Validate `paused_at_step ∈ {1, 1.5, 3}` (spec §5.5). If invalid, hard error: `"NEEDS_RESEARCH from step <N> is invalid; spec restricts to 1, 1.5, 3"` and stop.
+   - Validate `paused_at_step ∈ {1, 3}` (spec §5.5; B-revision 2026-04-28). If invalid, hard error: `"NEEDS_RESEARCH from step <N> is invalid; restricted to 1 or 3"` and stop.
 4. **If `pause_reason ∈ {gemini_cli_failure, hook_crash, user_initiated}`:**
    - No findings to ingest. Just acknowledge that the user has resolved the underlying issue (gemini auth refreshed, hook bug fixed, etc.).
 5. **Flip the lockfile state to running:** `python -m tools.pipette resume "<topic>"`. Returns 0 on success; nonzero exits stop here.
 6. **Append resume event to trace:** `python -m tools.pipette trace-append --folder=<folder> --step=<paused_at_step> --event=resumed`.
 7. **Re-dispatch to the paused step.** Re-enter the appropriate Step section of this command, with NEEDS_RESEARCH findings (if any) prepended to that step's input:
-   - `paused_at_step == 1` → "Step 1: Grill"
-   - `paused_at_step == 1.5` → "Step 1.5: Glossary delta"
+   - `paused_at_step == 1` → "Step 1: Grill (with docs)"
    - `paused_at_step == 3` → "Step 3: Multi-agent sanity check"
    - `paused_at_step == 5` → "Step 5: Execute" (re-dispatches the failed task; subagents start fresh in the worktree, picking up from the most recent committed state)
-   - any other value (0, 4) → hard error: `"resume from step <N> not yet implemented"` and stop. v1 doesn't pause at these steps; if you see this, the lockfile is corrupted.
+   - any other value (0, 1.5, 2, 4) → hard error: `"resume from step <N> not yet implemented"` and stop. v1 doesn't pause at these steps; if you see this, the lockfile is corrupted. (1.5 specifically: B-revision 2026-04-28 collapsed it into Step 1.)
 
 ## Step -1: Read project constants
 
 Bash: `python -m tools.pipette start "$ARGS"` — captures FOLDER from stdout (line `pipette: started <topic-slug> → <folder>`).
 
-Read `docs/pipeline/_meta/CONSTITUTION.md` and `docs/pipeline/_meta/UBIQUITOUS_LANGUAGE.md` and `docs/pipeline/_meta/lessons.md` (last 20 lines). Hold these in context for every subsequent step.
+Read `docs/pipeline/_meta/CONSTITUTION.md` and `docs/pipeline/_meta/CONTEXT.md` (the project's ubiquitous-language glossary) and `docs/pipeline/_meta/lessons.md` (last 20 lines). Hold these in context for every subsequent step.
 
 ## Step 0: Graph reconnaissance
 
@@ -94,23 +94,22 @@ Watch mode: if `mcp__code-review-graph__status` reports `last_updated` more than
 
 Write `FOLDER/00-graph-context.md` containing: modules, callers/callees, blast radius, risk_score, minimal_review_set, coverage map, prior-feature digest. Append `step=0 event=finished` to trace.
 
-## Step 1: Grill
+## Step 1: Grill (with docs)
+
+**B-revision (2026-04-28):** This step uses `grill-with-docs` (replaces `grill-me`). The skill challenges the plan against the project's existing glossary at `_meta/CONTEXT.md`, sharpens fuzzy language, and updates `CONTEXT.md` inline as decisions crystallise. Step 1.5 (separate `ubiquitous-language` skill invocation) was therefore collapsed into Step 1.
 
 **Resume-with-research:** before invoking grill, glob `FOLDER/_research/1-*.md`. If any exist with a `## Findings` section, prepend them to the grill's input as context (formatted as "PRIOR RESEARCH FINDINGS RELEVANT TO THIS DESIGN: ..."). This is how Step 1 picks up findings from a NEEDS_RESEARCH pause-resume cycle (spec §5.5).
 
-Invoke `Skill: grill-me` with the contents of `00-graph-context.md` and the topic prepended (and any research findings from above). The grill follows its own rules (it explores instead of asking when answerable from code).
+Invoke `Skill: grill-with-docs` with:
+- The topic + any research findings from above
+- The contents of `00-graph-context.md`
+- The contents of `docs/pipeline/_meta/CONTEXT.md` (so the grill can challenge against the existing glossary and update it in place)
 
-When the grill produces a design summary, write it to `FOLDER/01-grill.md`.
+The grill follows its own rules: it explores the codebase instead of asking when answerable from code, challenges fuzzy language against canonical terms, updates `CONTEXT.md` inline as decisions are made, and offers ADRs sparingly when a decision is hard-to-reverse + surprising + a real tradeoff. **CONTEXT.md updates land directly in `docs/pipeline/_meta/CONTEXT.md`** — that's the canonical glossary; do not write a separate per-feature glossary delta.
+
+When the grill produces a design summary, write it to `FOLDER/01-grill.md`. Any ADRs the skill generated land at `docs/adr/` (created lazily) per the skill's own convention.
 
 **User gate (soft):** Ask "Approve grill summary? (approve / revise / abort)". On `revise`, return to grill with feedback. On `abort`, run `python -m tools.pipette abort "$ARGS"` and exit. Append `step=1 event=gate decision=<choice>` to trace.
-
-## Step 1.5: Glossary delta
-
-**Resume-with-research:** before invoking ubiquitous-language, glob `FOLDER/_research/1.5-*.md`. If any exist with `## Findings`, prepend to the conversation context.
-
-Invoke `Skill: ubiquitous-language` with the conversation so far. The skill writes `UBIQUITOUS_LANGUAGE.md` in CWD by default — first `cd docs/pipeline/_meta` so the write lands at `_meta/`. Capture the diff (`git diff UBIQUITOUS_LANGUAGE.md` — the path is relative to the new CWD) and write it to `FOLDER/01b-glossary-delta.md`. After capturing, `cd` back to the repo root.
-
-**User gate (soft):** approve / revise / abort.
 
 ## Step 2: Diagram
 
@@ -129,7 +128,7 @@ The diagram MUST use canonical glossary terms.
 Dispatch the 4 reviewers in **parallel** via `Skill: superpowers:dispatching-parallel-agents`:
 
 For each reviewer in [contracts, impact, glossary, coverage]:
-- Subagent prompt: contents of `tools/pipette/sanity/reviewers/<reviewer>.md` + the artifact stack: `00-graph-context.md`, `01-grill.md`, `01b-glossary-delta.md`, `02-diagram.{mmd|excalidraw}`, AND `docs/pipeline/_meta/UBIQUITOUS_LANGUAGE.md` (the project glossary, load-bearing for the glossary-consistency reviewer per spec §3 Step 3 — also useful for the other 3 reviewers as terminology context).
+- Subagent prompt: contents of `tools/pipette/sanity/reviewers/<reviewer>.md` + the artifact stack: `00-graph-context.md`, `01-grill.md`, `02-diagram.{mmd|excalidraw}`, AND `docs/pipeline/_meta/CONTEXT.md` (the project glossary, updated inline by `grill-with-docs` during Step 1; load-bearing for the glossary-consistency reviewer per spec §3 Step 3, also useful for the other 3 reviewers as terminology context). (B-revision 2026-04-28: per-feature glossary delta `01b-glossary-delta.md` no longer exists; the glossary lives only in `_meta/CONTEXT.md`.)
 - Subagent writes its output JSON to `FOLDER/_reviewer-<name>.json` (instructed in the dispatch prompt). The orchestrator validates each file by parsing as `ReviewerOutput` (with markdown fence stripping):
   ```bash
   python -c "import json, re, sys; from tools.pipette.sanity.schema import ReviewerOutput; raw = open('FOLDER/_reviewer-<name>.json').read(); raw = re.sub(r'^\s*\`\`\`(?:json)?\s*\n?', '', raw); raw = re.sub(r'\n?\`\`\`\s*$', '', raw); ReviewerOutput.model_validate(json.loads(raw))"
@@ -143,13 +142,13 @@ Build the gemini prompt with the canonical schema embedded. Write to `FOLDER/_st
 ```
 You are the picker for /pipette Step 3. Read the artifact stack and surviving findings. Decide:
   - PASS — surviving findings do not warrant blocking; advance to Step 4 (plan).
-  - FAIL — at least one Critical or High finding requires loop-back; specify jump_back_to ∈ {1, 1.5, 2}.
+  - FAIL — at least one Critical or High finding requires loop-back; specify jump_back_to ∈ {1, 2}. (B-revision 2026-04-28: Step 1.5 collapsed into Step 1; jump_back_to=1.5 is no longer valid.)
   - NEEDS_RESEARCH — a load-bearing claim requires external/world knowledge the agent cannot confidently resolve.
 
 Output ONE YAML object and nothing else. No prose, no code fences:
 
 verdict: PASS | FAIL | NEEDS_RESEARCH
-jump_back_to: 1 | 1.5 | 2     # required only when verdict is FAIL; null otherwise
+jump_back_to: 1 | 2           # required only when verdict is FAIL; null otherwise
 research_brief:               # required only when verdict is NEEDS_RESEARCH
   question: <one sentence>
   why_needed: <one sentence>
@@ -165,7 +164,7 @@ Constraints:
 ---
 
 ARTIFACT STACK:
-<concatenate 00-graph-context.md, 01-grill.md, 01b-glossary-delta.md, 02-diagram.{mmd|excalidraw}, _meta/UBIQUITOUS_LANGUAGE.md>
+<concatenate 00-graph-context.md, 01-grill.md, 02-diagram.{mmd|excalidraw}, _meta/CONTEXT.md>
 
 ---
 
@@ -182,7 +181,7 @@ Then branch on verdict type:
 - exit 0 + verdict FAIL → **PAUSE FOR USER CHOICE first**. Print gemini's `notes` to the user, then ask:
     > Gemini FAIL on this design. Gemini suggests jump back to step <N>. Choose:
     >   1. `loop` — accept gemini's jump-back to step <N>
-    >   2. `--jump-to <step>` — override gemini's destination (must be 1, 1.5, or 2; validated via `python -m tools.pipette parse-jump`)
+    >   2. `--jump-to <step>` — override gemini's destination (must be 1 or 2; validated via `python -m tools.pipette parse-jump`)
     >   3. `override` — bypass the gate, write a feedback memory (per spec §5.4 schema), advance to Step 4
     >   4. `abort` — discard this run via `python -m tools.pipette abort "$ARGS"`
     
@@ -216,7 +215,7 @@ override_reason: <user-supplied one-line>
 
 Then append a one-line entry to the project's `MEMORY.md` index in the canonical format (`- [Title](file.md) — one-line hook`). Advance to Step 4.
 
-User manual jump-back: if user types `--jump-to N`, capture the literal string and validate via `python -m tools.pipette parse-jump "<user input>"`. Exit 0 prints `1`, `1.5`, or `2` on stdout; exit 2 prints rejection. The slash command MUST use the validated value, never re-parse via natural language. If validation rejects, surface the error to the user and re-prompt. Then archive accordingly and loop back.
+User manual jump-back: if user types `--jump-to N`, capture the literal string and validate via `python -m tools.pipette parse-jump "<user input>"`. Exit 0 prints `1` or `2` on stdout; exit 2 prints rejection. The slash command MUST use the validated value, never re-parse via natural language. If validation rejects, surface the error to the user and re-prompt. Then archive accordingly and loop back.
 
 ## Step 4: Plan
 
@@ -269,7 +268,7 @@ Read `FOLDER/trace.jsonl`. Compute objective signals:
 - Gemini FAIL count and jump-back distribution
 - NEEDS_RESEARCH raise count
 
-Ask user: "Did each step earn its time? Rate 1–5: graph / grill / glossary / diagram / sanity-check / plan / execute / ship."
+Ask user: "Did each step earn its time? Rate 1–5: graph / grill / diagram / sanity-check / plan / execute / ship." (B-revision 2026-04-28: glossary rating dropped — grill now includes glossary updates inline.)
 
 Write `FOLDER/07-eval.md` with the YAML frontmatter format the F2 weekly aggregator parses:
 
@@ -283,12 +282,11 @@ objective:
   plan_revised: true | false
   subagent_retry_count: <int>
   gemini_fail_count: <int>
-  gemini_jump_back_distribution: {1: <count>, 1.5: <count>, 2: <count>}
+  gemini_jump_back_distribution: {1: <count>, 2: <count>}
   needs_research_count: <int>
 self_report:                 # 1–5 ratings, exactly the keys below
   graph: <int>
   grill: <int>
-  glossary: <int>
   diagram: <int>
   sanity_check: <int>
   plan: <int>

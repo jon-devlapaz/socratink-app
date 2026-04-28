@@ -21,14 +21,14 @@ GATE_TYPES = {"user_gate", "automated_gate"}
 EXIT_TYPES = {"exit"}
 ALLOWED_LOOP_BACK_EDGES = {
     ("gate_sanity", "step_1_grill"),
-    ("gate_sanity", "step_1_5_glossary"),
     ("gate_sanity", "step_2_diagram"),
     ("gate_sanity", "step_3_sanity"),  # NEEDS_RESEARCH after pause+resume
     ("gate_grill", "step_1_grill"),     # revise
-    ("gate_glossary", "step_1_5_glossary"),
     ("gate_diagram", "step_2_diagram"),
     ("gate_plan", "step_4_plan"),
     ("gate_subagent_stop", "step_5_execute"),
+    # B-revision (2026-04-28): Step 1.5 collapsed into Step 1; grill-with-docs
+    # handles glossary inline. gate_glossary edges no longer exist.
 }
 
 

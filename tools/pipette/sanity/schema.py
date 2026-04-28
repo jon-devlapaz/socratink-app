@@ -22,7 +22,10 @@ class ResearchBrief(BaseModel):
     why_needed: str
 
 
-_ALLOWED_JUMP = (1, 1.5, 2)
+_ALLOWED_JUMP = (1, 2)
+# B-revision (2026-04-28): Step 1.5 was collapsed into Step 1 because the
+# `grill-with-docs` skill (replacing `grill-me` at Step 1) handles glossary
+# updates inline during grilling. jump_back_to=1.5 is no longer a valid value.
 
 
 class Verdict(BaseModel):
@@ -36,7 +39,7 @@ class Verdict(BaseModel):
         if self.jump_back_to is not None and self.jump_back_to not in _ALLOWED_JUMP:
             raise ValueError(f"jump_back_to must be one of {_ALLOWED_JUMP}, got {self.jump_back_to!r}")
         if self.verdict == "FAIL" and self.jump_back_to is None:
-            raise ValueError("FAIL requires jump_back_to in {1, 1.5, 2}")
+            raise ValueError("FAIL requires jump_back_to in {1, 2}")
         if self.verdict in ("PASS", "NEEDS_RESEARCH") and self.jump_back_to is not None:
             raise ValueError(f"{self.verdict} must not set jump_back_to")
         if self.verdict == "NEEDS_RESEARCH" and self.research_brief is None:
