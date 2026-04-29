@@ -2,6 +2,8 @@
 
 > A capture of the user experience this design system encodes. Not a style sheet — a description of how the product **feels** to use, why each surface behaves the way it does, and what the system refuses to do.
 
+> **Vocabulary.** This document uses the project's ubiquitous language. The authoritative term list — binding definitions for **Graph truth**, **Recorded evidence**, **Reconstruction evidence**, the four learning-loop states, and **Aliases to avoid** — lives in [/UBIQUITOUS_LANGUAGE.md](./UBIQUITOUS_LANGUAGE.md). Copy edits to this file must conform.
+
 ---
 
 ## 1. The product, in one paragraph

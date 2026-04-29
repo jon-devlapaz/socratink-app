@@ -27,6 +27,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 
 | Doc | Status | Binding | Purpose | Superseded By |
 | --- | --- | --- | --- | --- |
+| [/UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) | canonical | yes | Project-wide DDD glossary: binding terms (Graph truth, Recorded evidence, Reconstruction evidence, the four learning-loop states) and explicit Aliases to avoid. Authoritative term list referenced by the Precedence block above. | — |
 | [product/evidence-weighted-map.md](../product/evidence-weighted-map.md) | canonical | yes | Defines the evidence-weighted map doctrine, true game loop, starting-map-as-anchor, map-maturity language, and graph-claim rules. Overrides other docs on graph-truth claims. | — |
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
 | [product/ux-framework.md](../product/ux-framework.md) | canonical | yes | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | — |
