@@ -88,7 +88,7 @@ Rules:
 - Same-origin failures are real bugs. Cross-origin noise is already filtered — don't allow-list it unless proven third-party.
 - On failure: paste the pytest output verbatim. Trace at `test-results/<test>/trace.zip` (`playwright show-trace ...`).
 - Project doctrine: **local success ≠ hosted validation**. The smoke is the cheapest hosted-validation signal we have.
-- Extension: `authenticated_page` fixture (see `tests/e2e/README.md`) for future flow tests against `selectTile` / `runHeroAction` / `toggleTheme` / `importLibraryConcept`.
+- Extension: `authenticated_page` fixture (see `tests/e2e/README.md`) for non-guest authenticated flows. Still-uncovered critical flows: `selectTile` / `runHeroAction` / `toggleTheme`. (`openLibraryConcept` and active-concept delete are partially covered by tests 5–6 via the guest session.)
 
 Three entry points:
 - `/verify-deploy` (skill) — waits for Vercel to finish then runs smoke. Use after a push to confirm a specific commit is live. Wrapper: `scripts/verify-deploy.sh`.
