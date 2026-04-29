@@ -83,18 +83,18 @@ function applyAuthUi(session) {
     session.user?.email?.toLowerCase() === ADMIN_EMAIL;
   if (adminLink) adminLink.hidden = !isAdmin;
 
-  if (session.authenticated && session.user) {
-    const label = session.user.first_name || session.user.email || 'Signed in';
-    status.hidden = false;
-    status.textContent = label;
-    logoutBtn.hidden = false;
-    loginLink.hidden = true;
-  } else if (session?.guest_mode) {
+  if (session?.guest_mode) {
     status.hidden = false;
     status.textContent = 'Guest mode';
     logoutBtn.hidden = false;
     logoutBtn.textContent = 'Exit Guest';
     loginLink.hidden = !session?.auth_enabled;
+  } else if (session.authenticated && session.user) {
+    const label = session.user.first_name || session.user.email || 'Signed in';
+    status.hidden = false;
+    status.textContent = label;
+    logoutBtn.hidden = false;
+    loginLink.hidden = true;
   } else {
     status.hidden = false;
     status.textContent = 'Login required';
