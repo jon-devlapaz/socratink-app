@@ -462,7 +462,7 @@ Three successful retrievals per node per session. Beyond three, halt and schedul
 
 ### Session Ending: Leave Them Hungry
 
-End sessions at a point of engagement, not exhaustion. Use absolute limits (less reactance than flexible). Explain the science transparently. Frame warmly: "Progress locked in. Your neurons do the rest while you're away." Never end on a failure state.
+End sessions at a point of engagement, not exhaustion. Use absolute limits (less reactance than flexible). Explain the science transparently. Frame warmly: "Evidence recorded. Let spacing do its work while you're away." Never end on a failure state.
 
 This triggers episodic anticipation — stopping the learner while their dopaminergic "wanting" system is still active. The learner leaves with unresolved nodes visible (Ovsiankina resumption drive), clear progress data (competence satisfaction), and a physiological drive to return. Over time, they recognize the cap serves their mastery goal, supporting long-term autonomy. The instruction to "come back tomorrow" becomes a scientifically validated prescription, not a restriction.
 
@@ -568,7 +568,7 @@ Selective visual and sensory change on `solidified`, calibrated to cognitive loa
 
 - `primed`: "You've stepped inside. The real challenge is ahead."
 - `drilled`: "Worth revisiting. The next gain is here."
-- `solidified`: "Cleared. You proved it."
+- `solidified`: "Solidified. Spaced reconstruction recorded."
 
 The Ovsiankina effect makes incomplete nodes a natural return driver.
 
