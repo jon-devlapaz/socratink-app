@@ -136,7 +136,14 @@ class SupabaseAuthService:
     def _require_enabled(self) -> None:
         if not self.enabled:
             raise AuthConfigurationError("Auth is disabled.")
-        missing = [
+        missing = self.missing_required_settings()
+        if missing:
+            raise AuthConfigurationError(
+                f"Auth is enabled but missing: {', '.join(missing)}"
+            )
+
+    def missing_required_settings(self) -> list[str]:
+        return [
             name
             for name, value in [
                 ("SUPABASE_URL", self.supabase_url),
@@ -147,10 +154,6 @@ class SupabaseAuthService:
             ]
             if not value
         ]
-        if missing:
-            raise AuthConfigurationError(
-                f"Auth is enabled but missing: {', '.join(missing)}"
-            )
 
     def build_oauth_state(self, *, return_to: str) -> tuple[str, str, str]:
         """Build (verifier, challenge, signed_state_cookie) for /auth/google.
