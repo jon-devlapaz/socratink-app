@@ -2,24 +2,30 @@
 
 What this catches
 -----------------
-- Backend is up and the FastAPI app booted (health endpoint reachable)
+- Backend is up and the FastAPI app booted (`/api/health` shape valid)
 - Frontend renders without a blank-page regression (critical DOM IDs present)
+- Anonymous Supabase sessions are labeled as guest, not signed-in users
+- Drawer toggle stays visible after opening a library concept
+- Library cards reopen the concept-map view (not a stale shell) on second click
+- Deleting the active concept confirms via dialog and resets to the desk
 - No same-origin console errors during first paint
 - No same-origin asset request failures during first paint
 - The inline theme-preloader IIFE is resilient to a blank localStorage
 
 What this deliberately does NOT cover
 -------------------------------------
-- Authenticated flows (will live in test_authenticated_flows.py later, using
-  an `authenticated_page` fixture in conftest.py with stored storageState)
-- The 4 critical flows: selectTile, runHeroAction, toggleTheme,
-  importLibraryConcept (deeper e2e suite)
+- Non-guest authenticated flows (extension point: `authenticated_page`
+  fixture in conftest.py with stored storageState). The guest-session tests
+  here exercise some in-app behavior, but real signed-in flows still need a
+  separate suite.
+- Full critical-flow exercise (`selectTile`, `runHeroAction`, `toggleTheme`)
+  — only library reopen and active-concept delete are partially covered here.
 - Visual regression (screenshots are only saved on failure for debugging)
 - Performance / lighthouse metrics
 
 Run
 ---
-    # local (uvicorn main:app --reload running)
+    # local (start the app first: `bash scripts/dev.sh`)
     pytest tests/e2e/test_smoke.py -v
 
     # against a deployed environment
