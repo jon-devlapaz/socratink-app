@@ -83,7 +83,7 @@
   --white-rgb:        255, 255, 255;
 
   /* product-specific semantics */
-  --success:        #4dba8a;   /* solidified / actualized state */
+  --success:        #4dba8a;   /* solidified evidence state */
   --danger:         #e05c6b;   /* fractured state — only for non-solid */
   --pill-success-text: #397a59;
   --pill-danger-text:  #bf4f68;
@@ -190,7 +190,7 @@
   --crystal-fractured-specular:    rgba(var(--cream-50-rgb), 0.78);
   --crystal-fractured-glow:        rgba(224, 92, 107, 0.18);
 
-  /* hibernating = parked for spaced return */
+  /* legacy spacing shell state */
   --crystal-hibernating-top:         rgba(var(--lavender-500-rgb), 0.72);
   --crystal-hibernating-upper-left:  rgba(var(--violet-600-rgb),   0.58);
   --crystal-hibernating-upper-right: rgba(var(--ink-900-rgb),      0.92);
@@ -200,7 +200,7 @@
   --crystal-hibernating-specular:    rgba(var(--cream-50-rgb),     0.70);
   --crystal-hibernating-glow:        rgba(var(--lavender-500-rgb), 0.30);
 
-  /* actualized = solidified, verified understanding */
+  /* legacy actualized shell state; prefer solidified evidence language */
   --crystal-actualized-top:         rgba(var(--cream-50-rgb), 0.98);
   --crystal-actualized-upper-left:  rgba(var(--lavender-500-rgb), 0.86);
   --crystal-actualized-upper-right: rgba(var(--violet-600-rgb),   0.88);

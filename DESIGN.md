@@ -6,7 +6,7 @@
 
 ## 1. The product, in one paragraph
 
-**socratink** is a metacognitive learning tool. It teaches by **student generation**: the learner attempts a concept cold, receives targeted study, then re-drills the same concept after a deliberate spacing interval. The interface exists to support that loop and nothing else. There is no content browser, no completion checklist, no streak tracker — the **graph itself is the only profile that exists**, and it changes only when verified understanding is real.
+**socratink** is a metacognitive learning tool. It teaches by **student generation**: the learner attempts a concept cold, receives targeted study, then re-drills the same concept after a deliberate spacing interval. The interface exists to support that loop and nothing else. There is no content browser, no completion checklist, no streak tracker — the **graph itself is the only profile that exists**, and graph truth changes only when learner-generated evidence is recorded.
 
 The product's promise is small, specific, and load-bearing: **see what you can actually explain.**
 
@@ -21,7 +21,7 @@ Every UX decision descends from a single mental model:
 - The **cold attempt** is stepping through the door before you know what's inside.
 - **Targeted study** is the room revealing itself *after* the attempt.
 - The **spaced re-drill** is the room's boss fight.
-- New rooms open only when prerequisite understanding has been proven.
+- Traversal opens from recorded engagement evidence; mastery-gated progression waits for `solidified` evidence.
 
 This metaphor is why the graph reads as **trustable**. A state change has to feel earned, not decorative. The reward layer is not a popup — it is the room itself changing shape.
 
@@ -92,7 +92,7 @@ The graph's vocabulary is small on purpose. Only these phrases appear as graph-s
 | Study completed | repair artifact | stays `primed`; re-drill timer set |
 | Interleaving bridge shown | next-choice set + break | **none** |
 | Repair rep completed | practice history grows | **none** |
-| Spaced re-drill — solid | proof through reconstruction | `primed / drilled → solidified` |
+| Spaced re-drill — solid | solid spaced reconstruction recorded | `primed / drilled → solidified` |
 | Spaced re-drill — non-solid | "worth revisiting" | `primed → drilled` (warm, never red) |
 
 The graph is **the only public profile**. Routing signals, source-dependence scores, causal-depth estimates exist internally — the learner **never sees their own schema label**. No beginner/intermediate/advanced tier, no "your learning style," no curriculum claim.
@@ -107,7 +107,7 @@ The core motif is a **dual-diamond crystal polygon** with a vertical axis. It is
 - **The product wordmark.**
 - **Each tile on the isometric graph board.**
 
-The crystal's appearance *is* the truthful record of understanding. It morphs across five states — `locked` (mauve, dim), `primed` (lavender mid-plane, faint glow), `drilled` (warm, returnable), `solidified` (success-green, crisp facets), `fractured` (subdued danger glow, rare). Color choice for `drilled` is deliberate: **warm and return-worthy, never red, never punitive.** Struggle is honored, not hidden.
+The crystal's appearance *is* the truthful projection of recorded evidence. It morphs across five states — `locked` (mauve, dim), `primed` (lavender mid-plane, faint glow), `drilled` (warm, returnable), `solidified` (success-green, crisp facets), `fractured` (subdued danger glow, rare). Color choice for `drilled` is deliberate: **warm and return-worthy, never red, never punitive.** Struggle is honored, not hidden.
 
 The graph board is **always isometric**, **always cream**. Never flat. Never a force-directed node-and-edge diagram. The isometric view enforces the dungeon-map reading and resists being mistaken for a content browser.
 
@@ -127,7 +127,7 @@ The product has no human teacher to manage attributions in real time. The interf
 - Title Case for section headings only.
 - UPPERCASE with wide tracking only on eyebrow kickers — the lone exception.
 - Plain, complete sentences. Periods, not telegraph style.
-- Verbs over adjectives. The promise shows up as things the learner *does*: "Bring your material. Get a map. Clear rooms."
+- Verbs over adjectives. The promise shows up as things the learner *does*: "Bring your material. Build a map. Record evidence."
 - No exclamation marks. Ever.
 - No emoji. Ever.
 - No hype jargon — *revolutionary, AI-powered, supercharge, 10×, unlock, crush, game-changing.*
@@ -138,13 +138,13 @@ The product has no human teacher to manage attributions in real time. The interf
 | Surface | Tone | Example |
 |---|---|---|
 | Marketing hero | Invitation, not pitch | "See what you can **actually explain.**" |
-| Value strip | Plain declarative | "No fake progress — the map updates only when you actually get it." |
-| How it works | Imperative, low-volume | "Bring your material. Get a map. Clear rooms." |
+| Value strip | Plain declarative | "No fake state changes — the map updates when Socratink records learner-generated evidence." |
+| How it works | Imperative, low-volume | "Bring your material. Build a map. Record evidence." |
 | Drill prompt | Sparse, gap-identifying | "Explain why node B matters in the system." |
 | `primed` state | Quiet acknowledgment | "You've stepped inside. The real challenge is ahead." |
 | `drilled` state | Honored, not punitive | "Worth revisiting. The next gain is here." |
-| `solidified` state | Earned, brief | "Cleared. You proved it." |
-| Session cap | Warm, scientific | "Progress locked in. Your neurons do the rest while you're away." |
+| `solidified` state | Earned, brief | "Solidified. Spaced reconstruction recorded." |
+| Session cap | Warm, scientific | "Evidence recorded. Let spacing do its work while you're away." |
 | Error / non-solid | Strategy, never ability | "The causal link between step 2 and step 3 needs a different angle." |
 
 ### What is forbidden in copy
@@ -163,7 +163,7 @@ The product has no human teacher to manage attributions in real time. The interf
 
 ## 8. The trajectory bands (post-attempt only)
 
-A reflective vocabulary — `spark → link → chain → clear → tetris` — surfaces *only* as post-attempt growth framing, always paired with interpretation: *"Your cold attempt was a spark. Your re-drill hit chain. That jump is real learning."* It is **never a live score** during an attempt. The bands describe trajectory, not standing.
+A reflective vocabulary — `spark → link → chain → clear → tetris` — surfaces *only* as post-attempt growth framing, always paired with interpretation: *"Your cold attempt was a spark. Your re-drill hit chain. Stronger reconstruction evidence is on record."* It is **never a live score** during an attempt. The bands describe trajectory, not standing.
 
 ---
 
@@ -224,10 +224,10 @@ Defer:
 The product is defined as much by what it will not do. The following are hard exclusions, not preferences:
 
 - **No streaks. No XP. No badges. No leaderboards. No achievement popups.** The reward is the crystal state change itself.
-- **No content browser.** The graph is not a library; it is a record of verified understanding.
-- **No completion checklist.** Reading does not advance state. Only generation and verified retrieval do.
+- **No content browser.** The graph is not a library; it is a record of evidence Socratink has seen.
+- **No completion checklist.** Reading does not advance state. Only generation and spaced reconstruction evidence do.
 - **No "diagnostic" framing.** The threshold is a starting map, not an evaluation.
-- **No mastery claims** from graph generation, from reading, or from fluent prose. Only spaced reconstruction proves.
+- **No mastery claims** from graph generation, from reading, or from fluent prose. Only spaced reconstruction can record `solidified`.
 - **No learner-visible schema labels.** The system may infer; the learner never sees a tier.
 - **No punitive surface for struggle.** `drilled` is warm, return-worthy, honored.
 - **No hype.** No exclamation marks, no superlatives, no "AI-powered" boilerplate.
@@ -241,6 +241,6 @@ The product is defined as much by what it will not do. The following are hard ex
 
 ## 12. The one-line summary
 
-> **The graph proposes. The cold attempt creates something to repair. Study makes the repair inspectable. The spaced re-drill is the only proof.**
+> **The graph proposes. The cold attempt creates something to repair. Study makes the repair inspectable. The spaced re-drill records the strongest evidence.**
 
 Every surface in socratink is in service of that sentence. If a screen does not advance one of those four moves, it does not belong in the product.
