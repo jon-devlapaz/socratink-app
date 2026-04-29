@@ -33,8 +33,10 @@ For this branch, a workable MVP means a freshly created concept with a clear cau
 Run:
 
 ```bash
-uvicorn main:app --reload
+bash scripts/dev.sh
 ```
+
+`scripts/dev.sh` runs the local-auth preflight (`scripts/check-local-auth.py`) before starting Uvicorn, catching the common `.env` vs `.env.local` Supabase/session misconfiguration that would otherwise break guest sign-in mid-smoke.
 
 Open:
 
