@@ -74,6 +74,10 @@ Release gate:
 
 ## Test Plan
 
+Local readiness:
+
+- `bash scripts/dev.sh` (wraps `python scripts/check-local-auth.py`) validates Supabase + session env on localhost before starting Uvicorn, catching `.env` vs `.env.local` misconfiguration that breaks the Phase 0 release gate.
+
 Automate first:
 
 - auth router behavior
