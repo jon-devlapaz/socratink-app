@@ -21,7 +21,9 @@ from starlette.responses import JSONResponse, RedirectResponse, Response
 from auth import (
     auth_router,
     build_auth_service_from_env,
+    load_current_session_state,
 )
+from auth.supabase_client import build_supabase_client
 from ai_service import (
     GeminiRateLimitError,
     GeminiServiceError,
@@ -49,6 +51,8 @@ PROTECTED_API_PATHS = frozenset(
         "/api/admin/todo/toggle",
         "/api/admin/todo/move",
         "/api/admin/todo/edit",
+        "/api/admin/todo/issue",
+        "/api/admin/feedback",
     }
 )
 
@@ -339,6 +343,41 @@ def _is_private_url(url: str) -> bool:
         or addr.is_unspecified
         for addr in resolved_addresses
     )
+
+
+class FeedbackRequest(BaseModel):
+    message: str = Field(..., min_length=10, max_length=1000)
+
+
+@app.post("/api/feedback")
+def submit_feedback(req: FeedbackRequest, request: Request):
+    """Securely capture user feedback and store in Supabase."""
+    session = load_current_session_state(request)
+    user_id = session.user.id if (session.authenticated and session.user) else None
+
+    supabase_url = os.environ.get("SUPABASE_URL")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+
+    try:
+        client = build_supabase_client(supabase_url, publishable_key)
+        client.table("feedback").insert(
+            {"message": req.message, "user_id": user_id, "status": "pending"}
+        ).execute()
+    except Exception as err:
+        err_msg = str(err)
+        if "PGRST205" in err_msg or "feedback" in err_msg and "not found" in err_msg.lower():
+            logger.warning("Feedback table not found in Supabase. Submission failed gracefully.")
+            raise HTTPException(
+                status_code=503, 
+                detail="Feedback system is currently being set up. Please try again later."
+            )
+
+        logger.exception("Unexpected failure in /api/feedback")
+        raise HTTPException(
+            status_code=500, detail="Unexpected error while saving feedback."
+        ) from err
+
+    return {"status": "ok"}
 
 
 @app.post("/api/extract-url")

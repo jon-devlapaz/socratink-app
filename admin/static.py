@@ -255,6 +255,53 @@ ADMIN_TODO_HTML = r"""<!doctype html>
 
   main { padding: 8px 36px 96px; max-width: 1240px; margin: 0 auto; }
 
+  /* Feedback Inbox */
+  .feedback-inbox {
+    margin-bottom: 48px;
+    padding: 24px 28px;
+    background: var(--surface-nested);
+    border: 1px solid var(--accent-border);
+    border-radius: 20px;
+    box-shadow: var(--shadow-soft);
+  }
+  .feedback-inbox h2 {
+    margin: 0 0 16px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-kicker);
+    color: var(--accent);
+  }
+  .feedback-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .feedback-item {
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px;
+    box-shadow: var(--paper-edge);
+  }
+  .feedback-content { flex: 1; }
+  .feedback-msg {
+    margin: 0 0 6px;
+    font-size: 0.95rem;
+    color: var(--text-strong);
+    line-height: 1.5;
+  }
+  .feedback-meta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .feedback-actions {
+    display: flex; gap: 8px;
+  }
+
   .session {
     margin-top: 36px;
     padding: 22px 22px 24px;
@@ -408,6 +455,28 @@ ADMIN_TODO_HTML = r"""<!doctype html>
     letter-spacing: 0.04em;
     border: 1px solid transparent;
   }
+  li.item .actions { margin-top: 4px; display: flex; gap: 6px; }
+  li.item .action-btn {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--duration-micro) var(--ease-standard);
+  }
+  li.item .action-btn:hover:not(:disabled) {
+    border-color: var(--accent-border-strong);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  li.item .action-btn:disabled { opacity: 0.5; cursor: progress; }
+
   /* Builder's Trap: drilled-warm halo, never red, returnable. */
   .badge.bt {
     background: rgba(216, 168, 103, 0.14);
@@ -472,6 +541,10 @@ ADMIN_TODO_HTML = r"""<!doctype html>
 </header>
 <div class="filter-rail" id="filter-rail"></div>
 <main id="root">
+  <div class="feedback-inbox" id="feedback-inbox" hidden>
+    <h2>Pending User Feedback</h2>
+    <ul class="feedback-list" id="feedback-list"></ul>
+  </div>
   <div class="empty" id="loading">loading</div>
 </main>
 <script>
@@ -497,6 +570,8 @@ ADMIN_TODO_HTML = r"""<!doctype html>
   const statusEl = document.getElementById("status");
   const reloadBtn = document.getElementById("reload");
   const railEl = document.getElementById("filter-rail");
+  const fbInbox = document.getElementById("feedback-inbox");
+  const fbList = document.getElementById("feedback-list");
 
   function passesFilter(item) {
     switch (currentFilter) {
@@ -574,6 +649,7 @@ ADMIN_TODO_HTML = r"""<!doctype html>
       renderFilters(data);
       render(data);
       setStatus("current", "ok");
+      loadFeedback();
     } catch (e) {
       console.error(e);
       setStatus("network error", "err");
@@ -582,25 +658,121 @@ ADMIN_TODO_HTML = r"""<!doctype html>
     }
   }
 
+  async function loadFeedback() {
+    try {
+      const r = await fetch("/api/admin/feedback", { credentials: "same-origin" });
+      if (!r.ok) return;
+      const data = await r.json();
+      renderFeedback(data.feedback);
+    } catch (e) {
+      console.warn("failed to load feedback", e);
+    }
+  }
+
+  function renderFeedback(items) {
+    if (!items || !items.length) {
+      fbInbox.hidden = true;
+      return;
+    }
+    fbInbox.hidden = false;
+    fbList.innerHTML = "";
+    for (const item of items) {
+      const li = document.createElement("li");
+      li.className = "feedback-item";
+      
+      const content = document.createElement("div");
+      content.className = "feedback-content";
+      const msg = document.createElement("p");
+      msg.className = "feedback-msg";
+      msg.textContent = item.message;
+      const meta = document.createElement("div");
+      meta.className = "feedback-meta";
+      const date = new Date(item.created_at).toLocaleDateString();
+      meta.textContent = `from ${item.user_id ? item.user_id.slice(0,8) : 'guest'} on ${date}`;
+      content.appendChild(msg);
+      content.appendChild(meta);
+      
+      const actions = document.createElement("div");
+      actions.className = "feedback-actions";
+      const impBtn = document.createElement("button");
+      impBtn.className = "action-btn";
+      impBtn.textContent = "import";
+      impBtn.addEventListener("click", () => importFeedback(item.id, impBtn));
+      const disBtn = document.createElement("button");
+      disBtn.className = "action-btn";
+      disBtn.textContent = "dismiss";
+      disBtn.addEventListener("click", () => dismissFeedback(item.id, disBtn));
+      
+      actions.appendChild(impBtn);
+      actions.appendChild(disBtn);
+      
+      li.appendChild(content);
+      li.appendChild(actions);
+      fbList.appendChild(li);
+    }
+  }
+
+  async function importFeedback(id, btn) {
+    btn.disabled = true;
+    setStatus("importing feedback", "");
+    try {
+      const r = await fetch(`/api/admin/feedback/${id}/import`, {
+        method: "POST",
+        credentials: "same-origin"
+      });
+      if (!r.ok) throw new Error(r.status);
+      const data = await r.json();
+      CURRENT_MTIME = data.mtime;
+      render(data);
+      loadFeedback();
+      setStatus("imported", "ok");
+    } catch (e) {
+      console.error(e);
+      setStatus("import failed", "err");
+      btn.disabled = false;
+    }
+  }
+
+  async function dismissFeedback(id, btn) {
+    btn.disabled = true;
+    try {
+      const r = await fetch(`/api/admin/feedback/${id}`, {
+        method: "DELETE",
+        credentials: "same-origin"
+      });
+      if (!r.ok) throw new Error(r.status);
+      loadFeedback();
+    } catch (e) {
+      console.error(e);
+      btn.disabled = false;
+    }
+  }
+
   function render(data) {
     LAST_DATA = data;
     renderFilters(data);
-    root.innerHTML = "";
+    const gridRoot = document.createElement("div");
+    gridRoot.id = "grid-root";
     let visibleSessions = 0;
     for (const session of data.sessions) {
       if (!session.buckets.length) continue;
       const sectionEl = renderSession(session);
       if (sectionEl) {
-        root.appendChild(sectionEl);
+        gridRoot.appendChild(sectionEl);
         visibleSessions++;
       }
     }
+    const existingGrid = document.getElementById("grid-root");
+    if (existingGrid) existingGrid.replaceWith(gridRoot);
+    else root.appendChild(gridRoot);
+
     if (!visibleSessions) {
       const empty = document.createElement("div");
       empty.className = "empty";
+      empty.id = "empty-msg";
       empty.style.padding = "32px 8px";
       empty.textContent = "no items match this filter.";
-      root.appendChild(empty);
+      gridRoot.appendChild(empty);
     }
   }
 
@@ -669,8 +841,31 @@ ADMIN_TODO_HTML = r"""<!doctype html>
       enterEdit(li, item, body);
     });
     bodyWrap.appendChild(body);
+
+    const footer = document.createElement("div");
+    footer.className = "item-footer";
+    footer.style.display = "flex";
+    footer.style.justifyContent = "space-between";
+    footer.style.alignItems = "flex-end";
+
     const meta = renderBadges(item);
-    if (meta) bodyWrap.appendChild(meta);
+    if (meta) footer.appendChild(meta);
+    else footer.appendChild(document.createElement("div"));
+
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const ghBtn = document.createElement("button");
+    ghBtn.className = "action-btn";
+    ghBtn.textContent = "gh issue";
+    ghBtn.title = "Create GitHub Issue";
+    ghBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      createIssue(item.line_index, ghBtn);
+    });
+    actions.appendChild(ghBtn);
+    footer.appendChild(actions);
+
+    bodyWrap.appendChild(footer);
     li.appendChild(bodyWrap);
 
     wireItemDrag(li);
@@ -913,6 +1108,40 @@ ADMIN_TODO_HTML = r"""<!doctype html>
     } catch (e) {
       console.error(e);
       setStatus("network error", "err");
+    }
+  }
+
+  async function createIssue(lineIndex, btn) {
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.textContent = "creating...";
+    setStatus("creating issue", "");
+    try {
+      const r = await fetch("/api/admin/todo/issue", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ line_index: lineIndex, expected_mtime: CURRENT_MTIME })
+      });
+      if (r.status === 409) { showConflict(); return; }
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        setStatus("failed: " + (j.detail || r.status), "err");
+        btn.textContent = "failed";
+        setTimeout(() => { btn.textContent = oldText; btn.disabled = false; }, 2000);
+        return;
+      }
+      const data = await r.json();
+      CURRENT_MTIME = data.mtime;
+      mtimeEl.textContent = "mtime " + fmtMtime(data.mtime);
+      render(data);
+      setStatus("issue created", "ok");
+      btn.textContent = "done";
+    } catch (e) {
+      console.error(e);
+      setStatus("network error", "err");
+      btn.textContent = "error";
+      setTimeout(() => { btn.textContent = oldText; btn.disabled = false; }, 2000);
     }
   }
 
