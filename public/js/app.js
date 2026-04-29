@@ -3462,8 +3462,8 @@ const App = (() => {
     const nodeData = resolveNodeData(km, nodeContext.id) || {};
     if (nodeData.drill_status === 'solidified') {
       currentGraphController?.showBlockedMessage?.(
-        'Node already cleared',
-        'This room is already solidified. Pick an unresolved node to keep the graph truthful.'
+        'Solid evidence already recorded',
+        'This room already has a solid spaced reconstruction on record. Pick a node without that record to keep the graph truthful.'
       );
       return;
     }
