@@ -6,7 +6,7 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-6 tests, runtime ~10s warm + ~30s cold, in source order:
+9 tests, runtime ~15s warm + ~40s cold, in source order:
 
 1. **`test_health_endpoint_ok`** — backend reachable, `/api/health` shape valid.
    Runs first to absorb serverless cold-start latency.
@@ -14,17 +14,28 @@ one shell command, against local dev / Vercel preview / production.
    `#concept-list`, `.sidebar-brand-mark` all attached after navigation.
 3. **`test_guest_session_is_labeled_as_guest`** — anonymous Supabase sessions
    render as guest, not as signed-in users.
-4. **`test_no_console_errors_on_first_paint`** — zero same-origin
+4. **`test_drawer_toggle_remains_visible_in_concept_view`** — sidebar toggle
+   stays available after opening a library concept (regression gate for the
+   drawer-toggle visibility fix).
+5. **`test_saved_library_concept_reopens_map_view`** — library cards reopen
+   the concept-map view, not a stale shell, on the second click (regression
+   gate for the library reopen fix).
+6. **`test_active_concept_delete_confirms_then_returns_to_desk`** — deleting
+   the open concept confirms via dialog and resets the workspace to the desk
+   (regression gate for the active-concept delete flow).
+7. **`test_no_console_errors_on_first_paint`** — zero same-origin
    `console.error` during first paint.
-5. **`test_no_failed_critical_asset_requests`** — zero same-origin
+8. **`test_no_failed_critical_asset_requests`** — zero same-origin
    `requestfailed` events during first paint.
-6. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
+9. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
    at top of `<body>` produces no errors on a fresh visit.
 
 What's deliberately out of scope:
-- Authenticated flows (extension point: `authenticated_page` fixture)
-- Critical-flow exercise (`selectTile`, `runHeroAction`, `toggleTheme`,
-  `importLibraryConcept`) — that's a deeper e2e suite, separate file
+- Non-guest authenticated flows (extension point: `authenticated_page`
+  fixture). Tests 4–6 use a guest Supabase session, so they exercise some
+  in-app behavior, but real signed-in flows still need a separate suite.
+- Full critical-flow exercise (`selectTile`, `runHeroAction`, `toggleTheme`)
+  — only library reopen and concept delete are partially covered here.
 - Visual regression — Playwright captures a trace on failure for debugging
 - Performance / Lighthouse
 
@@ -43,7 +54,8 @@ The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point:
 
 ```bash
-# Local — needs `uvicorn main:app --reload` in another shell
+# Local — needs `bash scripts/dev.sh` in another shell (runs the
+# local-auth preflight, then `uvicorn main:app --reload`)
 bash scripts/qa-smoke.sh local
 
 # Production (https://app.socratink.ai)
@@ -56,7 +68,7 @@ bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel
 Raw pytest invocations (when you need flags the wrapper doesn't pass through):
 
 ```bash
-# Local — needs `uvicorn main:app --reload` in another shell
+# Local — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/test_smoke.py -v
 
 # Against any URL via env var
@@ -74,13 +86,17 @@ PWDEBUG=1 pytest tests/e2e/test_smoke.py -v
 Pass:
 
 ```
-tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED                 [ 20%]
-tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED   [ 40%]
-tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED   [ 60%]
-tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED  [ 80%]
+tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED                              [ 11%]
+tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED                [ 22%]
+tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED               [ 33%]
+tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED   [ 44%]
+tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED          [ 55%]
+tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED [ 66%]
+tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED                [ 77%]
+tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED               [ 88%]
 tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED [100%]
 
-============================== 5 passed in 8.21s ==============================
+============================== 9 passed in 14.7s ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,
