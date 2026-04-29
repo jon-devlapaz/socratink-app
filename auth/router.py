@@ -306,12 +306,14 @@ input {
   opacity: 0.88;
 }
 
-.google-button.is-disabled {
+.google-button.is-disabled,
+.guest-button.is-disabled {
   pointer-events: none;
   opacity: 0.52;
 }
 
-.google-button.is-disabled:hover {
+.google-button.is-disabled:hover,
+.guest-button.is-disabled:hover {
   transform: none;
   background: rgba(255, 255, 255, 0.56);
   box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);
@@ -485,6 +487,7 @@ function applyAuthErrorFromQuery() {
     user_cancelled: "Google sign-in was cancelled. You can try again.",
     authentication_failed: "We couldn't complete sign-in. Please try again.",
     authentication_unavailable: "Google sign-in is not configured correctly right now. Continue as guest or try again later.",
+    guest_unavailable: "Guest mode is not configured correctly right now. Try again later.",
     missing_code: "Sign-in did not complete. Please try again.",
     invalid_state: "Sign-in could not be verified safely. Please try again.",
   };
@@ -546,13 +549,16 @@ async function bootstrap() {
   }
   try {
     const session = await fetchSession();
-    if (session.authenticated) {
-      setBanner("You are already signed in. Redirecting...", "success");
-      window.location.assign(safeReturnTo());
+    if (session.guest_mode) {
+      setBanner("Guest mode is active. Continue with Google to save and sync, or return to the app.", "default");
+      if (guestLink) {
+        guestLink.href = safeReturnTo();
+        guestLink.textContent = "return to app";
+      }
       return;
     }
-    if (session.guest_mode) {
-      setBanner("Guest mode is already active in this browser. Redirecting...", "success");
+    if (session.authenticated) {
+      setBanner("You are already signed in. Redirecting...", "success");
       window.location.assign(safeReturnTo());
       return;
     }
@@ -562,7 +568,12 @@ async function bootstrap() {
         googleLink.classList.add("is-disabled");
         googleLink.removeAttribute("href");
       }
-      setBanner("Google sign-in is not configured here yet. Continue as guest to enter.", "default");
+      if (guestLink) {
+        guestLink.setAttribute("aria-disabled", "true");
+        guestLink.classList.add("is-disabled");
+        guestLink.removeAttribute("href");
+      }
+      setBanner("Authentication is not configured here right now. Try again later.", "error");
     } else if (session.authenticated) {
       setBanner("You are already signed in. Redirecting...", "success");
       window.location.assign(safeReturnTo());
@@ -783,7 +794,7 @@ def get_current_user(request: Request):
 def login(request: Request, return_to: str | None = None):
     current = load_current_session_state(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
-    if current.authenticated or current.guest_mode:
+    if current.authenticated and not current.guest_mode:
         response = RedirectResponse(url=sanitized_return_to, status_code=302)
     else:
         response = HTMLResponse(_render_login_html())
@@ -803,7 +814,7 @@ def auth_guest(request: Request, return_to: str | None = None):
         return RedirectResponse(
             url=_build_login_redirect(
                 return_to=sanitized_return_to,
-                auth_error="authentication_unavailable",
+                auth_error="guest_unavailable",
             ),
             status_code=302,
         )
@@ -818,8 +829,12 @@ def auth_guest(request: Request, return_to: str | None = None):
         )
 
     response = RedirectResponse(url=sanitized_return_to, status_code=302)
-    if not auth_state.authenticated or not auth_state.sealed_session:
-        logger.warning("Anonymous sign-in returned unauthenticated state")
+    if (
+        not auth_state.authenticated
+        or not auth_state.guest_mode
+        or not auth_state.sealed_session
+    ):
+        logger.warning("Anonymous sign-in did not return a guest session")
         return RedirectResponse(
             url=_build_login_redirect(
                 return_to=sanitized_return_to,

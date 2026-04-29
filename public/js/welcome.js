@@ -20,10 +20,10 @@ function escapeHtml(value) {
 }
 
 function storageKeyForSession(session) {
-  if (session?.authenticated && session?.user?.id) {
+  if (session?.guest_mode) return `${WELCOME_STORAGE_PREFIX}:guest`;
+  if (session?.authenticated && !session?.guest_mode && session?.user?.id) {
     return `${WELCOME_STORAGE_PREFIX}:user:${session.user.id}`;
   }
-  if (session?.guest_mode) return `${WELCOME_STORAGE_PREFIX}:guest`;
   return `${WELCOME_STORAGE_PREFIX}:browser`;
 }
 

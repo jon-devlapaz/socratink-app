@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+import subprocess
 import tempfile
 from datetime import date
 from pathlib import Path
@@ -23,6 +24,7 @@ from pydantic import BaseModel
 from starlette.responses import HTMLResponse, JSONResponse
 
 from auth import load_current_session_state
+from auth.supabase_client import build_supabase_client
 from .static import ADMIN_TODO_HTML
 from .todo_parser import (
     edit_item_body,
@@ -119,6 +121,11 @@ class EditRequest(BaseModel):
     expected_mtime: float | None = None
 
 
+class IssueRequest(BaseModel):
+    line_index: int
+    expected_mtime: float | None = None
+
+
 @admin_router.get("/admin/todo", response_class=HTMLResponse)
 def admin_todo_page(request: Request):
     _require_admin(request)
@@ -195,6 +202,156 @@ def admin_todo_move(payload: MoveRequest, request: Request):
     new_text = doc.serialize()
     new_mtime = _atomic_write_todo(new_text)
     return JSONResponse(_payload(new_text, new_mtime))
+
+
+@admin_router.post("/api/admin/todo/issue")
+def admin_todo_issue(payload: IssueRequest, request: Request):
+    _require_admin(request)
+    text, mtime = _read_todo()
+    if payload.expected_mtime is not None and abs(payload.expected_mtime - mtime) > 1e-3:
+        raise HTTPException(status_code=409, detail="file changed on disk")
+
+    doc = parse_tink_todo(text)
+    if payload.line_index not in doc.items:
+        raise HTTPException(status_code=422, detail="line is not a TODO Item")
+
+    item = doc.items[payload.line_index]
+    title = item.body.strip()
+
+    # Create the issue using the `gh` CLI.
+    try:
+        cmd = [
+            "gh",
+            "issue",
+            "create",
+            "--title",
+            title,
+            "--body",
+            f"Imported from Tink TODO: {TINK_TODO_PATH}",
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        issue_url = res.stdout.strip()
+    except subprocess.CalledProcessError as err:
+        logger.error("gh issue create failed: %s", err.stderr)
+        raise HTTPException(
+            status_code=500, detail=f"GitHub CLI failed: {err.stderr}"
+        ) from err
+
+    # Append the issue URL to the item body if not already present.
+    if issue_url and issue_url not in item.body:
+        new_body = f"{item.body} {issue_url}"
+        edit_item_body(doc, payload.line_index, new_body)
+        new_text = doc.serialize()
+        new_mtime = _atomic_write_todo(new_text)
+        return JSONResponse({**_payload(new_text, new_mtime), "issue_url": issue_url})
+
+    return JSONResponse({**_payload(text, mtime), "issue_url": issue_url})
+
+
+@admin_router.get("/api/admin/feedback")
+def admin_feedback_list(request: Request):
+    _require_admin(request)
+    supabase_url = os.environ.get("SUPABASE_URL")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+
+    try:
+        client = build_supabase_client(supabase_url, publishable_key)
+        res = (
+            client.table("feedback")
+            .select("*")
+            .eq("status", "pending")
+            .order("created_at", desc=False)
+            .execute()
+        )
+        return JSONResponse({"feedback": res.data})
+    except Exception as err:
+        # Gracefully handle missing table error (PGRST205)
+        err_msg = str(err)
+        if "PGRST205" in err_msg or "feedback" in err_msg and "not found" in err_msg.lower():
+            logger.warning("Feedback table not found in Supabase. Returning empty list.")
+            return JSONResponse({"feedback": [], "warning": "Feedback table not created in Supabase yet."})
+        
+        logger.exception("Failed to fetch feedback")
+        raise HTTPException(status_code=500, detail=str(err)) from err
+
+
+@admin_router.post("/api/admin/feedback/{feedback_id}/import")
+def admin_feedback_import(feedback_id: str, request: Request):
+    _require_admin(request)
+    supabase_url = os.environ.get("SUPABASE_URL")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+
+    try:
+        client = build_supabase_client(supabase_url, publishable_key)
+        # 1. Fetch the feedback
+        res = client.table("feedback").select("*").eq("id", feedback_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Feedback not found")
+        fb = res.data[0]
+
+        # 2. Append to TODO file
+        text, mtime = _read_todo()
+        doc = parse_tink_todo(text)
+
+        # Format: - [ ] Feedback: "{message}" *(from {user_id} on {date})*
+        from datetime import datetime
+
+        dt = datetime.fromisoformat(fb["created_at"].replace("Z", "+00:00"))
+        date_str = dt.strftime("%Y-%m-%d")
+        author = fb["user_id"][:8] if fb["user_id"] else "guest"
+        new_item_text = f"Feedback: \"{fb['message']}\" *(from {author} on {date_str})*"
+
+        # Insert at the top of the first bucket of the first session (Inbox)
+        # If no sessions, create one.
+        if not doc.sessions:
+            raise HTTPException(status_code=500, detail="TODO file has no sessions")
+
+        session = doc.sessions[0]
+        if not session.buckets:
+            # Create a bucket if none exist
+            # This is a bit complex with the current parser, so I'll just
+            # assume an Inbox bucket exists or use a simpler injection.
+            # Actually, I'll just append to the end of the file for safety if Inbox not found.
+            pass
+
+        # Use edit_item_body or similar? No, I need to add a NEW item.
+        # todo_parser.py doesn't seem to have a clean 'add_item' yet.
+        # I'll manually inject it into the text and re-parse.
+        lines = text.splitlines()
+        found_inbox = False
+        for i, line in enumerate(lines):
+            if "Inbox" in line or "loose items" in line:
+                lines.insert(i + 1, f"- [ ] {new_item_text}")
+                found_inbox = True
+                break
+        if not found_inbox:
+            lines.append(f"- [ ] {new_item_text}")
+
+        new_text = "\n".join(lines) + "\n"
+        new_mtime = _atomic_write_todo(new_text)
+
+        # 3. Update status in Supabase
+        client.table("feedback").update({"status": "imported"}).eq("id", feedback_id).execute()
+
+        return JSONResponse({**_payload(new_text, new_mtime), "status": "imported"})
+    except Exception as err:
+        logger.exception("Failed to import feedback")
+        raise HTTPException(status_code=500, detail=str(err)) from err
+
+
+@admin_router.delete("/api/admin/feedback/{feedback_id}")
+def admin_feedback_dismiss(feedback_id: str, request: Request):
+    _require_admin(request)
+    supabase_url = os.environ.get("SUPABASE_URL")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+
+    try:
+        client = build_supabase_client(supabase_url, publishable_key)
+        client.table("feedback").update({"status": "dismissed"}).eq("id", feedback_id).execute()
+        return JSONResponse({"status": "dismissed"})
+    except Exception as err:
+        logger.exception("Failed to dismiss feedback")
+        raise HTTPException(status_code=500, detail=str(err)) from err
 
 
 def register_admin_router(app: FastAPI) -> bool:

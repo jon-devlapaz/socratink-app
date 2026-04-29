@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=68">
+  <link rel="stylesheet" href="styles.css?v=69">
 </head>
 
 <body>
@@ -47,7 +47,7 @@
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
       <span class="material-symbols-outlined">auto_awesome</span>
-      <span class="bottom-nav-label">Dashboard</span>
+      <span class="bottom-nav-label">Desk</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showLibrary()" id="bn-library">
       <span class="material-symbols-outlined">memory</span>
@@ -68,11 +68,13 @@
 
     <nav class="sidebar-nav">
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
-        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Dashboard</a>
+        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showLibrary()"><span class="material-symbols-outlined">memory</span> Library</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
+      <a id="nav-feedback" class="sidebar-nav-item" href="javascript:void(0)"
+        onclick="Feedback.show()"><span class="material-symbols-outlined">info</span> Send Feedback</a>
     </nav>
 
     <div class="sidebar-divider"></div>
@@ -126,7 +128,12 @@
     </div>
 
     <!-- Close button (mobile only) -->
-    <button class="drawer-close" onclick="App.closeDrawer()">×</button>
+    <button class="drawer-close" onclick="App.closeDrawer()" aria-label="Close sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
   </div>
 
   <!-- Main content -->
@@ -153,12 +160,16 @@
       <div class="main-header-right">
         <div class="auth-controls" id="auth-controls" hidden>
           <span class="auth-status" id="auth-status" hidden></span>
-          <a class="auth-link auth-link-secondary" id="auth-admin-todo-link" href="/admin/todo" hidden title="Open Tink TODO admin dashboard">Tink TODO</a>
           <a class="auth-link" id="auth-login-link" href="/login">Save &amp; Sync</a>
           <button class="auth-link auth-link-secondary" id="auth-logout-btn" type="button" hidden>Log Out</button>
         </div>
         <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
-        <button class="map-close-btn" id="map-close-btn" type="button" onclick="App.hideMapView()" aria-label="Close concept map">×</button>
+        <button class="map-close-btn" id="map-close-btn" type="button" onclick="App.hideMapView()" aria-label="Close concept map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -207,15 +218,15 @@
               <!-- #hero-state-chip is the data-state hook that CSS :has() rules depend on.
                    In empty state we hide the wrapping .hero-meta-row entirely (see components.css).
                    Non-empty states render the chip text via renderHero(). -->
-              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">Board Empty</div>
+              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">no map yet</div>
             </div>
           </div>
           <div class="hero-eyebrow-row">
             <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
           </div>
           <h1 class="hero-title" id="title">What do you want to understand?</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.</p>
-          <p class="hero-voice-line">The map won't lie to you, even if you want it to.</p>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept or paste source material. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.</p>
+          <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
             <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
               <span class="hero-primary-action__label">Begin</span>
@@ -230,7 +241,7 @@
             <textarea class="hero-single-input__field"
                       id="hero-single-input-field"
                       rows="1"
-                      placeholder='e.g. "Entropy" — or paste a passage'
+                      placeholder='e.g. "Entropy", or paste a passage'
                       aria-label="What do you want to understand?"></textarea>
             <div class="hero-single-input__row">
               <input class="hero-single-input__file"
@@ -266,22 +277,22 @@
 
           <!-- Action Controls (Hidden for Board-First UX) -->
           <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button id="btn-drill" onclick="App.drill()">3. Drill (Recall)</button>
+            <button id="btn-drill" onclick="App.drill()">Start room</button>
           </div>
           <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button onclick="App.drillFail()">Forgot</button>
-            <button onclick="App.drillPass()">Remembered</button>
+            <button onclick="App.drillFail()">Needs repair</button>
+            <button onclick="App.drillPass()">Attempt recorded</button>
           </div>
           <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button onclick="App.consolidate()" disabled title="Consolidation is coming soon">Consolidate (Coming Soon)</button>
+            <button onclick="App.consolidate()" disabled title="Spacing gate is not active in this MVP">Spacing gate unavailable</button>
           </div>
         </div>
 
         <!-- 2×2 isometric crystal grid -->
         <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
-          <!-- Floating Consolidate Button (appears dynamically after successful drill) -->
+          <!-- Floating spacing button (disabled in the current MVP) -->
           <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
-            style="display:none;" disabled title="Consolidation is coming soon" aria-label="Consolidation coming soon">
+            style="display:none;" disabled title="Spacing gate is not active in this MVP" aria-label="Spacing gate unavailable">
             <svg
               style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; pointer-events: none;"
               viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -330,10 +341,10 @@
           </div>
           <div class="concept-header-actions">
             <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
-              <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Study</button>
-              <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Graph</button>
+              <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Draft</button>
+              <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Map</button>
             </div>
-            <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Drill</button>
+            <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Cold Attempt</button>
           </div>
         </header>
         <div id="map-content"></div>
@@ -342,8 +353,8 @@
             <div class="graph-stage-wrap">
               <div class="graph-stage-header">
                 <div>
-                  <div class="graph-stage-kicker">Architecture</div>
-                  <h3 class="graph-stage-title">Knowledge Graph</h3>
+                  <div class="graph-stage-kicker">Draft Route</div>
+                  <h3 class="graph-stage-title">Evidence Map</h3>
                 </div>
               </div>
               <div id="graph-stage" class="graph-stage"></div>
@@ -353,11 +364,11 @@
               <div class="drill-ui drill-ui-embedded" id="drill-ui">
                 <div class="drill-header">
                   <button class="drill-back" onclick="App.cancelDrill()">← Back</button>
-                  <span class="drill-title" id="drill-title">Socratic Drill</span>
+                  <span class="drill-title" id="drill-title">Cold Attempt</span>
                 </div>
                 <div class="chat-history" id="chat-history"></div>
                 <div class="chat-input-area">
-                  <textarea class="chat-input" id="chat-input" placeholder="Explain this concept in your own words..."
+                  <textarea class="chat-input" id="chat-input" placeholder="Write what you can reconstruct from memory."
                     rows="2"></textarea>
                 </div>
               </div>
@@ -375,9 +386,35 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=46"></script>
+  <script type="module" src="js/app.js?v=48"></script>
   <script src="js/intro-particles.js?v=3"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
+  <script type="module" src="js/feedback.js?v=1"></script>
+
+  <!-- Feedback Modal -->
+  <div id="feedback-overlay" class="modal-overlay" hidden onclick="Feedback.hide()">
+    <div class="modal-card feedback-modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title">Send Feedback</h2>
+        <button class="modal-close" onclick="Feedback.hide()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="feedback-form" onsubmit="return Feedback.submit(event)">
+        <p class="modal-desc">Experiencing an issue? Have an idea? Your feedback goes directly to my local TODO list.</p>
+        <textarea id="feedback-message" class="modal-textarea"
+                  placeholder="Tell me what's on your mind..."
+                  minlength="10" maxlength="1000" required></textarea>
+        <div class="modal-footer">
+          <span id="feedback-status" class="modal-status"></span>
+          <button type="submit" id="feedback-submit" class="btn-primary">Send Feedback</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Vercel Speed Insights -->
   <script>

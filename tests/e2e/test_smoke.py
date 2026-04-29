@@ -79,14 +79,34 @@ def test_health_endpoint_ok(base_url: str) -> None:
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     """Navigate to base_url and bypass the /login redirect via the guest link.
 
-    On Vercel, static `public/index.html` takes priority over the `/api`
-    rewrite, so `/` serves the app shell directly and the FastAPI
-    require_login_or_guest_entry redirect never fires. Locally (uvicorn),
-    `/` redirects to `/login` where the guest-continue link must be clicked.
+    On Vercel, static `public/index.html` can take priority over the `/api`
+    rewrite, so `/` may serve the app shell before the FastAPI redirect fires.
+    In that case, explicitly check `/api/me` and enter through `/login`.
     """
     page.goto(base_url)
+    if "/login" not in page.url:
+        session = _fetch_browser_session(page)
+        if session.get("authenticated") or session.get("guest_mode"):
+            return
+        page.goto(urljoin(base_url + "/", "login?return_to=%2F"))
     if "/login" in page.url:
+        expect(page.locator("#guest-continue-link")).to_be_visible()
         page.locator("#guest-continue-link").click()
+        page.wait_for_url(lambda url: "/login" not in url, timeout=15_000)
+
+
+def _fetch_browser_session(page: Page) -> dict:
+    payload = page.evaluate(
+        """async () => {
+            const response = await fetch('/api/me', {
+              credentials: 'same-origin',
+              headers: { Accept: 'application/json' },
+            });
+            if (!response.ok) return {};
+            return response.json();
+        }"""
+    )
+    return payload if isinstance(payload, dict) else {}
 
 
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:
@@ -101,6 +121,20 @@ def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> No
     expect(clean_page.locator("#concept-list")).to_be_attached()
     # Brand mark anchors that the head/sidebar mounted.
     expect(clean_page.locator(".sidebar-brand-mark").first).to_be_attached()
+
+
+def test_guest_session_is_labeled_as_guest(
+    clean_page: Page, base_url: str
+) -> None:
+    """Anonymous Supabase sessions must render as guest, not signed-in user."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    session = _fetch_browser_session(clean_page)
+
+    assert session.get("authenticated") is True
+    assert session.get("guest_mode") is True
+    expect(clean_page.locator("#auth-status")).to_have_text("Guest mode")
+    expect(clean_page.locator("#auth-login-link")).to_have_text("Save & Sync")
+    expect(clean_page.locator("#auth-logout-btn")).to_have_text("Exit Guest")
 
 
 # --- 3. No console errors on first paint ---------------------------------

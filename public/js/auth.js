@@ -11,6 +11,14 @@ export function redirectToLogin(returnTo = safeReturnTo()) {
   window.location.assign(buildLoginHref(returnTo));
 }
 
+export function isGuestSession(session) {
+  return Boolean(session?.guest_mode);
+}
+
+export function isIdentifiedUserSession(session) {
+  return Boolean(session?.authenticated && !session?.guest_mode && session?.user);
+}
+
 // Module-scoped session cache. First caller fetches; subsequent callers
 // await the same in-flight promise OR the resolved value. Cleared on
 // logout so the next fetch reflects the new anonymous state.
@@ -70,7 +78,6 @@ function applyAuthUi(session) {
   const loginLink = document.getElementById('auth-login-link');
   const logoutBtn = document.getElementById('auth-logout-btn');
   const status = document.getElementById('auth-status');
-  const adminLink = document.getElementById('auth-admin-todo-link');
   if (!controls || !loginLink || !logoutBtn || !status) return;
 
   controls.hidden = false;
@@ -79,22 +86,37 @@ function applyAuthUi(session) {
   logoutBtn.textContent = 'Log Out';
 
   const isAdmin =
-    session?.authenticated &&
+    isIdentifiedUserSession(session) &&
     session.user?.email?.toLowerCase() === ADMIN_EMAIL;
-  if (adminLink) adminLink.hidden = !isAdmin;
 
-  if (session.authenticated && session.user) {
-    const label = session.user.first_name || session.user.email || 'Signed in';
-    status.hidden = false;
-    status.textContent = label;
-    logoutBtn.hidden = false;
-    loginLink.hidden = true;
-  } else if (session?.guest_mode) {
+  let adminLink = document.getElementById('auth-admin-todo-link');
+  if (isAdmin) {
+    if (!adminLink) {
+      adminLink = document.createElement('a');
+      adminLink.id = 'auth-admin-todo-link';
+      adminLink.className = 'auth-link auth-link-secondary';
+      adminLink.href = '/admin/todo';
+      adminLink.title = 'Open Tink TODO admin dashboard';
+      adminLink.textContent = 'Tink TODO';
+      loginLink.parentNode.insertBefore(adminLink, loginLink);
+    }
+    adminLink.hidden = false;
+  } else if (adminLink) {
+    adminLink.remove();
+  }
+
+  if (isGuestSession(session)) {
     status.hidden = false;
     status.textContent = 'Guest mode';
     logoutBtn.hidden = false;
     logoutBtn.textContent = 'Exit Guest';
     loginLink.hidden = !session?.auth_enabled;
+  } else if (isIdentifiedUserSession(session)) {
+    const label = session.user.first_name || session.user.email || 'Signed in';
+    status.hidden = false;
+    status.textContent = label;
+    logoutBtn.hidden = false;
+    loginLink.hidden = true;
   } else {
     status.hidden = false;
     status.textContent = 'Login required';

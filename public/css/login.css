@@ -286,12 +286,14 @@ input {
   opacity: 0.88;
 }
 
-.google-button.is-disabled {
+.google-button.is-disabled,
+.guest-button.is-disabled {
   pointer-events: none;
   opacity: 0.52;
 }
 
-.google-button.is-disabled:hover {
+.google-button.is-disabled:hover,
+.guest-button.is-disabled:hover {
   transform: none;
   background: rgba(255, 255, 255, 0.56);
   box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.32);

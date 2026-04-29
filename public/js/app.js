@@ -1,5 +1,5 @@
 import { Bus } from './bus.js';
-import { generateKnowledgeMap } from './ai_service.js?v=1';
+import { generateKnowledgeMap } from './ai_service.js?v=2';
 import {
   getHealth,
   extractUrl,
@@ -7,9 +7,17 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
-import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
-import { maybeShowFirstRunWelcome } from './welcome.js?v=5';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=9';
+import {
+  bootstrapAuthUi,
+  buildLoginHref,
+  fetchAuthSession,
+  isGuestSession,
+  isIdentifiedUserSession,
+  logout,
+  redirectToLogin,
+} from './auth.js?v=3';
+import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -249,34 +257,34 @@ const App = (() => {
 
   function getHeroStateLabel(state) {
     switch (state) {
-      case 'instantiated': return 'Instantiated';
-      case 'growing': return 'Growing';
-      case 'fractured': return 'Fractured';
-      case 'hibernating': return 'Consolidating';
-      case 'actualized': return 'Actualized';
-      default: return 'Board Empty';
+      case 'instantiated': return 'source captured';
+      case 'growing': return 'draft path';
+      case 'fractured': return 'worth revisiting';
+      case 'hibernating': return 'spacing';
+      case 'actualized': return 'spaced evidence';
+      default: return 'no map yet';
     }
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return "Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.";
+    if (!concept) return 'Name one concept or paste source material. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
-          ? 'Open the map to inspect structure before recall.'
-          : 'Map this concept to turn it into a usable board node.';
+          ? 'Open the draft path. It is a hypothesis, not evidence yet.'
+          : 'Map this source into a draft path. The map will not grade you.';
       case 'growing':
         return concept.graphData
-          ? 'Inspect the concept map, then test recall.'
-          : 'Continue by mapping this concept into a board-ready structure.';
+          ? 'Open the draft path. Start with one cold attempt before study appears.'
+          : 'Continue by mapping this concept into a draft path.';
       case 'fractured':
-        return 'This concept needs repair through another drill.';
+        return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
       case 'hibernating':
-        return 'This concept is consolidating and cannot be drilled yet.';
+        return 'This room is spacing. Work elsewhere or return when re-drill is eligible.';
       case 'actualized':
-        return 'Review the map or revisit recall if you need a refresh.';
+        return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
       default:
-        return "Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.";
+        return 'Name one concept or paste source material. The first room asks for a small cold attempt before any explanation appears.';
     }
   }
 
@@ -287,22 +295,22 @@ const App = (() => {
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
-          ? { label: 'Open Map', action: 'open-map', disabled: false }
-          : { label: 'Map Concept', action: 'extract', disabled: false };
+          ? { label: 'Open Draft Path', action: 'open-map', disabled: false }
+          : { label: 'Draft Map', action: 'extract', disabled: false };
       case 'growing':
         return concept.graphData
-          ? { label: 'Open Map', action: 'open-map', disabled: false }
-          : { label: 'Map Concept', action: 'extract', disabled: false };
+          ? { label: 'Open Draft Path', action: 'open-map', disabled: false }
+          : { label: 'Draft Map', action: 'extract', disabled: false };
       case 'fractured':
-        return { label: 'Start Drill', action: 'drill', disabled: false };
+        return { label: 'Repair Gap', action: 'drill', disabled: false };
       case 'hibernating':
         return concept.graphData
-          ? { label: 'Review Map', action: 'open-map', disabled: false }
+          ? { label: 'Open Evidence Map', action: 'open-map', disabled: false }
           : { label: 'Return Later', action: 'wait', disabled: true };
       case 'actualized':
         return concept.graphData
-          ? { label: 'Review Map', action: 'open-map', disabled: false }
-          : { label: 'Open Board', action: 'wait', disabled: true };
+          ? { label: 'Open Evidence Map', action: 'open-map', disabled: false }
+          : { label: 'Open Desk', action: 'wait', disabled: true };
       default:
         return { label: 'Begin', action: 'add', disabled: false };
     }
@@ -313,7 +321,7 @@ const App = (() => {
       titleEl.textContent = 'What do you want to understand?';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
-        heroStateChipEl.textContent = 'Board Empty';
+        heroStateChipEl.textContent = 'no map yet';
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
@@ -516,8 +524,8 @@ const App = (() => {
   }
 
   // ── 8. Grid rendering ──────────────────────────────────────
-  // Dashboard tiles are inventory/navigation. The pin marks that a concept
-  // has earned a place here; it does not encode proof or mastery.
+  // Desk tiles are inventory/navigation. The pin marks that a concept
+  // has earned a place here; it does not encode proof or graph evidence.
   const TILE_PLATFORM = `
     <polygon class="tile-left"  points="0,40 70,80 70,90 0,50"/>
     <polygon class="tile-right" points="140,40 70,80 70,90 140,50"/>
@@ -601,7 +609,12 @@ const App = (() => {
       item.innerHTML = `
         <div class="concept-dot" data-state="${c.state}"></div>
         <span class="concept-item-name">${escHtml(c.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)">×</button>`;
+        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" title="Delete concept">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>`;
       item.addEventListener('click', e => {
         if (e.target.classList.contains('concept-delete')) return;
         showDashboard();
@@ -619,7 +632,7 @@ const App = (() => {
     addTriggerArea.style.overflowY = '';
     const full = loadConcepts().length >= 4;
     addTriggerArea.innerHTML = full
-      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Library full — remove a concept to add another">
+      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Library full. Remove a concept to add another.">
            <span class="add-trigger-icon" aria-hidden="true">
              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
                <line x1="6" y1="2" x2="6" y2="10"/>
@@ -668,12 +681,12 @@ const App = (() => {
         <div class="creation-intro">
           <div class="creation-intro-row">
             <div>
-              <div class="creation-intro-kicker">Add a New Tink</div>
-              <div class="creation-intro-title">Turn raw material into a drillable concept map.</div>
+              <div class="creation-intro-kicker">Add a new tink</div>
+              <div class="creation-intro-title">Turn raw material into a draft path.</div>
             </div>
             <div class="creation-capacity-pill">${Math.min(usedSlots, 4)}/4 active</div>
           </div>
-          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format for this learner artifact.</p>
+          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format. The draft will not grade you.</p>
         </div>
         <span class="creation-section-label">Name this concept</span>
         <input class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
@@ -686,12 +699,12 @@ const App = (() => {
       ${showNameField ? `
         <div class="creation-source-meta">
           <span class="creation-source-chip" data-role="source-chip">Text Paste</span>
-          <p class="creation-source-copy" data-role="source-copy">Paste notes, an article excerpt, a transcript, or any raw text you want Socratink to structure.</p>
+          <p class="creation-source-copy" data-role="source-copy">Paste notes, an article excerpt, a transcript, or any raw text you want socratink to structure.</p>
         </div>
       ` : ''}
       <div class="overlay-panel" data-panel="paste">
-        <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article…' : 'Paste content here…'}"></textarea>
-        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">⌘ Paste from clipboard</button><button class="wiki-random-btn" type="button">🔬 Random Science</button><button class="graph-preview-btn" type="button">⚡ Preview Graph</button></div>' : ''}
+        <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article...' : 'Paste content here...'}"></textarea>
+        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button><button class="wiki-random-btn" type="button">Random science</button><button class="graph-preview-btn" type="button">Preview map</button></div>' : ''}
       </div>
       <div class="overlay-panel" data-panel="url" style="display:none">
         <input class="overlay-url-input" type="url" placeholder="https://example.com/article">
@@ -708,7 +721,7 @@ const App = (() => {
       ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name and choose a source to continue.</p>' : ''}
       <div class="${showNameField ? 'creation-footer' : 'overlay-footer'}">
         <button class="${showNameField ? 'creation-cancel' : 'overlay-cancel'}">Cancel</button>
-        <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Map from Text' : 'Extract →'}</button>
+        <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Draft from Text' : 'Extract'}</button>
       </div>
     `;
 
@@ -736,8 +749,8 @@ const App = (() => {
           label: 'Import URL',
           chip: 'URL Import',
           copy: 'Bring in an article or text page that can be fetched directly by the app.',
-          action: showNameField ? 'Import URL' : 'Extract →',
-          missing: 'Add a source URL before mapping.',
+          action: showNameField ? 'Import URL' : 'Extract',
+          missing: 'Add a source URL before drafting.',
         };
       }
       if (activeTab === 'upload') {
@@ -745,16 +758,16 @@ const App = (() => {
           label: 'Upload File',
           chip: 'File Upload',
           copy: 'Use this for notes, markdown, or PDFs when the learner already has source material saved locally.',
-          action: showNameField ? 'Upload and Map' : 'Extract →',
-          missing: 'Upload a file before mapping.',
+          action: showNameField ? 'Upload and Draft' : 'Extract',
+          missing: 'Upload a file before drafting.',
         };
       }
       return {
         label: 'Text Paste',
         chip: 'Text Paste',
-        copy: 'Paste notes, an article excerpt, a transcript, or any raw text you want Socratink to structure.',
-        action: showNameField ? 'Map from Text' : 'Extract →',
-        missing: 'Paste source text before mapping.',
+        copy: 'Paste notes, an article excerpt, a transcript, or any raw text you want socratink to structure.',
+        action: showNameField ? 'Draft from Text' : 'Extract',
+        missing: 'Paste source text before drafting.',
       };
     }
 
@@ -786,11 +799,11 @@ const App = (() => {
         } else if (!nameInput.value.trim() && !hasContent()) {
           validationNote.textContent = 'Add a concept name and choose a source to continue.';
         } else if (!nameInput.value.trim()) {
-          validationNote.textContent = 'Add a concept name before mapping.';
+          validationNote.textContent = 'Add a concept name before drafting.';
         } else if (!hasContent()) {
           validationNote.textContent = getActiveTabMeta().missing;
         } else {
-          validationNote.textContent = 'Ready to map this concept.';
+          validationNote.textContent = 'Ready to draft this path.';
         }
       }
     }
@@ -809,8 +822,8 @@ const App = (() => {
     let namePhTimer = null;
     if (showNameField) {
       const PLACEHOLDERS = [
-        'Paste a Wikipedia article…', 'Paste a research paper…',
-        'Paste a meeting transcript…', 'Paste a textbook chapter…', 'Paste lecture notes…'
+        'Paste a Wikipedia article...', 'Paste a research paper...',
+        'Paste a meeting transcript...', 'Paste a textbook chapter...', 'Paste lecture notes...'
       ];
       const NAME_PLACEHOLDERS = [
         'Metacognition',
@@ -871,7 +884,7 @@ const App = (() => {
       wikiRandomBtn.addEventListener('click', async () => {
         const orig = wikiRandomBtn.textContent;
         wikiRandomBtn.disabled = true;
-        wikiRandomBtn.textContent = 'Loading…';
+        wikiRandomBtn.textContent = 'Loading...';
         try {
           // Two-step: category members → article summary
           async function fetchStemArticle(attempt) {
@@ -900,11 +913,11 @@ const App = (() => {
           textarea.focus();
           checkSubmitEnabled();
         } catch (e) {
-          wikiRandomBtn.textContent = 'Failed — retry';
+          wikiRandomBtn.textContent = 'Failed, retry';
           setTimeout(() => { wikiRandomBtn.textContent = orig; }, 2000);
         } finally {
           wikiRandomBtn.disabled = false;
-          if (wikiRandomBtn.textContent === 'Loading…') wikiRandomBtn.textContent = orig;
+          if (wikiRandomBtn.textContent === 'Loading...') wikiRandomBtn.textContent = orig;
         }
       });
     }
@@ -1048,7 +1061,12 @@ const App = (() => {
         <div class="creation-dialog-shell">
           <div class="creation-dialog-header">
             <span class="creation-dialog-kicker">New concept</span>
-            <button class="creation-dialog-close" type="button" aria-label="Close">×</button>
+            <button class="creation-dialog-close" type="button" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
           <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
           <div class="creation-dialog-banner-slot"></div>
@@ -1119,7 +1137,7 @@ const App = (() => {
     banner.innerHTML = `
       <div>
         <strong>Guest mode uses sample maps.</strong><br>
-        Sign in to extract your own content into a real knowledge map.
+        Sign in to extract your own content into a draft map.
       </div>
     `;
     return banner;
@@ -1264,7 +1282,7 @@ const App = (() => {
           </div>
           <footer class="eo-footer">
             <div class="eo-progress-meta">
-              <span class="eo-progress-label">Processing</span>
+              <span class="eo-progress-label">Drafting</span>
               <span class="eo-progress-pct">20%</span>
             </div>
             <div class="eo-progress-track">
@@ -1290,7 +1308,7 @@ const App = (() => {
           'Mapping concept graph...',
           'Checking for contradictions...',
           'Synthesizing relationships...',
-          'Verifying knowledge depth...',
+          'Checking source structure...',
           'Structuring final map...',
         ];
 
@@ -1312,12 +1330,12 @@ const App = (() => {
 
         const OVERLAY_TIPS = [
           'Retrieval practice strengthens memory far more than re-reading the same material.',
-          'Spacing your reviews over time — not cramming — is what turns short-term recall into lasting knowledge.',
-          'Sleep is when your brain consolidates what you practiced. Hibernating a concept isn\u2019t stalling \u2014 it\u2019s the science.',
+          'Spacing your reviews over time, not cramming, is what turns short-term recall into lasting knowledge.',
+          'A draft map is a hypothesis. It earns trust only after you reconstruct rooms from memory.',
           'Asking yourself questions before you have the answers is more powerful than reading answers directly.',
           'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive review.',
-          'Metacognition \u2014 knowing what you know \u2014 is the skill that makes all other learning more efficient.',
-          'Spaced repetition is most effective when review intervals grow: short gaps early, longer gaps later.',
+          'The graph records evidence from attempts and spaced reconstruction, not reading.',
+          'Spaced repetition is most useful when review intervals grow: short gaps early, longer gaps later.',
         ];
 
         function startTipCycle() {
@@ -1469,7 +1487,7 @@ const App = (() => {
             const statusEl = extractOverlay.querySelector('.eo-status-label');
             if (bar) bar.style.width = '100%';
             if (pctEl) pctEl.textContent = '100%';
-            if (statusEl) statusEl.textContent = 'Complete';
+            if (statusEl) statusEl.textContent = 'Draft ready';
             setCrystalScale(100);
             setTimeout(() => {
               extractOverlay.classList.remove('visible');
@@ -1499,7 +1517,7 @@ const App = (() => {
 
           if (!sourceText) throw new Error('No content provided.');
 
-          setOverlayProgress(65, 'Mapping knowledge');
+          setOverlayProgress(65, 'Drafting map');
           extractOverlay.classList.add('eo-mapping');
           startTrickle();
           startMetaCycle();
@@ -1644,15 +1662,15 @@ const App = (() => {
     stopTimer();
     const btnDrill = document.getElementById('btn-drill');
     const consolidateBtn = document.querySelector('#consolidate-controls button');
-    if (btnDrill) btnDrill.textContent = '3. Drill (Recall)';
+    if (btnDrill) btnDrill.textContent = 'Start room';
     if (consolidateBtn) {
       consolidateBtn.disabled = true;
-      consolidateBtn.textContent = 'Consolidate (Coming Soon)';
-      consolidateBtn.title = 'Consolidation is coming soon';
+      consolidateBtn.textContent = 'Spacing gate unavailable';
+      consolidateBtn.title = 'Spacing gate is not active in this MVP';
     }
     showControls(false, false, false, false, false);
 
-    // Consolidation is intentionally unavailable for the MVP.
+    // The old spacing affordance is intentionally unavailable for the MVP.
     const floatBtn = document.getElementById('btn-consolidate-float');
     if (floatBtn) {
       floatBtn.disabled = true;
@@ -1664,7 +1682,7 @@ const App = (() => {
     else if (state === 'growing') { showControls(false, false, false, false, false); setButtons(false, true); }
     else if (state === 'fractured') {
       showControls(false, false, false, false, false); setButtons(false, true);
-      if (btnDrill) btnDrill.textContent = '3. Drill (Repair)';
+      if (btnDrill) btnDrill.textContent = 'Start repair';
     }
     else if (state === 'hibernating') {
       let remaining = 24 * 60 * 60;
@@ -1922,52 +1940,127 @@ const App = (() => {
     if (tagsEl) {
       let tagsHtml = '';
       const stateLabel = getHeroStateLabel(concept.state);
-      if (stateLabel && stateLabel !== 'Board Empty') {
+      if (stateLabel && stateLabel !== 'no map yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
-      if (meta.low_density) tagsHtml += `<span class="map-low-density">Lightweight map</span>`;
+      if (meta.low_density) tagsHtml += `<span class="map-low-density">lightweight draft</span>`;
       tagsEl.innerHTML = tagsHtml;
     }
     if (drillBtn) {
       const showDrill = concept.state === 'growing' || concept.state === 'fractured';
       drillBtn.hidden = !showDrill;
-      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Drill' : 'Start Drill';
+      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Start Cold Attempt';
     }
+
+    const domMechs = rels.domain_mechanics || [];
+    const lrnPreqs = rels.learning_prerequisites || [];
+    const nodeStateLabel = (status) => {
+      if (status === 'solidified' || status === 'solid') return 'solidified through spaced reconstruction';
+      if (status === 'drilled') return 'worth revisiting';
+      if (status === 'primed') return 'primed for study';
+      return 'ready for first attempt';
+    };
+    const nodeStateClass = (status) => {
+      if (status === 'solidified' || status === 'solid') return 'solid';
+      if (status === 'drilled') return 'drilled';
+      if (status === 'primed') return 'primed';
+      return 'locked';
+    };
+    const hasLearnerEvidence = (status) => (
+      status === 'primed'
+      || status === 'drilled'
+      || status === 'solidified'
+      || status === 'solid'
+    );
+    const allDrillRooms = [
+      { label: 'Core thesis', drill_status: meta.drill_status },
+      ...backbone.map((item, index) => ({
+        label: `Suggested branch ${index + 1}`,
+        drill_status: item?.drill_status || null,
+      })),
+      ...clusters.flatMap((cluster) => (cluster.subnodes || []).map((subnode) => ({
+        label: subnode?.label || 'Drill room',
+        drill_status: subnode?.drill_status || null,
+      }))),
+    ];
+    const attemptedCount = allDrillRooms.filter((room) => (
+      room.drill_status === 'primed'
+      || room.drill_status === 'drilled'
+      || room.drill_status === 'solidified'
+      || room.drill_status === 'solid'
+    )).length;
+    const solidifiedCount = allDrillRooms.filter((room) => (
+      room.drill_status === 'solidified'
+      || room.drill_status === 'solid'
+    )).length;
 
     let html = '';
 
+    html += `
+      <div class="map-zone map-doctrine">
+        <div class="map-section-title">Draft Path</div>
+        <p class="map-doctrine-copy">This route is proposed from the source. It is not evidence that you know the material.</p>
+        <div class="map-doctrine-grid">
+          <div class="map-doctrine-stat">
+            <span class="map-doctrine-stat-value">${escHtml(String(allDrillRooms.length))}</span>
+            <span class="map-doctrine-stat-label">rooms proposed</span>
+          </div>
+          <div class="map-doctrine-stat">
+            <span class="map-doctrine-stat-value">${escHtml(String(attemptedCount))}</span>
+            <span class="map-doctrine-stat-label">attempts on record</span>
+          </div>
+          <div class="map-doctrine-stat">
+            <span class="map-doctrine-stat-value">${escHtml(String(solidifiedCount))}</span>
+            <span class="map-doctrine-stat-label">spaced reconstructions</span>
+          </div>
+        </div>
+        <p class="map-doctrine-copy">Untouched room names stay veiled until you try. Only spaced re-drill can add proof.</p>
+      </div>
+    `;
+
     if (backbone.length > 0) {
       html += '<div class="map-zone zone-2">';
-      html += '<div class="map-section-title">Backbone Principles</div>';
-      backbone.forEach(b => {
-        html += `<div class="map-backbone-item">${escHtml(b.principle)}</div>`;
+      html += '<div class="map-section-title">Suggested Branches</div>';
+      backbone.forEach((b, index) => {
+        const clusterCount = Array.isArray(b.dependent_clusters) ? b.dependent_clusters.length : 0;
+        html += `
+          <div class="map-backbone-item">
+            <span>${escHtml(`Branch ${index + 1}`)}</span>
+            <span class="map-muted">${escHtml(clusterCount === 1 ? '1 container' : `${clusterCount} containers`)}</span>
+          </div>
+        `;
       });
       html += '</div>';
     }
 
     if (clusters.length > 0) {
       html += '<div class="map-zone zone-3">';
-      html += '<div class="map-section-title">Clusters</div>';
+      html += '<div class="map-section-title">Room Containers</div>';
       clusters.forEach((c, idx) => {
         const isFirst = idx === 0 ? 'expanded' : '';
+        const subnodes = c.subnodes || [];
+        const attemptedRooms = subnodes.filter((sub) => hasLearnerEvidence(sub?.drill_status)).length;
+        const containerLabel = attemptedRooms > 0 ? (c.label || `Container ${idx + 1}`) : `Container ${idx + 1}`;
         html += `
           <div class="map-cluster-card ${isFirst}" onclick="App.toggleCluster(this)">
             <div class="map-cluster-header">
-              <span>${escHtml(c.label)}</span>
+              <span>${escHtml(containerLabel)}</span>
               <span class="map-cluster-icon">▾</span>
             </div>
             <div class="map-cluster-body" onclick="event.stopPropagation()">
-              <div class="map-cluster-desc">${escHtml(c.description || '')}</div>
+              <div class="map-cluster-desc">${escHtml(`${subnodes.length} rooms proposed. ${attemptedRooms} attempts on record.`)}</div>
         `;
-        const subnodes = c.subnodes || [];
-        subnodes.forEach(sub => {
-          const color = sub.drill_status ? 'var(--primary)' : '#c4c2d4';
+        subnodes.forEach((sub, subIndex) => {
+          const stateClass = nodeStateClass(sub.drill_status);
+          const roomLabel = hasLearnerEvidence(sub.drill_status)
+            ? (sub.label || `Room ${subIndex + 1}`)
+            : `Room ${subIndex + 1}`;
           html += `
              <div class="map-subnode-row">
-               <div class="map-subnode-indicator" style="background:${color};"></div>
+               <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
                <div class="map-subnode-content">
-                 <div class="map-subnode-label">${escHtml(sub.label)}</div>
-                 <div class="map-subnode-mech">${escHtml(sub.mechanism || '')}</div>
+                 <div class="map-subnode-label">${escHtml(roomLabel)}</div>
+                 <div class="map-subnode-mech">${escHtml(nodeStateLabel(sub.drill_status))}</div>
                </div>
              </div>
            `;
@@ -1977,31 +2070,21 @@ const App = (() => {
       html += '</div>';
     }
 
-    const domMechs = rels.domain_mechanics || [];
-    const lrnPreqs = rels.learning_prerequisites || [];
     if (domMechs.length > 0 || lrnPreqs.length > 0) {
       html += '<div class="map-zone zone-4">';
-      html += '<div class="map-section-title">Connections</div>';
-      domMechs.forEach(rel => {
-        const txt = rel.mechanism || rel.rationale || '';
-        html += `<div class="map-cx-item"><strong>Domain:</strong> ${escHtml(txt)}</div>`;
-      });
-      lrnPreqs.forEach(rel => {
-        const txt = rel.mechanism || rel.rationale || '';
-        html += `<div class="map-cx-item"><strong>Prerequisite:</strong> ${escHtml(txt)}</div>`;
-      });
+      html += '<div class="map-section-title">Connection Hints</div>';
+      if (domMechs.length) html += `<div class="map-cx-item"><strong>Domain links:</strong> ${escHtml(String(domMechs.length))} proposed source relationships.</div>`;
+      if (lrnPreqs.length) html += `<div class="map-cx-item"><strong>Prerequisite links:</strong> ${escHtml(String(lrnPreqs.length))} proposed route constraints.</div>`;
       html += '</div>';
     }
 
     if (fws.length > 0) {
       html += '<div class="map-zone zone-5">';
-      html += '<div class="map-section-title">Transferable Frameworks</div>';
-      fws.forEach(fw => {
-        html += `<div class="map-fw-card">
-           <div class="map-fw-name">${escHtml(fw.name)}</div>
-           <div class="map-fw-state">${escHtml(fw.statement)}</div>
-         </div>`;
-      });
+      html += '<div class="map-section-title">Framework Notes</div>';
+      html += `<div class="map-fw-card">
+        <div class="map-fw-name">${escHtml(`${fws.length} source frameworks held back`)}</div>
+        <div class="map-fw-state">They stay out of the draft view so the cold attempt remains generative.</div>
+      </div>`;
       html += '</div>';
     }
 
@@ -2174,7 +2257,7 @@ const App = (() => {
       ? `Source: ${concept.contentFilename}`
       : concept.contentType
         ? `Source: ${concept.contentType.toUpperCase()}`
-        : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Mapped concept');
+        : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Draft map');
 
     return {
       thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
@@ -2202,7 +2285,7 @@ const App = (() => {
 
       <div class="library-section">
         <h3 class="library-section-title">Documentation Concepts</h3>
-        <p class="library-section-copy">Curated source maps you can add to your library and drill like any other concept.</p>
+        <p class="library-section-copy">Curated draft paths you can enter without treating the map as proof.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
             const alreadyAdded = existingConceptNames.has(item.name);
@@ -2213,7 +2296,7 @@ const App = (() => {
                     <div class="library-card-kicker">${escHtml(item.kicker)}</div>
                     <span class="library-card-name">${escHtml(item.name)}</span>
                   </div>
-                  <span class="library-card-state">${alreadyAdded ? 'Mapped' : 'Ready'}</span>
+                  <span class="library-card-state">${alreadyAdded ? 'in library' : 'draft path'}</span>
                 </div>
                 <p class="library-card-summary">${escHtml(item.summary)}</p>
                 <div class="library-card-meta">
@@ -2229,11 +2312,11 @@ const App = (() => {
       
       <div class="library-section" style="margin-top: 40px;">
         <h3 class="library-section-title">Your Library</h3>
-        <p class="library-section-copy">Mapped concepts ready to reopen and drill.</p>
+        <p class="library-section-copy">Draft paths and evidence maps you can reopen.</p>
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No mapped concepts yet. Add a concept on the Dashboard to begin.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Add a concept on the desk to begin.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
@@ -2588,7 +2671,7 @@ const App = (() => {
     if (!nodeData?.re_drill_eligible_after) {
       return {
         headline: 'Study this node first',
-        body: 'Complete the study step before you try a scored re-drill.',
+        body: 'Finish the study step before you try a spaced re-drill.',
       };
     }
 
@@ -2675,16 +2758,16 @@ const App = (() => {
       ? {
           headline: 'Let this one incubate',
           body: nextTarget
-            ? `This idea is primed. Shift to ${nextTarget.label} while this one settles, then come back for the scored re-drill.`
-            : 'This idea is primed. Shift to another reachable branch while this one settles, then come back for the scored re-drill.',
+            ? `This idea is primed. Shift to ${nextTarget.label} while this one settles, then come back for spaced re-drill.`
+            : 'This idea is primed. Shift to another reachable branch while this one settles, then come back for spaced re-drill.',
         }
       : getSpacingBlockReason(nodeData, nodeContext.id);
 
     return {
       kind: nextTarget?.id ? 'focus-next' : 'resume-study',
       label: nextTarget?.id
-        ? (nodeContext.type === 'core' ? 'Go To Next Reachable Branch' : 'Go To Next Reachable Node')
-        : 'Review Study',
+        ? (nodeContext.type === 'core' ? 'Go to next reachable branch' : 'Go to next reachable node')
+        : 'Reopen Study',
       targetNodeId: nextTarget?.id || null,
       secondaryAction: isRepairRepsEligible(nodeData)
         ? { kind: 'start-repair-reps', label: 'Start Repair Reps' }
@@ -2716,7 +2799,7 @@ const App = (() => {
       if (isEligible) {
         return {
           kind: 'start-redrill',
-          label: 'Start Re-Drill',
+          label: 'Start Spaced Re-Drill',
           secondaryAction: isRepairRepsEligible(nodeData)
             ? { kind: 'start-repair-reps', label: 'Start Repair Reps' }
             : null,
@@ -2729,7 +2812,7 @@ const App = (() => {
       if (isEligible) {
         return {
           kind: 'start-redrill',
-          label: 'Start Re-Drill',
+          label: 'Start Spaced Re-Drill',
           secondaryAction: isRepairRepsEligible(nodeData)
             ? { kind: 'start-repair-reps', label: 'Start Repair Reps' }
             : null,
@@ -2794,7 +2877,7 @@ const App = (() => {
     if (!isRepairRepsEligible(nodeData)) {
       currentGraphController?.showBlockedMessage?.(
         'Repair Reps are not ready',
-        'Finish targeted study first, or return after a non-solid re-drill. Repair work never changes graph mastery.'
+        'Finish targeted study first, or return after a non-solid re-drill. Repair work never changes graph truth.'
       );
       return;
     }
@@ -3404,7 +3487,7 @@ const App = (() => {
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
         'Session node limit reached',
-        'You\'ve drilled 4 nodes this session — a good stopping point. Spacing your retrieval across sessions improves long-term retention.'
+        'You have drilled 4 nodes this session. This is a good stopping point. Spacing retrieval across sessions improves long-term retention.'
       );
       return;
     }
@@ -3417,7 +3500,7 @@ const App = (() => {
     if (!bypassSessionLimits && (sessionState.retriesByNode[nodeContext.id] || 0) >= 3) {
       currentGraphController?.showBlockedMessage?.(
         'Retrieval ceiling reached',
-        'You\'ve attempted this node 3 times this session. Space your attempts — return in a future session for better consolidation.'
+        'You have attempted this node 3 times this session. Space your attempts and return in a future session.'
       );
       return;
     }
@@ -3447,7 +3530,7 @@ const App = (() => {
     }
     if (drillTitle) {
       const label = nodeContext?.label || nodeContext?.fullLabel || concept.name;
-      drillTitle.textContent = `Drilling: ${label}`;
+      drillTitle.textContent = `Active room: ${label}`;
     }
 
     let initialMode = 'cold-attempt-active';
@@ -3617,15 +3700,15 @@ const App = (() => {
   function renderAccountBody(container, session) {
     if (!container) return;
 
-    if (session?.authenticated && session.user) {
-      const label = session.user.first_name || session.user.email || 'Signed in';
+    if (isGuestSession(session)) {
       container.innerHTML = `
         <div class="settings-account-summary">
-          <div class="settings-account-title">Signed in as ${escHtml(label)}</div>
-          <p class="settings-subtext">This browser has an authenticated session. Logging out will send you back to the login decision screen.</p>
+          <div class="settings-account-title">Guest mode is active</div>
+          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep testing locally, upgrade into Google sign-in, or exit back to login.</p>
         </div>
         <div class="settings-actions">
-          <button id="settings-logout-btn" class="settings-test" type="button">Log Out</button>
+          ${session.auth_enabled ? `<a class="auth-link" href="${escHtml(buildLoginHref('/'))}">Continue with Google</a>` : ''}
+          <button id="settings-logout-btn" class="settings-test" type="button">Exit Guest</button>
         </div>
       `;
       const logoutBtn = container.querySelector('#settings-logout-btn');
@@ -3642,15 +3725,15 @@ const App = (() => {
       return;
     }
 
-    if (session?.guest_mode) {
+    if (isIdentifiedUserSession(session)) {
+      const label = session.user.first_name || session.user.email || 'Signed in';
       container.innerHTML = `
         <div class="settings-account-summary">
-          <div class="settings-account-title">Guest mode is active</div>
-          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep testing locally, upgrade into Google sign-in, or exit back to login.</p>
+          <div class="settings-account-title">Signed in as ${escHtml(label)}</div>
+          <p class="settings-subtext">This browser has an authenticated session. Logging out will send you back to the login decision screen.</p>
         </div>
         <div class="settings-actions">
-          ${session.auth_enabled ? `<a class="auth-link" href="${escHtml(buildLoginHref('/'))}">Continue with Google</a>` : ''}
-          <button id="settings-logout-btn" class="settings-test" type="button">Exit Guest</button>
+          <button id="settings-logout-btn" class="settings-test" type="button">Log Out</button>
         </div>
       `;
       const logoutBtn = container.querySelector('#settings-logout-btn');
@@ -3700,12 +3783,12 @@ const App = (() => {
             <div class="settings-health-list">
               <div class="settings-health-row">
                 <span class="settings-health-label">Backend</span>
-                <span id="settings-backend-badge" class="settings-badge neutral">Checking…</span>
+                <span id="settings-backend-badge" class="settings-badge neutral">Checking...</span>
               </div>
               <p id="settings-backend-detail" class="settings-subtext">Testing the local API.</p>
               <div class="settings-health-row">
                 <span class="settings-health-label">AI Access</span>
-                <span id="settings-ai-badge" class="settings-badge neutral">Checking…</span>
+                <span id="settings-ai-badge" class="settings-badge neutral">Checking...</span>
               </div>
               <p id="settings-ai-detail" class="settings-subtext">Looking for a server key or a locally saved Gemini key.</p>
             </div>
@@ -3737,7 +3820,7 @@ const App = (() => {
             <p class="settings-subtext">Every tester now enters through login first. This panel shows whether this browser is signed in, in guest mode, or needs to re-enter through the login wall.</p>
             <div id="settings-account-body" class="settings-account-body">
               <div class="settings-account-summary">
-                <div class="settings-account-title">Loading account state…</div>
+                <div class="settings-account-title">Loading account state...</div>
               </div>
             </div>
           </article>
@@ -3781,7 +3864,7 @@ const App = (() => {
 
     const refreshBackendStatus = async () => {
       testBtn.disabled = true;
-      testBtn.textContent = 'Testing…';
+      testBtn.textContent = 'Testing...';
       if (statusBox) {
         statusBox.textContent = '';
       }

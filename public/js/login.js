@@ -29,6 +29,7 @@ function applyAuthErrorFromQuery() {
     user_cancelled: "Google sign-in was cancelled. You can try again.",
     authentication_failed: "We couldn't complete sign-in. Please try again.",
     authentication_unavailable: "Google sign-in is not configured correctly right now. Continue as guest or try again later.",
+    guest_unavailable: "Guest mode is not configured correctly right now. Try again later.",
     missing_code: "Sign-in did not complete. Please try again.",
     invalid_state: "Sign-in could not be verified safely. Please try again.",
   };
@@ -122,13 +123,16 @@ async function bootstrap() {
 
   try {
     const session = await fetchSession();
-    if (session.authenticated) {
-      setBanner("You are already signed in. Redirecting...", "success");
-      window.location.assign(safeReturnTo());
+    if (session.guest_mode) {
+      setBanner("Guest mode is active. Continue with Google to save and sync, or return to the app.", "default");
+      if (guestLink) {
+        guestLink.href = safeReturnTo();
+        guestLink.textContent = "return to app";
+      }
       return;
     }
-    if (session.guest_mode) {
-      setBanner("Guest mode is already active in this browser. Redirecting...", "success");
+    if (session.authenticated && !session.guest_mode) {
+      setBanner("You are already signed in. Redirecting...", "success");
       window.location.assign(safeReturnTo());
       return;
     }
@@ -138,7 +142,12 @@ async function bootstrap() {
         googleLink.classList.add("is-disabled");
         googleLink.removeAttribute("href");
       }
-      setBanner("Google sign-in is not configured here yet. Continue as guest to enter.", "default");
+      if (guestLink) {
+        guestLink.setAttribute("aria-disabled", "true");
+        guestLink.classList.add("is-disabled");
+        guestLink.removeAttribute("href");
+      }
+      setBanner("Authentication is not configured here right now. Try again later.", "error");
     }
   } catch (err) {
     setBanner("Authentication is temporarily unavailable. Continue as guest or try Google sign-in again.", "error");

@@ -31,6 +31,7 @@ def _fake_anon_response():
         id="anon_uuid_456",
         email=None,
         user_metadata={},
+        is_anonymous=True,
     )
     session = SimpleNamespace(
         access_token="anon.access.jwt",
@@ -49,6 +50,7 @@ class SignInAnonymouslyTests(unittest.TestCase):
             )
             state = svc.sign_in_anonymously()
         self.assertTrue(state.authenticated)
+        self.assertTrue(state.guest_mode)
         self.assertIsNotNone(state.sealed_session)
         self.assertEqual(state.user.id, "anon_uuid_456")
         self.assertIsNone(state.user.email)
