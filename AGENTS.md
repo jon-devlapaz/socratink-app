@@ -27,6 +27,11 @@ playwright install chromium
 
 ### Run locally
 ```bash
+# Preferred: validates local auth env before starting the login-gated app.
+bash scripts/dev.sh
+
+# Direct fallback if you already ran the preflight:
+python scripts/check-local-auth.py
 uvicorn main:app --reload
 ```
 
