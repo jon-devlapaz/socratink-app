@@ -257,34 +257,34 @@ const App = (() => {
 
   function getHeroStateLabel(state) {
     switch (state) {
-      case 'instantiated': return 'Instantiated';
-      case 'growing': return 'Growing';
-      case 'fractured': return 'Fractured';
-      case 'hibernating': return 'Consolidating';
-      case 'actualized': return 'Actualized';
-      default: return 'Board Empty';
+      case 'instantiated': return 'draft path';
+      case 'growing': return 'ready for first attempt';
+      case 'fractured': return 'worth revisiting';
+      case 'hibernating': return 'spacing window';
+      case 'actualized': return 'ready for re-drill';
+      default: return 'no map yet';
     }
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return "Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.";
+    if (!concept) return 'Name one concept. socratink will help you rebuild it from memory. No slides. No skim-reading.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
-          ? 'Open the map to inspect structure before recall.'
-          : 'Map this concept to turn it into a usable board node.';
+          ? 'Open the provisional map, then choose one room for a cold attempt.'
+          : 'Add material before the first room opens.';
       case 'growing':
         return concept.graphData
-          ? 'Inspect the concept map, then test recall.'
-          : 'Continue by mapping this concept into a board-ready structure.';
+          ? 'Choose the first room and make a cold attempt before study appears.'
+          : 'Map this concept from your material before any study appears.';
       case 'fractured':
-        return 'This concept needs repair through another drill.';
+        return 'This room is worth revisiting. Repair the hinge, then return after spacing.';
       case 'hibernating':
-        return 'This concept is consolidating and cannot be drilled yet.';
+        return 'Let this room settle while you work elsewhere. Spacing keeps the map honest.';
       case 'actualized':
-        return 'Review the map or revisit recall if you need a refresh.';
+        return 'Return to the map and choose a spaced re-drill when you are ready.';
       default:
-        return "Name one concept. We'll help you drill it until you can explain it from memory — no slides, no skim-reading.";
+        return 'Name one concept. socratink will help you rebuild it from memory. No slides. No skim-reading.';
     }
   }
 
@@ -302,7 +302,7 @@ const App = (() => {
           ? { label: 'Open Map', action: 'open-map', disabled: false }
           : { label: 'Map Concept', action: 'extract', disabled: false };
       case 'fractured':
-        return { label: 'Start Drill', action: 'drill', disabled: false };
+        return { label: 'Repair Room', action: 'drill', disabled: false };
       case 'hibernating':
         return concept.graphData
           ? { label: 'Review Map', action: 'open-map', disabled: false }
@@ -321,7 +321,7 @@ const App = (() => {
       titleEl.textContent = 'What do you want to understand?';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
-        heroStateChipEl.textContent = 'Board Empty';
+        heroStateChipEl.textContent = 'no map yet';
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
@@ -609,7 +609,12 @@ const App = (() => {
       item.innerHTML = `
         <div class="concept-dot" data-state="${c.state}"></div>
         <span class="concept-item-name">${escHtml(c.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)">×</button>`;
+        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" title="Delete concept">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>`;
       item.addEventListener('click', e => {
         if (e.target.classList.contains('concept-delete')) return;
         showDashboard();
@@ -1056,7 +1061,12 @@ const App = (() => {
         <div class="creation-dialog-shell">
           <div class="creation-dialog-header">
             <span class="creation-dialog-kicker">New concept</span>
-            <button class="creation-dialog-close" type="button" aria-label="Close">×</button>
+            <button class="creation-dialog-close" type="button" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
           <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
           <div class="creation-dialog-banner-slot"></div>
@@ -1320,11 +1330,11 @@ const App = (() => {
 
         const OVERLAY_TIPS = [
           'Retrieval practice strengthens memory far more than re-reading the same material.',
-          'Spacing your reviews over time — not cramming — is what turns short-term recall into lasting knowledge.',
-          'Sleep is when your brain consolidates what you practiced. Hibernating a concept isn\u2019t stalling \u2014 it\u2019s the science.',
+          'Spacing your reviews over time, not cramming, is what makes retrieval harder to fake.',
+          'A short delay helps separate durable reconstruction from short-term echo.',
           'Asking yourself questions before you have the answers is more powerful than reading answers directly.',
           'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive review.',
-          'Metacognition \u2014 knowing what you know \u2014 is the skill that makes all other learning more efficient.',
+          'Metacognition starts with noticing what your answer can and cannot support.',
           'Spaced repetition is most effective when review intervals grow: short gaps early, longer gaps later.',
         ];
 
@@ -1652,15 +1662,15 @@ const App = (() => {
     stopTimer();
     const btnDrill = document.getElementById('btn-drill');
     const consolidateBtn = document.querySelector('#consolidate-controls button');
-    if (btnDrill) btnDrill.textContent = '3. Drill (Recall)';
+    if (btnDrill) btnDrill.textContent = 'Start room';
     if (consolidateBtn) {
       consolidateBtn.disabled = true;
-      consolidateBtn.textContent = 'Consolidate (Coming Soon)';
-      consolidateBtn.title = 'Consolidation is coming soon';
+      consolidateBtn.textContent = 'Spacing gate unavailable';
+      consolidateBtn.title = 'Spacing gate is not active in this MVP';
     }
     showControls(false, false, false, false, false);
 
-    // Consolidation is intentionally unavailable for the MVP.
+    // The old spacing affordance is intentionally unavailable for the MVP.
     const floatBtn = document.getElementById('btn-consolidate-float');
     if (floatBtn) {
       floatBtn.disabled = true;
@@ -1672,7 +1682,7 @@ const App = (() => {
     else if (state === 'growing') { showControls(false, false, false, false, false); setButtons(false, true); }
     else if (state === 'fractured') {
       showControls(false, false, false, false, false); setButtons(false, true);
-      if (btnDrill) btnDrill.textContent = '3. Drill (Repair)';
+      if (btnDrill) btnDrill.textContent = 'Start repair';
     }
     else if (state === 'hibernating') {
       let remaining = 24 * 60 * 60;
@@ -1930,7 +1940,7 @@ const App = (() => {
     if (tagsEl) {
       let tagsHtml = '';
       const stateLabel = getHeroStateLabel(concept.state);
-      if (stateLabel && stateLabel !== 'Board Empty') {
+      if (stateLabel && stateLabel !== 'no map yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
       if (meta.low_density) tagsHtml += `<span class="map-low-density">Lightweight map</span>`;
@@ -2596,7 +2606,7 @@ const App = (() => {
     if (!nodeData?.re_drill_eligible_after) {
       return {
         headline: 'Study this node first',
-        body: 'Complete the study step before you try a scored re-drill.',
+        body: 'Study this node before the spaced re-drill is available.',
       };
     }
 
@@ -2683,15 +2693,15 @@ const App = (() => {
       ? {
           headline: 'Let this one incubate',
           body: nextTarget
-            ? `This idea is primed. Shift to ${nextTarget.label} while this one settles, then come back for the scored re-drill.`
-            : 'This idea is primed. Shift to another reachable branch while this one settles, then come back for the scored re-drill.',
+            ? `This idea is primed. Shift to ${nextTarget.label} while this one settles, then come back for the spaced re-drill.`
+            : 'This idea is primed. Shift to another reachable branch while this one settles, then come back for the spaced re-drill.',
         }
       : getSpacingBlockReason(nodeData, nodeContext.id);
 
     return {
       kind: nextTarget?.id ? 'focus-next' : 'resume-study',
       label: nextTarget?.id
-        ? (nodeContext.type === 'core' ? 'Go To Next Reachable Branch' : 'Go To Next Reachable Node')
+        ? (nodeContext.type === 'core' ? 'Choose Next Branch' : 'Choose Next Room')
         : 'Review Study',
       targetNodeId: nextTarget?.id || null,
       secondaryAction: isRepairRepsEligible(nodeData)
@@ -3412,7 +3422,7 @@ const App = (() => {
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
         'Session node limit reached',
-        'You\'ve drilled 4 nodes this session — a good stopping point. Spacing your retrieval across sessions improves long-term retention.'
+        'Four nodes are enough for this session. Spacing your retrieval across sessions gives the next attempt a cleaner signal.'
       );
       return;
     }
@@ -3425,7 +3435,7 @@ const App = (() => {
     if (!bypassSessionLimits && (sessionState.retriesByNode[nodeContext.id] || 0) >= 3) {
       currentGraphController?.showBlockedMessage?.(
         'Retrieval ceiling reached',
-        'You\'ve attempted this node 3 times this session. Space your attempts — return in a future session for better consolidation.'
+        'You have attempted this node 3 times this session. Return later so the next reconstruction is not short-term echo.'
       );
       return;
     }

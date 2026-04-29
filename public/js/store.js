@@ -172,7 +172,7 @@ export function updateActiveConcept(patch) {
 export const STATES = {
   instantiated: { title:'', desc:'' },
   growing:      { title:'', desc:'' },
-  fractured:    { title:'Misconception Detected', desc:'Knowledge gap found. Drill again to repair.' },
-  hibernating:  { title:'Consolidating…',         desc:'Synaptic lockout enforced. Return tomorrow.' },
-  actualized:   { title:'Consolidated',           desc:'Converted into durable understanding.' },
+  fractured:    { title:'Worth revisiting', desc:'The next repair path is visible.' },
+  hibernating:  { title:'Spacing window',   desc:'Work another room before returning.' },
+  actualized:   { title:'Ready for re-drill', desc:'Return with a spaced reconstruction.' },
 };

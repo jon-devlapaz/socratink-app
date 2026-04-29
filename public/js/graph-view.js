@@ -110,8 +110,8 @@ function getInspectPrompt(data) {
 
   if (data.drillStatus === 'primed') {
     return data.type === 'core' || data.type === 'backbone'
-      ? 'Study complete. Let this idea incubate while you work another reachable branch, then return for the scored re-drill.'
-      : 'This room is primed. Work another reachable node before coming back for the scored re-drill.';
+      ? 'Study recorded. Let this idea incubate while you work another reachable branch, then return for the spaced re-drill.'
+      : 'This room is primed. Work another reachable node before coming back for the spaced re-drill.';
   }
 
   if (data.drillStatus === 'drilled') {
@@ -649,14 +649,14 @@ function repairRepsMarkupForNode(data, repairState = {}) {
       }).join('')
       : '';
     return `
-      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps complete' })}
+      ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps logged' })}
       <div class="graph-repair-complete">
         <div class="graph-detail-kicker">Repair Reps</div>
         ${repairProgressMarkup({ currentIndex: 2, total: Math.max(reps.length, 3), complete: true })}
         <h3 class="graph-detail-title">Practice logged</h3>
         <p class="graph-detail-copy">Three bridge reps saved on ${escHtml(nodeLabel)}.</p>
         ${calibrationMarkup || (legacySummaryRows ? `<div class="graph-repair-summary">${legacySummaryRows}</div>` : '')}
-        <p class="graph-detail-copy">These reps are saved. Graph progress comes from the next re-drill.</p>
+        <p class="graph-detail-copy">These reps are saved. The graph still waits for a spaced re-drill.</p>
         <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
       </div>
     `;
@@ -745,9 +745,9 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
 
   if (mode === 'session-complete') {
     return `
-      <div class="graph-detail-kicker">Session Complete</div>
-      <h3 class="graph-detail-title">Excellent Focus</h3>
-      <p class="graph-detail-copy">You have completed a structured study session. Spacing your learning is key to retention.</p>
+      <div class="graph-detail-kicker">Session Pause</div>
+      <h3 class="graph-detail-title">Progress recorded</h3>
+      <p class="graph-detail-copy">The current work is saved. Step away or choose another room later; spacing does the rest.</p>
       <button class="${actionButtonClass} trigger-continue">Return to Map</button>
     `;
   }
@@ -760,9 +760,9 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     const next = options.nextNodeSuggestion;
     const nextStepCopy = next
       ? (next.action === 're-drill'
-          ? `Next best move: re-drill ${escHtml(next.label)}.`
-          : `Next best move: explore ${escHtml(next.label)}.`)
-      : 'Leave this node to incubate. Work on other nodes before returning to re-drill.';
+          ? `Return to ${escHtml(next.label)} for a spaced re-drill.`
+          : `Choose ${escHtml(next.label)} while this room settles.`)
+      : 'Leave this node to incubate. Work on another room before returning to re-drill.';
     return `
       <div class="graph-study-shell">
         <section class="graph-detail-surface graph-study-card">
@@ -793,7 +793,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
-      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'Provide your best initial guess to unlock the study material.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
+      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'Take your best first guess. Study stays hidden until you make an attempt.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
       </div>
@@ -811,7 +811,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
           : 'Drill Result';
     const trajectoryHtml = isSolid && data.reDrillBand
       ? `<p class="graph-detail-copy" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
-           Cold attempt: exploratory guess → Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That gap is real learning.
+           Cold attempt: exploratory guess. Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That change is real learning.
          </p>`
       : '';
     return `
@@ -827,7 +827,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       ${data.gapDescription && !isSolid ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
       ${!isSolid ? `
         <div class="graph-detail-block">
-            <div class="graph-detail-kicker">Revisit Study Material</div>
+            <div class="graph-detail-kicker">Repair From Study</div>
             <p class="graph-detail-copy" style="opacity: 1; color: var(--text-primary);">
                ${escHtml(data.detail || 'Mechanism not specified.')}
             </p>
@@ -848,7 +848,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start With Core Thesis</button>`}
+      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Enter Core Thesis</button>`}
       ${secondaryInspectButtonHtml}
     `;
   }
@@ -863,7 +863,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start Drill</button>`) : ''}
+      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Enter Room</button>`) : ''}
       ${data.available ? secondaryInspectButtonHtml : ''}
     `;
   }

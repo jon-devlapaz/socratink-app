@@ -78,7 +78,6 @@ function applyAuthUi(session) {
   const loginLink = document.getElementById('auth-login-link');
   const logoutBtn = document.getElementById('auth-logout-btn');
   const status = document.getElementById('auth-status');
-  const adminLink = document.getElementById('auth-admin-todo-link');
   if (!controls || !loginLink || !logoutBtn || !status) return;
 
   controls.hidden = false;
@@ -89,7 +88,22 @@ function applyAuthUi(session) {
   const isAdmin =
     isIdentifiedUserSession(session) &&
     session.user?.email?.toLowerCase() === ADMIN_EMAIL;
-  if (adminLink) adminLink.hidden = !isAdmin;
+
+  let adminLink = document.getElementById('auth-admin-todo-link');
+  if (isAdmin) {
+    if (!adminLink) {
+      adminLink = document.createElement('a');
+      adminLink.id = 'auth-admin-todo-link';
+      adminLink.className = 'auth-link auth-link-secondary';
+      adminLink.href = '/admin/todo';
+      adminLink.title = 'Open Tink TODO admin dashboard';
+      adminLink.textContent = 'Tink TODO';
+      loginLink.parentNode.insertBefore(adminLink, loginLink);
+    }
+    adminLink.hidden = false;
+  } else if (adminLink) {
+    adminLink.remove();
+  }
 
   if (isGuestSession(session)) {
     status.hidden = false;

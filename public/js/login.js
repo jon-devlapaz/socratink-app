@@ -131,7 +131,7 @@ async function bootstrap() {
       }
       return;
     }
-    if (session.authenticated) {
+    if (session.authenticated && !session.guest_mode) {
       setBanner("You are already signed in. Redirecting...", "success");
       window.location.assign(safeReturnTo());
       return;

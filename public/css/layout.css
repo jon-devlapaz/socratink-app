@@ -947,21 +947,31 @@ body:not([data-map-open="true"]) .map-back-link {
   background: var(--accent-soft);
   border: none;
   border-radius: 50%;
-  font-size: 20px;
-  line-height: 1;
   color: var(--primary);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-shadow: none;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
 }
+
+.map-close-btn svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
 .map-close-btn:hover:not(:disabled) {
   background: var(--primary-fill);
   color: var(--text-on-primary);
   transform: none;
   box-shadow: none;
+}
+
+.map-close-btn:hover:not(:disabled) svg {
+  opacity: 1;
 }
 
 /* Map Zones */
