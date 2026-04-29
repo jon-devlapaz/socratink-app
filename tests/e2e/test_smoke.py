@@ -137,6 +137,94 @@ def test_guest_session_is_labeled_as_guest(
     expect(clean_page.locator("#auth-logout-btn")).to_have_text("Exit Guest")
 
 
+def test_drawer_toggle_remains_visible_in_concept_view(
+    clean_page: Page, base_url: str
+) -> None:
+    """The sidebar control must stay available after entering a concept."""
+    clean_page.evaluate(
+        """localStorage.setItem(
+            'socratink:firstSeenAt:v1:guest',
+            new Date().toISOString()
+        );"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    toggle = clean_page.locator("#drawer-toggle")
+    expect(toggle).to_be_visible()
+
+    clean_page.locator("#nav-library").click()
+    expect(clean_page.get_by_text("Documentation Concepts")).to_be_visible()
+
+    clean_page.locator(".library-card-vault", has_text="Hermes Agent").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Hermes Agent")
+    expect(toggle).to_be_visible()
+
+
+def test_saved_library_concept_reopens_map_view(
+    clean_page: Page, base_url: str
+) -> None:
+    """Library entry points should both open the concept map, not a stale shell."""
+    clean_page.evaluate(
+        """localStorage.setItem(
+            'socratink:firstSeenAt:v1:guest',
+            new Date().toISOString()
+        );"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator("#nav-library").click()
+    clean_page.locator(".library-card-vault", has_text="Hermes Agent").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Hermes Agent")
+    assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+
+    clean_page.locator("#nav-library").click()
+    your_library = clean_page.locator("#library-content .library-section", has_text="Your Library")
+    your_library.locator(".library-card-vault", has_text="Hermes Agent").click()
+
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Hermes Agent")
+    assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+    expect(clean_page.locator("#map-mode-graph")).to_have_attribute("aria-pressed", "true")
+
+
+def test_active_concept_delete_confirms_then_returns_to_desk(
+    clean_page: Page, base_url: str
+) -> None:
+    """Deleting the open concept must not leave stale concept content visible."""
+    clean_page.evaluate(
+        """localStorage.setItem(
+            'socratink:firstSeenAt:v1:guest',
+            new Date().toISOString()
+        );"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator("#nav-library").click()
+    clean_page.locator(".library-card-vault", has_text="Hermes Agent").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Hermes Agent")
+
+    delete_button = clean_page.locator(".concept-item.active .concept-delete")
+
+    def dismiss_delete(dialog) -> None:
+        assert "Delete \"Hermes Agent\"?" in dialog.message
+        dialog.dismiss()
+
+    clean_page.once("dialog", dismiss_delete)
+    delete_button.click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Hermes Agent")
+    expect(clean_page.locator(".concept-item.active")).to_have_count(1)
+
+    def accept_delete(dialog) -> None:
+        assert "Delete \"Hermes Agent\"?" in dialog.message
+        dialog.accept()
+
+    clean_page.once("dialog", accept_delete)
+    delete_button.click()
+    expect(clean_page.locator("#title")).to_have_text("What do you want to understand?")
+    expect(clean_page.locator(".concept-item")).to_have_count(0)
+    expect(clean_page.locator("#concept-header-title")).not_to_be_visible()
+    assert clean_page.locator("body").get_attribute("data-map-open") != "true"
+
+
 # --- 3. No console errors on first paint ---------------------------------
 
 

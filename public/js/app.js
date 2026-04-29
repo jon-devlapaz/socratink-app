@@ -616,7 +616,7 @@ const App = (() => {
           </svg>
         </button>`;
       item.addEventListener('click', e => {
-        if (e.target.classList.contains('concept-delete')) return;
+        if (e.target instanceof Element && e.target.closest('.concept-delete')) return;
         showDashboard();
         selectConcept(c.id);
         if (c.graphData) showMapView(c);
@@ -1574,21 +1574,48 @@ const App = (() => {
   }
 
   function deleteConcept(id, btnEl) {
-    const item = btnEl.closest('.concept-item');
+    const concept = loadConcepts().find(c => c.id === id);
+    if (!concept) return;
+
+    const conceptName = concept.name || 'this concept';
+    const confirmed = window.confirm(`Delete "${conceptName}"?\n\nThis removes its draft path and recorded evidence from this browser.`);
+    if (!confirmed) return;
+
+    const wasActive = getActiveId() === id;
+    const item = btnEl?.closest?.('.concept-item');
     if (item) { item.style.transition = 'all 0.2s ease'; item.style.opacity = '0'; item.style.transform = 'translateX(-12px)'; }
 
-    setTimeout(() => {
+    const finishDelete = () => {
       const concepts = loadConcepts().filter(c => c.id !== id);
       saveConcepts(concepts);
       clearRepairRepsStateForConcept(id);
 
-      if (getActiveId() === id) {
-        if (concepts.length > 0) { selectConcept(concepts[0].id); }
-        else { setActiveId(null); showEmptyState(); }
+      try {
+        sessionStorage.removeItem(getPhaseBSessionStorageKey(id));
+      } catch (err) {
+        console.warn('Unable to clear deleted concept session state.', err);
       }
-      renderGrid();
-      renderConceptList();
-    }, 200);
+
+      const resumeState = loadPhaseBResumeState();
+      if (resumeState?.conceptId === id) {
+        persistPhaseBResumeState(null);
+      }
+
+      if (wasActive) {
+        setActiveId(null);
+        sessionState = getDefaultPhaseBSessionState();
+        showDashboard();
+        showEmptyState();
+      }
+      renderGrid(concepts);
+      renderConceptList(concepts);
+    };
+
+    if (item) {
+      setTimeout(finishDelete, 200);
+    } else {
+      finishDelete();
+    }
   }
 
   function selectTile(tileIdx) {
@@ -2321,7 +2348,7 @@ const App = (() => {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
         return `
-          <div class="library-card library-card-vault" style="cursor:pointer;" onclick="App.selectConcept('${c.id}'); App.hideLibrary();">
+          <div class="library-card library-card-vault" style="cursor:pointer;" onclick="App.openLibraryConcept('${c.id}')">
             <div class="library-card-header">
               <div>
                 <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
@@ -2351,6 +2378,19 @@ const App = (() => {
   function hideLibrary() {
     const libraryView = document.getElementById('library-view');
     if (libraryView) libraryView.classList.remove('visible');
+  }
+
+  function openLibraryConcept(id) {
+    const concept = activateConceptSelection(id);
+    if (!concept) return;
+    hideLibrary();
+    setNavActive('nav-dashboard');
+    if (concept.graphData) {
+      showMapView(concept);
+      setMapMode('graph');
+    } else {
+      showDashboard();
+    }
   }
 
   function toggleCluster(el) {
@@ -4014,7 +4054,7 @@ const App = (() => {
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
-    showLibrary, hideLibrary, showDashboard, showSettings,
+    showLibrary, hideLibrary, openLibraryConcept, showDashboard, showSettings,
     importLibraryConcept,
     toggleTheme, runHeroAction
   };
