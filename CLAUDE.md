@@ -74,9 +74,9 @@ bash scripts/qa-smoke.sh https://custom-url.com       # explicit URL
 bash scripts/qa-smoke.sh                              # local (default)
 ```
 
-Stack: pytest + playwright-python. Suite: `tests/e2e/test_smoke.py` (5 tests, ~10s warm / ~30s cold). Read-only — safe against prod.
+Stack: pytest + playwright-python. Suite: `tests/e2e/test_smoke.py` (6 tests, ~10s warm / ~30s cold). Read-only — safe against prod.
 
-5 checks: `/api/health` shape, homepage critical DOM (`#drawer`, `#bottom-nav`, `#concept-list`, brand mark), zero same-origin console errors on first paint, zero same-origin asset failures, theme-preloader resilient to blank `localStorage`.
+6 checks: `/api/health` shape, homepage critical DOM (`#drawer`, `#bottom-nav`, `#concept-list`, brand mark), guest sessions labeled as guest, zero same-origin console errors on first paint, zero same-origin asset failures, theme-preloader resilient to blank `localStorage`.
 
 Run WITHOUT being asked when:
 - After deploy / merge to main / `git push origin main` + any verification framing

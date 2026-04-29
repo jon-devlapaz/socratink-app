@@ -11,6 +11,14 @@ export function redirectToLogin(returnTo = safeReturnTo()) {
   window.location.assign(buildLoginHref(returnTo));
 }
 
+export function isGuestSession(session) {
+  return Boolean(session?.guest_mode);
+}
+
+export function isIdentifiedUserSession(session) {
+  return Boolean(session?.authenticated && !session?.guest_mode && session?.user);
+}
+
 // Module-scoped session cache. First caller fetches; subsequent callers
 // await the same in-flight promise OR the resolved value. Cleared on
 // logout so the next fetch reflects the new anonymous state.
@@ -79,22 +87,22 @@ function applyAuthUi(session) {
   logoutBtn.textContent = 'Log Out';
 
   const isAdmin =
-    session?.authenticated &&
+    isIdentifiedUserSession(session) &&
     session.user?.email?.toLowerCase() === ADMIN_EMAIL;
   if (adminLink) adminLink.hidden = !isAdmin;
 
-  if (session.authenticated && session.user) {
-    const label = session.user.first_name || session.user.email || 'Signed in';
-    status.hidden = false;
-    status.textContent = label;
-    logoutBtn.hidden = false;
-    loginLink.hidden = true;
-  } else if (session?.guest_mode) {
+  if (isGuestSession(session)) {
     status.hidden = false;
     status.textContent = 'Guest mode';
     logoutBtn.hidden = false;
     logoutBtn.textContent = 'Exit Guest';
     loginLink.hidden = !session?.auth_enabled;
+  } else if (isIdentifiedUserSession(session)) {
+    const label = session.user.first_name || session.user.email || 'Signed in';
+    status.hidden = false;
+    status.textContent = label;
+    logoutBtn.hidden = false;
+    loginLink.hidden = true;
   } else {
     status.hidden = false;
     status.textContent = 'Login required';

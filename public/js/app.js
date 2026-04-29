@@ -8,8 +8,16 @@ import {
   loadLibraryConcept,
 } from './api-client.js?v=1';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=7';
-import { bootstrapAuthUi, buildLoginHref, fetchAuthSession, logout, redirectToLogin } from './auth.js?v=2';
-import { maybeShowFirstRunWelcome } from './welcome.js?v=5';
+import {
+  bootstrapAuthUi,
+  buildLoginHref,
+  fetchAuthSession,
+  isGuestSession,
+  isIdentifiedUserSession,
+  logout,
+  redirectToLogin,
+} from './auth.js?v=3';
+import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -3617,15 +3625,15 @@ const App = (() => {
   function renderAccountBody(container, session) {
     if (!container) return;
 
-    if (session?.authenticated && session.user) {
-      const label = session.user.first_name || session.user.email || 'Signed in';
+    if (isGuestSession(session)) {
       container.innerHTML = `
         <div class="settings-account-summary">
-          <div class="settings-account-title">Signed in as ${escHtml(label)}</div>
-          <p class="settings-subtext">This browser has an authenticated session. Logging out will send you back to the login decision screen.</p>
+          <div class="settings-account-title">Guest mode is active</div>
+          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep testing locally, upgrade into Google sign-in, or exit back to login.</p>
         </div>
         <div class="settings-actions">
-          <button id="settings-logout-btn" class="settings-test" type="button">Log Out</button>
+          ${session.auth_enabled ? `<a class="auth-link" href="${escHtml(buildLoginHref('/'))}">Continue with Google</a>` : ''}
+          <button id="settings-logout-btn" class="settings-test" type="button">Exit Guest</button>
         </div>
       `;
       const logoutBtn = container.querySelector('#settings-logout-btn');
@@ -3642,15 +3650,15 @@ const App = (() => {
       return;
     }
 
-    if (session?.guest_mode) {
+    if (isIdentifiedUserSession(session)) {
+      const label = session.user.first_name || session.user.email || 'Signed in';
       container.innerHTML = `
         <div class="settings-account-summary">
-          <div class="settings-account-title">Guest mode is active</div>
-          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep testing locally, upgrade into Google sign-in, or exit back to login.</p>
+          <div class="settings-account-title">Signed in as ${escHtml(label)}</div>
+          <p class="settings-subtext">This browser has an authenticated session. Logging out will send you back to the login decision screen.</p>
         </div>
         <div class="settings-actions">
-          ${session.auth_enabled ? `<a class="auth-link" href="${escHtml(buildLoginHref('/'))}">Continue with Google</a>` : ''}
-          <button id="settings-logout-btn" class="settings-test" type="button">Exit Guest</button>
+          <button id="settings-logout-btn" class="settings-test" type="button">Log Out</button>
         </div>
       `;
       const logoutBtn = container.querySelector('#settings-logout-btn');

@@ -6,17 +6,19 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-5 tests, runtime ~10s warm + ~30s cold, in source order:
+6 tests, runtime ~10s warm + ~30s cold, in source order:
 
 1. **`test_health_endpoint_ok`** — backend reachable, `/api/health` shape valid.
    Runs first to absorb serverless cold-start latency.
 2. **`test_homepage_loads_with_critical_dom`** — `#drawer`, `#bottom-nav`,
    `#concept-list`, `.sidebar-brand-mark` all attached after navigation.
-3. **`test_no_console_errors_on_first_paint`** — zero same-origin
+3. **`test_guest_session_is_labeled_as_guest`** — anonymous Supabase sessions
+   render as guest, not as signed-in users.
+4. **`test_no_console_errors_on_first_paint`** — zero same-origin
    `console.error` during first paint.
-4. **`test_no_failed_critical_asset_requests`** — zero same-origin
+5. **`test_no_failed_critical_asset_requests`** — zero same-origin
    `requestfailed` events during first paint.
-5. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
+6. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
    at top of `<body>` produces no errors on a fresh visit.
 
 What's deliberately out of scope:

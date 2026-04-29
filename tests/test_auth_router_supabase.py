@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from auth.router import GUEST_COOKIE_NAME, auth_router
-from auth.service import AuthSessionState, AuthUser
+from auth.service import AuthConfigurationError, AuthSessionState, AuthUser
 
 
 class FakeSupabaseAuthService:
@@ -91,6 +91,40 @@ def build_client(service: FakeSupabaseAuthService) -> TestClient:
     app.state.auth_service = service
     app.include_router(auth_router)
     return TestClient(app)
+
+
+class LoginRouteTests(unittest.TestCase):
+    def test_identified_user_redirects_from_login(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=AuthUser(id="user_uuid_123", email="learner@example.com"),
+            guest_mode=False,
+        )
+        client = build_client(service)
+
+        response = client.get("/login?return_to=/library", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/library")
+
+    def test_guest_can_open_login_to_upgrade(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=AuthUser(id="anon_uuid_456"),
+            guest_mode=True,
+        )
+        client = build_client(service)
+
+        response = client.get("/login?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 200)
+        body = response.text
+        self.assertIn("Continue with Google", body)
+        self.assertIn("continue as guest", body)
 
 
 class GoogleAuthStartTests(unittest.TestCase):
@@ -359,12 +393,43 @@ class AnonymousGuestTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("auth_error=authentication_failed", response.headers["location"])
 
+    def test_guest_configuration_failure_uses_guest_error(self):
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise AuthConfigurationError("missing anon auth config")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=guest_unavailable", response.headers["location"])
+
     def test_guest_unauthenticated_state_redirects_without_session_cookie(self):
         service = FakeSupabaseAuthService(enabled=True)
         service.sign_in_anonymously = lambda: AuthSessionState(  # type: ignore[assignment]
             auth_enabled=True,
             authenticated=False,
             user=AuthUser(id="anon_uuid_456"),
+        )
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/library", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+        self.assertNotIn("sb_session=", response.headers.get("set-cookie", ""))
+
+    def test_guest_non_anonymous_state_redirects_without_session_cookie(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.sign_in_anonymously = lambda: AuthSessionState(  # type: ignore[assignment]
+            auth_enabled=True,
+            authenticated=True,
+            guest_mode=False,
+            user=AuthUser(id="user_uuid_123", email="learner@example.com"),
+            sealed_session="sealed-user-blob",
         )
         client = build_client(service)
 
