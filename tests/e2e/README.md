@@ -131,8 +131,9 @@ def authenticated_page(browser: Browser, storage_state: Path) -> Page:
 ```
 
 Then a sibling `tests/e2e/test_critical_flows.py` can use
-`authenticated_page` and exercise the four critical flows without paying the
-login tax in every test.
+`authenticated_page` and exercise the still-uncovered critical flows
+(`selectTile`, `runHeroAction`, `toggleTheme`) without paying the login tax
+in every test.
 
 ## Why this stack
 
