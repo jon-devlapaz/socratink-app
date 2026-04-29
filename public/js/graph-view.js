@@ -32,14 +32,6 @@ function shortenLabel(label, maxLength = 32) {
   return compact || text.slice(0, maxLength - 3).trimEnd() + '...';
 }
 
-function generateTeaser(text) {
-  if (!text) return '???';
-  return text.split(/\s+/).map((word) => {
-    if (word.length <= 1) return word;
-    return word.charAt(0) + '•'.repeat(word.length - 1);
-  }).join(' ');
-}
-
 function getBackboneLabel(source) {
   const backbonePrinciple = source?.backbone?.[0]?.principle?.trim();
   const thesis = source?.metadata?.core_thesis?.trim();
@@ -52,9 +44,9 @@ function getCoreThesisDetail(source) {
 }
 
 function getStatusLabel(status) {
-  if (status === 'solidified' || status === 'solid') return 'Solidified';
-  if (status === 'primed') return 'Primed';
-  if (status === 'drilled') return 'Needs revisit';
+  if (status === 'solidified' || status === 'solid') return 'solidified through spaced reconstruction';
+  if (status === 'primed') return 'primed for study';
+  if (status === 'drilled') return 'worth revisiting';
   return status ? shortenLabel(String(status), 24) : '';
 }
 
@@ -74,9 +66,9 @@ function buildOutcomeMeta(data, { includeGapDescription = false } = {}) {
   if (data?.drillStatus === 'solidified' || data?.drillStatus === 'solid') {
     pills.push(`<span class="graph-detail-pill success">${escHtml(statusLabel)}</span>`);
   } else if (data?.state === 'primed' || data?.drillStatus === 'primed') {
-    pills.push('<span class="graph-detail-pill" style="background:#e0d8f0;color:#2c1b4d;">Primed</span>');
+    pills.push('<span class="graph-detail-pill" style="background:#e0d8f0;color:#2c1b4d;">primed for study</span>');
   } else if (data?.state === 'drilled' || data?.drillStatus === 'drilled' || data?.gapType) {
-    pills.push('<span class="graph-detail-pill warning">Needs revisit</span>');
+    pills.push('<span class="graph-detail-pill warning">worth revisiting</span>');
     if (gapLabel) {
       pills.push(`<span class="graph-detail-pill">${escHtml(gapLabel)}</span>`);
     } else if (statusLabel && statusLabel !== 'Primed') {
@@ -96,7 +88,7 @@ function buildOutcomeMeta(data, { includeGapDescription = false } = {}) {
 
 function getReachabilityPill(data) {
   if (data?.available && data?.state === 'locked') {
-    return '<span class="graph-detail-pill success">Reachable now</span>';
+    return '<span class="graph-detail-pill">ready for first attempt</span>';
   }
   return '';
 }
@@ -105,13 +97,13 @@ function getInspectPrompt(data) {
   if (!data) return 'Start here and rebuild the mechanism from memory.';
 
   if (data.drillPhase === 'study') {
-    return 'Study is open for this node. Re-enter the mechanism view, then return to the map when you are ready to let it incubate.';
+    return 'Targeted study is open for this node. Re-enter the mechanism view, then return to the map when you are ready to let it incubate.';
   }
 
   if (data.drillStatus === 'primed') {
     return data.type === 'core' || data.type === 'backbone'
-      ? 'Study recorded. Let this idea incubate while you work another reachable branch, then return for the spaced re-drill.'
-      : 'This room is primed. Work another reachable node before coming back for the spaced re-drill.';
+      ? 'Study is on record. Let this idea incubate while you work another reachable branch, then return for spaced re-drill.'
+      : 'This room is primed. Work another reachable node before coming back for spaced re-drill.';
   }
 
   if (data.drillStatus === 'drilled') {
@@ -121,32 +113,37 @@ function getInspectPrompt(data) {
   }
 
   if (data.type === 'core') {
-    return 'What governing idea explains how this whole system behaves? Start here, then prove it from memory.';
+    return 'What governing idea explains how this whole system behaves? Start here with a cold attempt.';
   }
 
   if (data.type === 'backbone') {
     return data.available
       ? 'What principle governs this branch, and why does the rest of this territory depend on it?'
-      : 'Solidify the core thesis first to reveal this backbone branch.';
+      : 'Engage the core thesis first to reveal this backbone branch.';
   }
 
   if (data.type === 'cluster') {
     return data.available
       ? 'This branch is open. The drill happens inside its rooms, not in the container itself.'
-      : 'Clear the governing dependencies to reveal this branch.';
+      : 'Work the prerequisite rooms to reveal this branch.';
   }
 
   if (data.type === 'subnode') {
     return data.available
-      ? 'This room is available. Can you reconstruct the mechanism from memory before entering the drill?'
-      : 'Unlock this branch before drilling this room.';
+      ? 'This room is available. Enter with your current model. Study stays hidden until you attempt.'
+      : 'Work the branch before drilling this room.';
   }
 
-  return 'Choose a reachable room and rebuild it from memory.';
+  return 'Choose a reachable room and make the next attempt.';
 }
 
 function getInspectHeading(data) {
   if (!data) return '';
+  if (data.state === 'locked' && !data.available && data.type !== 'core') {
+    if (data.type === 'cluster') return 'Locked branch container';
+    if (data.type === 'backbone') return 'Locked branch';
+    return 'Locked drill room';
+  }
   if (data.type === 'backbone') return data.label || data.fullLabel || 'Backbone Principle';
   return data.fullLabel || data.label || '';
 }
@@ -326,7 +323,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         state: backboneState,
         available: backboneAvailable,
         label: backboneLabel,
-        teaserLabel: generateTeaser(backboneLabel),
+        teaserLabel: 'Locked branch',
         fullLabel: item.principle || `Backbone Principle ${index + 1}`,
         detail: item.principle || '',
         dependentClusters: item.dependent_clusters || [],
@@ -377,7 +374,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         state: deriveClusterState(cluster),
         available: clusterAvailable ? 1 : 0,
         label: clusterLabel,
-        teaserLabel: generateTeaser(clusterLabel),
+        teaserLabel: 'Locked container',
         fullLabel: cluster.label || `Cluster ${clusterIndex + 1}`,
         detail: cluster.description || '',
         orbitLevel: 1,
@@ -427,7 +424,7 @@ export function transformKnowledgeMapToGraph(rawData) {
           state: deriveSubnodeState(subnode),
           available: clusterAvailable ? 1 : 0,
           label: subnodeLabel,
-          teaserLabel: generateTeaser(subnodeLabel),
+          teaserLabel: 'Locked room',
           fullLabel: subnode.label || `Drill Node ${subIndex + 1}`,
           detail: subnode.mechanism || '',
           parentCluster: clusterId,
@@ -616,7 +613,7 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         <div class="graph-detail-kicker">Repair Reps</div>
         ${repairProgressMarkup({ currentIndex: -1, total: 3 })}
         <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
-        <p class="graph-detail-copy">Building three causal reps for this node. This is practice, not mastery credit.</p>
+        <p class="graph-detail-copy">Building three causal reps for this node. This is practice, not graph-truth evidence.</p>
       </section>
     `;
   }
@@ -656,7 +653,7 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         <h3 class="graph-detail-title">Practice logged</h3>
         <p class="graph-detail-copy">Three bridge reps saved on ${escHtml(nodeLabel)}.</p>
         ${calibrationMarkup || (legacySummaryRows ? `<div class="graph-repair-summary">${legacySummaryRows}</div>` : '')}
-        <p class="graph-detail-copy">These reps are saved. The graph still waits for a spaced re-drill.</p>
+        <p class="graph-detail-copy">These reps are saved. Graph truth comes from the next re-drill.</p>
         <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
       </div>
     `;
@@ -704,7 +701,7 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         ` : ''}
       </section>
       <section class="graph-detail-surface graph-study-next graph-repair-next">
-        <p class="graph-detail-copy graph-repair-truth-line">Practice only. Graph progress comes from re-drill.</p>
+        <p class="graph-detail-copy graph-repair-truth-line">Practice only. Graph truth comes from re-drill.</p>
         ${revealed
           ? (ratingSelected
             ? `<button class="${actionButtonClass} trigger-repair-next">${currentIndex + 1 >= reps.length ? 'Finish Reps' : 'Next Rep'}</button>`
@@ -745,9 +742,9 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
 
   if (mode === 'session-complete') {
     return `
-      <div class="graph-detail-kicker">Session Pause</div>
-      <h3 class="graph-detail-title">Progress recorded</h3>
-      <p class="graph-detail-copy">The current work is saved. Step away or choose another room later; spacing does the rest.</p>
+      <div class="graph-detail-kicker">Session Save Point</div>
+      <h3 class="graph-detail-title">Enough for this pass</h3>
+      <p class="graph-detail-copy">This session has enough retrieval on record. Return later so spaced reconstruction can carry the evidence.</p>
       <button class="${actionButtonClass} trigger-continue">Return to Map</button>
     `;
   }
@@ -760,9 +757,9 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     const next = options.nextNodeSuggestion;
     const nextStepCopy = next
       ? (next.action === 're-drill'
-          ? `Return to ${escHtml(next.label)} for a spaced re-drill.`
-          : `Choose ${escHtml(next.label)} while this room settles.`)
-      : 'Leave this node to incubate. Work on another room before returning to re-drill.';
+          ? `Next evidence move: spaced re-drill ${escHtml(next.label)}.`
+          : `Next spacing move: enter ${escHtml(next.label)}.`)
+      : 'Leave this node to incubate. Work on other nodes before returning to re-drill.';
     return `
       <div class="graph-study-shell">
         <section class="graph-detail-surface graph-study-card">
@@ -770,7 +767,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
           <h3 class="graph-detail-title">${escHtml(getStudyHeading(data))}</h3>
           ${getStudyBodyMarkup(data)}
           <div class="graph-detail-meta graph-detail-meta-compact">
-            <span class="graph-detail-pill">Primed</span>
+            <span class="graph-detail-pill">primed for study</span>
           </div>
         </section>
         <section class="graph-detail-surface graph-study-next">
@@ -793,7 +790,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
-      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'Take your best first guess. Study stays hidden until you make an attempt.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
+      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'Make your best initial attempt. Study opens only after you try.' : 'Reconstruct this from memory. The map stays in the background until the drill resolves.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
       </div>
@@ -811,31 +808,31 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
           : 'Drill Result';
     const trajectoryHtml = isSolid && data.reDrillBand
       ? `<p class="graph-detail-copy" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
-           Cold attempt: exploratory guess. Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That change is real learning.
+           Cold attempt: exploratory guess. Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That change is the evidence on record.
          </p>`
       : '';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${isSolid ? 'Solidified. You rebuilt this from scratch.' : 'Attempt logged. This room is still unresolved.'}</p>
+      <p class="graph-detail-copy">${isSolid ? 'Solidified through spaced reconstruction. This is evidence, not a permanent claim.' : 'Attempt logged. This room is worth revisiting.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${isSolid
-          ? '<span class="graph-detail-pill success">Solidified</span>'
+          ? '<span class="graph-detail-pill success">solidified through spacing</span>'
           : outcomeMeta.pills}
       </div>
       ${trajectoryHtml}
       ${data.gapDescription && !isSolid ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
       ${!isSolid ? `
         <div class="graph-detail-block">
-            <div class="graph-detail-kicker">Repair From Study</div>
+            <div class="graph-detail-kicker">Reopen Targeted Study</div>
             <p class="graph-detail-copy" style="opacity: 1; color: var(--text-primary);">
                ${escHtml(data.detail || 'Mechanism not specified.')}
             </p>
-            <button class="${actionButtonClass} trigger-reopen">Reopen Study View</button>
+            <button class="${actionButtonClass} trigger-reopen">Reopen Study</button>
             <button class="${actionButtonClass} trigger-repair graph-detail-secondary-action graph-repair-secondary-action">Start Repair Reps</button>
         </div>
       ` : ''}
-      <button class="${actionButtonClass} trigger-continue">Continue</button>
+      <button class="${actionButtonClass} trigger-continue">Return to Map</button>
     `;
   }
 
@@ -863,7 +860,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Enter Room</button>`) : ''}
+      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start Cold Attempt</button>`) : ''}
       ${data.available ? secondaryInspectButtonHtml : ''}
     `;
   }
@@ -904,14 +901,28 @@ function detailMarkupForEdge(edge, cy) {
   const data = edge.data();
   const source = cy.getElementById(data.source);
   const target = cy.getElementById(data.target);
+  const sourceData = source.data();
+  const targetData = target.data();
+  const hasLockedEndpoint = [sourceData, targetData].some((nodeData) => (
+    nodeData?.state === 'locked' && !nodeData?.available
+  ));
+  const sourceLabel = hasLockedEndpoint
+    ? 'Draft connection'
+    : (source.data('fullLabel') || source.data('label'));
+  const targetLabel = hasLockedEndpoint
+    ? 'held until attempt'
+    : (target.data('label') || data.target);
+  const body = hasLockedEndpoint
+    ? 'This connection is part of the proposed route. Its mechanism stays out of view until the adjacent rooms have learner evidence.'
+    : (data.description || 'No explanatory text available for this relationship.');
 
   return `
     <div class="graph-detail-kicker">Connection</div>
-    <h3 class="graph-detail-title">${escHtml(source.data('fullLabel') || source.data('label'))}</h3>
-    <p class="graph-detail-copy">${escHtml(data.description || 'No explanatory text available for this relationship.')}</p>
+    <h3 class="graph-detail-title">${escHtml(sourceLabel)}</h3>
+    <p class="graph-detail-copy">${escHtml(body)}</p>
     <div class="graph-detail-meta">
       <span class="graph-detail-pill">${escHtml(data.label || data.type)}</span>
-      <span class="graph-detail-pill">${escHtml(target.data('label') || data.target)}</span>
+      <span class="graph-detail-pill">${escHtml(targetLabel)}</span>
     </div>
   `;
 }
@@ -921,23 +932,23 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
     detailEl.innerHTML = `
       <div class="graph-detail-kicker">Active Drill</div>
       <h3 class="graph-detail-title">One node at a time</h3>
-      <p class="graph-detail-copy">Use the chat to reconstruct the active node from memory. The graph will update after the drill outcome lands.</p>
+      <p class="graph-detail-copy">Use the chat to reconstruct the active node from memory. The graph updates only when the outcome provides evidence.</p>
     `;
     return;
   }
 
   const backboneTitle = escHtml('Core Thesis');
-  const starterPrompt = escHtml('What governing idea explains how this whole system behaves? Start here, then prove it from memory.');
+  const starterPrompt = escHtml('What governing idea explains how this whole system behaves? Start here with a cold attempt.');
   detailEl.innerHTML = `
     <div class="graph-detail-kicker">Starting Room</div>
     <h3 class="graph-detail-title">${backboneTitle}</h3>
     <p class="graph-detail-copy">${starterPrompt}</p>
     <div class="graph-detail-meta">
-      <span class="graph-detail-pill">Core thesis first</span>
-      <span class="graph-detail-pill">Bright = reachable</span>
-      <span class="graph-detail-pill">Ghosted = locked</span>
+      <span class="graph-detail-pill">core thesis first</span>
+      <span class="graph-detail-pill">bright means ready</span>
+      <span class="graph-detail-pill">ghosted means locked</span>
     </div>
-    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">✦ START WITH CORE THESIS</button>
+    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">Start With Core Thesis</button>
   `;
 }
 
@@ -1734,14 +1745,22 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
 
   const buildNodeAriaLabel = (node) => {
     const stateLabel = node.state === 'solidified'
-      ? 'solidified'
+      ? 'solidified through spaced reconstruction'
       : node.state === 'drilled'
-        ? 'needs revisit'
+        ? 'worth revisiting'
         : node.state === 'primed'
-          ? 'primed'
+          ? 'primed for study'
           : node.available
-            ? 'reachable'
+            ? 'ready for first attempt'
             : 'locked';
+    if (node.state === 'locked' && !node.available && node.type !== 'core') {
+      const kind = node.type === 'cluster'
+        ? 'locked branch container'
+        : node.type === 'backbone'
+          ? 'locked branch'
+          : 'locked drill room';
+      return `${kind}, ${stateLabel}`;
+    }
     return `${node.fullLabel || node.label || node.id}, ${stateLabel}`;
   };
 
@@ -1786,7 +1805,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   const svgEl = container.querySelector('.graph-svg');
   currentViewBox = { x: 0, y: 0, w: VIEWBOX.width, h: VIEWBOX.height };
   if (!svgEl) {
-    container.innerHTML = '<div class="graph-empty">Graph renderer failed to mount. Study view is still available.</div>';
+    container.innerHTML = '<div class="graph-empty">Graph renderer failed to mount. Draft view is still available.</div>';
     setEmptyDetail(detailEl, rawData);
     return {
       destroy() {},
@@ -2334,9 +2353,12 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         haloOpacity *= 0.12;
       }
 
+      const maskLockedLabel = node.state === 'locked' && !node.available && node.type !== 'core';
       const label = node.type === 'core'
         ? String(node.label || 'Core Thesis').toUpperCase()
-        : String(node.label || node.fullLabel || '');
+        : maskLockedLabel
+          ? String(node.teaserLabel || 'locked room')
+          : String(node.label || node.fullLabel || '');
       const labelLines = node.type === 'core'
         ? [label]
         : buildLabelLines(label, node.type === 'backbone' ? 24 : 20);
@@ -2357,7 +2379,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       ].filter(Boolean).join(' ');
 
       return `<g class="${nodeClass}" data-graph-kind="node" data-graph-id="${escHtml(node.id)}" data-state="${escHtml(stateAttr)}" data-available="${node.available ? 1 : 0}" data-has-motion="${hasMotion}" data-is-fresh-solid="${isFreshSolid}" style="--node-phase:${phase};--halo-rest:${haloOpacity.toFixed(3)};--node-halo-color:${palette.halo};" tabindex="0" role="button" aria-label="${escHtml(buildNodeAriaLabel(node))}">
-        <title>${escHtml(node.fullLabel || node.label || node.id)}</title>
+        <title>${escHtml(maskLockedLabel ? 'locked room' : (node.fullLabel || node.label || node.id))}</title>
         ${haloOpacity > 0.03 ? `<circle class="graph-node-halo" cx="${position.x}" cy="${position.y}" r="${haloRadius}" fill="${palette.halo}" opacity="${haloOpacity}" style="filter: blur(var(--graph-halo-blur, 6px));"></circle>` : ''}
         <circle class="graph-node-arrival-glow" cx="${position.x}" cy="${position.y}" r="${haloRadius * 1.15}" fill="${palette.halo}" style="filter: blur(8px);"></circle>
         ${(isActive || isSelected) && !prefersReducedMotion ? (() => {

@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=68">
+  <link rel="stylesheet" href="styles.css?v=69">
 </head>
 
 <body>
@@ -47,7 +47,7 @@
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
       <span class="material-symbols-outlined">auto_awesome</span>
-      <span class="bottom-nav-label">Dashboard</span>
+      <span class="bottom-nav-label">Desk</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showLibrary()" id="bn-library">
       <span class="material-symbols-outlined">memory</span>
@@ -68,7 +68,7 @@
 
     <nav class="sidebar-nav">
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
-        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Dashboard</a>
+        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showLibrary()"><span class="material-symbols-outlined">memory</span> Library</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
@@ -225,7 +225,7 @@
             <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
           </div>
           <h1 class="hero-title" id="title">What do you want to understand?</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. socratink will help you rebuild it from memory. No slides. No skim-reading.</p>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept or paste source material. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
             <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
@@ -341,10 +341,10 @@
           </div>
           <div class="concept-header-actions">
             <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
-              <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Study</button>
-              <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Graph</button>
+              <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Draft</button>
+              <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Map</button>
             </div>
-            <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Drill</button>
+            <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Cold Attempt</button>
           </div>
         </header>
         <div id="map-content"></div>
@@ -353,8 +353,8 @@
             <div class="graph-stage-wrap">
               <div class="graph-stage-header">
                 <div>
-                  <div class="graph-stage-kicker">Architecture</div>
-                  <h3 class="graph-stage-title">Knowledge Graph</h3>
+                  <div class="graph-stage-kicker">Draft Route</div>
+                  <h3 class="graph-stage-title">Evidence Map</h3>
                 </div>
               </div>
               <div id="graph-stage" class="graph-stage"></div>
@@ -364,11 +364,11 @@
               <div class="drill-ui drill-ui-embedded" id="drill-ui">
                 <div class="drill-header">
                   <button class="drill-back" onclick="App.cancelDrill()">← Back</button>
-                  <span class="drill-title" id="drill-title">Socratic Drill</span>
+                  <span class="drill-title" id="drill-title">Cold Attempt</span>
                 </div>
                 <div class="chat-history" id="chat-history"></div>
                 <div class="chat-input-area">
-                  <textarea class="chat-input" id="chat-input" placeholder="Explain this concept in your own words..."
+                  <textarea class="chat-input" id="chat-input" placeholder="Write what you can reconstruct from memory."
                     rows="2"></textarea>
                 </div>
               </div>
@@ -386,7 +386,7 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=47"></script>
+  <script type="module" src="js/app.js?v=48"></script>
   <script src="js/intro-particles.js?v=3"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/feedback.js?v=1"></script>

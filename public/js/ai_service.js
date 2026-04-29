@@ -2,7 +2,7 @@
 // Calls the local Python backend for AI extraction.
 
 export async function generateKnowledgeMap(rawText, onProgress) {
-  if (onProgress) onProgress('Mapping knowledge...');
+  if (onProgress) onProgress('Drafting map...');
   const apiKey = localStorage.getItem('gemini_key') || undefined;
   const response = await fetch('/api/extract', {
     method: 'POST',
