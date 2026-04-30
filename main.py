@@ -441,71 +441,20 @@ def submit_feedback(req: FeedbackRequest, request: Request):
 
 @app.post("/api/extract-url")
 def extract_url(req: UrlExtractRequest):
-    url = req.url.strip()
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise HTTPException(status_code=400, detail="Enter a valid http(s) URL.")
-    if _is_blocked_video_url(url):
-        raise HTTPException(
-            status_code=400,
-            detail="Video links are not supported in this deployment. Paste the text directly instead.",
-        )
-    if _is_private_url(url):
-        raise HTTPException(status_code=400, detail="Cannot fetch internal addresses.")
-
     try:
-        request = UrlRequest(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; socratink/1.0; +https://localhost)"
-            },
-        )
-        # SECURITY: redirects are followed by default; private targets reachable via 30x. See audit-pass-1.
-        with urlopen(request, timeout=12) as response:
-            content_type = (response.headers.get("Content-Type") or "").lower()
-            if "text/html" not in content_type and "text/plain" not in content_type:
-                raise HTTPException(
-                    status_code=415,
-                    detail="That URL did not return an HTML or plain text page.",
-                )
-
-            raw_bytes = response.read(2_000_000 + 1)
-            if len(raw_bytes) > 2_000_000:
-                raise HTTPException(
-                    status_code=413, detail="Page is too large to import."
-                )
-
-            charset = response.headers.get_content_charset() or "utf-8"
-            raw_text = raw_bytes.decode(charset, errors="replace")
-    except HTTPException:
-        raise
-    except HTTPError as err:
-        raise HTTPException(
-            status_code=502, detail=f"Source page returned HTTP {err.code}."
-        )
-    except URLError:
-        raise HTTPException(status_code=502, detail="Could not fetch that URL.")
-    except Exception as err:
-        logger.exception("Unexpected failure in /api/extract-url for %s", url)
-        raise HTTPException(
-            status_code=500, detail="Unexpected error while fetching that URL."
-        ) from err
-
-    if "text/plain" in content_type:
-        text = raw_text.strip()
-        title = parsed.netloc
-    else:
-        title_match = re.search(r"(?is)<title[^>]*>(.*?)</title>", raw_text)
-        title = unescape(title_match.group(1)).strip() if title_match else parsed.netloc
-        text = _extract_text_from_html(raw_text)
-
-    if len(text) < 200:
-        raise HTTPException(
-            status_code=422,
-            detail="Could not extract enough readable text from that page.",
-        )
-
-    return {"url": url, "title": title[:200], "text": text[:500_000]}
+        src = source_intake.from_url(req.url)
+    except SourceIntakeError as exc:
+        logger.info("intake_failed", extra={
+            "exc_type": type(exc).__name__,
+            "reason": getattr(exc, "reason", None),
+            "cause": getattr(exc, "cause", None),
+            "url_summary": _summarize_url_for_log(req.url),
+        })
+        raise _map_intake_error(exc)
+    except Exception:
+        logger.exception("intake_unexpected", extra={"url_summary": _summarize_url_for_log(req.url)})
+        raise HTTPException(500, "Unexpected error while importing.")
+    return src.to_dict()
 
 
 @app.post("/api/drill")
