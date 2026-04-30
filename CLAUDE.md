@@ -74,9 +74,9 @@ bash scripts/qa-smoke.sh https://custom-url.com       # explicit URL
 bash scripts/qa-smoke.sh                              # local (default)
 ```
 
-Stack: pytest + playwright-python. Suite: `tests/e2e/test_smoke.py` (6 tests, ~10s warm / ~30s cold). Read-only — safe against prod.
+Stack: pytest + playwright-python. Suite: `tests/e2e/test_smoke.py` (9 tests, ~15s warm / ~40s cold). Read-only — safe against prod.
 
-6 checks: `/api/health` shape, homepage critical DOM (`#drawer`, `#bottom-nav`, `#concept-list`, brand mark), guest sessions labeled as guest, zero same-origin console errors on first paint, zero same-origin asset failures, theme-preloader resilient to blank `localStorage`.
+9 checks: `/api/health` shape, homepage critical DOM (`#drawer`, `#bottom-nav`, `#concept-list`, brand mark), guest sessions labeled as guest, drawer toggle stays visible after entering a concept, saved library cards reopen the concept-map view, deleting the active concept confirms then resets to the desk, zero same-origin console errors on first paint, zero same-origin asset failures, theme-preloader resilient to blank `localStorage`.
 
 Run WITHOUT being asked when:
 - After deploy / merge to main / `git push origin main` + any verification framing
@@ -88,7 +88,7 @@ Rules:
 - Same-origin failures are real bugs. Cross-origin noise is already filtered — don't allow-list it unless proven third-party.
 - On failure: paste the pytest output verbatim. Trace at `test-results/<test>/trace.zip` (`playwright show-trace ...`).
 - Project doctrine: **local success ≠ hosted validation**. The smoke is the cheapest hosted-validation signal we have.
-- Extension: `authenticated_page` fixture (see `tests/e2e/README.md`) for future flow tests against `selectTile` / `runHeroAction` / `toggleTheme` / `importLibraryConcept`.
+- Extension: `authenticated_page` fixture (see `tests/e2e/README.md`) for non-guest authenticated flows. Still-uncovered critical flows: `selectTile` / `runHeroAction` / `toggleTheme`. (`openLibraryConcept` and active-concept delete are partially covered by tests 5–6 via the guest session.)
 
 Three entry points:
 - `/verify-deploy` (skill) — waits for Vercel to finish then runs smoke. Use after a push to confirm a specific commit is live. Wrapper: `scripts/verify-deploy.sh`.

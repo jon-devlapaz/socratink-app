@@ -74,10 +74,10 @@ body[data-map-open="true"] .auth-controls,
 body[data-map-open="true"] .dev-skip {
   display: none !important;
 }
-/* Map-view chrome — single back control (UX-todo #10). In map view,
-   hide the ambiguous < drawer-toggle and redundant × close-btn; show
-   the explicit "← Dashboard" text link instead. */
-body[data-map-open="true"] .drawer-toggle,
+/* Map-view chrome keeps the app shell drawer toggle available. */
+body[data-map-open="true"] .drawer-toggle {
+  display: inline-flex !important;
+}
 body[data-map-open="true"] .map-close-btn {
   display: none !important;
 }

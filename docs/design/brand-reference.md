@@ -1,6 +1,6 @@
 # socratink Design System
 
-> **socratink.ai** — a metacognitive learning tool that increases signal, reduces cognitive load, and enhances real learning derived from **student generation**. The product strengthens active recall and mitigates the illusion of understanding that comes from mere familiarity.
+> **socratink.ai** — a metacognitive learning tool that increases signal, reduces cognitive load, and records reconstruction evidence derived from **student generation**. The product strengthens active recall and mitigates the illusion of understanding that comes from mere familiarity.
 
 This design system is the binding contract for how socratink looks, sounds, and moves. It is rooted in the product's single unifying principle: **metacognitive UX** — every surface is designed for the learner's awareness of their own cognitive process, not just the content. The aesthetic mirrors the work the product asks of its learners: **quiet, scholarly, crystalline.**
 
@@ -25,7 +25,7 @@ Assume the reader of this file does **not** have access to the above. If that as
 
 socratink is (today) a single product surface with two faces:
 
-1. **The app** (`app.socratink.ai`) — a React SPA. A sidebar of concepts, an isometric **grid board** of tiles, and on each tile a **crystal polygon** whose visual state (instantiated → growing → hibernating → fractured → actualized) is a **truthful record of verified understanding**. A drill chat panel drives the three-phase loop: **cold attempt → targeted study → spaced re-drill**. See `ui_kits/app/`.
+1. **The app** (`app.socratink.ai`) — a vanilla JS/FastAPI product surface. A sidebar of concepts, an isometric **grid board** of tiles, and concept-shell visuals project recorded evidence while node drill status remains the graph-truth layer: `locked → primed → drilled → solidified`. A drill chat panel drives the three-phase loop: **cold attempt → targeted study → spaced re-drill**.
 
 2. **The marketing site** (`socratink.ai`) — a React landing page introducing the thesis, the loop, and the FAQ. Quiet type, cream page, violet accent. See `ui_kits/website/`.
 
@@ -33,7 +33,7 @@ Both surfaces share a single token set (`colors_and_type.css`).
 
 ### The product's unifying metaphor
 
-The graph behaves like a **dungeon map**. Every node is a **room**. The cold attempt is stepping through the door before you know what's inside. Targeted study is the room revealing itself *after* the attempt. The spaced re-drill is the room's boss fight. New rooms open only when prerequisite understanding is real. The **graph tells the truth** — it is not a content browser or a completion checklist.
+The graph behaves like a **dungeon map**. Every node is a **room**. The cold attempt is stepping through the door before you know what's inside. Targeted study is the room revealing itself *after* the attempt. The spaced re-drill is the room's boss fight. Traversal opens from recorded engagement evidence; mastery-gated progression waits for `solidified` evidence. The **graph tells the truth** — it is not a content browser or a completion checklist.
 
 ### What the visual language has to carry
 
@@ -53,9 +53,9 @@ This is the binding narrative for **how the learner is onboarded into a concept*
 > The graph **proposes** where to look.
 > The cold attempt **creates something to repair.**
 > The study view makes the repair **inspectable.**
-> The spaced re-drill is **the only proof.**
+> The spaced re-drill records **the strongest evidence.**
 
-A concept page is not where the learner goes to read. It is where **their understanding becomes inspectable.** socratink asks for the learner's **starting map** before showing explanatory content. That starting map shapes routing and repair — it must never create mastery claims.
+A concept page is not where the learner goes to read. It is where **their current model becomes inspectable.** socratink asks for the learner's **starting map** before showing explanatory content. That starting map shapes routing and repair — it must never create mastery claims.
 
 ### Friction fixes the flow must avoid
 
@@ -177,7 +177,7 @@ The product has **no human teacher** to manage attributions in real time. The in
 - **Second person, singular.** Copy talks to *you*. "You own the content." "You reconstruct from memory." The product rarely says "we." When it does, it's meta ("we ask you to build yours").
 - **Lowercase product name.** `socratink` — even at the start of sentences. The wordmark is lowercase too.
 - **Plain, complete sentences.** No telegraph style. Periods. Short paragraphs. The sentence "The floor dropped out." is the maximum drama the brand gets.
-- **Verbs over adjectives.** "Bring your material." "Get a map." "Clear rooms." The product's promise shows up as things the learner *does*, never as things the product *is*.
+- **Verbs over adjectives.** "Bring your material." "Build a map." "Record evidence." The product's promise shows up as things the learner *does*, never as things the product *is*.
 - **Zero jargon that signals hype.** No "revolutionary," "AI-powered," "supercharge," "10×," "unlock your potential," "crush your goals." No exclamation marks. No emoji in product copy. Ever.
 - **Admit the state of the product honestly.** The live site reads: *"Still testing. Still learning. socratink is in active development."* That kind of line is load-bearing brand, not filler.
 
@@ -186,13 +186,13 @@ The product has **no human teacher** to manage attributions in real time. The in
 | Surface | Tone | Example |
 |---|---|---|
 | Marketing hero | Invitation, not pitch | "See what you can **actually explain.**" |
-| Value strip | Plain declarative | "No fake progress — the map updates only when you actually get it." |
-| How it works | Imperative, low-volume | "Bring your material. Get a map. Clear rooms." |
+| Value strip | Plain declarative | "No fake state changes — the map updates when Socratink records learner-generated evidence." |
+| How it works | Imperative, low-volume | "Bring your material. Build a map. Record evidence." |
 | Drill prompt (AI) | Sparse, gap-identifying | "Explain why node B matters in the system." |
 | `primed` state copy | Quiet acknowledgment | "You've stepped inside. The real challenge is ahead." |
 | `drilled` state copy | Honored, not punitive | "Worth revisiting. The next gain is here." |
-| `solidified` state copy | Earned, brief | "Cleared. You proved it." |
-| Session cap / break | Warm, scientific, transparent | "Progress locked in. Your neurons do the rest while you're away." |
+| `solidified` state copy | Earned, brief | "Solidified. Spaced reconstruction recorded." |
+| Session cap / break | Warm, scientific, transparent | "Evidence recorded. Let spacing do its work while you're away." |
 | Error / non-solid | Strategy, never ability | "The causal link between step 2 and step 3 needs a different angle." |
 
 ### Casing
@@ -211,7 +211,7 @@ The product has **no human teacher** to manage attributions in real time. The in
 
 ### Trajectory vocabulary (internal only, shown as bands after the attempt)
 
-The tier system `spark → link → chain → clear → tetris` is the product's **prediction-contrast** surface. It is shown only as *post-attempt* reflection on growth, always paired with interpretive framing ("Your cold attempt was a spark. Your re-drill hit chain. That jump is real learning."). Never a live score.
+The tier system `spark → link → chain → clear → tetris` is the product's **prediction-contrast** surface. It is shown only as *post-attempt* reflection on growth, always paired with interpretive framing ("Your cold attempt was a spark. Your re-drill hit chain. Stronger reconstruction evidence is on record."). Never a live score.
 
 ---
 
@@ -225,11 +225,11 @@ Warm-muted jewel tones on a cream-paper page. Five primitives, plus two reserved
 |---|---|---|---|
 | Ink | `--ink-900` | `#242038` | All text, deep shadows, crystal lower edges. Treat as near-black; never use true black. |
 | Primary | `--violet-600` | `#9067C6` | Accent strokes, active states, most interactive hover glow. The "crystalline" warm violet. |
-| Secondary | `--lavender-500` | `#8D86C9` | Kicker text, dust on surfaces, crystal mid-planes, locked/hibernating state. |
+| Secondary | `--lavender-500` | `#8D86C9` | Kicker text, dust on surfaces, crystal mid-planes, locked and legacy spacing shell states. |
 | Neutral | `--mauve-200` | `#CAC4CE` | Locked tiles, empty-tile dashes, inactive chips. Calm, never sad. |
 | Page | `--cream-50` | `#F7ECE1` | Every page background. **Never pure white** in the light theme. |
 | White | `--white` | `#FFFFFF` | Raised card faces only; never a page. |
-| Success | `--success` | `#4DBA8A` | `solidified` / actualized state. Single celebrant color. |
+| Success | `--success` | `#4DBA8A` | `solidified` state. Single celebrant color. |
 | Danger | `--danger` | `#E05C6B` | Reserved. Used only on `fractured` crystal glow — rarely, and muted. |
 
 The palette explicitly **excludes**: neon purples, pure white pages, clinical SaaS blues, gradient-bluish-to-purple hero washes, gold trim.

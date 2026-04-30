@@ -408,7 +408,7 @@ Applied: "This concept is designed to be challenging. We know you can master it.
 
 The tier/band system (`spark → link → chain → clear → tetris`) serves as the trajectory contrast mechanism.
 
-Showing the learner their own improvement — "Your cold attempt was a spark. Your re-drill hit chain. That jump is real learning." — motivates through visible growth AND calibrates metacognitive accuracy.
+Showing the learner their own improvement — "Your cold attempt was a spark. Your re-drill hit chain. Stronger reconstruction evidence is on record." — motivates through visible growth AND calibrates metacognitive accuracy.
 
 Learners systematically undervalue pretesting even after experiencing better outcomes (Pan & Rivers 2023). The only intervention that updated their beliefs was explicit prediction-contrast.
 
@@ -462,7 +462,7 @@ Three successful retrievals per node per session. Beyond three, halt and schedul
 
 ### Session Ending: Leave Them Hungry
 
-End sessions at a point of engagement, not exhaustion. Use absolute limits (less reactance than flexible). Explain the science transparently. Frame warmly: "Progress locked in. Your neurons do the rest while you're away." Never end on a failure state.
+End sessions at a point of engagement, not exhaustion. Use absolute limits (less reactance than flexible). Explain the science transparently. Frame warmly: "Evidence recorded. Let spacing do its work while you're away." Never end on a failure state.
 
 This triggers episodic anticipation — stopping the learner while their dopaminergic "wanting" system is still active. The learner leaves with unresolved nodes visible (Ovsiankina resumption drive), clear progress data (competence satisfaction), and a physiological drive to return. Over time, they recognize the cap serves their mastery goal, supporting long-term autonomy. The instruction to "come back tomorrow" becomes a scientifically validated prescription, not a restriction.
 
@@ -508,9 +508,9 @@ The graph's visual state changes *are* the primary reward mechanism.
 
 ### Endowed Progress Through Truthful Prerequisites
 
-When a learner enters a new cluster or branch, the graph should visually connect and illuminate prerequisite nodes they have already legitimately mastered from earlier work. Frame the new territory as a partially completed structure: "You already possess the foundational mechanisms for this area."
+When a learner enters a new cluster or branch, the graph should visually connect and illuminate prerequisite nodes that already carry `solidified` records from earlier work. Frame the new territory as a partially completed structure: "Socratink already has solid reconstruction evidence for the foundational mechanisms in this area."
 
-This triggers the endowed progress effect (Nunes & Dreze 2006: 34% vs 19% completion) without faking mastery. The 10-25% initial progress sweet spot applies — over-endowment undermines the effect because the effort feels unearned. The advancement must reflect real, previously verified understanding.
+This triggers the endowed progress effect (Nunes & Dreze 2006: 34% vs 19% completion) without faking mastery. The 10-25% initial progress sweet spot applies — over-endowment undermines the effect because the effort feels unearned. The advancement must reflect previously recorded solid spaced reconstructions.
 
 ### Streaks, Badges, and Points
 
@@ -534,14 +534,14 @@ No streaks in MVP. If ever implemented, only as **spaced session streaks** — r
 
 - As progress indicators (not currency) can work. (Mekler et al. 2017.)
 - Never purchasable, tradeable, or gating.
-- Represent verified understanding, not activity volume.
+- Represent solid spaced reconstructions recorded, not activity volume.
 - Variable/surprise point bonuses may be applied to engagement behaviors (returning to the app, completing a spaced session) but never to accuracy — variable reinforcement on accuracy distorts metacognitive calibration and undermines the learner's ability to judge what they actually know.
 
 ### Trajectory Contrast
 
 The `spark → link → chain → clear → tetris` progression serves as the primary metacognitive and motivational mechanism.
 
-- Show trajectory, not score: "Your cold attempt was a spark. Your re-drill hit chain. That jump is real learning."
+- Show trajectory, not score: "Your cold attempt was a spark. Your re-drill hit chain. Stronger reconstruction evidence is on record."
 - Never show during the attempt. Show as post-attempt reflection on growth.
 - Always pair with interpretive framing. Raw analytics without meaning frames show null or negative effects.
 - Temporal self-comparison raises pride and calibrates metacognitive accuracy. (Chiviacowsky et al. 2018; Butler, Karpicke & Roediger 2008.)
@@ -554,7 +554,7 @@ The study view does not unlock until the cold attempt is complete. AI must not r
 
 ### 2. One Active Cognitive Target
 
-At any moment, the learner should know what they are working on, where it sits, what phase it is in, and whether it is primed, drilled, or cleared. No silent target switching. No mode bleed. The interleaving rhythm must feel guided — if the learner loses orientation, the interface has failed.
+At any moment, the learner should know what they are working on, where it sits, what phase it is in, and whether it is primed, drilled, or solidified. No silent target switching. No mode bleed. The interleaving rhythm must feel guided — if the learner loses orientation, the interface has failed.
 
 ### 3. The Graph Must Tell The Truth
 
@@ -568,7 +568,7 @@ Selective visual and sensory change on `solidified`, calibrated to cognitive loa
 
 - `primed`: "You've stepped inside. The real challenge is ahead."
 - `drilled`: "Worth revisiting. The next gain is here."
-- `solidified`: "Cleared. You proved it."
+- `solidified`: "Solidified. Spaced reconstruction recorded."
 
 The Ovsiankina effect makes incomplete nodes a natural return driver.
 

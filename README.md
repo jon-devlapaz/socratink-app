@@ -28,10 +28,15 @@ The product doctrine is stable even while implementation is still moving:
 ## Local Run
 
 ```bash
-uvicorn main:app --reload
+bash scripts/dev.sh
 ```
 
 Then open [http://localhost:8000](http://localhost:8000).
+
+`scripts/dev.sh` runs `python scripts/check-local-auth.py` before starting
+Uvicorn. That catches the common local failure where `.env` disables auth or
+omits Supabase/session values while `.env.local` has the real development
+configuration.
 
 ## Testing
 

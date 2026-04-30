@@ -11,7 +11,6 @@ from urllib.request import Request as UrlRequest, urlopen
 
 from html import unescape
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -33,8 +32,9 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
+from runtime_env import load_app_env
 
-load_dotenv()
+load_app_env()
 
 app = FastAPI()
 app.state.auth_service = build_auth_service_from_env()
