@@ -28,15 +28,15 @@ The product doctrine is stable even while implementation is still moving:
 ## Local Run
 
 ```bash
+bash scripts/bootstrap-python.sh
 bash scripts/dev.sh
 ```
 
 Then open [http://localhost:8000](http://localhost:8000).
 
-`scripts/dev.sh` runs `python scripts/check-local-auth.py` before starting
-Uvicorn. That catches the common local failure where `.env` disables auth or
-omits Supabase/session values while `.env.local` has the real development
-configuration.
+`scripts/dev.sh` refuses to run without `.venv/` (to avoid accidentally using
+global/pyenv site-packages). It runs `scripts/check-local-auth.py` before
+starting Uvicorn to catch missing `.env` / `.env.local` auth configuration.
 
 ## Testing
 
@@ -48,4 +48,17 @@ bash scripts/qa-smoke.sh local
 
 # Test against the live production server (https://app.socratink.ai)
 bash scripts/qa-smoke.sh live
+```
+
+## Dependency Updates
+
+This repo uses pinned, hashed lock files for reproducible installs:
+
+- Edit `requirements.in` / `requirements-dev.in`
+- Regenerate locks:
+
+```bash
+.venv/bin/pip install -U pip-tools
+.venv/bin/pip-compile --allow-unsafe --generate-hashes -o requirements.lock requirements.in
+.venv/bin/pip-compile --allow-unsafe --generate-hashes -o requirements-dev.lock requirements-dev.in
 ```

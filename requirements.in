@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+google-genai
+python-dotenv
+aiofiles
+youtube-transcript-api
+supabase
+pyjwt[crypto]
+cryptography
+

@@ -1,9 +1,8 @@
-fastapi
-uvicorn
-google-genai
-python-dotenv
-aiofiles
-youtube-transcript-api
-supabase
-pyjwt[crypto]
-cryptography
+# Runtime dependencies (Vercel function install surface).
+#
+# Source-of-truth inputs live in `requirements.in`.
+# Pinned lock output lives in `requirements.lock`.
+#
+# Keep this file compatible with `pip install -r requirements.txt` for
+# environments that don't (yet) consume the lock.
+-r requirements.lock
