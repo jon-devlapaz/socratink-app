@@ -50,17 +50,30 @@ bash scripts/qa-smoke.sh local
 bash scripts/qa-smoke.sh live
 ```
 
-## Dependency Updates
+## Dependency Updates & Deployment
 
-This repo uses pinned, hashed lock files for reproducible installs:
+This repo keeps Python dependency management intentionally simple:
 
-- Edit `requirements.in` / `requirements-dev.in`
-- Keep `requirements.txt` as a simple direct copy of `requirements.in` entries; Vercel does not support recursive `-r` includes there
-- Regenerate locks:
+- `requirements.txt` is the Vercel runtime install surface.
+- `requirements-dev.txt` is local-only test and tooling surface.
+- Keep both files flat: one pinned package per line, no `-r` includes, no hash blocks.
 
-```bash
-.venv/bin/pip install -U pip-tools
-.venv/bin/pip-compile --allow-unsafe --generate-hashes -o requirements.lock requirements.in
-.venv/bin/pip-compile --allow-unsafe --generate-hashes -o requirements-dev.lock requirements-dev.in
-python scripts/check-vercel-requirements.py
-```
+### Deployment Validation
+
+When preparing and validating a deployment, clearly distinguish between these stages:
+
+1. **Local prerequisite validation:**
+   ```bash
+   bash scripts/doctor.sh
+   ```
+2. **Vercel build readiness:**
+   This proves local Vercel build readiness, not hosted production correctness.
+   ```bash
+   bash scripts/preflight-deploy.sh
+   ```
+3. **Hosted production validation after deployment:**
+   ```bash
+   bash scripts/verify-deploy.sh HEAD
+   ```
+
+Doc-only changes to this section still require `bash scripts/doctor.sh`, because agent and deploy instructions are part of the repository's executable workflow.

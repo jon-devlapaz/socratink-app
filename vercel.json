@@ -3,7 +3,8 @@
   "framework": null,
   "functions": {
     "api/index.py": {
-      "includeFiles": "{public/**,app_prompts/**}"
+      "includeFiles": "{public/**,app_prompts/**}",
+      "excludeFiles": "{tests/**,docs/**,logs/**,tmp/**,scripts/**,.*/**,.env*,requirements-dev.txt,README.md,CLAUDE.md,DESIGN.md,PRODUCT.md,UBIQUITOUS_LANGUAGE.md}"
     }
   },
   "rewrites": [

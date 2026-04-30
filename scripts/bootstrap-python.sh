@@ -12,9 +12,7 @@ fi
 
 python -m pip install --upgrade pip
 
-# Always install from the pinned locks. This is the “one true path” for local reproducibility.
-python -m pip install --require-hashes -r requirements.lock
-python -m pip install --require-hashes -r requirements-dev.lock
+python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 
 echo "[bootstrap-python] OK"
-

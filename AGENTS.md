@@ -1,12 +1,13 @@
 # AGENTS.md
 
-This file provides guidance to WARP (warp.dev) when working with code in this repository.
+This file provides guidance to all coding agents and automation working in this repository.
 
 ## First principles for this repo
 - Keep changes surgical and scope-locked. Do not broaden features or refactor unrelated areas.
 - Prefer the simplest implementation that satisfies the task.
 - For non-trivial work, convert the request into verifiable goals (typically via targeted tests).
 - MVP doctrine applies: separate true blockers from nice-to-have polish.
+- Preserve product truth: never fake mastery, graph progress, or learner knowledge.
 
 ## Code exploration and review workflow
 - This repo is configured for a code-review knowledge graph. Use graph tools before grep/glob/read whenever available.
@@ -21,7 +22,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 ## Common development commands
 ### Environment setup
 ```bash
-pip install -r requirements-dev.txt
+bash scripts/bootstrap-python.sh
 playwright install chromium
 ```
 
@@ -61,6 +62,9 @@ SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
 
 ### Deploy verification
 ```bash
+# Validate the same dependency/build surface Vercel will use
+bash scripts/preflight-deploy.sh
+
 # Wait for Vercel deployment of origin/main and then run production smoke
 bash scripts/verify-deploy.sh
 
@@ -74,7 +78,14 @@ bash scripts/verify-deploy.sh HEAD
 - There is no repository lint configuration checked in (no ruff/flake8/mypy config at repo root). Do not invent lint commands.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
-  - serverless function bundles `public/**` and `app_prompts/**`
+  - serverless function explicitly includes `public/**` and `app_prompts/**`
+  - serverless function excludes tests, docs, logs, local env files, caches, and agent/tooling artifacts
+
+## Agent bootstrap discovery
+- Canonical session bootstrap: `docs/codex/onboarding.md`.
+- Legacy compatibility path: `docs/codex/session-bootstrap.md` redirects agents to onboarding.
+- If an agent instruction references `docs/codex/session-bootstrap.md`, treat that as `docs/codex/onboarding.md`.
+- Deterministic agent quality rules live in `docs/codex/agent-quality.md`.
 
 ## Big-picture architecture
 - Runtime surface is a single FastAPI app (`main.py`) deployed as a Vercel Python serverless entrypoint via `api/index.py`.
