@@ -133,9 +133,6 @@ def test_guest_session_is_labeled_as_guest(
     clean_page: Page, base_url: str
 ) -> None:
     """Anonymous Supabase sessions must render as guest, not signed-in user."""
-    clean_page.on("console", lambda msg: print(f"PAGE LOG: {msg.type} {msg.text}"))
-    clean_page.on("pageerror", lambda exc: print(f"PAGE ERROR: {exc}"))
-    clean_page.on("response", lambda r: print(f"RES: {r.status} {r.url}") if r.status >= 400 else None)
     _enter_app_shell_as_guest(clean_page, base_url)
     session = _fetch_browser_session(clean_page)
 

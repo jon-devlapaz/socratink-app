@@ -74,12 +74,10 @@ export async function logout() {
 const ADMIN_EMAIL = 'jonathan10620@gmail.com';
 
 function applyAuthUi(session) {
-  console.log('applyAuthUi called with session:', session);
   const controls = document.getElementById('auth-controls');
   const loginLink = document.getElementById('auth-login-link');
   const logoutBtn = document.getElementById('auth-logout-btn');
   const status = document.getElementById('auth-status');
-  console.log('DOM elements:', { controls: !!controls, loginLink: !!loginLink, logoutBtn: !!logoutBtn, status: !!status });
   if (!controls || !loginLink || !logoutBtn || !status) return;
 
   controls.hidden = false;
