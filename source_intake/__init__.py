@@ -60,4 +60,42 @@ class ImportedSource:
         return {"url": self.url, "title": self.title, "text": self.text}
 
 
-# from_url and from_text implemented in Task 13 (facade).
+from . import fetch, parse
+
+
+def from_url(url: str) -> ImportedSource:
+    """Fetch and parse a single web page.
+
+    Raises (any of): InvalidUrl, BlockedSource, FetchFailed,
+                     UnsupportedContent, TooLarge, ParseEmpty.
+    """
+    fetched = fetch.fetch(url)
+    decoded = parse.decode(fetched.raw_bytes, fetched.headers)
+    if fetched.content_type == "text/plain":
+        parsed = parse.extract_plain(decoded, source_url=fetched.final_url)
+    else:
+        parsed = parse.extract_html(decoded, source_url=fetched.final_url)
+    return ImportedSource(
+        url=fetched.final_url,
+        title=parsed.title,
+        text=parsed.text,
+        is_remote_source=True,
+    )
+
+
+def from_text(text: str, *, min_text_length: int = 1) -> ImportedSource:
+    """Normalize a raw-text submission. No fetch.
+
+    Default min_text_length=1 preserves /api/extract's current behavior of
+    accepting any non-empty text. Callers wanting the URL-path floor pass
+    min_text_length=200 explicitly.
+
+    Raises: ParseEmpty.
+    """
+    parsed = parse.extract_plain(text, source_url=None, min_text_length=min_text_length)
+    return ImportedSource(
+        url=None,
+        title=parsed.title,
+        text=parsed.text,
+        is_remote_source=False,
+    )
