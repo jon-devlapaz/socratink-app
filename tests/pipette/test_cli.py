@@ -1,6 +1,45 @@
+"""CLI tests for tools.pipette.cli — added in Chunk B (F4) and extended in C (F3) and G (F14)."""
+from __future__ import annotations
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# Chunk B.1 — parse_extra_kv helper (F4)
+# ---------------------------------------------------------------------------
+
+def test_parse_extra_kv_simple():
+    from tools.pipette.trace import parse_extra_kv
+    assert parse_extra_kv("jump_back_to=1") == {"jump_back_to": "1"}
+
+
+def test_parse_extra_kv_multi():
+    from tools.pipette.trace import parse_extra_kv
+    assert parse_extra_kv("jump_back_to=1,reason=verdict_fail") == {
+        "jump_back_to": "1",
+        "reason": "verdict_fail",
+    }
+
+
+def test_parse_extra_kv_empty_returns_empty_dict():
+    from tools.pipette.trace import parse_extra_kv
+    assert parse_extra_kv("") == {}
+    assert parse_extra_kv(None) == {}
+
+
+def test_parse_extra_kv_rejects_no_equals():
+    from tools.pipette.trace import parse_extra_kv
+    with pytest.raises(ValueError, match="expected key=value"):
+        parse_extra_kv("just_a_key")
+
+
+# ---------------------------------------------------------------------------
+# Pre-existing subprocess-style tests
+# ---------------------------------------------------------------------------
 
 def _run(*args, cwd=None, input=None):
     return subprocess.run(
