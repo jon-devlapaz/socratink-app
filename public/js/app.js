@@ -722,11 +722,12 @@ const App = (() => {
       ${showNameField ? `
         <section class="creation-threshold">
           <div class="creation-threshold-head">
-            <span class="creation-section-label">Concept Threshold</span>
+            <span class="creation-section-label" id="creation-threshold-label">Concept Threshold</span>
             <span class="creation-threshold-pill">global context</span>
           </div>
           <p class="creation-threshold-copy">This is global context. The first room will ask one smaller question.</p>
           <textarea class="creation-threshold-input"
+                    aria-labelledby="creation-threshold-label"
                     maxlength="1200"
                     placeholder="Write what you already think is going on: parts, guesses, examples, or confusion."></textarea>
         </section>
@@ -2058,7 +2059,7 @@ const App = (() => {
         const subnodes = c.subnodes || [];
         subnodes.forEach((sub, subIdx) => {
           const subHasEvidence = hasStudyEvidence(sub);
-          const color = sub.drill_status ? 'var(--primary)' : '#c4c2d4';
+          const color = subHasEvidence ? 'var(--primary)' : '#c4c2d4';
           const roomLabel = subHasEvidence ? (sub.label || `Room ${subIdx + 1}`) : `Locked room ${subIdx + 1}`;
           const mechanismCopy = subHasEvidence
             ? (sub.mechanism || 'Study material available after the recorded attempt.')

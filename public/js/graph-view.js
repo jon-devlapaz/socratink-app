@@ -52,7 +52,7 @@ function getCoreThesisDetail(source) {
 }
 
 function getStartingMapContext(source) {
-  return String(source?.metadata?.starting_map_context || '').replace(/\s+/g, ' ').trim();
+  return String(source?.metadata?.starting_map_context || source?.startingMapContext || '');
 }
 
 function getStartingMapSnippet(source, maxLength = 190) {
@@ -973,7 +973,9 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
         <p>${escHtml(thresholdSnippet)}</p>
       </div>
     ` : ''}
-    <p class="graph-detail-copy">This is the first room. It asks one smaller question from the global context you gave.</p>
+    <p class="graph-detail-copy">${thresholdSnippet
+      ? 'This is the first room. It asks one smaller question from the global context you gave.'
+      : 'This is the first room. It asks one smaller question to anchor the map.'}</p>
     <p class="graph-detail-copy">${starterPrompt}</p>
     <div class="graph-detail-meta">
       <span class="graph-detail-pill">Core thesis first</span>
