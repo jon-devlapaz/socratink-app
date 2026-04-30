@@ -137,3 +137,89 @@ def extract_plain(text: str, source_url: str | None = None, *, min_text_length: 
         title = "Imported text"
 
     return ParsedPage(title=title[:MAX_TITLE_LENGTH], text=cleaned[:MAX_TEXT_LENGTH])
+
+
+from bs4 import BeautifulSoup
+
+MIN_HTML_TEXT_LENGTH = 200
+
+
+def extract_html(html: str, source_url: str) -> ParsedPage:
+    """Pure: HTML string → ParsedPage. Raises ParseEmpty if < 200 chars extracted."""
+    soup = BeautifulSoup(html, "html.parser")
+
+    title = _extract_title(soup, source_url)
+
+    # Preserve <pre> block content before stripping (whitespace matters for code).
+    # Inline <code> is intentionally NOT special-cased — that produces weird spacing.
+    pre_blocks = _extract_pre_placeholders(soup)
+
+    # Drop non-content tags. <head> is removed AFTER title extraction.
+    for tag in soup.select("script, style, noscript, svg, iframe, template, head"):
+        tag.decompose()
+
+    body = soup.body or soup
+    text = body.get_text(separator="\n", strip=True)
+    text = _restore_pre_placeholders(text, pre_blocks)
+    text = _CONTROL_CHARS_RE.sub("", text)
+    text = _BLANK_LINES_RE.sub("\n\n", text)
+    text = text.strip()
+
+    if len(text) < MIN_HTML_TEXT_LENGTH:
+        raise ParseEmpty(f"extracted {len(text)} chars after parsing")
+
+    return ParsedPage(title=title[:MAX_TITLE_LENGTH], text=text[:MAX_TEXT_LENGTH])
+
+
+def _extract_title(soup: BeautifulSoup, source_url: str) -> str:
+    """Title fallback chain: <title> → og:title → twitter:title → first <h1> → host → default."""
+    if soup.title:
+        t = soup.title.get_text(strip=True)
+        if t:
+            return t
+
+    og = soup.find("meta", attrs={"property": "og:title"})
+    if og and og.get("content"):
+        t = og["content"].strip()
+        if t:
+            return t
+
+    tw = soup.find("meta", attrs={"name": "twitter:title"})
+    if tw and tw.get("content"):
+        t = tw["content"].strip()
+        if t:
+            return t
+
+    h1 = soup.find("h1")
+    if h1:
+        t = h1.get_text(strip=True)
+        if t:
+            return t
+
+    if source_url:
+        host = urlparse(source_url).hostname
+        if host:
+            return host
+
+    return "Imported text"
+
+
+_PRE_PLACEHOLDER = "\x00PRE_BLOCK_{}\x00"
+
+
+def _extract_pre_placeholders(soup: BeautifulSoup) -> list[str]:
+    """Replace each <pre> block with a placeholder. Returns the original contents in order.
+
+    Block-only — inline <code> is left untouched.
+    """
+    blocks: list[str] = []
+    for i, pre in enumerate(soup.find_all("pre")):
+        blocks.append(pre.get_text())
+        pre.string = _PRE_PLACEHOLDER.format(i)
+    return blocks
+
+
+def _restore_pre_placeholders(text: str, blocks: list[str]) -> str:
+    for i, original in enumerate(blocks):
+        text = text.replace(_PRE_PLACEHOLDER.format(i), original)
+    return text
