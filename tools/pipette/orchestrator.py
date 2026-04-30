@@ -231,8 +231,18 @@ def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     arch = folder / "_attempts" / f"{step_label}-{ts}"
     arch.mkdir(parents=True)
     affected = {
-        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
-        2.0: ["02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
+        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md",
+              # F10: Step 3 scratch — preserves the audit trail for attempt 1.
+              "_reviewer-contracts.json", "_reviewer-impact.json",
+              "_reviewer-glossary.json", "_reviewer-coverage.json",
+              "_verifier-output.json", "_verifier-survivors.json",
+              "_step3-prompt.txt", "_gemini-stdout.log"],
+        2.0: ["02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md",
+              # F10: same scratch list — Step 3 ran in attempt 1 of jump=2 too.
+              "_reviewer-contracts.json", "_reviewer-impact.json",
+              "_reviewer-glossary.json", "_reviewer-coverage.json",
+              "_verifier-output.json", "_verifier-survivors.json",
+              "_step3-prompt.txt", "_gemini-stdout.log"],
     }
     if float(jump_back_to) not in affected:
         raise ValueError(f"jump_back_to must be 1 or 2 (B-revision dropped 1.5); got {jump_back_to!r}")
