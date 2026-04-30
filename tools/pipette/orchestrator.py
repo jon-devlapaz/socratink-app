@@ -1,9 +1,11 @@
 # tools/pipette/orchestrator.py
 from __future__ import annotations
+import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal, TypedDict
 import yaml
 
 from tools.pipette.folder import folder_name, slug
@@ -11,6 +13,25 @@ from tools.pipette.lockfile import (
     acquire, resume, abort, LockHeld, LockPaused, FilesystemUnsupported,
 )
 from tools.pipette.trace import append_event, Event
+
+
+# F11/F12: shape contract for `_verifier-survivors.json` — the file that
+# downstream loop-back consumers (reviewers_to_redispatch_from_folder,
+# should_run_verifier_on_attempt) read. No code in the repo writes this
+# file as of Chunk F; the producer (a future verifier output path) MUST
+# conform to this TypedDict so the consumers don't need to reverse-
+# engineer the shape.
+class VerifierFinding(TypedDict, total=False):
+    severity: Literal["critical", "high", "medium", "low", "polish"]
+    confidence: float
+    claim: str
+    evidence: list[str]
+    suggested_fix: str | None
+
+
+# Mapping reviewer name → list of findings the verifier confirmed survived
+# its 0.8-confidence filter for that reviewer's prior attempt.
+VerifierSurvivors = dict[str, list[VerifierFinding]]
 
 
 def _meta(root: Path) -> Path:
@@ -141,6 +162,17 @@ _REVIEWER_ARTIFACTS = {
 
 _FULL_ARTIFACT_STACK = ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"]
 
+# F10: Step 3 scratch files archived on loop-back so the audit trail for
+# attempt N (reviewer JSONs, verifier outputs, gemini stdout) is preserved
+# in `_attempts/N-<ts>/`. Single source of truth — both jump_back_to=1 and
+# =2 paths reference this list.
+_STEP3_SCRATCH = [
+    "_reviewer-contracts.json", "_reviewer-impact.json",
+    "_reviewer-glossary.json", "_reviewer-coverage.json",
+    "_verifier-output.json", "_verifier-survivors.json",
+    "_step3-prompt.txt", "_gemini-stdout.log",
+]
+
 
 def reviewer_artifacts(reviewer: str) -> list[str]:
     """Return the artifact list passed to a reviewer subagent's context.
@@ -161,12 +193,14 @@ _ALL_REVIEWERS = ["contracts", "impact", "glossary", "coverage"]
 _MEDIUM_OR_HIGHER = {"medium", "high", "critical"}
 
 
-def reviewers_to_redispatch(survivors_by_reviewer: dict[str, list[dict]]) -> list[str]:
-    """F11: only redispatch reviewers that flagged >= medium in the prior attempt.
+def reviewers_to_redispatch(survivors_by_reviewer: VerifierSurvivors) -> list[str]:
+    """F11: only redispatch reviewers that flagged >= medium in the prior
+    attempt's surviving findings.
 
-    `_verifier-survivors.json` shape (de facto contract — not yet written by
-    any code as of Chunk F): {reviewer_name: [{"severity": "...", ...}, ...]}.
-    The orchestrator's loop-back dispatch path is the de facto producer."""
+    Shape contract: see `VerifierSurvivors` TypedDict at module top —
+    `_verifier-survivors.json` is `{reviewer_name: [VerifierFinding, ...]}`.
+    No code in the repo writes the file yet (Chunk F): the orchestrator's
+    loop-back dispatch path is the de facto producer."""
     out: list[str] = []
     for reviewer in _ALL_REVIEWERS:
         findings = survivors_by_reviewer.get(reviewer) or []
@@ -180,14 +214,13 @@ def reviewers_to_redispatch_from_folder(folder: Path) -> ReviewerRedispatchPlan:
     fall back to full dispatch and log the reason — spec enhancement.
     The orchestrator emits a `smart_reviewers_fallback` trace event when
     `fallback_reason` is non-None."""
-    import json as _json
     p = folder / "_verifier-survivors.json"
     if not p.exists():
         return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
                                       fallback_reason="survivors_missing")
     try:
-        data = _json.loads(p.read_text())
-    except _json.JSONDecodeError:
+        data = json.loads(p.read_text())
+    except json.JSONDecodeError:
         return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
                                       fallback_reason="survivors_unparseable")
     if not isinstance(data, dict):
@@ -203,15 +236,14 @@ def should_run_verifier_on_attempt(*, folder: Path, attempt: int) -> bool:
     clean `_verifier-survivors.json`. Spec enhancement: if attempt 1's
     verifier crashed or output was malformed, run the verifier in attempt 2
     rather than silently breaking the verification chain."""
-    import json as _json
     if attempt < 2:
         return True
     p = folder / "_verifier-survivors.json"
     if not p.exists():
         return True
     try:
-        data = _json.loads(p.read_text())
-    except _json.JSONDecodeError:
+        data = json.loads(p.read_text())
+    except json.JSONDecodeError:
         return True
     return not isinstance(data, dict)  # well-formed dict → safe to skip
 
@@ -231,18 +263,10 @@ def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     arch = folder / "_attempts" / f"{step_label}-{ts}"
     arch.mkdir(parents=True)
     affected = {
-        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md",
-              # F10: Step 3 scratch — preserves the audit trail for attempt 1.
-              "_reviewer-contracts.json", "_reviewer-impact.json",
-              "_reviewer-glossary.json", "_reviewer-coverage.json",
-              "_verifier-output.json", "_verifier-survivors.json",
-              "_step3-prompt.txt", "_gemini-stdout.log"],
-        2.0: ["02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md",
-              # F10: same scratch list — Step 3 ran in attempt 1 of jump=2 too.
-              "_reviewer-contracts.json", "_reviewer-impact.json",
-              "_reviewer-glossary.json", "_reviewer-coverage.json",
-              "_verifier-output.json", "_verifier-survivors.json",
-              "_step3-prompt.txt", "_gemini-stdout.log"],
+        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw",
+              "03-gemini-verdict.md", *_STEP3_SCRATCH],
+        2.0: ["02-diagram.mmd", "02-diagram.excalidraw",
+              "03-gemini-verdict.md", *_STEP3_SCRATCH],
     }
     if float(jump_back_to) not in affected:
         raise ValueError(f"jump_back_to must be 1 or 2 (B-revision dropped 1.5); got {jump_back_to!r}")
