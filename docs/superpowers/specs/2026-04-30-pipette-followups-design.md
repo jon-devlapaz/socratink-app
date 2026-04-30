@@ -71,7 +71,9 @@ Six chunks, in execution order. Each is one PR. Each can be reverted independent
 
 **Contains:** F1 (doctor in-session MCP probe), F3 (build-coverage-map malformed-dump warning), F5 (shared MCP-fallback section in reviewer prompts), F8 (subagent_stop hook reads lockfile for current step).
 
-**Why grouped (P8):** all four are "the tool must stop lying." Different files, single theme, single reason a reviewer would reject the chunk ("does it make signals more honest?"). Each is its own commit per P5.
+**Why grouped (P8):** all four are "the tool must stop lying." Different files, shared theme.
+
+**Tension with P5 (acknowledged):** strict P5 would split this into four chunks (one per fix). We trade strict P5 for fewer PRs by relying on per-commit revertibility as the mitigation: each fix is its own commit, with its own test, so a reviewer can request changes to commit 3 without blocking commits 1, 2, or 4. If review feedback on any single commit becomes contentious, that commit splits out into its own PR rather than holding the chunk hostage.
 
 **Why before E (P3, gemini's hazard):** Chunk E debugs grill behavior; if doctor lies about MCP availability, every grill verification is suspect. **Why before G (P3):** F15's heuristic auto-pass uses coverage data; if coverage dumps are silently malformed (F3), the auto-pass makes wrong decisions.
 
@@ -109,11 +111,12 @@ auto-pass IFF
 No scoring module, no configuration file. Constants live next to the gate function.
 
 **Verification:**
-- New `tests/pipette/test_orchestrator_dispatch.py` with three cases:
+- New `tests/pipette/test_orchestrator_dispatch.py` with five cases:
   1. All thresholds pass → auto-pass; `03-gemini-verdict.md` written with `heuristic auto-pass`; reviewers/verifier never dispatched.
-  2. One threshold fails → fall through to full Step 3 ceremony.
-  3. Coverage data malformed (depends on F3's warning path) → fall through to full Step 3 with a logged reason.
-- Lite path integration test: `pipette-lite <topic>` runs Steps 0, 1, 2, 4, 5, 6, 7 (single-subagent, no best-of-N) and never enters Step 3 dispatch.
+  2. One threshold fails → fall through to full Step 3 ceremony; trace event `autopass_rejected` written with `reason` naming the failed threshold (`coverage_below_80`, `risk_above_30`, `lines_above_50`). Required for future threshold tuning without guessing.
+  3. Coverage data malformed (depends on F3's warning path) → fall through to full Step 3 with `autopass_rejected reason=coverage_malformed`.
+  4. F14 vs F15 precedence: `pipette-lite <topic>` invoked with synthetic high-risk-score input; the lite path bypasses Step 3 unconditionally, ignoring F15's heuristic. Lite mode is an absolute manual override.
+  5. Lite path integration: `pipette-lite <topic>` runs Steps 0, 1, 2, 4, 5, 6, 7 (single-subagent, no best-of-N) and never enters Step 3 dispatch.
 
 **Done signal:** dispatch tests green; manual lite run on a trivial change completes in expected token budget.
 
@@ -135,8 +138,8 @@ No scoring module, no configuration file. Constants live next to the gate functi
 
 **Verification:**
 - F13: per-reviewer artifact lookup table. Test: each reviewer's prompt context contains only the expected artifacts; e.g., glossary reviewer never sees `00-graph-context.md`.
-- F11: `--smart-reviewers` flag (default ON for attempts ≥ 2). Test: on loop-back, only reviewers that flagged ≥ medium in the prior attempt's verifier-survivors are redispatched.
-- F12: skip verifier on attempt ≥ 2 if reviewers had access to the prior attempt's verified findings. Test: orchestrator dispatch logs show no verifier subagent in attempt 2; reviewer outputs are filtered by 0.8 confidence directly.
+- F11: `--smart-reviewers` flag (default ON for attempts ≥ 2). Test: on loop-back, only reviewers that flagged ≥ medium in the prior attempt's verifier-survivors are redispatched. **Fallback:** if `_verifier-survivors.json` is malformed or missing on loop-back, default to full reviewer dispatch with a logged warning (`smart_reviewers_fallback reason=survivors_unparseable`). Test: malformed-fixture case asserts full dispatch + warning event.
+- F12: skip verifier on attempt ≥ 2 **only if** attempt 1's `_verifier-survivors.json` exists and parses cleanly. If attempt 1's verifier crashed or output was malformed, attempt 2 still runs the verifier (the verification chain isn't broken silently). Test: dispatch decision under both conditions; reviewer outputs are filtered by 0.8 confidence directly when skip is allowed.
 - F10: archive function file list extended. Test: after a loop-back, `_attempts/N-<ts>/` contains `_reviewer-*.json`, `_verifier-output.json`, `_verifier-survivors.json`, `_step3-prompt.txt`, `_gemini-stdout.log` in addition to the original three artifacts.
 
 **Done signal:** four commits' tests green; a loop-back regression run on the same fixture used to motivate F11/F12 shows reduced total token count vs. the run captured in `implementation-followups.md` (rough — not strict pass/fail).
@@ -155,9 +158,9 @@ No scoring module, no configuration file. Constants live next to the gate functi
 
 **Files touched:** `~/.claude/skills/grill-with-docs/SKILL.md` (global) OR `.claude/skills/pipette/SKILL.md` + the inlined slash-command flow, depending on whether F2 (Chunk A) restored the skill's invocability. If A succeeded, the canonical fix lives in the grill skill; if it didn't, fix the inlined version in pipette.
 
-**F6 fix (option a):** before Step 1 produces its design summary, the grill must Read the single most-cited symbol in its code snippet and confirm the field/method shape exists. The grill cannot advance until this round-trip is logged.
+**F6 fix (option a):** before Step 1 produces its design summary, the grill must Read the single most-cited symbol in its code snippet and confirm the field/method shape exists. The grill prompt instructs the model to log this round-trip as a structured trace event (`grill_symbol_verified` with the symbol name) and refuse to write `01-grill.md` without it. **Enforcement is prompt-level, not orchestrator-level** — the grill's discipline is what holds the gate, with the trace event providing observability so we can audit whether it skipped. A hard orchestrator-side gate (parsing `01-grill.md` for the verification block, refusing to advance Step 2 if absent) is captured in Future work.
 
-**F7 fix:** when the grill marks a route as **Dev-only Route** per CONTEXT.md, it must produce a deployment-topology block that names every layer between client and FastAPI handler (e.g., `Vercel CDN → FastAPI middleware → handler`). Either the route's HTML shell is served by a FastAPI handler (`HTMLResponse`), or `vercel.json` rewrites are inspected and confirmed to forward the path to the function.
+**F7 fix:** when the grill marks a route as **Dev-only Route** per CONTEXT.md, it must (1) Read `vercel.json` (or equivalent config — the grill prompt names the file explicitly so the LLM doesn't hallucinate routing layers from pre-training), then (2) produce a deployment-topology block that names every layer between client and FastAPI handler (e.g., `Vercel CDN → FastAPI middleware → handler`). Either the route's HTML shell is served by a FastAPI handler (`HTMLResponse`), or the cited `vercel.json` rewrites confirm forwarding the path to the function. Mirrors F6's "Read the cited symbol before claiming its shape" discipline.
 
 **Verification:** manual fixture, documented in the PR description.
 - **F6 fixture:** the literal admin-tink-todo state.email failure. A grill output that names `state.email` when `AuthSessionState.email` doesn't exist (only `state.user.email`) — orchestrator must refuse to advance Step 1.
@@ -176,7 +179,7 @@ No automated test (P10). The PR description includes screenshots / log excerpts 
 - **No `orchestrator.py` architectural refactor.** Chunks C/F/G all touch it — we change behavior only, not structure.
 - **No new MCP tooling.** F1's probe checks the existing tool list; it doesn't try to fix MCP server lifecycle.
 - **No Step 1 "v2" rewrite (F6 option c).** The `<verify-this>` block design is captured in "Future work" below; this round ships option (a) only.
-- **No retroactive lessons curation.** The lessons block at the bottom of `implementation-followups.md` is appended once to `_meta/lessons.md` as a standalone housekeeping commit on the branch before Chunk A starts (not bundled into any chunk's PR — different reason to fail review per P5), then we close that loop.
+- **No retroactive lessons curation.** The lessons block at the bottom of `implementation-followups.md` is appended once to `_meta/lessons.md` as a standalone tiny PR landed to `main` *before* any chunk branch is cut. Each chunk then branches from updated `main` and carries only its own commits — Chunk A's PR independence (P9) is preserved. After this one-shot housekeeping, we close the loop.
 - **No backwards compatibility for in-flight pipeline scratch files.** Local `_reviewer-*.json` / `_verifier-*.json` files from prior runs may not be readable post-Chunk-F. Users delete and re-run.
 - **F15 thresholds are hardcoded constants, not a configurable scoring module.** No risk-scoring abstraction. The thresholds (`coverage ≥ 0.80`, `risk < 0.30`, `lines < 50`) live as constants in the gate function.
 
@@ -185,6 +188,7 @@ No automated test (P10). The PR description includes screenshots / log excerpts 
 ## Future work (deferred, not part of this spec)
 
 - **F6 option (c)** — `<verify-this>` blocks in `01-grill.md` extracted by Step 0 into auto-generated test harnesses. The systemic fix; option (a) is the lightweight version.
+- **Hard orchestrator-side gate for F6/F7** — parse `01-grill.md` for the verification block / topology block; refuse to advance Step 2 if absent. Currently enforcement is prompt-level discipline + observability via trace events. If the trace shows the grill skipping verification under load, escalate to a hard gate.
 - **E2E pipette smoke harness** — fixture-based dry-run walking Steps 0→7 with stub LLMs. Worth building once the surface stabilizes.
 - **Configurable F15 risk scoring** — if hardcoded thresholds prove too rigid in practice, generalize into a small scoring module with weights.
 
