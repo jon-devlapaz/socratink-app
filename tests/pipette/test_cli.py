@@ -1,4 +1,4 @@
-"""CLI tests for tools.pipette.cli — added in Chunk B (F4) and extended in C (F3) and G (F14)."""
+"""CLI tests for tools.pipette.cli — added/extended in Chunk B (F4)."""
 from __future__ import annotations
 import json
 import subprocess
@@ -80,20 +80,36 @@ def test_trace_append_rejects_malformed_data(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 def test_gemini_picker_event_shape_preserved():
-    """F9: gemini_picker must keep emitting `gemini_verdict` with keys
-    {ts, step, event, decision, jump_back_to}. This is the canonical
-    structured-event reference for trace.jsonl readers (e.g., weekly
-    aggregator); changing it would silently break downstream tools."""
+    """F9: a NAMING regression test (not a runtime shape test).
+
+    Pins two facts about gemini_picker:
+      1. The literal event name `"gemini_verdict"` still appears in source.
+      2. `append_event` is actually called (not just imported), so the
+         event-write path still routes through trace.append_event.
+
+    What this does NOT verify: the runtime trace.jsonl record shape (keys,
+    types). For that, an integration test would need to invoke gemini_picker
+    with a mocked subprocess.run. This test's stated job is to catch
+    rename/removal regressions only. Downstream readers (e.g., weekly
+    aggregator) that depend on the {ts, step, event, decision, jump_back_to}
+    shape need their own integration coverage."""
+    import ast
     import inspect
     from tools.pipette import gemini_picker as gp
     src = inspect.getsource(gp)
-    # The event name must appear verbatim somewhere in the module.
+    # 1. Event name is referenced verbatim somewhere in the module.
     assert '"gemini_verdict"' in src or "'gemini_verdict'" in src, \
         "gemini_picker no longer references the gemini_verdict event name"
-    # The event must be written via append_event so it goes through the
-    # same path as `pipette trace-append --data ...`.
-    assert "append_event" in src, \
-        "gemini_picker should write events via trace.append_event for consistency with --data CLI path"
+    # 2. append_event is actually CALLED (not merely imported). Defends
+    #    against a refactor that imports the symbol but routes writes
+    #    elsewhere (raw json.dumps, a different helper, etc.).
+    tree = ast.parse(src)
+    called_names = {
+        (n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", None))
+        for n in ast.walk(tree) if isinstance(n, ast.Call)
+    }
+    assert "append_event" in called_names, \
+        "gemini_picker must call append_event (not just import it) to keep the event-write path consistent with `pipette trace-append --data`"
 
 
 # ---------------------------------------------------------------------------
