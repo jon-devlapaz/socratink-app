@@ -81,8 +81,14 @@ def test_decode_meta_only_for_html():
 # === charset-normalizer fallback (priority 4) ===
 
 def test_decode_falls_back_to_normalizer():
-    """No BOM, no header charset, no meta — detector runs."""
-    raw = "Café".encode("cp1252")
+    """No BOM, no header charset, no meta — detector runs.
+
+    Uses a longer cp1252 sample so the detector has enough signal to
+    disambiguate from multi-byte encodings. charset-normalizer is
+    unreliable on tiny inputs (a 4-byte sample can be mis-identified
+    as utf-16-be); real-world HTML bodies always have much more signal.
+    """
+    raw = ("Café au lait. " * 20).encode("cp1252")
     result = decode(raw, {"content-type": "text/html"})
     assert "Café" in result
 
