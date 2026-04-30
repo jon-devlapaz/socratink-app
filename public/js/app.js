@@ -1,5 +1,5 @@
 import { Bus } from './bus.js';
-import { generateKnowledgeMap } from './ai_service.js?v=2';
+import { generateKnowledgeMap } from './ai_service.js?v=3';
 import {
   getHealth,
   extractUrl,
@@ -7,7 +7,7 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=9';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=10';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -381,16 +381,16 @@ const App = (() => {
       const tryFill = () => {
         const dialog = document.getElementById('creation-dialog');
         const nameInput = dialog?.querySelector('.creation-name-input');
+        const thresholdInput = dialog?.querySelector('.creation-threshold-input');
         const textarea = dialog?.querySelector('.overlay-textarea');
-        if (!nameInput || !textarea) {
+        if (!nameInput || !textarea || !thresholdInput) {
           if (performance.now() < deadline) requestAnimationFrame(tryFill);
           return;
         }
         if (classified.kind === 'name') {
           nameInput.value = classified.text;
           nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-          nameInput.focus();
-          nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
+          thresholdInput.focus();
         } else {
           textarea.value = classified.text;
           textarea.dispatchEvent(new Event('input', { bubbles: true }));
@@ -666,6 +666,7 @@ const App = (() => {
     }
   }
 
+<<<<<<< Updated upstream
   function shortOnboardingText(value, maxLength = 180) {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     if (text.length <= maxLength) return text;
@@ -678,6 +679,16 @@ const App = (() => {
       || node.drill_status === 'solidified'
       || node.drill_status === 'solid'
       || Boolean(node.gap_type);
+=======
+  function normalizeStartingMap(raw = {}) {
+    const globalContext = String(raw.global_context || raw.globalContext || '').trim();
+    const fuzzyArea = String(raw.fuzzy_area || raw.fuzzyArea || '').trim();
+    if (!globalContext) return null;
+    return {
+      global_context: globalContext.slice(0, 5000),
+      ...(fuzzyArea ? { fuzzy_area: fuzzyArea.slice(0, 1000) } : {}),
+    };
+>>>>>>> Stashed changes
   }
 
   // ── 12. CRUD ───────────────────────────────────────────────
@@ -700,10 +711,18 @@ const App = (() => {
             </div>
             <div class="creation-capacity-pill">${Math.min(usedSlots, 4)}/4 active</div>
           </div>
-          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format. The draft will not grade you.</p>
+          <p class="creation-intro-copy">Name the concept, externalize your rough model, then choose the cleanest source. The draft will not grade you.</p>
         </div>
         <span class="creation-section-label">Name this concept</span>
         <input class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
+        <div class="creation-threshold">
+          <div class="creation-threshold-kicker">Concept Threshold</div>
+          <label class="creation-threshold-label" for="creation-threshold-input">Show me your starting map.</label>
+          <p class="creation-threshold-copy">This is global context. The first room will ask one smaller question.</p>
+          <textarea id="creation-threshold-input" class="creation-threshold-input" maxlength="5000" placeholder="Write your rough model before seeing the path. Parts, guesses, examples, or confusions are useful."></textarea>
+          <label class="creation-threshold-label secondary" for="creation-fuzzy-input">What feels fuzzy? <span>optional</span></label>
+          <input id="creation-fuzzy-input" class="creation-fuzzy-input" type="text" maxlength="1000" placeholder="e.g. I am not sure which part causes which.">
+        </div>
       ` : ''}
       <div class="overlay-tabs" style="margin-bottom:12px;">
         <button class="overlay-tab active" data-tab="paste">${showNameField ? 'Text' : 'Paste'}</button>
@@ -732,6 +751,7 @@ const App = (() => {
         <input type="file" accept=".txt,.md,.pdf" style="display:none">
         <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
+<<<<<<< Updated upstream
       ${showNameField ? `
         <section class="creation-threshold">
           <div class="creation-threshold-head">
@@ -746,6 +766,9 @@ const App = (() => {
         </section>
       ` : ''}
       ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name and choose a source to continue.</p>' : ''}
+=======
+      ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name, your global starting map, and a source to continue.</p>' : ''}
+>>>>>>> Stashed changes
       <div class="${showNameField ? 'creation-footer' : 'overlay-footer'}">
         <button class="${showNameField ? 'creation-cancel' : 'overlay-cancel'}">Cancel</button>
         <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Draft from Text' : 'Extract'}</button>
@@ -768,6 +791,10 @@ const App = (() => {
     const sourceCopy = container.querySelector('[data-role="source-copy"]');
     const validationNote = container.querySelector('[data-role="validation-note"]');
     const thresholdInput = container.querySelector('.creation-threshold-input');
+<<<<<<< Updated upstream
+=======
+    const fuzzyInput = container.querySelector('.creation-fuzzy-input');
+>>>>>>> Stashed changes
     const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
 
@@ -819,18 +846,25 @@ const App = (() => {
     }
     function checkSubmitEnabled() {
       const blockedVideoUrl = activeTab === 'url' && isBlockedVideoUrl(urlInput.value.trim());
+      const hasStartingMap = thresholdInput ? thresholdInput.value.trim().length > 0 : true;
       const ready = showNameField
+<<<<<<< Updated upstream
         ? (!blockedVideoUrl && hasContent() && nameInput.value.trim().length > 0 && hasThresholdContext())
+=======
+        ? (!blockedVideoUrl && hasContent() && nameInput.value.trim().length > 0 && hasStartingMap)
+>>>>>>> Stashed changes
         : hasContent();
       submitBtn.disabled = !ready;
       if (showNameField) {
         if (!validationNote) return;
         if (blockedVideoUrl) {
           validationNote.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
-        } else if (!nameInput.value.trim() && !hasContent()) {
-          validationNote.textContent = 'Add a concept name and choose a source to continue.';
+        } else if (!nameInput.value.trim() && !hasStartingMap && !hasContent()) {
+          validationNote.textContent = 'Add a concept name, your global starting map, and a source to continue.';
         } else if (!nameInput.value.trim()) {
           validationNote.textContent = 'Add a concept name before drafting.';
+        } else if (!hasStartingMap) {
+          validationNote.textContent = 'Add your global starting map before drafting.';
         } else if (!hasContent()) {
           validationNote.textContent = getActiveTabMeta().missing;
         } else if (!hasThresholdContext()) {
@@ -965,6 +999,26 @@ const App = (() => {
     textarea.addEventListener('input', checkSubmitEnabled);
     if (thresholdInput) {
       thresholdInput.addEventListener('input', checkSubmitEnabled);
+<<<<<<< Updated upstream
+=======
+      thresholdInput.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          if (phTimer) clearInterval(phTimer);
+          if (namePhTimer) clearInterval(namePhTimer);
+          onCancel();
+        }
+      });
+    }
+    if (fuzzyInput) {
+      fuzzyInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !submitBtn.disabled) { e.preventDefault(); doSubmit(); }
+        if (e.key === 'Escape') {
+          if (phTimer) clearInterval(phTimer);
+          if (namePhTimer) clearInterval(namePhTimer);
+          onCancel();
+        }
+      });
+>>>>>>> Stashed changes
     }
     if (urlInput) {
       urlInput.addEventListener('input', () => {
@@ -1070,7 +1124,16 @@ const App = (() => {
         filename,
         url,
         name: nameInput ? nameInput.value.trim() : null,
+<<<<<<< Updated upstream
         thresholdContext: thresholdInput ? thresholdInput.value.trim() : null,
+=======
+        startingMap: showNameField
+          ? normalizeStartingMap({
+              global_context: thresholdInput ? thresholdInput.value : '',
+              fuzzy_area: fuzzyInput ? fuzzyInput.value : '',
+            })
+          : null,
+>>>>>>> Stashed changes
       });
     }
 
@@ -1258,10 +1321,17 @@ const App = (() => {
     buildContentInputUI(dialog.shellContent, {
       showNameField: true,
       showClipboard: true,
+<<<<<<< Updated upstream
       onSubmit: async ({ text, type, filename, url, name, thresholdContext }) => {
         if (!name) return;
         const startingMapContext = String(thresholdContext || '').trim().slice(0, 1200);
         if (!startingMapContext) return;
+=======
+      onSubmit: async ({ text, type, filename, url, name, startingMap }) => {
+        if (!name) return;
+        const normalizedStartingMap = normalizeStartingMap(startingMap || {});
+        if (!normalizedStartingMap) return;
+>>>>>>> Stashed changes
         const concepts = loadConcepts();
         if (concepts.length >= 4) { renderAddTrigger(); return; }
 
@@ -1566,7 +1636,9 @@ const App = (() => {
           extractOverlay.classList.add('eo-mapping');
           startTrickle();
           startMetaCycle();
-          const jsonPayload = await generateKnowledgeMap(sourceText);
+          const jsonPayload = await generateKnowledgeMap(sourceText, {
+            startingMap: normalizedStartingMap,
+          });
           const durationMs = Math.round(performance.now() - extractStartedPerf);
 
           // INVARIANT: failed or malformed extraction must never mutate
@@ -1578,8 +1650,12 @@ const App = (() => {
           }
 
           jsonPayload.metadata = jsonPayload.metadata || {};
+<<<<<<< Updated upstream
           jsonPayload.metadata.starting_map_context = startingMapContext;
           jsonPayload.metadata.map_maturity = 'provisional';
+=======
+          jsonPayload.metadata.starting_map = normalizedStartingMap;
+>>>>>>> Stashed changes
 
           removeOverlay(true);
           const concept = {
@@ -1589,7 +1665,11 @@ const App = (() => {
             contentType: type,
             contentFilename: sourceFilename,
             sourceUrl: type === 'url' ? url : null,
+<<<<<<< Updated upstream
             startingMapContext,
+=======
+            startingMap: normalizedStartingMap,
+>>>>>>> Stashed changes
             graphData: JSON.stringify(jsonPayload)
           };
           contentStore.set(id, sourceText);

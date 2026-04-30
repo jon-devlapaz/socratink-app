@@ -1757,6 +1757,45 @@ body:not([data-map-open="true"]) .map-back-link {
   background: linear-gradient(180deg, rgba(var(--lavender-500-rgb), 0.14), rgba(var(--lavender-500-rgb), 0.06));
   border-color: rgba(var(--lavender-500-rgb), 0.22);
 }
+.graph-threshold-handoff,
+.graph-locked-study-silhouette {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--lavender-500-rgb), 0.16);
+  border-radius: 8px;
+  background: rgba(var(--lavender-500-rgb), 0.05);
+}
+.graph-threshold-quote {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.58;
+  font-weight: 600;
+}
+.graph-threshold-fuzzy {
+  margin: -2px 0 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.graph-locked-study-silhouette {
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(var(--ink-900-rgb), 0.035),
+    rgba(var(--ink-900-rgb), 0.035) 8px,
+    rgba(var(--lavender-500-rgb), 0.04) 8px,
+    rgba(var(--lavender-500-rgb), 0.04) 16px
+  );
+  border-color: rgba(var(--ink-900-rgb), 0.1);
+}
+[data-theme="dark"] .graph-threshold-handoff,
+[data-theme="dark"] .graph-locked-study-silhouette {
+  background: rgba(var(--lavender-500-rgb), 0.1);
+  border-color: rgba(var(--lavender-500-rgb), 0.24);
+}
 .graph-study-shell {
   display: flex;
   flex-direction: column;

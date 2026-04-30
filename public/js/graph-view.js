@@ -104,6 +104,56 @@ function getReachabilityPill(data) {
   return '';
 }
 
+function normalizeStartingMapContext(value) {
+  if (!value || typeof value !== 'object') return null;
+  const globalContext = String(value.global_context || value.globalContext || '').trim();
+  const fuzzyArea = String(value.fuzzy_area || value.fuzzyArea || '').trim();
+  if (!globalContext && !fuzzyArea) return null;
+  return {
+    ...(globalContext ? { global_context: globalContext } : {}),
+    ...(fuzzyArea ? { fuzzy_area: fuzzyArea } : {}),
+  };
+}
+
+function shortenStartingMapQuote(value, maxLength = 180) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength - 3).trimEnd() + '...';
+}
+
+function getColdAttemptThresholdMarkup(data) {
+  const startingMap = normalizeStartingMapContext(data?.startingMap);
+  const quote = shortenStartingMapQuote(startingMap?.global_context);
+  const fuzzy = shortenStartingMapQuote(startingMap?.fuzzy_area, 120);
+  const quoteMarkup = quote
+    ? `<p class="graph-threshold-quote">&ldquo;${escHtml(quote)}&rdquo;</p>`
+    : '';
+  const fuzzyMarkup = fuzzy
+    ? `<p class="graph-threshold-fuzzy">Fuzzy area: ${escHtml(fuzzy)}</p>`
+    : '';
+
+  return `
+    ${startingMap ? `
+      <div class="graph-threshold-handoff">
+        <div class="graph-detail-kicker">From Your Starting Map</div>
+        ${quoteMarkup}
+        ${fuzzyMarkup}
+        <p class="graph-detail-copy"><strong>This is global context.</strong> This room asks one smaller question.</p>
+      </div>
+    ` : `
+      <div class="graph-threshold-handoff">
+        <div class="graph-detail-kicker">Cold Attempt</div>
+        <p class="graph-detail-copy"><strong>This is global context.</strong> This room asks one smaller question.</p>
+      </div>
+    `}
+    <div class="graph-locked-study-silhouette">
+      <div class="graph-detail-kicker">Study Layer Locked</div>
+      <p class="graph-detail-copy">No definitions, solved diagrams, or mechanism text are shown before your first attempt.</p>
+    </div>
+  `;
+}
+
 function getInspectPrompt(data) {
   if (!data) return 'Start here and rebuild the mechanism from memory.';
 
@@ -247,6 +297,9 @@ export function transformKnowledgeMapToGraph(rawData) {
   const clusters = Array.isArray(source?.clusters) ? source.clusters : [];
   const backboneItems = Array.isArray(source?.backbone) ? source.backbone : [];
   const relationships = source?.relationships || {};
+  const startingMap = normalizeStartingMapContext(
+    source?.metadata?.starting_map || source?.metadata?.starting_map_context
+  );
   const coreId = 'core-thesis';
   const clusterMap = new Map();
   const coreState = deriveCoreState(source);
@@ -317,6 +370,7 @@ export function transformKnowledgeMapToGraph(rawData) {
       reDrillBand: source?.metadata?.re_drill_band || null,
       gapType: source?.metadata?.gap_type || null,
       gapDescription: source?.metadata?.gap_description || null,
+      startingMap,
       weight: 1,
     },
     classes: 'node-core-thesis',
@@ -348,6 +402,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         reDrillBand: item.re_drill_band || null,
         gapType: item.gap_type || null,
         gapDescription: item.gap_description || null,
+        startingMap,
         weight: 0.72,
       },
       classes: 'node-backbone',
@@ -392,6 +447,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         orbitLevel: 1,
         subnodeCount: Array.isArray(cluster.subnodes) ? cluster.subnodes.length : 0,
         ownerBackbones,
+        startingMap,
       },
       classes: 'node-cluster',
     });
@@ -450,6 +506,7 @@ export function transformKnowledgeMapToGraph(rawData) {
           reDrillBand: subnode.re_drill_band || null,
           gapType: subnode.gap_type,
           gapDescription: subnode.gap_description,
+          startingMap,
         },
         classes: 'node-subnode',
       });
@@ -792,6 +849,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
   }
 
   if (isDrillActive) {
+    const isColdAttempt = mode === 'cold-attempt-active';
     const kicker = data.type === 'core'
       ? 'Core Thesis'
       : data.type === 'backbone'
@@ -810,8 +868,13 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
+<<<<<<< Updated upstream
       ${thresholdHtml}
       <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'That context belongs to the whole map. This room asks one smaller question before any study appears.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
+=======
+      ${isColdAttempt ? getColdAttemptThresholdMarkup(data) : ''}
+      <p class="graph-detail-copy">${isColdAttempt ? 'Take your best local guess. Study opens only after you try.' : 'Reconstruct this from memory. The map stays in the background until the drill resolves.'}</p>
+>>>>>>> Stashed changes
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
       </div>

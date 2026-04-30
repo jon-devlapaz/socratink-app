@@ -37,6 +37,9 @@ USER_PROMPT = (
     "No preamble, no explanation, no code fences — raw JSON only:\n\n{text}"
 )
 
+STARTING_MAP_GLOBAL_CONTEXT_LIMIT = 5_000
+STARTING_MAP_FUZZY_AREA_LIMIT = 1_000
+
 
 def get_drill_session_time_limit_seconds() -> int | None:
     raw_limit = os.environ.get(DRILL_SESSION_TIME_LIMIT_ENV, "").strip().lower()
@@ -320,6 +323,9 @@ def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
             "starting_map_context": metadata.get("starting_map_context"),
         }
     }
+    starting_map = _normalize_starting_map(metadata.get("starting_map"))
+    if starting_map:
+        pruned["metadata"]["starting_map"] = starting_map
     relationships = knowledge_map.get("relationships") or {}
     frameworks = knowledge_map.get("frameworks") or []
 
@@ -676,17 +682,66 @@ def _normalize_drill_evaluation(
     return evaluation
 
 
+def _normalize_starting_map(starting_map: dict | None) -> dict | None:
+    if not isinstance(starting_map, dict):
+        return None
+
+    global_context = str(starting_map.get("global_context") or "").strip()
+    fuzzy_area = str(starting_map.get("fuzzy_area") or "").strip()
+    if not global_context and not fuzzy_area:
+        return None
+
+    normalized: dict[str, str] = {}
+    if global_context:
+        normalized["global_context"] = global_context[:STARTING_MAP_GLOBAL_CONTEXT_LIMIT]
+    if fuzzy_area:
+        normalized["fuzzy_area"] = fuzzy_area[:STARTING_MAP_FUZZY_AREA_LIMIT]
+    return normalized
+
+
+def _build_extraction_user_prompt(
+    raw_text: str,
+    *,
+    starting_map: dict | None = None,
+) -> str:
+    normalized_starting_map = _normalize_starting_map(starting_map)
+    if not normalized_starting_map:
+        return USER_PROMPT.format(text=raw_text)
+
+    context_lines = [
+        "Learner starting map (route-shaping context, not learner evidence):",
+        f"- Global context: {normalized_starting_map.get('global_context', '')}",
+    ]
+    if normalized_starting_map.get("fuzzy_area"):
+        context_lines.append(f"- Fuzzy area: {normalized_starting_map['fuzzy_area']}")
+    context_lines.extend(
+        [
+            "Use this only to shape route emphasis, route order, and first-room framing.",
+            "Do not infer a score, diagnosis, schema label, or mastery claim from it.",
+            "",
+            "Source material:",
+            raw_text,
+        ]
+    )
+    return USER_PROMPT.format(text="\n".join(context_lines))
+
+
 def extract_knowledge_map(
     raw_text: str,
+    starting_map: dict | None = None,
     api_key: str | None = None,
     telemetry_context: dict | None = None,
 ) -> dict:
     client = _get_client(api_key)
+    normalized_starting_map = _normalize_starting_map(starting_map)
 
     response = _call_gemini_with_retry(
         client,
         model=MODEL,
-        contents=USER_PROMPT.format(text=raw_text),
+        contents=_build_extraction_user_prompt(
+            raw_text,
+            starting_map=normalized_starting_map,
+        ),
         config=types.GenerateContentConfig(
             system_instruction=EXTRACT_PROMPT_PATH.read_text(),
             temperature=EXTRACT_TEMPERATURE,
@@ -721,6 +776,10 @@ def extract_knowledge_map(
             cleaned_response=cleaned,
         )
         raise
+
+    if normalized_starting_map:
+        knowledge_map.setdefault("metadata", {})
+        knowledge_map["metadata"]["starting_map"] = normalized_starting_map
 
     return knowledge_map
 
@@ -920,7 +979,19 @@ def drill_chat(
     )
 
     if drill_mode == "cold_attempt":
+<<<<<<< Updated upstream
         system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question, do not reveal the mechanism. If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. Enforce minimum generative commitment. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess. Return null for classification/tier."
+=======
+        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question, do not reveal the mechanism. Emphasize it is ok to guess. Enforce minimum generative commitment. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess. Return null for classification/tier."
+        system_prompt_extras += (
+            "\nSTARTING MAP HANDOFF: If Knowledge map JSON includes metadata.starting_map, "
+            "treat it as global context only. Briefly quote or paraphrase the learner's own words, "
+            "then ask one smaller local question for this target node. Use the threshold to shape "
+            "the route, not as learner evidence. Do not evaluate the threshold. Do not reveal the "
+            "mechanism, answer key, definitions, or solved diagrams. Do not use score, diagnostic, "
+            "or mastery language."
+        )
+>>>>>>> Stashed changes
     else:
         system_prompt_extras += f"\nMODE: RE-DRILL (Attempt {re_drill_count + 1}). Demand multi-step causal reconstruction. Vary prompt angle (e.g. self-explanation, summarization, teaching, problem-posing). Apply concrete rubric: Does response contain (a) initiating condition, (b) causal transition, and (c) resulting state? Err toward false negatives."
         if re_drill_count >= 2:

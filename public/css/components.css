@@ -859,6 +859,77 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 }
 .creation-name-input:focus { border-color:var(--primary); }
 .creation-name-input::placeholder { color:var(--text-sub); }
+.creation-threshold {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--accent-soft-strong);
+  border-radius: 8px;
+  background: var(--surface-nested);
+}
+.creation-threshold-kicker {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.creation-threshold-label {
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--text);
+}
+.creation-threshold-label.secondary {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.creation-threshold-label.secondary span {
+  font-weight: 600;
+  opacity: 0.74;
+}
+.creation-threshold-copy {
+  margin: -2px 0 2px;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.creation-threshold-input,
+.creation-fuzzy-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, background-color var(--theme-transition-ms) var(--theme-transition-ease), color var(--theme-transition-ms) var(--theme-transition-ease);
+}
+.creation-threshold-input {
+  min-height: 96px;
+  resize: vertical;
+  padding: 10px;
+  line-height: 1.5;
+}
+.creation-fuzzy-input {
+  min-height: 38px;
+  padding: 0 10px;
+}
+.creation-threshold-input:focus,
+.creation-fuzzy-input:focus {
+  border-color: var(--primary);
+}
+.creation-threshold-input::placeholder,
+.creation-fuzzy-input::placeholder {
+  color: var(--text-sub);
+}
 .creation-source-meta {
   margin: -2px 0 4px;
   padding: 10px 12px;
