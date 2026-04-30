@@ -76,7 +76,8 @@ def test_f15_falls_through_on_large_diff(folder_with_artifacts: Path):
 
 
 def test_f15_falls_through_on_malformed_coverage(folder_with_artifacts: Path):
-    """F15 + F3 dependency: malformed coverage data → fall through with logged reason."""
+    """F15 + F3 dependency: malformed coverage data → fall through with
+    reason='coverage_malformed'."""
     from tools.pipette.orchestrator import step3_heuristic_decision
 
     (folder_with_artifacts / "coverage_map.json").write_text("{not json}")
@@ -84,6 +85,20 @@ def test_f15_falls_through_on_malformed_coverage(folder_with_artifacts: Path):
     decision = step3_heuristic_decision(folder=folder_with_artifacts)
     assert decision.auto_pass is False
     assert decision.reason == "coverage_malformed"
+
+
+def test_f15_falls_through_on_missing_coverage(folder_with_artifacts: Path):
+    """F15 distinguishes 'Step 2 didn't produce coverage_map.json'
+    (coverage_missing) from 'the file is corrupt' (coverage_malformed).
+    Both block auto-pass but imply different fixes; the audit trail's
+    `autopass_rejected reason=...` keeps them distinct."""
+    from tools.pipette.orchestrator import step3_heuristic_decision
+
+    # No coverage_map.json written.
+    _write_grill_summary(folder_with_artifacts, total_changed_lines=10, max_risk_score=0.10)
+    decision = step3_heuristic_decision(folder=folder_with_artifacts)
+    assert decision.auto_pass is False
+    assert decision.reason == "coverage_missing"
 
 
 def test_f15_emits_autopass_rejected_trace_event(folder_with_artifacts: Path):
