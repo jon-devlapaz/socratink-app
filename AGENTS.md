@@ -8,6 +8,19 @@ This file provides guidance to all coding agents and automation working in this 
 - For non-trivial work, convert the request into verifiable goals (typically via targeted tests).
 - MVP doctrine applies: separate true blockers from nice-to-have polish.
 - Preserve product truth: never fake mastery, graph progress, or learner knowledge.
+- State assumptions before acting when the task is ambiguous. If multiple reasonable interpretations exist, present them instead of silently choosing.
+- Push back when a simpler approach satisfies the goal or when the requested path risks product truth, deployment safety, or unnecessary scope expansion.
+
+## Execution discipline
+- No features beyond the ask.
+- No abstractions, configurability, or generic frameworks for single-use code.
+- Match the existing style and ownership boundaries.
+- Do not refactor adjacent code, comments, or formatting unless required to satisfy the request.
+- Mention unrelated dead code or defects, but do not delete or fix them unless asked.
+- Remove orphaned code, docs, or tests created by your own change.
+- Every changed line should trace back to the user request or to required verification.
+- If the task is multi-step, state a short plan with the verification for each major step.
+- For fixes, prefer a reproducing test when practical; for refactors, preserve behavior and run before/after-relevant checks when practical.
 
 ## Code exploration and review workflow
 - This repo is configured for a code-review knowledge graph. Use graph tools before grep/glob/read whenever available.
@@ -17,7 +30,9 @@ This file provides guidance to all coding agents and automation working in this 
   - `get_impact_radius` and `get_affected_flows` for blast-radius analysis
   - `query_graph` / `semantic_search_nodes` for callers, callees, imports, and tests
 - Use grep/glob/read only when graph coverage is insufficient.
-- Caveat from project rules: call-count data can under-report; verify “single call site” claims with textual search.
+- Default to minimal graph detail first. Escalate to full source snippets only when the minimal view is insufficient.
+- Caveat from project rules: call-count data can under-report; verify "single call site" claims with textual search such as `rg "<symbol>"`.
+- Local-first search applies: check local docs, scripts, and skills before remote sources or external agents. Before building new functionality, verify there is not already a local script, command, or documented workflow that does it.
 
 ## Common development commands
 ### Environment setup
@@ -41,6 +56,9 @@ SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 
 ### Tests
 ```bash
+# Agent docs / bootstrap minimum verification
+bash scripts/doctor.sh
+
 # Full Python test suite
 pytest
 
@@ -55,6 +73,9 @@ bash scripts/qa-smoke.sh local
 
 # E2E smoke (production)
 bash scripts/qa-smoke.sh live
+
+# E2E smoke (explicit URL)
+bash scripts/qa-smoke.sh https://custom-url.com
 
 # Direct pytest smoke equivalent
 SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
@@ -86,6 +107,16 @@ bash scripts/verify-deploy.sh HEAD
 - Legacy compatibility path: `docs/codex/session-bootstrap.md` redirects agents to onboarding.
 - If an agent instruction references `docs/codex/session-bootstrap.md`, treat that as `docs/codex/onboarding.md`.
 - Deterministic agent quality rules live in `docs/codex/agent-quality.md`.
+- Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
+- Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `docs/codex/onboarding.md`.
+
+## Multi-agent and worktree safety
+- Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs that specialty.
+- Keep read-only agents read-only unless implementation is explicitly required.
+- Code-modifying agents must verify against the latest uncommitted state, not just `HEAD`.
+- Worktree, branch, or ownership conflicts must be surfaced honestly. Never fabricate a resolution.
+- For multi-phase refactors, get peer review before merge when the change crosses ownership boundaries or product invariants.
+- When specialists disagree, record the disputed point, evidence, decision owner, chosen path, and resulting state/doc updates.
 
 ## Big-picture architecture
 - Runtime surface is a single FastAPI app (`main.py`) deployed as a Vercel Python serverless entrypoint via `api/index.py`.
@@ -113,9 +144,16 @@ bash scripts/verify-deploy.sh HEAD
 - Browser smoke (`tests/e2e/test_smoke.py`) is the load-bearing hosted verification signal.
 - Use `bash scripts/qa-smoke.sh` for quick local/prod checks; use `bash scripts/verify-deploy.sh` when validating a deployed commit.
 - Treat local success as insufficient proof of hosted correctness.
+- Run browser smoke without being asked after deploys, merges to `main`, `git push origin main` with verification framing, before claiming "the site works" or "X is live", when investigating hosted-only symptoms, and after high-risk changes to `main.py`, `api/index.py`, or `public/index.html`.
+- Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; do not allow-list failures unless they are proven third-party.
+- On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
+- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
 
 ## /pipette note
 - Before invoking `/pipette`, read:
   - `docs/superpowers/specs/2026-04-28-pipette-design.md`
   - `docs/superpowers/plans/2026-04-28-pipette.md`
+- `/pipette doctor` validates prerequisites before heavy planning.
+- `/pipette <topic>` runs Steps -1 through 7 with deterministic gates and per-feature artifacts under `docs/pipeline/`.
+- Pause/resume via `/pipette resume <topic>`; abort via `/pipette abort <topic>`.
 - Operational commands are exposed via `python -m tools.pipette ...` and wrapped by slash-command flows.
