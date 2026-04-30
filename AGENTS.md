@@ -33,6 +33,9 @@ bash scripts/dev.sh
 # Direct fallback if you already ran the preflight:
 python scripts/check-local-auth.py
 uvicorn main:app --reload
+
+# Opt out of .env.local on a localhost shell (test the production code path):
+SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 ```
 
 ### Tests
@@ -75,6 +78,7 @@ bash scripts/verify-deploy.sh HEAD
 
 ## Big-picture architecture
 - Runtime surface is a single FastAPI app (`main.py`) deployed as a Vercel Python serverless entrypoint via `api/index.py`.
+- Env loading is centralized in `runtime_env.py` (`load_app_env`); precedence is `process env > .env.local > .env`, and `.env.local` is skipped on Vercel/CI or when `SOCRATINK_DISABLE_DOTENV_LOCAL` is set. Auth startup depends on this ordering.
 - `main.py` wires:
   - CORS middleware
   - sensitive static-file blocking middleware

@@ -133,7 +133,7 @@ Calm, precise, Socratic. Reading room, not dashboard.
 - **Strategy over ability.** Errors describe the missing link ("The causal connection between step 2 and step 3 needs a different angle"), never the learner ("You got it wrong").
 - **No streaks, no XP, no badges, no leaderboards.** The reward is the crystal state change itself.
 - **Admit the product's honest state.** Lines like "Still testing. Still learning." are load-bearing brand.
-- **Imperative + verb-led marketing copy.** "Bring your material. Get a map. Clear rooms."
+- **Imperative + verb-led marketing copy.** "Bring your material. Build a map. Record evidence."
 
 Casing: lowercase for product name and state tokens (`primed`, `drilled`, `solidified`); Title Case for section headings; UPPERCASE with `--tracking-kicker` only on eyebrow labels.
 

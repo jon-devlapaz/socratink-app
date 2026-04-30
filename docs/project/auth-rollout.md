@@ -74,6 +74,11 @@ Release gate:
 
 ## Test Plan
 
+Local readiness:
+
+- `bash scripts/dev.sh` (wraps `python scripts/check-local-auth.py`) validates Supabase + session env on localhost before starting Uvicorn, catching `.env` vs `.env.local` misconfiguration that breaks the Phase 0 release gate.
+- `python scripts/check-local-auth.py --probe-guest` additionally calls `sign_in_anonymously()` against the configured Supabase project, proving the anon key actually works end-to-end — the strongest local check for the Phase 0 guest-session path.
+
 Automate first:
 
 - auth router behavior
