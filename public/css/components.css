@@ -886,6 +886,63 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   line-height: 1.55;
   color: var(--text-sub);
 }
+.creation-threshold {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-nested);
+}
+.creation-threshold-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.creation-threshold .creation-section-label {
+  margin: 0;
+}
+.creation-threshold-pill {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--accent-border);
+  color: var(--primary);
+  background: var(--accent-soft);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.creation-threshold-copy {
+  margin: 0 0 10px;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.creation-threshold-input {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  color: var(--text);
+  padding: 11px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.45;
+  outline: none;
+  box-sizing: border-box;
+}
+.creation-threshold-input:focus {
+  border-color: var(--primary);
+  box-shadow: var(--accent-ring);
+}
+.creation-threshold-input::placeholder {
+  color: var(--text-sub);
+}
 .creation-validation {
   margin: -2px 0 0;
   font-size: 11.5px;

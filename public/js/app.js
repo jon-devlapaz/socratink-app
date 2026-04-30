@@ -666,6 +666,20 @@ const App = (() => {
     }
   }
 
+  function shortOnboardingText(value, maxLength = 180) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength - 3).trimEnd()}...`;
+  }
+
+  function hasStudyEvidence(node = {}) {
+    return node.drill_status === 'primed'
+      || node.drill_status === 'drilled'
+      || node.drill_status === 'solidified'
+      || node.drill_status === 'solid'
+      || Boolean(node.gap_type);
+  }
+
   // ── 12. CRUD ───────────────────────────────────────────────
   function buildContentInputUI(container, { onSubmit, onCancel, showNameField, showClipboard }) {
     let uploadedText = '';
@@ -718,6 +732,19 @@ const App = (() => {
         <input type="file" accept=".txt,.md,.pdf" style="display:none">
         <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
+      ${showNameField ? `
+        <section class="creation-threshold">
+          <div class="creation-threshold-head">
+            <span class="creation-section-label" id="creation-threshold-label">Concept Threshold</span>
+            <span class="creation-threshold-pill">global context</span>
+          </div>
+          <p class="creation-threshold-copy">This is global context. The first room will ask one smaller question.</p>
+          <textarea class="creation-threshold-input"
+                    aria-labelledby="creation-threshold-label"
+                    maxlength="1200"
+                    placeholder="Write what you already think is going on: parts, guesses, examples, or confusion."></textarea>
+        </section>
+      ` : ''}
       ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name and choose a source to continue.</p>' : ''}
       <div class="${showNameField ? 'creation-footer' : 'overlay-footer'}">
         <button class="${showNameField ? 'creation-cancel' : 'overlay-cancel'}">Cancel</button>
@@ -740,6 +767,7 @@ const App = (() => {
     const sourceChip = container.querySelector('[data-role="source-chip"]');
     const sourceCopy = container.querySelector('[data-role="source-copy"]');
     const validationNote = container.querySelector('[data-role="validation-note"]');
+    const thresholdInput = container.querySelector('.creation-threshold-input');
     const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
 
@@ -786,10 +814,13 @@ const App = (() => {
       }
       return uploadedText.length > 0;
     }
+    function hasThresholdContext() {
+      return !showNameField || (thresholdInput && thresholdInput.value.trim().length > 0);
+    }
     function checkSubmitEnabled() {
       const blockedVideoUrl = activeTab === 'url' && isBlockedVideoUrl(urlInput.value.trim());
       const ready = showNameField
-        ? (!blockedVideoUrl && hasContent() && nameInput.value.trim().length > 0)
+        ? (!blockedVideoUrl && hasContent() && nameInput.value.trim().length > 0 && hasThresholdContext())
         : hasContent();
       submitBtn.disabled = !ready;
       if (showNameField) {
@@ -802,8 +833,10 @@ const App = (() => {
           validationNote.textContent = 'Add a concept name before drafting.';
         } else if (!hasContent()) {
           validationNote.textContent = getActiveTabMeta().missing;
+        } else if (!hasThresholdContext()) {
+          validationNote.textContent = 'Add global context before mapping. This will shape the first room without grading you.';
         } else {
-          validationNote.textContent = 'Ready to draft this path.';
+          validationNote.textContent = 'Ready to build a provisional route.';
         }
       }
     }
@@ -930,6 +963,9 @@ const App = (() => {
     }
 
     textarea.addEventListener('input', checkSubmitEnabled);
+    if (thresholdInput) {
+      thresholdInput.addEventListener('input', checkSubmitEnabled);
+    }
     if (urlInput) {
       urlInput.addEventListener('input', () => {
         fetchedUrlText = '';
@@ -1028,7 +1064,14 @@ const App = (() => {
         url = null;
       }
       if (phTimer) clearInterval(phTimer);
-      onSubmit({ text, type, filename, url, name: nameInput ? nameInput.value.trim() : null });
+      onSubmit({
+        text,
+        type,
+        filename,
+        url,
+        name: nameInput ? nameInput.value.trim() : null,
+        thresholdContext: thresholdInput ? thresholdInput.value.trim() : null,
+      });
     }
 
     if (showNameField && nameInput) nameInput.focus();
@@ -1215,8 +1258,10 @@ const App = (() => {
     buildContentInputUI(dialog.shellContent, {
       showNameField: true,
       showClipboard: true,
-      onSubmit: async ({ text, type, filename, url, name }) => {
+      onSubmit: async ({ text, type, filename, url, name, thresholdContext }) => {
         if (!name) return;
+        const startingMapContext = String(thresholdContext || '').trim().slice(0, 1200);
+        if (!startingMapContext) return;
         const concepts = loadConcepts();
         if (concepts.length >= 4) { renderAddTrigger(); return; }
 
@@ -1308,7 +1353,7 @@ const App = (() => {
           'Mapping concept graph...',
           'Checking for contradictions...',
           'Synthesizing relationships...',
-          'Checking source structure...',
+          'Drafting provisional route...',
           'Structuring final map...',
         ];
 
@@ -1532,6 +1577,10 @@ const App = (() => {
             throw new Error('Extraction returned an invalid map.');
           }
 
+          jsonPayload.metadata = jsonPayload.metadata || {};
+          jsonPayload.metadata.starting_map_context = startingMapContext;
+          jsonPayload.metadata.map_maturity = 'provisional';
+
           removeOverlay(true);
           const concept = {
             id, name, state: 'growing',
@@ -1540,6 +1589,7 @@ const App = (() => {
             contentType: type,
             contentFilename: sourceFilename,
             sourceUrl: type === 'url' ? url : null,
+            startingMapContext,
             graphData: JSON.stringify(jsonPayload)
           };
           contentStore.set(id, sourceText);
@@ -2023,37 +2073,54 @@ const App = (() => {
 
     let html = '';
 
+    const startingMapContext = String(concept.startingMapContext || meta.starting_map_context || '').trim();
+    const hasAnyAttemptEvidence = hasStudyEvidence(meta)
+      || backbone.some((item) => hasStudyEvidence(item))
+      || clusters.some((cluster) => hasStudyEvidence(cluster) || (cluster.subnodes || []).some((subnode) => hasStudyEvidence(subnode)));
+
     html += `
-      <div class="map-zone map-doctrine">
-        <div class="map-section-title">Draft Path</div>
-        <p class="map-doctrine-copy">This route is proposed from the source. It is not evidence that you know the material.</p>
-        <div class="map-doctrine-grid">
-          <div class="map-doctrine-stat">
-            <span class="map-doctrine-stat-value">${escHtml(String(allDrillRooms.length))}</span>
-            <span class="map-doctrine-stat-label">rooms proposed</span>
-          </div>
-          <div class="map-doctrine-stat">
-            <span class="map-doctrine-stat-value">${escHtml(String(attemptedCount))}</span>
-            <span class="map-doctrine-stat-label">attempts on record</span>
-          </div>
-          <div class="map-doctrine-stat">
-            <span class="map-doctrine-stat-value">${escHtml(String(solidifiedCount))}</span>
-            <span class="map-doctrine-stat-label">spaced reconstructions</span>
+      <section class="map-zone map-threshold-zone">
+        <div class="map-section-title">Concept Threshold</div>
+        <div class="map-threshold-panel">
+          <p class="map-threshold-lead">This is global context. The first room will ask one smaller question.</p>
+          <blockquote class="map-threshold-quote">${escHtml(startingMapContext || 'No threshold context was captured for this concept.')}</blockquote>
+        </div>
+      </section>
+      <section class="map-zone map-provisional-zone">
+        <div class="map-section-title">Provisional Graph</div>
+        <div class="map-provisional-panel">
+          <p class="map-provisional-copy">The route below is a hypothesis from the source and your threshold. It has not changed graph truth.</p>
+          <div class="map-provisional-legend" aria-label="Provisional graph legend">
+            <span>draft route</span>
+            <span>ready for first attempt</span>
+            <span>locked</span>
           </div>
         </div>
-        <p class="map-doctrine-copy">Untouched room names stay veiled until you try. Only spaced re-drill can add proof.</p>
-      </div>
+      </section>
+      <section class="map-zone map-first-room-zone">
+        <div class="map-section-title">First Cold Attempt</div>
+        <div class="map-first-room">
+          <div>
+            <div class="map-first-room-kicker">Starting Room</div>
+            <h3>Core thesis</h3>
+            <p>The first room asks for the governing idea, not the whole source.</p>
+          </div>
+          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first room</button>
+        </div>
+      </section>
     `;
 
     if (backbone.length > 0) {
       html += '<div class="map-zone zone-2">';
-      html += '<div class="map-section-title">Suggested Branches</div>';
-      backbone.forEach((b, index) => {
-        const clusterCount = Array.isArray(b.dependent_clusters) ? b.dependent_clusters.length : 0;
+      html += '<div class="map-section-title">Draft Route</div>';
+      backbone.forEach((b, idx) => {
+        const hasEvidence = hasStudyEvidence(b);
+        const stateLabel = hasEvidence ? 'primed for study' : 'locked';
+        const routeLabel = hasEvidence ? (b.principle || `Backbone room ${idx + 1}`) : `Backbone room ${idx + 1}`;
         html += `
           <div class="map-backbone-item">
-            <span>${escHtml(`Branch ${index + 1}`)}</span>
-            <span class="map-muted">${escHtml(clusterCount === 1 ? '1 container' : `${clusterCount} containers`)}</span>
+            <span>${escHtml(shortOnboardingText(routeLabel, 110))}</span>
+            <span class="map-route-state">${escHtml(stateLabel)}</span>
           </div>
         `;
       });
@@ -2062,32 +2129,37 @@ const App = (() => {
 
     if (clusters.length > 0) {
       html += '<div class="map-zone zone-3">';
-      html += '<div class="map-section-title">Room Containers</div>';
+      html += '<div class="map-section-title">Nearby Rooms</div>';
       clusters.forEach((c, idx) => {
         const isFirst = idx === 0 ? 'expanded' : '';
-        const subnodes = c.subnodes || [];
-        const attemptedRooms = subnodes.filter((sub) => hasLearnerEvidence(sub?.drill_status)).length;
-        const containerLabel = attemptedRooms > 0 ? (c.label || `Container ${idx + 1}`) : `Container ${idx + 1}`;
+        const clusterHasEvidence = hasStudyEvidence(c) || (c.subnodes || []).some((subnode) => hasStudyEvidence(subnode));
+        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby room set ${idx + 1}`) : `Nearby room set ${idx + 1}`;
         html += `
           <div class="map-cluster-card ${isFirst}" onclick="App.toggleCluster(this)">
             <div class="map-cluster-header">
-              <span>${escHtml(containerLabel)}</span>
+              <span>${escHtml(clusterLabel)}</span>
               <span class="map-cluster-icon">▾</span>
             </div>
             <div class="map-cluster-body" onclick="event.stopPropagation()">
-              <div class="map-cluster-desc">${escHtml(`${subnodes.length} rooms proposed. ${attemptedRooms} attempts on record.`)}</div>
+              <div class="map-cluster-desc">${clusterHasEvidence ? escHtml(c.description || '') : 'Purpose only for now. Study content stays locked until a cold attempt creates something to repair.'}</div>
         `;
-        subnodes.forEach((sub, subIndex) => {
+        const subnodes = c.subnodes || [];
+        subnodes.forEach((sub, subIdx) => {
+          const subHasEvidence = hasStudyEvidence(sub);
           const stateClass = nodeStateClass(sub.drill_status);
-          const roomLabel = hasLearnerEvidence(sub.drill_status)
-            ? (sub.label || `Room ${subIndex + 1}`)
-            : `Room ${subIndex + 1}`;
+          const roomLabel = subHasEvidence ? (sub.label || `Room ${subIdx + 1}`) : `Locked room ${subIdx + 1}`;
+          const mechanismCopy = subHasEvidence
+            ? (sub.mechanism || 'Study material available after the recorded attempt.')
+            : 'locked study silhouette. Enter the room before the mechanism appears.';
           html += `
              <div class="map-subnode-row">
                <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
                <div class="map-subnode-content">
                  <div class="map-subnode-label">${escHtml(roomLabel)}</div>
-                 <div class="map-subnode-mech">${escHtml(nodeStateLabel(sub.drill_status))}</div>
+                 <div class="map-subnode-mech${subHasEvidence ? '' : ' is-locked'}">${escHtml(mechanismCopy)}</div>
+               </div>
+             </div>
+           `;
                </div>
              </div>
            `;
@@ -2097,7 +2169,9 @@ const App = (() => {
       html += '</div>';
     }
 
-    if (domMechs.length > 0 || lrnPreqs.length > 0) {
+    const domMechs = rels.domain_mechanics || [];
+    const lrnPreqs = rels.learning_prerequisites || [];
+    if (hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0)) {
       html += '<div class="map-zone zone-4">';
       html += '<div class="map-section-title">Connection Hints</div>';
       if (domMechs.length) html += `<div class="map-cx-item"><strong>Domain links:</strong> ${escHtml(String(domMechs.length))} proposed source relationships.</div>`;
@@ -2105,7 +2179,16 @@ const App = (() => {
       html += '</div>';
     }
 
-    if (fws.length > 0) {
+    if (!hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0 || fws.length > 0)) {
+      html += `
+        <div class="map-zone map-locked-study-zone">
+          <div class="map-section-title">Locked Study Silhouette</div>
+          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one room has a cold attempt on record.</p>
+        </div>
+      `;
+    }
+
+    if (hasAnyAttemptEvidence && fws.length > 0) {
       html += '<div class="map-zone zone-5">';
       html += '<div class="map-section-title">Framework Notes</div>';
       html += `<div class="map-fw-card">
