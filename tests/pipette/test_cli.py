@@ -76,6 +76,27 @@ def test_trace_append_rejects_malformed_data(tmp_path: Path):
 
 
 # ---------------------------------------------------------------------------
+# Chunk B.3 — gemini_picker event shape regression (F9)
+# ---------------------------------------------------------------------------
+
+def test_gemini_picker_event_shape_preserved():
+    """F9: gemini_picker must keep emitting `gemini_verdict` with keys
+    {ts, step, event, decision, jump_back_to}. This is the canonical
+    structured-event reference for trace.jsonl readers (e.g., weekly
+    aggregator); changing it would silently break downstream tools."""
+    import inspect
+    from tools.pipette import gemini_picker as gp
+    src = inspect.getsource(gp)
+    # The event name must appear verbatim somewhere in the module.
+    assert '"gemini_verdict"' in src or "'gemini_verdict'" in src, \
+        "gemini_picker no longer references the gemini_verdict event name"
+    # The event must be written via append_event so it goes through the
+    # same path as `pipette trace-append --data ...`.
+    assert "append_event" in src, \
+        "gemini_picker should write events via trace.append_event for consistency with --data CLI path"
+
+
+# ---------------------------------------------------------------------------
 # Pre-existing subprocess-style tests
 # ---------------------------------------------------------------------------
 
