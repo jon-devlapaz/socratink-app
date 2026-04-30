@@ -209,3 +209,36 @@ def test_f11_falls_back_to_full_dispatch_when_survivors_malformed(folder_with_ar
     result = reviewers_to_redispatch_from_folder(folder_with_artifacts)
     assert set(result.reviewers) == {"contracts", "impact", "glossary", "coverage"}
     assert result.fallback_reason == "survivors_unparseable"
+
+
+# ---------------------------------------------------------------------------
+# F12 — skip verifier on attempt >= 2 (with safety condition)
+# ---------------------------------------------------------------------------
+
+def test_f12_skips_verifier_when_prior_survivors_clean(folder_with_artifacts: Path):
+    """F12: skip verifier on attempt 2 IFF attempt 1's survivors file
+    exists and parses cleanly."""
+    import json
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    (folder_with_artifacts / "_verifier-survivors.json").write_text(
+        json.dumps({"contracts": [], "impact": [], "glossary": [], "coverage": []})
+    )
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=2) is False
+
+
+def test_f12_runs_verifier_when_prior_survivors_missing(folder_with_artifacts: Path):
+    """Spec enhancement: if attempt 1's verifier crashed (no survivors file),
+    don't silently skip in attempt 2."""
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=2) is True
+
+
+def test_f12_runs_verifier_when_prior_survivors_malformed(folder_with_artifacts: Path):
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    (folder_with_artifacts / "_verifier-survivors.json").write_text("not json")
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=2) is True
+
+
+def test_f12_always_runs_verifier_on_attempt_1(folder_with_artifacts: Path):
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=1) is True
