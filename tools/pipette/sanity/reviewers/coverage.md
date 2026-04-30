@@ -5,6 +5,10 @@ You will receive: `00-graph-context.md`, `01-grill.md`, `02-diagram.{mmd|excalid
 
 Your job: read the coverage map embedded in `00-graph-context.md` and flag any proposed changes that touch currently untested code, as well as grill summaries that lack a concrete test plan for new or modified behaviour.
 
+If the MCP tools are not exposed in this session, use the fallbacks
+documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
+(SQLite + Grep) rather than burning tool turns rediscovering them.
+
 For each finding, emit:
 - reviewer: "coverage"
 - severity: critical | high | medium | low | polish
@@ -26,7 +30,3 @@ For each finding, emit:
 ```
 
 No prose outside the JSON. No code fences. The orchestrator parses your stdout as JSON and rejects anything else.
-
-If the MCP tools are not exposed in this session, use the fallbacks
-documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
-(SQLite + Grep) rather than burning tool turns rediscovering them.
