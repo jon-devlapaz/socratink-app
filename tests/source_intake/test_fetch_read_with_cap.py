@@ -1,9 +1,11 @@
 # tests/source_intake/test_fetch_read_with_cap.py
-"""Tests for fetch._read_with_cap — streaming abort at byte cap."""
+"""Tests for fetch._read_with_cap — streaming abort at byte cap and
+mid-body exception wrapping."""
 
 import pytest
+from urllib3.exceptions import ProtocolError, ReadTimeoutError, SSLError
 
-from source_intake.errors import TooLarge
+from source_intake.errors import FetchFailed, TooLarge
 from source_intake.fetch import _read_with_cap
 
 
@@ -16,6 +18,19 @@ class _FakeStreamingResponse:
     def stream(self, amt: int = 16384, decode_content: bool = False):
         for chunk in self._chunks:
             yield chunk
+
+
+class _FakeFailingStream:
+    """Yields some chunks then raises a urllib3 exception mid-iteration."""
+
+    def __init__(self, chunks_before_fail: list[bytes], exc: Exception):
+        self._chunks = chunks_before_fail
+        self._exc = exc
+
+    def stream(self, amt: int = 16384, decode_content: bool = False):
+        for chunk in self._chunks:
+            yield chunk
+        raise self._exc
 
 
 def test_read_with_cap_returns_full_body_below_cap():
@@ -53,3 +68,31 @@ def test_read_with_cap_exact_boundary():
     response_over = _FakeStreamingResponse([b"x" * 101])
     with pytest.raises(TooLarge):
         _read_with_cap(response_over, max_bytes=100)
+
+
+# === Mid-body exception wrapping (closes the 500-vs-502 leak flagged
+#     by no-mistakes review on PR #66 / commit 2ffb2ee). Stream-read
+#     exceptions must surface as FetchFailed so the route layer maps
+#     them to 502, matching connection-establish exceptions. ===
+
+
+def test_read_with_cap_wraps_read_timeout_in_fetch_failed():
+    response = _FakeFailingStream([b"partial"], ReadTimeoutError(None, "test", "read timeout"))
+    with pytest.raises(FetchFailed) as exc_info:
+        _read_with_cap(response, max_bytes=1024)
+    assert exc_info.value.cause == "timeout"
+    assert "raw text" not in str(exc_info.value)
+
+
+def test_read_with_cap_wraps_protocol_error_in_fetch_failed():
+    response = _FakeFailingStream([b"partial"], ProtocolError("connection reset"))
+    with pytest.raises(FetchFailed) as exc_info:
+        _read_with_cap(response, max_bytes=1024)
+    assert exc_info.value.cause == "connect"
+
+
+def test_read_with_cap_wraps_ssl_error_in_fetch_failed():
+    response = _FakeFailingStream([b"partial"], SSLError("ssl handshake interrupted"))
+    with pytest.raises(FetchFailed) as exc_info:
+        _read_with_cap(response, max_bytes=1024)
+    assert exc_info.value.cause == "connect"

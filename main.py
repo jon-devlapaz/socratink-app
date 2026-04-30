@@ -318,8 +318,11 @@ def extract(req: ExtractRequest):
         raise HTTPException(status_code=400, detail="No text provided.")
     try:
         src = source_intake.from_text(req.text)   # default min_text_length=1
-    except ParseEmpty as err:
-        raise HTTPException(status_code=400, detail=str(err))
+    except ParseEmpty:
+        raise HTTPException(
+            status_code=422,
+            detail="Couldn't find enough readable text in what you pasted.",
+        )
     try:
         knowledge_map = extract_knowledge_map(src.text, api_key=req.api_key)
         return {"knowledge_map": knowledge_map}

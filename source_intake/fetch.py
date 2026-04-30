@@ -106,7 +106,7 @@ def _validate_outbound_target(url: str) -> list[str]:
     return validated_ips
 
 
-from .errors import TooLarge
+from .errors import FetchFailed, TooLarge
 
 
 def _read_with_cap(response, max_bytes: int) -> bytes:
@@ -115,14 +115,27 @@ def _read_with_cap(response, max_bytes: int) -> bytes:
     Uses response.stream() in chunks; aborts as soon as cumulative size
     exceeds cap. Does not trust Content-Length. Does not auto-decompress
     (decode_content=False, paired with Accept-Encoding: identity at request).
+
+    Mid-body urllib3 exceptions (ReadTimeoutError, ProtocolError, SSLError)
+    are wrapped as FetchFailed so the route layer maps them to 502, matching
+    connection-establishment exceptions instead of leaking as 500.
     """
     chunks: list[bytes] = []
     total = 0
-    for chunk in response.stream(amt=16384, decode_content=False):
-        total += len(chunk)
-        if total > max_bytes:
-            raise TooLarge(f"exceeded {max_bytes} bytes")
-        chunks.append(chunk)
+    try:
+        for chunk in response.stream(amt=16384, decode_content=False):
+            total += len(chunk)
+            if total > max_bytes:
+                raise TooLarge(f"exceeded {max_bytes} bytes")
+            chunks.append(chunk)
+    except TooLarge:
+        raise
+    except ReadTimeoutError as exc:
+        raise FetchFailed(f"body read timeout: {exc}", cause="timeout") from exc
+    except (ProtocolError, SSLError) as exc:
+        raise FetchFailed(
+            f"body stream interrupted: {type(exc).__name__}", cause="connect"
+        ) from exc
     return b"".join(chunks)
 
 
@@ -137,6 +150,7 @@ from urllib3.exceptions import (
     NewConnectionError,
     ProtocolError,
     ReadTimeoutError,
+    SSLError,
 )
 from urllib3.util import Timeout
 
