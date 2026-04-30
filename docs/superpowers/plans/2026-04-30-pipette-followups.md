@@ -67,13 +67,13 @@ Expected: only the three lines above are added.
 - [ ] **Step 4: Commit**
 
 ```bash
-git checkout main
+git checkout dev-fresh
 git pull
 git checkout -b housekeeping/lessons-append-2026-04-28
 git add docs/pipeline/_meta/lessons.md
 git commit -m "docs(pipette): append 2026-04-28 lessons from implementation-followups.md"
 git push -u origin housekeeping/lessons-append-2026-04-28
-gh pr create --base main --title "docs(pipette): append 2026-04-28 lessons" --body "Closes the lessons loop from the 2026-04-28 admin-tink-todo-dashboard pipette run. See implementation-followups.md F1, F2, F6, F7."
+gh pr create --base dev-fresh --title "docs(pipette): append 2026-04-28 lessons" --body "Closes the lessons loop from the 2026-04-28 admin-tink-todo-dashboard pipette run. See implementation-followups.md F1, F2, F6, F7."
 ```
 
 - [ ] **Step 5: Wait for merge to `main` before starting Chunk A.**
@@ -348,7 +348,7 @@ git commit -m "test(pipette): pin gemini_verdict event shape and append_event us
 
 ```bash
 git push -u origin feat/pipette-chunk-b-trace-contract
-gh pr create --base main --title "feat(pipette): trace contract — F4 --data flag + F9 event shape pinned" --body "Implements Chunk B from docs/superpowers/plans/2026-04-30-pipette-followups.md. Adds 'pipette trace-append --data k=v,k2=v2' so external callers can write structured trace events; pins gemini_picker's gemini_verdict event shape via regression test."
+gh pr create --base dev-fresh --title "feat(pipette): trace contract — F4 --data flag + F9 event shape pinned" --body "Implements Chunk B from docs/superpowers/plans/2026-04-30-pipette-followups.md. Adds 'pipette trace-append --data k=v,k2=v2' so external callers can write structured trace events; pins gemini_picker's gemini_verdict event shape via regression test."
 ```
 
 ---
@@ -775,7 +775,7 @@ git commit -m "docs(pipette): shared MCP-fallback reference for reviewer prompts
 
 ```bash
 git push -u origin feat/pipette-chunk-c-signal-honesty
-gh pr create --base main --title "feat(pipette): signal honesty — F1 doctor probe + F3 dump validation + F5 reviewer fallbacks + F8 hook step-tag" --body "Implements Chunk C from docs/superpowers/plans/2026-04-30-pipette-followups.md. Four independent commits, each addressing one place where pipette's tooling silently lied; per-commit revertibility is the mitigation for the P5 tension acknowledged in the spec."
+gh pr create --base dev-fresh --title "feat(pipette): signal honesty — F1 doctor probe + F3 dump validation + F5 reviewer fallbacks + F8 hook step-tag" --body "Implements Chunk C from docs/superpowers/plans/2026-04-30-pipette-followups.md. Four independent commits, each addressing one place where pipette's tooling silently lied; per-commit revertibility is the mitigation for the P5 tension acknowledged in the spec."
 ```
 
 ---
@@ -1143,7 +1143,7 @@ git commit -m "feat(pipette): pipette-lite slash command bypasses Step 3 uncondi
 
 ```bash
 git push -u origin feat/pipette-chunk-g-macro-gate
-gh pr create --base main --title "feat(pipette): macro gate — F15 heuristic + F14 lite mode" --body "Implements Chunk G from docs/superpowers/plans/2026-04-30-pipette-followups.md. Adds F15 hardcoded-threshold auto-pass at Step 3 entry with autopass_rejected telemetry, and F14 pipette-lite slash command that bypasses Step 3 unconditionally per spec enhancement #5."
+gh pr create --base dev-fresh --title "feat(pipette): macro gate — F15 heuristic + F14 lite mode" --body "Implements Chunk G from docs/superpowers/plans/2026-04-30-pipette-followups.md. Adds F15 hardcoded-threshold auto-pass at Step 3 entry with autopass_rejected telemetry, and F14 pipette-lite slash command that bypasses Step 3 unconditionally per spec enhancement #5."
 ```
 
 ---
@@ -1553,7 +1553,7 @@ git commit -m "feat(pipette): archive Step 3 scratch on loop-back for audit trai
 
 ```bash
 git push -u origin feat/pipette-chunk-f-step3-surface
-gh pr create --base main --title "feat(pipette): Step 3 surface — F13 artifacts + F11 smart redispatch + F12 verifier skip + F10 audit archive" --body "Implements Chunk F from docs/superpowers/plans/2026-04-30-pipette-followups.md. Four commits: per-reviewer artifact subsets, smart-reviewers redispatch with fallback, verifier-skip with prior-attempt safety condition, and Step 3 scratch archiving. Each commit independently revertible."
+gh pr create --base dev-fresh --title "feat(pipette): Step 3 surface — F13 artifacts + F11 smart redispatch + F12 verifier skip + F10 audit archive" --body "Implements Chunk F from docs/superpowers/plans/2026-04-30-pipette-followups.md. Four commits: per-reviewer artifact subsets, smart-reviewers redispatch with fallback, verifier-skip with prior-attempt safety condition, and Step 3 scratch archiving. Each commit independently revertible."
 ```
 
 ---
