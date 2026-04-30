@@ -179,14 +179,8 @@ async def require_login_or_guest_entry(request: Request, call_next):
     return response
 
 
-class StartingMapRequest(BaseModel):
-    global_context: str = Field(..., min_length=1, max_length=5_000)
-    fuzzy_area: str | None = Field(None, max_length=1_000)
-
-
 class ExtractRequest(BaseModel):
     text: str = Field(..., max_length=500_000)
-    starting_map: StartingMapRequest | None = None
     api_key: str | None = Field(None, max_length=200)
 
 
@@ -271,16 +265,7 @@ def extract(req: ExtractRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="No text provided.")
     try:
-        starting_map = (
-            req.starting_map.model_dump(exclude_none=True)
-            if req.starting_map
-            else None
-        )
-        knowledge_map = extract_knowledge_map(
-            req.text,
-            starting_map=starting_map,
-            api_key=req.api_key,
-        )
+        knowledge_map = extract_knowledge_map(req.text, api_key=req.api_key)
         return {"knowledge_map": knowledge_map}
     except MissingAPIKeyError as err:
         raise HTTPException(status_code=401, detail=str(err))

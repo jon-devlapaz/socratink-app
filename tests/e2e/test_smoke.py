@@ -39,17 +39,12 @@ to absorb any serverless cold-start latency before the browser tests run.
 
 from __future__ import annotations
 
-import json
 import time
-from pathlib import Path
 from urllib.parse import urljoin
 
 import pytest
 import requests
 from playwright.sync_api import Page, expect
-
-
-APP_SHELL_HTML = Path(__file__).resolve().parents[2] / "public" / "index.html"
 
 
 # --- 1. Health check (also serves as serverless warm-up) -----------------
@@ -120,34 +115,6 @@ def _fetch_browser_session(page: Page) -> dict:
     return payload if isinstance(payload, dict) else {}
 
 
-def _load_app_shell_with_mock_session(page: Page, base_url: str) -> None:
-    """Load the real app shell while isolating tests from Supabase auth state."""
-    page.route(
-        "**/api/me",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps(
-                {
-                    "auth_enabled": True,
-                    "authenticated": True,
-                    "guest_mode": False,
-                    "user": {"id": "test-user", "email": "learner@example.com"},
-                }
-            ),
-        ),
-    )
-    shell_html = APP_SHELL_HTML.read_text(encoding="utf-8")
-
-    def fulfill_shell(route) -> None:
-        route.fulfill(status=200, content_type="text/html", body=shell_html)
-
-    page.route(base_url, fulfill_shell)
-    page.route(base_url + "/", fulfill_shell)
-    page.goto(base_url)
-    page.wait_for_load_state("networkidle")
-
-
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:
     """Critical IDs are attached to the DOM after a fresh navigation."""
     _enter_app_shell_as_guest(clean_page, base_url)
@@ -174,163 +141,6 @@ def test_guest_session_is_labeled_as_guest(
     expect(clean_page.locator("#auth-status")).to_have_text("Guest mode")
     expect(clean_page.locator("#auth-login-link")).to_have_text("Save & Sync")
     expect(clean_page.locator("#auth-logout-btn")).to_have_text("Exit Guest")
-
-
-def test_new_concept_dialog_requires_global_starting_map(
-    clean_page: Page, base_url: str
-) -> None:
-    """The threshold field is required before source extraction can start."""
-    clean_page.evaluate(
-        """() => {
-            const now = new Date().toISOString();
-            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
-            localStorage.setItem('socratink:firstSeenAt:v1:user:test-user', now);
-        }"""
-    )
-    _load_app_shell_with_mock_session(clean_page, base_url)
-
-    clean_page.locator("#add-trigger").click()
-    dialog = clean_page.locator("#creation-dialog")
-    expect(dialog).to_have_attribute("data-open", "true")
-    expect(
-        dialog.get_by_text(
-            "This is global context. The first room will ask one smaller question."
-        )
-    ).to_be_visible()
-
-    dialog.locator(".creation-name-input").fill("Thermostat")
-    dialog.locator(".overlay-textarea").fill(
-        "A thermostat compares room temperature with a setpoint and controls heat."
-    )
-    expect(dialog.locator(".creation-submit")).to_be_disabled()
-    expect(dialog.locator(".creation-validation")).to_contain_text(
-        "Add your global starting map"
-    )
-
-    dialog.locator(".creation-threshold-input").fill(
-        "I think feedback compares the room reading to a goal."
-    )
-    expect(dialog.locator(".creation-submit")).to_be_enabled()
-
-
-def test_first_cold_attempt_handoff_hides_study_mechanism(
-    clean_page: Page, base_url: str
-) -> None:
-    """Cold attempt detail shows the threshold handoff, not answer content."""
-    clean_page.evaluate(
-        """() => {
-            const now = new Date().toISOString();
-            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
-            localStorage.setItem('socratink:firstSeenAt:v1:user:test-user', now);
-        }"""
-    )
-    _load_app_shell_with_mock_session(clean_page, base_url)
-    clean_page.route(
-        "**/api/drill",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps(
-                {
-                    "concept_id": "threshold-test",
-                    "agent_response": (
-                        "You wrote that feedback compares a reading to a goal. "
-                        "What is the smaller comparison in this room?"
-                    ),
-                    "generative_commitment": None,
-                    "answer_mode": None,
-                    "score_eligible": False,
-                    "help_request_reason": None,
-                    "classification": None,
-                    "gap_description": None,
-                    "routing": "PROBE",
-                    "response_tier": None,
-                    "response_band": None,
-                    "tier_reason": None,
-                    "node_id": "core-thesis",
-                    "probe_count": 0,
-                    "nodes_drilled": 0,
-                    "attempt_turn_count": 0,
-                    "help_turn_count": 0,
-                    "graph_mutated": False,
-                    "ux_reward_emitted": False,
-                    "session_terminated": False,
-                    "termination_reason": None,
-                }
-            ),
-        ),
-    )
-    graph_data = {
-        "metadata": {
-            "source_title": "Thermostat",
-            "core_thesis": "Feedback keeps room temperature near a target.",
-            "governing_assumptions": [],
-            "starting_map": {
-                "global_context": "I think feedback compares the room reading to a goal.",
-                "fuzzy_area": "I am unsure when heat turns on.",
-            },
-        },
-        "backbone": [
-            {
-                "id": "b1",
-                "principle": "Temperature regulation compares reading and setpoint.",
-                "dependent_clusters": ["c1"],
-            }
-        ],
-        "clusters": [
-            {
-                "id": "c1",
-                "label": "Feedback loop",
-                "description": "The controller routes measurements into action.",
-                "subnodes": [
-                    {
-                        "id": "c1_s1",
-                        "label": "Heater switch",
-                        "mechanism": "When measured temperature is below setpoint, the thermostat turns the heater on.",
-                    }
-                ],
-            }
-        ],
-        "relationships": {"domain_mechanics": [], "learning_prerequisites": []},
-        "frameworks": [],
-    }
-    concept = {
-        "id": "threshold-test",
-        "name": "Thermostat",
-        "state": "growing",
-        "createdAt": 1,
-        "timerStart": None,
-        "contentPreview": "Thermostat source",
-        "contentType": "text",
-        "contentFilename": None,
-        "sourceUrl": None,
-        "startingMap": graph_data["metadata"]["starting_map"],
-        "graphData": json.dumps(graph_data),
-    }
-    clean_page.evaluate(
-        """(concept) => {
-            localStorage.setItem('socratink:firstSeenAt:v1:guest', new Date().toISOString());
-            localStorage.setItem('learnops_concepts', JSON.stringify([concept]));
-            localStorage.setItem('learnops_active', concept.id);
-        }""",
-        concept,
-    )
-
-    clean_page.reload()
-    clean_page.wait_for_load_state("networkidle")
-    clean_page.evaluate("App.startDrillFromMap()")
-
-    detail = clean_page.locator("#graph-node-detail")
-    expect(detail.locator(".graph-threshold-quote")).to_contain_text(
-        "I think feedback compares"
-    )
-    expect(
-        detail.get_by_text(
-            "This is global context. This room asks one smaller question."
-        )
-    ).to_be_visible()
-    expect(detail.locator(".graph-locked-study-silhouette")).to_be_visible()
-    expect(detail).not_to_contain_text("thermostat turns the heater on")
 
 
 def test_drawer_toggle_remains_visible_in_concept_view(
