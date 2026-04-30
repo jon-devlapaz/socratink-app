@@ -4,17 +4,12 @@ from pathlib import Path
 
 import pytest
 
+from tools.pipette.orchestrator import _STEP3_SCRATCH
 
-SCRATCH_FILES = [
-    "_reviewer-contracts.json",
-    "_reviewer-impact.json",
-    "_reviewer-glossary.json",
-    "_reviewer-coverage.json",
-    "_verifier-output.json",
-    "_verifier-survivors.json",
-    "_step3-prompt.txt",
-    "_gemini-stdout.log",
-]
+
+# Single source of truth — drift between this test list and the production
+# constant would silently un-test new scratch files added later.
+SCRATCH_FILES = list(_STEP3_SCRATCH)
 
 ORIGINAL_ARTIFACTS = ["01-grill.md", "02-diagram.mmd", "03-gemini-verdict.md"]
 
@@ -51,3 +46,22 @@ def test_archive_does_not_fail_on_missing_scratch(tmp_path: Path):
     archived = {p.name for p in arch.iterdir()}
     for original in ORIGINAL_ARTIFACTS:
         assert original in archived
+
+
+def test_archive_handles_partial_scratch(tmp_path: Path):
+    """Mid-state: only some scratch files exist (e.g., reviewer dispatch
+    crashed mid-batch leaving 2 of 4 reviewer JSONs). archive_for_loop_back
+    must move the present ones without failing on absentees."""
+    from tools.pipette.orchestrator import archive_for_loop_back
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    present = ["01-grill.md", "_reviewer-contracts.json", "_reviewer-impact.json"]
+    for f in present:
+        (folder / f).write_text("placeholder")
+    arch = archive_for_loop_back(folder=folder, jump_back_to=1.0)
+    archived = {p.name for p in arch.iterdir()}
+    assert "01-grill.md" in archived
+    assert "_reviewer-contracts.json" in archived
+    assert "_reviewer-impact.json" in archived
+    assert "_reviewer-glossary.json" not in archived  # never existed
+    assert "_reviewer-coverage.json" not in archived  # never existed

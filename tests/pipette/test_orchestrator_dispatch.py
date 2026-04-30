@@ -155,6 +155,14 @@ def test_lite_mode_runs_correct_step_subset(folder_with_artifacts: Path, monkeyp
 # F13 — per-reviewer artifact subsets (Chunk F)
 # ---------------------------------------------------------------------------
 
+def test_reviewer_names_consistent_between_artifacts_and_all_reviewers():
+    """Single source of truth: `_REVIEWER_ARTIFACTS` keys and `_ALL_REVIEWERS`
+    must agree. If a fifth reviewer is added, both constants need updating —
+    this assertion fails loudly rather than letting the pair drift."""
+    from tools.pipette.orchestrator import _ALL_REVIEWERS, _REVIEWER_ARTIFACTS
+    assert set(_ALL_REVIEWERS) == set(_REVIEWER_ARTIFACTS.keys())
+
+
 def test_f13_glossary_reviewer_does_not_get_graph_context():
     """F13: per-reviewer artifact subsets. Glossary reviewer never sees
     00-graph-context.md (graph data, not glossary)."""
