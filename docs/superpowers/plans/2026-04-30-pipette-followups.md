@@ -37,12 +37,12 @@
 
 ---
 
-## Pre-flight: Lessons Append (Standalone PR to `main`)
+## Pre-flight: Lessons Append (Standalone PR to `dev-fresh`)
 
 **Files:**
 - Modify: `docs/pipeline/_meta/lessons.md`
 
-**Why standalone:** spec §"Out of scope" — preserves Chunk A independence by landing this housekeeping commit on `main` *before* any chunk branch is cut. Per Principle 5: this commit has a different reason to fail review than any chunk's substantive work.
+**Why standalone:** spec §"Out of scope" — preserves Chunk A independence by landing this housekeeping commit on `dev-fresh` *before* any chunk branch is cut. Per Principle 5: this commit has a different reason to fail review than any chunk's substantive work.
 
 - [ ] **Step 1: Read existing `_meta/lessons.md` to confirm append pattern**
 
@@ -76,7 +76,7 @@ git push -u origin housekeeping/lessons-append-2026-04-28
 gh pr create --base dev-fresh --title "docs(pipette): append 2026-04-28 lessons" --body "Closes the lessons loop from the 2026-04-28 admin-tink-todo-dashboard pipette run. See implementation-followups.md F1, F2, F6, F7."
 ```
 
-- [ ] **Step 5: Wait for merge to `main` before starting Chunk A.**
+- [ ] **Step 5: Wait for merge to `dev-fresh` before starting Chunk A.**
 
 ---
 
