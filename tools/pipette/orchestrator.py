@@ -125,6 +125,87 @@ def recover_run(*, topic: str, root: Path) -> int:
     return 0
 
 
+from dataclasses import dataclass
+
+
+# F15 thresholds — hardcoded constants per spec scope cuts.
+# Tuning requires editing this file (deliberate; no scoring module).
+F15_COVERAGE_FLOOR = 0.80
+F15_RISK_CEILING = 0.30
+F15_LINES_CEILING = 50
+
+
+@dataclass
+class Step3HeuristicDecision:
+    auto_pass: bool
+    reason: str  # "heuristic_auto_pass" | "coverage_below_80" | "risk_above_30" | "lines_above_50" | "coverage_malformed" | "grill_meta_missing"
+
+
+def _read_grill_meta(folder: Path) -> tuple[int | None, float | None]:
+    """Parse the `<!-- pipette-meta total_changed_lines=N max_risk_score=F -->`
+    annotation that the grill writes into 01-grill.md. The grill prompt
+    instructs it to emit this block; if missing, both values are None and
+    F15 falls through (no auto-pass without a grounded count)."""
+    import re
+    p = folder / "01-grill.md"
+    if not p.exists():
+        return None, None
+    text = p.read_text()
+    m = re.search(r"pipette-meta\s+total_changed_lines=(\d+)\s+max_risk_score=([\d.]+)", text)
+    if not m:
+        return None, None
+    return int(m.group(1)), float(m.group(2))
+
+
+def _read_coverage_min(folder: Path) -> tuple[float | None, str | None]:
+    """Returns (min_coverage_across_affected, error_reason). On malformed
+    JSON or missing file, returns (None, 'coverage_malformed')."""
+    import json as _json
+    p = folder / "coverage_map.json"
+    if not p.exists():
+        return None, "coverage_malformed"
+    try:
+        data = _json.loads(p.read_text())
+    except _json.JSONDecodeError:
+        return None, "coverage_malformed"
+    files = data.get("files") if isinstance(data, dict) else None
+    if not isinstance(files, dict) or not files:
+        return None, "coverage_malformed"
+    return min(float(v) for v in files.values()), None
+
+
+def step3_heuristic_decision(*, folder: Path, write_trace: bool = False) -> "Step3HeuristicDecision":
+    """F15: gate at Step 3 entry. Auto-pass IFF all thresholds met.
+
+    On fall-through, optionally emits an `autopass_rejected` trace event
+    naming the failed threshold — needed for future threshold tuning.
+    """
+    cov_min, cov_err = _read_coverage_min(folder)
+    if cov_err:
+        decision = Step3HeuristicDecision(auto_pass=False, reason=cov_err)
+    elif cov_min < F15_COVERAGE_FLOOR:
+        decision = Step3HeuristicDecision(auto_pass=False, reason="coverage_below_80")
+    else:
+        lines, risk = _read_grill_meta(folder)
+        if lines is None or risk is None:
+            decision = Step3HeuristicDecision(auto_pass=False, reason="grill_meta_missing")
+        elif risk >= F15_RISK_CEILING:
+            decision = Step3HeuristicDecision(auto_pass=False, reason="risk_above_30")
+        elif lines >= F15_LINES_CEILING:
+            decision = Step3HeuristicDecision(auto_pass=False, reason="lines_above_50")
+        else:
+            decision = Step3HeuristicDecision(auto_pass=True, reason="heuristic_auto_pass")
+
+    if write_trace and not decision.auto_pass:
+        try:
+            append_event(folder / "trace.jsonl",
+                         Event(step=3, event="autopass_rejected",
+                               extra={"reason": decision.reason}))
+        except OSError:
+            pass
+    return decision
+
+
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/.
 

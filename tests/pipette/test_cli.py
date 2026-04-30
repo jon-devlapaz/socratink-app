@@ -70,3 +70,22 @@ def test_build_coverage_map_ignores_non_test_edges(tmp_path: Path):
     assert r.returncode == 0
     cov = json.loads(out.read_text())
     assert cov["files"]["src/foo.py"] == 0.30
+
+
+def test_step3_heuristic_check_cli_returns_json_decision(tmp_path: Path):
+    """F15 CLI: step3-heuristic-check prints a JSON decision and exits 0."""
+    import json
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    # Write coverage_map.json and 01-grill.md so all thresholds pass.
+    (folder / "coverage_map.json").write_text(
+        json.dumps({"_method": "graph_approx_v1", "files": {"src/foo.py": 0.95}})
+    )
+    (folder / "01-grill.md").write_text(
+        "# Grill\n\n<!-- pipette-meta total_changed_lines=10 max_risk_score=0.10 -->\n"
+    )
+    r = _run("step3-heuristic-check", "--folder", str(folder))
+    assert r.returncode == 0, r.stderr
+    decision = json.loads(r.stdout.strip())
+    assert decision["auto_pass"] is True
+    assert decision["reason"] == "heuristic_auto_pass"
