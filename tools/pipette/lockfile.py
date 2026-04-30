@@ -175,6 +175,12 @@ def pause(lock_path: Path, *, paused_at_step: float | int, pause_reason: str) ->
     update_state(lock_path, state="paused", paused_at_step=paused_at_step, pause_reason=pause_reason)
 
 
+def set_current_step(lock_path: Path, step: float) -> None:
+    """F8 helper: orchestrator calls this on each step transition so the
+    SubagentStop hook can tag trace events with the right step."""
+    update_state(lock_path, current_step=step)
+
+
 def resume(lock_path: Path, *, topic: str) -> None:
     """Transition paused → running. Refuses any other state."""
     if not lock_path.exists():
