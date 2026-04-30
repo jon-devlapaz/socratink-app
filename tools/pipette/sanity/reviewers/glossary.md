@@ -26,3 +26,7 @@ For each finding, emit:
 ```
 
 No prose outside the JSON. No code fences. The orchestrator parses your stdout as JSON and rejects anything else.
+
+If the MCP tools are not exposed in this session, use the fallbacks
+documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
+(SQLite + Grep) rather than burning tool turns rediscovering them.
