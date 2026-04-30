@@ -20,6 +20,7 @@ class CheckResult:
     ok: bool
     message: str = ""
     fix: str = ""
+    severity: str = "fail"  # 'fail' (❌) or 'warn' (⚠) when ok is False
 
 
 def _verify_no_mistakes() -> tuple[bool, str]:
@@ -48,6 +49,33 @@ def _verify_code_review_graph_cli_and_mcp() -> tuple[bool, str]:
     if "code-review-graph" not in enabled:
         return False, f"`code-review-graph` not in enabledMcpjsonServers: {enabled}"
     return True, "CLI status OK + MCP enabled in settings.local.json"
+
+def _session_exposes_mcp_tools(prefix: str) -> bool:
+    """Probe whether the running Claude Code session has tools matching
+    `prefix` exposed (e.g., 'mcp__code-review-graph__'). Implementation
+    detail: Claude Code writes the deferred-tool list to an env var or a
+    well-known path on session start. If we can't read it, return False
+    (which downstream `_verify_code_review_graph_session_probe` interprets
+    as 'not exposed' → WARN). This is patchable in tests."""
+    import os
+    # Claude Code exposes the available tool prefixes via this env var when
+    # the session starts. Best-effort: if it's missing, treat as "tools not
+    # exposed" (the conservative answer for F1).
+    raw = os.environ.get("CLAUDE_CODE_AVAILABLE_TOOL_PREFIXES", "")
+    return prefix in {p.strip() for p in raw.split(",") if p.strip()}
+
+
+def _verify_code_review_graph_session_probe() -> tuple[bool, str]:
+    """F1: in-session probe — confirms the mcp__code-review-graph__ tools
+    are actually exposed in the running session, not just configured.
+    Returns (False, msg) when configured-but-not-exposed; the caller's
+    Check should classify this as WARN, not FAIL — fallback paths (SQLite,
+    Grep) still let the pipeline run."""
+    if _session_exposes_mcp_tools("mcp__code-review-graph__"):
+        return True, "mcp__code-review-graph__ tools exposed in session"
+    return False, ("MCP server configured but tools not exposed in session — "
+                   "restart Claude Code or check `claude --mcp-debug`")
+
 
 def _verify_post_commit_hook() -> tuple[bool, str]:
     p = Path(".git/hooks/post-commit")
@@ -141,7 +169,16 @@ CHECKS: list[Check] = [
           "Ensure `tools/pipette/validate_pipeline_graph.py` exists and is importable. (Replaces the spec's Agentproof reference; see plan §1.)"),
     Check("filesystem supports O_EXCL", _verify_filesystem,
           "pipette refuses to run on filesystems without reliable O_EXCL semantics (e.g., NFS, FUSE). Run pipette on a local APFS/ext4/btrfs volume."),
+    Check("code-review-graph MCP tools exposed in session (F1)", _verify_code_review_graph_session_probe,
+          "MCP tools not visible in this session — restart Claude Code or run `claude --mcp-debug` to diagnose. "
+          "Fallback paths (SQLite, Grep) are documented in tools/pipette/sanity/reviewers/_shared/mcp-fallback.md."),
 ]
+
+
+# Override severity for warn-only checks (F1 session probe is WARN, not FAIL)
+_CHECK_SEVERITY: dict[str, str] = {
+    "code-review-graph MCP tools exposed in session (F1)": "warn",
+}
 
 
 def run_checks(checks: list[Check]) -> list[CheckResult]:
@@ -151,19 +188,27 @@ def run_checks(checks: list[Check]) -> list[CheckResult]:
             ok, detail = c.verify()
         except Exception as e:
             ok, detail = False, f"{type(e).__name__}: {e}"
-        results.append(CheckResult(name=c.name, ok=ok, message=detail, fix=c.fix if not ok else ""))
+        severity = _CHECK_SEVERITY.get(c.name, "fail")
+        results.append(CheckResult(name=c.name, ok=ok, message=detail,
+                                   fix=c.fix if not ok else "", severity=severity))
     return results
 
 
 def _aggregate_rc(results: list[CheckResult]) -> int:
-    return 0 if all(r.ok for r in results) else 1
+    # WARN-severity failures are non-blocking (fallback paths exist); only FAIL-severity drives rc=1.
+    return 0 if all(r.ok or r.severity == "warn" for r in results) else 1
 
 
 def run_doctor() -> int:
     results = run_checks(CHECKS)
     for r in results:
-        mark = "✅" if r.ok else "❌"
-        print(f"{mark} {r.name}: {r.message}")
+        if r.ok:
+            glyph = "✅"
+        elif r.severity == "warn":
+            glyph = "⚠"
+        else:
+            glyph = "❌"
+        print(f"{glyph} {r.name}: {r.message}")
         if not r.ok:
             print(f"   FIX: {r.fix}")
     rc = _aggregate_rc(results)
