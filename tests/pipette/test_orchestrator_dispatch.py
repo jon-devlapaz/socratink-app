@@ -97,3 +97,25 @@ def test_f15_emits_autopass_rejected_trace_event(folder_with_artifacts: Path):
     rec = json.loads(line)
     assert rec["event"] == "autopass_rejected"
     assert rec["reason"] == "coverage_below_80"
+
+
+def test_f14_lite_mode_overrides_f15_unconditionally(folder_with_artifacts: Path):
+    """Spec enhancement: lite mode is an absolute manual override.
+    Even synthetic high-risk-score input that would fail F15 must still
+    bypass Step 3 in lite mode."""
+    from tools.pipette.orchestrator import should_run_step3
+
+    _write_coverage_map(folder_with_artifacts, {"src/foo.py": 0.40})
+    _write_grill_summary(folder_with_artifacts, total_changed_lines=999, max_risk_score=0.99)
+    # Lite mode: never run Step 3, regardless of heuristic.
+    assert should_run_step3(folder=folder_with_artifacts, lite_mode=True) is False
+    # Default: F15 fall-through → run Step 3.
+    assert should_run_step3(folder=folder_with_artifacts, lite_mode=False) is True
+
+
+def test_lite_mode_runs_correct_step_subset(folder_with_artifacts: Path, monkeypatch: pytest.MonkeyPatch):
+    """Lite path runs Steps 0, 1, 2, 4, 5, 6, 7 — never Step 3."""
+    from tools.pipette.orchestrator import lite_pipeline_steps
+    steps = lite_pipeline_steps()
+    assert 3 not in steps
+    assert {0, 1, 2, 4, 5, 6, 7}.issubset(set(steps))

@@ -206,6 +206,22 @@ def step3_heuristic_decision(*, folder: Path, write_trace: bool = False) -> "Ste
     return decision
 
 
+def should_run_step3(*, folder: Path, lite_mode: bool) -> bool:
+    """Combined gate. Lite mode is an absolute manual override (P-spec
+    enhancement #5): even if F15 demands a full review, lite skips Step 3.
+    Default path: respect F15 — auto-pass means skip, fall-through means run."""
+    if lite_mode:
+        return False
+    return not step3_heuristic_decision(folder=folder, write_trace=False).auto_pass
+
+
+def lite_pipeline_steps() -> list[float]:
+    """Steps that pipette-lite runs. Step 3 is unconditionally skipped;
+    best-of-N is disabled (single-subagent only) — the integration layer
+    is responsible for honoring the latter."""
+    return [0, 1, 2, 4, 5, 6, 7]
+
+
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/.
 
