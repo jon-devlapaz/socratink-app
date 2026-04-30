@@ -63,6 +63,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | Doc | Status | Binding | Purpose | Superseded By |
 | --- | --- | --- | --- | --- |
 | [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions. | — |
+| [codex/agent-quality.md](../codex/agent-quality.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails. | — |
 | [codex/workflows.md](../codex/workflows.md) | workflow | yes | Hot-fix, Build-Measure-Learn, decision-log, and Glenna review workflows. | — |
 | [codex/drill-build-measure-learn.md](../codex/drill-build-measure-learn.md) | workflow | yes | Drill log → Socratink Brain evaluation → fix cycle. | — |
 | [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |
