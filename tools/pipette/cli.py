@@ -249,18 +249,33 @@ def main(argv: list[str] | None = None) -> int:
                 if src and dst and src.startswith("tests/"):
                     tested_files.add(dst)
                     edges_with_tests_prefix += 1
-        # F3: shape validation. If the dump claims edges but none have a
-        # tests/-prefixed source_file, the dump shape is malformed and the
-        # coverage map will be all-uncovered — silently triggering TDD
-        # enforcement spuriously. Warn loudly to stderr.
-        if isinstance(edges, list) and len(edges) > 0 and edges_with_tests_prefix == 0:
-            print(
-                "pipette: warning — coverage dump appears malformed "
-                "(no test→source edges with `from.source_file` starting with 'tests/'); "
-                "coverage map will be all-uncovered. "
-                "Verify dump shape: {edges:[{from:{source_file:'tests/...'}, to:{source_file:'...'}}]}",
-                file=sys.stderr,
-            )
+        # F3: shape validation. The coverage map is silently wrong when
+        # the dump's edges lack `tests/`-prefixed source_files. Two warning
+        # tiers:
+        #   (1) all-or-nothing — len > 0 and zero tests-prefixed → almost
+        #       certainly malformed (the 2026-04-28 silent-failure shape).
+        #   (2) majority-non-test — len >= 5 and ratio < 50% → likely
+        #       partial corruption (e.g., dump producer mid-refactor).
+        # Both warn loudly to stderr; rc unchanged (warning, not error).
+        if isinstance(edges, list) and len(edges) > 0:
+            ratio = edges_with_tests_prefix / len(edges)
+            if edges_with_tests_prefix == 0:
+                print(
+                    "pipette: warning — coverage dump appears malformed "
+                    "(no test→source edges with `from.source_file` starting with 'tests/'); "
+                    "coverage map will be all-uncovered. "
+                    "Verify dump shape: {edges:[{from:{source_file:'tests/...'}, to:{source_file:'...'}}]}",
+                    file=sys.stderr,
+                )
+            elif len(edges) >= 5 and ratio < 0.5:
+                print(
+                    f"pipette: warning — coverage dump appears partially malformed "
+                    f"(only {edges_with_tests_prefix}/{len(edges)} edges = "
+                    f"{ratio:.0%} have `from.source_file` starting with 'tests/'); "
+                    f"the coverage map for non-tests/-prefixed source files will be all-uncovered. "
+                    f"Verify dump shape: {{edges:[{{from:{{source_file:'tests/...'}}, to:{{source_file:'...'}}}}]}}",
+                    file=sys.stderr,
+                )
         files_map = {f: (0.85 if f in tested_files else 0.30) for f in args.affected_files}
         out = {"_method": "graph_approx_v1", "files": files_map}
         Path(args.output).write_text(_json.dumps(out, indent=2))

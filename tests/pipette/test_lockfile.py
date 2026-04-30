@@ -14,6 +14,7 @@ from tools.pipette.lockfile import (
     resume,
     abort,
     detect_filesystem_supports_o_excl,
+    set_current_step,
 )
 
 def _read_lock(p: Path) -> dict:
@@ -138,3 +139,31 @@ def test_abort_renames_folder_and_removes_lock(tmp_pipeline_root: Path):
 
 def test_filesystem_detection_passes_on_local_fs(tmp_pipeline_root: Path):
     assert detect_filesystem_supports_o_excl(tmp_pipeline_root / "_meta") is True
+
+
+def test_set_current_step_writes_step_to_lockfile(tmp_pipeline_root: Path):
+    """F8: `set_current_step` is the orchestrator's hook into the
+    SubagentStop hook's step-tagging path. The helper must write the
+    step into the lockfile yaml so the hook (`subagent_stop._read_current_step_from_lockfile`)
+    can pick it up. Caller for this helper is intentionally absent in
+    Chunk C (orchestrator wiring is markdown-driven and lands in a later
+    chunk); this direct test guards the helper's contract regardless."""
+    lock = tmp_pipeline_root / "_meta" / ".lock"
+    folder = tmp_pipeline_root / "2026-04-28-143211-x"
+    folder.mkdir()
+    acquire(lock, topic="x", folder=folder)
+    set_current_step(lock, 3)
+    cur = _read_lock(lock)
+    assert cur["current_step"] == 3
+
+
+def test_set_current_step_updates_existing_step(tmp_pipeline_root: Path):
+    """Successive calls overwrite — orchestrator transitions advance step."""
+    lock = tmp_pipeline_root / "_meta" / ".lock"
+    folder = tmp_pipeline_root / "2026-04-28-143211-x"
+    folder.mkdir()
+    acquire(lock, topic="x", folder=folder)
+    set_current_step(lock, 1)
+    set_current_step(lock, 3)
+    cur = _read_lock(lock)
+    assert cur["current_step"] == 3

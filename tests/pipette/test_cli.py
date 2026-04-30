@@ -186,6 +186,39 @@ def test_build_coverage_map_ignores_non_test_edges(tmp_path: Path):
     assert cov["files"]["src/foo.py"] == 0.30
 
 
+def test_build_coverage_map_warns_on_partially_malformed_dump(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """F3 (extended per code-quality review): when the dump has >= 5
+    edges but < 50% have `tests/`-prefixed source_files, warn that the
+    dump is partially malformed. Catches mid-refactor dump-producer
+    bugs that the original all-or-nothing check missed."""
+    import json
+    from tools.pipette.cli import main
+
+    bad_dump = tmp_path / "partial.json"
+    # 6 edges total: 1 tests/-prefixed, 5 absolute paths → ratio 1/6 ≈ 17%.
+    edges = [
+        {"from": {"source_file": "tests/test_foo.py"},
+         "to": {"source_file": "src/foo.py"}},
+    ]
+    edges.extend(
+        {"from": {"source_file": f"/abs/path/file_{i}.py"},
+         "to": {"source_file": f"/abs/path/dst_{i}.py"}}
+        for i in range(5)
+    )
+    bad_dump.write_text(json.dumps({"edges": edges}))
+    out_path = tmp_path / "coverage_map.json"
+    rc = main([
+        "build-coverage-map",
+        "--dump-file", str(bad_dump),
+        "--affected-files", "src/foo.py",
+        "--output", str(out_path),
+    ])
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "warning" in err.lower()
+    assert "partially malformed" in err.lower() or "1/6" in err
+
+
 def test_build_coverage_map_warns_on_malformed_dump(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
     """F3: when the dump's edges have NO `from.source_file` starting with
     'tests/', every affected file gets the uncovered default. That's a

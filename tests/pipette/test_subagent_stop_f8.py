@@ -26,9 +26,18 @@ def lockfile_at_step_3(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return folder
 
 
-def test_emit_uses_step_from_lockfile_not_hardcoded_5(lockfile_at_step_3: Path):
-    """F8: the trace event the hook writes must carry the actual step
-    (3 in this fixture), not a hardcoded 5."""
+def test_emit_uses_step_from_lockfile_when_set(lockfile_at_step_3: Path):
+    """F8 — read path: when the lockfile carries `current_step: N`, the
+    SubagentStop hook tags its trace event with that step rather than
+    the legacy hardcoded `step=5`.
+
+    NOTE: this test exercises the READ path only — the fixture writes
+    `current_step: 3` directly into the lockfile yaml. In production
+    today, the orchestrator's step-transition sites do not yet call
+    `lockfile.set_current_step` (that wiring is markdown-driven and
+    lands in a later chunk), so the hook falls back to `default=5` for
+    real runs. Direct test coverage for `set_current_step` itself lives
+    in `tests/pipette/test_lockfile.py`."""
     from tools.pipette.subagent_stop import _emit
     from tools.pipette.trace import Event  # noqa: F401 — used via _emit's append_event call
 
