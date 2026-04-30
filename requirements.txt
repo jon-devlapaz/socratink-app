@@ -1,3 +1,14 @@
+# Runtime dependencies (Vercel function install surface).
+#
+# Source-of-truth inputs live in `requirements.in`.
+# Pinned lock output lives in `requirements.lock`.
+#
+# IMPORTANT (Vercel):
+# Vercel's Python builder parses `requirements.txt` with a lightweight parser
+# that does not support recursive `-r` includes (and may choke on hash-locked
+# multi-line entries). Keep this file as a simple, directly-parseable list.
+#
+# For reproducible local installs, prefer `pip install -r requirements.lock`.
 fastapi
 uvicorn
 google-genai

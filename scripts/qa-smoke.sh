@@ -20,6 +20,15 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
+if [ ! -x ".venv/bin/python" ]; then
+  echo "[qa-smoke] ERROR: .venv is missing. Run: bash scripts/bootstrap-python.sh" >&2
+  exit 1
+fi
+
+PYTHON_BIN=".venv/bin/python"
+PYTEST_BIN=".venv/bin/pytest"
+PLAYWRIGHT_BIN=".venv/bin/playwright"
+
 # 1. Resolve target URL: positional arg > SOCRATINK_BASE_URL env var > local default.
 if [ $# -ge 1 ]; then
     INPUT="$1"
@@ -40,15 +49,15 @@ export SOCRATINK_BASE_URL="$TARGET"
 echo "[qa-smoke] target: $SOCRATINK_BASE_URL"
 
 # 2. Verify deps. Install if missing (idempotent).
-if ! python3 -c "import pytest_playwright" 2>/dev/null; then
-  echo "[qa-smoke] installing dev deps..."
-  pip install -r requirements-dev.txt
+if ! "$PYTHON_BIN" -c "import pytest_playwright" 2>/dev/null; then
+  echo "[qa-smoke] FAIL: pytest-playwright missing. Run: bash scripts/bootstrap-python.sh" >&2
+  exit 1
 fi
 
-if ! python3 -c "from playwright.sync_api import sync_playwright; sync_playwright().__enter__().chromium.launch().close()" 2>/dev/null; then
+if ! "$PYTHON_BIN" -c "from playwright.sync_api import sync_playwright; sync_playwright().__enter__().chromium.launch().close()" 2>/dev/null; then
   echo "[qa-smoke] installing Chromium browser binary..."
-  playwright install chromium
+  "$PLAYWRIGHT_BIN" install chromium
 fi
 
 # 3. Run the suite.
-exec pytest tests/e2e/test_smoke.py -v --tb=short
+exec "$PYTEST_BIN" tests/e2e/test_smoke.py -v --tb=short
