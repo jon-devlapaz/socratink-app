@@ -1,15 +1,8 @@
-import ipaddress
 import json
 import logging
 import os
-import re
-import socket
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
-from urllib.request import Request as UrlRequest, urlopen
-
-from html import unescape
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -343,69 +336,6 @@ def extract(req: ExtractRequest):
         raise HTTPException(
             status_code=500, detail="Unexpected server error during extraction."
         ) from err
-
-
-def _extract_text_from_html(raw_html: str) -> str:
-    cleaned = re.sub(
-        r"(?is)<(script|style|noscript|svg|iframe).*?>.*?</\1>", " ", raw_html
-    )
-    cleaned = re.sub(r"(?i)<br\s*/?>", "\n", cleaned)
-    cleaned = re.sub(
-        r"(?i)</(p|div|section|article|li|h1|h2|h3|h4|h5|h6|tr)>", "\n", cleaned
-    )
-    cleaned = re.sub(r"(?s)<[^>]+>", " ", cleaned)
-    cleaned = unescape(cleaned)
-    cleaned = cleaned.replace("\r", "\n")
-    cleaned = re.sub(r"\n\s*\n\s*\n+", "\n\n", cleaned)
-    cleaned = re.sub(r"[ \t]+", " ", cleaned)
-    return cleaned.strip()
-
-
-def _is_blocked_video_url(url: str) -> bool:
-    parsed = urlparse(url)
-    host = (parsed.hostname or "").lower()
-    return (
-        host == "youtu.be"
-        or host == "youtube.com"
-        or host.endswith(".youtube.com")
-        or host == "youtube-nocookie.com"
-        or host.endswith(".youtube-nocookie.com")
-    )
-
-
-def _is_private_url(url: str) -> bool:
-    parsed = urlparse(url)
-    hostname = parsed.hostname
-    if not hostname:
-        return True
-
-    try:
-        direct_ip = ipaddress.ip_address(hostname)
-        resolved_addresses = [direct_ip]
-    except ValueError:
-        try:
-            addr_info = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
-        except socket.gaierror:
-            return True
-        resolved_addresses = []
-        for _, _, _, _, sockaddr in addr_info:
-            try:
-                resolved_addresses.append(ipaddress.ip_address(sockaddr[0]))
-            except ValueError:
-                return True
-
-    if not resolved_addresses:
-        return True
-
-    return any(
-        addr.is_private
-        or addr.is_loopback
-        or addr.is_link_local
-        or addr.is_reserved
-        or addr.is_multicast
-        or addr.is_unspecified
-        for addr in resolved_addresses
-    )
 
 
 class FeedbackRequest(BaseModel):
