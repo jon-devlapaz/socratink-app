@@ -272,7 +272,7 @@ const App = (() => {
       case 'instantiated':
         return concept.graphData
           ? 'Open the draft path. It is a hypothesis, not evidence yet.'
-          : 'Map this source into a draft path. The map will not grade you.';
+          : 'Map this source into a draft path. The draft is not learner evidence.';
       case 'growing':
         return concept.graphData
           ? 'Open the draft path. Start with one cold attempt before study appears.'
@@ -525,7 +525,7 @@ const App = (() => {
 
   // ── 8. Grid rendering ──────────────────────────────────────
   // Desk tiles are inventory/navigation. The pin marks that a concept
-  // has earned a place here; it does not encode proof or graph evidence.
+  // has earned a place here; it does not encode graph-truth evidence.
   const TILE_PLATFORM = `
     <polygon class="tile-left"  points="0,40 70,80 70,90 0,50"/>
     <polygon class="tile-right" points="140,40 70,80 70,90 140,50"/>
@@ -686,7 +686,7 @@ const App = (() => {
             </div>
             <div class="creation-capacity-pill">${Math.min(usedSlots, 4)}/4 active</div>
           </div>
-          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format. The draft will not grade you.</p>
+          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format. The draft is not learner evidence.</p>
         </div>
         <span class="creation-section-label">Name this concept</span>
         <input class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
@@ -1071,7 +1071,7 @@ const App = (() => {
           <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
           <div class="creation-dialog-banner-slot"></div>
           <div class="creation-dialog-content"></div>
-          <p class="creation-dialog-meta">Your words shape the path; they do not grade you.</p>
+          <p class="creation-dialog-meta">Your words shape the path; they do not change graph truth.</p>
         </div>
       `;
       document.body.appendChild(node);
@@ -1171,7 +1171,7 @@ const App = (() => {
     banner.className = 'creation-banner creation-banner--error';
     banner.innerHTML = `
       <div>
-        <strong>Extraction didn't complete.</strong><br>
+        <strong>Extraction stopped.</strong><br>
         ${escHtml(sanitizedMessage)}
       </div>
     `;
@@ -1278,7 +1278,7 @@ const App = (() => {
             <span class="eo-meta-text">Parsing source content...</span>
           </div>
           <div class="eo-tip">
-            <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory far more than re-reading the same material.&rdquo;</p>
+            <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory more than passive exposure.&rdquo;</p>
           </div>
           <footer class="eo-footer">
             <div class="eo-progress-meta">
@@ -1329,13 +1329,13 @@ const App = (() => {
         }
 
         const OVERLAY_TIPS = [
-          'Retrieval practice strengthens memory far more than re-reading the same material.',
-          'Spacing your reviews over time, not cramming, is what turns short-term recall into lasting knowledge.',
+          'Retrieval practice strengthens memory more than passive exposure.',
+          'Spacing retrieval over time helps short-term recall become more durable.',
           'A draft map is a hypothesis. It earns trust only after you reconstruct rooms from memory.',
-          'Asking yourself questions before you have the answers is more powerful than reading answers directly.',
-          'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive review.',
-          'The graph records evidence from attempts and spaced reconstruction, not reading.',
-          'Spaced repetition is most useful when review intervals grow: short gaps early, longer gaps later.',
+          'Answering before the explanation appears gives study something specific to repair.',
+          'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive exposure.',
+          'The graph records evidence from attempts and spaced reconstruction, not exposure.',
+          'Spacing works best when intervals grow: short gaps early, longer gaps later.',
         ];
 
         function startTipCycle() {
@@ -1669,7 +1669,7 @@ const App = (() => {
     if (newState !== 'hibernating') patch.timerStart = null;
     updateActiveConcept(patch);
 
-    // Keep the dashboard marker in sync without turning the board into a proof/status surface.
+    // Keep the dashboard marker in sync without turning the board into a graph-truth surface.
     const markerEl = document.getElementById('concept-pin-' + tileIdx);
     if (markerEl) {
       markerEl.dataset.state = newState;
@@ -1948,9 +1948,8 @@ const App = (() => {
     if (!data.metadata) {
       data.metadata = {
         source_title: concept.name,
-        core_thesis: "Raw visual structure. Deep Knowledge Map extraction pending or failed.",
+        core_thesis: "Raw visual structure. Draft map extraction pending or failed.",
         architecture_type: "prototype",
-        difficulty: "unknown"
       };
     }
 
@@ -2026,7 +2025,7 @@ const App = (() => {
     html += `
       <div class="map-zone map-doctrine">
         <div class="map-section-title">Draft Path</div>
-        <p class="map-doctrine-copy">This route is proposed from the source. It is not evidence that you know the material.</p>
+        <p class="map-doctrine-copy">This route is proposed from the source. It is not learner evidence yet.</p>
         <div class="map-doctrine-grid">
           <div class="map-doctrine-stat">
             <span class="map-doctrine-stat-value">${escHtml(String(allDrillRooms.length))}</span>
@@ -2041,7 +2040,7 @@ const App = (() => {
             <span class="map-doctrine-stat-label">spaced reconstructions</span>
           </div>
         </div>
-        <p class="map-doctrine-copy">Untouched room names stay veiled until you try. Only spaced re-drill can add proof.</p>
+        <p class="map-doctrine-copy">Untouched room names stay veiled until you try. Only spaced re-drill can add a solid record.</p>
       </div>
     `;
 
@@ -2221,9 +2220,9 @@ const App = (() => {
       file: 'hermes_agent.json',
       name: 'Hermes Agent',
       kicker: 'Documentation concept',
-      summary: 'Learn the Nous Research Hermes Agent system: persistent memory, skills, tools, providers, messaging gateways, environments, automations, and safety boundaries.',
+      summary: 'Reconstruct the Nous Research Hermes Agent system: persistent memory, skills, tools, providers, messaging gateways, environments, automations, and safety boundaries.',
       architecture: 'system description',
-      difficulty: 'hard',
+      sourceShape: 'dense documentation',
     },
   ];
 
@@ -2289,7 +2288,6 @@ const App = (() => {
     return {
       thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
       architecture: metadata.architecture_type ? metadata.architecture_type.replace(/_/g, ' ') : null,
-      difficulty: metadata.difficulty || null,
       clusterCount: clusters.length,
       subnodeCount,
       sourceLabel,
@@ -2312,7 +2310,7 @@ const App = (() => {
 
       <div class="library-section">
         <h3 class="library-section-title">Documentation Concepts</h3>
-        <p class="library-section-copy">Curated draft paths you can enter without treating the map as proof.</p>
+        <p class="library-section-copy">Curated draft paths you can enter without treating the map as learner evidence.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
             const alreadyAdded = existingConceptNames.has(item.name);
@@ -2328,7 +2326,7 @@ const App = (() => {
                 <p class="library-card-summary">${escHtml(item.summary)}</p>
                 <div class="library-card-meta">
                   <span class="library-card-pill">${escHtml(item.architecture)}</span>
-                  <span class="library-card-pill">${escHtml(item.difficulty)}</span>
+                  <span class="library-card-pill">${escHtml(item.sourceShape)}</span>
                 </div>
                 <div class="library-card-cta">${alreadyAdded ? 'Open concept' : 'Add concept'}</div>
               </div>
@@ -2359,7 +2357,6 @@ const App = (() => {
             <p class="library-card-summary">${escHtml(meta.thesis)}</p>
             <div class="library-card-meta">
               ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
-              ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
               <span class="library-card-pill">${escHtml(`${meta.clusterCount} clusters`)}</span>
               <span class="library-card-pill">${escHtml(`${meta.subnodeCount} drill nodes`)}</span>
             </div>
@@ -2719,7 +2716,7 @@ const App = (() => {
     if (!Number.isNaN(eligibleAtMs) && Date.now() < eligibleAtMs) {
       return {
         headline: 'Work on another node first',
-        body: 'Your brain needs a short buffer before this re-drill counts. Review another node, then come back.',
+        body: 'This re-drill needs a short buffer before it counts. Work another node, then come back.',
       };
     }
 
@@ -3744,7 +3741,7 @@ const App = (() => {
       container.innerHTML = `
         <div class="settings-account-summary">
           <div class="settings-account-title">Guest mode is active</div>
-          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep testing locally, upgrade into Google sign-in, or exit back to login.</p>
+          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep trying locally, upgrade into Google sign-in, or exit back to login.</p>
         </div>
         <div class="settings-actions">
           ${session.auth_enabled ? `<a class="auth-link" href="${escHtml(buildLoginHref('/'))}">Continue with Google</a>` : ''}
@@ -3809,8 +3806,8 @@ const App = (() => {
       <div class="settings-shell">
         <header class="settings-page-header">
           <div class="settings-page-kicker">Settings</div>
-          <h2 class="settings-page-title">Setup for a truthful test run</h2>
-          <p class="settings-page-copy">Keep this page focused on what a friends-and-family tester needs: backend reachability, Gemini key access, and account state.</p>
+          <h2 class="settings-page-title">Setup for a truthful trial run</h2>
+          <p class="settings-page-copy">Keep this page focused on what a friends-and-family user needs: backend reachability, Gemini key access, and account state.</p>
         </header>
 
         <div class="settings-page-grid">
@@ -3819,21 +3816,21 @@ const App = (() => {
               <h4>Runtime Access</h4>
               <span class="settings-dot" id="settings-dot"></span>
             </div>
-            <p class="settings-subtext">Backend reachability and key availability are separate checks. A green backend alone does not prove extract or drill is fully working.</p>
+            <p class="settings-subtext">Backend reachability and key availability are separate checks. A green backend alone does not mean extract or drill is fully working.</p>
             <div class="settings-health-list">
               <div class="settings-health-row">
                 <span class="settings-health-label">Backend</span>
                 <span id="settings-backend-badge" class="settings-badge neutral">Checking...</span>
               </div>
-              <p id="settings-backend-detail" class="settings-subtext">Testing the local API.</p>
+              <p id="settings-backend-detail" class="settings-subtext">Checking the local API.</p>
               <div class="settings-health-row">
-                <span class="settings-health-label">AI Access</span>
+                <span class="settings-health-label">Model Access</span>
                 <span id="settings-ai-badge" class="settings-badge neutral">Checking...</span>
               </div>
               <p id="settings-ai-detail" class="settings-subtext">Looking for a server key or a locally saved Gemini key.</p>
             </div>
             <div class="settings-actions">
-              <button id="settings-test-btn" class="settings-test" type="button">Test Backend</button>
+              <button id="settings-test-btn" class="settings-test" type="button">Check Backend</button>
             </div>
             <div id="settings-status" class="settings-status"></div>
           </article>
@@ -3857,7 +3854,7 @@ const App = (() => {
             <div class="settings-section-header">
               <h4>Account</h4>
             </div>
-            <p class="settings-subtext">Every tester now enters through login first. This panel shows whether this browser is signed in, in guest mode, or needs to re-enter through the login wall.</p>
+            <p class="settings-subtext">Every user now enters through login first. This panel shows whether this browser is signed in, in guest mode, or needs to re-enter through the login wall.</p>
             <div id="settings-account-body" class="settings-account-body">
               <div class="settings-account-summary">
                 <div class="settings-account-title">Loading account state...</div>
@@ -3904,7 +3901,7 @@ const App = (() => {
 
     const refreshBackendStatus = async () => {
       testBtn.disabled = true;
-      testBtn.textContent = 'Testing...';
+      testBtn.textContent = 'Checking...';
       if (statusBox) {
         statusBox.textContent = '';
       }
@@ -3927,7 +3924,7 @@ const App = (() => {
         dot?.classList.add('error');
         dot?.classList.remove('connected');
         setStatusBadge(backendBadge, 'danger', 'Unavailable');
-        backendDetail.textContent = 'Cannot reach the backend from this browser. Start the API before testing extract or drill.';
+        backendDetail.textContent = 'Cannot reach the backend from this browser. Start the API before trying extract or drill.';
         refreshAiAccessUi({ backendReachable: false, serverKeyConfigured: false });
         if (statusBox) {
           statusBox.textContent = 'Backend check failed. Start the API and try again.';
@@ -3935,7 +3932,7 @@ const App = (() => {
         }
       } finally {
         testBtn.disabled = false;
-        testBtn.textContent = 'Test Backend';
+        testBtn.textContent = 'Check Backend';
       }
     };
 
