@@ -124,3 +124,142 @@ def _read_with_cap(response, max_bytes: int) -> bytes:
             raise TooLarge(f"exceeded {max_bytes} bytes")
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+import socket as _socket
+from urllib.parse import urljoin
+
+import urllib3
+from urllib3.connection import HTTPConnection, HTTPSConnection
+from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
+from urllib3.exceptions import (
+    ConnectTimeoutError,
+    NewConnectionError,
+    ProtocolError,
+    ReadTimeoutError,
+)
+from urllib3.util import Timeout
+
+
+class _PinnedHTTPSConnection(HTTPSConnection):
+    """Connects to a pre-validated IP while preserving Host/SNI/cert verification
+    against the original hostname. Closes DNS rebinding TOCTOU."""
+
+    def __init__(self, *args, dest_ip: str | None = None, **kwargs):
+        self._dest_ip = dest_ip
+        super().__init__(*args, **kwargs)
+
+    def _new_conn(self):
+        # Connect to self._dest_ip on self.port.
+        # self.host stays as the hostname for SNI and cert verification.
+        if self._dest_ip is None:
+            return super()._new_conn()
+        try:
+            sock = _socket.create_connection(
+                (self._dest_ip, self.port),
+                timeout=self.timeout if self.timeout else None,
+                source_address=self.source_address,
+            )
+        except OSError as exc:
+            raise NewConnectionError(self, f"failed to establish a new connection: {exc}") from exc
+        return sock
+
+
+class _PinnedHTTPConnection(HTTPConnection):
+    """Plain-http variant of the pinned connection."""
+
+    def __init__(self, *args, dest_ip: str | None = None, **kwargs):
+        self._dest_ip = dest_ip
+        super().__init__(*args, **kwargs)
+
+    def _new_conn(self):
+        if self._dest_ip is None:
+            return super()._new_conn()
+        try:
+            sock = _socket.create_connection(
+                (self._dest_ip, self.port),
+                timeout=self.timeout if self.timeout else None,
+                source_address=self.source_address,
+            )
+        except OSError as exc:
+            raise NewConnectionError(self, f"failed to establish a new connection: {exc}") from exc
+        return sock
+
+
+class _PinnedHTTPSConnectionPool(HTTPSConnectionPool):
+    ConnectionCls = _PinnedHTTPSConnection
+
+    def __init__(self, host, port, dest_ip, timeout):
+        super().__init__(host=host, port=port, timeout=timeout, retries=False)
+        self._dest_ip = dest_ip
+
+    def _new_conn(self):
+        return self.ConnectionCls(
+            host=self.host, port=self.port, dest_ip=self._dest_ip,
+            timeout=self.timeout.connect_timeout,
+        )
+
+
+class _PinnedHTTPConnectionPool(HTTPConnectionPool):
+    ConnectionCls = _PinnedHTTPConnection
+
+    def __init__(self, host, port, dest_ip, timeout):
+        super().__init__(host=host, port=port, timeout=timeout, retries=False)
+        self._dest_ip = dest_ip
+
+    def _new_conn(self):
+        return self.ConnectionCls(
+            host=self.host, port=self.port, dest_ip=self._dest_ip,
+            timeout=self.timeout.connect_timeout,
+        )
+
+
+def _build_pinned_pool(parsed, dest_ip: str):
+    """Construct a single-use pool pinned to dest_ip."""
+    host = parsed.hostname
+    scheme = parsed.scheme
+    port = parsed.port or (443 if scheme == "https" else 80)
+    timeout = Timeout(total=TIMEOUT_SECONDS)
+
+    if scheme == "https":
+        return _PinnedHTTPSConnectionPool(host=host, port=port, dest_ip=dest_ip, timeout=timeout)
+    return _PinnedHTTPConnectionPool(host=host, port=port, dest_ip=dest_ip, timeout=timeout)
+
+
+def _open_pinned(url: str, validated_ips: list[str]):
+    """Try each validated IP in order; first connect wins.
+
+    Sends a relative request target (path + query). Direct origin connections
+    expect origin-form, not absolute URL.
+    """
+    parsed = urlparse(url)
+    request_target = parsed.path or "/"
+    if parsed.query:
+        request_target = f"{request_target}?{parsed.query}"
+
+    last_exc: Exception | None = None
+    for ip in validated_ips:
+        try:
+            pool = _build_pinned_pool(parsed, ip)
+            return pool.urlopen(
+                "GET",
+                request_target,
+                headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"},
+                redirect=False,
+                preload_content=False,
+                decode_content=False,
+                timeout=Timeout(total=TIMEOUT_SECONDS),
+            )
+        except (NewConnectionError, ConnectTimeoutError) as exc:
+            last_exc = exc
+            continue
+    raise FetchFailed("all validated IPs unreachable", cause="connect") from last_exc
+
+
+def fetch(url: str) -> FetchedSource:
+    """Stub — full implementation in Task 12. For now, exercises the
+    validate→open_pinned path so pinned-IP tests can run."""
+    validated_ips = _validate_outbound_target(url)
+    response = _open_pinned(url, validated_ips)   # raises FetchFailed on connect failure
+    response.release_conn()
+    raise NotImplementedError("fetch() full lifecycle in Task 12")

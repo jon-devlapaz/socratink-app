@@ -67,3 +67,48 @@ def fake_dns(monkeypatch) -> Iterator[_FakeDns]:
 
     monkeypatch.setattr(socket, "getaddrinfo", _fake_getaddrinfo)
     yield fdns
+
+
+# === Pinned-IP shim for rebinding tests ===
+
+class _PinnedShimRecord:
+    """Records the intended dest_ip from each _PinnedHTTPSConnection construction."""
+
+    def __init__(self):
+        self.dest_ips: list[str] = []
+        self.hostnames: list[str] = []
+
+    def reset(self):
+        self.dest_ips.clear()
+        self.hostnames.clear()
+
+
+@pytest.fixture
+def pinned_shim_records(monkeypatch) -> Iterator[_PinnedShimRecord]:
+    """Records all (dest_ip, hostname) pairs the pinned connector is asked for.
+
+    Useful for proving the rebinding defense: assert that DNS was called once
+    AND the connection went to the validated IP, not whatever DNS returned later.
+
+    Test code physically routes the connection to localhost via the shim.
+    """
+    record = _PinnedShimRecord()
+
+    # Defer imports until fixture body so monkeypatch is available.
+    from source_intake import fetch as fetch_mod
+    from urllib3.exceptions import NewConnectionError
+
+    original_init = fetch_mod._PinnedHTTPSConnection.__init__
+
+    def _shim_init(self, *args, dest_ip=None, **kwargs):
+        record.dest_ips.append(dest_ip)
+        record.hostnames.append(args[0] if args else kwargs.get("host"))
+        original_init(self, *args, dest_ip=dest_ip, **kwargs)
+
+    def _shim_new_conn(self):
+        # Prevent any outbound packets in test environment.
+        raise NewConnectionError(self, f"shimmed: would have connected to {self._dest_ip}")
+
+    monkeypatch.setattr(fetch_mod._PinnedHTTPSConnection, "__init__", _shim_init)
+    monkeypatch.setattr(fetch_mod._PinnedHTTPSConnection, "_new_conn", _shim_new_conn)
+    yield record
