@@ -342,6 +342,20 @@ class FeedbackRequest(BaseModel):
     message: str = Field(..., min_length=10, max_length=1000)
 
 
+def _is_feedback_storage_unavailable(err: Exception) -> bool:
+    err_msg = str(err)
+    normalized = err_msg.lower()
+    return (
+        "PGRST205" in err_msg
+        or ("feedback" in normalized and "not found" in normalized)
+        or "permission denied for table users" in normalized
+        or "permission denied for table feedback" in normalized
+        or "'code': '42501'" in err_msg
+        or '"code":"42501"' in err_msg
+        or '"code": "42501"' in err_msg
+    )
+
+
 @app.post("/api/feedback")
 def submit_feedback(req: FeedbackRequest, request: Request):
     """Securely capture user feedback and store in Supabase."""
@@ -354,15 +368,15 @@ def submit_feedback(req: FeedbackRequest, request: Request):
     try:
         client = build_supabase_client(supabase_url, publishable_key)
         client.table("feedback").insert(
-            {"message": req.message, "user_id": user_id, "status": "pending"}
+            {"message": req.message, "user_id": user_id, "status": "pending"},
+            returning="minimal",
         ).execute()
     except Exception as err:
-        err_msg = str(err)
-        if "PGRST205" in err_msg or "feedback" in err_msg and "not found" in err_msg.lower():
-            logger.warning("Feedback table not found in Supabase. Submission failed gracefully.")
+        if _is_feedback_storage_unavailable(err):
+            logger.warning("Feedback storage unavailable: %s", err)
             raise HTTPException(
-                status_code=503, 
-                detail="Feedback system is currently being set up. Please try again later."
+                status_code=503,
+                detail="Feedback storage is currently unavailable. Please try again later.",
             )
 
         logger.exception("Unexpected failure in /api/feedback")

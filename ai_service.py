@@ -317,6 +317,7 @@ def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
         "metadata": {
             "thesis": metadata.get("core_thesis"),
             "governing_assumptions": metadata.get("governing_assumptions") or [],
+            "starting_map_context": metadata.get("starting_map_context"),
         }
     }
     relationships = knowledge_map.get("relationships") or {}
@@ -919,7 +920,7 @@ def drill_chat(
     )
 
     if drill_mode == "cold_attempt":
-        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question, do not reveal the mechanism. Emphasize it is ok to guess. Enforce minimum generative commitment. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess. Return null for classification/tier."
+        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question, do not reveal the mechanism. If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. Enforce minimum generative commitment. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess. Return null for classification/tier."
     else:
         system_prompt_extras += f"\nMODE: RE-DRILL (Attempt {re_drill_count + 1}). Demand multi-step causal reconstruction. Vary prompt angle (e.g. self-explanation, summarization, teaching, problem-posing). Apply concrete rubric: Does response contain (a) initiating condition, (b) causal transition, and (c) resulting state? Err toward false negatives."
         if re_drill_count >= 2:

@@ -43,6 +43,17 @@ function getCoreThesisDetail(source) {
   return thesis || 'This node anchors the extracted concept map.';
 }
 
+function getStartingMapContext(source) {
+  return String(source?.metadata?.starting_map_context || source?.startingMapContext || '');
+}
+
+function getStartingMapSnippet(source, maxLength = 190) {
+  const text = getStartingMapContext(source);
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3).trimEnd()}...`;
+}
+
 function getStatusLabel(status) {
   if (status === 'solidified' || status === 'solid') return 'solidified through spaced reconstruction';
   if (status === 'primed') return 'primed for study';
@@ -113,7 +124,7 @@ function getInspectPrompt(data) {
   }
 
   if (data.type === 'core') {
-    return 'What governing idea explains how this whole system behaves? Start here with a cold attempt.';
+    return 'What governing idea explains how this whole system behaves? Start here, then take your best guess.';
   }
 
   if (data.type === 'backbone') {
@@ -139,10 +150,10 @@ function getInspectPrompt(data) {
 
 function getInspectHeading(data) {
   if (!data) return '';
-  if (data.state === 'locked' && !data.available && data.type !== 'core') {
-    if (data.type === 'cluster') return 'Locked branch container';
+  if (data.state === 'locked' && !data.available) {
     if (data.type === 'backbone') return 'Locked branch';
-    return 'Locked drill room';
+    if (data.type === 'cluster') return 'Locked room set';
+    if (data.type === 'subnode') return 'Locked room';
   }
   if (data.type === 'backbone') return data.label || data.fullLabel || 'Backbone Principle';
   return data.fullLabel || data.label || '';
@@ -296,6 +307,7 @@ export function transformKnowledgeMapToGraph(rawData) {
       label: 'Core Thesis',
       fullLabel: 'Core Thesis',
       detail: getCoreThesisDetail(source),
+      startingMapContext: getStartingMapContext(source),
       drillStatus: source?.metadata?.drill_status || null,
       drillPhase: source?.metadata?.drill_phase || null,
       coldAttemptAt: source?.metadata?.cold_attempt_at || null,
@@ -787,10 +799,19 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         : data.type === 'cluster'
           ? 'Cluster Focus'
           : 'Drill Node';
+    const thresholdHtml = mode === 'cold-attempt-active' && data.startingMapContext
+      ? `
+        <div class="graph-threshold-anchor">
+          <div class="graph-detail-kicker">Global Context</div>
+          <p>${escHtml(data.startingMapContext)}</p>
+        </div>
+      `
+      : '';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
-      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'Make your best initial attempt. Study opens only after you try.' : 'Reconstruct this from memory. The map stays in the background until the re-drill resolves.'}</p>
+      ${thresholdHtml}
+      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'That context belongs to the whole map. This room asks one smaller question before any study appears.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
       </div>
@@ -837,10 +858,19 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
   }
 
   if (data.type === 'core') {
+    const thresholdHtml = data.startingMapContext
+      ? `
+        <div class="graph-threshold-anchor">
+          <div class="graph-detail-kicker">Global Context</div>
+          <p>${escHtml(data.startingMapContext)}</p>
+        </div>
+      `
+      : '';
     return `
       <div class="graph-detail-kicker">Core Thesis</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
+      ${thresholdHtml}
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
@@ -938,17 +968,27 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
   }
 
   const backboneTitle = escHtml('Core Thesis');
-  const starterPrompt = escHtml('What governing idea explains how this whole system behaves? Start here with a cold attempt.');
+  const thresholdSnippet = getStartingMapSnippet(source);
+  const starterPrompt = escHtml('What governing idea explains how this whole system behaves? Start here, then take your best guess.');
   detailEl.innerHTML = `
     <div class="graph-detail-kicker">Starting Room</div>
     <h3 class="graph-detail-title">${backboneTitle}</h3>
+    ${thresholdSnippet ? `
+      <div class="graph-threshold-anchor">
+        <div class="graph-detail-kicker">Global Context</div>
+        <p>${escHtml(thresholdSnippet)}</p>
+      </div>
+    ` : ''}
+    <p class="graph-detail-copy">${thresholdSnippet
+      ? 'This is the first room. It asks one smaller question from the global context you gave.'
+      : 'This is the first room. It asks one smaller question to anchor the map.'}</p>
     <p class="graph-detail-copy">${starterPrompt}</p>
     <div class="graph-detail-meta">
       <span class="graph-detail-pill">core thesis first</span>
       <span class="graph-detail-pill">bright means ready</span>
       <span class="graph-detail-pill">ghosted means locked</span>
     </div>
-    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">Start With Core Thesis</button>
+    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">Start first room</button>
   `;
 }
 
@@ -1743,6 +1783,15 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
     };
   };
 
+  const getDisplayLabelForNode = (node) => {
+    const isUnavailableLocked = node.state === 'locked' && !node.available;
+    if (isUnavailableLocked && node.type === 'backbone') return 'Locked branch';
+    if (isUnavailableLocked && node.type === 'cluster') return 'Locked room set';
+    if (isUnavailableLocked && node.type === 'subnode') return 'Locked room';
+    if (node.type === 'core') return String(node.label || 'Core Thesis').toUpperCase();
+    return String(node.label || node.fullLabel || '');
+  };
+
   const buildNodeAriaLabel = (node) => {
     const stateLabel = node.state === 'solidified'
       ? 'solidified through spaced reconstruction'
@@ -1753,15 +1802,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
           : node.available
             ? 'ready for first attempt'
             : 'locked';
-    if (node.state === 'locked' && !node.available && node.type !== 'core') {
-      const kind = node.type === 'cluster'
-        ? 'locked branch container'
-        : node.type === 'backbone'
-          ? 'locked branch'
-          : 'locked drill room';
-      return `${kind}, ${stateLabel}`;
-    }
-    return `${node.fullLabel || node.label || node.id}, ${stateLabel}`;
+    return `${getDisplayLabelForNode(node) || node.id}, ${stateLabel}`;
   };
 
   const isBeamEligible = (edge) => Boolean(
@@ -2353,12 +2394,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
         haloOpacity *= 0.12;
       }
 
-      const maskLockedLabel = node.state === 'locked' && !node.available && node.type !== 'core';
-      const label = node.type === 'core'
-        ? String(node.label || 'Core Thesis').toUpperCase()
-        : maskLockedLabel
-          ? String(node.teaserLabel || 'locked room')
-          : String(node.label || node.fullLabel || '');
+      const label = getDisplayLabelForNode(node);
       const labelLines = node.type === 'core'
         ? [label]
         : buildLabelLines(label, node.type === 'backbone' ? 24 : 20);
@@ -2379,7 +2415,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
       ].filter(Boolean).join(' ');
 
       return `<g class="${nodeClass}" data-graph-kind="node" data-graph-id="${escHtml(node.id)}" data-state="${escHtml(stateAttr)}" data-available="${node.available ? 1 : 0}" data-has-motion="${hasMotion}" data-is-fresh-solid="${isFreshSolid}" style="--node-phase:${phase};--halo-rest:${haloOpacity.toFixed(3)};--node-halo-color:${palette.halo};" tabindex="0" role="button" aria-label="${escHtml(buildNodeAriaLabel(node))}">
-        <title>${escHtml(maskLockedLabel ? 'locked room' : (node.fullLabel || node.label || node.id))}</title>
+        <title>${escHtml(getDisplayLabelForNode(node) || node.id)}</title>
         ${haloOpacity > 0.03 ? `<circle class="graph-node-halo" cx="${position.x}" cy="${position.y}" r="${haloRadius}" fill="${palette.halo}" opacity="${haloOpacity}" style="filter: blur(var(--graph-halo-blur, 6px));"></circle>` : ''}
         <circle class="graph-node-arrival-glow" cx="${position.x}" cy="${position.y}" r="${haloRadius * 1.15}" fill="${palette.halo}" style="filter: blur(8px);"></circle>
         ${(isActive || isSelected) && !prefersReducedMotion ? (() => {
