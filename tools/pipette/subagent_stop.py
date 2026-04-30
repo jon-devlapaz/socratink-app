@@ -77,14 +77,35 @@ LLM_RETRY_LIMIT = 3
 LLM_TIMEOUT_S = 120
 
 
+def _read_current_step_from_lockfile(default: float = 5) -> float:
+    """F8: hook tags trace events with the actual pipeline step rather than
+    a hardcoded 5. The lockfile carries `current_step` (set by the orchestrator
+    on each step transition); read it here. Returns `default` if the lockfile
+    is missing or doesn't carry the field — preserves prior behavior on
+    unrecognized state rather than failing the hook."""
+    try:
+        cur = yaml.safe_load(_lock_path().read_text()) or {}
+    except (OSError, yaml.YAMLError):
+        return default
+    val = cur.get("current_step")
+    if isinstance(val, (int, float)):
+        return float(val)
+    # Fallback to paused_at_step if running-state field is missing
+    paused = cur.get("paused_at_step")
+    if isinstance(paused, (int, float)):
+        return float(paused)
+    return default
+
+
 def _emit(decision: str, reason: str, *, folder: Path | None = None, task_id: str | None = None) -> int:
     out = {"permissionDecision": decision, "reason": reason}
     json.dump(out, sys.stdout)
     if folder is not None:
         try:
+            step = _read_current_step_from_lockfile(default=5)
             append_event(
                 folder / "trace.jsonl",
-                Event(step=5, event="subagent_stop_hook", decision=decision,
+                Event(step=step, event="subagent_stop_hook", decision=decision,
                       extra={"task_id": task_id, "reason": reason}),
             )
         except OSError:
