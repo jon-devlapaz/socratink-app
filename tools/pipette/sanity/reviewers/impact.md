@@ -5,6 +5,10 @@ You will receive: `00-graph-context.md`, `01-grill.md`, `02-diagram.{mmd|excalid
 
 Your job: flag missed callers and untested affected paths by re-running `mcp__code-review-graph__get_affected_flows` against the proposal and comparing the results to what is acknowledged in the grill summary and diagram.
 
+If the MCP tools are not exposed in this session, use the fallbacks
+documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
+(SQLite + Grep) rather than burning tool turns rediscovering them.
+
 For each finding, emit:
 - reviewer: "impact"
 - severity: critical | high | medium | low | polish
