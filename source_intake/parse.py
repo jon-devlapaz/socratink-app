@@ -97,3 +97,43 @@ def _peek_meta_charset(prefix: bytes) -> str | None:
     if match:
         return match.group(1).decode("ascii", errors="ignore").lower()
     return None
+
+
+from urllib.parse import urlparse
+
+from .errors import ParseEmpty
+
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x0c\x0e-\x1f]")
+_BLANK_LINES_RE = re.compile(r"\n{3,}")
+
+MAX_TEXT_LENGTH = 500_000
+MAX_TITLE_LENGTH = 200
+
+
+def extract_plain(text: str, source_url: str | None = None, *, min_text_length: int = 200) -> ParsedPage:
+    """Pure: raw text → ParsedPage.
+
+    Used by from_text and by Content-Type: text/plain URLs.
+
+    min_text_length is a parameter rather than a hard-coded floor because
+    the two intake paths have different policies: from_url enforces 200
+    (preserves URL-path behavior); from_text overrides to 1 (preserves
+    /api/extract wire contract).
+    """
+    cleaned = text.replace("\r", "\n")
+    cleaned = _CONTROL_CHARS_RE.sub("", cleaned)
+    cleaned = _BLANK_LINES_RE.sub("\n\n", cleaned).strip()
+
+    if len(cleaned) < min_text_length:
+        raise ParseEmpty(f"raw text {len(cleaned)} chars (min {min_text_length})")
+
+    # Title: first non-empty line if short, else host or default.
+    first_line = next((l.strip() for l in cleaned.split("\n") if l.strip()), "")
+    if first_line and len(first_line) <= MAX_TITLE_LENGTH:
+        title = first_line
+    elif source_url and (host := urlparse(source_url).hostname):
+        title = host
+    else:
+        title = "Imported text"
+
+    return ParsedPage(title=title[:MAX_TITLE_LENGTH], text=cleaned[:MAX_TEXT_LENGTH])
