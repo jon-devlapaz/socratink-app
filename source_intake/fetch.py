@@ -33,7 +33,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
-from .errors import BlockedSource, FetchFailed, InvalidUrl
+from .errors import BlockedSource, FetchFailed, InvalidUrl, UnsupportedContent
 
 ALLOWED_SCHEMES = frozenset({"http", "https"})
 ALLOWED_PORTS = frozenset({80, 443})
@@ -256,10 +256,85 @@ def _open_pinned(url: str, validated_ips: list[str]):
     raise FetchFailed("all validated IPs unreachable", cause="connect") from last_exc
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 def fetch(url: str) -> FetchedSource:
-    """Stub — full implementation in Task 12. For now, exercises the
-    validate→open_pinned path so pinned-IP tests can run."""
-    validated_ips = _validate_outbound_target(url)
-    response = _open_pinned(url, validated_ips)   # raises FetchFailed on connect failure
-    response.release_conn()
-    raise NotImplementedError("fetch() full lifecycle in Task 12")
+    """Fetch URL with SSRF + redirect re-validation, pinned-IP connect, byte cap.
+
+    Raises any of: InvalidUrl, BlockedSource, FetchFailed, UnsupportedContent, TooLarge.
+    """
+    current_url = url
+    redirects = 0
+
+    while True:
+        validated_ips = _validate_outbound_target(current_url)
+
+        try:
+            response = _open_pinned(current_url, validated_ips)
+        except (ConnectTimeoutError, ReadTimeoutError) as exc:
+            raise FetchFailed(f"timeout: {exc}", cause="timeout") from exc
+        except (NewConnectionError, ProtocolError) as exc:
+            raise FetchFailed(f"connect: {exc}", cause="connect") from exc
+
+        try:
+            # Redirects: extract Location, release, re-loop with re-validation.
+            if 300 <= response.status < 400:
+                location = response.headers.get("Location") or response.headers.get("location")
+                response.release_conn()
+                if not location:
+                    raise FetchFailed("3xx without Location", cause="connect")
+                redirects += 1
+                if redirects > MAX_REDIRECTS:
+                    raise FetchFailed("too many redirects", cause="connect")
+                current_url = urljoin(current_url, location)
+                continue
+
+            # 4xx / 5xx: urllib3 returns these as responses, not exceptions.
+            if 400 <= response.status < 500:
+                response.release_conn()
+                raise FetchFailed(f"upstream HTTP {response.status}", cause="http_4xx")
+            if 500 <= response.status < 600:
+                response.release_conn()
+                raise FetchFailed(f"upstream HTTP {response.status}", cause="http_5xx")
+
+            # Reject server-side compression
+            if response.headers.get("content-encoding", "identity").lower() != "identity":
+                response.release_conn()
+                raise UnsupportedContent("server returned encoded content")
+
+            # Content-type policing
+            content_type_header = response.headers.get("content-type", "") or ""
+            if not content_type_header:
+                response.release_conn()
+                raise UnsupportedContent("missing content-type")
+            content_type = content_type_header.split(";")[0].strip().lower()
+            if content_type not in SUPPORTED_CONTENT_TYPES:
+                response.release_conn()
+                raise UnsupportedContent(f"content-type {content_type!r}")
+
+            # Stream with byte cap
+            try:
+                raw = _read_with_cap(response, MAX_BYTES)
+            except Exception:
+                response.release_conn()
+                raise
+
+            response.release_conn()
+
+            # Normalize headers: lowercase keys
+            headers = {k.lower(): v for k, v in response.headers.items()}
+            return FetchedSource(
+                raw_bytes=raw,
+                headers=headers,
+                final_url=current_url,
+                content_type=content_type,
+            )
+        except Exception:
+            try:
+                response.release_conn()
+            except Exception:
+                pass
+            raise
