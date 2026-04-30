@@ -324,7 +324,11 @@ def extract(req: ExtractRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="No text provided.")
     try:
-        knowledge_map = extract_knowledge_map(req.text, api_key=req.api_key)
+        src = source_intake.from_text(req.text)   # default min_text_length=1
+    except ParseEmpty as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    try:
+        knowledge_map = extract_knowledge_map(src.text, api_key=req.api_key)
         return {"knowledge_map": knowledge_map}
     except MissingAPIKeyError as err:
         raise HTTPException(status_code=401, detail=str(err))
