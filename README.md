@@ -55,10 +55,12 @@ bash scripts/qa-smoke.sh live
 This repo uses pinned, hashed lock files for reproducible installs:
 
 - Edit `requirements.in` / `requirements-dev.in`
+- Keep `requirements.txt` as a simple direct copy of `requirements.in` entries; Vercel does not support recursive `-r` includes there
 - Regenerate locks:
 
 ```bash
 .venv/bin/pip install -U pip-tools
 .venv/bin/pip-compile --allow-unsafe --generate-hashes -o requirements.lock requirements.in
 .venv/bin/pip-compile --allow-unsafe --generate-hashes -o requirements-dev.lock requirements-dev.in
+python scripts/check-vercel-requirements.py
 ```

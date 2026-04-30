@@ -9,6 +9,9 @@ PORT="${PORT:-8000}"
 echo "[doctor] repo: $REPO_ROOT"
 echo "[doctor] port: $PORT"
 
+echo "[doctor] Vercel requirements surface..."
+python scripts/check-vercel-requirements.py
+
 if [ ! -x ".venv/bin/python" ]; then
   echo "[doctor] FAIL: missing .venv. Run: bash scripts/bootstrap-python.sh" >&2
   exit 1
@@ -28,4 +31,3 @@ echo "[doctor] uvicorn entrypoint present..."
 .venv/bin/python -c "import uvicorn, fastapi; import main"
 
 echo "[doctor] OK"
-

@@ -3,6 +3,18 @@
 # Source-of-truth inputs live in `requirements.in`.
 # Pinned lock output lives in `requirements.lock`.
 #
-# Keep this file compatible with `pip install -r requirements.txt` for
-# environments that don't (yet) consume the lock.
--r requirements.lock
+# IMPORTANT (Vercel):
+# Vercel's Python builder parses `requirements.txt` with a lightweight parser
+# that does not support recursive `-r` includes (and may choke on hash-locked
+# multi-line entries). Keep this file as a simple, directly-parseable list.
+#
+# For reproducible local installs, prefer `pip install -r requirements.lock`.
+fastapi
+uvicorn
+google-genai
+python-dotenv
+aiofiles
+youtube-transcript-api
+supabase
+pyjwt[crypto]
+cryptography
