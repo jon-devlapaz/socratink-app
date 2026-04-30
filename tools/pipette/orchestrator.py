@@ -197,6 +197,25 @@ def reviewers_to_redispatch_from_folder(folder: Path) -> ReviewerRedispatchPlan:
                                   fallback_reason=None)
 
 
+# F12: skip verifier on attempt >= 2 with safety condition.
+def should_run_verifier_on_attempt(*, folder: Path, attempt: int) -> bool:
+    """F12: skip the verifier on attempt >= 2 only if attempt 1 produced a
+    clean `_verifier-survivors.json`. Spec enhancement: if attempt 1's
+    verifier crashed or output was malformed, run the verifier in attempt 2
+    rather than silently breaking the verification chain."""
+    import json as _json
+    if attempt < 2:
+        return True
+    p = folder / "_verifier-survivors.json"
+    if not p.exists():
+        return True
+    try:
+        data = _json.loads(p.read_text())
+    except _json.JSONDecodeError:
+        return True
+    return not isinstance(data, dict)  # well-formed dict → safe to skip
+
+
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/.
 
