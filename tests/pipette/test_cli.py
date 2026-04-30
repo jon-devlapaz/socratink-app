@@ -38,6 +38,44 @@ def test_parse_extra_kv_rejects_no_equals():
 
 
 # ---------------------------------------------------------------------------
+# Chunk B.2 — trace-append --data wiring (F4)
+# ---------------------------------------------------------------------------
+
+def test_trace_append_writes_structured_data(tmp_path: Path):
+    """trace-append --data k=v writes the keys into trace.jsonl."""
+    from tools.pipette.cli import main
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    rc = main([
+        "trace-append",
+        "--folder", str(folder),
+        "--step", "3",
+        "--event", "verdict_fail",
+        "--data", "jump_back_to=1,reason=contracts_critical",
+    ])
+    assert rc == 0
+    line = (folder / "trace.jsonl").read_text().strip()
+    rec = json.loads(line)
+    assert rec["event"] == "verdict_fail"
+    assert rec["jump_back_to"] == "1"
+    assert rec["reason"] == "contracts_critical"
+
+
+def test_trace_append_rejects_malformed_data(tmp_path: Path):
+    from tools.pipette.cli import main
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    rc = main([
+        "trace-append",
+        "--folder", str(folder),
+        "--step", "3",
+        "--event", "x",
+        "--data", "no_equals_here",
+    ])
+    assert rc != 0
+
+
+# ---------------------------------------------------------------------------
 # Pre-existing subprocess-style tests
 # ---------------------------------------------------------------------------
 
