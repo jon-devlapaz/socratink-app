@@ -250,6 +250,30 @@ def lite_pipeline_steps() -> list[float]:
     return [0, 1, 2, 4, 5, 6, 7]
 
 
+# F13: per-reviewer artifact subsets. Spec recommendation:
+#   contracts: needs symbols → [00, 01]
+#   impact: needs everything → [00, 01, 02, _meta/CONTEXT.md]
+#   glossary: terminology, not graph → [01, 02, _meta/CONTEXT.md]
+#   coverage: tests, not graph → [00, 01, coverage_map.json]
+# Saves ~30% on per-reviewer context.
+_REVIEWER_ARTIFACTS = {
+    "contracts": ["00-graph-context.md", "01-grill.md"],
+    "impact": ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"],
+    "glossary": ["01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"],
+    "coverage": ["00-graph-context.md", "01-grill.md", "coverage_map.json"],
+}
+
+_FULL_ARTIFACT_STACK = ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"]
+
+
+def reviewer_artifacts(reviewer: str) -> list[str]:
+    """Return the artifact list passed to a reviewer subagent's context.
+    Unknown reviewer names fall back to the full stack rather than raising,
+    preserving backward compatibility if a new reviewer is added without
+    updating this table."""
+    return _REVIEWER_ARTIFACTS.get(reviewer, _FULL_ARTIFACT_STACK)
+
+
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/.
 

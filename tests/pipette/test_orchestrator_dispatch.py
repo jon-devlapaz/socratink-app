@@ -14,10 +14,17 @@ LINES_CEILING = 50
 
 
 @pytest.fixture
-def folder_with_artifacts(tmp_path: Path):
-    """A pipeline folder with the artifacts F15 inspects."""
+def folder_with_artifacts(tmp_path: Path) -> Path:
+    """A pipeline folder with standard Step 3 artifacts pre-populated.
+    Used by both the F11/F12/F13 reviewer-dispatch tests (need the artifact
+    files to exist) and the F15 heuristic tests (need 01-grill.md to be
+    present for _write_grill_summary to overwrite)."""
     folder = tmp_path / "feature-x"
     folder.mkdir()
+    for name in ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"]:
+        p = folder / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("placeholder")
     return folder
 
 
@@ -34,6 +41,10 @@ def _write_grill_summary(folder: Path, total_changed_lines: int, max_risk_score:
         f"...\n"
     )
 
+
+# ---------------------------------------------------------------------------
+# F15 — heuristic auto-pass at Step 3 entry (Chunk G)
+# ---------------------------------------------------------------------------
 
 def test_f15_auto_pass_when_all_thresholds_met(folder_with_artifacts: Path):
     from tools.pipette.orchestrator import step3_heuristic_decision
@@ -114,6 +125,10 @@ def test_f15_emits_autopass_rejected_trace_event(folder_with_artifacts: Path):
     assert rec["reason"] == "coverage_below_80"
 
 
+# ---------------------------------------------------------------------------
+# F14 — pipette-lite absolute override (Chunk G)
+# ---------------------------------------------------------------------------
+
 def test_f14_lite_mode_overrides_f15_unconditionally(folder_with_artifacts: Path):
     """Spec enhancement: lite mode is an absolute manual override.
     Even synthetic high-risk-score input that would fail F15 must still
@@ -134,3 +149,32 @@ def test_lite_mode_runs_correct_step_subset(folder_with_artifacts: Path, monkeyp
     steps = lite_pipeline_steps()
     assert 3 not in steps
     assert {0, 1, 2, 4, 5, 6, 7}.issubset(set(steps))
+
+
+# ---------------------------------------------------------------------------
+# F13 — per-reviewer artifact subsets (Chunk F)
+# ---------------------------------------------------------------------------
+
+def test_f13_glossary_reviewer_does_not_get_graph_context():
+    """F13: per-reviewer artifact subsets. Glossary reviewer never sees
+    00-graph-context.md (graph data, not glossary)."""
+    from tools.pipette.orchestrator import reviewer_artifacts
+    artifacts = reviewer_artifacts("glossary")
+    assert "00-graph-context.md" not in artifacts
+
+
+def test_f13_impact_reviewer_gets_full_artifact_stack():
+    """F13: impact is the only reviewer that needs all four artifacts."""
+    from tools.pipette.orchestrator import reviewer_artifacts
+    artifacts = reviewer_artifacts("impact")
+    assert {"00-graph-context.md", "01-grill.md", "02-diagram.mmd",
+            "_meta/CONTEXT.md"}.issubset(set(artifacts))
+
+
+def test_f13_unknown_reviewer_gets_full_stack():
+    """Defensive: an unknown reviewer name falls back to the full stack
+    rather than raising — preserves backward compatibility if a future
+    reviewer is added without updating the lookup table."""
+    from tools.pipette.orchestrator import reviewer_artifacts
+    artifacts = reviewer_artifacts("future_reviewer")
+    assert "00-graph-context.md" in artifacts
