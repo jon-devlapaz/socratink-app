@@ -241,12 +241,26 @@ def main(argv: list[str] | None = None) -> int:
         # OR a flat list of nodes with a `tested_files` field. Support both.
         edges = dump.get("edges") if isinstance(dump, dict) else dump
         tested_files: set[str] = set()
+        edges_with_tests_prefix = 0
         if isinstance(edges, list):
             for e in edges:
                 src = (e.get("from") or {}).get("source_file") if isinstance(e, dict) else None
                 dst = (e.get("to") or {}).get("source_file") if isinstance(e, dict) else None
                 if src and dst and src.startswith("tests/"):
                     tested_files.add(dst)
+                    edges_with_tests_prefix += 1
+        # F3: shape validation. If the dump claims edges but none have a
+        # tests/-prefixed source_file, the dump shape is malformed and the
+        # coverage map will be all-uncovered — silently triggering TDD
+        # enforcement spuriously. Warn loudly to stderr.
+        if isinstance(edges, list) and len(edges) > 0 and edges_with_tests_prefix == 0:
+            print(
+                "pipette: warning — coverage dump appears malformed "
+                "(no test→source edges with `from.source_file` starting with 'tests/'); "
+                "coverage map will be all-uncovered. "
+                "Verify dump shape: {edges:[{from:{source_file:'tests/...'}, to:{source_file:'...'}}]}",
+                file=sys.stderr,
+            )
         files_map = {f: (0.85 if f in tested_files else 0.30) for f in args.affected_files}
         out = {"_method": "graph_approx_v1", "files": files_map}
         Path(args.output).write_text(_json.dumps(out, indent=2))
