@@ -53,7 +53,7 @@ Expected: lines like `- 2026-MM-DD <topic>: <one-line lesson>` — matching the 
 
 Open `docs/pipeline/_meta/lessons.md` and append (newest at top per the doc's existing convention; if the file uses oldest-first, match that):
 
-```
+```text
 - 2026-04-28 admin-tink-todo-dashboard: Step 3 caught 2 critical design bugs (state.email AttributeError; Vercel CDN bypass) that Step 1 grill should have caught — see implementation-followups.md F6, F7
 - 2026-04-28 admin-tink-todo-dashboard: doctor PASSes on MCP-configured even when tools aren't exposed in-session — see implementation-followups.md F1
 - 2026-04-28 admin-tink-todo-dashboard: `grill-with-docs` skill has `disable-model-invocation: true`, blocks orchestrator dispatch — see implementation-followups.md F2
@@ -98,7 +98,7 @@ Expected: YAML frontmatter contains a line `disable-model-invocation: true` (thi
 
 Open a throwaway Claude Code session and dispatch:
 
-```
+```text
 Skill: grill-with-docs
 ```
 
@@ -112,7 +112,7 @@ Edit `~/.claude/skills/grill-with-docs/SKILL.md`. Remove the `disable-model-invo
 
 In a fresh Claude Code session (skill files load at session start, so a fresh session is required), dispatch:
 
-```
+```text
 Skill: grill-with-docs
 ```
 
@@ -1593,7 +1593,7 @@ reasoning hinges on most). Then:
    the actual class — not `state.user.email` or some other indirection).
 3. Log the round-trip as a structured trace event:
 
-   ```
+   ```bash
    pipette trace-append --folder=<FOLDER> --step=1 \
      --event=grill_symbol_verified --data=symbol=<the.symbol.you.checked>
    ```
@@ -1648,7 +1648,7 @@ If your design marks any route as a **Dev-only Route** per
    `Vercel CDN → FastAPI middleware → handler`.
 3. Produce an explicit topology block in `01-grill.md`:
 
-   ```
+   ```text
    ## Deployment topology
    - Path: /admin/tink-todo
    - Layers: Vercel CDN (serves public/* directly) → FastAPI middleware → handler
