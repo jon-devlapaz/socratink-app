@@ -245,3 +245,22 @@ def test_build_coverage_map_warns_on_malformed_dump(tmp_path: Path, capsys: pyte
     err = capsys.readouterr().err
     assert "warning" in err.lower()
     assert "malformed" in err.lower() or "no test→source edges" in err.lower()
+
+
+def test_step3_heuristic_check_cli_returns_json_decision(tmp_path: Path):
+    """F15 CLI: step3-heuristic-check prints a JSON decision and exits 0."""
+    import json
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    # Write coverage_map.json and 01-grill.md so all thresholds pass.
+    (folder / "coverage_map.json").write_text(
+        json.dumps({"_method": "graph_approx_v1", "files": {"src/foo.py": 0.95}})
+    )
+    (folder / "01-grill.md").write_text(
+        "# Grill\n\n<!-- pipette-meta total_changed_lines=10 max_risk_score=0.10 -->\n"
+    )
+    r = _run("step3-heuristic-check", "--folder", str(folder))
+    assert r.returncode == 0, r.stderr
+    decision = json.loads(r.stdout.strip())
+    assert decision["auto_pass"] is True
+    assert decision["reason"] == "heuristic_auto_pass"
