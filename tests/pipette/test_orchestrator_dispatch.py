@@ -178,3 +178,34 @@ def test_f13_unknown_reviewer_gets_full_stack():
     from tools.pipette.orchestrator import reviewer_artifacts
     artifacts = reviewer_artifacts("future_reviewer")
     assert "00-graph-context.md" in artifacts
+
+
+# ---------------------------------------------------------------------------
+# F11 — smart-reviewers redispatch on loop-back
+# ---------------------------------------------------------------------------
+
+def test_f11_smart_reviewers_skips_clean_reviewers_on_loopback(folder_with_artifacts: Path):
+    """F11: a reviewer with no >= medium findings in attempt 1 is not
+    redispatched in attempt 2."""
+    from tools.pipette.orchestrator import reviewers_to_redispatch
+    survivors = {
+        "contracts": [{"severity": "critical"}],
+        "impact":    [{"severity": "low"}],
+        "glossary":  [],
+        "coverage":  [{"severity": "medium"}],
+    }
+    to_dispatch = reviewers_to_redispatch(survivors)
+    assert set(to_dispatch) == {"contracts", "coverage"}
+    assert "glossary" not in to_dispatch
+    assert "impact" not in to_dispatch  # only `low` findings, no medium+
+
+
+def test_f11_falls_back_to_full_dispatch_when_survivors_malformed(folder_with_artifacts: Path):
+    """Spec enhancement: malformed/missing _verifier-survivors.json defaults to
+    full reviewer dispatch with a logged warning."""
+    from tools.pipette.orchestrator import reviewers_to_redispatch_from_folder
+
+    (folder_with_artifacts / "_verifier-survivors.json").write_text("{not json}")
+    result = reviewers_to_redispatch_from_folder(folder_with_artifacts)
+    assert set(result.reviewers) == {"contracts", "impact", "glossary", "coverage"}
+    assert result.fallback_reason == "survivors_unparseable"
