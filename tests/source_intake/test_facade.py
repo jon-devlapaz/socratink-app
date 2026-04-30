@@ -38,6 +38,30 @@ def test_to_dict_includes_url_title_text():
     assert src.to_dict() == {"url": "https://example.com/page", "title": "Title", "text": "content"}
 
 
+def test_from_url_strips_surrounding_whitespace():
+    """REGRESSION: main's old extract_url handler stripped req.url before parse;
+    after the source-intake refactor that strip moved into the route only, then
+    was lost. Pasted URLs with leading/trailing whitespace must succeed.
+    """
+    fetched = FetchedSource(
+        raw_bytes=b"<html><head><title>T</title></head><body>" + b"x" * 300 + b"</body></html>",
+        headers={"content-type": "text/html"},
+        content_type="text/html",
+        final_url="https://example.com/page",
+    )
+    captured: dict[str, str] = {}
+
+    def fake_fetch(url: str):
+        captured["url"] = url
+        return fetched
+
+    with patch("source_intake.fetch.fetch", side_effect=fake_fetch):
+        src = from_url("  https://example.com/page  \n")
+
+    assert captured["url"] == "https://example.com/page"
+    assert src.url == "https://example.com/page"
+
+
 def test_imported_source_is_frozen():
     src = ImportedSource(url=None, title="t", text="x" * 250, is_remote_source=False)
     with pytest.raises(Exception):  # FrozenInstanceError or AttributeError

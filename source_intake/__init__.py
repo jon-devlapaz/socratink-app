@@ -66,9 +66,13 @@ from . import fetch, parse
 def from_url(url: str) -> ImportedSource:
     """Fetch and parse a single web page.
 
+    Strips surrounding whitespace before fetch — without this, URLs pasted
+    with leading/trailing spaces fail scheme parsing in _validate_outbound_target.
+
     Raises (any of): InvalidUrl, BlockedSource, FetchFailed,
                      UnsupportedContent, TooLarge, ParseEmpty.
     """
+    url = url.strip()
     fetched = fetch.fetch(url)
     decoded = parse.decode(fetched.raw_bytes, fetched.headers)
     if fetched.content_type == "text/plain":
