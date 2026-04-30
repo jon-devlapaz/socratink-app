@@ -104,3 +104,23 @@ def _validate_outbound_target(url: str) -> list[str]:
         raise BlockedSource(f"video host {host_lower}", reason="blocked_video")
 
     return validated_ips
+
+
+from .errors import TooLarge
+
+
+def _read_with_cap(response, max_bytes: int) -> bytes:
+    """Stream-read up to max_bytes; raise TooLarge if exceeded.
+
+    Uses response.stream() in chunks; aborts as soon as cumulative size
+    exceeds cap. Does not trust Content-Length. Does not auto-decompress
+    (decode_content=False, paired with Accept-Encoding: identity at request).
+    """
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in response.stream(amt=16384, decode_content=False):
+        total += len(chunk)
+        if total > max_bytes:
+            raise TooLarge(f"exceeded {max_bytes} bytes")
+        chunks.append(chunk)
+    return b"".join(chunks)
