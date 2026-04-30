@@ -1,6 +1,7 @@
 # tools/pipette/orchestrator.py
 from __future__ import annotations
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 import yaml
@@ -147,6 +148,53 @@ def reviewer_artifacts(reviewer: str) -> list[str]:
     preserving backward compatibility if a new reviewer is added without
     updating this table."""
     return _REVIEWER_ARTIFACTS.get(reviewer, _FULL_ARTIFACT_STACK)
+
+
+# F11: smart-reviewers redispatch on loop-back.
+@dataclass
+class ReviewerRedispatchPlan:
+    reviewers: list[str]
+    fallback_reason: str | None  # None on happy path; non-None when full-dispatch fallback fired
+
+
+_ALL_REVIEWERS = ["contracts", "impact", "glossary", "coverage"]
+_MEDIUM_OR_HIGHER = {"medium", "high", "critical"}
+
+
+def reviewers_to_redispatch(survivors_by_reviewer: dict[str, list[dict]]) -> list[str]:
+    """F11: only redispatch reviewers that flagged >= medium in the prior attempt.
+
+    `_verifier-survivors.json` shape (de facto contract — not yet written by
+    any code as of Chunk F): {reviewer_name: [{"severity": "...", ...}, ...]}.
+    The orchestrator's loop-back dispatch path is the de facto producer."""
+    out: list[str] = []
+    for reviewer in _ALL_REVIEWERS:
+        findings = survivors_by_reviewer.get(reviewer) or []
+        if any((f.get("severity") or "").lower() in _MEDIUM_OR_HIGHER for f in findings):
+            out.append(reviewer)
+    return out
+
+
+def reviewers_to_redispatch_from_folder(folder: Path) -> ReviewerRedispatchPlan:
+    """Read `_verifier-survivors.json` from `folder`. On malformed/missing,
+    fall back to full dispatch and log the reason — spec enhancement.
+    The orchestrator emits a `smart_reviewers_fallback` trace event when
+    `fallback_reason` is non-None."""
+    import json as _json
+    p = folder / "_verifier-survivors.json"
+    if not p.exists():
+        return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
+                                      fallback_reason="survivors_missing")
+    try:
+        data = _json.loads(p.read_text())
+    except _json.JSONDecodeError:
+        return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
+                                      fallback_reason="survivors_unparseable")
+    if not isinstance(data, dict):
+        return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
+                                      fallback_reason="survivors_unexpected_shape")
+    return ReviewerRedispatchPlan(reviewers=reviewers_to_redispatch(data),
+                                  fallback_reason=None)
 
 
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
