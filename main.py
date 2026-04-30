@@ -32,6 +32,16 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
+import source_intake
+from source_intake import (
+    BlockedSource,
+    FetchFailed,
+    InvalidUrl,
+    ParseEmpty,
+    SourceIntakeError,
+    TooLarge,
+    UnsupportedContent,
+)
 from runtime_env import load_app_env
 
 load_app_env()
@@ -249,6 +259,55 @@ def _resolve_node_mechanism(
                 return str(subnode.get("mechanism") or subnode.get("label") or fallback)
 
     return fallback
+
+
+def _map_intake_error(exc: SourceIntakeError) -> HTTPException:
+    """Maps source_intake domain exception → HTTP response.
+
+    Oracle defense: BlockedSource(private_address) and FetchFailed both
+    surface as 502 with the same generic user-facing message, so an
+    attacker cannot use response differences to map internal network state.
+    """
+    if isinstance(exc, InvalidUrl):
+        return HTTPException(400, "Enter a valid http(s) URL.")
+    if isinstance(exc, BlockedSource):
+        if exc.reason == "private_address":
+            return HTTPException(502, "We couldn't reach that URL.")
+        if exc.reason == "blocked_port":
+            return HTTPException(400, "Only standard web ports (80/443) are supported.")
+        if exc.reason == "blocked_scheme":
+            return HTTPException(400, "Only http and https URLs are supported.")
+        if exc.reason == "blocked_video":
+            return HTTPException(400, "Video links aren't supported. Paste the text directly instead.")
+        return HTTPException(502, "We couldn't reach that URL.")  # unknown reason → fail closed
+    if isinstance(exc, FetchFailed):
+        return HTTPException(502, "We couldn't reach that URL.")
+    if isinstance(exc, UnsupportedContent):
+        return HTTPException(415, "We can only import HTML or plain-text pages.")
+    if isinstance(exc, TooLarge):
+        return HTTPException(413, "Page is too large to import.")
+    if isinstance(exc, ParseEmpty):
+        return HTTPException(422, "Couldn't extract enough readable text from that page.")
+    logger.exception("Unmapped SourceIntakeError")
+    return HTTPException(500, "Unexpected error while importing.")
+
+
+def _summarize_url_for_log(url: str) -> dict:
+    """Sanitized fields for logging. URLs can carry basic-auth credentials,
+    signed query tokens, fragments, or private course links — never log raw URL.
+    """
+    try:
+        parsed = urlparse(url)
+        return {
+            "scheme": parsed.scheme,
+            "host": parsed.hostname,
+            "port": parsed.port,
+            "path_len": len(parsed.path or ""),
+            "has_query": bool(parsed.query),
+            "has_userinfo": bool(parsed.username or parsed.password),
+        }
+    except Exception:
+        return {"unparseable": True, "len": len(url) if url else 0}
 
 
 @app.get("/api/health")
