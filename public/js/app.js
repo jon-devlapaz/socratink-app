@@ -2366,6 +2366,7 @@ const App = (() => {
     return {
       thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
       architecture: metadata.architecture_type ? metadata.architecture_type.replace(/_/g, ' ') : null,
+      difficulty: metadata.difficulty || null,
       clusterCount: clusters.length,
       subnodeCount,
       sourceLabel,
@@ -2435,6 +2436,7 @@ const App = (() => {
             <p class="library-card-summary">${escHtml(meta.thesis)}</p>
             <div class="library-card-meta">
               ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
+              ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
               <span class="library-card-pill">${escHtml(`${meta.clusterCount} clusters`)}</span>
               <span class="library-card-pill">${escHtml(`${meta.subnodeCount} drill nodes`)}</span>
             </div>
