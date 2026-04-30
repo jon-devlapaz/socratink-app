@@ -2160,17 +2160,12 @@ const App = (() => {
                </div>
              </div>
            `;
-               </div>
-             </div>
-           `;
         });
         html += `</div></div>`;
       });
       html += '</div>';
     }
 
-    const domMechs = rels.domain_mechanics || [];
-    const lrnPreqs = rels.learning_prerequisites || [];
     if (hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0)) {
       html += '<div class="map-zone zone-4">';
       html += '<div class="map-section-title">Connection Hints</div>';
