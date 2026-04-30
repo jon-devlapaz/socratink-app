@@ -1,6 +1,11 @@
+"""CLI tests for tools.pipette.cli — extended in Chunk C (F3)."""
+from __future__ import annotations
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 def _run(*args, cwd=None, input=None):
     return subprocess.run(
@@ -70,3 +75,31 @@ def test_build_coverage_map_ignores_non_test_edges(tmp_path: Path):
     assert r.returncode == 0
     cov = json.loads(out.read_text())
     assert cov["files"]["src/foo.py"] == 0.30
+
+
+def test_build_coverage_map_warns_on_malformed_dump(tmp_path: Path, capsys: pytest.CaptureFixture[str]):
+    """F3: when the dump's edges have NO `from.source_file` starting with
+    'tests/', every affected file gets the uncovered default. That's a
+    silent failure mode that triggered TDD enforcement spuriously in the
+    2026-04-28 run. Emit a stderr warning when the shape looks wrong."""
+    from tools.pipette.cli import main
+
+    bad_dump = tmp_path / "bad.json"
+    # Absolute paths, no 'tests/' prefix — the symptom from F3.
+    bad_dump.write_text(json.dumps({
+        "edges": [
+            {"from": {"source_file": "/abs/path/foo.py"},
+             "to": {"source_file": "/abs/path/bar.py"}}
+        ]
+    }))
+    out_path = tmp_path / "coverage_map.json"
+    rc = main([
+        "build-coverage-map",
+        "--dump-file", str(bad_dump),
+        "--affected-files", "src/foo.py",
+        "--output", str(out_path),
+    ])
+    assert rc == 0  # warning, not error
+    err = capsys.readouterr().err
+    assert "warning" in err.lower()
+    assert "malformed" in err.lower() or "no test→source edges" in err.lower()
