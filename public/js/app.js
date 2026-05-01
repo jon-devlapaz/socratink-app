@@ -692,33 +692,53 @@ const App = (() => {
 
     container.innerHTML = `
       ${showNameField ? `
-        <div class="creation-intro">
+        <div class="creation-intro creation-intro-compact">
           <div class="creation-intro-row">
             <div>
-              <div class="creation-intro-kicker">Add a new tink</div>
-              <div class="creation-intro-title">Turn raw material into a draft path.</div>
+              <div class="creation-intro-title">Start with your rough map.</div>
+              <p class="creation-intro-copy">This is global context. The first room will ask one smaller question.</p>
             </div>
             <div class="creation-capacity-pill">${Math.min(usedSlots, 4)}/4 active</div>
           </div>
-          <p class="creation-intro-copy">Give it a short name, then choose the cleanest source format. The draft is not learner evidence.</p>
         </div>
-        <span class="creation-section-label">Name this concept</span>
-        <input class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
+        <div class="creation-field">
+          <label class="creation-section-label" for="creation-name-input">Concept name</label>
+          <input id="creation-name-input" class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
+        </div>
+        <section class="creation-threshold">
+          <div class="creation-threshold-head">
+            <div>
+              <span class="creation-section-label" id="creation-threshold-label">Starting map</span>
+              <p class="creation-threshold-copy">Write what you think is happening before socratink structures the source.</p>
+            </div>
+          </div>
+          <textarea class="creation-threshold-input"
+                    aria-labelledby="creation-threshold-label"
+                    maxlength="1200"
+                    placeholder="Write what you already think is going on: parts, guesses, examples, or confusion."></textarea>
+          <button class="creation-fuzzy-toggle" type="button" aria-expanded="false">Add fuzzy area</button>
+          <div class="creation-fuzzy-panel" hidden>
+            <label class="creation-section-label" for="creation-fuzzy-input">What feels fuzzy?</label>
+            <input id="creation-fuzzy-input" class="creation-fuzzy-input" type="text" maxlength="500" placeholder="Optional. e.g. I am not sure which part causes which.">
+          </div>
+        </section>
+        <div class="creation-source-header">
+          <span class="creation-section-label">Source material</span>
+        </div>
       ` : ''}
-      <div class="overlay-tabs" style="margin-bottom:12px;">
+      <div class="overlay-tabs creation-source-tabs">
         <button class="overlay-tab active" data-tab="paste">${showNameField ? 'Text' : 'Paste'}</button>
         <button class="overlay-tab" data-tab="url">URL</button>
         <button class="overlay-tab" data-tab="upload">${showNameField ? 'File' : 'Upload'}</button>
       </div>
       ${showNameField ? `
         <div class="creation-source-meta">
-          <span class="creation-source-chip" data-role="source-chip">Text Paste</span>
           <p class="creation-source-copy" data-role="source-copy">Paste notes, an article excerpt, a transcript, or any raw text you want socratink to structure.</p>
         </div>
       ` : ''}
       <div class="overlay-panel" data-panel="paste">
         <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article...' : 'Paste content here...'}"></textarea>
-        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button><button class="wiki-random-btn" type="button">Random science</button><button class="graph-preview-btn" type="button">Preview map</button></div>' : ''}
+        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button><button class="wiki-random-btn" type="button">Random science</button></div>' : ''}
       </div>
       <div class="overlay-panel" data-panel="url" style="display:none">
         <input class="overlay-url-input" type="url" placeholder="https://example.com/article">
@@ -732,20 +752,7 @@ const App = (() => {
         <input type="file" accept=".txt,.md,.pdf" style="display:none">
         <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
-      ${showNameField ? `
-        <section class="creation-threshold">
-          <div class="creation-threshold-head">
-            <span class="creation-section-label" id="creation-threshold-label">Concept Threshold</span>
-            <span class="creation-threshold-pill">global context</span>
-          </div>
-          <p class="creation-threshold-copy">This is global context. The first room will ask one smaller question.</p>
-          <textarea class="creation-threshold-input"
-                    aria-labelledby="creation-threshold-label"
-                    maxlength="1200"
-                    placeholder="Write what you already think is going on: parts, guesses, examples, or confusion."></textarea>
-        </section>
-      ` : ''}
-      ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name and choose a source to continue.</p>' : ''}
+      ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name to continue.</p>' : ''}
       <div class="${showNameField ? 'creation-footer' : 'overlay-footer'}">
         <button class="${showNameField ? 'creation-cancel' : 'overlay-cancel'}">Cancel</button>
         <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Draft from Text' : 'Extract'}</button>
@@ -762,12 +769,13 @@ const App = (() => {
     const urlFeedback = container.querySelector('.overlay-url-feedback');
     const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
     const wikiRandomBtn = container.querySelector('.wiki-random-btn');
-    const graphPreviewBtn = container.querySelector('.graph-preview-btn');
     const nameInput = container.querySelector('.creation-name-input');
-    const sourceChip = container.querySelector('[data-role="source-chip"]');
     const sourceCopy = container.querySelector('[data-role="source-copy"]');
     const validationNote = container.querySelector('[data-role="validation-note"]');
     const thresholdInput = container.querySelector('.creation-threshold-input');
+    const fuzzyToggle = container.querySelector('.creation-fuzzy-toggle');
+    const fuzzyPanel = container.querySelector('.creation-fuzzy-panel');
+    const fuzzyInput = container.querySelector('.creation-fuzzy-input');
     const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
     const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
 
@@ -775,7 +783,6 @@ const App = (() => {
       if (activeTab === 'url') {
         return {
           label: 'Import URL',
-          chip: 'URL Import',
           copy: 'Bring in an article or text page that can be fetched directly by the app.',
           action: showNameField ? 'Import URL' : 'Extract',
           missing: 'Add a source URL before drafting.',
@@ -784,7 +791,6 @@ const App = (() => {
       if (activeTab === 'upload') {
         return {
           label: 'Upload File',
-          chip: 'File Upload',
           copy: 'Use this for notes, markdown, or PDFs when the learner already has source material saved locally.',
           action: showNameField ? 'Upload and Draft' : 'Extract',
           missing: 'Upload a file before drafting.',
@@ -792,7 +798,6 @@ const App = (() => {
       }
       return {
         label: 'Text Paste',
-        chip: 'Text Paste',
         copy: 'Paste notes, an article excerpt, a transcript, or any raw text you want socratink to structure.',
         action: showNameField ? 'Draft from Text' : 'Extract',
         missing: 'Paste source text before drafting.',
@@ -801,7 +806,6 @@ const App = (() => {
 
     function updateComposerMeta() {
       const meta = getActiveTabMeta();
-      if (sourceChip) sourceChip.textContent = meta.chip;
       if (sourceCopy) sourceCopy.textContent = meta.copy;
       if (submitBtn) submitBtn.textContent = meta.action;
     }
@@ -827,14 +831,12 @@ const App = (() => {
         if (!validationNote) return;
         if (blockedVideoUrl) {
           validationNote.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
-        } else if (!nameInput.value.trim() && !hasContent()) {
-          validationNote.textContent = 'Add a concept name and choose a source to continue.';
         } else if (!nameInput.value.trim()) {
-          validationNote.textContent = 'Add a concept name before drafting.';
+          validationNote.textContent = 'Add a concept name to continue.';
+        } else if (!hasThresholdContext()) {
+          validationNote.textContent = 'Add your starting map. It is global context, not evidence.';
         } else if (!hasContent()) {
           validationNote.textContent = getActiveTabMeta().missing;
-        } else if (!hasThresholdContext()) {
-          validationNote.textContent = 'Add global context before mapping. This will shape the first room without grading you.';
         } else {
           validationNote.textContent = 'Ready to build a provisional route.';
         }
@@ -955,16 +957,18 @@ const App = (() => {
       });
     }
 
-    if (showClipboard && graphPreviewBtn) {
-      graphPreviewBtn.addEventListener('click', () => {
-        const name = (nameInput && nameInput.value.trim()) || 'Photosynthesis';
-        window.testGraph(name);
-      });
-    }
-
     textarea.addEventListener('input', checkSubmitEnabled);
     if (thresholdInput) {
       thresholdInput.addEventListener('input', checkSubmitEnabled);
+    }
+    if (fuzzyToggle && fuzzyPanel) {
+      fuzzyToggle.addEventListener('click', () => {
+        const isOpening = fuzzyPanel.hasAttribute('hidden');
+        fuzzyPanel.toggleAttribute('hidden', !isOpening);
+        fuzzyToggle.setAttribute('aria-expanded', String(isOpening));
+        fuzzyToggle.textContent = isOpening ? 'Hide fuzzy area' : 'Add fuzzy area';
+        if (isOpening) fuzzyInput?.focus();
+      });
     }
     if (urlInput) {
       urlInput.addEventListener('input', () => {
@@ -1047,6 +1051,9 @@ const App = (() => {
 
     function doSubmit() {
       let text, type, filename, url;
+      const thresholdText = thresholdInput ? thresholdInput.value.trim() : '';
+      const fuzzyText = fuzzyInput ? fuzzyInput.value.trim() : '';
+      const thresholdContext = fuzzyText ? `${thresholdText}\n\nFuzzy area: ${fuzzyText}` : thresholdText;
       if (activeTab === 'paste') {
         text = textarea.value.trim();
         type = 'text';
@@ -1070,7 +1077,7 @@ const App = (() => {
         filename,
         url,
         name: nameInput ? nameInput.value.trim() : null,
-        thresholdContext: thresholdInput ? thresholdInput.value.trim() : null,
+        thresholdContext,
       });
     }
 
@@ -1111,10 +1118,10 @@ const App = (() => {
               </svg>
             </button>
           </div>
-          <h3 id="creation-dialog-title" class="creation-dialog-title">Bring your material.</h3>
+          <h3 id="creation-dialog-title" class="creation-dialog-title">Start a concept</h3>
           <div class="creation-dialog-banner-slot"></div>
           <div class="creation-dialog-content"></div>
-          <p class="creation-dialog-meta">Your words shape the path; they do not change graph truth.</p>
+          <p class="creation-dialog-meta">Study content stays locked until the cold attempt.</p>
         </div>
       `;
       document.body.appendChild(node);
