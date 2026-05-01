@@ -109,7 +109,61 @@ The grill follows its own rules: it explores the codebase instead of asking when
 
 When the grill produces a design summary, write it to `FOLDER/01-grill.md`. Any ADRs the skill generated land at `docs/adr/` (created lazily) per the skill's own convention.
 
-**User gate (soft):** Ask "Approve grill summary? (approve / revise / abort)". On `revise`, return to grill with feedback. On `abort`, run `python -m tools.pipette abort "$ARGS"` and exit. Append `step=1 event=gate decision=<choice>` to trace.
+### Step 1.6: Verify-cited-symbols (F6, pipette-only discipline)
+
+**B-revision (2026-04-30):** before the soft user gate below fires, the orchestrator (you) must enforce two pipette-specific disciplines on the grill summary the grill skill itself does not enforce. These exist because the 2026-04-28 admin-tink-todo run shipped `01-grill.md` with `state.email` referenced when `AuthSessionState.email` did not exist (only `state.user.email`); see `docs/pipeline/_meta/implementation-followups.md` F6.
+
+For the **single most-cited symbol** in the grill's design summary (the field, method, or function the design hinges on most):
+
+1. Use the `Read` tool on the file that defines that symbol.
+2. Confirm the field/method shape exists exactly as cited (e.g., if the snippet says `state.email`, confirm `state.email` resolves on the actual class — not via `state.user.email` indirection or any other shape).
+3. Log the round-trip as a structured trace event:
+
+   ```
+   python -m tools.pipette trace-append --folder=FOLDER --step=1 \
+     --event=grill_symbol_verified --data=symbol=<the.symbol.you.checked>
+   ```
+
+4. **If the cited symbol does not match its actual shape, return to the grill with the corrected shape as feedback.** Do not advance to the user gate (Step 1.8) until the round-trip is logged AND the grill summary references real symbols.
+
+This is prompt-level discipline. The trace event provides observability so a future audit can confirm whether the orchestrator skipped this step.
+
+### Step 1.7: Deployment-topology check (F7, pipette-only discipline)
+
+If the grill marks any route as a **Dev-only Route** per `docs/pipeline/_meta/CONTEXT.md`, you must (in this order):
+
+1. Use the `Read` tool on `vercel.json` (or the project's actual deployment config — confirm the filename via `ls *.json` at the repo root rather than assuming).
+2. Identify every layer that could intercept the request between client and the FastAPI handler. For socratink-app this is typically: `Vercel CDN → FastAPI middleware → handler`.
+3. Append a topology block to `01-grill.md`:
+
+   ```
+   ## Deployment topology
+   - Path: <e.g. /admin/tink-todo>
+   - Layers: <e.g. Vercel CDN (serves public/* directly) → FastAPI middleware → handler>
+   - Gating placement: <where is the gate? in middleware? in handler? in vercel.json rewrites?>
+   - Risk: <e.g. if HTML lives in public/, the CDN bypasses the FastAPI gate>
+   ```
+
+4. Either: (a) the route's HTML shell is served by a FastAPI handler (`HTMLResponse`), not from `public/`; OR (b) the cited `vercel.json` rewrites must be inspected and confirmed to forward the path to the function.
+
+The Read of `vercel.json` is **mandatory** — do not write the topology block from pre-training knowledge. Mirrors §1.6's "Read the cited symbol before claiming its shape" discipline, applied to deployment layers.
+
+### Step 1.8: Emit pipette-meta block (Chunk G F15 dependency)
+
+Before writing the soft user gate, append a single HTML comment to `01-grill.md` with the metrics F15's heuristic auto-pass at Step 3 entry will read:
+
+```
+<!-- pipette-meta total_changed_lines=N max_risk_score=F -->
+```
+
+- `N` = total lines the design proposes to change across all affected files (your best estimate from the grill summary; integer).
+- `F` = the max risk_score across affected files from `00-graph-context.md` (decimal between 0.0 and 1.0).
+
+The order of the keys (`total_changed_lines` then `max_risk_score`) matters — the F15 regex is order-sensitive. Both keys are required; if you can't compute one, default `total_changed_lines=999 max_risk_score=1.0` to force F15 to fall through (conservative; never auto-pass on missing metrics).
+
+### Step 1.9: User gate (soft)
+
+Ask "Approve grill summary? (approve / revise / abort)". On `revise`, return to grill with feedback. On `abort`, run `python -m tools.pipette abort "$ARGS"` and exit. Append `step=1 event=gate decision=<choice>` to trace.
 
 ## Step 2: Diagram
 
