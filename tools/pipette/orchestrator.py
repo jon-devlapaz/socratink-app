@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal, TypedDict
 import yaml
 
 from tools.pipette.folder import folder_name, slug
@@ -13,6 +14,25 @@ from tools.pipette.lockfile import (
     acquire, resume, abort, LockHeld, LockPaused, FilesystemUnsupported,
 )
 from tools.pipette.trace import append_event, Event
+
+
+# F11/F12: shape contract for `_verifier-survivors.json` — the file that
+# downstream loop-back consumers (reviewers_to_redispatch_from_folder,
+# should_run_verifier_on_attempt) read. No code in the repo writes this
+# file as of Chunk F; the producer (a future verifier output path) MUST
+# conform to this TypedDict so the consumers don't need to reverse-
+# engineer the shape.
+class VerifierFinding(TypedDict, total=False):
+    severity: Literal["critical", "high", "medium", "low", "polish"]
+    confidence: float
+    claim: str
+    evidence: list[str]
+    suggested_fix: str | None
+
+
+# Mapping reviewer name → list of findings the verifier confirmed survived
+# its 0.8-confidence filter for that reviewer's prior attempt.
+VerifierSurvivors = dict[str, list[VerifierFinding]]
 
 
 def _meta(root: Path) -> Path:
@@ -250,6 +270,107 @@ def lite_pipeline_steps() -> list[float]:
     return [0, 1, 2, 4, 5, 6, 7]
 
 
+# F13: per-reviewer artifact subsets. Spec recommendation:
+#   contracts: needs symbols → [00, 01]
+#   impact: needs everything → [00, 01, 02, _meta/CONTEXT.md]
+#   glossary: terminology, not graph → [01, 02, _meta/CONTEXT.md]
+#   coverage: tests, not graph → [00, 01, coverage_map.json]
+# Saves ~30% on per-reviewer context.
+_REVIEWER_ARTIFACTS = {
+    "contracts": ["00-graph-context.md", "01-grill.md"],
+    "impact": ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"],
+    "glossary": ["01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"],
+    "coverage": ["00-graph-context.md", "01-grill.md", "coverage_map.json"],
+}
+
+_FULL_ARTIFACT_STACK = ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"]
+
+# F10: Step 3 scratch files archived on loop-back so the audit trail for
+# attempt N (reviewer JSONs, verifier outputs, gemini stdout) is preserved
+# in `_attempts/N-<ts>/`. Single source of truth — both jump_back_to=1 and
+# =2 paths reference this list.
+_STEP3_SCRATCH = [
+    "_reviewer-contracts.json", "_reviewer-impact.json",
+    "_reviewer-glossary.json", "_reviewer-coverage.json",
+    "_verifier-output.json", "_verifier-survivors.json",
+    "_step3-prompt.txt", "_gemini-stdout.log",
+]
+
+
+def reviewer_artifacts(reviewer: str) -> list[str]:
+    """Return the artifact list passed to a reviewer subagent's context.
+    Unknown reviewer names fall back to the full stack rather than raising,
+    preserving backward compatibility if a new reviewer is added without
+    updating this table."""
+    return _REVIEWER_ARTIFACTS.get(reviewer, _FULL_ARTIFACT_STACK)
+
+
+# F11: smart-reviewers redispatch on loop-back.
+@dataclass
+class ReviewerRedispatchPlan:
+    reviewers: list[str]
+    fallback_reason: str | None  # None on happy path; non-None when full-dispatch fallback fired
+
+
+_ALL_REVIEWERS = ["contracts", "impact", "glossary", "coverage"]
+_MEDIUM_OR_HIGHER = {"medium", "high", "critical"}
+
+
+def reviewers_to_redispatch(survivors_by_reviewer: VerifierSurvivors) -> list[str]:
+    """F11: only redispatch reviewers that flagged >= medium in the prior
+    attempt's surviving findings.
+
+    Shape contract: see `VerifierSurvivors` TypedDict at module top —
+    `_verifier-survivors.json` is `{reviewer_name: [VerifierFinding, ...]}`.
+    No code in the repo writes the file yet (Chunk F): the orchestrator's
+    loop-back dispatch path is the de facto producer."""
+    out: list[str] = []
+    for reviewer in _ALL_REVIEWERS:
+        findings = survivors_by_reviewer.get(reviewer) or []
+        if any((f.get("severity") or "").lower() in _MEDIUM_OR_HIGHER for f in findings):
+            out.append(reviewer)
+    return out
+
+
+def reviewers_to_redispatch_from_folder(folder: Path) -> ReviewerRedispatchPlan:
+    """Read `_verifier-survivors.json` from `folder`. On malformed/missing,
+    fall back to full dispatch and log the reason — spec enhancement.
+    The orchestrator emits a `smart_reviewers_fallback` trace event when
+    `fallback_reason` is non-None."""
+    p = folder / "_verifier-survivors.json"
+    if not p.exists():
+        return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
+                                      fallback_reason="survivors_missing")
+    try:
+        data = json.loads(p.read_text())
+    except json.JSONDecodeError:
+        return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
+                                      fallback_reason="survivors_unparseable")
+    if not isinstance(data, dict):
+        return ReviewerRedispatchPlan(reviewers=list(_ALL_REVIEWERS),
+                                      fallback_reason="survivors_unexpected_shape")
+    return ReviewerRedispatchPlan(reviewers=reviewers_to_redispatch(data),
+                                  fallback_reason=None)
+
+
+# F12: skip verifier on attempt >= 2 with safety condition.
+def should_run_verifier_on_attempt(*, folder: Path, attempt: int) -> bool:
+    """F12: skip the verifier on attempt >= 2 only if attempt 1 produced a
+    clean `_verifier-survivors.json`. Spec enhancement: if attempt 1's
+    verifier crashed or output was malformed, run the verifier in attempt 2
+    rather than silently breaking the verification chain."""
+    if attempt < 2:
+        return True
+    p = folder / "_verifier-survivors.json"
+    if not p.exists():
+        return True
+    try:
+        data = json.loads(p.read_text())
+    except json.JSONDecodeError:
+        return True
+    return not isinstance(data, dict)  # well-formed dict → safe to skip
+
+
 def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     """§5.3: archive artifacts from step jump_back_to..highest into _attempts/N-<ts>/.
 
@@ -265,8 +386,10 @@ def archive_for_loop_back(*, folder: Path, jump_back_to: float) -> Path:
     arch = folder / "_attempts" / f"{step_label}-{ts}"
     arch.mkdir(parents=True)
     affected = {
-        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
-        2.0: ["02-diagram.mmd", "02-diagram.excalidraw", "03-gemini-verdict.md"],
+        1.0: ["01-grill.md", "02-diagram.mmd", "02-diagram.excalidraw",
+              "03-gemini-verdict.md", *_STEP3_SCRATCH],
+        2.0: ["02-diagram.mmd", "02-diagram.excalidraw",
+              "03-gemini-verdict.md", *_STEP3_SCRATCH],
     }
     if float(jump_back_to) not in affected:
         raise ValueError(f"jump_back_to must be 1 or 2 (B-revision dropped 1.5); got {jump_back_to!r}")

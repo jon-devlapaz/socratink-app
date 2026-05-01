@@ -14,10 +14,17 @@ LINES_CEILING = 50
 
 
 @pytest.fixture
-def folder_with_artifacts(tmp_path: Path):
-    """A pipeline folder with the artifacts F15 inspects."""
+def folder_with_artifacts(tmp_path: Path) -> Path:
+    """A pipeline folder with standard Step 3 artifacts pre-populated.
+    Used by both the F11/F12/F13 reviewer-dispatch tests (need the artifact
+    files to exist) and the F15 heuristic tests (need 01-grill.md to be
+    present for _write_grill_summary to overwrite)."""
     folder = tmp_path / "feature-x"
     folder.mkdir()
+    for name in ["00-graph-context.md", "01-grill.md", "02-diagram.mmd", "_meta/CONTEXT.md"]:
+        p = folder / name
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("placeholder")
     return folder
 
 
@@ -34,6 +41,10 @@ def _write_grill_summary(folder: Path, total_changed_lines: int, max_risk_score:
         f"...\n"
     )
 
+
+# ---------------------------------------------------------------------------
+# F15 — heuristic auto-pass at Step 3 entry (Chunk G)
+# ---------------------------------------------------------------------------
 
 def test_f15_auto_pass_when_all_thresholds_met(folder_with_artifacts: Path):
     from tools.pipette.orchestrator import step3_heuristic_decision
@@ -114,6 +125,10 @@ def test_f15_emits_autopass_rejected_trace_event(folder_with_artifacts: Path):
     assert rec["reason"] == "coverage_below_80"
 
 
+# ---------------------------------------------------------------------------
+# F14 — pipette-lite absolute override (Chunk G)
+# ---------------------------------------------------------------------------
+
 def test_f14_lite_mode_overrides_f15_unconditionally(folder_with_artifacts: Path):
     """Spec enhancement: lite mode is an absolute manual override.
     Even synthetic high-risk-score input that would fail F15 must still
@@ -134,3 +149,104 @@ def test_lite_mode_runs_correct_step_subset(folder_with_artifacts: Path, monkeyp
     steps = lite_pipeline_steps()
     assert 3 not in steps
     assert {0, 1, 2, 4, 5, 6, 7}.issubset(set(steps))
+
+
+# ---------------------------------------------------------------------------
+# F13 — per-reviewer artifact subsets (Chunk F)
+# ---------------------------------------------------------------------------
+
+def test_reviewer_names_consistent_between_artifacts_and_all_reviewers():
+    """Single source of truth: `_REVIEWER_ARTIFACTS` keys and `_ALL_REVIEWERS`
+    must agree. If a fifth reviewer is added, both constants need updating —
+    this assertion fails loudly rather than letting the pair drift."""
+    from tools.pipette.orchestrator import _ALL_REVIEWERS, _REVIEWER_ARTIFACTS
+    assert set(_ALL_REVIEWERS) == set(_REVIEWER_ARTIFACTS.keys())
+
+
+def test_f13_glossary_reviewer_does_not_get_graph_context():
+    """F13: per-reviewer artifact subsets. Glossary reviewer never sees
+    00-graph-context.md (graph data, not glossary)."""
+    from tools.pipette.orchestrator import reviewer_artifacts
+    artifacts = reviewer_artifacts("glossary")
+    assert "00-graph-context.md" not in artifacts
+
+
+def test_f13_impact_reviewer_gets_full_artifact_stack():
+    """F13: impact is the only reviewer that needs all four artifacts."""
+    from tools.pipette.orchestrator import reviewer_artifacts
+    artifacts = reviewer_artifacts("impact")
+    assert {"00-graph-context.md", "01-grill.md", "02-diagram.mmd",
+            "_meta/CONTEXT.md"}.issubset(set(artifacts))
+
+
+def test_f13_unknown_reviewer_gets_full_stack():
+    """Defensive: an unknown reviewer name falls back to the full stack
+    rather than raising — preserves backward compatibility if a future
+    reviewer is added without updating the lookup table."""
+    from tools.pipette.orchestrator import reviewer_artifacts
+    artifacts = reviewer_artifacts("future_reviewer")
+    assert "00-graph-context.md" in artifacts
+
+
+# ---------------------------------------------------------------------------
+# F11 — smart-reviewers redispatch on loop-back
+# ---------------------------------------------------------------------------
+
+def test_f11_smart_reviewers_skips_clean_reviewers_on_loopback(folder_with_artifacts: Path):
+    """F11: a reviewer with no >= medium findings in attempt 1 is not
+    redispatched in attempt 2."""
+    from tools.pipette.orchestrator import reviewers_to_redispatch
+    survivors = {
+        "contracts": [{"severity": "critical"}],
+        "impact":    [{"severity": "low"}],
+        "glossary":  [],
+        "coverage":  [{"severity": "medium"}],
+    }
+    to_dispatch = reviewers_to_redispatch(survivors)
+    assert set(to_dispatch) == {"contracts", "coverage"}
+    assert "glossary" not in to_dispatch
+    assert "impact" not in to_dispatch  # only `low` findings, no medium+
+
+
+def test_f11_falls_back_to_full_dispatch_when_survivors_malformed(folder_with_artifacts: Path):
+    """Spec enhancement: malformed/missing _verifier-survivors.json defaults to
+    full reviewer dispatch with a logged warning."""
+    from tools.pipette.orchestrator import reviewers_to_redispatch_from_folder
+
+    (folder_with_artifacts / "_verifier-survivors.json").write_text("{not json}")
+    result = reviewers_to_redispatch_from_folder(folder_with_artifacts)
+    assert set(result.reviewers) == {"contracts", "impact", "glossary", "coverage"}
+    assert result.fallback_reason == "survivors_unparseable"
+
+
+# ---------------------------------------------------------------------------
+# F12 — skip verifier on attempt >= 2 (with safety condition)
+# ---------------------------------------------------------------------------
+
+def test_f12_skips_verifier_when_prior_survivors_clean(folder_with_artifacts: Path):
+    """F12: skip verifier on attempt 2 IFF attempt 1's survivors file
+    exists and parses cleanly."""
+    import json
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    (folder_with_artifacts / "_verifier-survivors.json").write_text(
+        json.dumps({"contracts": [], "impact": [], "glossary": [], "coverage": []})
+    )
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=2) is False
+
+
+def test_f12_runs_verifier_when_prior_survivors_missing(folder_with_artifacts: Path):
+    """Spec enhancement: if attempt 1's verifier crashed (no survivors file),
+    don't silently skip in attempt 2."""
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=2) is True
+
+
+def test_f12_runs_verifier_when_prior_survivors_malformed(folder_with_artifacts: Path):
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    (folder_with_artifacts / "_verifier-survivors.json").write_text("not json")
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=2) is True
+
+
+def test_f12_always_runs_verifier_on_attempt_1(folder_with_artifacts: Path):
+    from tools.pipette.orchestrator import should_run_verifier_on_attempt
+    assert should_run_verifier_on_attempt(folder=folder_with_artifacts, attempt=1) is True
