@@ -9,6 +9,10 @@
 !.claude/commands/pipette.md
 !.claude/commands/pipette-weekly.md
 !.claude/commands/pipette-lite.md
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/git-order/
+!.claude/skills/git-order/SKILL.md
 .kiro/
 .playwright-cli/
 .firecrawl/
