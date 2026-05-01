@@ -88,8 +88,7 @@ def _validate_outbound_target(url: str) -> list[str]:
             ip = ipaddress.ip_address(ip_str)
         except ValueError as exc:
             raise BlockedSource(f"unparseable address {ip_str!r}", reason="private_address") from exc
-        if (ip.is_private or ip.is_loopback or ip.is_link_local
-                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+        if not ip.is_global:
             raise BlockedSource(f"non-global address {ip}", reason="private_address")
         validated_ips.append(ip_str)
 

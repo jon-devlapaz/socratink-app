@@ -65,6 +65,10 @@ def test_dns_failure_raises_fetch_failed(fake_dns):
     "127.0.0.1",         # loopback
     "169.254.169.254",   # link-local — AWS IMDS
     "0.0.0.0",           # unspecified
+    "100.64.0.1",        # CGN (RFC 6598) — is_private=False on Py3.13, only is_global=False catches it
+    "203.0.113.5",       # TEST-NET-3 (RFC 5737)
+    "198.51.100.7",      # TEST-NET-2 (RFC 5737)
+    "192.0.2.99",        # TEST-NET-1 (RFC 5737)
 ])
 def test_blocks_private_ipv4(ip, fake_dns):
     fake_dns.set("attacker.example", [ip])
