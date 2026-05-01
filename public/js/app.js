@@ -1052,7 +1052,8 @@ const App = (() => {
     function doSubmit() {
       let text, type, filename, url;
       const thresholdText = thresholdInput ? thresholdInput.value.trim() : '';
-      const fuzzyText = fuzzyInput ? fuzzyInput.value.trim() : '';
+      const fuzzyVisible = fuzzyPanel && !fuzzyPanel.hasAttribute('hidden');
+      const fuzzyText = fuzzyInput && fuzzyVisible ? fuzzyInput.value.trim() : '';
       const thresholdContext = fuzzyText ? `${thresholdText}\n\nFuzzy area: ${fuzzyText}` : thresholdText;
       if (activeTab === 'paste') {
         text = textarea.value.trim();

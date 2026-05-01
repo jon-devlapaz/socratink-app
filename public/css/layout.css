@@ -1107,7 +1107,8 @@ body:not([data-map-open="true"]) .map-back-link {
 .map-subnode-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--locked); flex-shrink: 0; margin-top: 6px; }
 .map-subnode-indicator[data-state="primed"] { background: var(--node-primed); }
 .map-subnode-indicator[data-state="drilled"] { background: var(--node-drilled); }
-.map-subnode-indicator[data-state="solid"] { background: var(--node-solidified); }
+.map-subnode-indicator[data-state="solid"],
+.map-subnode-indicator[data-state="solidified"] { background: var(--node-solidified); box-shadow: 0 0 5px rgba(var(--node-solidified-rgb), 0.44); }
 .map-subnode-content { flex: 1; }
 .map-subnode-label { font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 4px; }
 .map-subnode-mech { font-size: 12px; color: var(--text-sub); line-height: 1.4; }
