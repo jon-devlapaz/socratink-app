@@ -113,6 +113,21 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="list of affected source files to compute coverage for")
     cm.add_argument("--output", required=True, help="write coverage_map.json here")
 
+    sh = sub.add_parser("step3-heuristic-check",
+                        help="F15: run Step 3 heuristic gate; prints JSON decision to stdout (exit 0 always)")
+    sh.add_argument("--folder", required=True,
+                    help="per-feature pipeline folder (contains coverage_map.json and 01-grill.md)")
+
+    lps = sub.add_parser("lite-pipeline-steps",
+                         help="F14: print the step list that pipette-lite runs as JSON")
+
+    srs = sub.add_parser("should-run-step3",
+                         help="F14/F15: combined gate; prints 'true' or 'false' to stdout (exit 0 always)")
+    srs.add_argument("--folder", required=True,
+                     help="per-feature pipeline folder")
+    srs.add_argument("--lite", action="store_true", default=False,
+                     help="if set, lite mode is active (Step 3 is unconditionally skipped)")
+
     return p
 
 
@@ -279,6 +294,22 @@ def main(argv: list[str] | None = None) -> int:
         files_map = {f: (0.85 if f in tested_files else 0.30) for f in args.affected_files}
         out = {"_method": "graph_approx_v1", "files": files_map}
         Path(args.output).write_text(_json.dumps(out, indent=2))
+        return 0
+    if args.cmd == "step3-heuristic-check":
+        import json as _json
+        from tools.pipette.orchestrator import step3_heuristic_decision
+        decision = step3_heuristic_decision(folder=Path(args.folder), write_trace=True)
+        print(_json.dumps({"auto_pass": decision.auto_pass, "reason": decision.reason}))
+        return 0  # always 0: decision is informational; slash-command markdown branches on JSON
+    if args.cmd == "lite-pipeline-steps":
+        import json as _json
+        from tools.pipette.orchestrator import lite_pipeline_steps
+        print(_json.dumps(lite_pipeline_steps()))
+        return 0
+    if args.cmd == "should-run-step3":
+        from tools.pipette.orchestrator import should_run_step3
+        result = should_run_step3(folder=Path(args.folder), lite_mode=args.lite)
+        print("true" if result else "false")
         return 0
     parser.print_help()
     return 0

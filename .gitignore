@@ -8,6 +8,7 @@
 .claude/commands/*
 !.claude/commands/pipette.md
 !.claude/commands/pipette-weekly.md
+!.claude/commands/pipette-lite.md
 .kiro/
 .playwright-cli/
 .firecrawl/
