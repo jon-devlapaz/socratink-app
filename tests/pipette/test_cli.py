@@ -1,6 +1,120 @@
+"""CLI tests for tools.pipette.cli — added/extended in Chunk B (F4)."""
+from __future__ import annotations
+import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# Chunk B.1 — parse_extra_kv helper (F4)
+# ---------------------------------------------------------------------------
+
+def test_parse_extra_kv_simple():
+    from tools.pipette.trace import parse_extra_kv
+    assert parse_extra_kv("jump_back_to=1") == {"jump_back_to": "1"}
+
+
+def test_parse_extra_kv_multi():
+    from tools.pipette.trace import parse_extra_kv
+    assert parse_extra_kv("jump_back_to=1,reason=verdict_fail") == {
+        "jump_back_to": "1",
+        "reason": "verdict_fail",
+    }
+
+
+def test_parse_extra_kv_empty_returns_empty_dict():
+    from tools.pipette.trace import parse_extra_kv
+    assert parse_extra_kv("") == {}
+    assert parse_extra_kv(None) == {}
+
+
+def test_parse_extra_kv_rejects_no_equals():
+    from tools.pipette.trace import parse_extra_kv
+    with pytest.raises(ValueError, match="expected key=value"):
+        parse_extra_kv("just_a_key")
+
+
+# ---------------------------------------------------------------------------
+# Chunk B.2 — trace-append --data wiring (F4)
+# ---------------------------------------------------------------------------
+
+def test_trace_append_writes_structured_data(tmp_path: Path):
+    """trace-append --data k=v writes the keys into trace.jsonl."""
+    from tools.pipette.cli import main
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    rc = main([
+        "trace-append",
+        "--folder", str(folder),
+        "--step", "3",
+        "--event", "verdict_fail",
+        "--data", "jump_back_to=1,reason=contracts_critical",
+    ])
+    assert rc == 0
+    line = (folder / "trace.jsonl").read_text().strip()
+    rec = json.loads(line)
+    assert rec["event"] == "verdict_fail"
+    assert rec["jump_back_to"] == "1"
+    assert rec["reason"] == "contracts_critical"
+
+
+def test_trace_append_rejects_malformed_data(tmp_path: Path):
+    from tools.pipette.cli import main
+    folder = tmp_path / "feature-x"
+    folder.mkdir()
+    rc = main([
+        "trace-append",
+        "--folder", str(folder),
+        "--step", "3",
+        "--event", "x",
+        "--data", "no_equals_here",
+    ])
+    assert rc != 0
+
+
+# ---------------------------------------------------------------------------
+# Chunk B.3 — gemini_picker event shape regression (F9)
+# ---------------------------------------------------------------------------
+
+def test_gemini_picker_event_shape_preserved():
+    """F9: a NAMING regression test (not a runtime shape test).
+
+    Pins two facts about gemini_picker:
+      1. The literal event name `"gemini_verdict"` still appears in source.
+      2. `append_event` is actually called (not just imported), so the
+         event-write path still routes through trace.append_event.
+
+    What this does NOT verify: the runtime trace.jsonl record shape (keys,
+    types). For that, an integration test would need to invoke gemini_picker
+    with a mocked subprocess.run. This test's stated job is to catch
+    rename/removal regressions only. Downstream readers (e.g., weekly
+    aggregator) that depend on the {ts, step, event, decision, jump_back_to}
+    shape need their own integration coverage."""
+    import ast
+    import inspect
+    from tools.pipette import gemini_picker as gp
+    src = inspect.getsource(gp)
+    # 1. Event name is referenced verbatim somewhere in the module.
+    assert '"gemini_verdict"' in src or "'gemini_verdict'" in src, \
+        "gemini_picker no longer references the gemini_verdict event name"
+    # 2. append_event is actually CALLED (not merely imported). Defends
+    #    against a refactor that imports the symbol but routes writes
+    #    elsewhere (raw json.dumps, a different helper, etc.).
+    tree = ast.parse(src)
+    called_names = {
+        (n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", None))
+        for n in ast.walk(tree) if isinstance(n, ast.Call)
+    }
+    assert "append_event" in called_names, \
+        "gemini_picker must call append_event (not just import it) to keep the event-write path consistent with `pipette trace-append --data`"
+
+
+# ---------------------------------------------------------------------------
+# Pre-existing subprocess-style tests
+# ---------------------------------------------------------------------------
 
 def _run(*args, cwd=None, input=None):
     return subprocess.run(

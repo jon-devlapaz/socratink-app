@@ -41,3 +41,25 @@ def append_event(path: Path, ev: Event) -> None:
         os.write(fd, line.encode("utf-8"))
     finally:
         os.close(fd)
+
+
+def parse_extra_kv(s: str | None) -> dict[str, str]:
+    """Parse `'k=v,k2=v2'` into a dict of strings.
+
+    Used by `pipette trace-append --data ...` (F4) so external callers can
+    write structured trace events through the same path that gemini_picker
+    uses. Values are kept as strings — callers that need typed values should
+    cast on read; trace.jsonl is a string-keyed JSON record.
+    """
+    if not s:
+        return {}
+    out: dict[str, str] = {}
+    for chunk in s.split(","):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        if "=" not in chunk:
+            raise ValueError(f"expected key=value in --data; got {chunk!r}")
+        k, _, v = chunk.partition("=")
+        out[k.strip()] = v.strip()
+    return out

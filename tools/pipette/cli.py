@@ -89,6 +89,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ta.add_argument("--event", required=True)
     ta.add_argument("--decision", default=None)
     ta.add_argument("--jump-back-to", type=float, default=None)
+    ta.add_argument("--data", default=None, help="extra structured fields as 'k=v,k2=v2' (F4)")
 
     al = sub.add_parser("archive-for-loop-back", help="archive Step N+ artifacts to _attempts/")
     al.add_argument("--folder", required=True)
@@ -183,10 +184,16 @@ def main(argv: list[str] | None = None) -> int:
         from tools.pipette.orchestrator import finish_run
         return finish_run(folder=Path(args.folder), root=Path(args.root))
     if args.cmd == "trace-append":
-        from tools.pipette.trace import append_event, Event
+        from tools.pipette.trace import append_event, Event, parse_extra_kv
+        try:
+            extra = parse_extra_kv(args.data)
+        except ValueError as e:
+            print(f"pipette: {e}", file=sys.stderr)
+            return 2
         append_event(
             Path(args.folder) / "trace.jsonl",
-            Event(step=args.step, event=args.event, decision=args.decision, jump_back_to=args.jump_back_to),
+            Event(step=args.step, event=args.event, decision=args.decision,
+                  jump_back_to=args.jump_back_to, extra=extra),
         )
         return 0
     if args.cmd == "archive-for-loop-back":
