@@ -93,7 +93,7 @@ These shape every decision below.
         │                │
         │ Raises:        │
         │   InvalidUrl,  │
-        │   BlockedSrc,  │
+        │   BlockedSource,│
         │   FetchFailed, │
         │   UnsupportedContent,│
         │   TooLarge     │
