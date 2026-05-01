@@ -401,10 +401,10 @@ def extract_url(req: UrlExtractRequest):
             "cause": getattr(exc, "cause", None),
             "url_summary": _summarize_url_for_log(req.url),
         })
-        raise _map_intake_error(exc)
-    except Exception:
+        raise _map_intake_error(exc) from exc
+    except Exception as exc:
         logger.exception("intake_unexpected", extra={"url_summary": _summarize_url_for_log(req.url)})
-        raise HTTPException(500, "Unexpected error while importing.")
+        raise HTTPException(500, "Unexpected error while importing.") from exc
     return src.to_dict()
 
 
