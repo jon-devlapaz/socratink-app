@@ -5,6 +5,10 @@ You will receive: `00-graph-context.md`, `01-grill.md`, `02-diagram.{mmd|excalid
 
 Your job: check every domain term introduced or used in the grill summary and diagram against the canonical definitions in `_meta/CONTEXT.md` (the project's ubiquitous-language glossary, updated inline by `grill-with-docs` during Step 1). Flag synonyms (two terms used for the same concept) and undefined terms (terms used but not defined in CONTEXT.md).
 
+If the MCP tools are not exposed in this session, use the fallbacks
+documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
+(SQLite + Grep) rather than burning tool turns rediscovering them.
+
 For each finding, emit:
 - reviewer: "glossary"
 - severity: critical | high | medium | low | polish

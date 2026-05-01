@@ -20,6 +20,7 @@ class CheckResult:
     ok: bool
     message: str = ""
     fix: str = ""
+    severity: str = "fail"  # 'fail' (❌) or 'warn' (⚠) when ok is False
 
 
 def _verify_no_mistakes() -> tuple[bool, str]:
@@ -48,6 +49,49 @@ def _verify_code_review_graph_cli_and_mcp() -> tuple[bool, str]:
     if "code-review-graph" not in enabled:
         return False, f"`code-review-graph` not in enabledMcpjsonServers: {enabled}"
     return True, "CLI status OK + MCP enabled in settings.local.json"
+
+def _probe_mcp_via_claude_cli(server_name: str) -> tuple[bool, str]:
+    """F1: probe MCP runtime status via `claude mcp get <server>`.
+
+    Returns (False, msg) when the server is missing or not connected;
+    (True, msg) when `Status: ✓ Connected` appears in the output. This
+    answers a different question than the legacy in-session env probe
+    (which Claude Code does not actually export): "is the MCP server
+    configured and currently reachable from this CLI?" — a stronger
+    proxy for "are its tools usable" than reading settings.local.json
+    alone.
+
+    Patchable in tests via `monkeypatch.setattr(doctor, "_probe_mcp_via_claude_cli", ...)`.
+    """
+    if shutil.which("claude") is None:
+        return False, "claude CLI not on PATH; cannot verify MCP runtime status"
+    try:
+        r = subprocess.run(
+            ["claude", "mcp", "get", server_name],
+            capture_output=True, text=True, timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        return False, f"claude mcp probe failed: {type(e).__name__}: {e}"
+    if r.returncode != 0:
+        # `claude mcp get` exits nonzero with "No MCP server found with name: <x>".
+        return False, (f"{server_name} MCP not configured in this Claude Code installation — "
+                       f"`claude mcp add {server_name} ...` (or restart Claude Code if recently added)")
+    if "Connected" not in r.stdout:
+        return False, (f"{server_name} MCP configured but not connected — "
+                       f"check `claude --debug` or restart Claude Code")
+    return True, f"{server_name} MCP connected"
+
+
+def _verify_code_review_graph_session_probe() -> tuple[bool, str]:
+    """F1: confirms the code-review-graph MCP server is reachable.
+
+    Wraps `_probe_mcp_via_claude_cli` so the surface is named after the
+    pipette concern rather than the implementation. Returns (False, msg)
+    when missing/disconnected; the caller's Check classifies this as WARN
+    (not FAIL) since fallback paths (SQLite, Grep) still let the pipeline
+    run — see tools/pipette/sanity/reviewers/_shared/mcp-fallback.md."""
+    return _probe_mcp_via_claude_cli("code-review-graph")
+
 
 def _verify_post_commit_hook() -> tuple[bool, str]:
     p = Path(".git/hooks/post-commit")
@@ -141,7 +185,18 @@ CHECKS: list[Check] = [
           "Ensure `tools/pipette/validate_pipeline_graph.py` exists and is importable. (Replaces the spec's Agentproof reference; see plan §1.)"),
     Check("filesystem supports O_EXCL", _verify_filesystem,
           "pipette refuses to run on filesystems without reliable O_EXCL semantics (e.g., NFS, FUSE). Run pipette on a local APFS/ext4/btrfs volume."),
+    Check("code-review-graph MCP runtime probe (F1)", _verify_code_review_graph_session_probe,
+          "code-review-graph MCP not configured or not connected. Try: "
+          "`claude mcp get code-review-graph` for status; reinstall via "
+          "`code-review-graph install --platform claude-code`; or restart Claude Code if recently added. "
+          "Fallback paths (SQLite, Grep) are documented in tools/pipette/sanity/reviewers/_shared/mcp-fallback.md."),
 ]
+
+
+# Override severity for warn-only checks (F1 session probe is WARN, not FAIL)
+_CHECK_SEVERITY: dict[str, str] = {
+    "code-review-graph MCP runtime probe (F1)": "warn",
+}
 
 
 def run_checks(checks: list[Check]) -> list[CheckResult]:
@@ -151,19 +206,27 @@ def run_checks(checks: list[Check]) -> list[CheckResult]:
             ok, detail = c.verify()
         except Exception as e:
             ok, detail = False, f"{type(e).__name__}: {e}"
-        results.append(CheckResult(name=c.name, ok=ok, message=detail, fix=c.fix if not ok else ""))
+        severity = _CHECK_SEVERITY.get(c.name, "fail")
+        results.append(CheckResult(name=c.name, ok=ok, message=detail,
+                                   fix=c.fix if not ok else "", severity=severity))
     return results
 
 
 def _aggregate_rc(results: list[CheckResult]) -> int:
-    return 0 if all(r.ok for r in results) else 1
+    # WARN-severity failures are non-blocking (fallback paths exist); only FAIL-severity drives rc=1.
+    return 0 if all(r.ok or r.severity == "warn" for r in results) else 1
 
 
 def run_doctor() -> int:
     results = run_checks(CHECKS)
     for r in results:
-        mark = "✅" if r.ok else "❌"
-        print(f"{mark} {r.name}: {r.message}")
+        if r.ok:
+            glyph = "✅"
+        elif r.severity == "warn":
+            glyph = "⚠"
+        else:
+            glyph = "❌"
+        print(f"{glyph} {r.name}: {r.message}")
         if not r.ok:
             print(f"   FIX: {r.fix}")
     rc = _aggregate_rc(results)

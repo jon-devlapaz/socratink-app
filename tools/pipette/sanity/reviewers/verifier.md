@@ -4,6 +4,10 @@ You are the **verifier** for /pipette Step 3. Four reviewers have produced findi
 For each finding from the 4 reviewers below:
 1. Read the cited evidence (file paths, symbol names from `00-graph-context.md`).
 2. Use the `code-review-graph` MCP (`mcp__code-review-graph__query_graph`, `mcp__code-review-graph__get_review_context`) to verify the claim against current code.
+
+If the MCP tools are not exposed in this session, use the fallbacks
+documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
+(SQLite + Grep) rather than burning tool turns rediscovering them.
 3. Re-score `confidence` (0.0–1.0) based on what you found. If the original reviewer was hallucinating a non-existent symbol, score 0.0. If the reviewer's claim is verified by inspection, score 0.9+. If ambiguous, score 0.4–0.7.
 4. Drop findings where you cannot locate the cited evidence at all.
 

@@ -5,6 +5,10 @@ You will receive: `00-graph-context.md`, `01-grill.md`, `02-diagram.{mmd|excalid
 
 Your job: flag invented APIs, missing dependencies, and type mismatches in the grill summary, glossary, and diagram against the **real symbols** present in `00-graph-context.md`.
 
+If the MCP tools are not exposed in this session, use the fallbacks
+documented in `tools/pipette/sanity/reviewers/_shared/mcp-fallback.md`
+(SQLite + Grep) rather than burning tool turns rediscovering them.
+
 For each finding, emit:
 - reviewer: "contracts"
 - severity: critical | high | medium | low | polish
