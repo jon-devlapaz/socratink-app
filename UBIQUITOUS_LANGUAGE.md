@@ -34,6 +34,12 @@
 | **Reconstruction evidence** | Evidence from the learner rebuilding a mechanism in their own words. | Real learning, proved it |
 | **Gap** | A missing or incorrect causal bridge in an attempt. | Misconception detected, weakness |
 
+## Content Intake
+
+| Term | Definition | Aliases to avoid |
+| --- | --- | --- |
+| **Imported source** | A normalized text source ready for Gemini extraction. Either fetched from a URL or supplied as raw text by the learner. Carries the canonical (post-redirect) URL when present and a flag indicating remote-attacker-controllability. | "Article", "fetched page", "scraped content" |
+
 ## Relationships
 
 - A **Draft map** can become a **Provisional map** without mutating **Graph truth**.
@@ -41,6 +47,8 @@
 - **Targeted study** and **Repair Reps** may help the learner, but neither mutates **Graph truth**.
 - A **Spaced re-drill** is the only event that can move **`primed`** or **`drilled`** to **`solidified`**.
 - A **Traversal unlock** can happen before **`solidified`** when the product is creating interleaving, but **Mastery-gated progression** requires **`solidified`**.
+- An **Imported source** is the input to the **Draft map** extraction pipeline.
+- An **Imported source** that is `is_remote_source=True` is treated as untrusted in extraction prompt assembly (per OWASP LLM01).
 
 ## Example Dialogue
 

@@ -507,7 +507,7 @@ export function transformKnowledgeMapToGraph(rawData) {
 function repairProgressMarkup({ currentIndex = -1, total = 3, complete = false } = {}) {
   const dotCount = Math.max(Number(total) || 3, 3);
   return `
-    <div class="graph-repair-progress" aria-label="Repair Reps progress">
+    <div class="graph-repair-progress" aria-label="Repair Reps steps">
       ${Array.from({ length: dotCount }, (_, index) => (
         `<span class="graph-repair-dot ${complete || currentIndex >= index ? 'is-done' : ''}"></span>`
       )).join('')}
@@ -533,9 +533,9 @@ function repairKindLabel(kind) {
 }
 
 function repairRatingLabel(rating) {
-  if (rating === 'close_match') return 'Close match';
+  if (rating === 'close_match') return 'Same bridge';
   if (rating === 'partial') return 'Partly linked';
-  if (rating === 'missed') return 'Missed the link';
+  if (rating === 'missed') return 'Different link';
   return 'Not rated';
 }
 
@@ -549,11 +549,11 @@ function repairRatingMarkup(state, currentIndex) {
   `;
   return `
     <div class="graph-repair-rating">
-      <div class="graph-detail-kicker">How close was your bridge?</div>
+      <div class="graph-detail-kicker">Compare your bridge</div>
       <div class="graph-repair-rating-group">
-        ${button('close_match', 'Close match')}
+        ${button('close_match', 'Same bridge')}
         ${button('partial', 'Partly linked')}
-        ${button('missed', 'Missed the link')}
+        ${button('missed', 'Different link')}
       </div>
     </div>
   `;
@@ -562,13 +562,13 @@ function repairRatingMarkup(state, currentIndex) {
 const REPAIR_PRE_CONFIDENCE_LABELS = {
   guessing: 'Guessing',
   hunch: 'Have a hunch',
-  can_explain: 'Can explain',
+  can_explain: 'Can trace it',
 };
 
 const REPAIR_RATING_SUMMARY_LABELS = {
-  close_match: 'Close match',
+  close_match: 'Same bridge',
   partial: 'Partly linked',
-  missed: 'Missed the link',
+  missed: 'Different link',
 };
 
 function repairPredictPillsMarkup(currentPreConfidence, isLocked) {
@@ -582,11 +582,11 @@ function repairPredictPillsMarkup(currentPreConfidence, isLocked) {
   };
   return `
     <div class="graph-repair-predict">
-      <div class="graph-detail-kicker">Before you peek</div>
-      <div class="graph-repair-predict-group${lockedClass}" role="radiogroup" aria-label="Confidence before revealing reference"${lockedAttr}>
+      <div class="graph-detail-kicker">Before reference</div>
+      <div class="graph-repair-predict-group${lockedClass}" role="radiogroup" aria-label="Stance before revealing reference"${lockedAttr}>
         ${pill('guessing', 'Guessing')}
         ${pill('hunch', 'Have a hunch')}
-        ${pill('can_explain', 'Can explain')}
+        ${pill('can_explain', 'Can trace it')}
       </div>
     </div>
   `;
@@ -665,7 +665,7 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         <h3 class="graph-detail-title">Practice logged</h3>
         <p class="graph-detail-copy">Three bridge reps saved on ${escHtml(nodeLabel)}.</p>
         ${calibrationMarkup || (legacySummaryRows ? `<div class="graph-repair-summary">${legacySummaryRows}</div>` : '')}
-        <p class="graph-detail-copy">These reps are saved. Graph truth comes from the next re-drill.</p>
+        <p class="graph-detail-copy">These reps are saved. Graph truth comes from the next spaced re-drill.</p>
         <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
       </div>
     `;
@@ -713,11 +713,11 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         ` : ''}
       </section>
       <section class="graph-detail-surface graph-study-next graph-repair-next">
-        <p class="graph-detail-copy graph-repair-truth-line">Practice only. Graph truth comes from re-drill.</p>
+        <p class="graph-detail-copy graph-repair-truth-line">Practice only. Graph truth comes from spaced re-drill.</p>
         ${revealed
           ? (ratingSelected
-            ? `<button class="${actionButtonClass} trigger-repair-next">${currentIndex + 1 >= reps.length ? 'Finish Reps' : 'Next Rep'}</button>`
-            : '<p class="graph-detail-copy graph-repair-rating-hint">Choose the closest comparison before moving on.</p>')
+            ? `<button class="${actionButtonClass} trigger-repair-next">${currentIndex + 1 >= reps.length ? 'Log Reps' : 'Next Rep'}</button>`
+            : '<p class="graph-detail-copy graph-repair-rating-hint">Choose a comparison before moving on.</p>')
           : `
             <button class="${actionButtonClass} trigger-repair-reveal" ${revealReady ? '' : 'disabled'} aria-describedby="repair-reveal-helper">Lock in and show reference bridge</button>
             <p class="graph-repair-reveal-helper" id="repair-reveal-helper">Pick a stance and type your bridge to continue.</p>
@@ -771,7 +771,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       ? (next.action === 're-drill'
           ? `Next evidence move: spaced re-drill ${escHtml(next.label)}.`
           : `Next spacing move: enter ${escHtml(next.label)}.`)
-      : 'Leave this node to incubate. Work on other nodes before returning to re-drill.';
+      : 'Leave this node to incubate. Work on other nodes before returning to spaced re-drill.';
     return `
       <div class="graph-study-shell">
         <section class="graph-detail-surface graph-study-card">
@@ -838,7 +838,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       <p class="graph-detail-copy">${isSolid ? 'Solidified through spaced reconstruction. This is evidence, not a permanent claim.' : 'Attempt logged. This room is worth revisiting.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${isSolid
-          ? '<span class="graph-detail-pill success">solidified through spacing</span>'
+          ? '<span class="graph-detail-pill success">solidified through spaced reconstruction</span>'
           : outcomeMeta.pills}
       </div>
       ${trajectoryHtml}
@@ -907,7 +907,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
         ${getReachabilityPill(data)}
-        ${isDrilled ? '<span class="graph-detail-pill warning">In progress</span>' : ''}
+        ${isDrilled ? '<span class="graph-detail-pill warning">attempts recorded</span>' : ''}
       </div>
     `;
   }

@@ -1,15 +1,8 @@
-import ipaddress
 import json
 import logging
 import os
-import re
-import socket
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
-from urllib.request import Request as UrlRequest, urlopen
-
-from html import unescape
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +24,16 @@ from ai_service import (
     extract_knowledge_map,
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
+)
+import source_intake
+from source_intake import (
+    BlockedSource,
+    FetchFailed,
+    InvalidUrl,
+    ParseEmpty,
+    SourceIntakeError,
+    TooLarge,
+    UnsupportedContent,
 )
 from runtime_env import load_app_env
 
@@ -251,6 +254,55 @@ def _resolve_node_mechanism(
     return fallback
 
 
+def _map_intake_error(exc: SourceIntakeError) -> HTTPException:
+    """Maps source_intake domain exception → HTTP response.
+
+    Oracle defense: BlockedSource(private_address) and FetchFailed both
+    surface as 502 with the same generic user-facing message, so an
+    attacker cannot use response differences to map internal network state.
+    """
+    if isinstance(exc, InvalidUrl):
+        return HTTPException(400, "Enter a valid http(s) URL.")
+    if isinstance(exc, BlockedSource):
+        if exc.reason == "private_address":
+            return HTTPException(502, "We couldn't reach that URL.")
+        if exc.reason == "blocked_port":
+            return HTTPException(400, "Only standard web ports (80/443) are supported.")
+        if exc.reason == "blocked_scheme":
+            return HTTPException(400, "Only http and https URLs are supported.")
+        if exc.reason == "blocked_video":
+            return HTTPException(400, "Video links aren't supported. Paste the text directly instead.")
+        return HTTPException(502, "We couldn't reach that URL.")  # unknown reason → fail closed
+    if isinstance(exc, FetchFailed):
+        return HTTPException(502, "We couldn't reach that URL.")
+    if isinstance(exc, UnsupportedContent):
+        return HTTPException(415, "We can only import HTML or plain-text pages.")
+    if isinstance(exc, TooLarge):
+        return HTTPException(413, "Page is too large to import.")
+    if isinstance(exc, ParseEmpty):
+        return HTTPException(422, "Couldn't extract enough readable text from that page.")
+    logger.exception("Unmapped SourceIntakeError")
+    return HTTPException(500, "Unexpected error while importing.")
+
+
+def _summarize_url_for_log(url: str) -> dict:
+    """Sanitized fields for logging. URLs can carry basic-auth credentials,
+    signed query tokens, fragments, or private course links — never log raw URL.
+    """
+    try:
+        parsed = urlparse(url)
+        return {
+            "scheme": parsed.scheme,
+            "host": parsed.hostname,
+            "port": parsed.port,
+            "path_len": len(parsed.path or ""),
+            "has_query": bool(parsed.query),
+            "has_userinfo": bool(parsed.username or parsed.password),
+        }
+    except Exception:
+        return {"unparseable": True, "len": len(url) if url else 0}
+
+
 @app.get("/api/health")
 def health():
     return {
@@ -265,7 +317,14 @@ def extract(req: ExtractRequest):
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="No text provided.")
     try:
-        knowledge_map = extract_knowledge_map(req.text, api_key=req.api_key)
+        src = source_intake.from_text(req.text)   # default min_text_length=1
+    except ParseEmpty:
+        raise HTTPException(
+            status_code=422,
+            detail="Couldn't find enough readable text in what you pasted.",
+        )
+    try:
+        knowledge_map = extract_knowledge_map(src.text, api_key=req.api_key)
         return {"knowledge_map": knowledge_map}
     except MissingAPIKeyError as err:
         raise HTTPException(status_code=401, detail=str(err))
@@ -280,69 +339,6 @@ def extract(req: ExtractRequest):
         raise HTTPException(
             status_code=500, detail="Unexpected server error during extraction."
         ) from err
-
-
-def _extract_text_from_html(raw_html: str) -> str:
-    cleaned = re.sub(
-        r"(?is)<(script|style|noscript|svg|iframe).*?>.*?</\1>", " ", raw_html
-    )
-    cleaned = re.sub(r"(?i)<br\s*/?>", "\n", cleaned)
-    cleaned = re.sub(
-        r"(?i)</(p|div|section|article|li|h1|h2|h3|h4|h5|h6|tr)>", "\n", cleaned
-    )
-    cleaned = re.sub(r"(?s)<[^>]+>", " ", cleaned)
-    cleaned = unescape(cleaned)
-    cleaned = cleaned.replace("\r", "\n")
-    cleaned = re.sub(r"\n\s*\n\s*\n+", "\n\n", cleaned)
-    cleaned = re.sub(r"[ \t]+", " ", cleaned)
-    return cleaned.strip()
-
-
-def _is_blocked_video_url(url: str) -> bool:
-    parsed = urlparse(url)
-    host = (parsed.hostname or "").lower()
-    return (
-        host == "youtu.be"
-        or host == "youtube.com"
-        or host.endswith(".youtube.com")
-        or host == "youtube-nocookie.com"
-        or host.endswith(".youtube-nocookie.com")
-    )
-
-
-def _is_private_url(url: str) -> bool:
-    parsed = urlparse(url)
-    hostname = parsed.hostname
-    if not hostname:
-        return True
-
-    try:
-        direct_ip = ipaddress.ip_address(hostname)
-        resolved_addresses = [direct_ip]
-    except ValueError:
-        try:
-            addr_info = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
-        except socket.gaierror:
-            return True
-        resolved_addresses = []
-        for _, _, _, _, sockaddr in addr_info:
-            try:
-                resolved_addresses.append(ipaddress.ip_address(sockaddr[0]))
-            except ValueError:
-                return True
-
-    if not resolved_addresses:
-        return True
-
-    return any(
-        addr.is_private
-        or addr.is_loopback
-        or addr.is_link_local
-        or addr.is_reserved
-        or addr.is_multicast
-        or addr.is_unspecified
-        for addr in resolved_addresses
-    )
 
 
 class FeedbackRequest(BaseModel):
@@ -396,71 +392,20 @@ def submit_feedback(req: FeedbackRequest, request: Request):
 
 @app.post("/api/extract-url")
 def extract_url(req: UrlExtractRequest):
-    url = req.url.strip()
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise HTTPException(status_code=400, detail="Enter a valid http(s) URL.")
-    if _is_blocked_video_url(url):
-        raise HTTPException(
-            status_code=400,
-            detail="Video links are not supported in this deployment. Paste the text directly instead.",
-        )
-    if _is_private_url(url):
-        raise HTTPException(status_code=400, detail="Cannot fetch internal addresses.")
-
     try:
-        request = UrlRequest(
-            url,
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; socratink/1.0; +https://localhost)"
-            },
-        )
-        # SECURITY: redirects are followed by default; private targets reachable via 30x. See audit-pass-1.
-        with urlopen(request, timeout=12) as response:
-            content_type = (response.headers.get("Content-Type") or "").lower()
-            if "text/html" not in content_type and "text/plain" not in content_type:
-                raise HTTPException(
-                    status_code=415,
-                    detail="That URL did not return an HTML or plain text page.",
-                )
-
-            raw_bytes = response.read(2_000_000 + 1)
-            if len(raw_bytes) > 2_000_000:
-                raise HTTPException(
-                    status_code=413, detail="Page is too large to import."
-                )
-
-            charset = response.headers.get_content_charset() or "utf-8"
-            raw_text = raw_bytes.decode(charset, errors="replace")
-    except HTTPException:
-        raise
-    except HTTPError as err:
-        raise HTTPException(
-            status_code=502, detail=f"Source page returned HTTP {err.code}."
-        )
-    except URLError:
-        raise HTTPException(status_code=502, detail="Could not fetch that URL.")
-    except Exception as err:
-        logger.exception("Unexpected failure in /api/extract-url for %s", url)
-        raise HTTPException(
-            status_code=500, detail="Unexpected error while fetching that URL."
-        ) from err
-
-    if "text/plain" in content_type:
-        text = raw_text.strip()
-        title = parsed.netloc
-    else:
-        title_match = re.search(r"(?is)<title[^>]*>(.*?)</title>", raw_text)
-        title = unescape(title_match.group(1)).strip() if title_match else parsed.netloc
-        text = _extract_text_from_html(raw_text)
-
-    if len(text) < 200:
-        raise HTTPException(
-            status_code=422,
-            detail="Could not extract enough readable text from that page.",
-        )
-
-    return {"url": url, "title": title[:200], "text": text[:500_000]}
+        src = source_intake.from_url(req.url)
+    except SourceIntakeError as exc:
+        logger.info("intake_failed", extra={
+            "exc_type": type(exc).__name__,
+            "reason": getattr(exc, "reason", None),
+            "cause": getattr(exc, "cause", None),
+            "url_summary": _summarize_url_for_log(req.url),
+        })
+        raise _map_intake_error(exc) from exc
+    except Exception as exc:
+        logger.exception("intake_unexpected", extra={"url_summary": _summarize_url_for_log(req.url)})
+        raise HTTPException(500, "Unexpected error while importing.") from exc
+    return src.to_dict()
 
 
 @app.post("/api/drill")
