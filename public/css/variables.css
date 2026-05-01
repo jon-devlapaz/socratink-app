@@ -10,18 +10,22 @@
   --lavender-500:       #8d86c9;
   --mauve-200:          #cac4ce;
   --cream-50:           #f7ece1;
-  --white:              #ffffff;
+  --paper-0:            #fffaf6;
+  --paper-10:           #fbf5ee;
+  --white:              var(--paper-0);
 
   --ink-900-rgb:        36, 32, 56;
   --violet-600-rgb:     144, 103, 198;
   --lavender-500-rgb:   141, 134, 201;
   --mauve-200-rgb:      202, 196, 206;
   --cream-50-rgb:       247, 236, 225;
-  --white-rgb:          255, 255, 255;
+  --paper-0-rgb:        255, 250, 246;
+  --paper-10-rgb:       251, 245, 238;
+  --white-rgb:          var(--paper-0-rgb);
 
   /* Semantic theme */
   --surface-page-theme:        var(--cream-50);
-  --surface-card-theme:        var(--white);
+  --surface-card-theme:        var(--paper-0);
   --surface-panel-theme:       rgba(var(--mauve-200-rgb), 0.28);
   --surface-nested-theme:      rgba(var(--mauve-200-rgb), 0.42);
   --surface-overlay-theme:     var(--ink-900);
@@ -69,17 +73,17 @@
   --tooltip-text-sub:   rgba(var(--cream-50-rgb), 0.82);
   --tooltip-kicker:     rgba(var(--lavender-500-rgb), 0.94);
 
-  --gradient-card-start: rgba(var(--white-rgb), 0.96);
+  --gradient-card-start: rgba(var(--paper-0-rgb), 0.96);
   --gradient-card-end:   rgba(var(--cream-50-rgb), 0.96);
-  --gradient-panel-start: rgba(var(--white-rgb), 0.82);
+  --gradient-panel-start: rgba(var(--paper-0-rgb), 0.82);
   --gradient-panel-end:   rgba(var(--cream-50-rgb), 0.92);
   --gradient-stage-accent: rgba(var(--violet-600-rgb), 0.09);
-  --gradient-stage-start:  rgba(var(--white-rgb), 0.78);
+  --gradient-stage-start:  rgba(var(--paper-0-rgb), 0.78);
   --gradient-stage-end:    rgba(var(--cream-50-rgb), 0.96);
 
   /* New semantic surface additions — for analytics, settings, section bands */
-  --surface-high:       #fdf9f5;
-  --surface-highest:    #fffaf6;
+  --surface-high:       var(--paper-10);
+  --surface-highest:    var(--paper-0);
 
   /* Page ambient gradients (consumed by body background) */
   --page-bloom-primary:   radial-gradient(circle at center,
@@ -87,7 +91,7 @@
   --page-bloom-secondary: radial-gradient(circle at center,
                             rgba(255, 249, 242, 0.42), transparent 62%);
   --page-background:
-    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.56), transparent 28%),
+    radial-gradient(circle at 14% 12%, rgba(var(--paper-0-rgb), 0.56), transparent 28%),
     radial-gradient(circle at 88% 18%, rgba(var(--lavender-500-rgb), 0.12), transparent 24%),
     radial-gradient(circle at 52% 100%, rgba(212, 179, 131, 0.09), transparent 30%),
     linear-gradient(180deg,
@@ -133,9 +137,10 @@
   --graph-halo-stroke-width: 2;
 
   /* Inner core dot — deeper saturation, retains state read at any zoom */
-  --graph-node-cyan-core:  #205a78;
+  --graph-node-primed-core: #4d438e;
+  --graph-node-cyan-core:   var(--graph-node-primed-core);
   --graph-node-amber-core: #7a4a05;
-  --graph-node-solid-core: #4d2e7d;
+  --graph-node-solid-core: #2f7b59;
 
   /* Focus aura — small + soft on paper so it highlights the node without bleeding into siblings */
   --graph-focus-glow-radius:  55;
@@ -152,11 +157,11 @@
   --graph-star-opacity-max: 0.18;
   --graph-beam-duration: 2.4s;
 
-  --graph-node-base-fill:   #ffffff;
+  --graph-node-base-fill:   var(--paper-0);
   --graph-node-base-border: #d7d0f1;
   --graph-node-base-text:   #423c58;
 
-  --graph-node-locked-fill:          rgba(255, 255, 255, 0.08);
+  --graph-node-locked-fill:          rgba(var(--paper-0-rgb), 0.08);
   --graph-node-locked-ring:          rgba(36, 32, 56, 0.30);
   --graph-node-locked-text:          rgba(36, 32, 56, 0.62); /* WCAG AA on cream */
   --graph-node-locked-opacity:       0.42;
@@ -172,10 +177,10 @@
   --graph-cluster-reachable-ring: #7c6fcd;
   --graph-cluster-reachable-text: #55488e;
 
-  --graph-node-primed-fill:            #8fc7e0;
-  --graph-node-primed-ring:            #2e7ca0;
-  --graph-node-primed-halo:            rgba(46, 124, 160, 0.62);
-  --graph-node-primed-text:            #18476a;
+  --graph-node-primed-fill:            rgba(var(--lavender-500-rgb), 0.66);
+  --graph-node-primed-ring:            #6f61b8;
+  --graph-node-primed-halo:            rgba(var(--lavender-500-rgb), 0.56);
+  --graph-node-primed-text:            #4d438e;
   --graph-node-primed-overlay-opacity: 0.05;
 
   --graph-node-drilled-fill:            #d9a14a;
@@ -184,12 +189,12 @@
   --graph-node-drilled-text:            #6f4708;
   --graph-node-drilled-overlay-opacity: 0.04;
 
-  --graph-node-solid-fill:            #7c6fcd;
-  --graph-node-solid-ring:            #988be4;
-  --graph-node-solid-halo:            rgba(122, 89, 170, 0.65);
-  --graph-node-solid-text:            #7c6fcd;
+  --graph-node-solid-fill:            var(--success);
+  --graph-node-solid-ring:            #2f7b59;
+  --graph-node-solid-halo:            rgba(var(--node-solidified-rgb), 0.58);
+  --graph-node-solid-text:            #2f7b59;
   --graph-node-solid-overlay-opacity: 0.06;
-  --graph-node-solid-flash-fill:      #a895ea;
+  --graph-node-solid-flash-fill:      #9edbbd;
 
   --graph-node-active-fill:            #f3efff;
   --graph-node-active-ring:            #7c6fcd;
@@ -255,14 +260,14 @@
   --text-4xl:         clamp(1.95rem, 1.65rem + 1.5vw, 2.4rem);
 
   /* Shadows */
-  --shadow-ambient:   0 40px 100px rgba(44,51,62,0.05), 0 2px 8px rgba(44,51,62,0.04);
-  --shadow-card:      0 8px 32px rgba(var(--violet-600-rgb), 0.10), 0 1px 4px rgba(0,0,0,0.04);
-  --shadow-soft:      0 10px 30px rgba(var(--ink-900-rgb), 0.05);
-  --shadow-inline:    0 2px 10px rgba(var(--ink-900-rgb), 0.10);
-  --shadow-hover:     0 16px 32px rgba(var(--ink-900-rgb), 0.10);
+  --shadow-ambient:   0 40px 100px rgba(var(--violet-600-rgb), 0.06), 0 2px 8px rgba(var(--violet-600-rgb), 0.04);
+  --shadow-card:      0 8px 32px rgba(var(--violet-600-rgb), 0.10), 0 1px 4px rgba(var(--violet-600-rgb), 0.05);
+  --shadow-soft:      0 10px 30px rgba(var(--violet-600-rgb), 0.07);
+  --shadow-inline:    0 2px 10px rgba(var(--violet-600-rgb), 0.10);
+  --shadow-hover:     0 16px 32px rgba(var(--violet-600-rgb), 0.12);
   --shadow-border:    0 0 0 1px rgba(var(--violet-600-rgb), 0.12);
-  --shadow-raised:    0 18px 34px rgba(var(--ink-900-rgb), 0.09);
-  --shadow-tutorial:  0 0 0 4px rgba(var(--violet-600-rgb), 0.16), 0 10px 18px rgba(var(--ink-900-rgb), 0.22);
+  --shadow-raised:    0 18px 34px rgba(var(--violet-600-rgb), 0.14);
+  --shadow-tutorial:  0 0 0 4px rgba(var(--violet-600-rgb), 0.16), 0 10px 18px rgba(var(--violet-600-rgb), 0.22);
 
   --pill-accent-bg:   rgba(var(--violet-600-rgb), 0.10);
   --pill-danger-bg:   rgba(224, 92, 107, 0.10);
@@ -312,13 +317,48 @@
   --crystal-hibernating-glow:        rgba(var(--lavender-500-rgb), 0.30);
 
   --crystal-actualized-top:         rgba(var(--cream-50-rgb), 0.98);
-  --crystal-actualized-upper-left:  rgba(var(--lavender-500-rgb), 0.86);
-  --crystal-actualized-upper-right: rgba(var(--violet-600-rgb), 0.88);
-  --crystal-actualized-lower-left:  rgba(var(--violet-600-rgb), 0.82);
-  --crystal-actualized-lower-right: rgba(var(--ink-900-rgb), 0.82);
-  --crystal-actualized-bottom-tip:  rgba(var(--ink-900-rgb), 0.92);
+  --crystal-actualized-upper-left:  rgba(var(--node-solidified-rgb), 0.72);
+  --crystal-actualized-upper-right: rgba(var(--node-solidified-rgb), 0.84);
+  --crystal-actualized-lower-left:  rgba(var(--node-solidified-rgb), 0.64);
+  --crystal-actualized-lower-right: #2f7b59;
+  --crystal-actualized-bottom-tip:  #255f47;
   --crystal-actualized-specular:    rgba(var(--cream-50-rgb), 1);
-  --crystal-actualized-glow:        rgba(var(--violet-600-rgb), 0.38);
+  --crystal-actualized-glow:        rgba(var(--node-solidified-rgb), 0.34);
+
+  /* Canonical crystal aliases from DESIGN.md.
+     Existing lifecycle names remain for compatibility with persisted maps. */
+  --crystal-locked-top:         var(--crystal-instantiated-top);
+  --crystal-locked-upper-left:  var(--crystal-instantiated-upper-left);
+  --crystal-locked-upper-right: var(--crystal-instantiated-upper-right);
+  --crystal-locked-lower-left:  var(--crystal-instantiated-lower-left);
+  --crystal-locked-lower-right: var(--crystal-instantiated-lower-right);
+  --crystal-locked-bottom-tip:  var(--crystal-instantiated-bottom-tip);
+  --crystal-locked-specular:    var(--crystal-instantiated-specular);
+  --crystal-locked-glow:        var(--crystal-instantiated-glow);
+  --crystal-primed-top:         var(--crystal-growing-top);
+  --crystal-primed-upper-left:  var(--crystal-growing-upper-left);
+  --crystal-primed-upper-right: var(--crystal-growing-upper-right);
+  --crystal-primed-lower-left:  var(--crystal-growing-lower-left);
+  --crystal-primed-lower-right: var(--crystal-growing-lower-right);
+  --crystal-primed-bottom-tip:  var(--crystal-growing-bottom-tip);
+  --crystal-primed-specular:    var(--crystal-growing-specular);
+  --crystal-primed-glow:        var(--crystal-growing-glow);
+  --crystal-drilled-top:         rgba(var(--node-drilled-rgb), 0.66);
+  --crystal-drilled-upper-left:  rgba(var(--node-drilled-rgb), 0.76);
+  --crystal-drilled-upper-right: #b97718;
+  --crystal-drilled-lower-left:  #b97718;
+  --crystal-drilled-lower-right: #7a4a05;
+  --crystal-drilled-bottom-tip:  #5f3906;
+  --crystal-drilled-specular:    rgba(var(--cream-50-rgb), 0.88);
+  --crystal-drilled-glow:        rgba(var(--node-drilled-rgb), 0.24);
+  --crystal-solidified-top:         var(--crystal-actualized-top);
+  --crystal-solidified-upper-left:  var(--crystal-actualized-upper-left);
+  --crystal-solidified-upper-right: var(--crystal-actualized-upper-right);
+  --crystal-solidified-lower-left:  var(--crystal-actualized-lower-left);
+  --crystal-solidified-lower-right: var(--crystal-actualized-lower-right);
+  --crystal-solidified-bottom-tip:  var(--crystal-actualized-bottom-tip);
+  --crystal-solidified-specular:    var(--crystal-actualized-specular);
+  --crystal-solidified-glow:        var(--crystal-actualized-glow);
   /* Radii */
   --radius-hero:      1.25rem;
   --radius-card:      1rem;
@@ -377,7 +417,7 @@
   --leading-loose:    1.75;
 
   /* Additional shadows */
-  --shadow-hero:      0 42px 100px rgba(var(--ink-900-rgb), 0.08);
+  --shadow-hero:      0 42px 100px rgba(var(--violet-600-rgb), 0.10);
   --shadow-mockup:    0 32px 80px rgba(84, 68, 120, 0.16);
 
   /* Node state rgb channels (alpha compositing for pills, glows) */
@@ -467,9 +507,10 @@
   --graph-halo-stroke-width: 0;
 
   /* Inner core dot — brighter against dark stage */
-  --graph-node-cyan-core:  #d6f1fb;
+  --graph-node-primed-core: #f0e9ff;
+  --graph-node-cyan-core:   var(--graph-node-primed-core);
   --graph-node-amber-core: #ffe5b4;
-  --graph-node-solid-core: #f1e3ff;
+  --graph-node-solid-core: #dff5e9;
 
   /* Focus aura — large + atmospheric on obsidian stage */
   --graph-focus-glow-radius:  120;
@@ -511,9 +552,9 @@
   --graph-cluster-reachable-ring: #d7beff;
   --graph-cluster-reachable-text: var(--text-strong);
 
-  --graph-node-primed-fill:            #9fd5ed;
-  --graph-node-primed-ring:            #9fd5ed;
-  --graph-node-primed-halo:            rgba(159, 213, 237, 0.55);
+  --graph-node-primed-fill:            #d7beff;
+  --graph-node-primed-ring:            #d7beff;
+  --graph-node-primed-halo:            rgba(215, 190, 255, 0.55);
   --graph-node-primed-text:            var(--text-strong);
   --graph-node-primed-overlay-opacity: 0.25;
 
@@ -523,12 +564,12 @@
   --graph-node-drilled-text:            var(--text-strong);
   --graph-node-drilled-overlay-opacity: 0.22;
 
-  --graph-node-solid-fill:            #d7beff;
-  --graph-node-solid-ring:            #d7beff;
-  --graph-node-solid-halo:            rgba(215, 190, 255, 0.70);
+  --graph-node-solid-fill:            #8fe0b5;
+  --graph-node-solid-ring:            #8fe0b5;
+  --graph-node-solid-halo:            rgba(143, 224, 181, 0.62);
   --graph-node-solid-text:            var(--text-strong);
   --graph-node-solid-overlay-opacity: 0.30;
-  --graph-node-solid-flash-fill:      #f0deff;
+  --graph-node-solid-flash-fill:      #dff5e9;
 
   --graph-node-active-fill:            rgba(215, 190, 255, 0.18);
   --graph-node-active-ring:            #d7beff;
@@ -539,7 +580,7 @@
   --graph-node-selection-glow:            rgba(215, 190, 255, 0.72);
   --graph-node-selection-overlay-opacity: 0.16;
 
-  --graph-node-primed-flash-fill: rgba(159, 213, 237, 0.92);
+  --graph-node-primed-flash-fill: rgba(215, 190, 255, 0.92);
 
   --graph-edge-base:       rgba(215, 190, 255, 0.45);
   --graph-edge-structural: rgba(215, 190, 255, 0.45);

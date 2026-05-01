@@ -216,5 +216,41 @@ body[data-theme="dark"] .concept-pin-core {
 .crystal-instance[data-state="actualized"] .cp-specular    { fill:var(--crystal-actualized-specular); opacity:0.88; }
 .crystal-instance[data-state="actualized"] .cp-glow        { fill:var(--crystal-actualized-glow); opacity:0.30; }
 
+.crystal-instance[data-state="locked"] .cp-top         { fill:var(--crystal-locked-top); }
+.crystal-instance[data-state="locked"] .cp-upper-left  { fill:var(--crystal-locked-upper-left); }
+.crystal-instance[data-state="locked"] .cp-upper-right { fill:var(--crystal-locked-upper-right); }
+.crystal-instance[data-state="locked"] .cp-lower-left  { fill:var(--crystal-locked-lower-left); }
+.crystal-instance[data-state="locked"] .cp-lower-right { fill:var(--crystal-locked-lower-right); }
+.crystal-instance[data-state="locked"] .cp-bottom-tip  { fill:var(--crystal-locked-bottom-tip); }
+.crystal-instance[data-state="locked"] .cp-specular    { fill:var(--crystal-locked-specular); opacity:0.35; }
+.crystal-instance[data-state="locked"] .cp-glow        { fill:var(--crystal-locked-glow); opacity:0.10; }
+
+.crystal-instance[data-state="primed"] .cp-top         { fill:var(--crystal-primed-top); }
+.crystal-instance[data-state="primed"] .cp-upper-left  { fill:var(--crystal-primed-upper-left); }
+.crystal-instance[data-state="primed"] .cp-upper-right { fill:var(--crystal-primed-upper-right); }
+.crystal-instance[data-state="primed"] .cp-lower-left  { fill:var(--crystal-primed-lower-left); }
+.crystal-instance[data-state="primed"] .cp-lower-right { fill:var(--crystal-primed-lower-right); }
+.crystal-instance[data-state="primed"] .cp-bottom-tip  { fill:var(--crystal-primed-bottom-tip); }
+.crystal-instance[data-state="primed"] .cp-specular    { fill:var(--crystal-primed-specular); opacity:0.70; }
+.crystal-instance[data-state="primed"] .cp-glow        { fill:var(--crystal-primed-glow); opacity:0.20; }
+
+.crystal-instance[data-state="drilled"] .cp-top         { fill:var(--crystal-drilled-top); }
+.crystal-instance[data-state="drilled"] .cp-upper-left  { fill:var(--crystal-drilled-upper-left); }
+.crystal-instance[data-state="drilled"] .cp-upper-right { fill:var(--crystal-drilled-upper-right); }
+.crystal-instance[data-state="drilled"] .cp-lower-left  { fill:var(--crystal-drilled-lower-left); }
+.crystal-instance[data-state="drilled"] .cp-lower-right { fill:var(--crystal-drilled-lower-right); }
+.crystal-instance[data-state="drilled"] .cp-bottom-tip  { fill:var(--crystal-drilled-bottom-tip); }
+.crystal-instance[data-state="drilled"] .cp-specular    { fill:var(--crystal-drilled-specular); opacity:0.50; }
+.crystal-instance[data-state="drilled"] .cp-glow        { fill:var(--crystal-drilled-glow); opacity:0.14; }
+
+.crystal-instance[data-state="solidified"] .cp-top         { fill:var(--crystal-solidified-top); }
+.crystal-instance[data-state="solidified"] .cp-upper-left  { fill:var(--crystal-solidified-upper-left); }
+.crystal-instance[data-state="solidified"] .cp-upper-right { fill:var(--crystal-solidified-upper-right); }
+.crystal-instance[data-state="solidified"] .cp-lower-left  { fill:var(--crystal-solidified-lower-left); }
+.crystal-instance[data-state="solidified"] .cp-lower-right { fill:var(--crystal-solidified-lower-right); }
+.crystal-instance[data-state="solidified"] .cp-bottom-tip  { fill:var(--crystal-solidified-bottom-tip); }
+.crystal-instance[data-state="solidified"] .cp-specular    { fill:var(--crystal-solidified-specular); opacity:0.88; }
+.crystal-instance[data-state="solidified"] .cp-glow        { fill:var(--crystal-solidified-glow); opacity:0.30; }
+
 /* Dark-mode token reassignment moved to variables.css.
    Kept above: tile-geometry overrides (L92-121) — hex values beyond tokens. */
