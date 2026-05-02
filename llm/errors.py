@@ -2,6 +2,12 @@
 
 Application code catches these. Adapter code raises these. The mapping
 from provider-specific exceptions to these lives inside each adapter.
+
+Retry contract is encoded in the type system via ``RetriableLLMError``:
+``LLMClient`` retries any exception that subclasses ``RetriableLLMError``.
+Permanent failures (missing key, validation, client-side rejections) do
+not subclass it, so adding a new permanent error type cannot accidentally
+re-enable retries.
 """
 from __future__ import annotations
 
@@ -10,21 +16,34 @@ class LLMError(Exception):
     """Base for all errors raised through the LLM seam."""
 
 
+class RetriableLLMError(LLMError):
+    """Marker base class: ``LLMClient`` retries these with exponential backoff.
+
+    Concrete subclasses represent transient failures where retrying makes
+    sense (rate limits clear, upstream services recover). New retriable
+    error types should subclass this directly.
+
+    Permanent failures must NOT subclass ``RetriableLLMError``. The retry
+    loop catches ``except RetriableLLMError`` exactly, so this is the
+    single source of truth for "should LLMClient retry?"
+    """
+
+
 class LLMMissingKeyError(LLMError):
-    """The configured provider has no API key."""
+    """The configured provider has no API key. Permanent (not retried)."""
 
 
-class LLMRateLimitError(LLMError):
-    """The provider rate-limited the request (e.g., Gemini 429)."""
+class LLMRateLimitError(RetriableLLMError):
+    """The provider rate-limited the request (e.g., Gemini 429). Retried."""
 
 
-class LLMServiceError(LLMError):
+class LLMServiceError(RetriableLLMError):
     """The provider returned a transient transport / upstream failure
-    (Gemini 5xx, network timeouts, malformed transport response).
+    (Gemini 5xx, network timeouts, malformed transport response). Retried.
 
-    These ARE retried by ``LLMClient``. Distinct from ``LLMClientError``,
-    which is permanent (no retry), and ``LLMValidationError``, which means
-    the provider returned content but it failed schema validation.
+    Distinct from ``LLMClientError`` (permanent 4xx) and
+    ``LLMValidationError`` (provider returned content but it failed
+    schema validation).
     """
 
 
@@ -33,10 +52,10 @@ class LLMClientError(LLMError):
     (HTTP 4xx other than 429). Causes include expired/invalid API key,
     unknown model name, malformed request, quota exhausted (non-rate-limit).
 
-    NOT retried by ``LLMClient`` — retrying a 4xx wastes quota and time.
-    The route layer should map this to a 503 to the learner (the cause is
-    operator-misconfiguration, not a learner action) and surface the
-    underlying message to the operator's logs.
+    NOT retried — retrying a 4xx wastes quota and time. The route layer
+    maps this to a 503 to the learner (the cause is
+    operator-misconfiguration, not a learner action) and surfaces the
+    underlying message to the operator's logs only.
     """
 
 

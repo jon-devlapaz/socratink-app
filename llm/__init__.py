@@ -14,6 +14,7 @@ from .errors import (
     LLMRateLimitError,
     LLMServiceError,
     LLMValidationError,
+    RetriableLLMError,
 )
 from .factory import build_llm_client
 from .types import StructuredLLMRequest, StructuredLLMResult, TokenUsage
@@ -29,5 +30,6 @@ __all__ = [
     "LLMRateLimitError",
     "LLMServiceError",
     "LLMValidationError",
+    "RetriableLLMError",
     "build_llm_client",
 ]

@@ -17,7 +17,7 @@ import time
 from dataclasses import dataclass, replace
 
 from .adapter import LLMAdapter
-from .errors import LLMRateLimitError, LLMServiceError
+from .errors import RetriableLLMError
 from .types import StructuredLLMRequest, StructuredLLMResult
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class LLMClient:
             start = time.perf_counter()
             try:
                 result = self.adapter.call_once(request)
-            except (LLMRateLimitError, LLMServiceError) as exc:
+            except RetriableLLMError as exc:
                 latency_ms = (time.perf_counter() - start) * 1000.0
                 self._log_failure(request, exc, attempt=attempt, latency_ms=latency_ms)
                 last_exc = exc

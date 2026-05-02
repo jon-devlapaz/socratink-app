@@ -5,6 +5,7 @@ from llm.errors import (
     LLMRateLimitError,
     LLMServiceError,
     LLMValidationError,
+    RetriableLLMError,
 )
 
 
@@ -15,6 +16,7 @@ def test_all_subclasses_inherit_from_llm_error():
         LLMRateLimitError,
         LLMServiceError,
         LLMValidationError,
+        RetriableLLMError,
     ):
         assert issubclass(cls, LLMError)
         assert issubclass(cls, Exception)
@@ -35,6 +37,21 @@ def test_subclasses_are_distinct():
     # LLMClient's retry loop would erroneously retry permanent 4xx failures.
     assert not issubclass(LLMClientError, LLMServiceError)
     assert not issubclass(LLMClientError, LLMRateLimitError)
+
+
+def test_retriable_marker_governs_retry_set():
+    """RetriableLLMError is the single source of truth for "LLMClient retries this."
+    Lock in the membership so a future error class added without thinking
+    about retries can't accidentally land in (or out of) the retry set.
+    """
+    # Retried — must subclass RetriableLLMError
+    assert issubclass(LLMRateLimitError, RetriableLLMError)
+    assert issubclass(LLMServiceError, RetriableLLMError)
+
+    # Permanent — must NOT subclass RetriableLLMError
+    assert not issubclass(LLMMissingKeyError, RetriableLLMError)
+    assert not issubclass(LLMClientError, RetriableLLMError)
+    assert not issubclass(LLMValidationError, RetriableLLMError)
 
 
 def test_validation_error_carries_message_and_optional_raw_text():
