@@ -334,37 +334,50 @@ def extract(req: ExtractRequest):
         provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
         # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
         return {"knowledge_map": provisional_map.model_dump()}
+    # All LLM-error branches: stable user-facing copy ONLY. Provider details
+    # (model name, error code, original message) flow into operator logs but
+    # never into the response body. This is consistent across the whole LLM
+    # error hierarchy — the user is never told which provider we use.
     except LLMMissingKeyError as err:
-        raise HTTPException(status_code=401, detail=str(err))
-    except LLMRateLimitError as err:
-        raise HTTPException(status_code=429, detail=str(err))
-    except LLMValidationError:
-        # Provider returned content but it did not match ProvisionalMap.
-        # Stable user-facing copy; raw_text is preserved internally for
-        # logging / fixture refresh but never surfaced to the user.
-        logger.warning(
-            "extract_knowledge_map: LLMValidationError on /api/extract"
+        logger.warning("extract: LLMMissingKeyError: %s", err)
+        raise HTTPException(
+            status_code=401,
+            detail="No API key configured. Add one in Settings to continue.",
         )
+    except LLMRateLimitError as err:
+        logger.warning("extract: LLMRateLimitError: %s", err)
+        raise HTTPException(
+            status_code=429,
+            detail="The AI service is rate-limiting requests. Try again in a minute.",
+        )
+    except LLMValidationError as err:
+        # raw_text preserved internally on the exception object for fixture
+        # refresh / debugging; never serialized to the response.
+        logger.warning("extract: LLMValidationError: %s", err)
         raise HTTPException(
             status_code=502,
             detail="Extraction returned malformed structure. Please retry.",
         )
     except LLMServiceError as err:
-        raise HTTPException(status_code=503, detail=str(err))
-    except LLMClientError as err:
-        # Operator-misconfiguration (expired key, unknown model, etc.).
-        # Surface as 503 to the learner — same UX as a transient outage —
-        # but log the underlying message so the operator can fix the root
-        # cause. Stable user-facing copy; do NOT leak the API error string.
-        logger.warning(
-            "extract_knowledge_map: LLMClientError on /api/extract: %s", err
-        )
+        logger.warning("extract: LLMServiceError: %s", err)
         raise HTTPException(
             status_code=503,
-            detail="Extraction service is temporarily unavailable. Please try again shortly.",
+            detail="The AI service is temporarily unavailable. Please try again shortly.",
+        )
+    except LLMClientError as err:
+        # Operator-misconfiguration (expired key, unknown model, etc.).
+        # Same UX as a transient outage from the learner's perspective.
+        logger.warning("extract: LLMClientError: %s", err)
+        raise HTTPException(
+            status_code=503,
+            detail="The AI service is temporarily unavailable. Please try again shortly.",
         )
     except ValueError as err:
-        # Pydantic structural-validation errors raised by ProvisionalMap.
+        # Pydantic structural-validation errors raised by ProvisionalMap
+        # (closure rules, identifier grammar). The message here is OUR
+        # internal validator output, not provider-debug, so it is safe
+        # AND informative to surface.
+        logger.warning("extract: structural validation failed: %s", err)
         raise HTTPException(status_code=422, detail=str(err))
     except Exception as err:
         logger.exception("Unexpected failure in /api/extract")
