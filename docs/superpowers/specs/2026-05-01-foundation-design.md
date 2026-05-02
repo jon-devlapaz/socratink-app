@@ -62,8 +62,10 @@ Three architectural invariants flow from this:
 The model carries:
 
 - **Identifier grammar** — `BackboneId`, `ClusterId`, `SubnodeId` typed wrappers. Parser rejects malformed IDs (`b1`, `c1_s2`, `core-thesis` are valid; arbitrary strings are not).
-- **Reference closure validator** — every subnode references an existing cluster; every cluster references an existing backbone node; every node referenced in a mechanism string is defined.
+- **Reference closure validators** — implements every closure rule documented in `app_prompts/extract-system-v1.txt` (output rules section): backbone-cluster coverage, dependent-cluster existence, every cluster has at least one subnode, learning-prerequisite DAG (no self-loops, reciprocals, or cycles), framework-cluster references resolve.
 - **No quality-floor knobs.** The prompt is responsible for content quality. The model is responsible for structural integrity.
+
+The exact field set of `ProvisionalMap` is bound to the JSON schema declared in `app_prompts/extract-system-v1.txt`. When the prompt's output schema changes, the Pydantic model changes alongside it (likely as a new prompt version + matching model migration).
 
 Future: `DraftMap` (raw extraction from source, no learner shaping) becomes a sibling model when URL ingestion ships.
 
@@ -74,7 +76,7 @@ llm/
 ├── __init__.py        # public re-exports: LLMClient, StructuredLLMRequest, StructuredLLMResult, TokenUsage, errors
 ├── types.py           # request, result, usage dataclasses
 ├── errors.py          # normalized exception hierarchy
-├── adapter.py         # LLMAdapter Protocol — primitive: _call_once(req) -> result | raise normalized error
+├── adapter.py         # LLMAdapter Protocol — primitive: call_once(req) -> result | raise normalized error
 ├── client.py          # LLMClient (concrete) — wraps an adapter; owns retry policy, telemetry, logging
 └── gemini_adapter.py  # GeminiAdapter(LLMAdapter)
 ```
@@ -132,7 +134,7 @@ class LLMValidationError(LLMError): ...
 | Telemetry / structured logging | `LLMClient` | Normalized fields fire once per call |
 | Token usage accounting | `LLMClient` (extracted from result) | Provider-agnostic shape |
 
-The adapter exposes one primitive: `_call_once(StructuredLLMRequest) -> StructuredLLMResult` or raises a normalized exception. `LLMClient.generate_structured(req)` wraps that in a retry loop and a logging block. App code only imports `LLMClient`.
+The adapter exposes one primitive: `call_once(StructuredLLMRequest) -> StructuredLLMResult` or raises a normalized exception. `LLMClient.generate_structured(req)` wraps that in a retry loop and a logging block. App code only imports `LLMClient`.
 
 ### 5.3 Architectural invariant — the isolation test
 
