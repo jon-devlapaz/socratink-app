@@ -62,3 +62,34 @@ def test_happy_path_delegates_once():
     result = client.generate_structured(_request())
     assert result.parsed.x == "ok"
     assert adapter.calls == 1
+
+
+def test_retries_on_rate_limit_then_succeeds():
+    adapter = _CountingAdapter(raises=[LLMRateLimitError("rate"), None])
+    client = LLMClient(adapter=adapter)
+    result = client.generate_structured(_request())
+    assert result.parsed.x == "ok"
+    assert adapter.calls == 2  # one fail + one success
+
+
+def test_retries_on_service_error_then_succeeds():
+    adapter = _CountingAdapter(raises=[LLMServiceError("svc"), None])
+    client = LLMClient(adapter=adapter)
+    result = client.generate_structured(_request())
+    assert result.parsed.x == "ok"
+    assert adapter.calls == 2
+
+
+def test_gives_up_after_max_retries_on_rate_limit():
+    adapter = _CountingAdapter(
+        raises=[
+            LLMRateLimitError("r1"),
+            LLMRateLimitError("r2"),
+            LLMRateLimitError("r3"),
+        ]
+    )
+    client = LLMClient(adapter=adapter)
+    with pytest.raises(LLMRateLimitError):
+        client.generate_structured(_request())
+    # max_retries=2 → up to 2 retries beyond initial → 3 total calls
+    assert adapter.calls == 3
