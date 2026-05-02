@@ -25,6 +25,12 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
+from llm.errors import (
+    LLMMissingKeyError,
+    LLMRateLimitError,
+    LLMServiceError,
+    LLMValidationError,
+)
 import source_intake
 from source_intake import (
     BlockedSource,
@@ -324,16 +330,29 @@ def extract(req: ExtractRequest):
             detail="Couldn't find enough readable text in what you pasted.",
         )
     try:
-        knowledge_map = extract_knowledge_map(src.text, api_key=req.api_key)
-        return {"knowledge_map": knowledge_map}
-    except MissingAPIKeyError as err:
+        provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
+        # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
+        return {"knowledge_map": provisional_map.model_dump()}
+    except LLMMissingKeyError as err:
         raise HTTPException(status_code=401, detail=str(err))
-    except GeminiRateLimitError as err:
+    except LLMRateLimitError as err:
         raise HTTPException(status_code=429, detail=str(err))
-    except GeminiServiceError as err:
+    except LLMValidationError:
+        # Provider returned content but it did not match ProvisionalMap.
+        # Stable user-facing copy; raw_text is preserved internally for
+        # logging / fixture refresh but never surfaced to the user.
+        logger.warning(
+            "extract_knowledge_map: LLMValidationError on /api/extract"
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="Extraction returned malformed structure. Please retry.",
+        )
+    except LLMServiceError as err:
         raise HTTPException(status_code=503, detail=str(err))
     except ValueError as err:
-        raise HTTPException(status_code=400, detail=str(err))
+        # Pydantic structural-validation errors raised by ProvisionalMap.
+        raise HTTPException(status_code=422, detail=str(err))
     except Exception as err:
         logger.exception("Unexpected failure in /api/extract")
         raise HTTPException(
