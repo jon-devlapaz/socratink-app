@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
 from pydantic import BaseModel
 
@@ -109,3 +111,37 @@ def test_does_not_retry_on_missing_key_error():
     with pytest.raises(LLMMissingKeyError):
         client.generate_structured(_request())
     assert adapter.calls == 1
+
+
+def test_emits_structured_log_on_success(caplog):
+    adapter = _CountingAdapter()
+    client = LLMClient(adapter=adapter)
+    with caplog.at_level(logging.INFO, logger="llm.client"):
+        client.generate_structured(_request())
+    matches = [
+        r
+        for r in caplog.records
+        if r.name == "llm.client"
+        and getattr(r, "task_name", None) == "test_task"
+        and getattr(r, "prompt_version", None) == "v1"
+        and getattr(r, "provider", None) == "fake"
+        and getattr(r, "input_tokens", None) == 1
+        and getattr(r, "output_tokens", None) == 1
+    ]
+    assert matches, f"no structured success log matched. records: {caplog.records}"
+
+
+def test_emits_structured_log_on_failure(caplog):
+    adapter = _CountingAdapter(raises=[LLMValidationError("bad")])
+    client = LLMClient(adapter=adapter)
+    with caplog.at_level(logging.WARNING, logger="llm.client"):
+        with pytest.raises(LLMValidationError):
+            client.generate_structured(_request())
+    matches = [
+        r
+        for r in caplog.records
+        if r.name == "llm.client"
+        and getattr(r, "task_name", None) == "test_task"
+        and getattr(r, "error_class", None) == "LLMValidationError"
+    ]
+    assert matches, f"no structured failure log matched. records: {caplog.records}"
