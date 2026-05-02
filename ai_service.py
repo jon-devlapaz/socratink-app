@@ -31,7 +31,6 @@ DRILL_PROMPT_VERSION = "drill-system-v1"
 REPAIR_REPS_PROMPT_VERSION = "repair-reps-system-v1"
 DRILL_SYSTEM_BASE = DRILL_PROMPT_PATH.read_text()
 REPAIR_REPS_SYSTEM_BASE = REPAIR_REPS_PROMPT_PATH.read_text()
-EXTRACT_FAILURE_LOG_PATH = Path(__file__).parent / "logs/extract-invalid-json.log"
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 RETRYABLE_CODES = {429, 503, 500}
