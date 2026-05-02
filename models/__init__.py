@@ -6,6 +6,17 @@ from .identifiers import (
     parse_id,
     CORE_THESIS,
 )
+from .provisional_map import (
+    BackboneItem,
+    Cluster,
+    DomainMechanic,
+    Framework,
+    LearningPrereq,
+    Metadata,
+    ProvisionalMap,
+    Relationships,
+    Subnode,
+)
 
 __all__ = [
     "BackboneId",
@@ -14,4 +25,13 @@ __all__ = [
     "SubnodeId",
     "parse_id",
     "CORE_THESIS",
+    "BackboneItem",
+    "Cluster",
+    "DomainMechanic",
+    "Framework",
+    "LearningPrereq",
+    "Metadata",
+    "ProvisionalMap",
+    "Relationships",
+    "Subnode",
 ]
