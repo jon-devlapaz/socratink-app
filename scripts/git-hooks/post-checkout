@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# post-checkout hook
+#
+# Symlinks gitignored env files (.env and .env.local) from the main
+# worktree into newly-created worktrees so they "just work" without
+# manual setup.
+#
+# Fires after `git checkout <branch>` and `git worktree add ...`. The
+# guard below limits action to:
+#   - branch checkouts (flag=1), not file checkouts (flag=0)
+#   - worktrees other than the main one (the main worktree already has
+#     its own env files)
+#   - cases where the source env file exists in the main worktree AND
+#     the destination does not already exist in this worktree
+#
+# Best-effort. Never fails the checkout: any error is swallowed, and
+# missing source files are simply skipped.
+#
+# See docs/agents/ or AGENTS.md for the env-loading precedence
+# (process env > .env.local > .env, per runtime_env.load_app_env).
+
+set -u
+
+# Args from git: $1 prev HEAD, $2 new HEAD, $3 flag (1=branch, 0=file)
+flag="${3:-0}"
+[ "$flag" = "1" ] || exit 0
+
+current_top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+[ -n "${current_top}" ] || exit 0
+
+# The first 'worktree' line in `git worktree list --porcelain` is always
+# the main worktree (the original repo directory).
+main_top="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')"
+[ -n "${main_top}" ] || exit 0
+
+# If we're IN the main worktree, no symlinking — its env files are real.
+if [ "${current_top}" = "${main_top}" ]; then
+  exit 0
+fi
+
+linked_any=0
+for envfile in .env .env.local; do
+  src="${main_top}/${envfile}"
+  dst="${current_top}/${envfile}"
+  if [ -f "${src}" ] && [ ! -e "${dst}" ]; then
+    if ln -s "${src}" "${dst}" 2>/dev/null; then
+      linked_any=1
+      echo "[post-checkout] linked ${envfile} -> ${src}" >&2
+    fi
+  fi
+done
+
+# Stay quiet if nothing was linked; only chime in when the hook actually
+# did something useful.
+exit 0
