@@ -354,6 +354,14 @@ def admin_feedback_dismiss(feedback_id: str, request: Request):
         raise HTTPException(status_code=500, detail=str(err)) from err
 
 
+@admin_router.get("/admin/health")
+def admin_health_check():
+    """Liveness probe for the admin router. Confirms the router is mounted
+    and reachable. Does not check upstream dependencies (Supabase, etc.).
+    """
+    return JSONResponse({"status": "ok"})
+
+
 def register_admin_router(app: FastAPI) -> bool:
     """Include admin_router into `app` IFF dev-environment + Tink TODO file exists.
 
