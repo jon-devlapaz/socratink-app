@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from llm.client import LLMClient
 from llm.errors import (
+    LLMClientError,
     LLMMissingKeyError,
     LLMRateLimitError,
     LLMServiceError,
@@ -109,6 +110,20 @@ def test_does_not_retry_on_missing_key_error():
     adapter = _CountingAdapter(raises=[LLMMissingKeyError("no key")])
     client = LLMClient(adapter=adapter)
     with pytest.raises(LLMMissingKeyError):
+        client.generate_structured(_request())
+    assert adapter.calls == 1
+
+
+def test_does_not_retry_on_client_error():
+    """4xx-non-429 errors are permanent — LLMClient must NOT retry them.
+
+    This was a real bug discovered live: an expired GEMINI_API_KEY (HTTP
+    400) was being retried 3 times before giving up, wasting quota and
+    time. LLMClientError is the fix; this test prevents regression.
+    """
+    adapter = _CountingAdapter(raises=[LLMClientError("expired key")])
+    client = LLMClient(adapter=adapter)
+    with pytest.raises(LLMClientError):
         client.generate_structured(_request())
     assert adapter.calls == 1
 

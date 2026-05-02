@@ -6,6 +6,7 @@ import pytest
 from pydantic import BaseModel
 
 from llm.errors import (
+    LLMClientError,
     LLMMissingKeyError,
     LLMRateLimitError,
     LLMServiceError,
@@ -87,12 +88,45 @@ def test_429_maps_to_rate_limit_error(monkeypatch):
         adapter.call_once(_request())
 
 
-@pytest.mark.parametrize("code", [500, 503, 504, 401, 400])
-def test_other_codes_map_to_service_error(monkeypatch, code):
+@pytest.mark.parametrize("code", [500, 502, 503, 504])
+def test_5xx_codes_map_to_service_error(monkeypatch, code):
+    """5xx are transient upstream failures — retried by LLMClient."""
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     import llm.gemini_adapter as ga
     monkeypatch.setattr(ga, "APIError", _FakeAPIError)
     _patch_genai_client(monkeypatch, raises=_FakeAPIError(code))
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMServiceError):
+        adapter.call_once(_request())
+
+
+@pytest.mark.parametrize("code", [400, 401, 403, 404])
+def test_4xx_non_429_codes_map_to_client_error(monkeypatch, code):
+    """Non-429 4xx are permanent client failures — NOT retried.
+
+    Reproduces the "API key expired" 400 we saw end-to-end on a stale
+    GEMINI_API_KEY: the adapter must classify it as LLMClientError so
+    LLMClient skips the retry loop.
+    """
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
+    _patch_genai_client(monkeypatch, raises=_FakeAPIError(code))
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMClientError):
+        adapter.call_once(_request())
+
+
+def test_unknown_error_code_treated_as_service_error(monkeypatch):
+    """When .code is not an int (e.g., None), treat as transient service."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
+    err = _FakeAPIError(0)
+    err.code = None  # type: ignore[assignment]
+    _patch_genai_client(monkeypatch, raises=err)
 
     adapter = GeminiAdapter(model="gemini-2.5-flash")
     with pytest.raises(LLMServiceError):

@@ -19,6 +19,7 @@ from google.genai import types as genai_types
 from google.genai.errors import APIError
 
 from .errors import (
+    LLMClientError,
     LLMMissingKeyError,
     LLMRateLimitError,
     LLMServiceError,
@@ -28,7 +29,8 @@ from .types import StructuredLLMRequest, StructuredLLMResult, TokenUsage
 
 _PROVIDER = "gemini"
 _RATE_LIMIT_CODE = 429
-_RETRYABLE_SERVICE_CODES = {500, 503}
+# 5xx are transient upstream failures that LLMClient retries.
+_RETRYABLE_SERVICE_CODES = {500, 502, 503, 504}
 
 
 class GeminiAdapter:
@@ -103,6 +105,11 @@ class GeminiAdapter:
             raise LLMRateLimitError(f"Gemini rate-limited: {message}") from err
         if code in _RETRYABLE_SERVICE_CODES:
             raise LLMServiceError(f"Gemini service error (HTTP {code}): {message}") from err
+        if isinstance(code, int) and 400 <= code < 500:
+            # Permanent client-side failure (expired key, invalid model,
+            # malformed request, quota exhausted). NOT retried.
+            raise LLMClientError(f"Gemini API error (HTTP {code}): {message}") from err
+        # Unknown / non-HTTP error — treat as transient service to be safe.
         raise LLMServiceError(f"Gemini API error (HTTP {code}): {message}") from err
 
     @staticmethod

@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 import main
 from auth.service import AuthSessionState
 from llm.errors import (
+    LLMClientError,
     LLMMissingKeyError,
     LLMRateLimitError,
     LLMServiceError,
@@ -65,6 +66,7 @@ def _post(client):
         (LLMMissingKeyError, 401),
         (LLMRateLimitError, 429),
         (LLMServiceError, 503),
+        (LLMClientError, 503),
         (LLMValidationError, 502),
     ],
 )
@@ -76,6 +78,21 @@ def test_route_maps_normalized_errors_to_http(client, exc_cls, expected_status):
     with patch("main.extract_knowledge_map", side_effect=exc_instance):
         resp = _post(client)
     assert resp.status_code == expected_status, resp.json()
+
+
+def test_route_client_error_does_not_leak_provider_message(client):
+    """LLMClientError carries operator-debug detail (e.g., 'API key expired').
+    The user-facing message must be stable copy; the operator gets the real
+    cause via the warning log only.
+    """
+    leaky = LLMClientError("Gemini API error (HTTP 400): API key expired")
+    with patch("main.extract_knowledge_map", side_effect=leaky):
+        resp = _post(client)
+    assert resp.status_code == 503
+    detail = resp.json().get("detail", "")
+    assert "API key" not in detail
+    assert "HTTP 400" not in detail
+    assert "Gemini" not in detail
 
 
 def test_route_validation_error_does_not_leak_raw_text(client):

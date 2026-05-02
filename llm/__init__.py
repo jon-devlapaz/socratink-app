@@ -8,6 +8,7 @@ that the Gemini SDK is only imported in ``llm/gemini_adapter.py``.
 """
 from .client import LLMClient
 from .errors import (
+    LLMClientError,
     LLMError,
     LLMMissingKeyError,
     LLMRateLimitError,
@@ -23,6 +24,7 @@ __all__ = [
     "StructuredLLMResult",
     "TokenUsage",
     "LLMError",
+    "LLMClientError",
     "LLMMissingKeyError",
     "LLMRateLimitError",
     "LLMServiceError",

@@ -26,6 +26,7 @@ from ai_service import (
     get_drill_session_time_limit_seconds,
 )
 from llm.errors import (
+    LLMClientError,
     LLMMissingKeyError,
     LLMRateLimitError,
     LLMServiceError,
@@ -350,6 +351,18 @@ def extract(req: ExtractRequest):
         )
     except LLMServiceError as err:
         raise HTTPException(status_code=503, detail=str(err))
+    except LLMClientError as err:
+        # Operator-misconfiguration (expired key, unknown model, etc.).
+        # Surface as 503 to the learner — same UX as a transient outage —
+        # but log the underlying message so the operator can fix the root
+        # cause. Stable user-facing copy; do NOT leak the API error string.
+        logger.warning(
+            "extract_knowledge_map: LLMClientError on /api/extract: %s", err
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Extraction service is temporarily unavailable. Please try again shortly.",
+        )
     except ValueError as err:
         # Pydantic structural-validation errors raised by ProvisionalMap.
         raise HTTPException(status_code=422, detail=str(err))

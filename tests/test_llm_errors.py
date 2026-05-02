@@ -1,4 +1,5 @@
 from llm.errors import (
+    LLMClientError,
     LLMError,
     LLMMissingKeyError,
     LLMRateLimitError,
@@ -9,6 +10,7 @@ from llm.errors import (
 
 def test_all_subclasses_inherit_from_llm_error():
     for cls in (
+        LLMClientError,
         LLMMissingKeyError,
         LLMRateLimitError,
         LLMServiceError,
@@ -20,14 +22,19 @@ def test_all_subclasses_inherit_from_llm_error():
 
 def test_subclasses_are_distinct():
     classes = {
+        LLMClientError,
         LLMMissingKeyError,
         LLMRateLimitError,
         LLMServiceError,
         LLMValidationError,
     }
-    assert len(classes) == 4
+    assert len(classes) == 5
     assert not issubclass(LLMValidationError, LLMServiceError)
     assert not issubclass(LLMRateLimitError, LLMServiceError)
+    # Critical: LLMClientError must NOT subclass LLMServiceError, otherwise
+    # LLMClient's retry loop would erroneously retry permanent 4xx failures.
+    assert not issubclass(LLMClientError, LLMServiceError)
+    assert not issubclass(LLMClientError, LLMRateLimitError)
 
 
 def test_validation_error_carries_message_and_optional_raw_text():
