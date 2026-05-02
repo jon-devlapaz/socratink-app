@@ -30,7 +30,7 @@ current_top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 
 # The first 'worktree' line in `git worktree list --porcelain` is always
 # the main worktree (the original repo directory).
-main_top="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2; exit}')"
+main_top="$(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{sub(/^worktree /, ""); print; exit}')"
 [ -n "${main_top}" ] || exit 0
 
 # If we're IN the main worktree, no symlinking — its env files are real.

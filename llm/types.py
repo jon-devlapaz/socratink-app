@@ -28,6 +28,10 @@ class StructuredLLMRequest:
     task_name: str | None = None
     prompt_version: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.max_retries < 0:
+            raise ValueError(f"max_retries cannot be negative (got {self.max_retries})")
+
 
 @dataclass(frozen=True)
 class TokenUsage:

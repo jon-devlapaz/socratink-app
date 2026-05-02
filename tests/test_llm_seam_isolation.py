@@ -38,6 +38,7 @@ _SKIP_DIR_PARTS = {
     "test-results",
     "logs",
     ".worktrees",
+    ".vercel",
 }
 
 
@@ -64,10 +65,12 @@ def test_gemini_sdk_only_imported_in_adapter():
         if rel == "ai_service.py":
             # Temporary exception until drill_chat + generate_repair_reps migrate.
             continue
+        if rel == "tests/test_llm_seam_isolation.py":
+            continue
         try:
             text = py_path.read_text(encoding="utf-8")
-        except Exception:
-            continue
+        except Exception as err:
+            pytest.fail(f"Failed to read {rel}: {err}")
         for needle in _FORBIDDEN_IMPORT_NEEDLES:
             if needle in text:
                 violations.append(f"{rel}: contains {needle!r}")

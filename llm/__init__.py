@@ -21,15 +21,15 @@ from .types import StructuredLLMRequest, StructuredLLMResult, TokenUsage
 
 __all__ = [
     "LLMClient",
-    "StructuredLLMRequest",
-    "StructuredLLMResult",
-    "TokenUsage",
-    "LLMError",
     "LLMClientError",
+    "LLMError",
     "LLMMissingKeyError",
     "LLMRateLimitError",
     "LLMServiceError",
     "LLMValidationError",
     "RetriableLLMError",
+    "StructuredLLMRequest",
+    "StructuredLLMResult",
+    "TokenUsage",
     "build_llm_client",
 ]

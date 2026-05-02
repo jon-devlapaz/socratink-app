@@ -185,7 +185,7 @@ Each fixture stores the input + a recorded LLM response + the expected rubric sc
 - Two run modes:
   - `--mode replay` (default, fast, free, runs in CI) — feeds recorded LLM responses through the rubric
   - `--mode live` (manual, costs money, refreshes fixtures) — calls real Gemini, records the response, optionally re-scores
-- Output: per-fixture rubric report (markdown table), aggregate pass-rate summary
+- Output: per-fixture rubric report (Markdown table), aggregate pass-rate summary
 - Pytest integration: `tests/test_extraction_rubric.py` runs replay mode in CI; per-fixture failures surface specific dimensions that broke
 
 ### Open questions for the brainstorm

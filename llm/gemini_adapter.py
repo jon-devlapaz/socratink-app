@@ -16,7 +16,6 @@ from typing import Any
 
 from google import genai
 from google.genai import types as genai_types
-from google.genai.errors import APIError
 
 from .errors import (
     LLMClientError,
@@ -71,9 +70,10 @@ class GeminiAdapter:
                 contents=request.user_prompt,
                 config=config,
             )
-        except APIError as err:
+        except Exception as err:
             self._raise_normalized(err)
-        latency_ms = (time.perf_counter() - start) * 1000.0
+        finally:
+            latency_ms = (time.perf_counter() - start) * 1000.0
 
         parsed = getattr(response, "parsed", None)
         if not isinstance(parsed, request.response_schema):
@@ -98,7 +98,7 @@ class GeminiAdapter:
         )
 
     @staticmethod
-    def _raise_normalized(err: APIError) -> None:
+    def _raise_normalized(err: Exception) -> None:
         code = getattr(err, "code", None)
         message = getattr(err, "message", None) or str(err)
         if code == _RATE_LIMIT_CODE:

@@ -18,9 +18,9 @@ from typing import Tuple, Union
 
 CORE_THESIS = "core-thesis"
 
-_BACKBONE_RE = re.compile(r"^b(\d{1,2})$")
-_CLUSTER_RE = re.compile(r"^c(\d{1,2})$")
-_SUBNODE_RE = re.compile(r"^(c\d{1,2})_s(\d{1,2})$")
+_BACKBONE_RE = re.compile(r"^b([1-9][0-9]?)$")
+_CLUSTER_RE = re.compile(r"^c([1-9][0-9]?)$")
+_SUBNODE_RE = re.compile(r"^(c[1-9][0-9]?)_s([1-9][0-9]?)$")
 
 
 class IdKind(Enum):
