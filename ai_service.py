@@ -11,6 +11,13 @@ from google.genai.errors import APIError
 from google.genai import types
 from pydantic import BaseModel, ConfigDict, Field
 
+from llm import (
+    LLMClient,
+    StructuredLLMRequest,
+    build_llm_client,
+)
+from models import ProvisionalMap
+
 MODEL = "gemini-2.5-flash"
 EXTRACT_TEMPERATURE = 0.2
 DRILL_TEMPERATURE = 0.2
@@ -200,39 +207,6 @@ def _get_client(api_key: str | None = None):
             "No Gemini API key configured. Add one in Settings or set GEMINI_API_KEY in .env."
         )
     return genai.Client(api_key=key)
-
-
-def _clean_response(text: str | None, context: str = "Gemini") -> str:
-    """Strip code fences. Used ONLY for extract_knowledge_map."""
-    result = (text or "").strip()
-    if not result:
-        raise ValueError(f"{context} returned an empty response.")
-
-    if result.startswith("```"):
-        result = result.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-
-    return result
-
-
-def _log_extract_failure(
-    *, reason: str, raw_response: str | None, cleaned_response: str | None = None
-) -> None:
-    try:
-        EXTRACT_FAILURE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with EXTRACT_FAILURE_LOG_PATH.open("a", encoding="utf-8") as log_file:
-            log_file.write("=" * 80 + "\n")
-            log_file.write(f"timestamp: {datetime.now(timezone.utc).isoformat()}\n")
-            log_file.write(f"reason: {reason}\n")
-            log_file.write("raw_response:\n")
-            log_file.write((raw_response or "").strip() or "<empty>")
-            log_file.write("\n")
-            if cleaned_response is not None and cleaned_response != raw_response:
-                log_file.write("cleaned_response:\n")
-                log_file.write(cleaned_response.strip() or "<empty>")
-                log_file.write("\n")
-    except Exception:
-        # Logging must never break extraction error handling.
-        pass
 
 
 def _parse_iso_timestamp(iso_string: str) -> datetime:
@@ -678,51 +652,31 @@ def _normalize_drill_evaluation(
 
 def extract_knowledge_map(
     raw_text: str,
+    *,
+    llm: LLMClient | None = None,
     api_key: str | None = None,
     telemetry_context: dict | None = None,
-) -> dict:
-    client = _get_client(api_key)
+) -> ProvisionalMap:
+    """Generate a Provisional map from learner-supplied text.
 
-    response = _call_gemini_with_retry(
-        client,
-        model=MODEL,
-        contents=USER_PROMPT.format(text=raw_text),
-        config=types.GenerateContentConfig(
-            system_instruction=EXTRACT_PROMPT_PATH.read_text(),
-            temperature=EXTRACT_TEMPERATURE,
-        ),
+    The application sees a typed ProvisionalMap, never a dict and never
+    a Gemini-shaped response. All provider-specific behavior lives behind
+    the LLMClient seam (see llm/ package). The closure validators on
+    ProvisionalMap enforce the structural rules from extract-system-v1.txt.
+    """
+    client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
+    request = StructuredLLMRequest(
+        system_prompt=EXTRACT_PROMPT_PATH.read_text(),
+        user_prompt=USER_PROMPT.format(text=raw_text),
+        response_schema=ProvisionalMap,
+        temperature=EXTRACT_TEMPERATURE,
+        task_name="provisional_map_generation",
+        prompt_version=EXTRACT_PROMPT_VERSION,
     )
-
-    raw_response = response.text
-    try:
-        cleaned = _clean_response(raw_response)
-    except ValueError as err:
-        _log_extract_failure(reason=str(err), raw_response=raw_response)
-        raise
-
-    try:
-        knowledge_map = json.loads(cleaned)
-    except json.JSONDecodeError as err:
-        _log_extract_failure(
-            reason=f"Invalid JSON: {err.msg} at line {err.lineno} column {err.colno}",
-            raw_response=raw_response,
-            cleaned_response=cleaned,
-        )
-        raise ValueError(
-            f"Gemini returned invalid JSON for extraction: {err.msg}"
-        ) from err
-
-    try:
-        _validate_knowledge_map(knowledge_map)
-    except ValueError as err:
-        _log_extract_failure(
-            reason=f"Schema validation failed: {err}",
-            raw_response=raw_response,
-            cleaned_response=cleaned,
-        )
-        raise
-
-    return knowledge_map
+    result = client.generate_structured(request)
+    # Adapter guarantees parsed is a ProvisionalMap or it raised
+    # LLMValidationError. The cast is for type-checker clarity.
+    return result.parsed  # type: ignore[return-value]
 
 
 def _validate_repair_reps_result(

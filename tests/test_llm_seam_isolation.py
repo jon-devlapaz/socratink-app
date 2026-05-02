@@ -77,15 +77,18 @@ def test_gemini_sdk_only_imported_in_adapter():
     )
 
 
-@pytest.mark.xfail(
-    reason="Closes after Task 9 migrates extract_knowledge_map onto llm.LLMClient",
-    strict=True,
-)
 def test_extract_knowledge_map_uses_llm_seam():
-    """Stronger invariant after Task 9: ai_service.py must use llm.LLMClient
-    at least for the extract path. Marked xfail until that lands.
+    """ai_service.py must use llm.LLMClient at least for the extract path.
+
+    Closed by Task 9. drill_chat and generate_repair_reps still use the
+    legacy SDK, so the file still imports google.genai overall — but
+    extract_knowledge_map now goes through the seam. When those paths
+    migrate, the broader isolation test above will tighten too.
     """
     ai_service = (REPO_ROOT / "ai_service.py").read_text(encoding="utf-8")
     assert (
-        "from llm" in ai_service or "import llm" in ai_service
-    ), "ai_service.py must use llm.LLMClient at least for the extract path"
+        "from llm import" in ai_service
+    ), "ai_service.py must import from llm for the extract path"
+    assert (
+        "ProvisionalMap" in ai_service
+    ), "ai_service.py must reference ProvisionalMap as the extract return type"
