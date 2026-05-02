@@ -46,3 +46,54 @@ def test_explicit_key_overrides_missing_env(monkeypatch):
     )
     with pytest.raises(RuntimeError, match="intercepted"):
         adapter.call_once(_request())
+
+
+# --- Error-code classification (Task 5.2) ------------------------------------
+
+
+class _FakeAPIError(Exception):
+    """Stand-in for google.genai.errors.APIError; same .code/.message contract."""
+
+    def __init__(self, code: int, message: str = "boom"):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def _patch_genai_client(monkeypatch, *, raises=None, response=None):
+    """Replace genai.Client(...) construction with a fake whose
+    .models.generate_content either raises or returns response.
+    """
+    fake_models = MagicMock()
+    if raises is not None:
+        fake_models.generate_content.side_effect = raises
+    else:
+        fake_models.generate_content.return_value = response
+    fake_client = MagicMock()
+    fake_client.models = fake_models
+
+    import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga.genai, "Client", lambda **_: fake_client)
+
+
+def test_429_maps_to_rate_limit_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
+    _patch_genai_client(monkeypatch, raises=_FakeAPIError(429))
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMRateLimitError):
+        adapter.call_once(_request())
+
+
+@pytest.mark.parametrize("code", [500, 503, 504, 401, 400])
+def test_other_codes_map_to_service_error(monkeypatch, code):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
+    _patch_genai_client(monkeypatch, raises=_FakeAPIError(code))
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMServiceError):
+        adapter.call_once(_request())
