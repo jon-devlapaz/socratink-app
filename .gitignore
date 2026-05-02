@@ -9,6 +9,10 @@
 !.claude/commands/pipette.md
 !.claude/commands/pipette-weekly.md
 !.claude/commands/pipette-lite.md
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/git-order/
+!.claude/skills/git-order/SKILL.md
 .kiro/
 .playwright-cli/
 .firecrawl/
@@ -63,6 +67,7 @@ uv.lock
 # QA + tool artifacts (do not track)
 .playwright-mcp/
 *.excalidraw
+!docs/diagrams/*.excalidraw
 c4-mobile-*.png
 map-header-*.png
 b&a/

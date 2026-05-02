@@ -17,7 +17,7 @@ Binding docs MUST be followed. Non-binding docs inform decisions but are not con
 
 ## Precedence (Binding)
 
-On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md) overrides every other binding doc, including the canonical `spec.md`, `ux-framework.md`, and all implementation-tier specs.
+On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md) overrides every other binding doc, including the canonical `spec.md`, `/DESIGN.md`, and all implementation-tier specs.
 
 Concretely: if any binding doc below uses legacy shorthand ("verified understanding", "cleared", "mastered", "proved it", "real learning", "possess"), evidence-weighted-map.md §13 (Legacy Shorthand Replacement Table) governs interpretation. Those phrases are UI or copy shorthand — not knowledge claims. Agents must translate them at read time and reject new occurrences at write time.
 
@@ -27,10 +27,11 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 
 | Doc | Status | Binding | Purpose | Superseded By |
 | --- | --- | --- | --- | --- |
+| [/DESIGN.md](../../DESIGN.md) | canonical | yes | The canonical UX doctrine: unifying metaphor, metacognitive happy path, state claims, session guardrails, AI contracts, and ethical engagement. | — |
 | [/UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) | canonical | yes | Project-wide DDD glossary: binding terms (Graph truth, Recorded evidence, Reconstruction evidence, the four learning-loop states) and explicit Aliases to avoid. Authoritative term list referenced by the Precedence block above. | — |
 | [product/evidence-weighted-map.md](../product/evidence-weighted-map.md) | canonical | yes | Defines the evidence-weighted map doctrine, true game loop, starting-map-as-anchor, map-maturity language, and graph-claim rules. Overrides other docs on graph-truth claims. | — |
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
-| [product/ux-framework.md](../product/ux-framework.md) | canonical | yes | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | — |
+| [product/ux-framework.md](../product/ux-framework.md) | deprecated | no | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | [/DESIGN.md](../../DESIGN.md) |
 | [theta/state.md](../theta/state.md) | canonical | yes | Evidence posture and confidence ratings for product-science claims; phase grounding; product language rules. | — |
 
 ## Implementation-Facing Specs
@@ -84,6 +85,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 ## Historical / Deprecated Notes
 
 - **`docs/codex/session-bootstrap.md`** — deprecated alias. All bootstrap reads should resolve to `docs/codex/onboarding.md`. Do not add new content here.
+- **`docs/product/ux-framework.md`** — deprecated. Consolidated into `/DESIGN.md` as the canonical UX doctrine.
 - No other docs are currently deprecated. Items flagged as stale during the evidence-weighted-map pivot are updated in place (see `evidence-weighted-map.md` for the binding doctrine and surgical edits to the canonical docs in this registry).
 
 ## Lean-Startup Consolidation Candidates (Post-MVP)
