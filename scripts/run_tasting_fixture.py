@@ -233,11 +233,16 @@ def run_fixture(args: argparse.Namespace) -> int:
     }
 
     print(f"Running fixture: {fixture_title}")
-    knowledge_map = extract_knowledge_map(
+    # extract_knowledge_map now returns a ProvisionalMap (Pydantic).
+    # drill_chat and the dict-walking helpers in this script still expect a
+    # dict, so dump it. When drill_chat migrates through the seam too,
+    # update both call sites at once.
+    provisional_map = extract_knowledge_map(
         fixture["source_text"],
         api_key=args.api_key,
         telemetry_context=base_telemetry,
     )
+    knowledge_map = provisional_map.model_dump()
     print_map_summary(knowledge_map)
 
     node = resolve_node(
