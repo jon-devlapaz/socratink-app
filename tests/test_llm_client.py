@@ -93,3 +93,19 @@ def test_gives_up_after_max_retries_on_rate_limit():
         client.generate_structured(_request())
     # max_retries=2 → up to 2 retries beyond initial → 3 total calls
     assert adapter.calls == 3
+
+
+def test_does_not_retry_on_validation_error():
+    adapter = _CountingAdapter(raises=[LLMValidationError("bad shape")])
+    client = LLMClient(adapter=adapter)
+    with pytest.raises(LLMValidationError):
+        client.generate_structured(_request())
+    assert adapter.calls == 1
+
+
+def test_does_not_retry_on_missing_key_error():
+    adapter = _CountingAdapter(raises=[LLMMissingKeyError("no key")])
+    client = LLMClient(adapter=adapter)
+    with pytest.raises(LLMMissingKeyError):
+        client.generate_structured(_request())
+    assert adapter.calls == 1
