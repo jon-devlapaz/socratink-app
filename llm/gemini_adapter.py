@@ -16,6 +16,7 @@ from typing import Any
 
 from google import genai
 from google.genai import types as genai_types
+from google.genai.errors import APIError
 
 from .errors import (
     LLMClientError,
@@ -70,7 +71,7 @@ class GeminiAdapter:
                 contents=request.user_prompt,
                 config=config,
             )
-        except Exception as err:
+        except APIError as err:
             self._raise_normalized(err)
         finally:
             latency_ms = (time.perf_counter() - start) * 1000.0

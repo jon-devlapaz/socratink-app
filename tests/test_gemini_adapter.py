@@ -46,7 +46,7 @@ def test_explicit_key_overrides_missing_env(monkeypatch):
         "Client",
         lambda **_: MagicMock(models=MagicMock(generate_content=MagicMock(side_effect=RuntimeError("intercepted")))),
     )
-    with pytest.raises(LLMError, match="intercepted"):
+    with pytest.raises(RuntimeError, match="intercepted"):
         adapter.call_once(_request())
 
 
@@ -81,6 +81,7 @@ def _patch_genai_client(monkeypatch, *, raises=None, response=None):
 def test_429_maps_to_rate_limit_error(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
     _patch_genai_client(monkeypatch, raises=_FakeAPIError(429))
 
     adapter = GeminiAdapter(model="gemini-2.5-flash")
@@ -93,6 +94,7 @@ def test_5xx_codes_map_to_service_error(monkeypatch, code):
     """5xx are transient upstream failures — retried by LLMClient."""
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
     _patch_genai_client(monkeypatch, raises=_FakeAPIError(code))
 
     adapter = GeminiAdapter(model="gemini-2.5-flash")
@@ -110,6 +112,7 @@ def test_4xx_non_429_codes_map_to_client_error(monkeypatch, code):
     """
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
     _patch_genai_client(monkeypatch, raises=_FakeAPIError(code))
 
     adapter = GeminiAdapter(model="gemini-2.5-flash")
@@ -121,6 +124,7 @@ def test_unknown_error_code_treated_as_service_error(monkeypatch):
     """When .code is not an int (e.g., None), treat as transient service."""
     monkeypatch.setenv("GEMINI_API_KEY", "test-key")
     import llm.gemini_adapter as ga
+    monkeypatch.setattr(ga, "APIError", _FakeAPIError)
     err = _FakeAPIError(0)
     err.code = None  # type: ignore[assignment]
     _patch_genai_client(monkeypatch, raises=err)
