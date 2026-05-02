@@ -5,14 +5,11 @@ import ActionPopover from './ActionPopover.jsx';
 import ChatPanel from './ChatPanel.jsx';
 import { createBranch, createPull, mergePull, repoCoords } from './api.js';
 
-const MAIN = import.meta.env.VITE_MAIN_BRANCH || 'main';
-const ZOOM_MIN = 0.4;
-const ZOOM_MAX = 1.6;
-const DRAG_THRESHOLD = 4;
+import ZoomControls, { ZOOM_MIN, ZOOM_MAX, clamp } from './ZoomControls.jsx';
+import HelpButton from './HelpButton.jsx';
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
+const MAIN = import.meta.env.VITE_MAIN_BRANCH || 'main';
+const DRAG_THRESHOLD = 4;
 
 export default function App() {
   const { graph, error, loading, refresh, addOptimistic, transitions } =
@@ -221,96 +218,4 @@ export default function App() {
   );
 }
 
-function ZoomControls({ zoom, setZoom }) {
-  return (
-    <div className="zoom-controls">
-      <button
-        className="zoom-btn"
-        onClick={() => setZoom((z) => clamp(z * 0.9, ZOOM_MIN, ZOOM_MAX))}
-        aria-label="zoom out"
-      >
-        −
-      </button>
-      <span className="zoom-readout">{Math.round(zoom * 100)}%</span>
-      <button
-        className="zoom-btn"
-        onClick={() => setZoom((z) => clamp(z * 1.1, ZOOM_MIN, ZOOM_MAX))}
-        aria-label="zoom in"
-      >
-        +
-      </button>
-      <button
-        className="zoom-btn zoom-reset"
-        onClick={() => setZoom(1)}
-        aria-label="reset zoom"
-        title="reset zoom"
-      >
-        1:1
-      </button>
-    </div>
-  );
-}
 
-function HelpButton() {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocClick(e) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, [open]);
-
-  return (
-    <div className="help-wrap" ref={wrapRef}>
-      <button
-        type="button"
-        className="help-btn"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="help"
-        aria-expanded={open}
-      >
-        ?
-      </button>
-      {open && (
-        <div className="help-popover" role="dialog">
-          <div className="help-row">
-            <span className="help-gesture">drag canvas</span>
-            <span className="help-arrow">→</span>
-            <span className="help-action">pan</span>
-          </div>
-          <div className="help-row">
-            <span className="help-gesture">⌘-scroll</span>
-            <span className="help-arrow">→</span>
-            <span className="help-action">zoom</span>
-          </div>
-          <div className="help-row">
-            <span className="help-gesture">click commit</span>
-            <span className="help-arrow">→</span>
-            <span className="help-action">open on github</span>
-          </div>
-          <div className="help-row">
-            <span className="help-gesture">right-click commit</span>
-            <span className="help-arrow">→</span>
-            <span className="help-action">branch</span>
-          </div>
-          <div className="help-row">
-            <span className="help-gesture">click branch label</span>
-            <span className="help-arrow">→</span>
-            <span className="help-action">open PR</span>
-          </div>
-          <div className="help-row">
-            <span className="help-gesture">click open PR arc</span>
-            <span className="help-arrow">→</span>
-            <span className="help-action">merge</span>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}

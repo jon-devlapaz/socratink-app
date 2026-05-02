@@ -180,7 +180,7 @@ The product has no human teacher to manage attributions in real time. The interf
 | Surface | Tone | Example |
 |---|---|---|
 | Marketing hero | Invitation, not pitch | "See what you can **actually explain.**" |
-| Value strip | Plain declarative | "No fake state changes — the map updates when Socratink records learner-generated evidence." |
+| Value strip | Plain declarative | "No fake state changes — the map updates when socratink records learner-generated evidence." |
 | How it works | Imperative, low-volume | "Bring your material. Build a map. Record evidence." |
 | Drill prompt | Sparse, gap-identifying | "Explain why node B matters in the system." |
 | `primed` state | Quiet acknowledgment | "You've stepped inside. The real challenge is ahead." |
@@ -257,7 +257,6 @@ Defer:
 - Long-term curriculum claims.
 - Cross-concept mastery summaries.
 - Rich notebook features.
-- URL ingestion (until SSRF hardening + manual fallback ships).
 
 ---
 
@@ -266,7 +265,7 @@ Defer:
 The product is defined as much by what it will not do. The following are hard exclusions, not preferences:
 
 - **No streaks. No XP. No badges. No leaderboards. No achievement popups.** The reward is the crystal state change itself.
-- **No content browser.** The graph is not a library; it is a record of evidence Socratink has seen.
+- **No content browser.** The graph is not a library; it is a record of evidence socratink has seen.
 - **No completion checklist.** Reading does not advance state. Only generation and spaced reconstruction evidence do.
 - **No "diagnostic" framing.** The threshold is a starting map, not an evaluation.
 - **No mastery claims** from graph generation, from reading, or from fluent prose. Only spaced reconstruction can record `solidified`.

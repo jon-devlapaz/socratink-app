@@ -25,6 +25,13 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
+from llm.errors import (
+    LLMClientError,
+    LLMMissingKeyError,
+    LLMRateLimitError,
+    LLMServiceError,
+    LLMValidationError,
+)
 import source_intake
 from source_intake import (
     BlockedSource,
@@ -324,16 +331,54 @@ def extract(req: ExtractRequest):
             detail="Couldn't find enough readable text in what you pasted.",
         )
     try:
-        knowledge_map = extract_knowledge_map(src.text, api_key=req.api_key)
-        return {"knowledge_map": knowledge_map}
-    except MissingAPIKeyError as err:
-        raise HTTPException(status_code=401, detail=str(err))
-    except GeminiRateLimitError as err:
-        raise HTTPException(status_code=429, detail=str(err))
-    except GeminiServiceError as err:
-        raise HTTPException(status_code=503, detail=str(err))
+        provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
+        # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
+        return {"knowledge_map": provisional_map.model_dump()}
+    # All LLM-error branches: stable user-facing copy ONLY. Provider details
+    # (model name, error code, original message) flow into operator logs but
+    # never into the response body. This is consistent across the whole LLM
+    # error hierarchy — the user is never told which provider we use.
+    except LLMMissingKeyError as err:
+        logger.warning("extract: LLMMissingKeyError: %s", err)
+        raise HTTPException(
+            status_code=401,
+            detail="No API key configured. Add one in Settings to continue.",
+        )
+    except LLMRateLimitError as err:
+        logger.warning("extract: LLMRateLimitError: %s", err)
+        raise HTTPException(
+            status_code=429,
+            detail="The AI service is rate-limiting requests. Try again in a minute.",
+        )
+    except LLMValidationError as err:
+        # raw_text preserved internally on the exception object for fixture
+        # refresh / debugging; never serialized to the response.
+        logger.warning("extract: LLMValidationError: %s", err)
+        raise HTTPException(
+            status_code=502,
+            detail="Extraction returned malformed structure. Please retry.",
+        )
+    except LLMServiceError as err:
+        logger.warning("extract: LLMServiceError: %s", err)
+        raise HTTPException(
+            status_code=503,
+            detail="The AI service is temporarily unavailable. Please try again shortly.",
+        )
+    except LLMClientError as err:
+        # Operator-misconfiguration (expired key, unknown model, etc.).
+        # Same UX as a transient outage from the learner's perspective.
+        logger.warning("extract: LLMClientError: %s", err)
+        raise HTTPException(
+            status_code=503,
+            detail="The AI service is temporarily unavailable. Please try again shortly.",
+        )
     except ValueError as err:
-        raise HTTPException(status_code=400, detail=str(err))
+        # Pydantic structural-validation errors raised by ProvisionalMap
+        # (closure rules, identifier grammar). The message here is OUR
+        # internal validator output, not provider-debug, so it is safe
+        # AND informative to surface.
+        logger.warning("extract: structural validation failed: %s", err)
+        raise HTTPException(status_code=422, detail=str(err))
     except Exception as err:
         logger.exception("Unexpected failure in /api/extract")
         raise HTTPException(

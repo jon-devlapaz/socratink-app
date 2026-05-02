@@ -124,8 +124,8 @@ def _run(*args, cwd=None, input=None):
 
 def test_no_args_prints_usage():
     r = _run()
-    assert r.returncode == 0
-    assert "Usage:" in r.stdout or "usage:" in r.stdout
+    assert r.returncode == 2
+    assert "Usage:" in r.stderr or "usage:" in r.stderr
 
 def test_unknown_subcommand_exits_2():
     r = _run("does-not-exist")
