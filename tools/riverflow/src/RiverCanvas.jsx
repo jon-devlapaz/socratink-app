@@ -2,13 +2,8 @@ import React, { useState } from 'react';
 import CommitNode, { CommitTooltip } from './CommitNode.jsx';
 import BranchLabel from './BranchLabel.jsx';
 import PRCard from './PRCard.jsx';
-
-const X_STEP = 90;
-const Y_STEP = 110;
-const LEFT_PAD = 80;
-const RIGHT_PAD = 220;
-const TOP_PAD = 160;
-const BOTTOM_PAD = 160;
+import AtMainPin from './AtMainPin.jsx';
+import { computeGeometry, X_STEP, TOP_PAD } from './canvasGeometry.js';
 
 const EMPTY_TRANSITIONS = {
   newPRs: new Set(),
@@ -25,28 +20,13 @@ export default function RiverCanvas({
 }) {
   const [hover, setHover] = useState(null); // { node, cx, cy } | null
   if (!graph) return null;
-  const { main, branches, pulls, mainTipX } = graph;
+  const { main, branches, pulls } = graph;
   const handleHover = (node, cx, cy) =>
     setHover(node ? { node, cx, cy } : null);
 
-  const lanes = branches.map((b) => b.lane);
-  const maxLane = lanes.length ? Math.max(0, ...lanes) : 0;
-  const minLane = lanes.length ? Math.min(0, ...lanes) : 0;
-
-  const mainY = TOP_PAD + maxLane * Y_STEP;
-  const height = mainY + Math.abs(minLane) * Y_STEP + BOTTOM_PAD;
-  const branchMaxX = branches.reduce(
-    (m, b) => Math.max(m, b.commits.length ? b.commits[b.commits.length - 1].x : b.forkX),
-    0,
-  );
-  const gridW = Math.max(mainTipX, branchMaxX) + 2;
-  const width = LEFT_PAD + gridW * X_STEP + RIGHT_PAD;
-
-  const xOf = (gx) => LEFT_PAD + gx * X_STEP;
-  const yOf = (lane) => mainY - lane * Y_STEP;
-
-  const mainStart = xOf(0);
-  const mainEnd = xOf(mainTipX);
+  const geometry = computeGeometry(graph);
+  if (!geometry) return null;
+  const { mainY, height, width, xOf, yOf, mainStart, mainEnd } = geometry;
 
   return (
     <svg
@@ -315,154 +295,5 @@ export default function RiverCanvas({
           );
         })}
     </svg>
-  );
-}
-
-const PR_COLORS = {
-  open: '#d8a867',   // amber — drilled state
-  merged: '#4dba8a', // success
-  closed: '#7a7387',
-};
-
-function AtMainPin({
-  branch,
-  x,
-  labelY,
-  mainY,
-  pulse = false,
-  pr = null,
-  isNewPR = false,
-  justMerged = false,
-  onClick,
-}) {
-  const [hover, setHover] = useState(false);
-  const w = Math.max(branch.name.length * 7 + 20, 60);
-  const h = 18;
-
-  let outlineColor = branch.color;
-  if (pr) {
-    if (pr.merged) outlineColor = PR_COLORS.merged;
-    else if (pr.state === 'open') outlineColor = PR_COLORS.open;
-  }
-
-  const isOpenPR = pr && pr.state === 'open' && !pr.merged;
-  // The pin always has an action: merge if there's an open PR, else open-PR.
-  const interactive = true;
-
-  let hintText = null;
-  if (hover) {
-    if (isOpenPR) {
-      const num = pr.number > 0 ? `#${pr.number}` : '#…';
-      hintText = `merge PR ${num} →`;
-    } else {
-      hintText = 'open PR →';
-    }
-  }
-
-  return (
-    <g
-      style={{
-        cursor: interactive ? 'pointer' : 'default',
-        opacity: branch.optimistic || pr?.optimistic ? 0.6 : 1,
-      }}
-      onClick={interactive ? onClick : undefined}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <line
-        x1={x}
-        y1={mainY - 6}
-        x2={x}
-        y2={labelY + h / 2}
-        stroke={branch.color}
-        strokeWidth={1}
-        opacity={0.45}
-        strokeDasharray="2 3"
-      />
-      <circle
-        cx={x}
-        cy={mainY}
-        r={3}
-        fill={outlineColor}
-        opacity={0.85}
-        className={pulse ? 'tip-pulse' : undefined}
-      />
-      <rect
-        x={x - w / 2}
-        y={labelY - h / 2}
-        width={w}
-        height={h}
-        rx={6}
-        fill="#2a2542"
-        stroke={outlineColor}
-        strokeWidth={pr ? 1.4 : 1}
-        className={
-          pr && pr.state === 'open' && !pr.merged ? 'pin-pr-open' : undefined
-        }
-        style={{ transition: 'stroke 400ms ease' }}
-      />
-      <text
-        x={x}
-        y={labelY + 3}
-        textAnchor="middle"
-        className="branch-label"
-        fill={outlineColor}
-        style={{ fontSize: 10 }}
-      >
-        {branch.name}
-      </text>
-
-      {/* Subtle "this branch has a PR" indicator next to the name */}
-      {pr && (
-        <circle
-          cx={x + w / 2 - 6}
-          cy={labelY}
-          r={2}
-          fill={pr.merged ? PR_COLORS.merged : PR_COLORS.open}
-        />
-      )}
-
-      {/* New-PR draw-on: a brief outline pulse, mirroring the arc draw-on */}
-      {isNewPR && (
-        <rect
-          x={x - w / 2}
-          y={labelY - h / 2}
-          width={w}
-          height={h}
-          rx={5}
-          fill="none"
-          stroke={PR_COLORS.open}
-          strokeWidth={1.4}
-          className="pin-drawon"
-        />
-      )}
-
-      {/* Merge ripple at the pin's anchor on main */}
-      {justMerged && (
-        <g pointerEvents="none">
-          <circle cx={x} cy={mainY} r={0} fill="none" stroke={PR_COLORS.merged} strokeWidth={2} opacity={0.9}>
-            <animate attributeName="r" from="0" to="56" dur="0.8s" fill="freeze" />
-            <animate attributeName="opacity" from="0.9" to="0" dur="0.8s" fill="freeze" />
-          </circle>
-          <circle cx={x} cy={mainY} r={0} fill={PR_COLORS.merged} opacity={0.5}>
-            <animate attributeName="r" from="0" to="14" dur="0.4s" fill="freeze" />
-            <animate attributeName="opacity" from="0.6" to="0" dur="0.8s" fill="freeze" />
-          </circle>
-        </g>
-      )}
-
-      {hintText && (
-        <text
-          x={x + w / 2 + 8}
-          y={labelY + 3}
-          className="hover-hint"
-          fill={outlineColor}
-          pointerEvents="none"
-          style={{ fontSize: 10 }}
-        >
-          {hintText}
-        </text>
-      )}
-    </g>
   );
 }

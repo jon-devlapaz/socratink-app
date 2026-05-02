@@ -688,7 +688,6 @@ const App = (() => {
     let fetchedUrlTitle = '';
     let fetchedUrl = '';
     let activeTab = 'paste';
-    const usedSlots = loadConcepts().length;
 
     container.innerHTML = `
       ${showNameField ? `
@@ -698,7 +697,6 @@ const App = (() => {
               <div class="creation-intro-title">Start with your rough map.</div>
               <p class="creation-intro-copy">This is global context. The first room will ask one smaller question.</p>
             </div>
-            <div class="creation-capacity-pill">${Math.min(usedSlots, 4)}/4 active</div>
           </div>
         </div>
         <div class="creation-field">
@@ -716,7 +714,10 @@ const App = (() => {
                     aria-labelledby="creation-threshold-label"
                     maxlength="1200"
                     placeholder="Write what you already think is going on: parts, guesses, examples, or confusion."></textarea>
-          <button class="creation-fuzzy-toggle" type="button" aria-expanded="false">Add fuzzy area</button>
+          <div class="creation-fuzzy-row">
+            <button class="creation-fuzzy-toggle" type="button" aria-expanded="false" aria-describedby="creation-fuzzy-hint">Add fuzzy area</button>
+            <span id="creation-fuzzy-hint" class="creation-fuzzy-hint">Optional. Marks where socratink should probe more carefully.</span>
+          </div>
           <div class="creation-fuzzy-panel" hidden>
             <label class="creation-section-label" for="creation-fuzzy-input">What feels fuzzy?</label>
             <input id="creation-fuzzy-input" class="creation-fuzzy-input" type="text" maxlength="500" placeholder="Optional. e.g. I am not sure which part causes which.">
@@ -737,8 +738,8 @@ const App = (() => {
         </div>
       ` : ''}
       <div class="overlay-panel" data-panel="paste">
-        <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste a Wikipedia article...' : 'Paste content here...'}"></textarea>
-        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button><button class="wiki-random-btn" type="button">Random science</button></div>' : ''}
+        <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste any source material. socratink will sketch the room.' : 'Paste source material here.'}"></textarea>
+        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button></div>' : ''}
       </div>
       <div class="overlay-panel" data-panel="url" style="display:none">
         <input class="overlay-url-input" type="url" placeholder="https://example.com/article">
@@ -768,7 +769,6 @@ const App = (() => {
     const urlInput = container.querySelector('.overlay-url-input');
     const urlFeedback = container.querySelector('.overlay-url-feedback');
     const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
-    const wikiRandomBtn = container.querySelector('.wiki-random-btn');
     const nameInput = container.querySelector('.creation-name-input');
     const sourceCopy = container.querySelector('[data-role="source-copy"]');
     const validationNote = container.querySelector('[data-role="validation-note"]');
@@ -857,8 +857,10 @@ const App = (() => {
     let namePhTimer = null;
     if (showNameField) {
       const PLACEHOLDERS = [
-        'Paste a Wikipedia article...', 'Paste a research paper...',
-        'Paste a meeting transcript...', 'Paste a textbook chapter...', 'Paste lecture notes...'
+        'Paste any source material. socratink will sketch the room.',
+        'Paste your notes, a transcript, or an article excerpt.',
+        'Paste a passage you want socratink to structure.',
+        'Paste a chapter, a brief, or your own writing.',
       ];
       const NAME_PLACEHOLDERS = [
         'Metacognition',
@@ -906,67 +908,18 @@ const App = (() => {
       });
     }
 
-    const STEM_CATEGORIES = [
-      'Quantum_mechanics', 'Thermodynamics', 'Electromagnetism',
-      'Organic_chemistry', 'Biochemistry', 'Molecular_biology',
-      'Neuroscience', 'Evolutionary_biology', 'Genetics', 'Ecology',
-      'Calculus', 'Linear_algebra', 'Number_theory', 'Probability_theory',
-      'Computer_algorithms', 'Machine_learning', 'Astronomy',
-      'Particle_physics', 'Fluid_mechanics', 'Cell_biology'
-    ];
-
-    if (showClipboard && wikiRandomBtn) {
-      wikiRandomBtn.addEventListener('click', async () => {
-        const orig = wikiRandomBtn.textContent;
-        wikiRandomBtn.disabled = true;
-        wikiRandomBtn.textContent = 'Loading...';
-        try {
-          // Two-step: category members → article summary
-          async function fetchStemArticle(attempt) {
-            const cat = STEM_CATEGORIES[Math.floor(Math.random() * STEM_CATEGORIES.length)];
-            const membersRes = await fetch(
-              `https://en.wikipedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:${cat}&cmlimit=50&cmtype=page&cmnamespace=0&format=json&origin=*`
-            );
-            if (!membersRes.ok) throw new Error(`HTTP ${membersRes.status}`);
-            const membersData = await membersRes.json();
-            const members = membersData.query?.categorymembers || [];
-            // Retry once with a fresh category if this one is empty
-            if (members.length === 0 && attempt < 2) return fetchStemArticle(attempt + 1);
-            if (members.length === 0) throw new Error('No articles found');
-            return members[Math.floor(Math.random() * members.length)];
-          }
-
-          const article = await fetchStemArticle(1);
-          const summaryRes = await fetch(
-            `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(article.title)}`
-          );
-          if (!summaryRes.ok) throw new Error(`HTTP ${summaryRes.status}`);
-          const data = await summaryRes.json();
-
-          textarea.value = `${data.title}\n\n${data.extract}`;
-          if (nameInput && !nameInput.value.trim()) nameInput.value = data.title;
-          textarea.focus();
-          checkSubmitEnabled();
-        } catch (e) {
-          wikiRandomBtn.textContent = 'Failed, retry';
-          setTimeout(() => { wikiRandomBtn.textContent = orig; }, 2000);
-        } finally {
-          wikiRandomBtn.disabled = false;
-          if (wikiRandomBtn.textContent === 'Loading...') wikiRandomBtn.textContent = orig;
-        }
-      });
-    }
-
     textarea.addEventListener('input', checkSubmitEnabled);
     if (thresholdInput) {
       thresholdInput.addEventListener('input', checkSubmitEnabled);
     }
     if (fuzzyToggle && fuzzyPanel) {
+      const fuzzyHint = container.querySelector('.creation-fuzzy-hint');
       fuzzyToggle.addEventListener('click', () => {
         const isOpening = fuzzyPanel.hasAttribute('hidden');
         fuzzyPanel.toggleAttribute('hidden', !isOpening);
         fuzzyToggle.setAttribute('aria-expanded', String(isOpening));
         fuzzyToggle.textContent = isOpening ? 'Hide fuzzy area' : 'Add fuzzy area';
+        if (fuzzyHint) fuzzyHint.toggleAttribute('hidden', isOpening);
         if (isOpening) fuzzyInput?.focus();
       });
     }

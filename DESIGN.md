@@ -257,7 +257,6 @@ Defer:
 - Long-term curriculum claims.
 - Cross-concept mastery summaries.
 - Rich notebook features.
-- URL ingestion (until SSRF hardening + manual fallback ships).
 
 ---
 
