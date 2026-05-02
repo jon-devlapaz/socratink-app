@@ -148,3 +148,46 @@ def test_empty_text_raises_service_error(monkeypatch):
     adapter = GeminiAdapter(model="gemini-2.5-flash")
     with pytest.raises(LLMServiceError):
         adapter.call_once(_request())
+
+
+# --- Happy path (Task 5.4) ---------------------------------------------------
+
+
+def test_happy_path_returns_structured_result(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    fake_response = MagicMock()
+    fake_response.parsed = _Schema(x="hello")
+    fake_response.text = '{"x": "hello"}'
+    fake_response.usage_metadata = MagicMock(
+        prompt_token_count=42, candidates_token_count=7
+    )
+    _patch_genai_client(monkeypatch, response=fake_response)
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    result = adapter.call_once(_request())
+
+    assert isinstance(result.parsed, _Schema)
+    assert result.parsed.x == "hello"
+    assert result.raw_text == '{"x": "hello"}'
+    assert result.usage.input_tokens == 42
+    assert result.usage.output_tokens == 7
+    assert result.model == "gemini-2.5-flash"
+    assert result.provider == "gemini"
+    assert result.latency_ms >= 0.0
+
+
+def test_happy_path_handles_missing_usage_metadata(monkeypatch):
+    """Some Gemini responses (e.g., short circuits) may omit usage_metadata."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    fake_response = MagicMock()
+    fake_response.parsed = _Schema(x="hello")
+    fake_response.text = '{"x":"hello"}'
+    fake_response.usage_metadata = None
+    _patch_genai_client(monkeypatch, response=fake_response)
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    result = adapter.call_once(_request())
+    assert result.usage.input_tokens == 0
+    assert result.usage.output_tokens == 0
