@@ -35,7 +35,11 @@ export default function RiverCanvas({
 
   const mainY = TOP_PAD + maxLane * Y_STEP;
   const height = mainY + Math.abs(minLane) * Y_STEP + BOTTOM_PAD;
-  const gridW = mainTipX + 2;
+  const branchMaxX = branches.reduce(
+    (m, b) => Math.max(m, b.commits.length ? b.commits[b.commits.length - 1].x : b.forkX),
+    0,
+  );
+  const gridW = Math.max(mainTipX, branchMaxX) + 2;
   const width = LEFT_PAD + gridW * X_STEP + RIGHT_PAD;
 
   const xOf = (gx) => LEFT_PAD + gx * X_STEP;
@@ -346,7 +350,6 @@ function AtMainPin({
   const interactive = true;
 
   let hintText = null;
-  let hintMuted = false;
   if (hover) {
     if (isOpenPR) {
       const num = pr.number > 0 ? `#${pr.number}` : '#…';
@@ -452,8 +455,8 @@ function AtMainPin({
         <text
           x={x + w / 2 + 8}
           y={labelY + 3}
-          className={hintMuted ? 'hover-hint-muted' : 'hover-hint'}
-          fill={hintMuted ? '#7f8a99' : outlineColor}
+          className="hover-hint"
+          fill={outlineColor}
           pointerEvents="none"
           style={{ fontSize: 10 }}
         >

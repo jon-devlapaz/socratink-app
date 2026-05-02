@@ -58,7 +58,7 @@ Enter concept
 
 **5. Study Repair Artifact.** Scoped to the attempted node only. Five parts in order: (a) the learner's exact words preserved, (b) **the hinge** — one specific correction, (c) **causal spine** — a compact arrow chain, (d) one clarifying diagram, (e) 1–2 connection cues. Never claims mastery. Primary CTA: *Choose next room* — which routes to the bridge, **never** straight into another cold attempt.
 
-**6. Interleaving Bridge.** Names *why* the learner is leaving the just-repaired node ("the repair is fresh, so re-drilling now would mostly test short-term echo"). Offers 2–3 nearby rooms with one-line purposes (no mechanism reveal). A non-punitive **"Take a short break instead"** is always present. Spacing is a valid choice. Interleaving is **never framed as reward or completion**.
+**6. Interleaving Bridge.** Names *why* the learner is leaving the just-repaired node ("the repair is fresh, so re-drilling now would mostly test short-term echo"). Offers 2–3 nearby rooms with one-line purposes (no mechanism reveal). A non-punitive **"Take a short break instead"** is always present. Spacing is a valid choice. Interleaving is **never framed as reward or completion**. *Operational rule: The ideal buffer flush before a re-drill is 10–15 minutes of cognitively demanding interpolated activity (minimum 5 minutes).*
 
 **7. Repair History.** A growing field journal — repaired misconceptions, recurring gaps, alternate explanations, learner-authored summaries. Accumulates from attempts, feedback, repair reps, and re-drills only — **never from reading**. Organized by the learner's voice, not the system's.
 
@@ -101,7 +101,47 @@ The graph is **the only public profile**. Routing signals, source-dependence sco
 
 ---
 
-## 6. The crystal — the visual thesis
+## 6. Session guardrails and bottleneck recovery
+
+Cognitive effectiveness of retrieval practice is subject to severe diminishing returns.
+
+- **Session Length**: No hard wall-clock cap in MVP, but duration should end at engagement, not exhaustion.
+- **Retrieval Ceiling**: Maximum three successful retrievals per node per session. Beyond three, halt and schedule for later.
+- **Node Cap**: Two to three nodes in active rotation is the recommended ceiling. Maximum 4 nodes per session.
+
+### Bottleneck recovery paths
+
+If a learner repeatedly lands on `drilled` on a gating node, the product can deadlock. To prevent session abandonment without lowering the mastery bar:
+
+- **Escalating Scaffold**: AI progressively breaks the mechanism into sub-steps across subsequent re-drills (e.g., reconstruct one piece at a time, or provide step 1 and ask for the link to step 2).
+- **Study Revisit**: After a non-solid re-drill, reopen study with an *alternate* explanation or reorganized sequence anchored to their new prediction error.
+- **Branch Escape**: For non-linear maps, allow entering a different branch's cold attempt while the blocked node stays `drilled`.
+
+---
+
+## 7. AI drill prompt contract
+
+AI is the scaffold, not the generator. The learner must be the primary generator of the target mechanism.
+
+- **Scaffold, never lecture**: During the cold attempt, ask an open question and listen. Do not pre-explain.
+- **Zero-schema detection**: If absolute zero schema is detected (no relevant vocabulary), pivot to Load Reduction Instruction: provide basic pieces, ask for a micro-generation.
+- **Sparse feedback**: AI responses during drill should be brief, pointed, and gap-identifying. If the AI talks more than the learner during a turn, the passive trap has been triggered.
+- **Probe the gap**: If a response is substantive but incomplete, probe the specific gap instead of re-explaining the full mechanism.
+- **No one-word answers**: During spaced re-drills on complex mechanisms, demand multi-step causal reconstruction (e.g., self-explanation or summarization).
+
+---
+
+## 8. Ethical engagement and endowed progress
+
+If a mechanic relies on loss aversion, FOMO, or mechanisms that only work when the learner is unaware, it crosses into manipulation.
+
+- **Endowed Progress through truth**: When entering a new cluster, visually illuminate prerequisite nodes that already carry `solidified` records. Frame the new territory as partially completed based on actual prior solid spaced reconstructions.
+- **Anti-compulsion design**: End sessions at a point of engagement by enforcing guardrails. Stop the learner while wanting is still active, and explain the science transparently. *"Evidence recorded. Let spacing do its work while you're away."*
+- **Roguelike dynamics**: The session is a "run." Permadeath means a node stays `drilled` until next time, not failed. Meta-progression is the knowledge graph recording effort. The mastery ceiling never lowers.
+
+---
+
+## 9. The crystal — the visual thesis
 
 The core motif is a **dual-diamond crystal polygon** with a vertical axis. It is the same shape at three scales:
 
@@ -115,7 +155,7 @@ The graph board is **always isometric**, **always cream**. Never flat. Never a f
 
 ---
 
-## 7. Copy voice — the attribution surface
+## 10. Copy voice — the attribution surface
 
 The product has no human teacher to manage attributions in real time. The interface *is* the attribution manager. Every line either pushes the learner toward **adaptive attribution** ("I haven't built the model yet") or **maladaptive attribution** ("I'm not smart enough"). There is no neutral position.
 
@@ -163,13 +203,13 @@ The product has no human teacher to manage attributions in real time. The interf
 
 ---
 
-## 8. The trajectory bands (post-attempt only)
+## 11. The trajectory bands (post-attempt only)
 
 A reflective vocabulary — `spark → link → chain → clear → tetris` — surfaces *only* as post-attempt growth framing, always paired with interpretation: *"Your cold attempt was a spark. Your re-drill hit chain. Stronger reconstruction evidence is on record."* It is **never a live score** during an attempt. The bands describe trajectory, not standing.
 
 ---
 
-## 9. Sensory grammar — how the surfaces feel
+## 12. Sensory grammar — how the surfaces feel
 
 The aesthetic mirrors the work the product asks of its learners: **quiet, scholarly, crystalline.**
 
@@ -196,7 +236,7 @@ At any moment one thing is foregrounded; everything else dims to 0.5–0.6 opaci
 
 ---
 
-## 10. The MVP cut — what to build first
+## 13. The MVP cut — what to build first
 
 This is the binding prioritization. Build first:
 
@@ -221,7 +261,7 @@ Defer:
 
 ---
 
-## 11. What socratink refuses to be
+## 14. What socratink refuses to be
 
 The product is defined as much by what it will not do. The following are hard exclusions, not preferences:
 
@@ -241,7 +281,7 @@ The product is defined as much by what it will not do. The following are hard ex
 
 ---
 
-## 12. The one-line summary
+## 15. The one-line summary
 
 > **The graph proposes. The cold attempt creates something to repair. Study makes the repair inspectable. The spaced re-drill records the strongest evidence.**
 

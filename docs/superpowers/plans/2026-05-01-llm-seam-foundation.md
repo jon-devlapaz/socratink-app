@@ -1716,10 +1716,15 @@ def test_provisional_map_rejects_missing_metadata():
         ProvisionalMap.model_validate(bad)
 
 
-def test_provisional_map_rejects_extra_field():
-    bad = {**VALID_MAP, "unexpected_top_level": "boom"}
-    with pytest.raises(ValueError):
-        ProvisionalMap.model_validate(bad)
+def test_provisional_map_tolerates_unknown_field_for_gemini_compat():
+    """Unknown fields must NOT raise — Gemini rejects extra='forbid' schemas
+    (additionalProperties: false in JSON Schema). Field-level correctness is
+    governed by the prompt + closure validators, not by extra='forbid'.
+    See ai_service.py:_parse_repair_reps_response for precedent.
+    """
+    permissive = {**VALID_MAP, "unexpected_top_level": "ignored"}
+    m = ProvisionalMap.model_validate(permissive)
+    assert m.metadata.core_thesis == "Entropy increases in closed systems."
 ```
 
 - [ ] **Step 2: Run to verify failure**
@@ -1761,7 +1766,12 @@ from .identifiers import IdKind, parse_id
 
 
 class Metadata(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     source_title: str
     core_thesis: str
@@ -1774,7 +1784,12 @@ class Metadata(BaseModel):
 
 
 class Subnode(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     id: str
     label: str
@@ -1794,7 +1809,12 @@ class Subnode(BaseModel):
 
 
 class Cluster(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     id: str
     label: str
@@ -1831,7 +1851,12 @@ class Cluster(BaseModel):
 
 
 class BackboneItem(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     id: str
     principle: str
@@ -1847,7 +1872,9 @@ class BackboneItem(BaseModel):
 
 
 class DomainMechanic(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # populate_by_name lets construction via from_=... work even though the
+    # JSON key is "from" (a Python keyword). Validation accepts either.
+    model_config = ConfigDict(populate_by_name=True)
 
     from_: str = Field(alias="from")
     to: str
@@ -1856,7 +1883,7 @@ class DomainMechanic(BaseModel):
 
 
 class LearningPrereq(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(populate_by_name=True)
 
     from_: str = Field(alias="from")
     to: str
@@ -1864,14 +1891,24 @@ class LearningPrereq(BaseModel):
 
 
 class Relationships(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     domain_mechanics: List[DomainMechanic] = Field(default_factory=list)
     learning_prerequisites: List[LearningPrereq] = Field(default_factory=list)
 
 
 class Framework(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     id: str
     name: str
@@ -1886,7 +1923,12 @@ class Framework(BaseModel):
 class ProvisionalMap(BaseModel):
     """A typed knowledge map. Consumed by drill, repair-reps, traversal."""
 
-    model_config = ConfigDict(extra="forbid")
+    # NOTE: extra="forbid" is intentionally NOT set. Pydantic emits
+    # additionalProperties: false in JSON Schema when extra="forbid" is set,
+    # and Gemini's response_schema parameter rejects schemas containing that.
+    # See ai_service.py:_parse_repair_reps_response for the existing precedent.
+    # Field-level correctness is enforced by the prompt + closure validators.
+    model_config = ConfigDict()
 
     metadata: Metadata
     backbone: List[BackboneItem]
