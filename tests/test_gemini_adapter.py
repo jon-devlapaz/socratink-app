@@ -97,3 +97,54 @@ def test_other_codes_map_to_service_error(monkeypatch, code):
     adapter = GeminiAdapter(model="gemini-2.5-flash")
     with pytest.raises(LLMServiceError):
         adapter.call_once(_request())
+
+
+# --- Schema validation failure (Task 5.3) ------------------------------------
+
+
+def test_parsed_none_with_text_raises_validation_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    fake_response = MagicMock()
+    fake_response.parsed = None
+    fake_response.text = '{"oops": "wrong shape"}'
+    fake_response.usage_metadata = MagicMock(
+        prompt_token_count=10, candidates_token_count=5
+    )
+    _patch_genai_client(monkeypatch, response=fake_response)
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMValidationError) as exc_info:
+        adapter.call_once(_request())
+    assert exc_info.value.raw_text == '{"oops": "wrong shape"}'
+
+
+def test_parsed_wrong_type_raises_validation_error(monkeypatch):
+    """parsed exists but is the wrong Pydantic class."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    class _OtherSchema(BaseModel):
+        y: str
+
+    fake_response = MagicMock()
+    fake_response.parsed = _OtherSchema(y="something")
+    fake_response.text = '{"y":"something"}'
+    fake_response.usage_metadata = MagicMock(prompt_token_count=1, candidates_token_count=1)
+    _patch_genai_client(monkeypatch, response=fake_response)
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMValidationError):
+        adapter.call_once(_request())
+
+
+def test_empty_text_raises_service_error(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    fake_response = MagicMock()
+    fake_response.parsed = None
+    fake_response.text = ""
+    _patch_genai_client(monkeypatch, response=fake_response)
+
+    adapter = GeminiAdapter(model="gemini-2.5-flash")
+    with pytest.raises(LLMServiceError):
+        adapter.call_once(_request())
