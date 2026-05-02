@@ -333,3 +333,24 @@ class AdminRegistrationTests(unittest.TestCase):
             self.assertFalse(admin_module._is_dev_environment())
         finally:
             os.environ.pop("APP_BASE_URL")
+
+
+class AdminHealthCheckTests(unittest.TestCase):
+    """The /admin/health endpoint is an unauthenticated liveness probe.
+
+    It is intentionally NOT gated by `_require_admin` — it just confirms
+    the router is mounted. Authentication on a health check would defeat
+    the purpose (infra needs to probe before any session exists).
+    """
+
+    def test_health_check_returns_200_for_anonymous(self):
+        client = TestClient(_build_app())
+        r = client.get("/admin/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"status": "ok"})
+
+    def test_health_check_returns_200_for_admin(self):
+        client = TestClient(_build_app(_admin_state()))
+        r = client.get("/admin/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"status": "ok"})
