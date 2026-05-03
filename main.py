@@ -29,7 +29,15 @@ from ai_service import (
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
-from learning_commons import LCClient, should_enrich_with_lc
+from learning_commons import (
+    LC_STATUS_HTTP_ERROR,
+    LC_STATUS_KEY_MISSING,
+    LC_STATUS_PARSE_ERROR,
+    LC_STATUS_TIMEOUT,
+    LC_STATUS_TRANSPORT_ERROR,
+    LCClient,
+    should_enrich_with_lc,
+)
 from llm.errors import (
     LLMClientError,
     LLMMissingKeyError,
@@ -56,20 +64,38 @@ app.state.auth_service = build_auth_service_from_env()
 logger = logging.getLogger(__name__)
 
 
+# Per-1k-token rates by model name. Update when model pricing changes.
+# Source: https://ai.google.dev/pricing as of 2026-05-03.
+_MODEL_PRICING_PER_1K: dict[str, tuple[float, float]] = {
+    # (input_per_1k_usd, output_per_1k_usd)
+    "gemini-2.5-flash": (0.000125, 0.000375),
+    "gemini-2.5-flash-lite": (0.0000625, 0.0001875),
+    "gemini-2.5-pro": (0.00125, 0.005),
+}
+
+
+def _estimate_cost_usd(model: str, input_tokens: int, output_tokens: int) -> float | None:
+    """Best-effort cost estimate. Returns None for unknown models."""
+    rates = _MODEL_PRICING_PER_1K.get(model)
+    if rates is None:
+        logger.warning("ai_call.unknown_model_for_cost_estimate", extra={"model": model})
+        return None
+    in_rate, out_rate = rates
+    return round(
+        (input_tokens / 1000.0) * in_rate
+        + (output_tokens / 1000.0) * out_rate,
+        6,
+    )
+
+
 def _emit_ai_call(*, stage: str, model: str, latency_ms: float,
                   input_tokens: int = 0, output_tokens: int = 0) -> None:
     """Emit concept_create.ai_call telemetry per spec §5.4.
 
-    Cost estimation uses rough per-1k-token rates for gemini-2.5-flash.
-    Update when model pricing changes — better than nothing for budget visibility.
+    Cost estimation uses a model-aware pricing table. Unknown models log a
+    warning and emit cost_usd_est=None — honest signal beats a wrong-looking number.
     """
-    cost_per_1k_in = 0.000125
-    cost_per_1k_out = 0.000375
-    cost_usd_est = round(
-        (input_tokens / 1000.0) * cost_per_1k_in
-        + (output_tokens / 1000.0) * cost_per_1k_out,
-        6,
-    )
+    cost_usd_est = _estimate_cost_usd(model, input_tokens, output_tokens)
     logger.info(
         "concept_create.ai_call",
         extra={
@@ -457,9 +483,11 @@ def extract(req: ExtractRequest):
         if decision["path"] == "from_sketch":
             lc_result = None
             lc_query_failed = False
+            lc_client = None
             lc_query_started = _time.monotonic()
             try:
-                lc_result = LCClient().search_concept(decision["name"])
+                lc_client = LCClient()
+                lc_result = lc_client.search_concept(decision["name"])
             except Exception:
                 lc_query_failed = True
                 logger.exception("lc_query_unexpected")
@@ -479,14 +507,18 @@ def extract(req: ExtractRequest):
 
             lc_context = should_enrich_with_lc(lc_result)
             if lc_context is None:
-                # Reason classification for telemetry. M-4 fix: exception takes priority.
+                # Reason classification for telemetry. Consult lc_client.last_status
+                # to distinguish timeout from other null returns (I-1 fix).
+                lc_last_status = lc_client.last_status if lc_client is not None else None
                 if lc_query_failed:
                     reason = "error"
-                elif not os.environ.get("LEARNING_COMMONS_API_KEY"):
+                elif lc_last_status == LC_STATUS_KEY_MISSING:
                     reason = "key_missing"
-                elif lc_result is None:
-                    reason = "no_results"  # transport-layer null
-                elif not lc_result.standards:
+                elif lc_last_status == LC_STATUS_TIMEOUT:
+                    reason = "timeout"
+                elif lc_last_status in (LC_STATUS_TRANSPORT_ERROR, LC_STATUS_HTTP_ERROR, LC_STATUS_PARSE_ERROR):
+                    reason = "error"
+                elif lc_result is None or not lc_result.standards:
                     reason = "no_results"
                 elif lc_result.top_score < 0.70:
                     reason = "low_score"

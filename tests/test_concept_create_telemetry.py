@@ -135,6 +135,7 @@ def test_lc_queried_emitted_even_when_lc_returns_none(client, caplog):
     with patch("main.LCClient") as fake_lc_cls, \
          patch("main.generate_provisional_map_from_sketch", return_value=fake_map):
         fake_lc_cls.return_value.search_concept.return_value = None
+        fake_lc_cls.return_value.last_status = "ok"
         client.post("/api/extract", json={
             "name": "Photosynthesis",
             "starting_sketch": "Plants take in light and make sugar from water and carbon dioxide.",
@@ -181,6 +182,7 @@ def test_ai_call_emitted_after_source_less_generation(client, caplog):
     with patch("main.LCClient") as fake_lc_cls, \
          patch("ai_service.build_llm_client", return_value=fake_llm):
         fake_lc_cls.return_value.search_concept.return_value = None
+        fake_lc_cls.return_value.last_status = "ok"
         client.post("/api/extract", json={
             "name": "Photosynthesis",
             "starting_sketch": "Plants take in light and make sugar from water and carbon dioxide.",
@@ -219,3 +221,56 @@ def test_ai_call_emitted_for_extract_path(client, caplog):
     assert ai_calls, "must emit ai_call for source-attached path"
     extras = ai_calls[0].__dict__
     assert extras.get("stage") == "generation_extract"
+
+
+# --- Tests for I-1 and I-2 telemetry-fidelity fixes ---
+
+def test_lc_skip_reason_is_timeout_when_socket_timeout(client, caplog):
+    """I-1: socket.timeout from LC must produce reason='timeout', not 'no_results'."""
+    caplog.set_level(logging.INFO)
+    fake_map = _minimal_map()
+    with patch("main.LCClient") as fake_lc_cls, \
+         patch("main.generate_provisional_map_from_sketch", return_value=fake_map):
+        instance = fake_lc_cls.return_value
+        instance.search_concept.return_value = None
+        instance.last_status = "timeout"
+        client.post("/api/extract", json={
+            "name": "Photosynthesis",
+            "starting_sketch": "Plants take in light and make sugar from water and carbon dioxide.",
+            "source": None,
+        })
+    skipped = _records_for(caplog, "concept_create.lc.enrichment_skipped")
+    assert skipped, "must emit lc.enrichment_skipped"
+    assert skipped[0].__dict__.get("reason") == "timeout"
+
+
+def test_ai_call_cost_is_none_for_unknown_model(client, caplog):
+    """I-2: unknown model must emit cost_usd_est=None, not a wrong-but-plausible number."""
+    caplog.set_level(logging.INFO)
+    fake_map = _minimal_map()
+    fake_result = StructuredLLMResult(
+        parsed=fake_map,
+        raw_text="{}",
+        usage=TokenUsage(input_tokens=420, output_tokens=180),
+        model="gemini-7.0-totally-not-a-real-model",
+        provider="gemini",
+        latency_ms=1234.0,
+    )
+    from unittest.mock import MagicMock
+    from llm.client import LLMClient as RealLLMClient
+    fake_llm = MagicMock(spec=RealLLMClient)
+    fake_llm.generate_structured.return_value = fake_result
+    with patch("main.LCClient") as fake_lc_cls:
+        fake_lc_cls.return_value.search_concept.return_value = None
+        fake_lc_cls.return_value.last_status = "ok"
+        with patch("ai_service.build_llm_client", return_value=fake_llm):
+            client.post("/api/extract", json={
+                "name": "Photosynthesis",
+                "starting_sketch": "Plants take in light and make sugar from water and carbon dioxide.",
+                "source": None,
+            })
+    ai_calls = _records_for(caplog, "concept_create.ai_call")
+    assert ai_calls, "must emit ai_call"
+    extras = ai_calls[0].__dict__
+    assert extras.get("cost_usd_est") is None
+    assert extras.get("model") == "gemini-7.0-totally-not-a-real-model"

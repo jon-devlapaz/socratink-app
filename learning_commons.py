@@ -30,6 +30,19 @@ from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 
+# --- Status sentinels for LCClient.last_status ------------------------------
+# These values are read by the route handler to emit the correct telemetry
+# reason from spec §5.4 vocabulary.
+
+LC_STATUS_OK = "ok"
+LC_STATUS_KEY_MISSING = "key_missing"
+LC_STATUS_TIMEOUT = "timeout"
+LC_STATUS_TRANSPORT_ERROR = "transport_error"
+LC_STATUS_HTTP_ERROR = "http_error"
+LC_STATUS_PARSE_ERROR = "parse_error"
+LC_STATUS_EMPTY_QUERY = "empty_query"
+
+
 # --- Configuration -----------------------------------------------------------
 
 LC_BASE_URL = "https://api.learningcommons.org/knowledge-graph"
@@ -138,19 +151,25 @@ class LCClient:
         """
         self._api_key = api_key if api_key is not None else os.environ.get("LEARNING_COMMONS_API_KEY")
         self._urlopen = urlopen if urlopen is not None else urlrequest.urlopen
+        self.last_status: str = LC_STATUS_OK
 
     def search_concept(self, concept: Optional[str]) -> Optional[LCSearchResult]:
+        self.last_status = LC_STATUS_OK
         if not self._api_key:
+            self.last_status = LC_STATUS_KEY_MISSING
             logger.info("learning_commons.skipped", extra={"reason": "key_missing"})
             return None
         if concept is None:
+            self.last_status = LC_STATUS_EMPTY_QUERY
             return None
         normalized = concept.strip().lower()
         if not normalized:
+            self.last_status = LC_STATUS_EMPTY_QUERY
             return None
 
         cached = self._cache.get(normalized)
         if cached is not None:
+            # Cache hit: status stays LC_STATUS_OK
             return cached
 
         result = self._fetch(normalized)
@@ -168,19 +187,30 @@ class LCClient:
                 body = response.read()
         except HTTPError as err:
             latency_ms = int((time.monotonic() - started) * 1000)
+            self.last_status = LC_STATUS_HTTP_ERROR
             logger.warning(
                 "learning_commons.http_error",
                 extra={"status": err.code, "latency_ms": latency_ms},
             )
             return None
-        except (URLError, socket.timeout) as err:
+        except socket.timeout as err:
             latency_ms = int((time.monotonic() - started) * 1000)
+            self.last_status = LC_STATUS_TIMEOUT
+            logger.warning(
+                "learning_commons.transport_error",
+                extra={"reason": str(err), "latency_ms": latency_ms},
+            )
+            return None
+        except URLError as err:
+            latency_ms = int((time.monotonic() - started) * 1000)
+            self.last_status = LC_STATUS_TRANSPORT_ERROR
             logger.warning(
                 "learning_commons.transport_error",
                 extra={"reason": str(err), "latency_ms": latency_ms},
             )
             return None
         except Exception as err:  # belt & suspenders
+            self.last_status = LC_STATUS_TRANSPORT_ERROR
             logger.exception("learning_commons.unexpected_error: %s", err)
             return None
 
@@ -188,6 +218,7 @@ class LCClient:
         try:
             payload = json.loads(body)
         except (ValueError, TypeError) as err:
+            self.last_status = LC_STATUS_PARSE_ERROR
             logger.warning(
                 "learning_commons.parse_error",
                 extra={"reason": str(err), "latency_ms": latency_ms},
