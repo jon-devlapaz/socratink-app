@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal, Optional, TypedDict
+from typing import Callable, Literal, Optional, TypedDict
 
 from google import genai
 from google.genai.errors import APIError
@@ -659,6 +659,7 @@ def extract_knowledge_map(
     llm: LLMClient | None = None,
     api_key: str | None = None,
     telemetry_context: dict | None = None,
+    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
     """Generate a Provisional map from learner-supplied text.
 
@@ -677,6 +678,8 @@ def extract_knowledge_map(
         prompt_version=EXTRACT_PROMPT_VERSION,
     )
     result = client.generate_structured(request)
+    if on_call_complete is not None:
+        on_call_complete(result)
     # Adapter guarantees parsed is a ProvisionalMap or it raised
     # LLMValidationError. The cast is for type-checker clarity.
     return result.parsed  # type: ignore[return-value]
@@ -690,6 +693,7 @@ def generate_provisional_map_from_sketch(
     api_key: str | None = None,
     lc_context: list["LCStandard"] | None = None,
     telemetry_context: dict | None = None,
+    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
     """Generate a Provisional map from concept name + learner sketch alone.
 
@@ -727,6 +731,8 @@ def generate_provisional_map_from_sketch(
         prompt_version=GENERATE_FROM_SKETCH_PROMPT_VERSION,
     )
     result = client.generate_structured(request)
+    if on_call_complete is not None:
+        on_call_complete(result)
     return result.parsed  # type: ignore[return-value]
 
 

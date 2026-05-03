@@ -1,6 +1,8 @@
+import hashlib
 import json
 import logging
 import os
+import time as _time
 from pathlib import Path
 from typing import Literal
 from urllib.parse import quote, urlparse
@@ -52,6 +54,35 @@ load_app_env()
 app = FastAPI()
 app.state.auth_service = build_auth_service_from_env()
 logger = logging.getLogger(__name__)
+
+
+def _emit_ai_call(*, stage: str, model: str, latency_ms: float,
+                  input_tokens: int = 0, output_tokens: int = 0) -> None:
+    """Emit concept_create.ai_call telemetry per spec §5.4.
+
+    Cost estimation uses rough per-1k-token rates for gemini-2.5-flash.
+    Update when model pricing changes — better than nothing for budget visibility.
+    """
+    cost_per_1k_in = 0.000125
+    cost_per_1k_out = 0.000375
+    cost_usd_est = round(
+        (input_tokens / 1000.0) * cost_per_1k_in
+        + (output_tokens / 1000.0) * cost_per_1k_out,
+        6,
+    )
+    logger.info(
+        "concept_create.ai_call",
+        extra={
+            "stage": stage,
+            "model": model,
+            "tokens_in": input_tokens,
+            "tokens_out": output_tokens,
+            "latency_ms": latency_ms,
+            "cost_usd_est": cost_usd_est,
+        },
+    )
+
+
 PROTECTED_HTML_PATHS = frozenset({"/", "/index.html", "/admin/todo"})
 PROTECTED_API_PATHS = frozenset(
     {
@@ -425,14 +456,33 @@ def extract(req: ExtractRequest):
     try:
         if decision["path"] == "from_sketch":
             lc_result = None
+            lc_query_failed = False
+            lc_query_started = _time.monotonic()
             try:
                 lc_result = LCClient().search_concept(decision["name"])
             except Exception:
+                lc_query_failed = True
                 logger.exception("lc_query_unexpected")
+            lc_latency_ms = int((_time.monotonic() - lc_query_started) * 1000)
+
+            # Always emit lc.queried (spec §5.4 — fires regardless of outcome)
+            _concept_hash = hashlib.sha1(decision["name"].lower().encode()).hexdigest()[:12]
+            logger.info(
+                "concept_create.lc.queried",
+                extra={
+                    "concept_hash": _concept_hash,
+                    "top_score": (lc_result.top_score if lc_result else 0.0),
+                    "standards_count": (len(lc_result.standards) if lc_result else 0),
+                    "latency_ms": lc_latency_ms,
+                },
+            )
+
             lc_context = should_enrich_with_lc(lc_result)
             if lc_context is None:
-                # Reason classification for telemetry. Keep simple.
-                if not os.environ.get("LEARNING_COMMONS_API_KEY"):
+                # Reason classification for telemetry. M-4 fix: exception takes priority.
+                if lc_query_failed:
+                    reason = "error"
+                elif not os.environ.get("LEARNING_COMMONS_API_KEY"):
                     reason = "key_missing"
                 elif lc_result is None:
                     reason = "no_results"  # transport-layer null
@@ -448,11 +498,21 @@ def extract(req: ExtractRequest):
                 logger.info("concept_create.lc.enrichment_applied",
                             extra={"standards_count": len(lc_context)})
 
+            def _on_sketch_call(result):
+                _emit_ai_call(
+                    stage="generation_lc_enriched" if lc_context else "generation_pure",
+                    model=result.model,
+                    latency_ms=result.latency_ms,
+                    input_tokens=result.usage.input_tokens,
+                    output_tokens=result.usage.output_tokens,
+                )
+
             provisional_map = generate_provisional_map_from_sketch(
                 concept=decision["name"],
                 sketch=decision["sketch"],
                 lc_context=lc_context,
                 api_key=req.api_key,
+                on_call_complete=_on_sketch_call,
             )
             return {"provisional_map": provisional_map.model_dump()}
         else:  # decision["path"] == "extract"
@@ -465,7 +525,21 @@ def extract(req: ExtractRequest):
                     status_code=422,
                     detail="Couldn't find enough readable text in what you pasted.",
                 )
-            provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
+
+            def _on_extract_call(result):
+                _emit_ai_call(
+                    stage="generation_extract",
+                    model=result.model,
+                    latency_ms=result.latency_ms,
+                    input_tokens=result.usage.input_tokens,
+                    output_tokens=result.usage.output_tokens,
+                )
+
+            provisional_map = extract_knowledge_map(
+                src.text,
+                api_key=req.api_key,
+                on_call_complete=_on_extract_call,
+            )
             # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
             return {"knowledge_map": provisional_map.model_dump()}
 
