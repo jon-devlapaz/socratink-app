@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Literal
 from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
@@ -22,9 +23,11 @@ from ai_service import (
     MissingAPIKeyError,
     drill_chat,
     extract_knowledge_map,
+    generate_provisional_map_from_sketch,
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
+from learning_commons import LCClient, should_enrich_with_lc
 from llm.errors import (
     LLMClientError,
     LLMMissingKeyError,
@@ -189,9 +192,95 @@ async def require_login_or_guest_entry(request: Request, call_next):
     return response
 
 
+class SourceAttachment(BaseModel):
+    """Optional source material attached to a concept submission."""
+    type: Literal["text", "url", "file"]
+    text: str | None = Field(None, max_length=500_000)
+    url: str | None = Field(None, max_length=2_000)
+    filename: str | None = Field(None, max_length=255)
+
+
 class ExtractRequest(BaseModel):
-    text: str = Field(..., max_length=500_000)
+    """Concept-creation submission.
+
+    Two payload shapes are accepted:
+
+    NEW (Plan A — conversational concept creation):
+      {name, starting_sketch, source, api_key?}
+
+    LEGACY (back-compat for the existing form-based client during rollout):
+      {text, api_key?}
+
+    Server-side validation in /api/extract enforces the spec §3.2
+    substantiveness rule: source-less submits require a substantive sketch.
+    """
+    # New shape
+    name: str | None = Field(None, max_length=200)
+    starting_sketch: str | None = Field(None, max_length=10_000)
+    source: SourceAttachment | None = None
+    # Legacy back-compat
+    text: str | None = Field(None, max_length=500_000)
+    # Common
     api_key: str | None = Field(None, max_length=200)
+
+
+def _resolve_extract_path(req: "ExtractRequest") -> dict:
+    """Decide which generation path the request takes, with server-side validation.
+
+    Returns one of:
+      {"path": "extract", "text": str}
+      {"path": "from_sketch", "name": str, "sketch": str}
+      {"path": "error", "status": 422, "error": str, "message": str}
+
+    Spec §3.2 truth table is enforced here as defense in depth.
+    """
+    from models.sketch_validation import is_substantive_sketch
+
+    # Legacy {text} payload — back-compat path. Bypasses the new shape entirely.
+    if req.text is not None and req.name is None and req.source is None:
+        if not req.text.strip():
+            return {"path": "error", "status": 422,
+                    "error": "missing_text", "message": "Source text required."}
+        return {"path": "extract", "text": req.text}
+
+    # New shape: name is mandatory
+    name = (req.name or "").strip()
+    if not name:
+        return {"path": "error", "status": 422,
+                "error": "missing_concept", "message": "Concept name required."}
+
+    sketch = (req.starting_sketch or "").strip()
+    has_source_text = (
+        req.source is not None
+        and req.source.type in ("text", "file")
+        and (req.source.text or "").strip()
+    )
+    has_source_url = (
+        req.source is not None
+        and req.source.type == "url"
+        and (req.source.url or "").strip()
+    )
+    sketch_ok = is_substantive_sketch(sketch)
+
+    if has_source_text:
+        return {"path": "extract", "text": (req.source.text or "").strip()}
+
+    if has_source_url:
+        # URL fetching belongs in /api/extract-url; the dispatcher does
+        # not handle URL fetch inline. The frontend should call the right
+        # endpoint, but if it sends a URL here we surface the situation
+        # rather than silently failing.
+        return {"path": "error", "status": 422,
+                "error": "url_source_unsupported_here",
+                "message": "URL sources go through /api/extract-url."}
+
+    if not sketch_ok:
+        # Spec §3.2 row 1: thin sketch + no source → block.
+        return {"path": "error", "status": 422,
+                "error": "thin_sketch_no_source",
+                "message": "Add more to your sketch, or attach source material — either path opens the build."}
+
+    return {"path": "from_sketch", "name": name, "sketch": sketch}
 
 
 class UrlExtractRequest(BaseModel):
@@ -321,23 +410,71 @@ def health():
 
 @app.post("/api/extract")
 def extract(req: ExtractRequest):
-    if not req.text.strip():
-        raise HTTPException(status_code=400, detail="No text provided.")
-    try:
-        src = source_intake.from_text(req.text)   # default min_text_length=1
-    except ParseEmpty:
-        raise HTTPException(
-            status_code=422,
-            detail="Couldn't find enough readable text in what you pasted.",
+    decision = _resolve_extract_path(req)
+
+    if decision["path"] == "error":
+        logger.info(
+            "concept_create.build_blocked",
+            extra={"reason": decision["error"], "origin": "server"},
         )
+        raise HTTPException(status_code=decision["status"], detail={
+            "error": decision["error"],
+            "message": decision["message"],
+        })
+
     try:
-        provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
-        # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
-        return {"knowledge_map": provisional_map.model_dump()}
+        if decision["path"] == "from_sketch":
+            lc_result = None
+            try:
+                lc_result = LCClient().search_concept(decision["name"])
+            except Exception:
+                logger.exception("lc_query_unexpected")
+            lc_context = should_enrich_with_lc(lc_result)
+            if lc_context is None:
+                # Reason classification for telemetry. Keep simple.
+                if not os.environ.get("LEARNING_COMMONS_API_KEY"):
+                    reason = "key_missing"
+                elif lc_result is None:
+                    reason = "no_results"  # transport-layer null
+                elif not lc_result.standards:
+                    reason = "no_results"
+                elif lc_result.top_score < 0.70:
+                    reason = "low_score"
+                else:
+                    reason = "non_k12"
+                logger.info("concept_create.lc.enrichment_skipped",
+                            extra={"reason": reason})
+            else:
+                logger.info("concept_create.lc.enrichment_applied",
+                            extra={"standards_count": len(lc_context)})
+
+            provisional_map = generate_provisional_map_from_sketch(
+                concept=decision["name"],
+                sketch=decision["sketch"],
+                lc_context=lc_context,
+                api_key=req.api_key,
+            )
+            return {"provisional_map": provisional_map.model_dump()}
+        else:  # decision["path"] == "extract"
+            # Preserve existing source-intake behavior byte-for-byte.
+            # source_intake.from_text normalizes the raw text before the AI call.
+            try:
+                src = source_intake.from_text(decision["text"])
+            except ParseEmpty:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Couldn't find enough readable text in what you pasted.",
+                )
+            provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
+            # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
+            return {"knowledge_map": provisional_map.model_dump()}
+
     # All LLM-error branches: stable user-facing copy ONLY. Provider details
     # (model name, error code, original message) flow into operator logs but
     # never into the response body. This is consistent across the whole LLM
     # error hierarchy — the user is never told which provider we use.
+    except HTTPException:
+        raise
     except LLMMissingKeyError as err:
         logger.warning("extract: LLMMissingKeyError: %s", err)
         raise HTTPException(
