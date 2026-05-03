@@ -33,6 +33,10 @@
     {"text": "I think plants need light to grow but I'm not sure how that turns into food.", "expected_substantive": true},
     {"text": "It happens in steps: light hits the leaf, water moves up, sugar comes out somehow.", "expected_substantive": true},
 
-    {"text": "Idk really, maybe something with light and water and the leaves do work?", "expected_substantive": true}
+    {"text": "Idk really, maybe something with light and water and the leaves do work?", "expected_substantive": true},
+
+    {"text": "Las plantas absorben luz y la convierten en azúcar a través de la fotosíntesis.", "expected_substantive": true},
+    {"text": "Le café contient des molécules complexes — caféine, théobromine, et plusieurs autres alcaloïdes.", "expected_substantive": true},
+    {"text": "光合作用 chloroplasts photosynthèse café résumé naïve coöperate piñata", "expected_substantive": true}
   ]
 }

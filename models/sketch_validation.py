@@ -1,4 +1,4 @@
-"""Shared substantiveness heuristic for the learner's starting sketch.
+r"""Shared substantiveness heuristic for the learner's starting sketch.
 
 This is the *only* place the substantiveness rule is defined for the backend.
 Frontend (Plan B) ports this exact behavior to JS and verifies parity against
@@ -18,6 +18,26 @@ simple — token count + a small "don't know" pattern list — because:
 
 When in doubt, this returns False. Source attachment is always a valid
 alternative for the learner.
+
+JS PORT NOTE (REQUIRED for Plan B parity):
+
+The Python regex `[^\w\s]` matches Unicode by default — `\w` in Python
+includes letters, digits, and underscore for ALL scripts (`café`, `光合`, etc.).
+JavaScript's `\w` is ASCII-only by default. A literal port with `/[^\w\s]/g`
+in JS will strip diacritics and split non-ASCII tokens mid-word, producing
+different substantiveness verdicts for the same input.
+
+Required JS implementation:
+
+  text.replace(/[^\p{L}\p{N}_\s]/gu, ' ')   // ← /u flag is mandatory
+
+The `_REPEATED_CHAR_RE` pattern also needs the `/u` flag in JS for the
+same reason (`.` matches BMP code units only without it).
+
+The parity fixture includes Spanish, French, and mixed-script entries
+specifically to lock this behavior. If the JS port silently uses
+ASCII `\w`, those entries will fail and the parity test will block
+the merge — that's the contract working as intended.
 """
 from __future__ import annotations
 
