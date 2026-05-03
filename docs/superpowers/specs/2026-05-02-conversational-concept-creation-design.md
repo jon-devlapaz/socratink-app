@@ -52,7 +52,7 @@ The chat lives inside the existing `creation-dialog` modal shell. Two AI turns, 
 
 > AI: *Sketch what you think it does — rough is fine. What parts come to mind?*
 
-**Adaptive fallback.** If the learner's reply to turn 2 is thin (heuristic: token count below threshold, or matches a "don't know" pattern like "idk", "no idea", one-word reply), the AI offers an analogical scaffold per DESIGN.md §3 Screen 3 (analogical-fallback rule). The fallback is a single targeted prompt — not a third "real" turn. After the fallback reply lands (substantive or not), the chat exits.
+**Adaptive fallback.** If the learner's reply to turn 2 is thin (heuristic: token count below threshold, or matches a "don't know" pattern like `idk`, `no idea`, one-word reply), the AI offers an analogical scaffold per DESIGN.md §3 Screen 3 (analogical-fallback rule). The fallback is **one bounded extra scaffold** — a single additional AI question with a single learner reply — *not* a return to open conversation. After the fallback reply lands (substantive or not), the chat exits to the summary card. The learner cannot trigger a second fallback, a second scaffold, or any further AI turn. The bound is hard: at most three AI turns total (turn 1 + turn 2 + at most one fallback) and three learner replies, then exit.
 
 > AI: *Try this: think of it like a kitchen taking in ingredients and making a meal. What ingredients does the system take in, and what does it produce?*
 
@@ -89,7 +89,16 @@ Layout P2 from the brainstorm. The chat collapses to a breadcrumb. Three chips a
 - **Empty (default).** Dashed border, transparent background, italic muted copy. `Add source` action in violet on the chip header.
 - **Attached.** Solid border, white background. Value shows the captured source descriptor: `3,421 chars from a Wikipedia article` (URL), `notes.md · 2,108 chars` (file), `2,640 chars pasted` (text). `replace` action on the chip header.
 
-**CTA copy.** `Build from my starting map` — this exact phrase. It names the learner's ownership: the build runs on the learner's model, with source as optional evidence.
+**CTA copy is state-dependent.** The build button names the actual seed of the build:
+
+| State | CTA copy | Why |
+|---|---|---|
+| Substantive sketch, no source | `Build from my starting map` | Sketch is the sole seed; learner's ownership is named explicitly |
+| Substantive sketch + source attached | `Build from my map and source` | Both are part of the seed; copy reflects the package |
+| Thin sketch + source attached | `Build from source` | Source is the seed; sketch is shaping context only — the copy is honest about which is doing the structural work |
+| Thin sketch + no source | (CTA disabled — see Validation) | No valid seed; build is blocked |
+
+The state-dependent CTA prevents a quiet lie: a learner who attached substantial source material with a one-line sketch deserves to see *"Build from source"* rather than *"Build from my starting map"*, because the source is the actual structural input. Naming the seed honestly is part of principle #7 (no hallucinate-and-present).
 
 **Footer copy.** `Study content stays locked until the cold attempt.` (unchanged from existing modal).
 
@@ -141,15 +150,16 @@ GET https://api.learningcommons.org/knowledge-graph/v0/academic-standards/search
 Authorization: Bearer ${LEARNING_COMMONS_API_KEY}
 ```
 
-LC enrichment is applied only when **all** of these hold:
+LC enrichment is applied only when **all four gates pass**. The gates are stated as contracts; the bracketed parenthetical inside each gate is the *initial implementation heuristic*, deliberately separated from the contract so the heuristic can be tightened or loosened from telemetry without rewriting the rule.
 
-1. The query returned ≥1 result.
-2. The top result's `score` is ≥ `LC_RELEVANCE_THRESHOLD` (initial value: `0.70`, configurable).
-3. The concept appears K-12 academic. Heuristic for the initial implementation: top result's `jurisdiction` is `Multi-State` or a US state name, AND `statementCode` is non-null OR description is non-empty. (See §6 for why this heuristic is deliberately loose.)
+1. **API responded.** The query returned successfully (HTTP 200) within the timeout budget. (Implementation: 800ms wall-clock; see §5.2.)
+2. **Results returned.** The response payload contains ≥1 standard.
+3. **Score floor.** The top result's relevance score clears the threshold above which LC's matches are real semantic hits rather than closest-substring noise. (Implementation: top `score` ≥ `LC_RELEVANCE_THRESHOLD`, initial value `0.70`, configurable. Verification log in Appendix A established that scores below ~0.66 plateau into garbage matches like *"photosynthesis" → "Draw conclusions from picture graphs"*.)
+4. **K-12 academic confidence.** The top result is identifiably a K-12 academic standard, not a generic literacy/numeracy fragment LC returned because nothing better matched. (Implementation: `jurisdiction` is `Multi-State` or a US state name, AND `statementCode` is non-null OR `description` length ≥ 40 characters. The heuristic is deliberately loose for v1; telemetry on `enrichment_skipped: non_k12` reveals where it under-fires; the gate tightens or loosens from there. Future iteration may add a topic-classifier or LC-side metadata field if available.)
 
-When all three hold, the top 2-3 standard descriptions are passed to the generation prompt as **optional grounding context** under a clearly-marked `<lc_context>` block. The prompt instructs the AI to use the context to ground hypothesis structure but to favor the learner's sketch when the two diverge. The AI is explicitly told the context is curriculum-aligned but not authoritative for this specific learner.
+When all four gates pass, the top 2-3 standard descriptions are passed to the generation prompt as **optional grounding context** under a clearly-marked `<lc_context>` block. The prompt instructs the AI to use the context to ground hypothesis structure but to favor the learner's sketch when the two diverge. The AI is explicitly told the context is curriculum-aligned but not authoritative for this specific learner.
 
-When **any** of the three conditions fails — or LC is unreachable, times out, or errors — the generation proceeds with `lc_context=None`. No fallback fetch from any other source is attempted. The system never tells the learner LC was queried; the enrichment is invisible UX-side.
+When **any** gate fails — or LC is unreachable, times out, or errors — the generation proceeds with `lc_context=None`. No fallback fetch from any other source is attempted. The system never tells the learner LC was queried; the enrichment is invisible UX-side. Each skip carries a telemetry reason (see §5.4) so we can measure the gate's behavior in production rather than guess at it.
 
 **Provisional graph framing.** The generated graph is rendered with the same Provisional Graph treatment as today (DESIGN.md §3 Screen 2 — *draft route · ready for first attempt · locked*). It does not mark which nodes came from LC vs from pure inference. The learner sees a hypothesis to attempt, not a pedigree of where the structure came from.
 
@@ -266,6 +276,17 @@ When `source == null`, the handler dispatches to `generate_provisional_map_from_
 
 The existing fuzzy-area input is removed from the payload entirely. Confusion signal is captured implicitly in the sketch text and (optionally) inferred by the AI from gaps. The 2026-05-01 redesign carried `fuzzyText` into a `Fuzzy area:` suffix on `thresholdContext`; that suffix is dropped.
 
+**Server-side validation (defense in depth).** The handler enforces the §3.2 substantiveness rule independently of the client; client-side CTA-disabling is a UX optimization, not the gate. The check, before any AI call:
+
+- `name` empty/whitespace-only → `422` with `{"error": "missing_concept", "message": "Concept name required."}`
+- `source == null` AND `is_substantive_sketch(starting_sketch) == False` → `422` with `{"error": "thin_sketch_no_source", "message": "Add more to your sketch, or attach source material — either path opens the build."}`
+
+The `is_substantive_sketch(text: str) -> bool` helper lives in the same module as `generate_provisional_map_from_sketch` so frontend and backend share the same definition through a synchronized heuristic spec. The frontend's TypeScript/JS implementation must mirror it byte-for-byte (same stopword set, same ≥8 token threshold, same "don't know" pattern list), and a shared test fixture with ~30 inputs (substantive / thin / borderline) verifies parity. A divergence between client and server checks is a release-blocker.
+
+The 422 response surfaces back to the frontend, which renders `message` in the same chip footer the client-side validation would have used — so a learner who somehow bypasses the client gate still sees the same strategy-framed copy, not a server-error toast.
+
+This server-side check is the only thing standing between principle #7 and a buggy/old/malicious client triggering source-less generation on a thin sketch. It is not optional.
+
 ### 5.4 Telemetry (load-bearing)
 
 Add structured-log events for:
@@ -279,8 +300,10 @@ Add structured-log events for:
 - `concept_create.lc.queried` — `{concept_hash, top_score, standards_count, latency_ms}`
 - `concept_create.lc.enrichment_applied` — `{standards_count}` (only when gate passed)
 - `concept_create.lc.enrichment_skipped` — `{reason: "no_results"|"low_score"|"non_k12"|"timeout"|"error"|"key_missing"}`
+- `concept_create.build_blocked` — `{reason: "missing_concept"|"thin_sketch_no_source", origin: "client"|"server"}` — fires every time the build is prevented (whether by client-side CTA-disable or by server-side 422). The `origin` field lets us spot client/server validation drift: in a healthy state, all blocks should fire as `origin: client` and zero as `origin: server`. Server-side blocks indicate either a client bug, an old cached client, or an attempted bypass — all worth knowing about.
+- `concept_create.ai_call` — `{stage, model, tokens_in, tokens_out, latency_ms, cost_usd_est}` — fires after every AI call within the concept creation flow. `stage` is one of: `chat_turn_2_probe`, `chat_fallback`, `summary_extract` (if extracting canonical concept name from chat replies is a separate call), `generation_pure`, `generation_lc_enriched`. Aggregating across `stage` per session gives the actual model-call count and dollar cost per concept created — the data that backs the §10 cost risk row.
 
-These events power post-launch diagnostics: where the chat actually fails, how often LC enrichment is applied, where the K-12 heuristic is wrong.
+These events power post-launch diagnostics: where the chat actually fails, how often LC enrichment is applied, where the K-12 heuristic is wrong, where build is blocked and at which layer, and how AI cost per concept evolves as the flow stabilizes. The `build_blocked` and `ai_call` events are load-bearing for principle #7 enforcement and cost governance respectively — both must be wired before launch.
 
 ## 6. Open questions for implementation
 
