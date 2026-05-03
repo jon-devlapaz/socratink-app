@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 
 # Minimum non-stopword token count to be considered substantive.
-MIN_SUBSTANTIVE_TOKENS = 5
+MIN_SUBSTANTIVE_TOKENS = 8
 
 # Patterns the learner uses when they have nothing to say. Matched as
 # normalized substring of the *whole* normalized sketch (stripped, lowercased,

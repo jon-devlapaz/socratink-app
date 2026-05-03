@@ -34,7 +34,11 @@ def test_parity_fixture_entries(text: str, expected: bool):
 
 def test_strips_leading_trailing_whitespace():
     assert is_substantive_sketch("  idk  ") is False
-    assert is_substantive_sketch("\n\n  Plants take in light and make sugar  \n") is True
+    # Use a fixture-substantive sketch wrapped in extra whitespace.
+    # The intent is to verify normalization strips leading/trailing whitespace
+    # without lowering the substantiveness threshold.
+    sketch = "Plants take in light and somehow make sugar. Not sure where the water goes."
+    assert is_substantive_sketch(f"\n\n  {sketch}  \n") is True
 
 
 def test_case_insensitive_dont_know_patterns():
