@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "description": "Shared parity fixture for is_substantive_sketch. Loaded by Python tests (tests/test_sketch_validation.py) and JS tests in Plan B for byte-for-byte parity. Each entry is {text, expected_substantive}.",
+  "entries": [
+    {"text": "Plants take in light and somehow make sugar. Not sure where the water goes.", "expected_substantive": true},
+    {"text": "Photosynthesis happens in chloroplasts where light energy converts CO2 and water into glucose and oxygen.", "expected_substantive": true},
+    {"text": "I think it is when cells divide into two and each new cell has the same DNA.", "expected_substantive": true},
+    {"text": "A way of thinking about how you think — noticing your own learning patterns.", "expected_substantive": true},
+
+    {"text": "idk", "expected_substantive": false},
+    {"text": "Idk", "expected_substantive": false},
+    {"text": "IDK", "expected_substantive": false},
+    {"text": "i dont know", "expected_substantive": false},
+    {"text": "I don't know", "expected_substantive": false},
+    {"text": "no idea", "expected_substantive": false},
+    {"text": "no clue", "expected_substantive": false},
+    {"text": "?", "expected_substantive": false},
+    {"text": "??", "expected_substantive": false},
+    {"text": "...", "expected_substantive": false},
+    {"text": "…", "expected_substantive": false},
+    {"text": "", "expected_substantive": false},
+    {"text": "   ", "expected_substantive": false},
+    {"text": "\n\n", "expected_substantive": false},
+    {"text": "asdf", "expected_substantive": false},
+    {"text": "asdfasdfasdf", "expected_substantive": false},
+    {"text": "aaaaaaaaaaaaaaaa", "expected_substantive": false},
+    {"text": "??????????", "expected_substantive": false},
+
+    {"text": "photosynthesis", "expected_substantive": false},
+    {"text": "long division", "expected_substantive": false},
+    {"text": "the cell does stuff", "expected_substantive": false},
+
+    {"text": "I think plants need light to grow but I'm not sure how that turns into food.", "expected_substantive": true},
+    {"text": "It happens in steps: light hits the leaf, water moves up, sugar comes out somehow.", "expected_substantive": true},
+
+    {"text": "Idk really, maybe something with light and water and the leaves do work?", "expected_substantive": true}
+  ]
+}
