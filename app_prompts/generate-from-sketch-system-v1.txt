@@ -44,10 +44,88 @@ OUTPUT:
 
 Same JSON schema as extract-system-v1.txt. The same Pydantic
 ProvisionalMap model parses your output. The same closure validators
-run on it. Read extract-system-v1.txt for the exact field set —
-there is one schema, not two. Backbone, clusters, subnodes, metadata,
-identifier grammar (b1, c1, c1_s2), framework references — all the
-same.
+run on it. The schema fields, identifier grammar, and reference rules
+are restated below in full so you do not need to consult another file.
+
+IDENTIFIER GRAMMAR (rejection rules — outputs that violate these fail
+Pydantic validation and the request errors):
+
+- Backbone IDs: b1, b2, b3, ...
+- Cluster IDs: c1, c2, c3, ...
+- Sub-node IDs: c<N>_s<M> (e.g., c1_s1, c1_s2, c2_s1).
+  A sub-node's id MUST start with its parent cluster's id followed by
+  "_s" — c1_s2 belongs to c1, not c2.
+
+REFERENCE-CLOSURE RULES (the validators check every one of these):
+
+- Every cluster id you reference (in backbone.dependent_clusters, in
+  relationships.domain_mechanics, in relationships.learning_prereqs,
+  in frameworks[].source_clusters) MUST exist in the clusters[] array.
+- Every cluster MUST appear in at least one backbone's dependent_clusters
+  list. Do not leave orphan clusters.
+- Every cluster MUST contain at least one sub-node. If a mechanism is
+  too unified to split, emit a single sub-node rather than leaving the
+  cluster empty.
+- Every sub-node lives in its declared cluster (c1_s1 must be inside c1).
+
+RELATIONSHIPS (BETWEEN CLUSTERS — NEVER between sub-nodes):
+
+  "relationships": {
+    "domain_mechanics":   [ { "from": "<cluster-id>", "to": "<cluster-id>", "principle": "..." }, ... ],
+    "learning_prerequisites": [ { "from": "<cluster-id>", "to": "<cluster-id>" }, ... ]
+  }
+
+CRITICAL: both `from` and `to` in relationships are CLUSTER IDs (c1,
+c2, c3) — NEVER sub-node IDs (c1_s1, c1_s2). domain_mechanics and
+learning_prerequisites map cluster-to-cluster relations only. If you
+need to express a within-cluster relationship, fold it into the
+sub-node descriptions instead.
+
+Learning_prerequisites must form a sparse DAG: no self-loops, no
+cycles, no reciprocal pairs (A→B and B→A is forbidden). Add a
+prerequisite edge only when mastery of `from` is genuinely necessary
+to understand `to`.
+
+OUTPUT SHAPE (the full schema, restated):
+
+  {
+    "metadata": {
+      "source_title": "string",
+      "core_thesis": "string",
+      "architecture_type": "causal_chain" | "problem_solution" | "comparison" | "system_description",
+      "difficulty": "easy" | "medium" | "hard",
+      "governing_assumptions": ["string", ...],
+      "low_density": true | false
+    },
+    "backbone": [
+      {
+        "id": "b1",
+        "principle": "string",
+        "dependent_clusters": ["c1", "c2"]
+      }
+    ],
+    "clusters": [
+      {
+        "id": "c1",
+        "label": "string",
+        "description": "string",
+        "subnodes": [
+          { "id": "c1_s1", "label": "string", "mechanism": "string" }
+        ]
+      }
+    ],
+    "relationships": {
+      "domain_mechanics": [
+        { "from": "c1", "to": "c2", "principle": "string" }
+      ],
+      "learning_prerequisites": [
+        { "from": "c1", "to": "c2" }
+      ]
+    },
+    "frameworks": [
+      { "label": "string", "source_clusters": ["c1", "c2"] }
+    ]
+  }
 
 Differences from extraction:
 
