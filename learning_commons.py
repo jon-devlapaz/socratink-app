@@ -213,3 +213,68 @@ class LCClient:
         standards.sort(key=lambda s: s.score, reverse=True)
         top_score = standards[0].score if standards else 0.0
         return LCSearchResult(top_score=top_score, standards=standards)
+
+
+# --- Four-gate threshold ----------------------------------------------------
+
+# Initial K-12 jurisdiction allowlist. "Multi-State" is the most common
+# value in LC's NGSS / CCSS aggregations. US state names cover the
+# state-specific frameworks. Heuristic is deliberately loose; tighten
+# from telemetry on `enrichment_skipped: non_k12`.
+_US_STATES = frozenset({
+    "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+    "Connecticut", "Delaware", "Florida", "Georgia", "Hawaii", "Idaho",
+    "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky", "Louisiana",
+    "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+    "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada",
+    "New Hampshire", "New Jersey", "New Mexico", "New York", "North Carolina",
+    "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania",
+    "Rhode Island", "South Carolina", "South Dakota", "Tennessee", "Texas",
+    "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+    "Wisconsin", "Wyoming", "District of Columbia",
+})
+
+
+def _looks_k12(standard: LCStandard) -> bool:
+    """Heuristic: gate 4 from spec §3.3.2.
+
+    Initial implementation: jurisdiction is "Multi-State" or a US state name,
+    AND (statement_code is non-null OR description is non-empty and >= a
+    minimum length). Telemetry on `enrichment_skipped: non_k12` reveals
+    where this under-fires; tighten or loosen from there.
+    """
+    juris = (standard.jurisdiction or "").strip()
+    if juris != "Multi-State" and juris not in _US_STATES:
+        return False
+    if standard.statement_code:
+        return True
+    if standard.description and len(standard.description) >= LC_K12_DESCRIPTION_MIN_LEN:
+        return True
+    return False
+
+
+def should_enrich_with_lc(
+    result: Optional[LCSearchResult],
+) -> Optional[list[LCStandard]]:
+    """Apply the four enrichment gates from spec §3.3.2.
+
+    Returns the top 2-3 standards when all gates pass, ``None`` otherwise.
+    The caller passes the returned list (or ``None``) into
+    ``generate_provisional_map_from_sketch(..., lc_context=...)``.
+    """
+    # Gate 1 (API responded) is implicit: if this function received a
+    # result at all, the call returned successfully. Network/timeout
+    # failures upstream produce result=None.
+    if result is None:
+        return None
+    # Gate 2: results returned
+    if not result.standards:
+        return None
+    top = result.standards[0]
+    # Gate 3: score floor
+    if top.score < LC_RELEVANCE_THRESHOLD:
+        return None
+    # Gate 4: K-12 academic confidence
+    if not _looks_k12(top):
+        return None
+    return result.standards[:3]
