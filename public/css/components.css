@@ -1980,7 +1980,7 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
 .hero-single-input__row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 12px 16px;
 }
@@ -2170,16 +2170,6 @@ body[data-theme="dark"] .hero-single-input__submit:hover:not(:disabled) {
 }
 body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   color: var(--danger-light, #ffb4a8);
-}
-
-.hero-single-input__reassure {
-  font-family: var(--font-body);
-  font-size: var(--text-sm, 13px);
-  font-style: italic;
-  line-height: var(--leading-snug, 1.45);
-  color: var(--text-sub);
-  margin: 0;
-  text-align: center;
 }
 
 /* Empty-state rhythm: question (eyebrow + H1) -> action (input). */
