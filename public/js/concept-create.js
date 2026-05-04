@@ -495,11 +495,18 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
         panels.forEach((p) => {
           p.style.display = p.dataset.panel === activeTab ? "" : "none";
         });
+        valueEl.querySelectorAll(".overlay-dropfeedback").forEach((f) => {
+          f.textContent = "";
+          f.className = "overlay-dropfeedback";
+        });
         refreshAttachEnabled();
       });
     });
 
     textarea.addEventListener("input", refreshAttachEnabled);
+    // URL validation is server-side: Task 9 hops through /api/extract-url, which
+    // applies source_intake's allow-list (private-IP block, video-host block, scheme
+    // checks). The client only enables Attach when the field is non-empty.
     urlInput.addEventListener("input", refreshAttachEnabled);
 
     dropzone.addEventListener("click", () => fileInput.click());
