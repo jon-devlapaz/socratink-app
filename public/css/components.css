@@ -1980,7 +1980,7 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
 .hero-single-input__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px 16px;
 }
@@ -2206,7 +2206,7 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   align-items: center;
   gap: 6px 8px;
   padding: 0;
-  flex: 1 1 auto;
+  flex: 1 1 100%;
   min-width: 0;
 }
 .hero-example-chips__label {
@@ -2227,6 +2227,7 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   font-size: 12px;
   color: var(--text-sub);
   cursor: pointer;
+  white-space: nowrap;
   transition:
     color var(--duration-micro, 140ms) var(--ease-standard, ease),
     border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
