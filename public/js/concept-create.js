@@ -317,9 +317,125 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
     attachSourceChipHandlers();
   }
 
-  // Stub — real submit ships in Task 9.
-  function doSubmit() {
-    /* implemented in Task 9 */
+  async function doSubmit() {
+    if (state.submitting) return;
+    state.submitting = true;
+
+    const concept = state.concept.trim();
+    const sketch = joinSketch();
+
+    emitTelemetry("concept_create.build_clicked", {
+      has_source: Boolean(state.source),
+      has_sketch: Boolean(sketch),
+    });
+
+    let resolvedSource = state.source;
+
+    // URL source path: hop through /api/extract-url first to materialise text.
+    // The /api/extract dispatcher rejects URL sources directly (see main.py
+    // _resolve_extract_path: 'URL sources go through /api/extract-url.').
+    if (resolvedSource && resolvedSource.type === "url" && !resolvedSource.text) {
+      try {
+        const { extractUrl } = await import("./api-client.js");
+        const fetched = await extractUrl({ url: resolvedSource.url });
+        // /api/extract-url returns {text, title, url} per source_intake.
+        resolvedSource = {
+          type: "text",
+          text: String(fetched.text || ""),
+          // Keep the original URL on the client for telemetry / display only.
+          // Backend payload uses type: "text" so the dispatcher takes the
+          // existing extract_knowledge_map path on this submit.
+        };
+      } catch (err) {
+        state.submitting = false;
+        showSubmitError(
+          "source",
+          err && err.message ? err.message : "Couldn't fetch that URL."
+        );
+        return;
+      }
+    }
+
+    try {
+      const { submitConceptCreate } = await import("./ai_service.js");
+      const apiKey =
+        (typeof localStorage !== "undefined" && localStorage.getItem("gemini_key")) ||
+        undefined;
+      const data = await submitConceptCreate({
+        name: concept,
+        startingSketch: sketch,
+        source: resolvedSource,
+        apiKey,
+      });
+      state.submitting = false;
+      // Hand off to the caller; one of provisional_map / knowledge_map is set.
+      onSubmit?.({
+        name: concept,
+        startingSketch: sketch,
+        source: resolvedSource,
+        provisionalMap: data.provisional_map || data.knowledge_map || null,
+      });
+    } catch (err) {
+      state.submitting = false;
+      if (err && err.status === 422 && err.body) {
+        const code = err.body.error;
+        const message = err.body.message || "Submission rejected.";
+        if (code === "missing_concept") {
+          showSubmitError("concept", message);
+          return;
+        }
+        if (code === "thin_sketch_no_source") {
+          showSubmitError("sketch", message);
+          return;
+        }
+      }
+      showSubmitError(
+        "submit",
+        (err && err.message) || "Couldn't submit. Try again."
+      );
+    }
+  }
+
+  function showSubmitError(target, message) {
+    rerenderSummary();
+    if (target === "concept") {
+      const valueEl = container.querySelector('[data-role="concept-value"]');
+      if (valueEl) {
+        valueEl.insertAdjacentHTML(
+          "afterend",
+          `<p class="creation-chip-footer">${escHtml(message)}</p>`
+        );
+      }
+      return;
+    }
+    if (target === "sketch") {
+      const sketchChip = container.querySelector('[data-chip="sketch"]');
+      if (!sketchChip) return;
+      const existing = sketchChip.querySelector(".creation-chip-footer");
+      if (existing) existing.textContent = message;
+      else
+        sketchChip.insertAdjacentHTML(
+          "beforeend",
+          `<p class="creation-chip-footer">${escHtml(message)}</p>`
+        );
+      return;
+    }
+    if (target === "source") {
+      const sourceChip = container.querySelector('[data-chip="source"]');
+      if (!sourceChip) return;
+      sourceChip.insertAdjacentHTML(
+        "beforeend",
+        `<p class="creation-chip-footer">${escHtml(message)}</p>`
+      );
+      return;
+    }
+    // Generic fallback: append a banner below the summary.
+    const summary = container.querySelector(".creation-summary");
+    if (!summary) return;
+    summary.insertAdjacentHTML(
+      "beforeend",
+      `<p class="creation-chip-footer">${escHtml(message)}</p>`
+    );
   }
 
   function rerenderSummary() {
