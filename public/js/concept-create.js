@@ -297,7 +297,13 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
     const submitBtn = container.querySelector(".creation-submit");
     submitBtn.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      if (submitBtn.disabled) return;
+      if (submitBtn.disabled) {
+        const reason = !state.concept.trim()
+          ? "missing_concept"
+          : "thin_sketch_no_source";
+        handleDisabledClickAttempt(reason);
+        return;
+      }
       doSubmit();
     });
 
@@ -311,6 +317,24 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
   // Stub — real submit ships in Task 9.
   function doSubmit() {
     /* implemented in Task 9 */
+  }
+
+  function rerenderSummary() {
+    // Cheap full re-render — chip state is small, DOM is shallow, no
+    // animation interrupted by re-render in v1. If perf bites later,
+    // swap to surgical updates per chip.
+    renderSummary();
+  }
+
+  // Wire the disabled-CTA telemetry. The CTA's disabled attribute prevents
+  // the click in normal use, but if an integration test or assistive tech
+  // somehow triggers an activation we want telemetry to log the block.
+  // (Server-side validation is the authority either way.)
+  function handleDisabledClickAttempt(reason) {
+    emitTelemetry("concept_create.build_blocked", {
+      reason,
+      origin: "client",
+    });
   }
 
   // Boot the first chat turn.
