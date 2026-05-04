@@ -370,10 +370,27 @@ const App = (() => {
       if (classified.kind === 'empty') return false;
       showDashboard();
       openDrawer();
-      // The conversational dialog handles its own input focus; no pre-fill needed.
-      // TODO(v2): When threshold-chat-turn is wired to the backend, pass `classified.text`
-      // as an initial hero-input hint so the chat turn-1 can be pre-answered for the user.
-      startAddConcept();
+
+      // The hero input is the learner's answer to "What do you want to
+      // understand?". Pre-seed the chat so the modal does not ask the
+      // same question again.
+      //   - "name" classification → seed concept; modal opens at turn 2.
+      //   - "passage" classification → seed source; modal opens at turn 1
+      //     for the concept name, then exits to the summary card directly
+      //     (sketch is optional when source is attached).
+      const seed =
+        classified.kind === 'name'
+          ? { name: classified.text }
+          : classified.kind === 'passage'
+            ? { source: { type: 'text', text: classified.text, filename: '' } }
+            : undefined;
+
+      startAddConcept(seed);
+
+      if (field) {
+        field.value = '';
+        field.style.height = '';
+      }
       return false;
     }
 
@@ -1337,7 +1354,7 @@ const App = (() => {
     overlayHandle.removeOverlay(true);
   }
 
-  async function startAddConcept() {
+  async function startAddConcept(seed) {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog();
     let isGuest = false;
@@ -1362,12 +1379,14 @@ const App = (() => {
     // Shared helper to re-mount the creation dialog with an error banner after
     // the overlay tears down. The user's sketch is NOT preserved on retry — this
     // is acceptable for v1. Preserving sketch across error retry is a follow-up.
+    // seed is forwarded so retry preserves the hero-input pre-fill.
     function remountWithError(err) {
       const dialog2 = mountCreationDialog();
       dialog2.bannerSlot.appendChild(
         buildErrorBanner(sanitizeExtractError(err))
       );
       buildConversationalCreateUI(dialog2.shellContent, {
+        seed,
         onCancel: () => closeCreationDialog(),
         onBeforeSubmit: ({ name: n }) => {
           closeCreationDialog();
@@ -1409,6 +1428,7 @@ const App = (() => {
     }
 
     buildConversationalCreateUI(dialog.shellContent, {
+      seed,
       onCancel: () => closeCreationDialog(),
       onBeforeSubmit: ({ name }) => {
         // Pre-flight: close the dialog and mount the overlay BEFORE the

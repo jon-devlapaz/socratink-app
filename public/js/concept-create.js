@@ -44,12 +44,18 @@ const SKETCH_FOOTER_BLOCKED =
   "A few words about how you think it works will give socratink something to draft from. " +
   "Or attach source material — either path opens the build.";
 
-export function buildConversationalCreateUI(container, { onSubmit, onCancel, onBeforeSubmit, onSubmitError }) {
+export function buildConversationalCreateUI(container, { onSubmit, onCancel, onBeforeSubmit, onSubmitError, seed }) {
+  const initialName = (seed && typeof seed.name === "string" ? seed.name.trim() : "");
+  const initialSource = seed && seed.source ? seed.source : null;
+  // If we have a name, skip turn 1 (the hero already captured the answer).
+  // If we have only source, start at turn 1 (concept name still needed).
+  const initialStage = initialName ? STAGE.CHAT_TURN_2 : STAGE.CHAT_TURN_1;
+
   const state = {
-    stage: STAGE.CHAT_TURN_1,
-    concept: "",
+    stage: initialStage,
+    concept: initialName,
     sketchTurns: [],          // verbatim learner replies; concatenated into chip value
-    source: null,              // { type, text?, url?, filename? } once attached
+    source: initialSource,    // { type, text?, url?, filename? } once attached
     usedFallback: false,
     submitting: false,
   };
@@ -150,6 +156,15 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
         reply_len: reply.length,
         used_fallback: false,
       });
+      // If a passage was pre-attached as source via the hero input, the
+      // source is the seed — skip turn 2 (sketch optional) and exit to
+      // the summary card directly. The learner can still edit the sketch
+      // chip later if they want.
+      if (state.source) {
+        state.stage = STAGE.SUMMARY;
+        renderSummary();
+        return;
+      }
       state.stage = STAGE.CHAT_TURN_2;
       renderChat();
       return;
