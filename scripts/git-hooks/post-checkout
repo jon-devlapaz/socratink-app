@@ -52,4 +52,18 @@ done
 
 # Stay quiet if nothing was linked; only chime in when the hook actually
 # did something useful.
+
+# After a branch checkout (flag=1), the working tree contents may have
+# shifted significantly — kick off a full graph rebuild in the
+# background so it reflects the new branch. Silent no-op if
+# code-review-graph isn't installed.
+#
+# Note: when a fresh worktree is created via `git worktree add`, this
+# hook fires AND Claude's `EnterWorktree` hook fires its own build.
+# Both are background and idempotent under WAL; worst case the second
+# build is a no-op or briefly blocks on the SQLite write lock.
+if command -v code-review-graph >/dev/null 2>&1; then
+  ( code-review-graph build >/dev/null 2>&1 & ) >/dev/null 2>&1
+fi
+
 exit 0

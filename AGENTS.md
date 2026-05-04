@@ -48,6 +48,20 @@ Discover with Claude Context → confirm structure with the graph → only then 
 - Call-count data from the graph can under-report. Always verify "single call site" or "only caller" claims with textual search such as `rg "<symbol>"` before acting on them — this rule survives the Claude Context addition; semantic similarity is even less authoritative for call-site enumeration than the graph.
 - Local-first search applies: check local docs, scripts, and skills before remote sources or external agents. Before building new functionality, verify there is not already a local script, command, or documented workflow that does it.
 
+### Known caveat — doc-heavy corpus skews semantic results
+This repo carries a large body of markdown (handoffs, design specs, ADRs, ubiquitous-language docs) alongside ~96 Python files. In practice, Claude Context's `search_code` consistently ranks markdown chunks above Python source even for queries naming literal class or function symbols (e.g. `SupabaseAuthService`). Treat this as a feature for *intent* discovery and a limitation for *symbol* discovery.
+
+### Practical query routing (what to reach for first)
+Empirical comparison run on 2026-05-04 against this codebase:
+
+1. **Known symbol or filename** → `rg "<symbol>"` or CRG `semantic_search_nodes` (FTS5 alone). Both return the real Python file as the first hit in <100ms. Skip Claude Context here — it returns docs first.
+2. **Multi-word natural-language concept where you don't know the symbol** → Claude Context `search_code`. CRG's FTS5 falls back to AND-matching word-by-word and returns 0 hits for queries like "sealed cookie session" or "drill evaluation routing". CC at least surfaces the relevant handoff/spec doc, which usually names the symbol you actually want.
+3. **Blast radius, callers, callees, affected flows, tests-for** → CRG graph tools (`get_impact_radius`, `query_graph`, `get_affected_flows`). No alternative tool produces this.
+4. **"Where does our spec say…"** → Claude Context `search_code` (this is its strongest mode on this corpus).
+5. **"Single call site" claims** → always verify with `rg "<symbol>"`. Both CRG and CC are floors, not ceilings.
+
+When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`). But note: in observed cases the result list often becomes empty rather than reordering — the underlying Voyage embedding for the query just doesn't score the Python chunks above the threshold. Falling back to CRG/`rg` is the right move.
+
 ## Common development commands
 ### Environment setup
 ```bash

@@ -15,8 +15,11 @@ Current shape: ~870 nodes, ~7,100 edges across 50 files (Python + JavaScript).
 
 ## How it stays fresh
 
-Hooks in `.claude/settings.json` keep the graph in sync automatically. You should
-not need to run anything by hand.
+Two hook layers keep the graph in sync automatically — one fires when an agent
+edits files, the other fires when *anyone* (human or agent) runs git. You
+should not need to run anything by hand.
+
+### Layer 1 — Claude hooks (agent edits)
 
 > `.claude/settings.json` is gitignored (per-developer). The team baseline is
 > committed at [`.claude/settings.example.json`](../.claude/settings.example.json) —
@@ -26,11 +29,43 @@ not need to run anything by hand.
 | Event | Hook | What runs |
 |---|---|---|
 | SessionStart | every new session | `code-review-graph status` (header + last-update) |
-| PostToolUse: `Edit\|Write\|Bash` | after every file mutation | `code-review-graph update --skip-flows` (incremental) |
-| PostToolUse: `EnterWorktree` | when a fresh worktree is created | `code-review-graph build` (full, synchronous, 60s timeout) |
+| PostToolUse: `Edit\|Write\|NotebookEdit\|Bash` | after every file mutation | `code-review-graph update --skip-flows` (incremental) |
+| PostToolUse: `EnterWorktree` | when a fresh worktree is created | `code-review-graph build && python3 scripts/build_code_graph_viz.py` (full graph + viz HTML, synchronous build, 60s timeout) |
 
 `EnterWorktree → build` runs synchronously to avoid racing with the incremental
-`update` that PostToolUse fires on the first edit in a worktree.
+`update` that PostToolUse fires on the first edit in a worktree. The viz
+regen is chained backgrounded so the worktree is usable as soon as the build
+completes.
+
+### Layer 2 — Git hooks (human + agent git ops)
+
+Repo-versioned at `scripts/git-hooks/` and wired in via `git config --local
+core.hooksPath scripts/git-hooks` (set automatically by
+`scripts/bootstrap-python.sh`). All hooks are best-effort and silent: each
+guards on `command -v code-review-graph` and exits 0 if the CLI isn't
+installed, so they never break standard git operations.
+
+| Event | Hook | What runs (backgrounded) |
+|---|---|---|
+| `git commit` (any) | `post-commit` | `code-review-graph update --skip-flows &` |
+| `git pull` / `git merge` | `post-merge` | `code-review-graph update --skip-flows &` |
+| `git rebase` / `git commit --amend` | `post-rewrite` | `code-review-graph build &` (full rebuild — incremental is unreliable after history rewrite) |
+| `git checkout <branch>` / `git worktree add` | `post-checkout` (flag=1) | `code-review-graph build &` |
+
+All git-hook commands are detached and redirect output to `/dev/null` so they
+never block git or spam the terminal. The `EnterWorktree` Claude hook and
+`post-checkout` git hook both fire on `git worktree add`; both are idempotent
+under SQLite WAL — worst case the second run briefly contends for the write
+lock and re-parses unchanged files.
+
+### When to run something by hand anyway
+
+The hook layers cover normal development. Force a manual rebuild only when:
+- `code-review-graph status` shows a stale `last_updated` after a long-running
+  background process you suspect was killed.
+- You see "database is locked" warnings repeatedly (kill stragglers, then
+  `code-review-graph build`).
+- You're debugging the hooks themselves.
 
 ## The token-efficiency contract
 

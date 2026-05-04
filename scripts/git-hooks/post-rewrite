@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# post-rewrite hook
+#
+# Fires after history-rewriting commands: `git rebase` and `git commit
+# --amend`. After a rewrite, file mtimes and HEAD have shifted enough
+# that an incremental update can be unreliable, so we kick off a full
+# rebuild in the background.
+#
+# Best-effort: silent no-op if code-review-graph isn't installed.
+
+if command -v code-review-graph >/dev/null 2>&1; then
+  ( code-review-graph build >/dev/null 2>&1 & ) >/dev/null 2>&1
+fi
+
+exit 0
