@@ -366,6 +366,11 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     // onBeforeSubmit is omitted, overlayHandle is undefined — callers that omit
     // it must not expect overlay teardown from the network-error path.
     const overlayHandle = onBeforeSubmit?.({ name: concept });
+    if (overlayHandle === null) {
+      // Caller rejected the submit (e.g., library at cap). Don't proceed.
+      state.submitting = false;
+      return;
+    }
 
     let resolvedSource = state.source;
 
@@ -502,7 +507,10 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     input.focus();
     input.select();
 
+    let saved = false;
     function save() {
+      if (saved) return;
+      saved = true;
       const next = input.value.trim();
       if (next !== prior) {
         state.concept = next;
@@ -511,6 +519,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       rerenderSummary();
     }
     function cancel() {
+      saved = true;  // suppress save on the imminent blur
       rerenderSummary();
     }
     input.addEventListener("blur", save);
@@ -544,7 +553,10 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
+    let saved = false;
     function save() {
+      if (saved) return;
+      saved = true;
       const next = textarea.value;
       if (next !== prior) {
         // Replace all sketchTurns with the edited value as a single turn.
@@ -555,6 +567,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       rerenderSummary();
     }
     function cancel() {
+      saved = true;  // suppress save on the imminent blur
       rerenderSummary();
     }
     textarea.addEventListener("blur", save);

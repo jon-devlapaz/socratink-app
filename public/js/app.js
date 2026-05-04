@@ -1,5 +1,5 @@
 import { Bus } from './bus.js';
-import { generateKnowledgeMap } from './ai_service.js?v=2';
+import { generateKnowledgeMap } from './ai_service.js';
 import {
   getHealth,
   extractUrl,
@@ -1373,12 +1373,6 @@ const App = (() => {
         return;
       }
 
-      if (loadConcepts().length >= 4) {
-        if (overlayHandle) overlayHandle.removeOverlay(false);
-        renderAddTrigger();
-        return;
-      }
-
       finishConceptCreateAfterOverlay({
         id: generateId(),
         name,
@@ -1395,6 +1389,16 @@ const App = (() => {
       seed,
       onCancel: () => closeCreationDialog(),
       onBeforeSubmit: ({ name }) => {
+        if (loadConcepts().length >= 4) {
+          // Library is at the 4-concept cap. Don't pay for an LLM call.
+          // Don't close the dialog. Surface the cap inline so the learner
+          // can either remove a concept or cancel.
+          dialog.bannerSlot.innerHTML = '';
+          dialog.bannerSlot.appendChild(
+            buildSeedFailureBanner('Library is full. Remove a concept first to add another.')
+          );
+          return null;
+        }
         // Pre-flight: close the dialog and mount the overlay BEFORE the
         // network call so there is no silent-wait gap after clicking Build.
         closeCreationDialog();
@@ -3915,7 +3919,6 @@ const App = (() => {
     deleteConcept,
     startAddConcept,
     renderAddTrigger,
-    mountExtractOverlay,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
