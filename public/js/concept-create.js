@@ -342,7 +342,6 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
         resolvedSource = {
           type: "text",
           text: String(fetched.text || ""),
-          // Keep the original URL on the client for telemetry / display only.
           // Backend payload uses type: "text" so the dispatcher takes the
           // existing extract_knowledge_map path on this submit.
         };
