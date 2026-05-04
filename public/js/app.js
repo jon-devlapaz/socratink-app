@@ -425,25 +425,9 @@ const App = (() => {
     if (!(field instanceof HTMLTextAreaElement)) return;
     const form = document.getElementById('hero-single-input');
     const submit = form?.querySelector('.hero-single-input__submit');
-    const fileInput = document.getElementById('hero-single-input-file');
-    const attachBtn = document.getElementById('hero-single-input-attach');
-    const fileNote = document.getElementById('hero-single-input-file-note');
-
-    const defaultFileNote = 'TXT, MD, or PDF · max 2 MB';
-
     const autogrow = () => {
       field.style.height = 'auto';
       field.style.height = Math.min(field.scrollHeight, 240) + 'px';
-    };
-    const setFileNote = (message = defaultFileNote, tone = 'neutral') => {
-      if (!(fileNote instanceof HTMLElement)) return;
-      fileNote.textContent = message;
-      fileNote.dataset.tone = tone;
-    };
-    const formatFileSize = (bytes) => {
-      if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
-      if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
     const sync = () => {
       if (submit instanceof HTMLButtonElement) {
@@ -460,37 +444,6 @@ const App = (() => {
       }
     });
     sync();
-    setFileNote();
-
-    if (fileInput instanceof HTMLInputElement && attachBtn instanceof HTMLButtonElement) {
-      attachBtn.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', () => {
-        const file = fileInput.files?.[0];
-        if (!file) return;
-
-        _readFile(
-          file,
-          (text, filename) => {
-            const nextText = String(text || '').trim();
-            if (!nextText) {
-              setFileNote('No readable text found. Try another file or paste text.', 'error');
-              fileInput.value = '';
-              return;
-            }
-            field.value = nextText;
-            sync();
-            field.focus();
-            setFileNote(`Attached ${filename} · ${formatFileSize(file.size)}`, 'success');
-            fileInput.value = '';
-          },
-          (message) => {
-            const sizeHint = file.size > 2 * 1024 * 1024 ? ` This file is ${formatFileSize(file.size)}.` : '';
-            setFileNote(`${message}${sizeHint}`, 'error');
-            fileInput.value = '';
-          }
-        );
-      });
-    }
   }
 
 
