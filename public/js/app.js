@@ -998,65 +998,65 @@ const App = (() => {
     const extractOverlay = document.createElement('div');
     extractOverlay.id = 'extract-overlay';
     extractOverlay.innerHTML = `
-      <canvas class=”eo-particle-canvas”></canvas>
-      <div class=”eo-glow-blob”></div>
-      <header class=”eo-header”>
-        <img src=”/brand/socratink-mark-square.png?v=1” alt=”” class=”eo-brand-mark” aria-hidden=”true”>
-        <h1 class=”eo-brand”>socratink</h1>
+      <canvas class="eo-particle-canvas"></canvas>
+      <div class="eo-glow-blob"></div>
+      <header class="eo-header">
+        <img src="/brand/socratink-mark-square.png?v=1" alt="" class="eo-brand-mark" aria-hidden="true">
+        <h1 class="eo-brand">socratink</h1>
       </header>
-      <div class=”eo-focal”>
-        <div class=”eo-radar”></div>
-        <div class=”eo-ring-outer”></div>
-        <div class=”eo-ring-inner”></div>
-        <svg class=”eo-crystal-svg” xmlns=”http://www.w3.org/2000/svg” viewBox=”54 65 92 110” overflow=”hidden”>
+      <div class="eo-focal">
+        <div class="eo-radar"></div>
+        <div class="eo-ring-outer"></div>
+        <div class="eo-ring-inner"></div>
+        <svg class="eo-crystal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="54 65 92 110" overflow="hidden">
           <defs>
-            <filter id=”eo-glow” x=”-40%” y=”-40%” width=”180%” height=”180%”>
-              <feGaussianBlur stdDeviation=”3” result=”blur”/>
-              <feComposite in=”SourceGraphic” in2=”blur” operator=”over”/>
+            <filter id="eo-glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
             </filter>
           </defs>
-          <g class=”eo-crystal-grow”>
+          <g class="eo-crystal-grow">
             <!-- glow halo — soft, no drop-shadow interference -->
-            <polygon points=”100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91” fill=”hsl(270,55%,65%)” opacity=”0.18” filter=”url(#eo-glow)”/>
+            <polygon points="100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91" fill="hsl(270,55%,65%)" opacity="0.18" filter="url(#eo-glow)"/>
             <!-- lower-left -->
-            <polygon points=”100,119 69,119 83,145 100,167” fill=”hsl(270,42%,52%)”/>
+            <polygon points="100,119 69,119 83,145 100,167" fill="hsl(270,42%,52%)"/>
             <!-- lower-right -->
-            <polygon points=”100,119 100,167 117,145 131,119” fill=”hsl(270,38%,42%)”/>
+            <polygon points="100,119 100,167 117,145 131,119" fill="hsl(270,38%,42%)"/>
             <!-- upper-left -->
-            <polygon points=”100,73 79,91 69,119 100,119” fill=”hsl(270,48%,62%)”/>
+            <polygon points="100,73 79,91 69,119 100,119" fill="hsl(270,48%,62%)"/>
             <!-- upper-right -->
-            <polygon points=”100,73 100,119 131,119 121,91” fill=”hsl(270,42%,52%)”/>
+            <polygon points="100,73 100,119 131,119 121,91" fill="hsl(270,42%,52%)"/>
             <!-- bottom-tip -->
-            <polygon points=”83,145 100,167 117,145” fill=”hsl(270,38%,42%)”/>
+            <polygon points="83,145 100,167 117,145" fill="hsl(270,38%,42%)"/>
             <!-- top — brightest face -->
-            <polygon points=”100,73 79,91 100,119 121,91” fill=”hsl(270,52%,74%)”/>
+            <polygon points="100,73 79,91 100,119 121,91" fill="hsl(270,52%,74%)"/>
             <!-- specular -->
-            <polygon points=”104,77 114,94 112,85” fill=”hsl(270,60%,92%)” opacity=”0.7”/>
+            <polygon points="104,77 114,94 112,85" fill="hsl(270,60%,92%)" opacity="0.7"/>
           </g>
         </svg>
-        <div class=”eo-pill eo-pill-top”>
-          <span class=”material-symbols-outlined eo-pill-icon”>auto_awesome</span>
-          <span class=”eo-status-label”>Analyzing</span>
+        <div class="eo-pill eo-pill-top">
+          <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
+          <span class="eo-status-label">Analyzing</span>
         </div>
-        <div class=”eo-pill eo-pill-bottom”>
-          <span class=”material-symbols-outlined eo-pill-icon”>memory</span>
-          <span class=”eo-concept-name”>${escHtml(name)}</span>
+        <div class="eo-pill eo-pill-bottom">
+          <span class="material-symbols-outlined eo-pill-icon">memory</span>
+          <span class="eo-concept-name">${escHtml(name)}</span>
         </div>
       </div>
-      <div class=”eo-meta-status”>
-        <span class=”eo-meta-text”>Parsing source content...</span>
+      <div class="eo-meta-status">
+        <span class="eo-meta-text">Parsing source content...</span>
       </div>
-      <div class=”eo-tip”>
-        <p class=”eo-tip-text”>&ldquo;socratink is drafting your starting map.&rdquo;</p>
+      <div class="eo-tip">
+        <p class="eo-tip-text">&ldquo;socratink is drafting your starting map.&rdquo;</p>
       </div>
-      <footer class=”eo-footer”>
-        <div class=”eo-progress-meta”>
-          <span class=”eo-progress-label”>Drafting</span>
-          <span class=”eo-progress-pct”>20%</span>
+      <footer class="eo-footer">
+        <div class="eo-progress-meta">
+          <span class="eo-progress-label">Drafting</span>
+          <span class="eo-progress-pct">20%</span>
         </div>
-        <div class=”eo-progress-track”>
-          <div class=”eo-progress-bar” style=”width:20%”>
-            <div class=”eo-progress-shimmer”></div>
+        <div class="eo-progress-track">
+          <div class="eo-progress-bar" style="width:20%">
+            <div class="eo-progress-shimmer"></div>
           </div>
         </div>
       </footer>
@@ -1099,7 +1099,7 @@ const App = (() => {
         tipEl.classList.add('eo-tip-exit');
         setTimeout(() => {
           idx = (idx + 1) % OVERLAY_TIPS.length;
-          tipEl.innerHTML = '“' + OVERLAY_TIPS[idx] + '”';
+          tipEl.innerHTML = '"' + OVERLAY_TIPS[idx] + '"';
           tipEl.classList.remove('eo-tip-exit');
         }, 420);
       }, 5500);
