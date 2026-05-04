@@ -1301,33 +1301,36 @@ const App = (() => {
       extractOverlay.classList.add('eo-mapping');
       startTrickle();
       startMetaCycle();
+
+      // Persistence runs inside the rAF callback so the intervals/RAF handles
+      // exist by the time removeOverlay(true) tries to cancel them. Without
+      // this ordering, removeOverlay fires before the rAF callback creates the
+      // timers, leaving them un-cancellable.
+      const jsonPayload = knowledgeMap;
+      jsonPayload.metadata = jsonPayload.metadata || {};
+      jsonPayload.metadata.starting_map_context = startingMapContext;
+      jsonPayload.metadata.map_maturity = 'provisional';
+
+      const concepts = loadConcepts();
+      const concept = {
+        id, name, state: 'growing',
+        createdAt: Date.now(), timerStart: null,
+        contentPreview: sourceText.slice(0, 500),
+        contentType: sourceType,
+        contentFilename: sourceFilename,
+        sourceUrl: source?.url || null,
+        startingMapContext,
+        graphData: JSON.stringify(jsonPayload)
+      };
+      contentStore.set(id, sourceText);
+      concepts.push(concept);
+      saveConcepts(concepts);
+      renderGrid(concepts);
+      renderConceptList(concepts);
+      selectConcept(concept.id);
+      closeDrawer();
+      removeOverlay(true);
     });
-
-    // The map is already in hand — stamp metadata then persist immediately.
-    const jsonPayload = knowledgeMap;
-    jsonPayload.metadata = jsonPayload.metadata || {};
-    jsonPayload.metadata.starting_map_context = startingMapContext;
-    jsonPayload.metadata.map_maturity = 'provisional';
-
-    removeOverlay(true);
-    const concepts = loadConcepts();
-    const concept = {
-      id, name, state: 'growing',
-      createdAt: Date.now(), timerStart: null,
-      contentPreview: sourceText.slice(0, 500),
-      contentType: sourceType,
-      contentFilename: sourceFilename,
-      sourceUrl: null,
-      startingMapContext,
-      graphData: JSON.stringify(jsonPayload)
-    };
-    contentStore.set(id, sourceText);
-    concepts.push(concept);
-    saveConcepts(concepts);
-    renderGrid(concepts);
-    renderConceptList(concepts);
-    selectConcept(concept.id);
-    closeDrawer();
   }
 
   async function startAddConcept() {
@@ -1634,7 +1637,6 @@ const App = (() => {
     }
 
     buildContentInputUI(overlay, {
-      showNameField: false,
       showClipboard: false,
       onSubmit: ({ text, type, filename }) => {
         if (!text) return;

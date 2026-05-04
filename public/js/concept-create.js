@@ -342,8 +342,11 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
         resolvedSource = {
           type: "text",
           text: String(fetched.text || ""),
-          // Backend payload uses type: "text" so the dispatcher takes the
-          // existing extract_knowledge_map path on this submit.
+          // Preserve the original URL on the resolved source so app.js can
+          // store sourceUrl on the concept record. Backend payload uses
+          // type: "text" so the dispatcher takes the existing
+          // extract_knowledge_map path on this submit.
+          url: resolvedSource.url,
         };
       } catch (err) {
         state.submitting = false;
