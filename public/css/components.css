@@ -820,68 +820,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   display:flex; flex-direction:column; gap:10px;
   padding:12px 16px 16px; border-top:1px solid var(--border);
 }
-.creation-intro {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 2px 0 4px;
-}
-.creation-intro-compact {
-  gap: 6px;
-  padding: 0 0 6px;
-}
-.creation-intro-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.creation-intro-title {
-  font-size: 15px;
-  line-height: 1.35;
-  font-weight: 700;
-  color: var(--text);
-}
-.creation-intro-copy {
-  margin: 2px 0 0;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text-sub);
-}
-.creation-capacity-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-soft-strong);
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.creation-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.creation-section-label {
-  font-size:11px; font-weight:700; letter-spacing:0.02em;
-  color:var(--text-sub); margin-top:2px;
-}
-.creation-name-input {
-  width:100%; background:var(--card-bg); border:1px solid var(--border);
-  border-radius:8px; padding:8px 10px; font-size:13px; color:var(--text);
-  outline:none; font-family:inherit;
-  transition:border-color 0.2s, background-color var(--theme-transition-ms) var(--theme-transition-ease), color var(--theme-transition-ms) var(--theme-transition-ease);
-  box-sizing:border-box;
-}
-.creation-name-input:focus { border-color:var(--primary); }
-.creation-name-input::placeholder { color:var(--text-sub); }
-.creation-source-header {
-  margin-top: 10px;
-}
 .creation-source-tabs {
   margin-top: 5px;
   margin-bottom: 6px;
@@ -907,140 +845,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   color: var(--text);
   border-color: var(--border-subtle);
   box-shadow: var(--shadow-inline);
-}
-.creation-source-meta {
-  margin: 0 0 8px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-}
-.creation-source-copy {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--text-sub);
-}
-.creation-threshold {
-  margin-top: 10px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-.creation-threshold-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-.creation-threshold .creation-section-label {
-  margin: 0;
-}
-.creation-threshold-copy {
-  margin: 3px 0 0;
-  color: var(--text-sub);
-  font-size: 12px;
-  line-height: 1.45;
-}
-.creation-threshold-input {
-  width: 100%;
-  min-height: 86px;
-  resize: vertical;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-card);
-  color: var(--text);
-  padding: 11px 12px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  line-height: 1.45;
-  outline: none;
-  box-sizing: border-box;
-}
-.creation-threshold-input:focus {
-  border-color: var(--primary);
-  box-shadow: var(--accent-ring);
-}
-.creation-threshold-input::placeholder {
-  color: var(--text-sub);
-}
-.creation-fuzzy-toggle {
-  display: inline-flex;
-  align-items: center;
-  width: auto;
-  min-height: 28px;
-  margin-top: 6px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  color: var(--text-sub);
-  cursor: pointer;
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0;
-  transition: color var(--duration-micro, 140ms) var(--ease-standard, ease);
-}
-.creation-fuzzy-toggle:hover {
-  color: var(--primary);
-  opacity: 1;
-  transform: none;
-  box-shadow: none;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.creation-fuzzy-toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--accent-ring);
-}
-.creation-fuzzy-row {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.creation-fuzzy-hint {
-  font-size: 11.5px;
-  line-height: 1.45;
-  color: var(--text-sub);
-}
-.creation-fuzzy-hint[hidden] {
-  display: none;
-}
-.creation-fuzzy-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
-}
-.creation-fuzzy-panel[hidden] {
-  display: none;
-}
-.creation-fuzzy-input {
-  width: 100%;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 9px 10px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 13px;
-  outline: none;
-  box-sizing: border-box;
-}
-.creation-fuzzy-input:focus {
-  border-color: var(--primary);
-  box-shadow: var(--accent-ring);
-}
-.creation-fuzzy-input::placeholder {
-  color: var(--text-sub);
-}
-.creation-validation {
-  margin: 0;
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--text-sub);
 }
 .creation-footer { display:flex; gap:8px; margin-top:4px; }
 .creation-dialog-content .overlay-textarea {
@@ -1078,17 +882,245 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 }
 .paste-clipboard-btn:hover { color:var(--primary); opacity:0.8; }
 
+/* ─────────────────────────────────────────────────────────────
+ * Conversational concept creation (Plan B, 2026-05-04).
+ * Two surfaces: chat (Stage A) and summary card (Stage B).
+ * One violet accent at rest = the build CTA. Eyebrows are
+ * lavender (--accent-secondary), which is secondary and does
+ * not double-count.
+ * ─────────────────────────────────────────────────────────── */
+
+.creation-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 0;
+}
+.creation-chat-question {
+  margin: 0;
+  font-family: var(--font-display, var(--font-body));
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.005em;
+}
+.creation-chat-composer {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-card);
+  color: var(--text);
+  padding: 11px 12px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.creation-chat-composer:focus {
+  border-color: var(--primary);
+  box-shadow: var(--accent-ring);
+}
+.creation-chat-breadcrumb {
+  margin: 0 0 4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+  font-style: normal;
+}
+
+.creation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 0;
+}
+.creation-section-eyebrow {
+  display: inline-block;
+  margin: 4px 0 -4px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent-secondary, var(--text-sub));
+  text-transform: uppercase;
+}
+
+.creation-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle, var(--border));
+  border-radius: 12px;
+  background: var(--surface-card);
+  /* Inset 1px lit-edge highlight — the cream-paper feel. */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  transition:
+    border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    background-color var(--theme-transition-ms) var(--theme-transition-ease),
+    color var(--theme-transition-ms) var(--theme-transition-ease);
+}
+.creation-chip-empty {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+.creation-chip-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.creation-chip-label {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--text-sub);
+  text-transform: uppercase;
+}
+.creation-chip-action {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-sub);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.creation-chip-action:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.creation-chip-action:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-radius: 4px;
+}
+.creation-chip-value {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.creation-chip-empty-text {
+  font-style: italic;
+  color: var(--text-sub);
+}
+.creation-chip-input,
+.creation-chip-textarea {
+  width: 100%;
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.creation-chip-textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+.creation-chip-input:focus,
+.creation-chip-textarea:focus {
+  border-color: var(--primary);
+  box-shadow: var(--accent-ring);
+}
+.creation-chip-footer {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+}
+
+/* Source-material panel inside the source chip (when expanded). Reuses the
+ * existing .overlay-tabs / .overlay-panel / .overlay-textarea / .overlay-url-input
+ * / .overlay-dropzone styles already in components.css; this block adds only
+ * the wrapper + footer styles specific to the panel-inside-chip presentation. */
+.creation-source-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.creation-source-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.creation-source-panel-cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition:
+    color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    border-color var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.creation-source-panel-cancel:hover {
+  color: var(--text);
+  border-color: var(--primary);
+}
+.creation-source-panel-attach {
+  background: var(--primary);
+  color: var(--accent-on-primary, white);
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-inline);
+  transition: opacity var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.creation-source-panel-attach:disabled {
+  background: var(--locked, var(--border));
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.creation-source-panel-attach:not(:disabled):hover {
+  opacity: 0.88;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creation-chat-composer,
+  .creation-chip,
+  .creation-chip-action,
+  .creation-chip-input,
+  .creation-chip-textarea,
+  .creation-source-panel-cancel,
+  .creation-source-panel-attach {
+    transition: none;
+  }
+}
+
 @media (max-width: 899px) {
   .add-trigger-card {
     width: calc(100% - 20px);
     margin: 10px;
-  }
-  .creation-intro-row {
-    flex-direction: column;
-    gap: 8px;
-  }
-  .creation-capacity-pill {
-    align-self: flex-start;
   }
 }
 
