@@ -961,7 +961,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   border-radius: 12px;
   background: var(--surface-card);
   /* Inset 1px lit-edge highlight — the cream-paper feel. */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  box-shadow: inset 0 1px 0 rgba(var(--paper-0-rgb), 0.78);
   transition:
     border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
     background-color var(--theme-transition-ms) var(--theme-transition-ease),
@@ -1085,7 +1085,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 }
 .creation-source-panel-attach {
   background: var(--primary);
-  color: var(--accent-on-primary, white);
+  color: var(--text-on-primary, white);
   border: 0;
   border-radius: 8px;
   padding: 6px 14px;
