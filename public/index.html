@@ -236,13 +236,21 @@
               </svg>
             </button>
           </div>
-          <!-- Empty-state single input: routes by input shape (short line → concept name, long/punctuated → passage). Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
+          <!-- Empty-state single input: single-purpose concept-name capture. Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
           <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
             <textarea class="hero-single-input__field"
                       id="hero-single-input-field"
                       rows="1"
-                      placeholder='e.g. "Entropy", or paste a passage'
+                      maxlength="200"
+                      placeholder='e.g. Photosynthesis'
                       aria-label="What do you want to understand?"></textarea>
+            <div class="hero-example-chips" aria-label="Try one of these">
+              <span class="hero-example-chips__label">Try</span>
+              <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
+              <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
+              <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
+              <button type="button" class="hero-example-chip" data-hero-example="Cognitive bias">Cognitive bias</button>
+            </div>
             <div class="hero-single-input__row">
               <button type="submit" class="hero-single-input__submit" disabled>
                 <span>Start first room</span>

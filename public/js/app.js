@@ -267,7 +267,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Name one concept or paste source material. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.';
+    if (!concept) return 'Name one concept. socratink helps you rebuild it from memory; the first room asks for a small cold attempt before any explanation appears.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -284,7 +284,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
       default:
-        return 'Name one concept or paste source material. The first room asks for a small cold attempt before any explanation appears.';
+        return 'Name one concept. The first room asks for a small cold attempt before any explanation appears.';
     }
   }
 
@@ -347,46 +347,18 @@ const App = (() => {
     }
   }
 
-  // Classify empty-state input: short, no newline, no sentence-final punctuation → concept name;
-  // otherwise → pasted passage. `.` `?` `!` are the signal; concept names almost never end in them.
-  function classifyHeroInput(raw) {
-    const text = (raw || '').trim();
-    if (!text) return { kind: 'empty', text: '' };
-    const hasNewline = /\n/.test(text);
-    const hasSentenceFinal = /[.?!]/.test(text);
-    if (text.length < 200 && !hasNewline && !hasSentenceFinal) {
-      return { kind: 'name', text };
-    }
-    return { kind: 'passage', text };
-  }
-
   function runHeroAction(evtOrNothing) {
-    // Empty-state form submit path: a Submit event comes in. Classify and pre-fill the dialog.
+    // Empty-state form submit path: a Submit event comes in. Hero is single-purpose:
+    // capture the concept name. Source material is attached on the modal's
+    // source-material chip if the learner wants it.
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       const field = document.getElementById('hero-single-input-field');
-      const raw = field ? field.value : '';
-      const classified = classifyHeroInput(raw);
-      if (classified.kind === 'empty') return false;
+      const raw = (field ? field.value : '').trim();
+      if (!raw) return false;
       showDashboard();
       openDrawer();
-
-      // The hero input is the learner's answer to "What do you want to
-      // understand?". Pre-seed the chat so the modal does not ask the
-      // same question again.
-      //   - "name" classification → seed concept; modal opens at turn 2.
-      //   - "passage" classification → seed source; modal opens at turn 1
-      //     for the concept name, then exits to the summary card directly
-      //     (sketch is optional when source is attached).
-      const seed =
-        classified.kind === 'name'
-          ? { name: classified.text }
-          : classified.kind === 'passage'
-            ? { source: { type: 'text', text: classified.text, filename: '' } }
-            : undefined;
-
-      startAddConcept(seed);
-
+      startAddConcept({ name: raw });
       if (field) {
         field.value = '';
         field.style.height = '';
@@ -442,6 +414,17 @@ const App = (() => {
         e.preventDefault();
         form?.requestSubmit?.();
       }
+    });
+    const chips = document.querySelectorAll('[data-hero-example]');
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const value = chip.dataset.heroExample || '';
+        if (!value) return;
+        field.value = value;
+        field.focus();
+        field.setSelectionRange(value.length, value.length);
+        sync();
+      });
     });
     sync();
   }

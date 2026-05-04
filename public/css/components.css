@@ -2198,6 +2198,52 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   }
 }
 
+/* Example chips — blank-page guidance for the empty-state hero */
+.hero-example-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.hero-example-chips__label {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-secondary, var(--text-sub));
+  margin-right: 4px;
+}
+.hero-example-chip {
+  background: transparent;
+  border: 1px solid var(--border-subtle, var(--border));
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--text-sub);
+  cursor: pointer;
+  transition:
+    color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    background-color var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.hero-example-chip:hover {
+  color: var(--text);
+  border-color: var(--accent-soft-strong, var(--primary));
+  background: var(--accent-soft);
+}
+.hero-example-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-color: var(--primary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-example-chip { transition: none; }
+}
+
 .hero-info:has(.hero-state-chip[data-state="empty"]) {
   justify-content: flex-start;
   gap: 12px;
