@@ -370,34 +370,10 @@ const App = (() => {
       if (classified.kind === 'empty') return false;
       showDashboard();
       openDrawer();
-      // `startAddConcept` is async (awaits auth), and `buildContentInputUI` mounts the
-      // name input + textarea only after it resolves. Poll for the fields, then pre-fill.
+      // The conversational dialog handles its own input focus; no pre-fill needed.
+      // TODO(v2): When threshold-chat-turn is wired to the backend, pass `classified.text`
+      // as an initial hero-input hint so the chat turn-1 can be pre-answered for the user.
       startAddConcept();
-      // TODO(v2): LLM-proposed concept name. On `classified.kind === 'passage'`, run a
-      // quick LLM pass on `classified.text` to suggest a name, pre-fill it in the name
-      // field, let the user accept via Begin or edit. Out of scope for v1 due to latency
-      // and cost.
-      const deadline = performance.now() + 2000;
-      const tryFill = () => {
-        const dialog = document.getElementById('creation-dialog');
-        const nameInput = dialog?.querySelector('.creation-name-input');
-        const textarea = dialog?.querySelector('.overlay-textarea');
-        if (!nameInput || !textarea) {
-          if (performance.now() < deadline) requestAnimationFrame(tryFill);
-          return;
-        }
-        if (classified.kind === 'name') {
-          nameInput.value = classified.text;
-          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-          nameInput.focus();
-          nameInput.setSelectionRange(nameInput.value.length, nameInput.value.length);
-        } else {
-          textarea.value = classified.text;
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-          nameInput.focus();
-        }
-      };
-      requestAnimationFrame(tryFill);
       return false;
     }
 
@@ -681,7 +657,7 @@ const App = (() => {
   }
 
   // ── 12. CRUD ───────────────────────────────────────────────
-  function buildContentInputUI(container, { onSubmit, onCancel, showNameField, showClipboard }) {
+  function buildContentInputUI(container, { onSubmit, onCancel, showClipboard }) {
     let uploadedText = '';
     let uploadedFilename = '';
     let fetchedUrlText = '';
@@ -690,55 +666,13 @@ const App = (() => {
     let activeTab = 'paste';
 
     container.innerHTML = `
-      ${showNameField ? `
-        <div class="creation-intro creation-intro-compact">
-          <div class="creation-intro-row">
-            <div>
-              <div class="creation-intro-title">Start with your rough map.</div>
-              <p class="creation-intro-copy">This is global context. The first room will ask one smaller question.</p>
-            </div>
-          </div>
-        </div>
-        <div class="creation-field">
-          <label class="creation-section-label" for="creation-name-input">Concept name</label>
-          <input id="creation-name-input" class="creation-name-input" type="text" placeholder="e.g. Photosynthesis" maxlength="80">
-        </div>
-        <section class="creation-threshold">
-          <div class="creation-threshold-head">
-            <div>
-              <span class="creation-section-label" id="creation-threshold-label">Starting map</span>
-              <p class="creation-threshold-copy">Write what you think is happening before socratink structures the source.</p>
-            </div>
-          </div>
-          <textarea class="creation-threshold-input"
-                    aria-labelledby="creation-threshold-label"
-                    maxlength="1200"
-                    placeholder="Write what you already think is going on: parts, guesses, examples, or confusion."></textarea>
-          <div class="creation-fuzzy-row">
-            <button class="creation-fuzzy-toggle" type="button" aria-expanded="false" aria-describedby="creation-fuzzy-hint">Add fuzzy area</button>
-            <span id="creation-fuzzy-hint" class="creation-fuzzy-hint">Optional. Marks where socratink should probe more carefully.</span>
-          </div>
-          <div class="creation-fuzzy-panel" hidden>
-            <label class="creation-section-label" for="creation-fuzzy-input">What feels fuzzy?</label>
-            <input id="creation-fuzzy-input" class="creation-fuzzy-input" type="text" maxlength="500" placeholder="Optional. e.g. I am not sure which part causes which.">
-          </div>
-        </section>
-        <div class="creation-source-header">
-          <span class="creation-section-label">Source material</span>
-        </div>
-      ` : ''}
       <div class="overlay-tabs creation-source-tabs">
-        <button class="overlay-tab active" data-tab="paste">${showNameField ? 'Text' : 'Paste'}</button>
+        <button class="overlay-tab active" data-tab="paste">Paste</button>
         <button class="overlay-tab" data-tab="url">URL</button>
-        <button class="overlay-tab" data-tab="upload">${showNameField ? 'File' : 'Upload'}</button>
+        <button class="overlay-tab" data-tab="upload">Upload</button>
       </div>
-      ${showNameField ? `
-        <div class="creation-source-meta">
-          <p class="creation-source-copy" data-role="source-copy">Paste notes, an article excerpt, a transcript, or any raw text you want socratink to structure.</p>
-        </div>
-      ` : ''}
       <div class="overlay-panel" data-panel="paste">
-        <textarea class="overlay-textarea" placeholder="${showNameField ? 'Paste any source material. socratink will sketch the room.' : 'Paste source material here.'}"></textarea>
+        <textarea class="overlay-textarea" placeholder="Paste source material here."></textarea>
         ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button></div>' : ''}
       </div>
       <div class="overlay-panel" data-panel="url" style="display:none">
@@ -753,10 +687,9 @@ const App = (() => {
         <input type="file" accept=".txt,.md,.pdf" style="display:none">
         <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
-      ${showNameField ? '<p class="creation-validation" data-role="validation-note">Add a concept name to continue.</p>' : ''}
-      <div class="${showNameField ? 'creation-footer' : 'overlay-footer'}">
-        <button class="${showNameField ? 'creation-cancel' : 'overlay-cancel'}">Cancel</button>
-        <button class="${showNameField ? 'creation-submit' : 'overlay-extract'}" disabled>${showNameField ? 'Draft from Text' : 'Extract'}</button>
+      <div class="overlay-footer">
+        <button class="overlay-cancel">Cancel</button>
+        <button class="overlay-extract" disabled>Extract</button>
       </div>
     `;
 
@@ -769,46 +702,8 @@ const App = (() => {
     const urlInput = container.querySelector('.overlay-url-input');
     const urlFeedback = container.querySelector('.overlay-url-feedback');
     const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
-    const nameInput = container.querySelector('.creation-name-input');
-    const sourceCopy = container.querySelector('[data-role="source-copy"]');
-    const validationNote = container.querySelector('[data-role="validation-note"]');
-    const thresholdInput = container.querySelector('.creation-threshold-input');
-    const fuzzyToggle = container.querySelector('.creation-fuzzy-toggle');
-    const fuzzyPanel = container.querySelector('.creation-fuzzy-panel');
-    const fuzzyInput = container.querySelector('.creation-fuzzy-input');
-    const cancelBtn = container.querySelector(showNameField ? '.creation-cancel' : '.overlay-cancel');
-    const submitBtn = container.querySelector(showNameField ? '.creation-submit' : '.overlay-extract');
-
-    function getActiveTabMeta() {
-      if (activeTab === 'url') {
-        return {
-          label: 'Import URL',
-          copy: 'Bring in an article or text page that can be fetched directly by the app.',
-          action: showNameField ? 'Import URL' : 'Extract',
-          missing: 'Add a source URL before drafting.',
-        };
-      }
-      if (activeTab === 'upload') {
-        return {
-          label: 'Upload File',
-          copy: 'Use this for notes, markdown, or PDFs when the learner already has source material saved locally.',
-          action: showNameField ? 'Upload and Draft' : 'Extract',
-          missing: 'Upload a file before drafting.',
-        };
-      }
-      return {
-        label: 'Text Paste',
-        copy: 'Paste notes, an article excerpt, a transcript, or any raw text you want socratink to structure.',
-        action: showNameField ? 'Draft from Text' : 'Extract',
-        missing: 'Paste source text before drafting.',
-      };
-    }
-
-    function updateComposerMeta() {
-      const meta = getActiveTabMeta();
-      if (sourceCopy) sourceCopy.textContent = meta.copy;
-      if (submitBtn) submitBtn.textContent = meta.action;
-    }
+    const cancelBtn = container.querySelector('.overlay-cancel');
+    const submitBtn = container.querySelector('.overlay-extract');
 
     function hasContent() {
       if (activeTab === 'paste') return textarea.value.trim().length > 0;
@@ -818,27 +713,14 @@ const App = (() => {
       }
       return uploadedText.length > 0;
     }
-    function hasThresholdContext() {
-      return !showNameField || (thresholdInput && thresholdInput.value.trim().length > 0);
-    }
     function checkSubmitEnabled() {
       const blockedVideoUrl = activeTab === 'url' && isBlockedVideoUrl(urlInput.value.trim());
-      const ready = showNameField
-        ? (!blockedVideoUrl && hasContent() && nameInput.value.trim().length > 0 && hasThresholdContext())
-        : hasContent();
-      submitBtn.disabled = !ready;
-      if (showNameField) {
-        if (!validationNote) return;
-        if (blockedVideoUrl) {
-          validationNote.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
-        } else if (!nameInput.value.trim()) {
-          validationNote.textContent = 'Add a concept name to continue.';
-        } else if (!hasThresholdContext()) {
-          validationNote.textContent = 'Add your starting map. It is global context, not evidence.';
-        } else if (!hasContent()) {
-          validationNote.textContent = getActiveTabMeta().missing;
-        } else {
-          validationNote.textContent = 'Ready to build a provisional route.';
+      submitBtn.disabled = !(hasContent() && !blockedVideoUrl);
+      if (urlFeedback) {
+        const rawUrl = urlInput.value.trim();
+        if (rawUrl && isBlockedVideoUrl(rawUrl)) {
+          urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback error';
+          urlFeedback.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
         }
       }
     }
@@ -848,52 +730,9 @@ const App = (() => {
         activeTab = tab.dataset.tab;
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
         panels.forEach(p => { p.style.display = p.dataset.panel === activeTab ? '' : 'none'; });
-        updateComposerMeta();
         checkSubmitEnabled();
       });
     });
-
-    let phTimer = null;
-    let namePhTimer = null;
-    if (showNameField) {
-      const PLACEHOLDERS = [
-        'Paste any source material. socratink will sketch the room.',
-        'Paste your notes, a transcript, or an article excerpt.',
-        'Paste a passage you want socratink to structure.',
-        'Paste a chapter, a brief, or your own writing.',
-      ];
-      const NAME_PLACEHOLDERS = [
-        'Metacognition',
-        'Tornadoes',
-        'Neuroscience',
-        'Photosynthesis',
-        'Game Theory',
-        'Plate Tectonics',
-        'Cognitive Biases',
-        'Black Holes',
-        'Impressionism',
-        'Natural Selection',
-        'Supply and Demand',
-        'Cell Division',
-        'The French Revolution',
-      ];
-      let phIdx = 0;
-      let namePhIdx = 0;
-      phTimer = setInterval(() => {
-        if (!document.contains(textarea)) { clearInterval(phTimer); return; }
-        if (textarea.value.length > 0) return;
-        phIdx = (phIdx + 1) % PLACEHOLDERS.length;
-        textarea.placeholder = PLACEHOLDERS[phIdx];
-      }, 2500);
-      if (nameInput) {
-        namePhTimer = setInterval(() => {
-          if (!document.contains(nameInput)) { clearInterval(namePhTimer); return; }
-          if (nameInput.value.length > 0) return;
-          namePhIdx = (namePhIdx + 1) % NAME_PLACEHOLDERS.length;
-          nameInput.placeholder = `e.g. ${NAME_PLACEHOLDERS[namePhIdx]}`;
-        }, 2500);
-      }
-    }
 
     if (showClipboard && pasteClipBtn) {
       pasteClipBtn.addEventListener('click', () => {
@@ -909,20 +748,6 @@ const App = (() => {
     }
 
     textarea.addEventListener('input', checkSubmitEnabled);
-    if (thresholdInput) {
-      thresholdInput.addEventListener('input', checkSubmitEnabled);
-    }
-    if (fuzzyToggle && fuzzyPanel) {
-      const fuzzyHint = container.querySelector('.creation-fuzzy-hint');
-      fuzzyToggle.addEventListener('click', () => {
-        const isOpening = fuzzyPanel.hasAttribute('hidden');
-        fuzzyPanel.toggleAttribute('hidden', !isOpening);
-        fuzzyToggle.setAttribute('aria-expanded', String(isOpening));
-        fuzzyToggle.textContent = isOpening ? 'Hide fuzzy area' : 'Add fuzzy area';
-        if (fuzzyHint) fuzzyHint.toggleAttribute('hidden', isOpening);
-        if (isOpening) fuzzyInput?.focus();
-      });
-    }
     if (urlInput) {
       urlInput.addEventListener('input', () => {
         fetchedUrlText = '';
@@ -942,17 +767,6 @@ const App = (() => {
       });
       urlInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !submitBtn.disabled) { e.preventDefault(); doSubmit(); }
-      });
-    }
-    if (nameInput) {
-      nameInput.addEventListener('input', checkSubmitEnabled);
-      nameInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !submitBtn.disabled) { e.preventDefault(); doSubmit(); }
-        if (e.key === 'Escape') {
-          if (phTimer) clearInterval(phTimer);
-          if (namePhTimer) clearInterval(namePhTimer);
-          onCancel();
-        }
       });
     }
 
@@ -992,8 +806,6 @@ const App = (() => {
     }
 
     cancelBtn.addEventListener('click', () => {
-      if (phTimer) clearInterval(phTimer);
-      if (namePhTimer) clearInterval(namePhTimer);
       onCancel();
     });
 
@@ -1004,10 +816,6 @@ const App = (() => {
 
     function doSubmit() {
       let text, type, filename, url;
-      const thresholdText = thresholdInput ? thresholdInput.value.trim() : '';
-      const fuzzyVisible = fuzzyPanel && !fuzzyPanel.hasAttribute('hidden');
-      const fuzzyText = fuzzyInput && fuzzyVisible ? fuzzyInput.value.trim() : '';
-      const thresholdContext = fuzzyText ? `${thresholdText}\n\nFuzzy area: ${fuzzyText}` : thresholdText;
       if (activeTab === 'paste') {
         text = textarea.value.trim();
         type = 'text';
@@ -1024,25 +832,18 @@ const App = (() => {
         filename = uploadedFilename;
         url = null;
       }
-      if (phTimer) clearInterval(phTimer);
       onSubmit({
         text,
         type,
         filename,
         url,
-        name: nameInput ? nameInput.value.trim() : null,
-        thresholdContext,
       });
     }
 
-    if (showNameField && nameInput) nameInput.focus();
-    else textarea.focus();
-    updateComposerMeta();
+    textarea.focus();
     checkSubmitEnabled();
     return {
       destroy() {
-        if (phTimer) clearInterval(phTimer);
-        if (namePhTimer) clearInterval(namePhTimer);
         container.innerHTML = '';
       }
     };
@@ -1196,6 +997,339 @@ const App = (() => {
     return row;
   }
 
+  // ── finishConceptCreateWithMap ───────────────────────────────
+  // Called after the knowledge map is already in hand (either from the old
+  // form-based flow or, now, from the conversational flow in concept-create.js).
+  // This helper owns everything that happens AFTER the network call:
+  //   mount extract overlay → brief animation → saveConcept → selectConcept.
+  //
+  // NOTE (Option B): In the conversational flow the network call happens inside
+  // concept-create.js (doSubmit) before onSubmit fires. The overlay therefore
+  // shows briefly between dialog close and graph mount rather than during the
+  // network call. A future Option A refactor would stream progress events from
+  // concept-create.js so the overlay could mount before the POST.
+  //
+  // Parameters:
+  //   id            — pre-generated concept id (generateId())
+  //   name          — concept name string
+  //   knowledgeMap  — already-validated knowledge map object
+  //   startedAtIso  — ISO timestamp of when creation began
+  //   startedPerf   — performance.now() at creation start (unused here but
+  //                   preserved for future duration telemetry)
+  //   startingSketch — the learner's rough map text (stored as
+  //                    starting_map_context in metadata; maps to the old
+  //                    thresholdContext field for persistence shape parity)
+  //   source        — resolved source object { type, text } from concept-create.js
+  function finishConceptCreateWithMap({ id, name, knowledgeMap, startedAtIso, startedPerf, startingSketch, source }) {
+    const startingMapContext = String(startingSketch || '').trim().slice(0, 1200);
+
+    // Derive content fields from source (URL already resolved by concept-create.js)
+    const sourceText = (source && source.text) ? source.text : '';
+    const sourceType = (source && source.type) ? source.type : 'text';
+    const sourceFilename = (source && source.filename) ? source.filename : null;
+
+    const extractOverlay = document.createElement('div');
+    extractOverlay.id = 'extract-overlay';
+    extractOverlay.innerHTML = `
+      <canvas class="eo-particle-canvas"></canvas>
+      <div class="eo-glow-blob"></div>
+      <header class="eo-header">
+        <img src="/brand/socratink-mark-square.png?v=1" alt="" class="eo-brand-mark" aria-hidden="true">
+        <h1 class="eo-brand">socratink</h1>
+      </header>
+      <div class="eo-focal">
+        <div class="eo-radar"></div>
+        <div class="eo-ring-outer"></div>
+        <div class="eo-ring-inner"></div>
+        <svg class="eo-crystal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="54 65 92 110" overflow="hidden">
+          <defs>
+            <filter id="eo-glow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="3" result="blur"/>
+              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            </filter>
+          </defs>
+          <g class="eo-crystal-grow">
+            <!-- glow halo — soft, no drop-shadow interference -->
+            <polygon points="100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91" fill="hsl(270,55%,65%)" opacity="0.18" filter="url(#eo-glow)"/>
+            <!-- lower-left -->
+            <polygon points="100,119 69,119 83,145 100,167" fill="hsl(270,42%,52%)"/>
+            <!-- lower-right -->
+            <polygon points="100,119 100,167 117,145 131,119" fill="hsl(270,38%,42%)"/>
+            <!-- upper-left -->
+            <polygon points="100,73 79,91 69,119 100,119" fill="hsl(270,48%,62%)"/>
+            <!-- upper-right -->
+            <polygon points="100,73 100,119 131,119 121,91" fill="hsl(270,42%,52%)"/>
+            <!-- bottom-tip -->
+            <polygon points="83,145 100,167 117,145" fill="hsl(270,38%,42%)"/>
+            <!-- top — brightest face -->
+            <polygon points="100,73 79,91 100,119 121,91" fill="hsl(270,52%,74%)"/>
+            <!-- specular -->
+            <polygon points="104,77 114,94 112,85" fill="hsl(270,60%,92%)" opacity="0.7"/>
+          </g>
+        </svg>
+        <div class="eo-pill eo-pill-top">
+          <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
+          <span class="eo-status-label">Analyzing</span>
+        </div>
+        <div class="eo-pill eo-pill-bottom">
+          <span class="material-symbols-outlined eo-pill-icon">memory</span>
+          <span class="eo-concept-name">${escHtml(name)}</span>
+        </div>
+      </div>
+      <div class="eo-meta-status">
+        <span class="eo-meta-text">Parsing source content...</span>
+      </div>
+      <div class="eo-tip">
+        <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory more than passive exposure.&rdquo;</p>
+      </div>
+      <footer class="eo-footer">
+        <div class="eo-progress-meta">
+          <span class="eo-progress-label">Drafting</span>
+          <span class="eo-progress-pct">20%</span>
+        </div>
+        <div class="eo-progress-track">
+          <div class="eo-progress-bar" style="width:20%">
+            <div class="eo-progress-shimmer"></div>
+          </div>
+        </div>
+      </footer>
+    `;
+    document.body.appendChild(extractOverlay);
+
+    let trickleInterval = null;
+    let tipInterval = null;
+    let metaInterval = null;
+    let pgDots = [], pgCursor = null, pgRafId = null;
+
+    const PG = {
+      SPACING: 28, DOT_R: 1.2,
+      BASE_OP: 0.14, MAX_OP: 0.38,
+      INFLUENCE: 90, MAX_PUSH: 7, EASE: 0.07, OP_EASE: 0.10,
+      SETTLE_THRESH: 0.12,
+    };
+
+    const OVERLAY_TIPS = [
+      'Retrieval practice strengthens memory more than passive exposure.',
+      'Spacing retrieval over time helps short-term recall become more durable.',
+      'A draft map is a hypothesis. It earns trust only after you reconstruct rooms from memory.',
+      'Answering before the explanation appears gives study something specific to repair.',
+      'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive exposure.',
+      'The graph records evidence from attempts and spaced reconstruction, not exposure.',
+      'Spacing works best when intervals grow: short gaps early, longer gaps later.',
+    ];
+
+    const META_STAGES = [
+      'Mapping concept graph...',
+      'Checking for contradictions...',
+      'Synthesizing relationships...',
+      'Drafting provisional route...',
+      'Structuring final map...',
+    ];
+
+    function setMetaStatus(txt) {
+      const el = extractOverlay.querySelector('.eo-meta-text');
+      if (!el) return;
+      el.classList.add('eo-meta-exit');
+      setTimeout(() => { el.textContent = txt; el.classList.remove('eo-meta-exit'); }, 260);
+    }
+
+    function startMetaCycle() {
+      let idx = 0;
+      setMetaStatus(META_STAGES[0]);
+      metaInterval = setInterval(() => {
+        idx = (idx + 1) % META_STAGES.length;
+        setMetaStatus(META_STAGES[idx]);
+      }, 3500);
+    }
+
+    function startTipCycle() {
+      let idx = 0;
+      tipInterval = setInterval(() => {
+        const tipEl = extractOverlay.querySelector('.eo-tip-text');
+        if (!tipEl) return;
+        tipEl.classList.add('eo-tip-exit');
+        setTimeout(() => {
+          idx = (idx + 1) % OVERLAY_TIPS.length;
+          tipEl.innerHTML = '“' + OVERLAY_TIPS[idx] + '”';
+          tipEl.classList.remove('eo-tip-exit');
+        }, 420);
+      }, 5500);
+    }
+
+    function pgInit() {
+      const canvas = extractOverlay.querySelector('.eo-particle-canvas');
+      if (!canvas) return;
+      const W = canvas.offsetWidth, H = canvas.offsetHeight;
+      canvas.width = W; canvas.height = H;
+      pgDots = [];
+      for (let y = PG.SPACING / 2; y < H; y += PG.SPACING) {
+        for (let x = PG.SPACING / 2; x < W; x += PG.SPACING) {
+          pgDots.push({ ox: x, oy: y, x, y, op: PG.BASE_OP });
+        }
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = 'white';
+      pgDraw(ctx);
+      canvas.closest('#extract-overlay').addEventListener('mousemove', e => {
+        const r = canvas.getBoundingClientRect();
+        pgCursor = { x: e.clientX - r.left, y: e.clientY - r.top };
+        if (!pgRafId) pgRafId = requestAnimationFrame(() => pgTick(ctx));
+      });
+      canvas.closest('#extract-overlay').addEventListener('mouseleave', () => {
+        pgCursor = null;
+        if (!pgRafId) pgRafId = requestAnimationFrame(() => pgTick(ctx));
+      });
+    }
+
+    function pgUpdate() {
+      const cx = pgCursor ? pgCursor.x : null;
+      const cy = pgCursor ? pgCursor.y : null;
+      for (const d of pgDots) {
+        if (cx !== null) {
+          const dx = d.ox - cx, dy = d.oy - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < PG.INFLUENCE && dist > 0) {
+            const s = (1 - dist / PG.INFLUENCE) * PG.MAX_PUSH;
+            d.x += (d.ox + (dx / dist) * s - d.x) * 0.18;
+            d.y += (d.oy + (dy / dist) * s - d.y) * 0.18;
+            d.op += (PG.BASE_OP + (1 - dist / PG.INFLUENCE) * (PG.MAX_OP - PG.BASE_OP) - d.op) * PG.OP_EASE;
+          } else {
+            d.x += (d.ox - d.x) * PG.EASE;
+            d.y += (d.oy - d.y) * PG.EASE;
+            d.op += (PG.BASE_OP - d.op) * PG.OP_EASE;
+          }
+        } else {
+          d.x += (d.ox - d.x) * PG.EASE;
+          d.y += (d.oy - d.y) * PG.EASE;
+          d.op += (PG.BASE_OP - d.op) * PG.OP_EASE;
+        }
+      }
+    }
+
+    function pgDraw(ctx) {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      for (const d of pgDots) {
+        ctx.globalAlpha = d.op;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, PG.DOT_R, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function pgSettled() {
+      return pgDots.every(d =>
+        Math.abs(d.x - d.ox) < PG.SETTLE_THRESH &&
+        Math.abs(d.y - d.oy) < PG.SETTLE_THRESH &&
+        Math.abs(d.op - PG.BASE_OP) < 0.004
+      );
+    }
+
+    function pgTick(ctx) {
+      pgUpdate();
+      pgDraw(ctx);
+      if (!pgSettled()) {
+        pgRafId = requestAnimationFrame(() => pgTick(ctx));
+      } else {
+        pgRafId = null;
+      }
+    }
+
+    function setCrystalScale(pct) {
+      const grow = extractOverlay.querySelector('.eo-crystal-grow');
+      if (!grow) return;
+      const t = pct / 100;
+      const scale = 0.025 + Math.pow(t, 2) * 0.975;
+      const opacity = 0.35 + t * 0.65;
+      grow.style.transform = `scale(${scale.toFixed(3)})`;
+      grow.style.opacity = opacity.toFixed(2);
+    }
+
+    function setOverlayProgress(pct, statusText) {
+      const bar = extractOverlay.querySelector('.eo-progress-bar');
+      const pctEl = extractOverlay.querySelector('.eo-progress-pct');
+      const statusEl = extractOverlay.querySelector('.eo-status-label');
+      if (bar) bar.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = pct + '%';
+      if (statusText && statusEl) statusEl.textContent = statusText;
+      setCrystalScale(pct);
+    }
+
+    function startTrickle() {
+      let current = 65;
+      const target = 89;
+      const tickMs = 1000;
+      const increment = (target - current) / 28; // 28s matches CSS eoTrickle duration
+      trickleInterval = setInterval(() => {
+        current = Math.min(current + increment, target);
+        const pctEl = extractOverlay.querySelector('.eo-progress-pct');
+        if (pctEl) pctEl.textContent = Math.round(current) + '%';
+        setCrystalScale(Math.round(current));
+        if (current >= target) { clearInterval(trickleInterval); trickleInterval = null; }
+      }, tickMs);
+    }
+
+    function removeOverlay(success = false) {
+      if (trickleInterval) { clearInterval(trickleInterval); trickleInterval = null; }
+      if (tipInterval) { clearInterval(tipInterval); tipInterval = null; }
+      if (metaInterval) { clearInterval(metaInterval); metaInterval = null; }
+      if (pgRafId) { cancelAnimationFrame(pgRafId); pgRafId = null; }
+      if (success) {
+        extractOverlay.classList.remove('eo-mapping');
+        const bar = extractOverlay.querySelector('.eo-progress-bar');
+        const pctEl = extractOverlay.querySelector('.eo-progress-pct');
+        const statusEl = extractOverlay.querySelector('.eo-status-label');
+        if (bar) bar.style.width = '100%';
+        if (pctEl) pctEl.textContent = '100%';
+        if (statusEl) statusEl.textContent = 'Draft ready';
+        setCrystalScale(100);
+        setTimeout(() => {
+          extractOverlay.classList.remove('visible');
+          setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
+        }, 700);
+      } else {
+        extractOverlay.classList.remove('visible');
+        setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
+      }
+    }
+
+    requestAnimationFrame(() => {
+      extractOverlay.classList.add('visible');
+      startTipCycle();
+      pgInit();
+      setCrystalScale(20);
+      setOverlayProgress(65, 'Drafting map');
+      extractOverlay.classList.add('eo-mapping');
+      startTrickle();
+      startMetaCycle();
+    });
+
+    // The map is already in hand — stamp metadata then persist immediately.
+    const jsonPayload = knowledgeMap;
+    jsonPayload.metadata = jsonPayload.metadata || {};
+    jsonPayload.metadata.starting_map_context = startingMapContext;
+    jsonPayload.metadata.map_maturity = 'provisional';
+
+    removeOverlay(true);
+    const concepts = loadConcepts();
+    const concept = {
+      id, name, state: 'growing',
+      createdAt: Date.now(), timerStart: null,
+      contentPreview: sourceText.slice(0, 500),
+      contentType: sourceType,
+      contentFilename: sourceFilename,
+      sourceUrl: null,
+      startingMapContext,
+      graphData: JSON.stringify(jsonPayload)
+    };
+    contentStore.set(id, sourceText);
+    concepts.push(concept);
+    saveConcepts(concepts);
+    renderGrid(concepts);
+    renderConceptList(concepts);
+    selectConcept(concept.id);
+    closeDrawer();
+  }
+
   async function startAddConcept() {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog();
@@ -1216,372 +1350,34 @@ const App = (() => {
       return;
     }
 
-    buildContentInputUI(dialog.shellContent, {
-      showNameField: true,
-      showClipboard: true,
-      onSubmit: async ({ text, type, filename, url, name, thresholdContext }) => {
-        if (!name) return;
-        const startingMapContext = String(thresholdContext || '').trim().slice(0, 1200);
-        if (!startingMapContext) return;
+    const { buildConversationalCreateUI } = await import('./concept-create.js');
+    buildConversationalCreateUI(dialog.shellContent, {
+      onCancel: () => closeCreationDialog(),
+      onSubmit: async ({ name, startingSketch, source, provisionalMap }) => {
+        if (!isValidKnowledgeMap(provisionalMap)) {
+          // The dialog has not closed yet; show the error banner inline.
+          dialog.bannerSlot.innerHTML = '';
+          dialog.bannerSlot.appendChild(
+            buildErrorBanner(sanitizeExtractError(new Error('invalid map')))
+          );
+          return;
+        }
+
         const concepts = loadConcepts();
         if (concepts.length >= 4) { renderAddTrigger(); return; }
-
         closeCreationDialog();
 
-        const id = generateId();
-        const extractStartedAt = new Date().toISOString();
-        const extractStartedPerf = performance.now();
-
-        const extractOverlay = document.createElement('div');
-        extractOverlay.id = 'extract-overlay';
-        extractOverlay.innerHTML = `
-          <canvas class="eo-particle-canvas"></canvas>
-          <div class="eo-glow-blob"></div>
-          <header class="eo-header">
-            <img src="/brand/socratink-mark-square.png?v=1" alt="" class="eo-brand-mark" aria-hidden="true">
-            <h1 class="eo-brand">socratink</h1>
-          </header>
-          <div class="eo-focal">
-            <div class="eo-radar"></div>
-            <div class="eo-ring-outer"></div>
-            <div class="eo-ring-inner"></div>
-            <svg class="eo-crystal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="54 65 92 110" overflow="hidden">
-              <defs>
-                <filter id="eo-glow" x="-40%" y="-40%" width="180%" height="180%">
-                  <feGaussianBlur stdDeviation="3" result="blur"/>
-                  <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-                </filter>
-              </defs>
-              <g class="eo-crystal-grow">
-                <!-- glow halo — soft, no drop-shadow interference -->
-                <polygon points="100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91" fill="hsl(270,55%,65%)" opacity="0.18" filter="url(#eo-glow)"/>
-                <!-- lower-left -->
-                <polygon points="100,119 69,119 83,145 100,167" fill="hsl(270,42%,52%)"/>
-                <!-- lower-right -->
-                <polygon points="100,119 100,167 117,145 131,119" fill="hsl(270,38%,42%)"/>
-                <!-- upper-left -->
-                <polygon points="100,73 79,91 69,119 100,119" fill="hsl(270,48%,62%)"/>
-                <!-- upper-right -->
-                <polygon points="100,73 100,119 131,119 121,91" fill="hsl(270,42%,52%)"/>
-                <!-- bottom-tip -->
-                <polygon points="83,145 100,167 117,145" fill="hsl(270,38%,42%)"/>
-                <!-- top — brightest face -->
-                <polygon points="100,73 79,91 100,119 121,91" fill="hsl(270,52%,74%)"/>
-                <!-- specular -->
-                <polygon points="104,77 114,94 112,85" fill="hsl(270,60%,92%)" opacity="0.7"/>
-              </g>
-            </svg>
-            <div class="eo-pill eo-pill-top">
-              <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
-              <span class="eo-status-label">Analyzing</span>
-            </div>
-            <div class="eo-pill eo-pill-bottom">
-              <span class="material-symbols-outlined eo-pill-icon">memory</span>
-              <span class="eo-concept-name">${escHtml(name)}</span>
-            </div>
-          </div>
-          <div class="eo-meta-status">
-            <span class="eo-meta-text">Parsing source content...</span>
-          </div>
-          <div class="eo-tip">
-            <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory more than passive exposure.&rdquo;</p>
-          </div>
-          <footer class="eo-footer">
-            <div class="eo-progress-meta">
-              <span class="eo-progress-label">Drafting</span>
-              <span class="eo-progress-pct">20%</span>
-            </div>
-            <div class="eo-progress-track">
-              <div class="eo-progress-bar" style="width:20%">
-                <div class="eo-progress-shimmer"></div>
-              </div>
-            </div>
-          </footer>
-        `;
-        document.body.appendChild(extractOverlay);
-        requestAnimationFrame(() => {
-          extractOverlay.classList.add('visible');
-          startTipCycle();
-          pgInit();
-          setCrystalScale(20);
+        finishConceptCreateWithMap({
+          id: generateId(),
+          name,
+          knowledgeMap: provisionalMap,
+          startedAtIso: new Date().toISOString(),
+          startedPerf: performance.now(),
+          startingSketch,
+          source,
         });
-
-        let trickleInterval = null;
-        let tipInterval = null;
-        let metaInterval = null;
-
-        const META_STAGES = [
-          'Mapping concept graph...',
-          'Checking for contradictions...',
-          'Synthesizing relationships...',
-          'Drafting provisional route...',
-          'Structuring final map...',
-        ];
-
-        function setMetaStatus(text) {
-          const el = extractOverlay.querySelector('.eo-meta-text');
-          if (!el) return;
-          el.classList.add('eo-meta-exit');
-          setTimeout(() => { el.textContent = text; el.classList.remove('eo-meta-exit'); }, 260);
-        }
-
-        function startMetaCycle() {
-          let idx = 0;
-          setMetaStatus(META_STAGES[0]);
-          metaInterval = setInterval(() => {
-            idx = (idx + 1) % META_STAGES.length;
-            setMetaStatus(META_STAGES[idx]);
-          }, 3500);
-        }
-
-        const OVERLAY_TIPS = [
-          'Retrieval practice strengthens memory more than passive exposure.',
-          'Spacing retrieval over time helps short-term recall become more durable.',
-          'A draft map is a hypothesis. It earns trust only after you reconstruct rooms from memory.',
-          'Answering before the explanation appears gives study something specific to repair.',
-          'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive exposure.',
-          'The graph records evidence from attempts and spaced reconstruction, not exposure.',
-          'Spacing works best when intervals grow: short gaps early, longer gaps later.',
-        ];
-
-        function startTipCycle() {
-          let idx = 0;
-          tipInterval = setInterval(() => {
-            const tipEl = extractOverlay.querySelector('.eo-tip-text');
-            if (!tipEl) return;
-            tipEl.classList.add('eo-tip-exit');
-            setTimeout(() => {
-              idx = (idx + 1) % OVERLAY_TIPS.length;
-              tipEl.innerHTML = '\u201c' + OVERLAY_TIPS[idx] + '\u201d';
-              tipEl.classList.remove('eo-tip-exit');
-            }, 420);
-          }, 5500);
-        }
-
-        // ── Particle grid ────────────────────────────────────────────
-        const PG = {
-          SPACING: 28, DOT_R: 1.2,
-          BASE_OP: 0.14, MAX_OP: 0.38,
-          INFLUENCE: 90, MAX_PUSH: 7, EASE: 0.07, OP_EASE: 0.10,
-          SETTLE_THRESH: 0.12,
-        };
-        let pgDots = [], pgCursor = null, pgRafId = null;
-
-        function pgInit() {
-          const canvas = extractOverlay.querySelector('.eo-particle-canvas');
-          if (!canvas) return;
-          const W = canvas.offsetWidth, H = canvas.offsetHeight;
-          canvas.width = W; canvas.height = H;
-          pgDots = [];
-          for (let y = PG.SPACING / 2; y < H; y += PG.SPACING) {
-            for (let x = PG.SPACING / 2; x < W; x += PG.SPACING) {
-              pgDots.push({ ox: x, oy: y, x, y, op: PG.BASE_OP });
-            }
-          }
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = 'white';
-          pgDraw(ctx);
-
-          canvas.closest('#extract-overlay').addEventListener('mousemove', e => {
-            const r = canvas.getBoundingClientRect();
-            pgCursor = { x: e.clientX - r.left, y: e.clientY - r.top };
-            if (!pgRafId) pgRafId = requestAnimationFrame(() => pgTick(ctx));
-          });
-          canvas.closest('#extract-overlay').addEventListener('mouseleave', () => {
-            pgCursor = null;
-            if (!pgRafId) pgRafId = requestAnimationFrame(() => pgTick(ctx));
-          });
-        }
-
-        function pgUpdate() {
-          const cx = pgCursor ? pgCursor.x : null;
-          const cy = pgCursor ? pgCursor.y : null;
-          for (const d of pgDots) {
-            if (cx !== null) {
-              const dx = d.ox - cx, dy = d.oy - cy;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist < PG.INFLUENCE && dist > 0) {
-                const s = (1 - dist / PG.INFLUENCE) * PG.MAX_PUSH;
-                d.x += (d.ox + (dx / dist) * s - d.x) * 0.18;
-                d.y += (d.oy + (dy / dist) * s - d.y) * 0.18;
-                d.op += (PG.BASE_OP + (1 - dist / PG.INFLUENCE) * (PG.MAX_OP - PG.BASE_OP) - d.op) * PG.OP_EASE;
-              } else {
-                d.x += (d.ox - d.x) * PG.EASE;
-                d.y += (d.oy - d.y) * PG.EASE;
-                d.op += (PG.BASE_OP - d.op) * PG.OP_EASE;
-              }
-            } else {
-              d.x += (d.ox - d.x) * PG.EASE;
-              d.y += (d.oy - d.y) * PG.EASE;
-              d.op += (PG.BASE_OP - d.op) * PG.OP_EASE;
-            }
-          }
-        }
-
-        function pgDraw(ctx) {
-          ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-          for (const d of pgDots) {
-            ctx.globalAlpha = d.op;
-            ctx.beginPath();
-            ctx.arc(d.x, d.y, PG.DOT_R, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        function pgSettled() {
-          return pgDots.every(d =>
-            Math.abs(d.x - d.ox) < PG.SETTLE_THRESH &&
-            Math.abs(d.y - d.oy) < PG.SETTLE_THRESH &&
-            Math.abs(d.op - PG.BASE_OP) < 0.004
-          );
-        }
-
-        function pgTick(ctx) {
-          pgUpdate();
-          pgDraw(ctx);
-          if (!pgSettled()) {
-            pgRafId = requestAnimationFrame(() => pgTick(ctx));
-          } else {
-            pgRafId = null;
-          }
-        }
-        // ─────────────────────────────────────────────────────────────
-
-        function setCrystalScale(pct) {
-          const grow = extractOverlay.querySelector('.eo-crystal-grow');
-          if (!grow) return;
-          const t = pct / 100;
-          const scale = 0.025 + Math.pow(t, 2) * 0.975;
-          const opacity = 0.35 + t * 0.65;
-          grow.style.transform = `scale(${scale.toFixed(3)})`;
-          grow.style.opacity = opacity.toFixed(2);
-        }
-
-        function setOverlayProgress(pct, statusText) {
-          const bar = extractOverlay.querySelector('.eo-progress-bar');
-          const pctEl = extractOverlay.querySelector('.eo-progress-pct');
-          const statusEl = extractOverlay.querySelector('.eo-status-label');
-          if (bar) bar.style.width = pct + '%';
-          if (pctEl) pctEl.textContent = pct + '%';
-          if (statusText && statusEl) statusEl.textContent = statusText;
-          setCrystalScale(pct);
-        }
-
-        function startTrickle() {
-          let current = 65;
-          const target = 89;
-          const tickMs = 1000;
-          const increment = (target - current) / 28; // 28s matches CSS eoTrickle duration
-          trickleInterval = setInterval(() => {
-            current = Math.min(current + increment, target);
-            const pctEl = extractOverlay.querySelector('.eo-progress-pct');
-            if (pctEl) pctEl.textContent = Math.round(current) + '%';
-            setCrystalScale(Math.round(current));
-            if (current >= target) { clearInterval(trickleInterval); trickleInterval = null; }
-          }, tickMs);
-        }
-
-        function removeOverlay(success = false) {
-          if (trickleInterval) { clearInterval(trickleInterval); trickleInterval = null; }
-          if (tipInterval) { clearInterval(tipInterval); tipInterval = null; }
-          if (metaInterval) { clearInterval(metaInterval); metaInterval = null; }
-          if (pgRafId) { cancelAnimationFrame(pgRafId); pgRafId = null; }
-          if (success) {
-            extractOverlay.classList.remove('eo-mapping');
-            const bar = extractOverlay.querySelector('.eo-progress-bar');
-            const pctEl = extractOverlay.querySelector('.eo-progress-pct');
-            const statusEl = extractOverlay.querySelector('.eo-status-label');
-            if (bar) bar.style.width = '100%';
-            if (pctEl) pctEl.textContent = '100%';
-            if (statusEl) statusEl.textContent = 'Draft ready';
-            setCrystalScale(100);
-            setTimeout(() => {
-              extractOverlay.classList.remove('visible');
-              setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
-            }, 700);
-          } else {
-            extractOverlay.classList.remove('visible');
-            setTimeout(() => { if (extractOverlay.parentNode) extractOverlay.parentNode.removeChild(extractOverlay); }, 400);
-          }
-        }
-
-        try {
-          let sourceText = text;
-          let sourceFilename = filename;
-
-          if (type === 'url') {
-            if (!url) throw new Error('No URL provided.');
-            if (isBlockedVideoUrl(url)) {
-              throw new Error('Video links are not supported in this build. Paste notes or transcript text instead.');
-            }
-            setOverlayProgress(38, 'Fetching page');
-            setMetaStatus('Evaluating source structure...');
-            const payload = await extractUrl({ url });
-            sourceText = payload.text;
-            sourceFilename = payload.title || url;
-          }
-
-          if (!sourceText) throw new Error('No content provided.');
-
-          setOverlayProgress(65, 'Drafting map');
-          extractOverlay.classList.add('eo-mapping');
-          startTrickle();
-          startMetaCycle();
-          const jsonPayload = await generateKnowledgeMap(sourceText);
-          const durationMs = Math.round(performance.now() - extractStartedPerf);
-
-          // INVARIANT: failed or malformed extraction must never mutate
-          // contentStore / concepts / localStorage. Guard runs BEFORE any
-          // state mutation and regardless of UI disabled state.
-          if (!isValidKnowledgeMap(jsonPayload)) {
-            removeOverlay();
-            throw new Error('Extraction returned an invalid map.');
-          }
-
-          jsonPayload.metadata = jsonPayload.metadata || {};
-          jsonPayload.metadata.starting_map_context = startingMapContext;
-          jsonPayload.metadata.map_maturity = 'provisional';
-
-          removeOverlay(true);
-          const concept = {
-            id, name, state: 'growing',
-            createdAt: Date.now(), timerStart: null,
-            contentPreview: sourceText.slice(0, 500),
-            contentType: type,
-            contentFilename: sourceFilename,
-            sourceUrl: type === 'url' ? url : null,
-            startingMapContext,
-            graphData: JSON.stringify(jsonPayload)
-          };
-          contentStore.set(id, sourceText);
-          concepts.push(concept);
-          saveConcepts(concepts);
-          renderGrid(concepts);
-          renderConceptList(concepts);
-          selectConcept(concept.id);
-          closeCreationDialog();
-          closeDrawer();
-        } catch (err) {
-          removeOverlay();
-          const sanitized = sanitizeExtractError(err);
-          console.warn('[extract] raw error (console only):', err);
-          const bannerSlot = document.querySelector('.creation-dialog-banner-slot');
-          if (bannerSlot) {
-            const existing = bannerSlot.querySelector('.creation-banner--error');
-            if (existing) existing.remove();
-            bannerSlot.appendChild(buildErrorBanner(sanitized));
-          }
-          const shellContent = document.querySelector('.creation-dialog-content');
-          shellContent?.querySelectorAll('button, input, textarea').forEach((el) => { el.disabled = false; });
-        }
       },
-      onCancel: () => {
-        closeCreationDialog();
-      }
     });
-    // Focus first input inside dialog after mount
-    const firstInput = dialog.shell.querySelector('input:not([disabled]), textarea:not([disabled])');
-    firstInput?.focus();
   }
 
   function deleteConcept(id, btnEl) {
