@@ -1361,8 +1361,15 @@ const App = (() => {
       if (!isValidKnowledgeMap(provisionalMap)) {
         // The dialog is already closed (onBeforeSubmit closed it). Tear down
         // the overlay and re-mount the dialog with an error banner.
+        // Preserve the learner's sketch and source so the re-mounted summary
+        // card is populated — same effort-preservation as the network-error path.
         if (overlayHandle) overlayHandle.removeOverlay(false);
-        remountWithError(new Error('invalid map'));
+        const preservedState = {
+          name,
+          sketchTurns: startingSketch ? [startingSketch] : [],
+          source,
+        };
+        remountWithError(new Error('invalid map'), preservedState);
         return;
       }
 

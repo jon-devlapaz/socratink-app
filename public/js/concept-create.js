@@ -37,7 +37,6 @@ const CHAT_COPY = Object.freeze({
     "Try this: give one example. Anywhere this concept shows up in something you've read or experienced — a small detail will do.",
 });
 
-const FOOTER_DEFAULT = "Study content stays locked until the cold attempt.";
 const SKETCH_FOOTER_BLOCKED =
   "A few words about how you think it works will give socratink something to draft from. " +
   "Or attach source material — either path opens the build.";
@@ -64,6 +63,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     usedFallback: false,
     submitting: false,
     ctaOverride: (seed && typeof seed.ctaOverrideCopy === "string") ? seed.ctaOverrideCopy : null,
+    summaryShownEmitted: false,      // gates concept_create.summary.shown to fire once per arrival
   };
 
   function destroy() {
@@ -140,7 +140,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     });
 
     cancelBtn.addEventListener("click", () => onCancel?.());
-    submitBtn.addEventListener("mousedown", (e) => {
+    submitBtn.addEventListener("click", (e) => {
       e.preventDefault();
       if (submitBtn.disabled) return;
       submitChatTurn(composer.value.trim());
@@ -243,6 +243,8 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
   function sourceChipDescriptor() {
     if (!state.source) return null;
     if (state.source.type === "url") {
+      // TODO(v2): URL descriptor renders "0 chars from a URL" before the
+      // URL hop materialises text. Show the URL itself or "fetching..." here.
       const len = (state.source.text || "").length.toLocaleString();
       return `${len} chars from a URL`;
     }
@@ -321,7 +323,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     // Wire cancel + submit (the chip edit + source actions land in Tasks 7-8).
     container.querySelector(".creation-cancel").addEventListener("click", () => onCancel?.());
     const submitBtn = container.querySelector(".creation-submit");
-    submitBtn.addEventListener("mousedown", (e) => {
+    submitBtn.addEventListener("click", (e) => {
       e.preventDefault();
       if (submitBtn.disabled) {
         const reason = !state.concept.trim()
@@ -333,11 +335,14 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       doSubmit();
     });
 
-    emitTelemetry("concept_create.summary.shown", {
-      has_concept: Boolean(concept),
-      has_sketch: Boolean(sketch),
-      sketch_len: sketch.length,
-    });
+    if (!state.summaryShownEmitted) {
+      emitTelemetry("concept_create.summary.shown", {
+        has_concept: Boolean(concept),
+        has_sketch: Boolean(sketch),
+        sketch_len: sketch.length,
+      });
+      state.summaryShownEmitted = true;
+    }
 
     attachChipEditHandlers();
     attachSourceChipHandlers();
@@ -690,7 +695,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
 
     cancelBtn.addEventListener("click", () => rerenderSummary());
 
-    attachBtn.addEventListener("mousedown", (e) => {
+    attachBtn.addEventListener("click", (e) => {
       e.preventDefault();
       if (attachBtn.disabled) return;
       if (activeTab === "paste") {
