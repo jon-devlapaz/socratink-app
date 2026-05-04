@@ -287,8 +287,6 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
             ${escHtml(ctaCopy)}
           </button>
         </div>
-
-        <p class="creation-dialog-meta">${FOOTER_DEFAULT}</p>
       </div>
     `;
 
@@ -383,10 +381,18 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
         const code = err.body.error;
         const message = err.body.message || "Submission rejected.";
         if (code === "missing_concept") {
+          emitTelemetry("concept_create.build_blocked", {
+            reason: code,
+            origin: "server",
+          });
           showSubmitError("concept", message);
           return;
         }
         if (code === "thin_sketch_no_source") {
+          emitTelemetry("concept_create.build_blocked", {
+            reason: code,
+            origin: "server",
+          });
           showSubmitError("sketch", message);
           return;
         }
