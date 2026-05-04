@@ -44,7 +44,7 @@ const SKETCH_FOOTER_BLOCKED =
   "A few words about how you think it works will give socratink something to draft from. " +
   "Or attach source material — either path opens the build.";
 
-export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
+export function buildConversationalCreateUI(container, { onSubmit, onCancel, onBeforeSubmit, onSubmitError }) {
   const state = {
     stage: STAGE.CHAT_TURN_1,
     concept: "",
@@ -327,6 +327,13 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
       has_sketch: Boolean(sketch),
     });
 
+    // Pre-flight: signal the caller to close the dialog and mount the extract
+    // overlay BEFORE any network call. The caller returns an overlayHandle that
+    // the caller uses to tear down the overlay on success or error. If
+    // onBeforeSubmit is omitted, overlayHandle is undefined — callers that omit
+    // it must not expect overlay teardown from the network-error path.
+    const overlayHandle = onBeforeSubmit?.({ name: concept });
+
     let resolvedSource = state.source;
 
     // URL source path: hop through /api/extract-url first to materialise text.
@@ -348,10 +355,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
         };
       } catch (err) {
         state.submitting = false;
-        showSubmitError(
-          "source",
-          err && err.message ? err.message : "Couldn't fetch that URL."
-        );
+        onSubmitError?.({ overlayHandle, error: err });
         return;
       }
     }
@@ -369,81 +373,32 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
       });
       state.submitting = false;
       // Hand off to the caller; one of provisional_map / knowledge_map is set.
+      // overlayHandle is forwarded so the caller can tear the overlay down after
+      // persistence (finishConceptCreateAfterOverlay calls removeOverlay(true)).
       onSubmit?.({
         name: concept,
         startingSketch: sketch,
         source: resolvedSource,
         provisionalMap: data.provisional_map || data.knowledge_map || null,
+        overlayHandle,
       });
     } catch (err) {
       state.submitting = false;
       if (err && err.status === 422 && err.body) {
         const code = err.body.error;
-        const message = err.body.message || "Submission rejected.";
-        if (code === "missing_concept") {
+        // Emit telemetry before routing to onSubmitError. The dialog is
+        // already closed (onBeforeSubmit closed it), so chip-level footers
+        // have nowhere to render — 422s now surface via the re-mounted dialog
+        // error banner in the caller.
+        if (code === "missing_concept" || code === "thin_sketch_no_source") {
           emitTelemetry("concept_create.build_blocked", {
             reason: code,
             origin: "server",
           });
-          showSubmitError("concept", message);
-          return;
-        }
-        if (code === "thin_sketch_no_source") {
-          emitTelemetry("concept_create.build_blocked", {
-            reason: code,
-            origin: "server",
-          });
-          showSubmitError("sketch", message);
-          return;
         }
       }
-      showSubmitError(
-        "submit",
-        (err && err.message) || "Couldn't submit. Try again."
-      );
+      onSubmitError?.({ overlayHandle, error: err });
     }
-  }
-
-  function showSubmitError(target, message) {
-    rerenderSummary();
-    if (target === "concept") {
-      const valueEl = container.querySelector('[data-role="concept-value"]');
-      if (valueEl) {
-        valueEl.insertAdjacentHTML(
-          "afterend",
-          `<p class="creation-chip-footer">${escHtml(message)}</p>`
-        );
-      }
-      return;
-    }
-    if (target === "sketch") {
-      const sketchChip = container.querySelector('[data-chip="sketch"]');
-      if (!sketchChip) return;
-      const existing = sketchChip.querySelector(".creation-chip-footer");
-      if (existing) existing.textContent = message;
-      else
-        sketchChip.insertAdjacentHTML(
-          "beforeend",
-          `<p class="creation-chip-footer">${escHtml(message)}</p>`
-        );
-      return;
-    }
-    if (target === "source") {
-      const sourceChip = container.querySelector('[data-chip="source"]');
-      if (!sourceChip) return;
-      sourceChip.insertAdjacentHTML(
-        "beforeend",
-        `<p class="creation-chip-footer">${escHtml(message)}</p>`
-      );
-      return;
-    }
-    // Generic fallback: append a banner below the summary.
-    const summary = container.querySelector(".creation-summary");
-    if (!summary) return;
-    summary.insertAdjacentHTML(
-      "beforeend",
-      `<p class="creation-chip-footer">${escHtml(message)}</p>`
-    );
   }
 
   function rerenderSummary() {

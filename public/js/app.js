@@ -997,99 +997,99 @@ const App = (() => {
     return row;
   }
 
-  // ── finishConceptCreateWithMap ───────────────────────────────
-  // Called after the knowledge map is already in hand (either from the old
-  // form-based flow or, now, from the conversational flow in concept-create.js).
-  // This helper owns everything that happens AFTER the network call:
-  //   mount extract overlay → brief animation → saveConcept → selectConcept.
+  // ── mountExtractOverlay ─────────────────────────────────────
+  // Mounts the full-viewport extract overlay and starts all animation
+  // cycles. Returns an overlayHandle object with a single method:
+  //   removeOverlay(success) — tears down the overlay.
+  //     success=true  → sets 100% + “Draft ready”, waits 700ms, then fades.
+  //     success=false → immediate fade-out (error path).
   //
-  // NOTE (Option B): In the conversational flow the network call happens inside
-  // concept-create.js (doSubmit) before onSubmit fires. The overlay therefore
-  // shows briefly between dialog close and graph mount rather than during the
-  // network call. A future Option A refactor would stream progress events from
-  // concept-create.js so the overlay could mount before the POST.
+  // The overlay mounts BEFORE the network call so learners see activity
+  // immediately after clicking Build. (Option A refactor — 2026-05-04.)
   //
-  // Parameters:
-  //   id            — pre-generated concept id (generateId())
-  //   name          — concept name string
-  //   knowledgeMap  — already-validated knowledge map object
-  //   startedAtIso  — ISO timestamp of when creation began
-  //   startedPerf   — performance.now() at creation start (unused here but
-  //                   preserved for future duration telemetry)
-  //   startingSketch — the learner's rough map text (stored as
-  //                    starting_map_context in metadata; maps to the old
-  //                    thresholdContext field for persistence shape parity)
-  //   source        — resolved source object { type, text } from concept-create.js
-  function finishConceptCreateWithMap({ id, name, knowledgeMap, startedAtIso, startedPerf, startingSketch, source }) {
-    const startingMapContext = String(startingSketch || '').trim().slice(0, 1200);
+  // Callers must NOT call removeOverlay twice; the DOM element is removed
+  // by the first call's scheduled timeout.
+  function mountExtractOverlay({ name }) {
+    const OVERLAY_TIPS = [
+      'socratink is drafting your starting map.',
+      'Spacing retrieval over time helps short-term recall become more durable.',
+      'socratink is structuring the rooms.',
+      'Answering before the explanation appears gives study something specific to repair.',
+      'socratink is sketching the draft route.',
+      'The graph records evidence from attempts and spaced reconstruction, not exposure.',
+      'Reading is exposure. Reconstruction is evidence.',
+    ];
 
-    // Derive content fields from source (URL already resolved by concept-create.js)
-    const sourceText = (source && source.text) ? source.text : '';
-    const sourceType = (source && source.type) ? source.type : 'text';
-    const sourceFilename = (source && source.filename) ? source.filename : null;
+    const META_STAGES = [
+      'Mapping concept graph...',
+      'Checking for contradictions...',
+      'Synthesizing relationships...',
+      'Drafting provisional route...',
+      'Structuring final map...',
+    ];
 
     const extractOverlay = document.createElement('div');
     extractOverlay.id = 'extract-overlay';
     extractOverlay.innerHTML = `
-      <canvas class="eo-particle-canvas"></canvas>
-      <div class="eo-glow-blob"></div>
-      <header class="eo-header">
-        <img src="/brand/socratink-mark-square.png?v=1" alt="" class="eo-brand-mark" aria-hidden="true">
-        <h1 class="eo-brand">socratink</h1>
+      <canvas class=”eo-particle-canvas”></canvas>
+      <div class=”eo-glow-blob”></div>
+      <header class=”eo-header”>
+        <img src=”/brand/socratink-mark-square.png?v=1” alt=”” class=”eo-brand-mark” aria-hidden=”true”>
+        <h1 class=”eo-brand”>socratink</h1>
       </header>
-      <div class="eo-focal">
-        <div class="eo-radar"></div>
-        <div class="eo-ring-outer"></div>
-        <div class="eo-ring-inner"></div>
-        <svg class="eo-crystal-svg" xmlns="http://www.w3.org/2000/svg" viewBox="54 65 92 110" overflow="hidden">
+      <div class=”eo-focal”>
+        <div class=”eo-radar”></div>
+        <div class=”eo-ring-outer”></div>
+        <div class=”eo-ring-inner”></div>
+        <svg class=”eo-crystal-svg” xmlns=”http://www.w3.org/2000/svg” viewBox=”54 65 92 110” overflow=”hidden”>
           <defs>
-            <filter id="eo-glow" x="-40%" y="-40%" width="180%" height="180%">
-              <feGaussianBlur stdDeviation="3" result="blur"/>
-              <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+            <filter id=”eo-glow” x=”-40%” y=”-40%” width=”180%” height=”180%”>
+              <feGaussianBlur stdDeviation=”3” result=”blur”/>
+              <feComposite in=”SourceGraphic” in2=”blur” operator=”over”/>
             </filter>
           </defs>
-          <g class="eo-crystal-grow">
+          <g class=”eo-crystal-grow”>
             <!-- glow halo — soft, no drop-shadow interference -->
-            <polygon points="100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91" fill="hsl(270,55%,65%)" opacity="0.18" filter="url(#eo-glow)"/>
+            <polygon points=”100,73 121,91 131,119 117,145 100,167 83,145 69,119 79,91” fill=”hsl(270,55%,65%)” opacity=”0.18” filter=”url(#eo-glow)”/>
             <!-- lower-left -->
-            <polygon points="100,119 69,119 83,145 100,167" fill="hsl(270,42%,52%)"/>
+            <polygon points=”100,119 69,119 83,145 100,167” fill=”hsl(270,42%,52%)”/>
             <!-- lower-right -->
-            <polygon points="100,119 100,167 117,145 131,119" fill="hsl(270,38%,42%)"/>
+            <polygon points=”100,119 100,167 117,145 131,119” fill=”hsl(270,38%,42%)”/>
             <!-- upper-left -->
-            <polygon points="100,73 79,91 69,119 100,119" fill="hsl(270,48%,62%)"/>
+            <polygon points=”100,73 79,91 69,119 100,119” fill=”hsl(270,48%,62%)”/>
             <!-- upper-right -->
-            <polygon points="100,73 100,119 131,119 121,91" fill="hsl(270,42%,52%)"/>
+            <polygon points=”100,73 100,119 131,119 121,91” fill=”hsl(270,42%,52%)”/>
             <!-- bottom-tip -->
-            <polygon points="83,145 100,167 117,145" fill="hsl(270,38%,42%)"/>
+            <polygon points=”83,145 100,167 117,145” fill=”hsl(270,38%,42%)”/>
             <!-- top — brightest face -->
-            <polygon points="100,73 79,91 100,119 121,91" fill="hsl(270,52%,74%)"/>
+            <polygon points=”100,73 79,91 100,119 121,91” fill=”hsl(270,52%,74%)”/>
             <!-- specular -->
-            <polygon points="104,77 114,94 112,85" fill="hsl(270,60%,92%)" opacity="0.7"/>
+            <polygon points=”104,77 114,94 112,85” fill=”hsl(270,60%,92%)” opacity=”0.7”/>
           </g>
         </svg>
-        <div class="eo-pill eo-pill-top">
-          <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
-          <span class="eo-status-label">Analyzing</span>
+        <div class=”eo-pill eo-pill-top”>
+          <span class=”material-symbols-outlined eo-pill-icon”>auto_awesome</span>
+          <span class=”eo-status-label”>Analyzing</span>
         </div>
-        <div class="eo-pill eo-pill-bottom">
-          <span class="material-symbols-outlined eo-pill-icon">memory</span>
-          <span class="eo-concept-name">${escHtml(name)}</span>
+        <div class=”eo-pill eo-pill-bottom”>
+          <span class=”material-symbols-outlined eo-pill-icon”>memory</span>
+          <span class=”eo-concept-name”>${escHtml(name)}</span>
         </div>
       </div>
-      <div class="eo-meta-status">
-        <span class="eo-meta-text">Parsing source content...</span>
+      <div class=”eo-meta-status”>
+        <span class=”eo-meta-text”>Parsing source content...</span>
       </div>
-      <div class="eo-tip">
-        <p class="eo-tip-text">&ldquo;Retrieval practice strengthens memory more than passive exposure.&rdquo;</p>
+      <div class=”eo-tip”>
+        <p class=”eo-tip-text”>&ldquo;socratink is drafting your starting map.&rdquo;</p>
       </div>
-      <footer class="eo-footer">
-        <div class="eo-progress-meta">
-          <span class="eo-progress-label">Drafting</span>
-          <span class="eo-progress-pct">20%</span>
+      <footer class=”eo-footer”>
+        <div class=”eo-progress-meta”>
+          <span class=”eo-progress-label”>Drafting</span>
+          <span class=”eo-progress-pct”>20%</span>
         </div>
-        <div class="eo-progress-track">
-          <div class="eo-progress-bar" style="width:20%">
-            <div class="eo-progress-shimmer"></div>
+        <div class=”eo-progress-track”>
+          <div class=”eo-progress-bar” style=”width:20%”>
+            <div class=”eo-progress-shimmer”></div>
           </div>
         </div>
       </footer>
@@ -1107,24 +1107,6 @@ const App = (() => {
       INFLUENCE: 90, MAX_PUSH: 7, EASE: 0.07, OP_EASE: 0.10,
       SETTLE_THRESH: 0.12,
     };
-
-    const OVERLAY_TIPS = [
-      'Retrieval practice strengthens memory more than passive exposure.',
-      'Spacing retrieval over time helps short-term recall become more durable.',
-      'A draft map is a hypothesis. It earns trust only after you reconstruct rooms from memory.',
-      'Answering before the explanation appears gives study something specific to repair.',
-      'The generation effect: producing an answer, even imperfectly, encodes it deeper than passive exposure.',
-      'The graph records evidence from attempts and spaced reconstruction, not exposure.',
-      'Spacing works best when intervals grow: short gaps early, longer gaps later.',
-    ];
-
-    const META_STAGES = [
-      'Mapping concept graph...',
-      'Checking for contradictions...',
-      'Synthesizing relationships...',
-      'Drafting provisional route...',
-      'Structuring final map...',
-    ];
 
     function setMetaStatus(txt) {
       const el = extractOverlay.querySelector('.eo-meta-text');
@@ -1301,36 +1283,58 @@ const App = (() => {
       extractOverlay.classList.add('eo-mapping');
       startTrickle();
       startMetaCycle();
-
-      // Persistence runs inside the rAF callback so the intervals/RAF handles
-      // exist by the time removeOverlay(true) tries to cancel them. Without
-      // this ordering, removeOverlay fires before the rAF callback creates the
-      // timers, leaving them un-cancellable.
-      const jsonPayload = knowledgeMap;
-      jsonPayload.metadata = jsonPayload.metadata || {};
-      jsonPayload.metadata.starting_map_context = startingMapContext;
-      jsonPayload.metadata.map_maturity = 'provisional';
-
-      const concepts = loadConcepts();
-      const concept = {
-        id, name, state: 'growing',
-        createdAt: Date.now(), timerStart: null,
-        contentPreview: sourceText.slice(0, 500),
-        contentType: sourceType,
-        contentFilename: sourceFilename,
-        sourceUrl: source?.url || null,
-        startingMapContext,
-        graphData: JSON.stringify(jsonPayload)
-      };
-      contentStore.set(id, sourceText);
-      concepts.push(concept);
-      saveConcepts(concepts);
-      renderGrid(concepts);
-      renderConceptList(concepts);
-      selectConcept(concept.id);
-      closeDrawer();
-      removeOverlay(true);
     });
+
+    return { removeOverlay };
+  }
+
+  // ── finishConceptCreateAfterOverlay ──────────────────────────
+  // Runs persistence + teardown AFTER the network call resolves.
+  // The extract overlay is already mounted by the caller (via mountExtractOverlay)
+  // before the network call. This function does NOT mount the overlay.
+  //
+  // Parameters:
+  //   id            — pre-generated concept id (generateId())
+  //   name          — concept name string
+  //   knowledgeMap  — already-validated knowledge map object
+  //   startedAtIso  — ISO timestamp of when creation began
+  //   startedPerf   — performance.now() at creation start (preserved for
+  //                   future duration telemetry)
+  //   startingSketch — the learner's rough map text
+  //   source        — resolved source object { type, text } from concept-create.js
+  //   overlayHandle — { removeOverlay } returned by mountExtractOverlay
+  function finishConceptCreateAfterOverlay({ id, name, knowledgeMap, startedAtIso, startedPerf, startingSketch, source, overlayHandle }) {
+    const startingMapContext = String(startingSketch || '').trim().slice(0, 1200);
+
+    // Derive content fields from source (URL already resolved by concept-create.js)
+    const sourceText = (source && source.text) ? source.text : '';
+    const sourceType = (source && source.type) ? source.type : 'text';
+    const sourceFilename = (source && source.filename) ? source.filename : null;
+
+    const jsonPayload = knowledgeMap;
+    jsonPayload.metadata = jsonPayload.metadata || {};
+    jsonPayload.metadata.starting_map_context = startingMapContext;
+    jsonPayload.metadata.map_maturity = 'provisional';
+
+    const concepts = loadConcepts();
+    const concept = {
+      id, name, state: 'growing',
+      createdAt: Date.now(), timerStart: null,
+      contentPreview: sourceText.slice(0, 500),
+      contentType: sourceType,
+      contentFilename: sourceFilename,
+      sourceUrl: source?.url || null,
+      startingMapContext,
+      graphData: JSON.stringify(jsonPayload)
+    };
+    contentStore.set(id, sourceText);
+    concepts.push(concept);
+    saveConcepts(concepts);
+    renderGrid(concepts);
+    renderConceptList(concepts);
+    selectConcept(concept.id);
+    closeDrawer();
+    overlayHandle.removeOverlay(true);
   }
 
   async function startAddConcept() {
@@ -1354,31 +1358,68 @@ const App = (() => {
     }
 
     const { buildConversationalCreateUI } = await import('./concept-create.js');
+
+    // Shared helper to re-mount the creation dialog with an error banner after
+    // the overlay tears down. The user's sketch is NOT preserved on retry — this
+    // is acceptable for v1. Preserving sketch across error retry is a follow-up.
+    function remountWithError(err) {
+      const dialog2 = mountCreationDialog();
+      dialog2.bannerSlot.appendChild(
+        buildErrorBanner(sanitizeExtractError(err))
+      );
+      buildConversationalCreateUI(dialog2.shellContent, {
+        onCancel: () => closeCreationDialog(),
+        onBeforeSubmit: ({ name: n }) => {
+          closeCreationDialog();
+          return mountExtractOverlay({ name: n });
+        },
+        onSubmit: handleSubmit,
+        onSubmitError: ({ overlayHandle, error }) => {
+          if (overlayHandle) overlayHandle.removeOverlay(false);
+          remountWithError(error);
+        },
+      });
+    }
+
+    function handleSubmit({ name, startingSketch, source, provisionalMap, overlayHandle }) {
+      if (!isValidKnowledgeMap(provisionalMap)) {
+        // The dialog is already closed (onBeforeSubmit closed it). Tear down
+        // the overlay and re-mount the dialog with an error banner.
+        if (overlayHandle) overlayHandle.removeOverlay(false);
+        remountWithError(new Error('invalid map'));
+        return;
+      }
+
+      if (loadConcepts().length >= 4) {
+        if (overlayHandle) overlayHandle.removeOverlay(false);
+        renderAddTrigger();
+        return;
+      }
+
+      finishConceptCreateAfterOverlay({
+        id: generateId(),
+        name,
+        knowledgeMap: provisionalMap,
+        startedAtIso: new Date().toISOString(),
+        startedPerf: performance.now(),
+        startingSketch,
+        source,
+        overlayHandle,
+      });
+    }
+
     buildConversationalCreateUI(dialog.shellContent, {
       onCancel: () => closeCreationDialog(),
-      onSubmit: async ({ name, startingSketch, source, provisionalMap }) => {
-        if (!isValidKnowledgeMap(provisionalMap)) {
-          // The dialog has not closed yet; show the error banner inline.
-          dialog.bannerSlot.innerHTML = '';
-          dialog.bannerSlot.appendChild(
-            buildErrorBanner(sanitizeExtractError(new Error('invalid map')))
-          );
-          return;
-        }
-
-        const concepts = loadConcepts();
-        if (concepts.length >= 4) { renderAddTrigger(); return; }
+      onBeforeSubmit: ({ name }) => {
+        // Pre-flight: close the dialog and mount the overlay BEFORE the
+        // network call so there is no silent-wait gap after clicking Build.
         closeCreationDialog();
-
-        finishConceptCreateWithMap({
-          id: generateId(),
-          name,
-          knowledgeMap: provisionalMap,
-          startedAtIso: new Date().toISOString(),
-          startedPerf: performance.now(),
-          startingSketch,
-          source,
-        });
+        return mountExtractOverlay({ name });
+      },
+      onSubmit: handleSubmit,
+      onSubmitError: ({ overlayHandle, error }) => {
+        if (overlayHandle) overlayHandle.removeOverlay(false);
+        remountWithError(error);
       },
     });
   }
@@ -3887,6 +3928,7 @@ const App = (() => {
     deleteConcept,
     startAddConcept,
     renderAddTrigger,
+    mountExtractOverlay,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
