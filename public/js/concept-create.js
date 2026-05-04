@@ -312,6 +312,8 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
       has_sketch: Boolean(sketch),
       sketch_len: sketch.length,
     });
+
+    attachChipEditHandlers();
   }
 
   // Stub — real submit ships in Task 9.
@@ -334,6 +336,98 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel }) {
     emitTelemetry("concept_create.build_blocked", {
       reason,
       origin: "client",
+    });
+  }
+
+  function attachChipEditHandlers() {
+    const editConceptBtn = container.querySelector('[data-action="edit-concept"]');
+    const editSketchBtn = container.querySelector('[data-action="edit-sketch"]');
+    if (editConceptBtn) editConceptBtn.addEventListener("click", () => beginEditConcept());
+    if (editSketchBtn) editSketchBtn.addEventListener("click", () => beginEditSketch());
+  }
+
+  function beginEditConcept() {
+    const valueEl = container.querySelector('[data-role="concept-value"]');
+    if (!valueEl) return;
+    const prior = state.concept;
+    valueEl.innerHTML = `
+      <input
+        class="creation-chip-input"
+        type="text"
+        maxlength="200"
+        value="${escHtml(prior)}"
+        aria-label="Concept name">
+    `;
+    const input = valueEl.querySelector(".creation-chip-input");
+    input.focus();
+    input.select();
+
+    function save() {
+      const next = input.value.trim();
+      if (next !== prior) {
+        state.concept = next;
+        emitTelemetry("concept_create.summary.edited", { chip: "concept" });
+      }
+      rerenderSummary();
+    }
+    function cancel() {
+      rerenderSummary();
+    }
+    input.addEventListener("blur", save);
+    input.addEventListener("keydown", (e) => {
+      // stopPropagation: prevent the modal-level Escape handler from closing
+      // the dialog while we're editing a chip in place.
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        cancel();
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        save();
+      }
+    });
+  }
+
+  function beginEditSketch() {
+    const valueEl = container.querySelector('[data-role="sketch-value"]');
+    if (!valueEl) return;
+    const prior = joinSketch();
+    valueEl.innerHTML = `
+      <textarea
+        class="creation-chip-textarea"
+        maxlength="10000"
+        rows="4"
+        aria-label="Your sketch">${escHtml(prior)}</textarea>
+    `;
+    const textarea = valueEl.querySelector(".creation-chip-textarea");
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    function save() {
+      const next = textarea.value;
+      if (next !== prior) {
+        // Replace all sketchTurns with the edited value as a single turn.
+        // Subsequent edits are a single-turn sketch from the learner's POV.
+        state.sketchTurns = next.trim() ? [next] : [];
+        emitTelemetry("concept_create.summary.edited", { chip: "sketch" });
+      }
+      rerenderSummary();
+    }
+    function cancel() {
+      rerenderSummary();
+    }
+    textarea.addEventListener("blur", save);
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        cancel();
+      }
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        save();
+      }
     });
   }
 
