@@ -305,7 +305,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
           <div class="creation-chip-value" data-role="source-value">
             ${sourceDesc
               ? escHtml(sourceDesc)
-              : '<span class="creation-chip-empty-text">None added — build will start from your model only</span>'}
+              : '<span class="creation-chip-empty-text">None added — socratink will draft from your sketch alone. The graph stays hypothesis until your reconstruction.</span>'}
           </div>
         </article>
 
