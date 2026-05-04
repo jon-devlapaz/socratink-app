@@ -39,6 +39,10 @@
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
 | **Imported source** | A normalized text source ready for Gemini extraction. Either fetched from a URL or supplied as raw text by the learner. Carries the canonical (post-redirect) URL when present and a flag indicating remote-attacker-controllability. | "Article", "fetched page", "scraped content" |
+| **Threshold chat** | The conversational two-turn surface that captures the learner's concept name and **Starting sketch** at concept creation. Chat is ignition only — it exits into a single handoff card and never grows into a study surface, history thread, or open-ended dialogue. | "AI tutor", "onboarding chat", "knowledge interview", "intake conversation" |
+| **Starting sketch** | The learner's verbatim reply to the **Threshold chat** — their rough current model of the concept, captured before any source extraction or graph generation. Remains the baseline against which the **Provisional map** is compared, against which **Targeted study** is scoped, and against which all repair is anchored. | "Notes", "guess", "intro text", "prompt input" |
+| **Source-less generation** | Generation of a **Provisional map** from `{concept name, starting sketch}` alone, without an **Imported source**. The resulting graph is hypothesis (per the **Provisional map** definition) — the absence of source raises, not lowers, the hypothesis weighting. | "AI-generated graph", "auto-graph", "source-free extraction" |
+| **Grounding context** | Optional curriculum-aligned descriptions (today, from Learning Commons academic standards) passed into the **Source-less generation** prompt as background. Never authoritative; never visible to the learner; never substitutes for an **Imported source** the learner declined to provide. | "Source", "research", "AI knowledge", "curated content" |
 
 ## Relationships
 
@@ -49,6 +53,10 @@
 - A **Traversal unlock** can happen before **`solidified`** when the product is creating interleaving, but **Mastery-gated progression** requires **`solidified`**.
 - An **Imported source** is the input to the **Draft map** extraction pipeline.
 - An **Imported source** that is `is_remote_source=True` is treated as untrusted in extraction prompt assembly (per OWASP LLM01).
+- A **Threshold chat** captures a **Starting sketch**, which is the canonical concept-creation form of the learner's **Current model**.
+- A **Provisional map** may be produced via **Source-less generation** from a **Starting sketch** alone, with no **Imported source** attached. The map is still framed as hypothesis and still mutates no **Graph truth**.
+- When both an **Imported source** and a **Starting sketch** are present, extraction runs from the **Imported source** and the **Starting sketch** shapes the result into a **Provisional map**.
+- **Grounding context** may augment **Source-less generation** but never substitutes for an **Imported source** the learner declined to provide. The system never silently fetches arbitrary content (Wikipedia, scrape, vendor library) when the learner chose to build without source.
 
 ## Example Dialogue
 

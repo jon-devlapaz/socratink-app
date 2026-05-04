@@ -1,0 +1,36 @@
+
+=== 1. Source-less substantive sketch (real Gemini call) ===
+request: {"name": "Photosynthesis", "starting_sketch": "Plants take in light and somehow make sugar from water and carbon dioxide. Not sure where the oxygen comes out.", "source": null}
+status:  HTTP 200  (15305 ms)  expected: 200
+  source_title: Photosynthesis
+  architecture_type: causal_chain
+  low_density: False
+  core_thesis: Photosynthesis is the fundamental biological process by which certain organisms convert light energy into chemical energy (sugars) using car
+  governing_assumptions: ['The learner understands photosynthesis as plants taking light, water, and carbon dioxide to make sugar, with oxygen as a byproduct whose origin is unclear.']
+  backbone_count: 1
+  cluster_count: 3
+  subnode_count_total: 7
+verdict: PASS
+
+=== 2. Source-less thin sketch (no Gemini call) ===
+request: {"name": "Photosynthesis", "starting_sketch": "idk", "source": null}
+status:  HTTP 422  (4 ms)  expected: 422
+error:   'thin_sketch_no_source'
+message: 'Add more to your sketch, or attach source material — either path opens the build.'
+verdict: PASS
+
+=== 3. Legacy text-only payload (real Gemini call, existing extract path) ===
+request: {"text": "Photosynthesis is the process by which plants convert light energy from the sun into chemical energy stored in glucose. It occurs in the chloroplasts of plant cells, primarily in the leaves.
+status:  HTTP 200  (9791 ms)  expected: 200
+  source_title: Photosynthesis Overview
+  architecture_type: system_description
+  low_density: False
+  core_thesis: Photosynthesis is the process by which plants convert light energy into chemical energy, utilizing carbon dioxide and water to produce gluco
+  governing_assumptions: ['Plants require energy to sustain life.', 'Light energy is a usable energy source for biological conversion.', 'Chemical energy stored in glucose is a usable form of energy for plants.']
+  backbone_count: 1
+  cluster_count: 1
+  subnode_count_total: 4
+verdict: PASS
+
+=== Summary ===
+3/3 scenarios passed

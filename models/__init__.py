@@ -17,6 +17,7 @@ from .provisional_map import (
     Relationships,
     Subnode,
 )
+from .sketch_validation import is_substantive_sketch  # noqa: F401
 
 __all__ = [
     "BackboneId",
@@ -27,6 +28,7 @@ __all__ = [
     "DomainMechanic",
     "Framework",
     "IdKind",
+    "is_substantive_sketch",
     "LearningPrereq",
     "Metadata",
     "ProvisionalMap",

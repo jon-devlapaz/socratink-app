@@ -1,7 +1,10 @@
+import hashlib
 import json
 import logging
 import os
+import time as _time
 from pathlib import Path
+from typing import Literal
 from urllib.parse import quote, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
@@ -22,8 +25,18 @@ from ai_service import (
     MissingAPIKeyError,
     drill_chat,
     extract_knowledge_map,
+    generate_provisional_map_from_sketch,
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
+)
+from learning_commons import (
+    LC_STATUS_HTTP_ERROR,
+    LC_STATUS_KEY_MISSING,
+    LC_STATUS_PARSE_ERROR,
+    LC_STATUS_TIMEOUT,
+    LC_STATUS_TRANSPORT_ERROR,
+    LCClient,
+    should_enrich_with_lc,
 )
 from llm.errors import (
     LLMClientError,
@@ -49,6 +62,53 @@ load_app_env()
 app = FastAPI()
 app.state.auth_service = build_auth_service_from_env()
 logger = logging.getLogger(__name__)
+
+
+# Per-1k-token rates by model name. Update when model pricing changes.
+# Source: https://ai.google.dev/pricing as of 2026-05-03.
+_MODEL_PRICING_PER_1K: dict[str, tuple[float, float]] = {
+    # (input_per_1k_usd, output_per_1k_usd)
+    "gemini-2.5-flash": (0.000125, 0.000375),
+    "gemini-2.5-flash-lite": (0.0000625, 0.0001875),
+    "gemini-2.5-pro": (0.00125, 0.005),
+}
+
+
+def _estimate_cost_usd(model: str, input_tokens: int, output_tokens: int) -> float | None:
+    """Best-effort cost estimate. Returns None for unknown models."""
+    rates = _MODEL_PRICING_PER_1K.get(model)
+    if rates is None:
+        logger.warning("ai_call.unknown_model_for_cost_estimate", extra={"model": model})
+        return None
+    in_rate, out_rate = rates
+    return round(
+        (input_tokens / 1000.0) * in_rate
+        + (output_tokens / 1000.0) * out_rate,
+        6,
+    )
+
+
+def _emit_ai_call(*, stage: str, model: str, latency_ms: float,
+                  input_tokens: int = 0, output_tokens: int = 0) -> None:
+    """Emit concept_create.ai_call telemetry per spec §5.4.
+
+    Cost estimation uses a model-aware pricing table. Unknown models log a
+    warning and emit cost_usd_est=None — honest signal beats a wrong-looking number.
+    """
+    cost_usd_est = _estimate_cost_usd(model, input_tokens, output_tokens)
+    logger.info(
+        "concept_create.ai_call",
+        extra={
+            "stage": stage,
+            "model": model,
+            "tokens_in": input_tokens,
+            "tokens_out": output_tokens,
+            "latency_ms": latency_ms,
+            "cost_usd_est": cost_usd_est,
+        },
+    )
+
+
 PROTECTED_HTML_PATHS = frozenset({"/", "/index.html", "/admin/todo"})
 PROTECTED_API_PATHS = frozenset(
     {
@@ -189,9 +249,95 @@ async def require_login_or_guest_entry(request: Request, call_next):
     return response
 
 
+class SourceAttachment(BaseModel):
+    """Optional source material attached to a concept submission."""
+    type: Literal["text", "url", "file"]
+    text: str | None = Field(None, max_length=500_000)
+    url: str | None = Field(None, max_length=2_000)
+    filename: str | None = Field(None, max_length=255)
+
+
 class ExtractRequest(BaseModel):
-    text: str = Field(..., max_length=500_000)
+    """Concept-creation submission.
+
+    Two payload shapes are accepted:
+
+    NEW (Plan A — conversational concept creation):
+      {name, starting_sketch, source, api_key?}
+
+    LEGACY (back-compat for the existing form-based client during rollout):
+      {text, api_key?}
+
+    Server-side validation in /api/extract enforces the spec §3.2
+    substantiveness rule: source-less submits require a substantive sketch.
+    """
+    # New shape
+    name: str | None = Field(None, max_length=200)
+    starting_sketch: str | None = Field(None, max_length=10_000)
+    source: SourceAttachment | None = None
+    # Legacy back-compat
+    text: str | None = Field(None, max_length=500_000)
+    # Common
     api_key: str | None = Field(None, max_length=200)
+
+
+def _resolve_extract_path(req: "ExtractRequest") -> dict:
+    """Decide which generation path the request takes, with server-side validation.
+
+    Returns one of:
+      {"path": "extract", "text": str}
+      {"path": "from_sketch", "name": str, "sketch": str}
+      {"path": "error", "status": 422, "error": str, "message": str}
+
+    Spec §3.2 truth table is enforced here as defense in depth.
+    """
+    from models.sketch_validation import is_substantive_sketch
+
+    # Legacy {text} payload — back-compat path. Bypasses the new shape entirely.
+    if req.text is not None and req.name is None and req.source is None:
+        if not req.text.strip():
+            return {"path": "error", "status": 422,
+                    "error": "missing_text", "message": "Source text required."}
+        return {"path": "extract", "text": req.text}
+
+    # New shape: name is mandatory
+    name = (req.name or "").strip()
+    if not name:
+        return {"path": "error", "status": 422,
+                "error": "missing_concept", "message": "Concept name required."}
+
+    sketch = (req.starting_sketch or "").strip()
+    has_source_text = (
+        req.source is not None
+        and req.source.type in ("text", "file")
+        and (req.source.text or "").strip()
+    )
+    has_source_url = (
+        req.source is not None
+        and req.source.type == "url"
+        and (req.source.url or "").strip()
+    )
+    sketch_ok = is_substantive_sketch(sketch)
+
+    if has_source_text:
+        return {"path": "extract", "text": (req.source.text or "").strip()}
+
+    if has_source_url:
+        # URL fetching belongs in /api/extract-url; the dispatcher does
+        # not handle URL fetch inline. The frontend should call the right
+        # endpoint, but if it sends a URL here we surface the situation
+        # rather than silently failing.
+        return {"path": "error", "status": 422,
+                "error": "url_source_unsupported_here",
+                "message": "URL sources go through /api/extract-url."}
+
+    if not sketch_ok:
+        # Spec §3.2 row 1: thin sketch + no source → block.
+        return {"path": "error", "status": 422,
+                "error": "thin_sketch_no_source",
+                "message": "Add more to your sketch, or attach source material — either path opens the build."}
+
+    return {"path": "from_sketch", "name": name, "sketch": sketch}
 
 
 class UrlExtractRequest(BaseModel):
@@ -321,23 +467,120 @@ def health():
 
 @app.post("/api/extract")
 def extract(req: ExtractRequest):
-    if not req.text.strip():
-        raise HTTPException(status_code=400, detail="No text provided.")
-    try:
-        src = source_intake.from_text(req.text)   # default min_text_length=1
-    except ParseEmpty:
-        raise HTTPException(
-            status_code=422,
-            detail="Couldn't find enough readable text in what you pasted.",
+    decision = _resolve_extract_path(req)
+
+    if decision["path"] == "error":
+        logger.info(
+            "concept_create.build_blocked",
+            extra={"reason": decision["error"], "origin": "server"},
         )
+        raise HTTPException(status_code=decision["status"], detail={
+            "error": decision["error"],
+            "message": decision["message"],
+        })
+
     try:
-        provisional_map = extract_knowledge_map(src.text, api_key=req.api_key)
-        # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
-        return {"knowledge_map": provisional_map.model_dump()}
+        if decision["path"] == "from_sketch":
+            lc_result = None
+            lc_query_failed = False
+            lc_client = None
+            lc_query_started = _time.monotonic()
+            try:
+                lc_client = LCClient()
+                lc_result = lc_client.search_concept(decision["name"])
+            except Exception:
+                lc_query_failed = True
+                logger.exception("lc_query_unexpected")
+            lc_latency_ms = int((_time.monotonic() - lc_query_started) * 1000)
+
+            # Always emit lc.queried (spec §5.4 — fires regardless of outcome)
+            _concept_hash = hashlib.sha1(decision["name"].lower().encode()).hexdigest()[:12]
+            logger.info(
+                "concept_create.lc.queried",
+                extra={
+                    "concept_hash": _concept_hash,
+                    "top_score": (lc_result.top_score if lc_result else 0.0),
+                    "standards_count": (len(lc_result.standards) if lc_result else 0),
+                    "latency_ms": lc_latency_ms,
+                },
+            )
+
+            lc_context = should_enrich_with_lc(lc_result)
+            if lc_context is None:
+                # Reason classification for telemetry. Consult lc_client.last_status
+                # to distinguish timeout from other null returns (I-1 fix).
+                lc_last_status = lc_client.last_status if lc_client is not None else None
+                if lc_query_failed:
+                    reason = "error"
+                elif lc_last_status == LC_STATUS_KEY_MISSING:
+                    reason = "key_missing"
+                elif lc_last_status == LC_STATUS_TIMEOUT:
+                    reason = "timeout"
+                elif lc_last_status in (LC_STATUS_TRANSPORT_ERROR, LC_STATUS_HTTP_ERROR, LC_STATUS_PARSE_ERROR):
+                    reason = "error"
+                elif lc_result is None or not lc_result.standards:
+                    reason = "no_results"
+                elif lc_result.top_score < 0.70:
+                    reason = "low_score"
+                else:
+                    reason = "non_k12"
+                logger.info("concept_create.lc.enrichment_skipped",
+                            extra={"reason": reason})
+            else:
+                logger.info("concept_create.lc.enrichment_applied",
+                            extra={"standards_count": len(lc_context)})
+
+            def _on_sketch_call(result):
+                _emit_ai_call(
+                    stage="generation_lc_enriched" if lc_context else "generation_pure",
+                    model=result.model,
+                    latency_ms=result.latency_ms,
+                    input_tokens=result.usage.input_tokens,
+                    output_tokens=result.usage.output_tokens,
+                )
+
+            provisional_map = generate_provisional_map_from_sketch(
+                concept=decision["name"],
+                sketch=decision["sketch"],
+                lc_context=lc_context,
+                api_key=req.api_key,
+                on_call_complete=_on_sketch_call,
+            )
+            return {"provisional_map": provisional_map.model_dump()}
+        else:  # decision["path"] == "extract"
+            # Preserve existing source-intake behavior byte-for-byte.
+            # source_intake.from_text normalizes the raw text before the AI call.
+            try:
+                src = source_intake.from_text(decision["text"])
+            except ParseEmpty:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Couldn't find enough readable text in what you pasted.",
+                )
+
+            def _on_extract_call(result):
+                _emit_ai_call(
+                    stage="generation_extract",
+                    model=result.model,
+                    latency_ms=result.latency_ms,
+                    input_tokens=result.usage.input_tokens,
+                    output_tokens=result.usage.output_tokens,
+                )
+
+            provisional_map = extract_knowledge_map(
+                src.text,
+                api_key=req.api_key,
+                on_call_complete=_on_extract_call,
+            )
+            # Wire-shape preserved: frontend consumes a dict at "knowledge_map".
+            return {"knowledge_map": provisional_map.model_dump()}
+
     # All LLM-error branches: stable user-facing copy ONLY. Provider details
     # (model name, error code, original message) flow into operator logs but
     # never into the response body. This is consistent across the whole LLM
     # error hierarchy — the user is never told which provider we use.
+    except HTTPException:
+        raise
     except LLMMissingKeyError as err:
         logger.warning("extract: LLMMissingKeyError: %s", err)
         raise HTTPException(

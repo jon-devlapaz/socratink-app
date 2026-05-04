@@ -3,7 +3,7 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|Bash",
+        "matcher": "Edit|Write|NotebookEdit|Bash",
         "hooks": [
           {
             "type": "command",
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "code-review-graph build",
+            "command": "code-review-graph build && python3 scripts/build_code_graph_viz.py >/dev/null 2>&1 &",
             "timeout": 60
           }
         ]

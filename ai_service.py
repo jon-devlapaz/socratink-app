@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal, Optional, TypedDict
+from typing import Callable, Literal, Optional, TypedDict
 
 from google import genai
 from google.genai.errors import APIError
@@ -31,6 +31,10 @@ DRILL_PROMPT_VERSION = "drill-system-v1"
 REPAIR_REPS_PROMPT_VERSION = "repair-reps-system-v1"
 DRILL_SYSTEM_BASE = DRILL_PROMPT_PATH.read_text()
 REPAIR_REPS_SYSTEM_BASE = REPAIR_REPS_PROMPT_PATH.read_text()
+# Source-less generation (spec §5.1).
+GENERATE_FROM_SKETCH_PROMPT_PATH = PROMPT_DIR / "generate-from-sketch-system-v1.txt"
+GENERATE_FROM_SKETCH_PROMPT_VERSION = "v1"
+GENERATE_FROM_SKETCH_TEMPERATURE = 0.4  # slightly higher than extraction; we want a hypothesis, not a transcription
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 RETRYABLE_CODES = {429, 503, 500}
@@ -655,6 +659,7 @@ def extract_knowledge_map(
     llm: LLMClient | None = None,
     api_key: str | None = None,
     telemetry_context: dict | None = None,
+    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
     """Generate a Provisional map from learner-supplied text.
 
@@ -673,8 +678,61 @@ def extract_knowledge_map(
         prompt_version=EXTRACT_PROMPT_VERSION,
     )
     result = client.generate_structured(request)
+    if on_call_complete is not None:
+        on_call_complete(result)
     # Adapter guarantees parsed is a ProvisionalMap or it raised
     # LLMValidationError. The cast is for type-checker clarity.
+    return result.parsed  # type: ignore[return-value]
+
+
+def generate_provisional_map_from_sketch(
+    concept: str,
+    sketch: str,
+    *,
+    llm: LLMClient | None = None,
+    api_key: str | None = None,
+    lc_context: list["LCStandard"] | None = None,
+    telemetry_context: dict | None = None,
+    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
+) -> ProvisionalMap:
+    """Generate a Provisional map from concept name + learner sketch alone.
+
+    Spec §3.3.2, §5.1. The sketch is the baseline; the AI hypothesizes
+    structure around it. Optional ``lc_context`` is grounding-only,
+    never authoritative.
+
+    Returns a structurally-validated ProvisionalMap. Same Pydantic model
+    as extraction; same closure validators; same error semantics.
+    """
+    from learning_commons import LCStandard  # local import to avoid cycle on module load
+
+    client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
+
+    user_prompt_parts: list[str] = [
+        f"<concept>{concept}</concept>",
+        f"<starting_sketch>{sketch}</starting_sketch>",
+    ]
+    if lc_context:
+        lc_block_lines = ["<lc_context>"]
+        for std in lc_context:
+            code = f" [{std.statement_code}]" if std.statement_code else ""
+            lc_block_lines.append(f"- {std.jurisdiction}{code}: {std.description}")
+        lc_block_lines.append("</lc_context>")
+        user_prompt_parts.append("\n".join(lc_block_lines))
+
+    user_prompt = "\n\n".join(user_prompt_parts)
+
+    request = StructuredLLMRequest(
+        system_prompt=GENERATE_FROM_SKETCH_PROMPT_PATH.read_text(),
+        user_prompt=user_prompt,
+        response_schema=ProvisionalMap,
+        temperature=GENERATE_FROM_SKETCH_TEMPERATURE,
+        task_name="provisional_map_from_sketch",
+        prompt_version=GENERATE_FROM_SKETCH_PROMPT_VERSION,
+    )
+    result = client.generate_structured(request)
+    if on_call_complete is not None:
+        on_call_complete(result)
     return result.parsed  # type: ignore[return-value]
 
 
@@ -905,20 +963,17 @@ def drill_chat(
             f"Latest learner message:\n{latest_learner_message}"
         )
 
-    try:
-        response = _call_gemini_with_retry(
-            client,
-            model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=DRILL_TEMPERATURE,
-                response_mime_type="application/json",
-                response_schema=DrillEvaluation,
-            ),
-        )
-    except Exception:
-        raise
+    response = _call_gemini_with_retry(
+        client,
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=DRILL_TEMPERATURE,
+            response_mime_type="application/json",
+            response_schema=DrillEvaluation,
+        ),
+    )
 
     evaluation = response.parsed
     if not isinstance(evaluation, DrillEvaluation):
