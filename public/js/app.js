@@ -1000,6 +1000,20 @@ const App = (() => {
     return banner;
   }
 
+  // Calm, seed-specific error banner used in error-recovery remount.
+  // Distinct from buildErrorBanner (which prefixes "Extraction stopped.") to
+  // avoid the console-y tone on what may be a transient model-output issue.
+  function buildSeedFailureBanner(message) {
+    const banner = document.createElement('div');
+    banner.className = 'creation-banner creation-banner--error';
+    banner.innerHTML = `
+      <div>
+        ${escHtml(message)}
+      </div>
+    `;
+    return banner;
+  }
+
   function buildGuestActions(loginHref) {
     const row = document.createElement('div');
     row.className = 'creation-guest-actions';
@@ -1376,26 +1390,33 @@ const App = (() => {
 
     const { buildConversationalCreateUI } = await import('./concept-create.js');
 
-    // Shared helper to re-mount the creation dialog with an error banner after
-    // the overlay tears down. The user's sketch is NOT preserved on retry — this
-    // is acceptable for v1. Preserving sketch across error retry is a follow-up.
-    // seed is forwarded so retry preserves the hero-input pre-fill.
-    function remountWithError(err) {
+    // Re-mount the creation dialog at the summary card stage, preserving the
+    // learner's concept, sketchTurns, and source from the failed submit.
+    // Banner names two strategic paths without consoling or naming the provider.
+    function remountWithError(err, preservedState) {
       const dialog2 = mountCreationDialog();
       dialog2.bannerSlot.appendChild(
-        buildErrorBanner(sanitizeExtractError(err))
+        buildSeedFailureBanner(
+          "socratink couldn't draft from this seed. You can try again, or attach source material for a different draft path."
+        )
       );
       buildConversationalCreateUI(dialog2.shellContent, {
-        seed,
+        seed: {
+          name: preservedState?.name || seed?.name || "",
+          sketchTurns: preservedState?.sketchTurns || [],
+          source: preservedState?.source || null,
+          stage: "summary",
+          ctaOverrideCopy: "Try again",
+        },
         onCancel: () => closeCreationDialog(),
         onBeforeSubmit: ({ name: n }) => {
           closeCreationDialog();
           return mountExtractOverlay({ name: n });
         },
         onSubmit: handleSubmit,
-        onSubmitError: ({ overlayHandle, error }) => {
+        onSubmitError: ({ overlayHandle, error, preservedState: ps }) => {
           if (overlayHandle) overlayHandle.removeOverlay(false);
-          remountWithError(error);
+          remountWithError(error, ps);
         },
       });
     }
@@ -1437,9 +1458,9 @@ const App = (() => {
         return mountExtractOverlay({ name });
       },
       onSubmit: handleSubmit,
-      onSubmitError: ({ overlayHandle, error }) => {
+      onSubmitError: ({ overlayHandle, error, preservedState }) => {
         if (overlayHandle) overlayHandle.removeOverlay(false);
-        remountWithError(error);
+        remountWithError(error, preservedState);
       },
     });
   }

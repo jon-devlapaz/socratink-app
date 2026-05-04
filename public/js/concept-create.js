@@ -45,17 +45,25 @@ const SKETCH_FOOTER_BLOCKED =
 export function buildConversationalCreateUI(container, { onSubmit, onCancel, onBeforeSubmit, onSubmitError, seed }) {
   const initialName = (seed && typeof seed.name === "string" ? seed.name.trim() : "");
   const initialSource = seed && seed.source ? seed.source : null;
-  // If we have a name, skip turn 1 (the hero already captured the answer).
-  // If we have only source, start at turn 1 (concept name still needed).
-  const initialStage = initialName ? STAGE.CHAT_TURN_2 : STAGE.CHAT_TURN_1;
+  const initialSketchTurns = (seed && Array.isArray(seed.sketchTurns)) ? seed.sketchTurns.slice() : [];
+  // If seed.stage === "summary" (explicit), or we have both name and sketchTurns,
+  // land at the summary card directly. Otherwise fall through to the chat turns.
+  const initialStage = (seed && seed.stage === "summary")
+    ? STAGE.SUMMARY
+    : (initialName && initialSketchTurns.length > 0)
+      ? STAGE.SUMMARY
+      : initialName
+        ? STAGE.CHAT_TURN_2
+        : STAGE.CHAT_TURN_1;
 
   const state = {
     stage: initialStage,
     concept: initialName,
-    sketchTurns: [],          // verbatim learner replies; concatenated into chip value
-    source: initialSource,    // { type, text?, url?, filename? } once attached
+    sketchTurns: initialSketchTurns, // verbatim learner replies; concatenated into chip value
+    source: initialSource,           // { type, text?, url?, filename? } once attached
     usedFallback: false,
     submitting: false,
+    ctaOverride: (seed && typeof seed.ctaOverrideCopy === "string") ? seed.ctaOverrideCopy : null,
   };
 
   function destroy() {
@@ -212,6 +220,10 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
   }
 
   function ctaCopyForState() {
+    // ctaOverride is set in error-recovery mode (e.g. "Try again"). Once the
+    // user attaches source, the override yields to the normal truth-table so
+    // the CTA accurately names the new build path.
+    if (state.ctaOverride && !state.source) return state.ctaOverride;
     if (state.source && sketchIsSubstantive()) return "Build from my map and source";
     if (state.source && !sketchIsSubstantive()) return "Build from source";
     if (!state.source && sketchIsSubstantive()) return "Build from my starting map";
@@ -371,7 +383,16 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
         };
       } catch (err) {
         state.submitting = false;
-        onSubmitError?.({ overlayHandle, error: err });
+        emitTelemetry("concept_create.build_failed", {
+          stage: "submit",
+          error_kind: "url_fetch",
+        });
+        const preservedState = {
+          name: state.concept,
+          sketchTurns: state.sketchTurns.slice(),
+          source: state.source,
+        };
+        onSubmitError?.({ overlayHandle, error: err, preservedState });
         return;
       }
     }
@@ -400,6 +421,11 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       });
     } catch (err) {
       state.submitting = false;
+      const preservedState = {
+        name: state.concept,
+        sketchTurns: state.sketchTurns.slice(),
+        source: state.source,
+      };
       if (err && err.status === 422 && err.body) {
         const code = err.body.error;
         // Emit telemetry before routing to onSubmitError. The dialog is
@@ -411,9 +437,22 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
             reason: code,
             origin: "server",
           });
+        } else {
+          emitTelemetry("concept_create.build_failed", {
+            stage: "submit",
+            error_kind: "422_unhandled",
+          });
         }
+      } else {
+        const errorKind = (err && err.status >= 500)
+          ? "5xx_network"
+          : "other";
+        emitTelemetry("concept_create.build_failed", {
+          stage: "submit",
+          error_kind: errorKind,
+        });
       }
-      onSubmitError?.({ overlayHandle, error: err });
+      onSubmitError?.({ overlayHandle, error: err, preservedState });
     }
   }
 
@@ -682,8 +721,12 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     if (replaceBtn) replaceBtn.addEventListener("click", () => beginEditSource());
   }
 
-  // Boot the first chat turn.
-  renderChat();
+  // Boot at the resolved initial stage.
+  if (initialStage === STAGE.SUMMARY) {
+    renderSummary();
+  } else {
+    renderChat();
+  }
 
   return { destroy };
 }
