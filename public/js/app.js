@@ -1871,6 +1871,9 @@ const App = (() => {
             <span>ready for first attempt</span>
             <span>locked</span>
           </div>
+          ${meta.low_density
+            ? `<p class="map-provisional-low-density">Drafted from a thin sketch. The route is intentionally sparse — your first cold attempt will fill in what the sketch left out.</p>`
+            : ''}
         </div>
       </section>
       <section class="map-zone map-first-room-zone">

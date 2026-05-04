@@ -1043,6 +1043,13 @@ body:not([data-map-open="true"]) .map-back-link {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+.map-provisional-low-density {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+  font-style: italic;
+}
 .map-first-room {
   display: flex;
   align-items: center;
