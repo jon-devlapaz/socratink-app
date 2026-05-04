@@ -196,6 +196,13 @@ body:not([data-map-open="true"]) .map-back-link {
   background: transparent;
   box-shadow: none;
 }
+@media (min-height: 800px) {
+  .hero-card:has(.hero-state-chip[data-state="empty"]) {
+    min-height: calc(100dvh - 120px);
+    display: grid;
+    align-content: center;
+  }
+}
 .hero-card:has(.hero-state-chip[data-state="empty"]) .intro-content {
   grid-template-columns: 1fr;
   align-items: start;
