@@ -905,20 +905,17 @@ def drill_chat(
             f"Latest learner message:\n{latest_learner_message}"
         )
 
-    try:
-        response = _call_gemini_with_retry(
-            client,
-            model=MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=DRILL_TEMPERATURE,
-                response_mime_type="application/json",
-                response_schema=DrillEvaluation,
-            ),
-        )
-    except Exception:
-        raise
+    response = _call_gemini_with_retry(
+        client,
+        model=MODEL,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=DRILL_TEMPERATURE,
+            response_mime_type="application/json",
+            response_schema=DrillEvaluation,
+        ),
+    )
 
     evaluation = response.parsed
     if not isinstance(evaluation, DrillEvaluation):

@@ -32,6 +32,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [product/evidence-weighted-map.md](../product/evidence-weighted-map.md) | canonical | yes | Defines the evidence-weighted map doctrine, true game loop, starting-map-as-anchor, map-maturity language, and graph-claim rules. Overrides other docs on graph-truth claims. | — |
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
 | [product/ux-framework.md](../product/ux-framework.md) | deprecated | no | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | [/DESIGN.md](../../DESIGN.md) |
+| [/PRODUCT.md](../../PRODUCT.md) | deprecated | no | Brand personality, anti-references, product purpose, design principles. | [/DESIGN.md](../../DESIGN.md) |
 | [theta/state.md](../theta/state.md) | canonical | yes | Evidence posture and confidence ratings for product-science claims; phase grounding; product language rules. | — |
 
 ## Implementation-Facing Specs
@@ -70,8 +71,6 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |
 | [codex/decision-log.md](../codex/decision-log.md) | workflow | yes | Append-only architectural/product decision log. Empty template at time of writing. | — |
 | [codex/agent-review-log.md](../codex/agent-review-log.md) | workflow | yes | Append-only Glenna review log. | — |
-| [superpowers/plans/2026-04-28-pipette.md](../superpowers/plans/2026-04-28-pipette.md) | workflow | yes | Load-bearing operational plan and slash-command definitions for the Pipette subsystem. | — |
-| [superpowers/specs/2026-04-28-pipette-design.md](../superpowers/specs/2026-04-28-pipette-design.md) | workflow | yes | Architecture and CLI interface spec for the Pipette orchestration subsystem. | — |
 
 ## Reference Fixtures
 

@@ -23,15 +23,29 @@ This file provides guidance to all coding agents and automation working in this 
 - For fixes, prefer a reproducing test when practical; for refactors, preserve behavior and run before/after-relevant checks when practical.
 
 ## Code exploration and review workflow
-- This repo is configured for a code-review knowledge graph. Use graph tools before grep/glob/read whenever available.
-- Start with minimal graph context, then escalate only if needed:
-  - `get_minimal_context_tool` for initial orientation
-  - `detect_changes` and `get_review_context` for review
-  - `get_impact_radius` and `get_affected_flows` for blast-radius analysis
-  - `query_graph` / `semantic_search_nodes` for callers, callees, imports, and tests
-- Use grep/glob/read only when graph coverage is insufficient.
+
+This repo is configured for two complementary code-intelligence layers. Use them in sequence, not in competition. Both exist to keep the working context window small and the structural reasoning honest.
+
+### Layer 1 — Claude Context (semantic discovery)
+Use the `claude-context` MCP server (`search_code`, `index_codebase`, `get_indexing_status`, `clear_index`) for fuzzy, conceptual orientation when you do not yet know the file or symbol. It replaces blind `grep`/`glob` sweeps that bloat context.
+- Use it for needle-in-haystack questions: "find the logic that handles guest users", "where do we validate Supabase JWTs", "code that throttles drill cadence", "the place we normalize Gemini API errors".
+- Output is vector chunks ranked by semantic similarity. Treat them as leads to verify, not ground truth.
+- Re-index after large refactors or before relying on search results in a long-running session (`get_indexing_status` to confirm freshness).
+
+### Layer 2 — Code-Review Graph (deterministic structure)
+Once a candidate file or symbol is in hand, switch to the code-review graph for caller/callee, blast-radius, and review safety. The graph gives structural guarantees that semantic search cannot.
+- `get_minimal_context_tool` for initial orientation on a known node
+- `detect_changes` and `get_review_context` for review
+- `get_impact_radius` and `get_affected_flows` for blast-radius analysis
+- `query_graph` / `semantic_search_nodes` for callers, callees, imports, and tests
+
+### Handoff rule
+Discover with Claude Context → confirm structure with the graph → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Reading source files top-to-bottom without either layer is the worst of all worlds: high context cost, no structural guarantee.
+
+### Hard rules
 - Default to minimal graph detail first. Escalate to full source snippets only when the minimal view is insufficient.
-- Caveat from project rules: call-count data can under-report; verify "single call site" claims with textual search such as `rg "<symbol>"`.
+- Reach for `grep`/`glob`/`Read` only when both layers above are insufficient, or to verify a specific claim.
+- Call-count data from the graph can under-report. Always verify "single call site" or "only caller" claims with textual search such as `rg "<symbol>"` before acting on them — this rule survives the Claude Context addition; semantic similarity is even less authoritative for call-site enumeration than the graph.
 - Local-first search applies: check local docs, scripts, and skills before remote sources or external agents. Before building new functionality, verify there is not already a local script, command, or documented workflow that does it.
 
 ## Common development commands
@@ -79,6 +93,11 @@ bash scripts/qa-smoke.sh https://custom-url.com
 
 # Direct pytest smoke equivalent
 SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
+
+# Manual AI pipeline validation against a fixture (extract + drill in terminal,
+# tagged run_mode=fixture in telemetry). Use before merging changes to
+# ai_service.py or ProvisionalMap.
+python scripts/run_tasting_fixture.py
 ```
 
 ### Deploy verification
@@ -138,7 +157,6 @@ bash scripts/verify-deploy.sh HEAD
   - `service.py` implements `SupabaseAuthService` with sealed-cookie session handling, token verification/refresh, and OAuth state validation
   - `supabase_client.py` creates per-request stateless Supabase clients (session persistence disabled), which is important for Vercel safety
 - Frontend is vanilla JS/HTML/CSS in `public/`; backend and frontend are tightly coupled through the above `/api/*` routes and auth redirects.
-- `tools/pipette/` is a separate orchestration subsystem (CLI + lockfile + trace model) used by the `/pipette` workflow, with tests under `tests/pipette/`.
 
 ## QA expectations that matter in this repo
 - Browser smoke (`tests/e2e/test_smoke.py`) is the load-bearing hosted verification signal.
@@ -148,12 +166,3 @@ bash scripts/verify-deploy.sh HEAD
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; do not allow-list failures unless they are proven third-party.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
 - The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
-
-## /pipette note
-- Before invoking `/pipette`, read:
-  - `docs/superpowers/specs/2026-04-28-pipette-design.md`
-  - `docs/superpowers/plans/2026-04-28-pipette.md`
-- `/pipette doctor` validates prerequisites before heavy planning.
-- `/pipette <topic>` runs Steps -1 through 7 with deterministic gates and per-feature artifacts under `docs/pipeline/`.
-- Pause/resume via `/pipette resume <topic>`; abort via `/pipette abort <topic>`.
-- Operational commands are exposed via `python -m tools.pipette ...` and wrapped by slash-command flows.

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Block commits containing unresolved git conflict markers.
+# Runs against staged content only (no working-tree noise).
+
+staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -z "$staged" ] && exit 0
+
+bad=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  # Skip binaries.
+  case "$(file --brief --mime "$f" 2>/dev/null || true)" in
+    *charset=binary*) continue ;;
+  esac
+  # Match conflict markers at column 0 only (avoid matching prose like "<<<<<<< prefix").
+  if git show ":$f" 2>/dev/null | grep -E '^(<{7}|={7}|>{7})( |$)' -q; then
+    bad="${bad}${f}"$'\n'
+  fi
+done <<< "$staged"
+
+if [ -n "$bad" ]; then
+  echo "[pre-commit] ERROR: unresolved conflict markers in staged files:" >&2
+  printf '%s' "$bad" | sed 's/^/  - /' >&2
+  echo "[pre-commit] Resolve markers, re-stage, then commit again." >&2
+  exit 1
+fi
