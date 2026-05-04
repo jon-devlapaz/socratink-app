@@ -30,13 +30,11 @@ const STAGE = Object.freeze({
 const CHAT_COPY = Object.freeze({
   TURN_1: "What do you want to understand?",
   TURN_2: "Sketch what you think it does — rough is fine. What parts come to mind?",
-  // The fallback is generic-but-honest for v1: "inputs and outputs" is the
-  // input-output frame most causal concepts share, derived in spirit from the
-  // spec's analogical-fallback rule. Concept-derived analogy generation is a
+  // The fallback is concept-agnostic: one example works for processes, state
+  // quantities, and abstract nouns. Concept-derived analogy generation is a
   // documented Plan B follow-up — see plan §"Out of scope".
   FALLBACK:
-    "Try this: think of something familiar that takes inputs and produces outputs. " +
-    "What inputs does this concept take, and what does it produce?",
+    "Try this: give one example. Anywhere this concept shows up in something you've read or experienced — a small detail will do.",
 });
 
 const FOOTER_DEFAULT = "Study content stays locked until the cold attempt.";
@@ -96,6 +94,9 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
 
     container.innerHTML = `
       <div class="creation-chat" data-stage="${escHtml(state.stage)}">
+        ${state.concept
+          ? `<p class="creation-chat-anchor"><span class="creation-chat-anchor-label">CONCEPT</span><span class="creation-chat-anchor-name">${escHtml(state.concept)}</span></p>`
+          : ""}
         <p class="creation-chat-question" id="creation-chat-question">${escHtml(question)}</p>
         <textarea
           class="creation-chat-composer"
