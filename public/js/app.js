@@ -23,6 +23,7 @@ import {
   getActiveId, setActiveId, getActiveConcept,
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
+import { AudioFX } from './audio.js?v=1';
 
 import {
   card, titleEl, descEl, primaryControls, drillControls,
@@ -356,9 +357,10 @@ const App = (() => {
       const field = document.getElementById('hero-single-input-field');
       const raw = (field ? field.value : '').trim();
       if (!raw) return false;
+      const originRect = field ? field.getBoundingClientRect() : null;
       showDashboard();
       openDrawer();
-      startAddConcept({ name: raw });
+      startAddConcept({ name: raw }, originRect);
       if (field) {
         field.value = '';
         field.style.height = '';
@@ -408,20 +410,33 @@ const App = (() => {
       autogrow();
     };
     field.addEventListener('input', sync);
-    // Cmd/Ctrl+Enter to submit from textarea (since plain Enter adds a newline).
+
+    const isPrintable = (e) =>
+      !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
+      (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
+
+    field.addEventListener('focus', () => AudioFX.playFocusTap());
     field.addEventListener('keydown', (e) => {
+      if (isPrintable(e)) {
+        AudioFX.playKeyClick();
+        field.classList.add('is-typing');
+      }
+      // Cmd/Ctrl+Enter to submit from textarea (since plain Enter adds a newline).
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && field.value.trim()) {
         e.preventDefault();
         form?.requestSubmit?.();
       }
     });
+    field.addEventListener('keyup', () => field.classList.remove('is-typing'));
+    field.addEventListener('blur', () => field.classList.remove('is-typing'));
+
     const chips = document.querySelectorAll('[data-hero-example]');
     chips.forEach((chip) => {
       chip.addEventListener('click', () => {
         const value = chip.dataset.heroExample || '';
         if (!value) return;
         field.value = value;
-        field.focus();
+        field.focus(); // focus handler fires playFocusTap on the resulting focus transition
         field.setSelectionRange(value.length, value.length);
         sync();
       });
@@ -797,7 +812,7 @@ const App = (() => {
 
   // ── Dialog helpers (C6a) ─────────────────────────────────────
   let __dialogInertedNodes = [];
-  function mountCreationDialog() {
+  function mountCreationDialog(originRect) {
     let node = document.getElementById('creation-dialog');
     const firstMount = !node;
     if (firstMount) {
@@ -830,6 +845,32 @@ const App = (() => {
       node.querySelector('.creation-dialog-scrim').addEventListener('click', () => closeCreationDialog());
       node.querySelector('.creation-dialog-shell').addEventListener('keydown', trapFocusHandler);
     }
+    
+    // Apply FLIP coordinates for the Antigravity spring animation
+    if (originRect) {
+      const shell = node.querySelector('.creation-dialog-shell');
+      shell.style.opacity = '0'; // hide while measuring
+      requestAnimationFrame(() => {
+        const finalRect = shell.getBoundingClientRect();
+        const deltaX = originRect.left - finalRect.left;
+        const deltaY = originRect.top - finalRect.top;
+        const scaleX = originRect.width / finalRect.width;
+        const scaleY = originRect.height / finalRect.height;
+        
+        shell.style.setProperty('--flip-x', `${deltaX}px`);
+        shell.style.setProperty('--flip-y', `${deltaY}px`);
+        shell.style.setProperty('--flip-sx', `${scaleX}`);
+        shell.style.setProperty('--flip-sy', `${scaleY}`);
+        
+        shell.style.opacity = ''; // reset
+        shell.classList.remove('anim-antigravity-enter');
+        void shell.offsetWidth; // trigger reflow
+        shell.classList.add('anim-antigravity-enter');
+      });
+    } else {
+      node.querySelector('.creation-dialog-shell').classList.remove('anim-antigravity-enter');
+    }
+
     node.dataset.open = 'true';
     __dialogInertedNodes = Array.from(document.body.children).filter(
       (el) => el !== node && !el.hasAttribute('inert')
@@ -1301,9 +1342,9 @@ const App = (() => {
     overlayHandle.removeOverlay(true);
   }
 
-  async function startAddConcept(seed) {
+  async function startAddConcept(seed, originRect) {
     window.__creationDialogTrigger = document.activeElement;
-    const dialog = mountCreationDialog();
+    const dialog = mountCreationDialog(originRect);
     let isGuest = false;
     let session = null;
     try {
@@ -1327,7 +1368,7 @@ const App = (() => {
     // learner's concept, sketchTurns, and source from the failed submit.
     // Banner names two strategic paths without consoling or naming the provider.
     function remountWithError(err, preservedState) {
-      const dialog2 = mountCreationDialog();
+      const dialog2 = mountCreationDialog(); // No origin rect needed for remount
       // Prefer the server's strategy-framed message (422 returns
       // {error, message} like "Add more to your sketch, or attach source
       // material — either path opens the build."). Falls back to the
@@ -3734,6 +3775,17 @@ const App = (() => {
               </div>
             </div>
           </article>
+
+          <article class="settings-page-card">
+            <div class="settings-section-header">
+              <h4>Sound</h4>
+            </div>
+            <p class="settings-subtext">Quiet sensory cues at the threshold — a soft tone on focus, a low settle on submit. On by default. Saved to this browser only.</p>
+            <label class="settings-sound-toggle" for="settings-sound-input">
+              <input type="checkbox" id="settings-sound-input">
+              <span>Enable threshold sounds</span>
+            </label>
+          </article>
         </div>
       </div>
     `;
@@ -3839,6 +3891,15 @@ const App = (() => {
     });
 
     testBtn?.addEventListener('click', refreshBackendStatus);
+
+    const soundInput = settingsContent.querySelector('#settings-sound-input');
+    if (soundInput) {
+      soundInput.checked = AudioFX.enabled;
+      soundInput.addEventListener('change', () => {
+        AudioFX.setEnabled(soundInput.checked);
+        if (soundInput.checked) AudioFX.playFocusTap();
+      });
+    }
 
     try {
       const session = await fetchAuthSession();
