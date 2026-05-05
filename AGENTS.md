@@ -142,6 +142,7 @@ bash scripts/verify-deploy.sh HEAD
 - Deterministic agent quality rules live in `docs/codex/agent-quality.md`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
 - Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `docs/codex/onboarding.md`.
+- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — read `docs/project/crg-architecture-snapshot-2026-05-04.md` first. It's a CRG-derived briefing that gives you the shape of the codebase in ~3 minutes so you don't have to grep your way to it. Re-generated after major refactors; the underlying graph itself is always live (auto-updated on every `Edit|Write|Bash` via `.claude/settings.json` `PostToolUse` hook), so the snapshot is the periodic crystallisation, not a cache.
 
 ## Multi-agent and worktree safety
 - Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs that specialty.

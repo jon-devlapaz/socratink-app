@@ -225,7 +225,7 @@
             <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
           </div>
           <h1 class="hero-title" id="title">What do you want to understand?</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept or paste source material. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.</p>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
             <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
@@ -236,31 +236,22 @@
               </svg>
             </button>
           </div>
-          <!-- Empty-state single input: routes by input shape (short line → concept name, long/punctuated → passage). Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
+          <!-- Empty-state single input: single-purpose concept-name capture. Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
           <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
             <textarea class="hero-single-input__field"
                       id="hero-single-input-field"
                       rows="1"
-                      placeholder='e.g. "Entropy", or paste a passage'
+                      maxlength="200"
+                      placeholder='e.g. Photosynthesis'
                       aria-label="What do you want to understand?"></textarea>
             <div class="hero-single-input__row">
-              <input class="hero-single-input__file"
-                     id="hero-single-input-file"
-                     type="file"
-                     accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf"
-                     hidden>
-              <button type="button"
-                      class="hero-single-input__attach"
-                      id="hero-single-input-attach"
-                      aria-describedby="hero-single-input-file-note"
-                      title="Attach TXT, MD, or PDF. Max 2 MB.">
-                <span class="hero-single-input__attach-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m21.4 11.1-8.7 8.7a6 6 0 0 1-8.5-8.5l8.7-8.7a4 4 0 0 1 5.7 5.7l-8.8 8.7a2 2 0 0 1-2.8-2.8l8.1-8.1"/>
-                  </svg>
-                </span>
-                <span>Attach file</span>
-              </button>
+              <div class="hero-example-chips" aria-label="Try one of these">
+                <span class="hero-example-chips__label">Try</span>
+                <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
+                <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
+                <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
+                <button type="button" class="hero-example-chip" data-hero-example="Cognitive bias">Cognitive bias</button>
+              </div>
               <button type="submit" class="hero-single-input__submit" disabled>
                 <span>Start first room</span>
                 <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -269,8 +260,6 @@
                 </svg>
               </button>
             </div>
-            <p class="hero-single-input__file-note" id="hero-single-input-file-note" aria-live="polite">TXT, MD, or PDF · max 2 MB</p>
-            <p class="hero-single-input__reassure">The first room is small.</p>
           </form>
 
           <div id="timer-display">24:00:00</div>

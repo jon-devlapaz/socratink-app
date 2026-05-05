@@ -598,7 +598,9 @@
   --card-bg:      var(--surface-card-theme);
   --text:         var(--text-strong);
   --text-sub:     var(--text-muted);
-  --drawer-bg:    var(--surface-panel-theme);
+  /* Dark-mode sidebar reads as neutral graphite, not violet-tinted —
+     calmer alongside the violet-tinted main canvas. */
+  --drawer-bg:    #18181b;
   --border:       var(--border-subtle);
   --tile-top:     var(--graph-tile-top);
   --tile-left:    var(--graph-tile-left);
