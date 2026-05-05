@@ -90,7 +90,7 @@ def _validate_outbound_target(url: str) -> list[str]:
             raise BlockedSource(f"unparseable address {ip_str!r}", reason="private_address") from exc
         if not ip.is_global:
             raise BlockedSource(f"non-global address {ip}", reason="private_address")
-        validated_ips.append(ip_str)
+        validated_ips.append(str(ip_str))
 
     # 6. Effective port
     effective_port = port if port is not None else (443 if parsed.scheme == "https" else 80)

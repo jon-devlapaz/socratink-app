@@ -795,7 +795,7 @@ def login(request: Request, return_to: str | None = None):
     current = load_current_session_state(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated and not current.guest_mode:
-        response = RedirectResponse(url=sanitized_return_to, status_code=302)
+        response: Response = RedirectResponse(url=sanitized_return_to, status_code=302)
     else:
         response = HTMLResponse(_render_login_html())
     if current.should_clear_cookie:

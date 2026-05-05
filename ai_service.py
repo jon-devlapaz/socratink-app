@@ -4,7 +4,12 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Literal, Optional, TypedDict
+from typing import Any, Callable, Literal, Optional, TypedDict, TYPE_CHECKING, cast
+
+from llm.types import StructuredLLMResult
+
+if TYPE_CHECKING:
+    from learning_commons import LCStandard
 
 from google import genai
 from google.genai.errors import APIError
@@ -290,7 +295,7 @@ def _infer_node_type(knowledge_map: dict, node_id: str) -> str:
 
 def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
     metadata = knowledge_map.get("metadata") or {}
-    pruned = {
+    pruned: dict[str, Any] = {
         "metadata": {
             "thesis": metadata.get("core_thesis"),
             "governing_assumptions": metadata.get("governing_assumptions") or [],
@@ -402,7 +407,7 @@ def _call_gemini_with_retry(
             raise ValueError(f"Unexpected error: {str(err)}") from err
 
 
-def _infer_help_request_reason(message: str) -> str | None:
+def _infer_help_request_reason(message: str) -> Literal["explicit_unknown", "explicit_explain_request", "affective_confusion"] | None:
     normalized = " ".join((message or "").strip().lower().split())
     if not normalized:
         return None
@@ -537,7 +542,7 @@ def _normalize_response_quality(evaluation: DrillEvaluation) -> None:
         "deep": 3,
         "solid": 4,
     }
-    band_by_tier = {
+    band_by_tier: dict[int, Literal["spark", "link", "chain", "clear", "tetris"]] = {
         1: "spark",
         2: "link",
         3: "chain",
@@ -899,7 +904,7 @@ def drill_chat(
         if (
             datetime.now(timezone.utc) - session_start
         ).total_seconds() >= session_time_limit_seconds:
-            result = {
+            result: DrillTurnResult = {
                 "agent_response": "That's a good stopping point. Your progress is saved. Pick up where you left off next session.",
                 "generative_commitment": None,
                 "answer_mode": None,
@@ -1017,7 +1022,7 @@ def drill_chat(
                 session_terminated = True
                 termination_reason = "node_cap"
 
-    result = {
+    result = cast(DrillTurnResult, {
         "agent_response": evaluation.agent_response.strip(),
         "generative_commitment": evaluation.generative_commitment,
         "answer_mode": evaluation.answer_mode,
@@ -1039,5 +1044,6 @@ def drill_chat(
         and (evaluation.response_tier or 0) >= 4,
         "session_terminated": session_terminated,
         "termination_reason": termination_reason,
-    }
+    })
     return result
+

@@ -179,16 +179,24 @@ def _extract_title(soup: BeautifulSoup, source_url: str) -> str:
             return t
 
     og = soup.find("meta", attrs={"property": "og:title"})
-    if og and og.get("content"):
-        t = og["content"].strip()
-        if t:
-            return t
+    if og:
+        og_content = og.get("content")
+        if isinstance(og_content, list):
+            og_content = " ".join(og_content)
+        if isinstance(og_content, str):
+            t = og_content.strip()
+            if t:
+                return t
 
     tw = soup.find("meta", attrs={"name": "twitter:title"})
-    if tw and tw.get("content"):
-        t = tw["content"].strip()
-        if t:
-            return t
+    if tw:
+        tw_content = tw.get("content")
+        if isinstance(tw_content, list):
+            tw_content = " ".join(tw_content)
+        if isinstance(tw_content, str):
+            t = tw_content.strip()
+            if t:
+                return t
 
     h1 = soup.find("h1")
     if h1:
