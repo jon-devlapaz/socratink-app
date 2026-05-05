@@ -4,6 +4,7 @@ Refresh-token rotation requires that rotated tokens be written back on protected
 requests; otherwise the next request 401s.
 """
 
+import os
 import unittest
 
 from fastapi.testclient import TestClient
@@ -99,6 +100,72 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
 
         response = client.get("/", follow_redirects=False)
         self.assertEqual(response.status_code, 200)
+
+
+class DevAutoguestGuardTests(unittest.TestCase):
+    """The dev-autoguest escape hatch must stay inert in any production-shaped
+    runtime env, regardless of whether the opt-in env var is set.
+    """
+
+    def setUp(self):
+        self.original_service = main.app.state.auth_service
+        self._env_keys = ("SOCRATINK_DEV_AUTOGUEST", "VERCEL", "VERCEL_ENV", "CI")
+        self._env_snapshot = {k: os.environ.get(k) for k in self._env_keys}
+
+    def tearDown(self):
+        main.app.state.auth_service = self.original_service
+        for key, value in self._env_snapshot.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def _set_env(self, **values):
+        for key in self._env_keys:
+            os.environ.pop(key, None)
+        for key, value in values.items():
+            if value is not None:
+                os.environ[key] = value
+
+    def _client(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        main.app.state.auth_service = service
+        return TestClient(main.app)
+
+    def test_default_local_redirects_to_login(self):
+        self._set_env()  # all unset
+        client = self._client()
+        response = client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/login?return_to=%2F")
+
+    def test_dev_autoguest_redirects_to_guest_route(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        client = self._client()
+        response = client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/auth/guest?return_to=%2F")
+
+    def test_vercel_env_disables_dev_autoguest(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1", VERCEL="1")
+        client = self._client()
+        response = client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/login?return_to=%2F")
+
+    def test_vercel_env_marker_disables_dev_autoguest(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1", VERCEL_ENV="production")
+        client = self._client()
+        response = client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/login?return_to=%2F")
+
+    def test_ci_env_disables_dev_autoguest(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1", CI="true")
+        client = self._client()
+        response = client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/login?return_to=%2F")
 
 
 if __name__ == "__main__":
