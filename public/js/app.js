@@ -18,6 +18,7 @@ import {
   redirectToLogin,
 } from './auth.js?v=3';
 import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
+import { isSubstantiveSketch } from './sketch-validation.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -28,7 +29,7 @@ import { AudioFX } from './audio.js?v=1';
 import {
   card, titleEl, descEl, primaryControls, drillControls,
   heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
-  addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
+  ignitionView, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls
 } from './dom.js';
 
@@ -268,7 +269,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Name one concept. socratink helps you rebuild it from memory; the first room asks for a small cold attempt before any explanation appears.';
+    if (!concept) return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -285,7 +286,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
       default:
-        return 'Name one concept. The first room asks for a small cold attempt before any explanation appears.';
+        return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
     }
   }
 
@@ -348,23 +349,44 @@ const App = (() => {
     }
   }
 
+  function clearHeroThresholdComposer() {
+    const conceptField = document.getElementById('hero-single-input-field');
+    const sketchField = document.getElementById('hero-starting-map-field');
+    [conceptField, sketchField].forEach((field) => {
+      if (!field) return;
+      field.value = '';
+      field.style.height = '';
+      field.classList.remove('is-typing');
+    });
+    const validation = document.getElementById('hero-threshold-validation');
+    if (validation) {
+      validation.textContent = '';
+    }
+    const submit = document.querySelector('.hero-single-input__submit');
+    if (submit instanceof HTMLButtonElement) {
+      submit.disabled = true;
+      submit.title = 'Add one concept and one guess, example, or confusion before socratink builds the draft path.';
+    }
+  }
+
   function runHeroAction(evtOrNothing) {
-    // Empty-state form submit path: a Submit event comes in. Hero is single-purpose:
-    // capture the concept name. Source material is attached on the modal's
-    // source-material chip if the learner wants it.
+    // Form submit path from the Ignition threshold composer. Captures the Concept
+    // Threshold seed (concept name + global starting-map context) and hands off
+    // to the existing creation flow at the summary card stage. The post-create
+    // navigation to Desk happens inside finishConceptCreateAfterOverlay.
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
-      const field = document.getElementById('hero-single-input-field');
-      const raw = (field ? field.value : '').trim();
-      if (!raw) return false;
-      const originRect = field ? field.getBoundingClientRect() : null;
-      showDashboard();
-      openDrawer();
-      startAddConcept({ name: raw }, originRect);
-      if (field) {
-        field.value = '';
-        field.style.height = '';
-      }
+      const conceptField = document.getElementById('hero-single-input-field');
+      const sketchField = document.getElementById('hero-starting-map-field');
+      const conceptName = (conceptField ? conceptField.value : '').trim();
+      const startingMap = (sketchField ? sketchField.value : '').trim();
+      if (!conceptName || !isSubstantiveSketch(startingMap)) return false;
+      const originRect = sketchField ? sketchField.getBoundingClientRect() : null;
+      startAddConcept({
+        name: conceptName,
+        sketchTurns: [startingMap],
+        stage: 'summary',
+      }, originRect);
       return false;
     }
 
@@ -392,52 +414,74 @@ const App = (() => {
     }
   }
 
-  // Wire up the empty-state single input: autogrow, enable Begin on non-empty,
-  // and attach small source files by reading them into the prompt.
+  // Wire up the empty-state Concept Threshold: autogrow both fields, require a
+  // concept plus one global starting-map detail, and seed the existing creation
+  // summary rather than creating a parallel entry flow.
   function initHeroSingleInput() {
-    const field = document.getElementById('hero-single-input-field');
-    if (!(field instanceof HTMLTextAreaElement)) return;
+    const conceptField = document.getElementById('hero-single-input-field');
+    const sketchField = document.getElementById('hero-starting-map-field');
+    if (!(conceptField instanceof HTMLTextAreaElement) || !(sketchField instanceof HTMLTextAreaElement)) return;
     const form = document.getElementById('hero-single-input');
     const submit = form?.querySelector('.hero-single-input__submit');
-    const autogrow = () => {
+    const validation = document.getElementById('hero-threshold-validation');
+    const thresholdFields = [conceptField, sketchField];
+    const autogrowField = (field) => {
       field.style.height = 'auto';
       field.style.height = Math.min(field.scrollHeight, 240) + 'px';
     };
+    const autogrow = () => thresholdFields.forEach(autogrowField);
     const sync = () => {
+      const hasConcept = conceptField.value.trim().length > 0;
+      const sketchText = sketchField.value.trim();
+      const sketchIsSubstantive = isSubstantiveSketch(sketchText);
       if (submit instanceof HTMLButtonElement) {
-        submit.disabled = field.value.trim().length === 0;
+        submit.disabled = !(hasConcept && sketchIsSubstantive);
+        submit.title = hasConcept && sketchIsSubstantive
+          ? 'Create draft path'
+          : 'Add a few words about how you think it works before socratink builds the draft path.';
+      }
+      if (validation) {
+        validation.textContent = hasConcept && !sketchIsSubstantive
+          ? 'Add a few words about how you think it works before socratink builds the draft path.'
+          : '';
       }
       autogrow();
     };
-    field.addEventListener('input', sync);
+    thresholdFields.forEach((field) => field.addEventListener('input', sync));
 
     const isPrintable = (e) =>
       !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
       (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
 
-    field.addEventListener('focus', () => AudioFX.playFocusTap());
-    field.addEventListener('keydown', (e) => {
-      if (isPrintable(e)) {
-        AudioFX.playKeyClick();
-        field.classList.add('is-typing');
-      }
-      // Cmd/Ctrl+Enter to submit from textarea (since plain Enter adds a newline).
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && field.value.trim()) {
-        e.preventDefault();
-        form?.requestSubmit?.();
-      }
+    thresholdFields.forEach((field) => {
+      field.addEventListener('focus', () => AudioFX.playFocusTap());
+      field.addEventListener('keydown', (e) => {
+        if (field === conceptField && e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+          e.preventDefault();
+          sketchField.focus();
+          return;
+        }
+        if (isPrintable(e)) {
+          AudioFX.playKeyClick();
+          field.classList.add('is-typing');
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim() && isSubstantiveSketch(sketchField.value.trim())) {
+          e.preventDefault();
+          form?.requestSubmit?.();
+        }
+      });
+      field.addEventListener('keyup', () => field.classList.remove('is-typing'));
+      field.addEventListener('blur', () => field.classList.remove('is-typing'));
     });
-    field.addEventListener('keyup', () => field.classList.remove('is-typing'));
-    field.addEventListener('blur', () => field.classList.remove('is-typing'));
 
     const chips = document.querySelectorAll('[data-hero-example]');
     chips.forEach((chip) => {
       chip.addEventListener('click', () => {
         const value = chip.dataset.heroExample || '';
         if (!value) return;
-        field.value = value;
-        field.focus(); // focus handler fires playFocusTap on the resulting focus transition
-        field.setSelectionRange(value.length, value.length);
+        conceptField.value = value;
+        sketchField.focus(); // focus handler fires playFocusTap on the resulting focus transition
+        sketchField.setSelectionRange(sketchField.value.length, sketchField.value.length);
         sync();
       });
     });
@@ -533,12 +577,12 @@ const App = (() => {
   if (window.innerWidth >= 900) openDrawer();
 
   function clearSettingsPanel() {
-    const triggerArea = document.getElementById('add-trigger-area');
-    const settingsPanel = triggerArea?.querySelector('.settings-panel');
+    const host = document.getElementById('sidebar-settings-host');
+    const settingsPanel = host?.querySelector('.settings-panel');
     if (!settingsPanel) return;
     const settingsBtn = document.getElementById('nav-settings');
     if (settingsBtn) delete settingsBtn.dataset.engaged;
-    renderAddTrigger();
+    host.innerHTML = '';
   }
 
   // ── 11. Concept list render ────────────────────────────────
@@ -568,32 +612,6 @@ const App = (() => {
       });
       conceptListEl.appendChild(item);
     });
-
-    renderAddTrigger();
-  }
-
-  function renderAddTrigger() {
-    addTriggerArea.style.overflowY = '';
-    const full = loadConcepts().length >= 4;
-    addTriggerArea.innerHTML = full
-      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Library full. Remove a concept to add another.">
-           <span class="add-trigger-icon" aria-hidden="true">
-             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-               <line x1="6" y1="2" x2="6" y2="10"/>
-               <line x1="2" y1="6" x2="10" y2="6"/>
-             </svg>
-           </span>
-           <span class="add-trigger-title">library full</span>
-         </button>`
-      : `<button class="add-trigger" id="add-trigger" type="button" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon" aria-hidden="true">
-             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-               <line x1="6" y1="2" x2="6" y2="10"/>
-               <line x1="2" y1="6" x2="10" y2="6"/>
-             </svg>
-           </span>
-           <span class="add-trigger-title">new tink</span>
-         </button>`;
   }
 
   function isBlockedVideoUrl(value) {
@@ -1337,7 +1355,10 @@ const App = (() => {
     saveConcepts(concepts);
     renderGrid(concepts);
     renderConceptList(concepts);
+    renderIgnitionGate();
+    showDashboard();
     selectConcept(concept.id);
+    clearHeroThresholdComposer();
     closeDrawer();
     overlayHandle.removeOverlay(true);
   }
@@ -1491,6 +1512,7 @@ const App = (() => {
       }
       renderGrid(concepts);
       renderConceptList(concepts);
+      renderIgnitionGate();
     };
 
     if (item) {
@@ -1526,6 +1548,7 @@ const App = (() => {
     applyControlsForState(concept.state, concept);
     renderGrid();
     renderConceptList();
+    renderIgnitionGate();
     return concept;
   }
 
@@ -2067,9 +2090,11 @@ const App = (() => {
 
   function hidePrimaryViews() {
     const heroCard = document.querySelector('.hero-card');
+    const ignitionView = document.getElementById('ignition-view');
     const libraryView = document.getElementById('library-view');
     const settingsView = document.getElementById('settings-view');
     if (heroCard) heroCard.style.display = 'none';
+    if (ignitionView) ignitionView.classList.remove('visible');
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
   }
@@ -2106,7 +2131,7 @@ const App = (() => {
 
   function setNavActive(id) {
     currentPrimaryNav = id;
-    ['nav-dashboard', 'nav-library', 'nav-settings'].forEach((navId) => {
+    ['nav-dashboard', 'nav-ignition', 'nav-library', 'nav-settings'].forEach((navId) => {
       const el = document.getElementById(navId);
       if (el) el.classList.toggle('active', navId === currentPrimaryNav);
       
@@ -2125,6 +2150,43 @@ const App = (() => {
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
     if (window.innerWidth < 900) closeDrawer();
+  }
+
+  function showIgnition() {
+    setNavActive('nav-ignition');
+    clearSettingsPanel();
+    teardownMapView();
+    hidePrimaryViews();
+    const view = document.getElementById('ignition-view');
+    if (view) view.classList.add('visible');
+    renderIgnitionGate();
+    if (window.innerWidth < 900) closeDrawer();
+    // Focus the concept field so the threshold composer is immediately usable.
+    const conceptField = document.getElementById('hero-single-input-field');
+    if (conceptField instanceof HTMLTextAreaElement) {
+      requestAnimationFrame(() => conceptField.focus());
+    }
+  }
+
+  function hideIgnition() {
+    const view = document.getElementById('ignition-view');
+    if (view) view.classList.remove('visible');
+  }
+
+  function renderIgnitionGate() {
+    const atCap = loadConcepts().length >= 4;
+    const gate = document.getElementById('ignition-cap-gate');
+    const form = document.getElementById('hero-single-input');
+    if (gate) gate.hidden = !atCap;
+    if (form) form.hidden = atCap;
+    // Also disable the Ignition nav entry visually when at cap.
+    ['nav-ignition', 'bn-ignition'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('disabled', atCap);
+      el.setAttribute('aria-disabled', atCap ? 'true' : 'false');
+      el.title = atCap ? 'Library full. Retire a concept to add another.' : '';
+    });
   }
 
   const BUILT_IN_LIBRARY_CONCEPTS = [
@@ -2169,6 +2231,7 @@ const App = (() => {
 
       renderGrid(concepts);
       renderConceptList(concepts);
+      renderIgnitionGate();
       selectConcept(newConcept.id);
       hideLibrary();
       showMapView(newConcept);
@@ -2254,7 +2317,7 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Add a concept on the desk to begin.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">Ignition</a>.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
@@ -2377,6 +2440,7 @@ const App = (() => {
   bindMapModeControls();
   renderGrid();
   renderConceptList();
+  renderIgnitionGate();
   initHeroSingleInput();
 
   // Restore selected concept
@@ -2391,18 +2455,9 @@ const App = (() => {
     persistPhaseBResumeState(null);
   }
 
-  if (!toLoad) {
-    showEmptyState();
-  } else {
-    activateConceptSelection(toLoad.id);
-    if (resumeConcept && resumeConcept.id === toLoad.id) {
-      showMapView(toLoad);
-    }
-  }
-
   void maybeShowFirstRunWelcome({
     getSession: () => fetchAuthSession(),
-    shouldShow: () => loadConcepts().length === 0 && heroStateChipEl?.dataset.state === 'empty',
+    shouldShow: () => loadConcepts().length === 0,
   });
 
   sessionState = loadPhaseBSessionState(getActiveId());
@@ -2420,6 +2475,17 @@ const App = (() => {
     _normalizationIdx: 0,
     sessionCompletePending: false,
   };
+
+  // Boot routing runs AFTER drillState is initialized because showIgnition()
+  // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
+  if (!toLoad) {
+    showIgnition();
+  } else {
+    activateConceptSelection(toLoad.id);
+    if (resumeConcept && resumeConcept.id === toLoad.id) {
+      showMapView(toLoad);
+    }
+  }
 
   function createDrillLogSessionId() {
     if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -3981,11 +4047,10 @@ const App = (() => {
     runInspectAction,
     deleteConcept,
     startAddConcept,
-    renderAddTrigger,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
-    showLibrary, hideLibrary, openLibraryConcept, showDashboard, showSettings,
+    showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
     importLibraryConcept,
     toggleTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader

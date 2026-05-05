@@ -15,7 +15,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
     rel="stylesheet">
   <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,close,help,info,memory,settings,show_chart&display=block"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,bolt,close,help,info,memory,settings,show_chart&display=block"
     rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=1">
@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=71">
+  <link rel="stylesheet" href="styles.css?v=74">
 </head>
 
 <body>
@@ -45,6 +45,10 @@
 
   <!-- Bottom Mobile Navigation -->
   <nav class="bottom-nav" id="bottom-nav">
+    <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
+      <span class="material-symbols-outlined">bolt</span>
+      <span class="bottom-nav-label">Ignition</span>
+    </a>
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
       <span class="material-symbols-outlined">auto_awesome</span>
       <span class="bottom-nav-label">Desk</span>
@@ -67,6 +71,8 @@
     </div>
 
     <nav class="sidebar-nav">
+      <a id="nav-ignition" class="sidebar-nav-item" href="javascript:void(0)"
+        onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> Ignition</a>
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
         onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
@@ -81,7 +87,7 @@
     <span class="sidebar-section-label">Concepts</span>
 
     <div id="concept-list"></div>
-    <div id="add-trigger-area"></div>
+    <div id="sidebar-settings-host"></div>
 
     <!-- Drawer footer (mobile only) -->
     <div class="drawer-footer" aria-label="Account actions">
@@ -207,9 +213,6 @@
 
     <!-- Hero card: concept info left, crystal grid right -->
     <section class="hero-card intro-page">
-      <div class="intro-particles" aria-hidden="true">
-        <canvas id="intro-particle-canvas"></canvas>
-      </div>
 
       <div class="intro-content">
         <div class="hero-info" id="hero-info">
@@ -222,45 +225,20 @@
             </div>
           </div>
           <div class="hero-eyebrow-row">
-            <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
+            <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
           </div>
-          <h1 class="hero-title" id="title">What do you want to understand?</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.</p>
+          <h1 class="hero-title" id="title">Your draft paths.</h1>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter a room, or start a new draft path at Ignition.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
-            <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
-              <span class="hero-primary-action__label">Begin</span>
+            <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
+              <span class="hero-primary-action__label">Begin at Ignition</span>
               <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>
               </svg>
             </button>
           </div>
-          <!-- Empty-state single input: single-purpose concept-name capture. Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
-          <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-            <textarea class="hero-single-input__field"
-                      id="hero-single-input-field"
-                      rows="1"
-                      maxlength="200"
-                      placeholder='e.g. Photosynthesis'
-                      aria-label="What do you want to understand?"></textarea>
-            <div class="hero-single-input__row">
-              <div class="hero-example-chips" aria-label="Try one of these">
-                <span class="hero-example-chips__label">Try</span>
-                <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
-                <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
-                <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
-                <button type="button" class="hero-example-chip" data-hero-example="Cognitive bias">Cognitive bias</button>
-              </div>
-              <button type="submit" class="hero-single-input__submit" disabled>
-                <span>Start first room</span>
-                <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h13"></path>
-                  <path d="m13 6 6 6-6 6"></path>
-                </svg>
-              </button>
-            </div>
-          </form>
 
           <div id="timer-display">24:00:00</div>
 
@@ -307,6 +285,63 @@
         </div>
       </div>
 
+    </section>
+
+    <!-- Ignition View: threshold composer for starting a new concept -->
+    <section id="ignition-view" class="primary-view ignition-view" aria-labelledby="ignition-title">
+      <div class="intro-particles" aria-hidden="true">
+        <canvas id="intro-particle-canvas"></canvas>
+      </div>
+      <div class="ignition-view__inner">
+        <p class="ignition-eyebrow">Start here</p>
+        <h1 class="ignition-title" id="ignition-title">What do you want to understand?</h1>
+
+        <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() when loadConcepts().length >= 4. -->
+        <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
+          <p class="ignition-cap-gate__message">Library is full (4 concepts). Retire one before starting another.</p>
+          <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
+        </div>
+
+        <!-- Threshold composer. Hidden by renderIgnitionGate() when at cap. -->
+        <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
+          <div class="hero-threshold-fields">
+            <label class="hero-threshold-field" for="hero-single-input-field">
+              <span class="hero-threshold-field__label">Concept</span>
+              <textarea class="hero-single-input__field hero-single-input__field--concept"
+                        id="hero-single-input-field"
+                        rows="1"
+                        maxlength="200"
+                        placeholder='e.g. Photosynthesis'
+                        aria-label="What do you want to understand?"
+                        aria-describedby="hero-threshold-validation"></textarea>
+            </label>
+            <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
+              <span class="hero-threshold-field__label">Starting map</span>
+              <textarea class="hero-single-input__field hero-single-input__field--sketch"
+                        id="hero-starting-map-field"
+                        rows="3"
+                        maxlength="1200"
+                        placeholder="Parts, guesses, examples, confusions. No polished answer needed."
+                        aria-describedby="hero-threshold-validation"></textarea>
+            </label>
+            <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
+          </div>
+          <div class="hero-single-input__row">
+            <div class="hero-example-chips" aria-label="Example concepts">
+              <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
+              <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
+              <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
+            </div>
+            <button type="submit" class="hero-single-input__submit" disabled>
+              <span>Create draft path</span>
+              <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13"></path>
+                <path d="m13 6 6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <!-- Library View Panel -->
@@ -375,8 +410,8 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=51"></script>
-  <script src="js/intro-particles.js?v=3"></script>
+  <script type="module" src="js/app.js?v=56"></script>
+  <script src="js/intro-particles.js?v=4"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/feedback.js?v=1"></script>
 

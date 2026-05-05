@@ -80,8 +80,21 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     });
   }
 
+  function getThresholdFields() {
+    return ['hero-single-input-field', 'hero-starting-map-field']
+      .map((id) => document.getElementById(id))
+      .filter((field) => field instanceof HTMLTextAreaElement);
+  }
+
+  function getActiveThresholdField() {
+    const fields = getThresholdFields();
+    return fields.includes(document.activeElement)
+      ? document.activeElement
+      : (fields[1] || fields[0] || null);
+  }
+
   function getTypingFocus() {
-    const field = document.getElementById('hero-single-input-field');
+    const field = getActiveThresholdField();
     const canvasRect = canvas.getBoundingClientRect();
     const fieldRect = field?.getBoundingClientRect?.();
 
@@ -113,7 +126,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   }
 
   function getTypingFieldAnchor() {
-    const field = document.getElementById('hero-single-input-field');
+    const field = getActiveThresholdField();
     const canvasRect = canvas.getBoundingClientRect();
     const fieldRect = field?.getBoundingClientRect?.();
 
@@ -207,30 +220,32 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   }
 
   function bindTypingReaction() {
-    const field = document.getElementById('hero-single-input-field');
-    if (!(field instanceof HTMLTextAreaElement)) return;
+    const fields = getThresholdFields();
+    if (!fields.length) return;
 
-    typing.lastValueLength = field.value.length;
+    typing.lastValueLength = fields.reduce((total, field) => total + field.value.length, 0);
     let spaceQueued = false;
 
-    field.addEventListener('focus', () => {
-      pulseFromTyping(0.55);
-    });
+    fields.forEach((field) => {
+      field.addEventListener('focus', () => {
+        pulseFromTyping(0.55);
+      });
 
-    field.addEventListener('keydown', (event) => {
-      spaceQueued = event.code === 'Space' && !event.metaKey && !event.ctrlKey && !event.altKey;
-    });
+      field.addEventListener('keydown', (event) => {
+        spaceQueued = event.code === 'Space' && !event.metaKey && !event.ctrlKey && !event.altKey;
+      });
 
-    field.addEventListener('input', (event) => {
-      const nextLength = field.value.length;
-      const delta = Math.abs(nextLength - typing.lastValueLength);
-      const selectionIndex = typeof field.selectionStart === 'number' ? field.selectionStart : nextLength;
-      const insertedSpace =
-        (typeof InputEvent !== 'undefined' && event instanceof InputEvent && event.inputType === 'insertText' && event.data === ' ') ||
-        (spaceQueued && field.value.charAt(Math.max(0, selectionIndex - 1)) === ' ');
-      typing.lastValueLength = nextLength;
-      spaceQueued = false;
-      pulseFromTyping(delta || 1, insertedSpace ? 'space' : 'character');
+      field.addEventListener('input', (event) => {
+        const nextLength = fields.reduce((total, nextField) => total + nextField.value.length, 0);
+        const delta = Math.abs(nextLength - typing.lastValueLength);
+        const selectionIndex = typeof field.selectionStart === 'number' ? field.selectionStart : field.value.length;
+        const insertedSpace =
+          (typeof InputEvent !== 'undefined' && event instanceof InputEvent && event.inputType === 'insertText' && event.data === ' ') ||
+          (spaceQueued && field.value.charAt(Math.max(0, selectionIndex - 1)) === ' ');
+        typing.lastValueLength = nextLength;
+        spaceQueued = false;
+        pulseFromTyping(delta || 1, insertedSpace ? 'space' : 'character');
+      });
     });
   }
 

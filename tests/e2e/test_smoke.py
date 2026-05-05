@@ -40,6 +40,7 @@ to absorb any serverless cold-start latency before the browser tests run.
 from __future__ import annotations
 
 import time
+import re
 from urllib.parse import urljoin
 
 import pytest
@@ -82,6 +83,8 @@ def test_health_endpoint_ok(base_url: str) -> None:
 # --- 2. Homepage renders critical DOM ------------------------------------
 
 
+_cached_guest_cookies = None
+
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     """Navigate to base_url and bypass the /login redirect via the guest link.
 
@@ -89,16 +92,38 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     rewrite, so `/` may serve the app shell before the FastAPI redirect fires.
     In that case, explicitly check `/api/me` and enter through `/login`.
     """
+    global _cached_guest_cookies
+    if _cached_guest_cookies:
+        page.context.add_cookies(_cached_guest_cookies)
+
     page.goto(base_url)
     if "/login" not in page.url:
         session = _fetch_browser_session(page)
         if session.get("authenticated") or session.get("guest_mode"):
+            if not _cached_guest_cookies:
+                _cached_guest_cookies = page.context.cookies()
             return
         page.goto(urljoin(base_url + "/", "login?return_to=%2F"))
     if "/login" in page.url:
         expect(page.locator("#guest-continue-link")).to_be_visible()
-        page.locator("#guest-continue-link").click()
-        page.wait_for_url(lambda url: "/login" not in url, timeout=15_000)
+        expect(page.locator("#guest-continue-link")).to_have_attribute("href", re.compile(r"^/auth/guest"))
+        target_pattern = re.compile(r"^" + re.escape(base_url.rstrip("/")) + r"/?$")
+        with page.expect_navigation(url=target_pattern, timeout=15_000):
+            page.locator("#guest-continue-link").click()
+        _cached_guest_cookies = page.context.cookies()
+
+
+def _wait_for_app_settled(page: Page) -> None:
+    """Deterministic replacement for `wait_for_load_state('networkidle')`.
+
+    Why: networkidle is discouraged by Playwright — analytics beacons, retrying
+    fetches, and websockets can keep the network "busy" forever and cause
+    flakes. Instead: wait for the `load` event (resources done) and assert a
+    critical app-shell element is attached. The `expect` call auto-retries,
+    so deferred mount work has up to the default 5s to complete.
+    """
+    page.wait_for_load_state("load")
+    expect(page.locator("#concept-list")).to_be_attached()
 
 
 def _fetch_browser_session(page: Page) -> dict:
@@ -225,7 +250,7 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
 
     clean_page.once("dialog", accept_delete)
     delete_button.click()
-    expect(clean_page.locator("#title")).to_have_text("What do you want to understand?")
+    expect(clean_page.locator("#title")).to_have_text("Your draft paths.")
     expect(clean_page.locator(".concept-item")).to_have_count(0)
     expect(clean_page.locator("#concept-header-title")).not_to_be_visible()
     assert clean_page.locator("body").get_attribute("data-map-open") != "true"
@@ -245,7 +270,7 @@ def test_no_console_errors_on_first_paint(
     """
     _enter_app_shell_as_guest(clean_page, base_url)
     # Settle: give the page a beat to finish any deferred error throws.
-    clean_page.wait_for_load_state("networkidle")
+    _wait_for_app_settled(clean_page)
 
     errors = captured["console_errors"]
     if errors:
@@ -268,7 +293,7 @@ def test_no_failed_critical_asset_requests(
     conftest.py.
     """
     _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.wait_for_load_state("networkidle")
+    _wait_for_app_settled(clean_page)
 
     failed = captured["failed_requests"]
     if failed:
@@ -292,7 +317,7 @@ def test_theme_preloader_resilient_on_blank_localstorage(
     """
     # clean_page already cleared storage. Enter the app shell so the IIFE runs.
     _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.wait_for_load_state("networkidle")
+    _wait_for_app_settled(clean_page)
 
     errors = captured["console_errors"]
     theme_related = [

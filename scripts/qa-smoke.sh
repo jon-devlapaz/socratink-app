@@ -40,9 +40,9 @@ if [ $# -ge 1 ]; then
         # Allow passing an explicit URL as a fallback
         TARGET="$INPUT"
     fi
-else
-    TARGET="${SOCRATINK_BASE_URL:-http://localhost:8000}"
 fi
+
+TARGET="${TARGET:-${SOCRATINK_BASE_URL:-http://localhost:8000}}"
 
 export SOCRATINK_BASE_URL="$TARGET"
 

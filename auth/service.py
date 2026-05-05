@@ -357,6 +357,8 @@ class SupabaseAuthService:
     def _refresh_session(self, refresh_token: str) -> AuthSessionState:
         try:
             client = self._make_supabase_client()
+            # Explicit refresh_token arg: SDK has no stored session; the sealed
+            # cookie is our source of truth. Don't "fix" this to the no-arg form.
             response = client.auth.refresh_session(refresh_token)
         except Exception as err:
             should_clear = _should_clear_refresh_cookie(err)

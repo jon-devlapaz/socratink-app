@@ -513,52 +513,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .concept-item:hover .concept-delete { color:var(--text-sub); }
 .concept-delete:hover { color:var(--danger) !important; background-color:var(--pill-danger-bg); }
 
-/* Add-trigger — ghost row matching .concept-item vocabulary. Trailing row
-   that reads as "the last row where you can add another concept." */
-.add-trigger {
-  display:flex; align-items:center; gap:6px;
-  padding:10px 20px; cursor:pointer;
-  color:var(--text-muted); font-size:13px; font-weight:500;
-  background:transparent; border:none; box-shadow:none;
-  width:100%; min-height:0;
-  font-family:inherit; text-align:left;
-  letter-spacing:0.01em;
-  transition:color 0.15s, background-color 0.15s;
-}
-.add-trigger:hover:not(:disabled),
-.add-trigger:hover:not(:disabled):not(:active) {
-  color:var(--primary);
-  background-color:var(--border);
-  box-shadow:none;
-  transform:none;
-  opacity:1;
-}
-.add-trigger:active:not(:disabled) {
-  transform:none;
-  opacity:1;
-  box-shadow:none;
-}
-.add-trigger:focus-visible {
-  outline:none;
-  box-shadow:none;
-  background-color:var(--border);
-  color:var(--primary);
-}
-.add-trigger.disabled {
-  opacity:0.45;
-  cursor:not-allowed;
-}
-.add-trigger-icon {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:12px; height:12px; flex-shrink:0;
-  color:var(--text-muted);
-  transition:color 0.15s;
-}
-.add-trigger:hover:not(:disabled) .add-trigger-icon { color:var(--primary); }
-.add-trigger-title {
-  flex:1; font-size:13px; color:inherit;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
 
 #tile-tooltip {
   position: absolute;
@@ -578,7 +532,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   z-index: 10;
 }
 #tile-tooltip.visible { opacity: 1; }
-.add-trigger.disabled:hover { color:var(--text-sub); background:none; }
 
 .add-input-row {
   display:flex; align-items:center; gap:8px; padding:8px 16px;
@@ -1009,21 +962,35 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   text-transform: uppercase;
 }
 .creation-chip-action {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
   background: transparent;
   border: 0;
-  padding: 0;
+  border-radius: 4px;
+  box-shadow: none;
+  padding: 2px 4px;
   font: inherit;
   font-size: 11.5px;
   font-weight: 500;
+  line-height: 1.2;
   color: var(--text-sub);
   cursor: pointer;
   text-decoration: none;
   transition: color var(--duration-micro, 140ms) var(--ease-standard, ease);
 }
 .creation-chip-action:hover {
+  background: transparent;
+  box-shadow: none;
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 2px;
+  transform: none;
 }
 .creation-chip-action:focus-visible {
   outline: none;
@@ -1136,13 +1103,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   .creation-source-panel-cancel,
   .creation-source-panel-attach {
     transition: none;
-  }
-}
-
-@media (max-width: 899px) {
-  .add-trigger-card {
-    width: calc(100% - 20px);
-    margin: 10px;
   }
 }
 
@@ -1976,21 +1936,20 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
 /* Empty-state voice line */
 .hero-voice-line { display: none; margin: 0; }
 
-/* Empty-state single input. Hidden outside empty state. */
-.hero-single-input { display: none; }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
+/* Threshold composer. Lives only inside #ignition-view. */
+.ignition-view .hero-single-input {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   text-align: left;
-  width: 100%;
-  max-width: 560px;
-  gap: 10px;
+  width: min(100%, 620px);
+  max-width: 620px;
+  gap: 12px;
   margin: 0 auto;
   position: relative;
   isolation: isolate;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input::before {
+.ignition-view .hero-single-input::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -2003,21 +1962,23 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
   );
   pointer-events: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  /* The bloom is static — no motion change needed under reduced-motion.
-     Listed here for explicit accessibility-intent declaration. */
-}
 
-/* In empty state, hide the guidance sub-head (it re-introduces mode cognition),
-   the voice line, the primary Begin button (replaced by the single-input submit),
-   the timer, and the state-chip meta row (BOARD EMPTY is redundant with the
-   invitation — the chip stays in the DOM as a :has() hook only). Keep the
-   eyebrow and title. */
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-guidance,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-actions,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row {
-  display: none;
+.hero-threshold-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hero-threshold-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hero-threshold-field__label {
+  color: var(--text-sub);
+  font-family: var(--font-body);
+  font-size: var(--text-xs, 12px);
+  font-weight: 760;
+  line-height: var(--leading-snug, 1.35);
 }
 
 .hero-single-input__field {
@@ -2040,6 +2001,12 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
     border-color var(--duration-standard, 220ms) var(--ease-standard),
     box-shadow var(--duration-standard, 220ms) var(--ease-standard),
     transform var(--duration-cozy, 320ms) var(--ease-standard);
+}
+.hero-single-input__field--concept {
+  min-height: 48px;
+}
+.hero-single-input__field--sketch {
+  min-height: 112px;
 }
 .hero-single-input__field::placeholder {
   color: var(--text-sub);
@@ -2067,10 +2034,23 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
   }
 }
 
+.hero-threshold-helper,
+.hero-threshold-validation {
+  margin: 0;
+  color: var(--text-sub);
+  font-family: var(--font-body);
+  font-size: var(--text-xs, 12px);
+  line-height: var(--leading-snug, 1.4);
+}
+.hero-threshold-validation {
+  min-height: 17px;
+  color: var(--accent-primary);
+}
+
 .hero-single-input__row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px 16px;
 }
@@ -2266,13 +2246,13 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-title {
   margin-bottom: 0;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
-  margin-top: 72px;
+.ignition-view .hero-single-input {
+  margin-top: 12px;
 }
 
 @media (max-width: 720px) {
-  .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
-    margin-top: 48px;
+  .ignition-view .hero-single-input {
+    margin-top: 8px;
   }
   .hero-single-input__row {
     flex-wrap: wrap;
@@ -2286,7 +2266,7 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   align-items: center;
   gap: 6px 8px;
   padding: 0;
-  flex: 1 1 100%;
+  flex: 1 1 280px;
   min-width: 0;
 }
 .hero-example-chips__label {
@@ -2302,22 +2282,25 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   background: transparent;
   border: 1px solid var(--border-subtle, var(--border));
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   font: inherit;
   font-size: 12px;
   color: var(--text-sub);
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: none;
   transition:
     color var(--duration-micro, 140ms) var(--ease-standard, ease),
     border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
     background-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease),
     transform var(--duration-micro, 140ms) var(--ease-standard, ease);
 }
 .hero-example-chip:hover {
   color: var(--text);
   border-color: var(--accent-soft-strong, var(--primary));
   background: var(--accent-soft);
+  box-shadow: 0 4px 12px 0 rgba(144, 103, 198, 0.12);
   transform: translateY(-1px);
 }
 .hero-example-chip:focus-visible {
@@ -2589,3 +2572,14 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 
 .modal-status.ok { color: #4dba8a; }
 .modal-status.err { color: #b77b90; }
+
+/* Disabled-state nav items — used when Ignition is at the library cap.
+   Click stays enabled on purpose: it routes to the Ignition view, where
+   the cap-gate banner explains the situation and offers Open Library.
+   Removing pointer-events: none preserves the title-attribute tooltip
+   for mouse users (CodeRabbit finding). */
+.sidebar-nav-item.disabled,
+.bottom-nav-item.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

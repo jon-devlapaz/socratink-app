@@ -30,6 +30,7 @@ Legacy alias: `docs/codex/session-bootstrap.md` exists only to redirect older in
 - Do not violate Generation Before Recognition.
 - Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs them.
 - Update durable state after meaningful work. `docs/project/state.md` holds live execution truth; logs and merge notes hold current evidence on this branch.
+- Code-generation tasks that touch a third-party SDK, API, hosted platform, browser API, or test framework: fetch current docs via Context7 before writing code. See `AGENTS.md` → "Layer 3 — Context7". Local binding docs still win on Socratink behavior.
 
 ## Session Bootstrap Prompt
 
@@ -47,6 +48,7 @@ Before doing substantive work:
 8. If the task touches drill/graph behavior, read docs/drill/engineering.md.
 9. Decide which agents are actually needed. Prefer a small party.
 10. Make a plan when the task is large, risky, or ambiguous.
+11. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
 
 Operating rules:
 - Keep read-only agents read-only unless implementation is explicitly required.
@@ -77,6 +79,7 @@ Before doing substantive work:
 9. Decide which agents are actually needed
 10. Make a plan when the task is large or ambiguous
 11. Use docs/codex/workflows.md for narrow regressions
+12. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
 
 The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with a four-state model (locked → primed → drilled → solidified). Only spaced reconstruction records `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
 

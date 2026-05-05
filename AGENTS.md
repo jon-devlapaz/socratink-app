@@ -39,8 +39,28 @@ Once a candidate file or symbol is in hand, switch to the code-review graph for 
 - `get_impact_radius` and `get_affected_flows` for blast-radius analysis
 - `query_graph` / `semantic_search_nodes` for callers, callees, imports, and tests
 
+### Layer 3 — Context7 (external API documentation gate)
+Local layers cover code that lives in this repo. They do not know what a third-party SDK or platform does today. Before editing code that depends on an external surface, fetch current docs with Context7 instead of relying on model memory.
+
+Use Context7 for:
+- Supabase auth/session/OAuth behavior
+- Vercel/serverless routing, build, and environment behavior
+- Gemini/OpenAI/Anthropic or other AI SDK/API behavior
+- Playwright APIs, browser automation, traces, and smoke-test behavior
+- Browser APIs used by `public/*.js`
+- Any unfamiliar external package or service
+
+Do not use Context7 for Socratink product doctrine, graph truth, drill behavior, source ownership, architecture decisions, or verification policy. Local binding docs (`AGENTS.md`, `docs/product/evidence-weighted-map.md`, `docs/product/spec.md`, the rest of the canonical doc set) remain authoritative on what Socratink should build.
+
+Before version-sensitive edits:
+1. Inspect the local dependency/config version (`requirements.txt`, `requirements-dev.txt`, `package.json`, `vercel.json`) where version matters.
+2. Ask Context7 for docs matching the library/platform and version when possible.
+3. If Context7 docs do not obviously match the installed version, state the uncertainty before editing.
+
+Context7 answers external API questions. It does not decide what Socratink should build. Do not send secrets, private source, customer data, or internal implementation details to it.
+
 ### Handoff rule
-Discover with Claude Context → confirm structure with the graph → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Reading source files top-to-bottom without either layer is the worst of all worlds: high context cost, no structural guarantee.
+Discover with Claude Context → confirm structure with the graph → fetch external API docs with Context7 when the edit touches a third-party surface → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Skipping the Context7 step on a third-party-SDK edit is how stale-API breakage ships. Reading source files top-to-bottom without these layers is the worst of all worlds: high context cost, no structural guarantee, no current-API guarantee.
 
 ### Hard rules
 - Default to minimal graph detail first. Escalate to full source snippets only when the minimal view is insufficient.
@@ -62,6 +82,12 @@ Empirical comparison run on 2026-05-04 against this codebase:
 
 When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`). But note: in observed cases the result list often becomes empty rather than reordering — the underlying Voyage embedding for the query just doesn't score the Python chunks above the threshold. Falling back to CRG/`rg` is the right move.
 
+### Pitfalls observed in practice
+- **Frontend bundle topology inflates risk scores.** `get_impact_radius` on any file imported into `public/js/app.js` reports HIGH risk and 50+ affected files. That is a topology artifact, not a real blast radius. Trust the callers/callees list, distrust the headline risk score for client JS.
+- **Symbol-shaped queries beat prose for semantic search.** "AudioFX bindUnlock" finds nodes; "threshold sound autoplay unlock" returns 0. When `semantic_search_nodes` falls back to keyword mode, prose queries silently fail.
+- **JS parser under-reports more than Python.** `query_graph file_summary` on `public/js/audio.js` lists 4 of its functions and misses the `play*` helpers. The floor-not-ceiling rule is sharper for JS files than for Python.
+- **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it surfaces unrelated admin Python flows. Skip it; go straight to `query_graph importers_of <file>`.
+
 ## Common development commands
 ### Environment setup
 ```bash
@@ -80,6 +106,12 @@ uvicorn main:app --reload
 
 # Opt out of .env.local on a localhost shell (test the production code path):
 SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
+
+# Opt out of the auto-guest dev escape hatch (test the /login wall locally).
+# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default, which trampolines
+# protected GETs through /auth/guest instead of /login. Hard-gated against
+# VERCEL / VERCEL_ENV / CI markers, so it never fires in deployed runtimes.
+SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 ```
 
 ### Tests
