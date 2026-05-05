@@ -295,8 +295,6 @@
       <div class="ignition-view__inner">
         <p class="ignition-eyebrow">Start here</p>
         <h1 class="ignition-title" id="ignition-title">What do you want to understand?</h1>
-        <p class="ignition-guidance" id="ignition-guidance">Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.</p>
-        <p class="ignition-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
 
         <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() when loadConcepts().length >= 4. -->
         <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
@@ -315,18 +313,17 @@
                         maxlength="200"
                         placeholder='e.g. Photosynthesis'
                         aria-label="What do you want to understand?"
-                        aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
+                        aria-describedby="hero-threshold-validation"></textarea>
             </label>
             <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
-              <span class="hero-threshold-field__label">Write what you already think: parts, guesses, examples, confusions.</span>
+              <span class="hero-threshold-field__label">Starting map</span>
               <textarea class="hero-single-input__field hero-single-input__field--sketch"
                         id="hero-starting-map-field"
                         rows="3"
                         maxlength="1200"
-                        placeholder="No polished answer needed."
-                        aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
+                        placeholder="Parts, guesses, examples, confusions — no polished answer needed."
+                        aria-describedby="hero-threshold-validation"></textarea>
             </label>
-            <p class="hero-threshold-helper" id="hero-threshold-helper">This is global context. The first room will ask one smaller question.</p>
             <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
           </div>
           <div class="hero-single-input__row">
