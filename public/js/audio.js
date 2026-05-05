@@ -1,6 +1,6 @@
 /**
  * Quiet sensory cues for threshold capture. Reading-room, not dashboard:
- * single soft sines, no chords, no celebration. Off by default; opt-in via
+ * single soft sines, no chords, no celebration. On by default; toggle in
  * Settings (persisted to localStorage). Honors prefers-reduced-motion.
  */
 
@@ -8,12 +8,26 @@ const STORAGE_KEY = 'socratink:sound';
 
 let audioCtx = null;
 let lastKeyClickAt = 0;
+let unlockBound = false;
+
+function bindUnlock() {
+  if (unlockBound || typeof window === 'undefined') return;
+  unlockBound = true;
+  const unlock = () => {
+    ensureCtx();
+    window.removeEventListener('pointerdown', unlock);
+    window.removeEventListener('keydown', unlock);
+  };
+  window.addEventListener('pointerdown', unlock, { once: true, passive: true });
+  window.addEventListener('keydown', unlock, { once: true, passive: true });
+}
 
 function readPreference() {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
+    // Default on — only an explicit "false" disables.
+    return localStorage.getItem(STORAGE_KEY) !== 'false';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -49,6 +63,8 @@ function softTone({ freqStart, freqEnd, peak, attack = 0.008, decay = 0.12, type
   osc.stop(t + decay + 0.02);
 }
 
+if (readPreference()) bindUnlock();
+
 export const AudioFX = {
   enabled: readPreference(),
 
@@ -57,12 +73,15 @@ export const AudioFX = {
   setEnabled(value) {
     this.enabled = Boolean(value);
     try { localStorage.setItem(STORAGE_KEY, String(this.enabled)); } catch {}
-    if (this.enabled) ensureCtx();
+    if (this.enabled) {
+      ensureCtx();
+      bindUnlock();
+    }
   },
 
   playFocusTap() {
     if (!this.enabled || reducedMotion()) return;
-    softTone({ freqStart: 180, freqEnd: 90, peak: 0.025, decay: 0.10 });
+    softTone({ freqStart: 220, freqEnd: 110, peak: 0.08, decay: 0.14 });
   },
 
   playKeyClick() {
@@ -70,12 +89,12 @@ export const AudioFX = {
     const now = performance.now();
     if (now - lastKeyClickAt < 90) return;
     lastKeyClickAt = now;
-    softTone({ type: 'triangle', freqStart: 520, freqEnd: 260, peak: 0.006, decay: 0.04 });
+    softTone({ type: 'triangle', freqStart: 620, freqEnd: 280, peak: 0.025, decay: 0.05 });
   },
 
   // Threshold submit is capture, not celebration — single low settle, no chord.
   playSubmitChime() {
     if (!this.enabled || reducedMotion()) return;
-    softTone({ freqStart: 392, freqEnd: 261.63, peak: 0.04, decay: 0.55 }); // G4 → C4 settle
+    softTone({ freqStart: 392, freqEnd: 261.63, peak: 0.14, decay: 0.7 }); // G4 → C4 settle
   },
 };

@@ -3781,7 +3781,7 @@ const App = (() => {
             <div class="settings-section-header">
               <h4>Sound</h4>
             </div>
-            <p class="settings-subtext">Quiet sensory cues at the threshold — a soft tone on focus, a low settle on submit. Off by default. Saved to this browser only.</p>
+            <p class="settings-subtext">Quiet sensory cues at the threshold — a soft tone on focus, a low settle on submit. On by default. Saved to this browser only.</p>
             <label class="settings-sound-toggle" for="settings-sound-input">
               <input type="checkbox" id="settings-sound-input">
               <span>Enable threshold sounds</span>
