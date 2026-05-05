@@ -45,13 +45,13 @@
 
   <!-- Bottom Mobile Navigation -->
   <nav class="bottom-nav" id="bottom-nav">
-    <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
-      <span class="material-symbols-outlined">auto_awesome</span>
-      <span class="bottom-nav-label">Desk</span>
-    </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
       <span class="material-symbols-outlined">bolt</span>
       <span class="bottom-nav-label">Ignition</span>
+    </a>
+    <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
+      <span class="material-symbols-outlined">auto_awesome</span>
+      <span class="bottom-nav-label">Desk</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showLibrary()" id="bn-library">
       <span class="material-symbols-outlined">memory</span>
@@ -71,10 +71,10 @@
     </div>
 
     <nav class="sidebar-nav">
-      <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
-        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-ignition" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> Ignition</a>
+      <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
+        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showLibrary()"><span class="material-symbols-outlined">memory</span> Library</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
