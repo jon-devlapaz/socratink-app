@@ -768,10 +768,10 @@ const App = (() => {
         filename = null;
         url = null;
       } else if (activeTab === 'url') {
-        text = fetchedUrlText;
+        url = urlInput.value.trim();
+        text = fetchedUrlText || url;
         type = 'url';
         filename = fetchedUrlTitle || null;
-        url = urlInput.value.trim();
       } else {
         text = uploadedText;
         type = 'file';

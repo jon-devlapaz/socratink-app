@@ -38,6 +38,12 @@ def test_js_sketch_validation_matches_python_for_every_fixture_entry() -> None:
     rows = json.loads(result.stdout)
     assert isinstance(rows, list) and rows, "runner produced no rows"
 
+    fixture = json.loads(FIXTURE.read_text())
+    assert len(rows) == len(fixture["entries"]), (
+        f"runner covered {len(rows)} rows but fixture has "
+        f"{len(fixture['entries'])} entries; runner skipped/filtered entries"
+    )
+
     mismatches = [r for r in rows if r["expected"] != r["actual"]]
     if mismatches:
         msg = "\n".join(
