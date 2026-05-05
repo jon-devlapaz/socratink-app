@@ -100,6 +100,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     const turn = turnNumberForStage(state.stage);
     const question = questionForStage(state.stage);
     const hasPrior = state.sketchTurns.length > 0 || state.concept !== "";
+    const composerMaxLen = state.stage === STAGE.CHAT_TURN_1 ? 200 : 2000;
 
     container.innerHTML = `
       <div class="creation-chat" data-stage="${escHtml(state.stage)}">
@@ -111,7 +112,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
           class="creation-chat-composer"
           id="creation-chat-composer"
           aria-labelledby="creation-chat-question"
-          maxlength="2000"
+          maxlength="${composerMaxLen}"
           rows="3"
           placeholder=""></textarea>
         <div class="creation-footer">
@@ -662,6 +663,22 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     // checks). The client only enables Attach when the field is non-empty.
     urlInput.addEventListener("input", refreshAttachEnabled);
 
+    const onSourcePanelEscape = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        rerenderSummary();
+      }
+    };
+    textarea.addEventListener("keydown", onSourcePanelEscape);
+    urlInput.addEventListener("keydown", onSourcePanelEscape);
+    // Also wire the panel itself so Escape consistency is preserved
+    // when focus is on the Cancel/Attach buttons themselves.
+    const panelEl = valueEl.querySelector(".creation-source-panel");
+    if (panelEl) {
+      panelEl.addEventListener("keydown", onSourcePanelEscape);
+    }
+
     dropzone.addEventListener("click", () => fileInput.click());
     dropzone.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -677,6 +694,8 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     fileInput.addEventListener("change", () => {
       const f = fileInput.files?.[0];
       if (f) handleFile(f);
+      // Reset value so the same file can be re-selected after a cancel/error.
+      fileInput.value = "";
     });
 
     function handleFile(file) {
@@ -689,21 +708,42 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
         refreshAttachEnabled();
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        pendingFileText = String(reader.result || "");
-        pendingFileName = file.name;
+
+      const onReadOk = (text, filename) => {
+        pendingFileText = String(text || "");
+        pendingFileName = String(filename || file.name);
         fileFeedback.className = "overlay-dropfeedback ok";
-        fileFeedback.textContent = `${file.name} · ${pendingFileText.length.toLocaleString()} chars`;
+        fileFeedback.textContent = `${pendingFileName} · ${pendingFileText.length.toLocaleString()} chars`;
         refreshAttachEnabled();
       };
-      reader.onerror = () => {
+      const onReadError = (errMsg) => {
         fileFeedback.className = "overlay-dropfeedback error";
-        fileFeedback.textContent = "Couldn't read that file.";
+        fileFeedback.textContent = errMsg || "Couldn't read that file.";
         pendingFileText = "";
         pendingFileName = "";
         refreshAttachEnabled();
       };
+
+      // Prefer the app-level _readFile helper (handles PDFs via pdf.js, txt/md via
+      // readAsText). Falls back to readAsText for text files only when the helper
+      // isn't available (e.g., test harness loading concept-create in isolation).
+      const appReadFile = (typeof window !== "undefined" && window.App && typeof window.App._readFile === "function")
+        ? window.App._readFile
+        : null;
+      if (appReadFile) {
+        appReadFile(file, onReadOk, onReadError);
+        return;
+      }
+
+      // Fallback: only safe for text files. Reject PDFs explicitly so we never
+      // produce garbage extracted text.
+      if (/\.pdf$/i.test(file.name)) {
+        onReadError("PDF reader unavailable.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => onReadOk(reader.result, file.name);
+      reader.onerror = () => onReadError("Couldn't read that file.");
       reader.readAsText(file);
     }
 

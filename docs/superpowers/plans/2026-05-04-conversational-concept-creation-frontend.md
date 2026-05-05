@@ -1936,7 +1936,7 @@ These show up here so the executor doesn't try to land them in this branch:
 | JS substantiveness heuristic diverges from Python | Task 1 fixture-locked parity test, runs in CI; release-blocker if any entry mismatches. |
 | Voice drift in hardcoded chat copy | Turn-2 + fallback text are literal mirrors of `app_prompts/threshold-chat-system-v1.txt`'s example shape. Acceptance criterion #10 (handoff) reviews against the prompt. |
 | Edit-chip Escape closes the modal mid-edit | `e.stopPropagation()` in chip edit Escape handlers (Task 7), so the modal-level Escape handler does not fire. |
-| Server returns `provisional_map` (new path) but frontend expects `knowledge_map` | Task 9's `submitConceptCreate` consumer normalises with `` `data.provisional_map || data.knowledge_map` ``. |
+| Server returns `provisional_map` (new path) but frontend expects `knowledge_map` | Task 9's `submitConceptCreate` consumer normalises with <code>data.provisional_map &#124;&#124; data.knowledge_map</code>. |
 | URL source attached, but `/api/extract` rejects URL types | Task 9 hops through `/api/extract-url` first to materialise text, then submits as `type: "text"`; mirrors today's behavior. |
 | Telemetry events fire at the wrong shape and confuse the dashboards | Each event's `extra={...}` shape is fixed in spec §5.4; tasks plant events at the named call sites with the named fields. |
 | CSS deletion accidentally removes a class still in use elsewhere | Task 11 enumerates the keep-list explicitly; before deleting any class, the executor must `grep -n` for it across `public/` to confirm no other surface uses it. |

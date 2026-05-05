@@ -768,10 +768,10 @@ const App = (() => {
         filename = null;
         url = null;
       } else if (activeTab === 'url') {
-        text = fetchedUrlText;
+        url = urlInput.value.trim();
+        text = fetchedUrlText || url;
         type = 'url';
         filename = fetchedUrlTitle || null;
-        url = urlInput.value.trim();
       } else {
         text = uploadedText;
         type = 'file';
@@ -1266,9 +1266,14 @@ const App = (() => {
   function finishConceptCreateAfterOverlay({ id, name, knowledgeMap, startedAtIso, startedPerf, startingSketch, source, overlayHandle }) {
     const startingMapContext = String(startingSketch || '').trim().slice(0, 1200);
 
-    // Derive content fields from source (URL already resolved by concept-create.js)
+    // Derive content fields from source (URL already resolved by concept-create.js
+    // — resolvedSource.type was rewritten "url"→"text" before submit, but
+    // resolvedSource.url is preserved. Recover the original type for the
+    // library card label by checking source.url presence first).
     const sourceText = (source && source.text) ? source.text : '';
-    const sourceType = (source && source.type) ? source.type : 'text';
+    const sourceType = (source && source.url)
+      ? 'url'
+      : (source && source.type) ? source.type : 'text';
     const sourceFilename = (source && source.filename) ? source.filename : null;
 
     const jsonPayload = { ...knowledgeMap, metadata: { ...(knowledgeMap.metadata || {}) } };
@@ -1323,11 +1328,16 @@ const App = (() => {
     // Banner names two strategic paths without consoling or naming the provider.
     function remountWithError(err, preservedState) {
       const dialog2 = mountCreationDialog();
-      dialog2.bannerSlot.appendChild(
-        buildSeedFailureBanner(
-          "socratink couldn't draft from this seed. You can try again, or attach source material for a different draft path."
-        )
-      );
+      // Prefer the server's strategy-framed message (422 returns
+      // {error, message} like "Add more to your sketch, or attach source
+      // material — either path opens the build."). Falls back to the
+      // generic seed-failure copy for non-422 transient failures.
+      const serverMessage = err && err.status === 422 && err.body && err.body.message
+        ? String(err.body.message)
+        : null;
+      const bannerCopy = serverMessage
+        || "socratink couldn't draft from this seed. You can try again, or attach source material for a different draft path.";
+      dialog2.bannerSlot.appendChild(buildSeedFailureBanner(bannerCopy));
       buildConversationalCreateUI(dialog2.shellContent, {
         seed: {
           name: preservedState?.name || seed?.name || "",
@@ -3916,7 +3926,8 @@ const App = (() => {
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showSettings,
     importLibraryConcept,
-    toggleTheme, runHeroAction
+    toggleTheme, runHeroAction,
+    _readFile,  // exposed for concept-create.js's source-panel file uploader
   };
 
 })();

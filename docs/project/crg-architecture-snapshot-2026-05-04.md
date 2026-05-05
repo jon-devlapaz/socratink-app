@@ -131,7 +131,7 @@ Top 15 by line count. Ordered descending. Files >400 lines and functions >300 li
 
 ## CRG warnings on this graph
 
-```
+```text
 High coupling (109 edges) between 'auth-auth' and 'tests-returns'
 High coupling (105 edges) between 'source-intake-pinned' and 'tests-returns'
 High coupling (57 edges) between 'llm-error' and 'tests-returns'
