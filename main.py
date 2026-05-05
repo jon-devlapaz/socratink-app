@@ -55,7 +55,7 @@ from source_intake import (
     TooLarge,
     UnsupportedContent,
 )
-from runtime_env import load_app_env
+from runtime_env import dev_autoguest_enabled, load_app_env
 
 load_app_env()
 
@@ -199,27 +199,6 @@ def _has_app_entry_session(request, state) -> bool:
     )
 
 
-_TRUTHY_AUTOGUEST = {"1", "true", "yes", "on"}
-
-
-def _dev_autoguest_enabled() -> bool:
-    """Local-only escape hatch that auto-mints a guest session on first protected
-    GET, so agents and ad-hoc local browsing don't have to click through /login.
-
-    Hard-gated against any production-shaped runtime env. Only fires when the
-    explicit opt-in env var is set AND no Vercel/CI markers are present.
-    """
-    if not os.getenv("SOCRATINK_DEV_AUTOGUEST", "").strip().lower() in _TRUTHY_AUTOGUEST:
-        return False
-    if os.getenv("VERCEL", "").strip().lower() in _TRUTHY_AUTOGUEST:
-        return False
-    if os.getenv("VERCEL_ENV"):
-        return False
-    if os.getenv("CI", "").strip().lower() in _TRUTHY_AUTOGUEST:
-        return False
-    return True
-
-
 def _apply_writeback(request: Request, response, state) -> None:
     """Apply refreshed sealed cookie to response if Supabase rotated tokens."""
     if state is None:
@@ -260,7 +239,7 @@ async def require_login_or_guest_entry(request: Request, call_next):
                 },
                 status_code=401,
             )
-        if _dev_autoguest_enabled():
+        if dev_autoguest_enabled():
             # Local dev: skip the /login wall by trampolining straight through
             # the existing guest sign-in route, which sets the session cookie
             # and redirects to the originally requested path.

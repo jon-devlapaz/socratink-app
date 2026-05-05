@@ -167,6 +167,27 @@ class DevAutoguestGuardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/login?return_to=%2F")
 
+    def test_api_me_exposes_dev_mode_when_enabled(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        client = self._client()
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json().get("dev_mode"), True)
+
+    def test_api_me_dev_mode_false_in_default_local(self):
+        self._set_env()  # all unset
+        client = self._client()
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json().get("dev_mode"), False)
+
+    def test_api_me_dev_mode_false_in_vercel(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1", VERCEL="1")
+        client = self._client()
+        response = client.get("/api/me")
+        self.assertEqual(response.status_code, 200)
+        self.assertIs(response.json().get("dev_mode"), False)
+
 
 if __name__ == "__main__":
     unittest.main()

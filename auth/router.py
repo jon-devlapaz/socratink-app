@@ -8,6 +8,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
+from runtime_env import dev_autoguest_enabled
+
 from .service import AuthConfigurationError, AuthSessionState
 
 auth_router = APIRouter()
@@ -782,7 +784,12 @@ def load_current_session_state(request: Request) -> AuthSessionState:
 @auth_router.get("/api/me")
 def get_current_user(request: Request):
     state = load_current_session_state(request)
-    response = JSONResponse(state.to_public_dict())
+    payload = state.to_public_dict()
+    # Expose dev-mode to the frontend so guest sessions can pass through the
+    # concept-create gate locally. Hard-gated against Vercel/CI in
+    # runtime_env.dev_autoguest_enabled.
+    payload["dev_mode"] = dev_autoguest_enabled()
+    response = JSONResponse(payload)
     if state.sealed_session:
         _apply_session_cookie(response, request, state.sealed_session)
     elif state.should_clear_cookie:

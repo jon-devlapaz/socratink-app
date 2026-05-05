@@ -29,6 +29,30 @@ def _truthy_env(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in _TRUTHY
 
 
+def dev_autoguest_enabled() -> bool:
+    """Local-only dev mode flag.
+
+    When SOCRATINK_DEV_AUTOGUEST is truthy AND no production-shaped env
+    markers are present (VERCEL, VERCEL_ENV, CI), dev mode is on.
+
+    Two effects, both gated on this single check:
+      1. main.py auth gate trampolines the /login redirect through
+         /auth/guest so agents and ad-hoc local browsing skip the wall.
+      2. /api/me returns dev_mode=True so the frontend can let guest
+         sessions through the concept-create flow that's otherwise gated
+         to authenticated users.
+    """
+    if not _truthy_env("SOCRATINK_DEV_AUTOGUEST"):
+        return False
+    if _truthy_env("VERCEL"):
+        return False
+    if os.getenv("VERCEL_ENV"):
+        return False
+    if _truthy_env("CI"):
+        return False
+    return True
+
+
 def _should_load_dotenv_local() -> tuple[bool, str | None]:
     if _truthy_env("SOCRATINK_DISABLE_DOTENV_LOCAL"):
         return False, "SOCRATINK_DISABLE_DOTENV_LOCAL is set"
