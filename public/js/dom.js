@@ -13,6 +13,7 @@ export const drawer              = document.getElementById('drawer');
 export const drawerToggle        = document.getElementById('drawer-toggle');
 export const conceptListEl       = document.getElementById('concept-list');
 export const addTriggerArea      = document.getElementById('add-trigger-area');
+export const ignitionView        = document.getElementById('ignition-view');
 export const heroInfo            = document.getElementById('hero-info');
 export const drillUi             = document.getElementById('drill-ui');
 export const chatHistory         = document.getElementById('chat-history');

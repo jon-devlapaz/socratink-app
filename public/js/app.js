@@ -29,7 +29,7 @@ import { AudioFX } from './audio.js?v=1';
 import {
   card, titleEl, descEl, primaryControls, drillControls,
   heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
-  addTriggerArea, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
+  addTriggerArea, ignitionView, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls
 } from './dom.js';
 
@@ -1381,6 +1381,7 @@ const App = (() => {
     saveConcepts(concepts);
     renderGrid(concepts);
     renderConceptList(concepts);
+    renderIgnitionGate();
     selectConcept(concept.id);
     clearHeroThresholdComposer();
     closeDrawer();
@@ -1536,6 +1537,7 @@ const App = (() => {
       }
       renderGrid(concepts);
       renderConceptList(concepts);
+      renderIgnitionGate();
     };
 
     if (item) {
@@ -1571,6 +1573,7 @@ const App = (() => {
     applyControlsForState(concept.state, concept);
     renderGrid();
     renderConceptList();
+    renderIgnitionGate();
     return concept;
   }
 
@@ -2112,9 +2115,11 @@ const App = (() => {
 
   function hidePrimaryViews() {
     const heroCard = document.querySelector('.hero-card');
+    const ignitionView = document.getElementById('ignition-view');
     const libraryView = document.getElementById('library-view');
     const settingsView = document.getElementById('settings-view');
     if (heroCard) heroCard.style.display = 'none';
+    if (ignitionView) ignitionView.classList.remove('visible');
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
   }
@@ -2151,7 +2156,7 @@ const App = (() => {
 
   function setNavActive(id) {
     currentPrimaryNav = id;
-    ['nav-dashboard', 'nav-library', 'nav-settings'].forEach((navId) => {
+    ['nav-dashboard', 'nav-ignition', 'nav-library', 'nav-settings'].forEach((navId) => {
       const el = document.getElementById(navId);
       if (el) el.classList.toggle('active', navId === currentPrimaryNav);
       
@@ -2170,6 +2175,43 @@ const App = (() => {
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
     if (window.innerWidth < 900) closeDrawer();
+  }
+
+  function showIgnition() {
+    setNavActive('nav-ignition');
+    clearSettingsPanel();
+    teardownMapView();
+    hidePrimaryViews();
+    const view = document.getElementById('ignition-view');
+    if (view) view.classList.add('visible');
+    renderIgnitionGate();
+    if (window.innerWidth < 900) closeDrawer();
+    // Focus the concept field so the threshold composer is immediately usable.
+    const conceptField = document.getElementById('hero-single-input-field');
+    if (conceptField instanceof HTMLTextAreaElement) {
+      requestAnimationFrame(() => conceptField.focus());
+    }
+  }
+
+  function hideIgnition() {
+    const view = document.getElementById('ignition-view');
+    if (view) view.classList.remove('visible');
+  }
+
+  function renderIgnitionGate() {
+    const atCap = loadConcepts().length >= 4;
+    const gate = document.getElementById('ignition-cap-gate');
+    const form = document.getElementById('hero-single-input');
+    if (gate) gate.hidden = !atCap;
+    if (form) form.hidden = atCap;
+    // Also disable the Ignition nav entry visually when at cap.
+    ['nav-ignition', 'bn-ignition'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.toggle('disabled', atCap);
+      el.setAttribute('aria-disabled', atCap ? 'true' : 'false');
+      el.title = atCap ? 'Library full. Retire a concept to add another.' : '';
+    });
   }
 
   const BUILT_IN_LIBRARY_CONCEPTS = [
@@ -2214,6 +2256,7 @@ const App = (() => {
 
       renderGrid(concepts);
       renderConceptList(concepts);
+      renderIgnitionGate();
       selectConcept(newConcept.id);
       hideLibrary();
       showMapView(newConcept);
@@ -2422,6 +2465,7 @@ const App = (() => {
   bindMapModeControls();
   renderGrid();
   renderConceptList();
+  renderIgnitionGate();
   initHeroSingleInput();
 
   // Restore selected concept
@@ -4030,7 +4074,7 @@ const App = (() => {
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
-    showLibrary, hideLibrary, openLibraryConcept, showDashboard, showSettings,
+    showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
     importLibraryConcept,
     toggleTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
