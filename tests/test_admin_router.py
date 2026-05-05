@@ -324,6 +324,7 @@ class AdminFeedbackTests(unittest.TestCase):
         r = self.client.post("/api/admin/feedback/123/import")
         self.assertEqual(r.status_code, 500)
         self.assertEqual(r.json()["detail"], "Failed to import feedback")
+        self.assertNotIn("Sensitive DB error", r.text)
 
     @patch("admin.router.build_supabase_client")
     def test_feedback_import_returns_404(self, mock_build):
@@ -346,6 +347,7 @@ class AdminFeedbackTests(unittest.TestCase):
         r = self.client.delete("/api/admin/feedback/123")
         self.assertEqual(r.status_code, 500)
         self.assertEqual(r.json()["detail"], "Failed to dismiss feedback")
+        self.assertNotIn("Sensitive DB error", r.text)
 
 
 class AdminRegistrationTests(unittest.TestCase):
