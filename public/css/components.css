@@ -2282,22 +2282,25 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   background: transparent;
   border: 1px solid var(--border-subtle, var(--border));
   border-radius: 999px;
-  padding: 4px 10px;
+  padding: 5px 12px;
   font: inherit;
   font-size: 12px;
   color: var(--text-sub);
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: none;
   transition:
     color var(--duration-micro, 140ms) var(--ease-standard, ease),
     border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
     background-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease),
     transform var(--duration-micro, 140ms) var(--ease-standard, ease);
 }
 .hero-example-chip:hover {
   color: var(--text);
   border-color: var(--accent-soft-strong, var(--primary));
   background: var(--accent-soft);
+  box-shadow: 0 4px 12px 0 rgba(144, 103, 198, 0.12);
   transform: translateY(-1px);
 }
 .hero-example-chip:focus-visible {

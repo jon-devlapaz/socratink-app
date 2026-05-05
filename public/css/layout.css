@@ -2478,7 +2478,7 @@ body:not([data-map-open="true"]) .map-back-link {
   display: none;
   flex-direction: column;
   align-items: center;
-  padding: 48px 24px 96px;
+  padding: clamp(56px, 10vh, 96px) 24px clamp(80px, 14vh, 128px);
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -2490,21 +2490,21 @@ body:not([data-map-open="true"]) .map-back-link {
   width: min(100%, 720px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   position: relative;
   z-index: 2;
 }
 .ignition-eyebrow {
-  margin: 0;
+  margin: 0 0 -4px 0;
   font-family: var(--font-body);
   font-size: var(--text-xs, 12px);
-  font-weight: 760;
+  font-weight: 660;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-sub);
 }
 .ignition-title {
-  margin: 0;
+  margin: 0 0 4px 0;
   font-family: var(--font-display, var(--font-body));
   font-size: var(--text-3xl, 32px);
   line-height: var(--leading-tight, 1.18);
@@ -2521,19 +2521,44 @@ body:not([data-map-open="true"]) .map-back-link {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
-  padding: 20px;
-  border: 1px solid var(--border, rgba(255,255,255,0.08));
-  border-radius: 8px;
-  background: var(--surface-2, rgba(255,255,255,0.02));
+  gap: 14px;
+  padding: 22px 24px;
+  border: 1px solid rgba(144, 103, 198, 0.18);
+  border-radius: 14px;
+  background: var(--surface-card, rgba(255, 250, 246, 0.62));
+  box-shadow:
+    0 8px 24px 0 rgba(144, 103, 198, 0.10),
+    inset 0 1px 0 0 rgba(255, 250, 246, 0.62);
+}
+.ignition-cap-gate__message {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-md, 15px);
+  line-height: var(--leading-relaxed, 1.55);
 }
 .ignition-cap-gate__cta {
   appearance: none;
   border: 1px solid var(--primary);
   background: transparent;
   color: var(--primary);
-  padding: 8px 14px;
-  border-radius: 6px;
+  padding: 9px 16px;
+  border-radius: 12px;
   font: inherit;
+  font-size: var(--text-sm, 14px);
+  font-weight: 600;
   cursor: pointer;
+  transition:
+    background-color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    color var(--duration-micro, 140ms) var(--ease-standard, ease),
+    transform var(--duration-micro, 140ms) var(--ease-standard, ease),
+    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease);
+}
+.ignition-cap-gate__cta:hover {
+  background: var(--accent-soft, rgba(144, 103, 198, 0.08));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px 0 rgba(144, 103, 198, 0.15);
+}
+.ignition-cap-gate__cta:active {
+  transform: scale(0.97);
 }
