@@ -86,6 +86,12 @@ uvicorn main:app --reload
 
 # Opt out of .env.local on a localhost shell (test the production code path):
 SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
+
+# Opt out of the auto-guest dev escape hatch (test the /login wall locally).
+# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default, which trampolines
+# protected GETs through /auth/guest instead of /login. Hard-gated against
+# VERCEL / VERCEL_ENV / CI markers, so it never fires in deployed runtimes.
+SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 ```
 
 ### Tests
