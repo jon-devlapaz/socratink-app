@@ -2487,7 +2487,9 @@ body:not([data-map-open="true"]) .map-back-link {
   display: flex;
 }
 .ignition-view__inner {
-  width: min(100%, 720px);
+  /* 620px matches the form's max width so eyebrow, title, fields, chips,
+     and submit all share the same left and right edges. */
+  width: min(100%, 620px);
   display: flex;
   flex-direction: column;
   gap: 20px;
