@@ -39,8 +39,28 @@ Once a candidate file or symbol is in hand, switch to the code-review graph for 
 - `get_impact_radius` and `get_affected_flows` for blast-radius analysis
 - `query_graph` / `semantic_search_nodes` for callers, callees, imports, and tests
 
+### Layer 3 — Context7 (external API documentation gate)
+Local layers cover code that lives in this repo. They do not know what a third-party SDK or platform does today. Before editing code that depends on an external surface, fetch current docs with Context7 instead of relying on model memory.
+
+Use Context7 for:
+- Supabase auth/session/OAuth behavior
+- Vercel/serverless routing, build, and environment behavior
+- Gemini/OpenAI/Anthropic or other AI SDK/API behavior
+- Playwright APIs, browser automation, traces, and smoke-test behavior
+- Browser APIs used by `public/*.js`
+- Any unfamiliar external package or service
+
+Do not use Context7 for Socratink product doctrine, graph truth, drill behavior, source ownership, architecture decisions, or verification policy. Local binding docs (`AGENTS.md`, `docs/product/evidence-weighted-map.md`, `docs/product/spec.md`, the rest of the canonical doc set) remain authoritative on what Socratink should build.
+
+Before version-sensitive edits:
+1. Inspect the local dependency/config version (`requirements.txt`, `requirements-dev.txt`, `package.json`, `vercel.json`) where version matters.
+2. Ask Context7 for docs matching the library/platform and version when possible.
+3. If Context7 docs do not obviously match the installed version, state the uncertainty before editing.
+
+Context7 answers external API questions. It does not decide what Socratink should build. Do not send secrets, private source, customer data, or internal implementation details to it.
+
 ### Handoff rule
-Discover with Claude Context → confirm structure with the graph → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Reading source files top-to-bottom without either layer is the worst of all worlds: high context cost, no structural guarantee.
+Discover with Claude Context → confirm structure with the graph → fetch external API docs with Context7 when the edit touches a third-party surface → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Skipping the Context7 step on a third-party-SDK edit is how stale-API breakage ships. Reading source files top-to-bottom without these layers is the worst of all worlds: high context cost, no structural guarantee, no current-API guarantee.
 
 ### Hard rules
 - Default to minimal graph detail first. Escalate to full source snippets only when the minimal view is insufficient.

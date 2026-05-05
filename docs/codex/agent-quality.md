@@ -9,6 +9,7 @@ Every agent must be able to answer these before editing:
 1. **What docs are binding for this task?**
 2. **What source file is authoritative?**
 3. **What command proves the change did not break the deploy, agent bootstrap, or product invariant?**
+4. **Does this edit touch a third-party SDK, API, hosted platform, browser API, or test framework?** If yes, fetch current docs via Context7 (`AGENTS.md` → "Layer 3 — Context7") before generating code. Do not rely on model memory for external API behavior.
 
 If any answer is unclear, inspect `docs/project/doc-map.md` before changing code.
 
@@ -21,6 +22,7 @@ If any answer is unclear, inspect `docs/project/doc-map.md` before changing code
 - Graph truth and mastery claims: `docs/product/evidence-weighted-map.md`.
 - Cold attempt, study, and re-drill contract: `docs/product/spec.md`.
 - Agent bootstrap: `docs/codex/onboarding.md`.
+- External API/SDK/platform behavior: Context7 (see `AGENTS.md` "Layer 3 — Context7"). Treat as external evidence, not Socratink doctrine; local binding docs win on conflicts about Socratink behavior.
 
 Do not create parallel source-of-truth files unless the user explicitly asks for a migration and the old path is removed or reduced to a redirect.
 
@@ -50,4 +52,5 @@ Do not create parallel source-of-truth files unless the user explicitly asks for
 | Dependencies or Vercel config | `bash scripts/preflight-deploy.sh` |
 | Auth/session behavior | targeted auth pytest plus `bash scripts/doctor.sh` |
 | Drill, graph, or mastery behavior | targeted pytest plus review against `docs/product/evidence-weighted-map.md` |
+| External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs, Playwright, browser APIs) | fetch current docs via Context7 before edit; targeted pytest if behavior is testable; `bash scripts/qa-smoke.sh` when the surface is hosted-visible |
 | Hosted release confidence | `bash scripts/verify-deploy.sh HEAD` after deployment |

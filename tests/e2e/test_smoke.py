@@ -113,6 +113,19 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
         _cached_guest_cookies = page.context.cookies()
 
 
+def _wait_for_app_settled(page: Page) -> None:
+    """Deterministic replacement for `wait_for_load_state('networkidle')`.
+
+    Why: networkidle is discouraged by Playwright — analytics beacons, retrying
+    fetches, and websockets can keep the network "busy" forever and cause
+    flakes. Instead: wait for the `load` event (resources done) and assert a
+    critical app-shell element is attached. The `expect` call auto-retries,
+    so deferred mount work has up to the default 5s to complete.
+    """
+    page.wait_for_load_state("load")
+    expect(page.locator("#concept-list")).to_be_attached()
+
+
 def _fetch_browser_session(page: Page) -> dict:
     payload = page.evaluate(
         """async () => {
@@ -257,7 +270,7 @@ def test_no_console_errors_on_first_paint(
     """
     _enter_app_shell_as_guest(clean_page, base_url)
     # Settle: give the page a beat to finish any deferred error throws.
-    clean_page.wait_for_load_state("networkidle")
+    _wait_for_app_settled(clean_page)
 
     errors = captured["console_errors"]
     if errors:
@@ -280,7 +293,7 @@ def test_no_failed_critical_asset_requests(
     conftest.py.
     """
     _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.wait_for_load_state("networkidle")
+    _wait_for_app_settled(clean_page)
 
     failed = captured["failed_requests"]
     if failed:
@@ -304,7 +317,7 @@ def test_theme_preloader_resilient_on_blank_localstorage(
     """
     # clean_page already cleared storage. Enter the app shell so the IIFE runs.
     _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.wait_for_load_state("networkidle")
+    _wait_for_app_settled(clean_page)
 
     errors = captured["console_errors"]
     theme_related = [
