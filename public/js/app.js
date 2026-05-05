@@ -1382,6 +1382,7 @@ const App = (() => {
     renderGrid(concepts);
     renderConceptList(concepts);
     renderIgnitionGate();
+    showDashboard();
     selectConcept(concept.id);
     clearHeroThresholdComposer();
     closeDrawer();
@@ -2481,7 +2482,7 @@ const App = (() => {
   }
 
   if (!toLoad) {
-    showEmptyState();
+    showIgnition();
   } else {
     activateConceptSelection(toLoad.id);
     if (resumeConcept && resumeConcept.id === toLoad.id) {
@@ -2491,7 +2492,7 @@ const App = (() => {
 
   void maybeShowFirstRunWelcome({
     getSession: () => fetchAuthSession(),
-    shouldShow: () => loadConcepts().length === 0 && heroStateChipEl?.dataset.state === 'empty',
+    shouldShow: () => loadConcepts().length === 0,
   });
 
   sessionState = loadPhaseBSessionState(getActiveId());
