@@ -513,52 +513,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .concept-item:hover .concept-delete { color:var(--text-sub); }
 .concept-delete:hover { color:var(--danger) !important; background-color:var(--pill-danger-bg); }
 
-/* Add-trigger — ghost row matching .concept-item vocabulary. Trailing row
-   that reads as "the last row where you can add another concept." */
-.add-trigger {
-  display:flex; align-items:center; gap:6px;
-  padding:10px 20px; cursor:pointer;
-  color:var(--text-muted); font-size:13px; font-weight:500;
-  background:transparent; border:none; box-shadow:none;
-  width:100%; min-height:0;
-  font-family:inherit; text-align:left;
-  letter-spacing:0.01em;
-  transition:color 0.15s, background-color 0.15s;
-}
-.add-trigger:hover:not(:disabled),
-.add-trigger:hover:not(:disabled):not(:active) {
-  color:var(--primary);
-  background-color:var(--border);
-  box-shadow:none;
-  transform:none;
-  opacity:1;
-}
-.add-trigger:active:not(:disabled) {
-  transform:none;
-  opacity:1;
-  box-shadow:none;
-}
-.add-trigger:focus-visible {
-  outline:none;
-  box-shadow:none;
-  background-color:var(--border);
-  color:var(--primary);
-}
-.add-trigger.disabled {
-  opacity:0.45;
-  cursor:not-allowed;
-}
-.add-trigger-icon {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:12px; height:12px; flex-shrink:0;
-  color:var(--text-muted);
-  transition:color 0.15s;
-}
-.add-trigger:hover:not(:disabled) .add-trigger-icon { color:var(--primary); }
-.add-trigger-title {
-  flex:1; font-size:13px; color:inherit;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
 
 #tile-tooltip {
   position: absolute;
@@ -578,7 +532,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   z-index: 10;
 }
 #tile-tooltip.visible { opacity: 1; }
-.add-trigger.disabled:hover { color:var(--text-sub); background:none; }
 
 .add-input-row {
   display:flex; align-items:center; gap:8px; padding:8px 16px;
@@ -1150,13 +1103,6 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   .creation-source-panel-cancel,
   .creation-source-panel-attach {
     transition: none;
-  }
-}
-
-@media (max-width: 899px) {
-  .add-trigger-card {
-    width: calc(100% - 20px);
-    margin: 10px;
   }
 }
 

@@ -29,7 +29,7 @@ import { AudioFX } from './audio.js?v=1';
 import {
   card, titleEl, descEl, primaryControls, drillControls,
   heroStateChipEl, heroPrimaryActionEl, consolidateControls, timerDisplay, devBtn, drawer, drawerToggle, conceptListEl,
-  addTriggerArea, ignitionView, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
+  ignitionView, heroInfo, drillUi, chatHistory, chatInput, drillTitle,
   TILE_IDS, tileEls
 } from './dom.js';
 
@@ -577,12 +577,12 @@ const App = (() => {
   if (window.innerWidth >= 900) openDrawer();
 
   function clearSettingsPanel() {
-    const triggerArea = document.getElementById('add-trigger-area');
-    const settingsPanel = triggerArea?.querySelector('.settings-panel');
+    const host = document.getElementById('sidebar-settings-host');
+    const settingsPanel = host?.querySelector('.settings-panel');
     if (!settingsPanel) return;
     const settingsBtn = document.getElementById('nav-settings');
     if (settingsBtn) delete settingsBtn.dataset.engaged;
-    renderAddTrigger();
+    host.innerHTML = '';
   }
 
   // ── 11. Concept list render ────────────────────────────────
@@ -612,32 +612,6 @@ const App = (() => {
       });
       conceptListEl.appendChild(item);
     });
-
-    renderAddTrigger();
-  }
-
-  function renderAddTrigger() {
-    addTriggerArea.style.overflowY = '';
-    const full = loadConcepts().length >= 4;
-    addTriggerArea.innerHTML = full
-      ? `<button class="add-trigger disabled" type="button" disabled aria-disabled="true" title="Library full. Remove a concept to add another.">
-           <span class="add-trigger-icon" aria-hidden="true">
-             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-               <line x1="6" y1="2" x2="6" y2="10"/>
-               <line x1="2" y1="6" x2="10" y2="6"/>
-             </svg>
-           </span>
-           <span class="add-trigger-title">library full</span>
-         </button>`
-      : `<button class="add-trigger" id="add-trigger" type="button" onclick="App.startAddConcept()">
-           <span class="add-trigger-icon" aria-hidden="true">
-             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
-               <line x1="6" y1="2" x2="6" y2="10"/>
-               <line x1="2" y1="6" x2="10" y2="6"/>
-             </svg>
-           </span>
-           <span class="add-trigger-title">new tink</span>
-         </button>`;
   }
 
   function isBlockedVideoUrl(value) {
@@ -4071,7 +4045,6 @@ const App = (() => {
     runInspectAction,
     deleteConcept,
     startAddConcept,
-    renderAddTrigger,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
