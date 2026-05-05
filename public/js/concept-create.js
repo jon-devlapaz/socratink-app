@@ -45,11 +45,12 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
   const initialName = (seed && typeof seed.name === "string" ? seed.name.trim() : "");
   const initialSource = seed && seed.source ? seed.source : null;
   const initialSketchTurns = (seed && Array.isArray(seed.sketchTurns)) ? seed.sketchTurns.slice() : [];
-  // If seed.stage === "summary" (explicit), or we have both name and sketchTurns,
-  // land at the summary card directly. Otherwise fall through to the chat turns.
+  // If seed.stage === "summary" (explicit), or we have a name plus either
+  // sketchTurns or a source attachment, land at the summary card directly.
+  // Otherwise fall through to the chat turns.
   const initialStage = (seed && seed.stage === "summary")
     ? STAGE.SUMMARY
-    : (initialName && initialSketchTurns.length > 0)
+    : (initialName && (initialSketchTurns.length > 0 || initialSource))
       ? STAGE.SUMMARY
       : initialName
         ? STAGE.CHAT_TURN_2

@@ -17,7 +17,7 @@ import { Bus } from "./bus.js";
 
 export function emitTelemetry(event, extra = {}) {
   if (typeof event !== "string" || !event) return;
-  const payload = { event, ...extra };
+  const payload = { ...(extra || {}), event };
   try {
     Bus.emit("telemetry", payload);
   } catch (err) {

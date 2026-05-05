@@ -671,9 +671,12 @@ const App = (() => {
       submitBtn.disabled = !(hasContent() && !blockedVideoUrl);
       if (urlFeedback) {
         const rawUrl = urlInput.value.trim();
+        urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback';
         if (rawUrl && isBlockedVideoUrl(rawUrl)) {
-          urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback error';
+          urlFeedback.classList.add('error');
           urlFeedback.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
+        } else {
+          urlFeedback.textContent = '';
         }
       }
     }
@@ -706,16 +709,6 @@ const App = (() => {
         fetchedUrlText = '';
         fetchedUrlTitle = '';
         fetchedUrl = '';
-        if (urlFeedback) {
-          const rawUrl = urlInput.value.trim();
-          urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback';
-          if (rawUrl && isBlockedVideoUrl(rawUrl)) {
-            urlFeedback.classList.add('error');
-            urlFeedback.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
-          } else {
-            urlFeedback.textContent = '';
-          }
-        }
         checkSubmitEnabled();
       });
       urlInput.addEventListener('keydown', e => {
@@ -1278,8 +1271,7 @@ const App = (() => {
     const sourceType = (source && source.type) ? source.type : 'text';
     const sourceFilename = (source && source.filename) ? source.filename : null;
 
-    const jsonPayload = knowledgeMap;
-    jsonPayload.metadata = jsonPayload.metadata || {};
+    const jsonPayload = { ...knowledgeMap, metadata: { ...(knowledgeMap.metadata || {}) } };
     jsonPayload.metadata.starting_map_context = startingMapContext;
     jsonPayload.metadata.map_maturity = 'provisional';
 
