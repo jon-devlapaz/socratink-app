@@ -2,7 +2,7 @@
 
 import unittest
 
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 
 from auth.session_seal import seal_session_tokens, unseal_session_tokens
 
@@ -27,17 +27,17 @@ class SealUnsealTests(unittest.TestCase):
     def test_wrong_key_rejected(self):
         sealed = seal_session_tokens(SAMPLE, key=KEY)
         other_key = Fernet.generate_key().decode()
-        with self.assertRaises(InvalidToken):
+        with self.assertRaises(ValueError):
             unseal_session_tokens(sealed, key=other_key)
 
     def test_tampered_blob_rejected(self):
         sealed = seal_session_tokens(SAMPLE, key=KEY)
         tampered = sealed[:-4] + "XXXX"
-        with self.assertRaises(InvalidToken):
+        with self.assertRaises(ValueError):
             unseal_session_tokens(tampered, key=KEY)
 
     def test_garbage_blob_rejected(self):
-        with self.assertRaises(InvalidToken):
+        with self.assertRaises(ValueError):
             unseal_session_tokens("not-a-fernet-token", key=KEY)
 
 

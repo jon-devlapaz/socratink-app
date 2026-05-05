@@ -272,7 +272,7 @@ def admin_feedback_list(request: Request):
             return JSONResponse({"feedback": [], "warning": "Feedback table not created in Supabase yet."})
         
         logger.exception("Failed to fetch feedback")
-        raise HTTPException(status_code=500, detail=str(err)) from err
+        raise HTTPException(status_code=500, detail="Failed to fetch feedback") from err
 
 
 @admin_router.post("/api/admin/feedback/{feedback_id}/import")
@@ -334,9 +334,11 @@ def admin_feedback_import(feedback_id: str, request: Request):
         client.table("feedback").update({"status": "imported"}).eq("id", feedback_id).execute()
 
         return JSONResponse({**_payload(new_text, new_mtime), "status": "imported"})
+    except HTTPException:
+        raise
     except Exception as err:
         logger.exception("Failed to import feedback")
-        raise HTTPException(status_code=500, detail=str(err)) from err
+        raise HTTPException(status_code=500, detail="Failed to import feedback") from err
 
 
 @admin_router.delete("/api/admin/feedback/{feedback_id}")
@@ -351,7 +353,7 @@ def admin_feedback_dismiss(feedback_id: str, request: Request):
         return JSONResponse({"status": "dismissed"})
     except Exception as err:
         logger.exception("Failed to dismiss feedback")
-        raise HTTPException(status_code=500, detail=str(err)) from err
+        raise HTTPException(status_code=500, detail="Failed to dismiss feedback") from err
 
 
 @admin_router.get("/admin/health")

@@ -82,5 +82,18 @@ class FactoryTests(unittest.TestCase):
                 build_auth_service_from_env().load_session("anything")
 
 
+    def test_invalid_session_cookie_key_raises(self):
+        with env(
+            AUTH_ENABLED="true",
+            SUPABASE_URL="https://abc.supabase.co",
+            SUPABASE_PUBLISHABLE_KEY="pk",
+            SUPABASE_JWT_SECRET="js",
+            APP_BASE_URL="http://localhost:8000",
+            SESSION_COOKIE_KEY="invalid-fernet-key",
+        ):
+            with self.assertRaisesRegex(AuthConfigurationError, "SESSION_COOKIE_KEY is not a valid Fernet key"):
+                build_auth_service_from_env().load_session("anything")
+
+
 if __name__ == "__main__":
     unittest.main()
