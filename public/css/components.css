@@ -1936,9 +1936,8 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
 /* Empty-state voice line */
 .hero-voice-line { display: none; margin: 0; }
 
-/* Empty-state single input. Hidden outside empty state. */
-.hero-single-input { display: none; }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
+/* Threshold composer. Lives only inside #ignition-view. */
+.ignition-view .hero-single-input {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1950,7 +1949,7 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
   position: relative;
   isolation: isolate;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input::before {
+.ignition-view .hero-single-input::before {
   content: "";
   position: absolute;
   z-index: -1;
@@ -1962,22 +1961,6 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
     transparent 78%
   );
   pointer-events: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* The bloom is static — no motion change needed under reduced-motion.
-     Listed here for explicit accessibility-intent declaration. */
-}
-
-/* In empty state, hide the guidance sub-head (it re-introduces mode cognition),
-   the voice line, the primary Begin button (replaced by the single-input submit),
-   the timer, and the state-chip meta row (BOARD EMPTY is redundant with the
-   invitation — the chip stays in the DOM as a :has() hook only). Keep the
-   eyebrow and title. */
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-guidance,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-voice-line,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-actions,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row {
-  display: none;
 }
 
 .hero-threshold-fields {
