@@ -370,8 +370,10 @@ const App = (() => {
   }
 
   function runHeroAction(evtOrNothing) {
-    // Empty-state form submit path: a Submit event comes in. Hero captures the
-    // Concept Threshold seed: concept name plus global starting-map context.
+    // Form submit path from the Ignition threshold composer. Captures the Concept
+    // Threshold seed (concept name + global starting-map context) and hands off
+    // to the existing creation flow at the summary card stage. The post-create
+    // navigation to Desk happens inside finishConceptCreateAfterOverlay.
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       const conceptField = document.getElementById('hero-single-input-field');
@@ -380,8 +382,6 @@ const App = (() => {
       const startingMap = (sketchField ? sketchField.value : '').trim();
       if (!conceptName || !isSubstantiveSketch(startingMap)) return false;
       const originRect = sketchField ? sketchField.getBoundingClientRect() : null;
-      showDashboard();
-      openDrawer();
       startAddConcept({
         name: conceptName,
         sketchTurns: [startingMap],
