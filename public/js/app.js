@@ -18,6 +18,7 @@ import {
   redirectToLogin,
 } from './auth.js?v=3';
 import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
+import { isSubstantiveSketch } from './sketch-validation.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -268,7 +269,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Name one concept. socratink helps you rebuild it from memory; the first room asks for a small cold attempt before any explanation appears.';
+    if (!concept) return 'Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -285,7 +286,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
       default:
-        return 'Name one concept. The first room asks for a small cold attempt before any explanation appears.';
+        return 'Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.';
     }
   }
 
@@ -348,23 +349,44 @@ const App = (() => {
     }
   }
 
+  function clearHeroThresholdComposer() {
+    const conceptField = document.getElementById('hero-single-input-field');
+    const sketchField = document.getElementById('hero-starting-map-field');
+    [conceptField, sketchField].forEach((field) => {
+      if (!field) return;
+      field.value = '';
+      field.style.height = '';
+      field.classList.remove('is-typing');
+    });
+    const validation = document.getElementById('hero-threshold-validation');
+    if (validation) {
+      validation.textContent = '';
+    }
+    const submit = document.querySelector('.hero-single-input__submit');
+    if (submit instanceof HTMLButtonElement) {
+      submit.disabled = true;
+      submit.title = 'Add one concept and one guess, example, or confusion before socratink builds the draft path.';
+    }
+  }
+
   function runHeroAction(evtOrNothing) {
-    // Empty-state form submit path: a Submit event comes in. Hero is single-purpose:
-    // capture the concept name. Source material is attached on the modal's
-    // source-material chip if the learner wants it.
+    // Empty-state form submit path: a Submit event comes in. Hero captures the
+    // Concept Threshold seed: concept name plus global starting-map context.
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
-      const field = document.getElementById('hero-single-input-field');
-      const raw = (field ? field.value : '').trim();
-      if (!raw) return false;
-      const originRect = field ? field.getBoundingClientRect() : null;
+      const conceptField = document.getElementById('hero-single-input-field');
+      const sketchField = document.getElementById('hero-starting-map-field');
+      const conceptName = (conceptField ? conceptField.value : '').trim();
+      const startingMap = (sketchField ? sketchField.value : '').trim();
+      if (!conceptName || !isSubstantiveSketch(startingMap)) return false;
+      const originRect = sketchField ? sketchField.getBoundingClientRect() : null;
       showDashboard();
       openDrawer();
-      startAddConcept({ name: raw }, originRect);
-      if (field) {
-        field.value = '';
-        field.style.height = '';
-      }
+      startAddConcept({
+        name: conceptName,
+        sketchTurns: [startingMap],
+        stage: 'summary',
+      }, originRect);
       return false;
     }
 
@@ -392,52 +414,74 @@ const App = (() => {
     }
   }
 
-  // Wire up the empty-state single input: autogrow, enable Begin on non-empty,
-  // and attach small source files by reading them into the prompt.
+  // Wire up the empty-state Concept Threshold: autogrow both fields, require a
+  // concept plus one global starting-map detail, and seed the existing creation
+  // summary rather than creating a parallel entry flow.
   function initHeroSingleInput() {
-    const field = document.getElementById('hero-single-input-field');
-    if (!(field instanceof HTMLTextAreaElement)) return;
+    const conceptField = document.getElementById('hero-single-input-field');
+    const sketchField = document.getElementById('hero-starting-map-field');
+    if (!(conceptField instanceof HTMLTextAreaElement) || !(sketchField instanceof HTMLTextAreaElement)) return;
     const form = document.getElementById('hero-single-input');
     const submit = form?.querySelector('.hero-single-input__submit');
-    const autogrow = () => {
+    const validation = document.getElementById('hero-threshold-validation');
+    const thresholdFields = [conceptField, sketchField];
+    const autogrowField = (field) => {
       field.style.height = 'auto';
       field.style.height = Math.min(field.scrollHeight, 240) + 'px';
     };
+    const autogrow = () => thresholdFields.forEach(autogrowField);
     const sync = () => {
+      const hasConcept = conceptField.value.trim().length > 0;
+      const sketchText = sketchField.value.trim();
+      const sketchIsSubstantive = isSubstantiveSketch(sketchText);
       if (submit instanceof HTMLButtonElement) {
-        submit.disabled = field.value.trim().length === 0;
+        submit.disabled = !(hasConcept && sketchIsSubstantive);
+        submit.title = hasConcept && sketchIsSubstantive
+          ? 'Create draft path'
+          : 'Add a few words about how you think it works before socratink builds the draft path.';
+      }
+      if (validation) {
+        validation.textContent = hasConcept && !sketchIsSubstantive
+          ? 'Add a few words about how you think it works before socratink builds the draft path.'
+          : '';
       }
       autogrow();
     };
-    field.addEventListener('input', sync);
+    thresholdFields.forEach((field) => field.addEventListener('input', sync));
 
     const isPrintable = (e) =>
       !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
       (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
 
-    field.addEventListener('focus', () => AudioFX.playFocusTap());
-    field.addEventListener('keydown', (e) => {
-      if (isPrintable(e)) {
-        AudioFX.playKeyClick();
-        field.classList.add('is-typing');
-      }
-      // Cmd/Ctrl+Enter to submit from textarea (since plain Enter adds a newline).
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && field.value.trim()) {
-        e.preventDefault();
-        form?.requestSubmit?.();
-      }
+    thresholdFields.forEach((field) => {
+      field.addEventListener('focus', () => AudioFX.playFocusTap());
+      field.addEventListener('keydown', (e) => {
+        if (field === conceptField && e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+          e.preventDefault();
+          sketchField.focus();
+          return;
+        }
+        if (isPrintable(e)) {
+          AudioFX.playKeyClick();
+          field.classList.add('is-typing');
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim() && isSubstantiveSketch(sketchField.value.trim())) {
+          e.preventDefault();
+          form?.requestSubmit?.();
+        }
+      });
+      field.addEventListener('keyup', () => field.classList.remove('is-typing'));
+      field.addEventListener('blur', () => field.classList.remove('is-typing'));
     });
-    field.addEventListener('keyup', () => field.classList.remove('is-typing'));
-    field.addEventListener('blur', () => field.classList.remove('is-typing'));
 
     const chips = document.querySelectorAll('[data-hero-example]');
     chips.forEach((chip) => {
       chip.addEventListener('click', () => {
         const value = chip.dataset.heroExample || '';
         if (!value) return;
-        field.value = value;
-        field.focus(); // focus handler fires playFocusTap on the resulting focus transition
-        field.setSelectionRange(value.length, value.length);
+        conceptField.value = value;
+        sketchField.focus(); // focus handler fires playFocusTap on the resulting focus transition
+        sketchField.setSelectionRange(sketchField.value.length, sketchField.value.length);
         sync();
       });
     });
@@ -1338,6 +1382,7 @@ const App = (() => {
     renderGrid(concepts);
     renderConceptList(concepts);
     selectConcept(concept.id);
+    clearHeroThresholdComposer();
     closeDrawer();
     overlayHandle.removeOverlay(true);
   }

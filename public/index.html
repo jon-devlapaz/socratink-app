@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=71">
+  <link rel="stylesheet" href="styles.css?v=73">
 </head>
 
 <body>
@@ -225,7 +225,7 @@
             <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
           </div>
           <h1 class="hero-title" id="title">What do you want to understand?</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept. socratink will help you rebuild it from memory. The first room asks for a small cold attempt before any explanation appears.</p>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
             <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
@@ -236,24 +236,40 @@
               </svg>
             </button>
           </div>
-          <!-- Empty-state single input: single-purpose concept-name capture. Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
+          <!-- Empty-state Concept Threshold: captures a concept plus global starting-map context. Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
           <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-            <textarea class="hero-single-input__field"
-                      id="hero-single-input-field"
-                      rows="1"
-                      maxlength="200"
-                      placeholder='e.g. Photosynthesis'
-                      aria-label="What do you want to understand?"></textarea>
+            <div class="hero-threshold-fields">
+              <label class="hero-threshold-field" for="hero-single-input-field">
+                <span class="hero-threshold-field__label">Concept</span>
+                <textarea class="hero-single-input__field hero-single-input__field--concept"
+                          id="hero-single-input-field"
+                          rows="1"
+                          maxlength="200"
+                          placeholder='e.g. Photosynthesis'
+                          aria-label="What do you want to understand?"
+                          aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
+              </label>
+              <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
+                <span class="hero-threshold-field__label">Write what you already think: parts, guesses, examples, confusions.</span>
+                <textarea class="hero-single-input__field hero-single-input__field--sketch"
+                          id="hero-starting-map-field"
+                          rows="3"
+                          maxlength="1200"
+                          placeholder="No polished answer needed."
+                          aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
+              </label>
+              <p class="hero-threshold-helper" id="hero-threshold-helper">This is global context. The first room will ask one smaller question.</p>
+              <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
+            </div>
             <div class="hero-single-input__row">
               <div class="hero-example-chips" aria-label="Try one of these">
                 <span class="hero-example-chips__label">Try</span>
                 <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
                 <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
                 <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
-                <button type="button" class="hero-example-chip" data-hero-example="Cognitive bias">Cognitive bias</button>
               </div>
               <button type="submit" class="hero-single-input__submit" disabled>
-                <span>Start first room</span>
+                <span>Create draft path</span>
                 <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M5 12h13"></path>
                   <path d="m13 6 6 6-6 6"></path>
@@ -375,8 +391,8 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=51"></script>
-  <script src="js/intro-particles.js?v=3"></script>
+  <script type="module" src="js/app.js?v=55"></script>
+  <script src="js/intro-particles.js?v=4"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/feedback.js?v=1"></script>
 
