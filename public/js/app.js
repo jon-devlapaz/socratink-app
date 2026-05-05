@@ -2455,15 +2455,6 @@ const App = (() => {
     persistPhaseBResumeState(null);
   }
 
-  if (!toLoad) {
-    showIgnition();
-  } else {
-    activateConceptSelection(toLoad.id);
-    if (resumeConcept && resumeConcept.id === toLoad.id) {
-      showMapView(toLoad);
-    }
-  }
-
   void maybeShowFirstRunWelcome({
     getSession: () => fetchAuthSession(),
     shouldShow: () => loadConcepts().length === 0,
@@ -2484,6 +2475,17 @@ const App = (() => {
     _normalizationIdx: 0,
     sessionCompletePending: false,
   };
+
+  // Boot routing runs AFTER drillState is initialized because showIgnition()
+  // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
+  if (!toLoad) {
+    showIgnition();
+  } else {
+    activateConceptSelection(toLoad.id);
+    if (resumeConcept && resumeConcept.id === toLoad.id) {
+      showMapView(toLoad);
+    }
+  }
 
   function createDrillLogSessionId() {
     if (window.crypto?.randomUUID) return window.crypto.randomUUID();
