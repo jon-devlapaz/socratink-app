@@ -228,61 +228,20 @@
             </div>
           </div>
           <div class="hero-eyebrow-row">
-            <div class="hero-eyebrow" id="hero-eyebrow">Start here</div>
+            <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
           </div>
-          <h1 class="hero-title" id="title">What do you want to understand?</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.</p>
+          <h1 class="hero-title" id="title">Your draft paths.</h1>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter a room, or start a new draft path at Ignition.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
-            <button id="hero-primary-action" class="hero-primary-action" type="button" onclick="App.runHeroAction()">
-              <span class="hero-primary-action__label">Begin</span>
+            <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
+              <span class="hero-primary-action__label">Begin at Ignition</span>
               <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>
               </svg>
             </button>
           </div>
-          <!-- Empty-state Concept Threshold: captures a concept plus global starting-map context. Shown only when hero-state-chip[data-state="empty"]; hidden otherwise via CSS. -->
-          <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-            <div class="hero-threshold-fields">
-              <label class="hero-threshold-field" for="hero-single-input-field">
-                <span class="hero-threshold-field__label">Concept</span>
-                <textarea class="hero-single-input__field hero-single-input__field--concept"
-                          id="hero-single-input-field"
-                          rows="1"
-                          maxlength="200"
-                          placeholder='e.g. Photosynthesis'
-                          aria-label="What do you want to understand?"
-                          aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
-              </label>
-              <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
-                <span class="hero-threshold-field__label">Write what you already think: parts, guesses, examples, confusions.</span>
-                <textarea class="hero-single-input__field hero-single-input__field--sketch"
-                          id="hero-starting-map-field"
-                          rows="3"
-                          maxlength="1200"
-                          placeholder="No polished answer needed."
-                          aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
-              </label>
-              <p class="hero-threshold-helper" id="hero-threshold-helper">This is global context. The first room will ask one smaller question.</p>
-              <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
-            </div>
-            <div class="hero-single-input__row">
-              <div class="hero-example-chips" aria-label="Try one of these">
-                <span class="hero-example-chips__label">Try</span>
-                <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
-                <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
-                <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
-              </div>
-              <button type="submit" class="hero-single-input__submit" disabled>
-                <span>Create draft path</span>
-                <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h13"></path>
-                  <path d="m13 6 6 6-6 6"></path>
-                </svg>
-              </button>
-            </div>
-          </form>
 
           <div id="timer-display">24:00:00</div>
 
@@ -329,6 +288,64 @@
         </div>
       </div>
 
+    </section>
+
+    <!-- Ignition View: threshold composer for starting a new concept -->
+    <section id="ignition-view" class="primary-view ignition-view" aria-labelledby="ignition-title">
+      <div class="ignition-view__inner">
+        <p class="ignition-eyebrow">Start here</p>
+        <h1 class="ignition-title" id="ignition-title">What do you want to understand?</h1>
+        <p class="ignition-guidance" id="ignition-guidance">Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.</p>
+        <p class="ignition-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
+
+        <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() when loadConcepts().length >= 4. -->
+        <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
+          <p class="ignition-cap-gate__message">Library is full (4 concepts). Retire one before starting another.</p>
+          <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
+        </div>
+
+        <!-- Threshold composer. Hidden by renderIgnitionGate() when at cap. -->
+        <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
+          <div class="hero-threshold-fields">
+            <label class="hero-threshold-field" for="hero-single-input-field">
+              <span class="hero-threshold-field__label">Concept</span>
+              <textarea class="hero-single-input__field hero-single-input__field--concept"
+                        id="hero-single-input-field"
+                        rows="1"
+                        maxlength="200"
+                        placeholder='e.g. Photosynthesis'
+                        aria-label="What do you want to understand?"
+                        aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
+            </label>
+            <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
+              <span class="hero-threshold-field__label">Write what you already think: parts, guesses, examples, confusions.</span>
+              <textarea class="hero-single-input__field hero-single-input__field--sketch"
+                        id="hero-starting-map-field"
+                        rows="3"
+                        maxlength="1200"
+                        placeholder="No polished answer needed."
+                        aria-describedby="hero-threshold-helper hero-threshold-validation"></textarea>
+            </label>
+            <p class="hero-threshold-helper" id="hero-threshold-helper">This is global context. The first room will ask one smaller question.</p>
+            <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
+          </div>
+          <div class="hero-single-input__row">
+            <div class="hero-example-chips" aria-label="Try one of these">
+              <span class="hero-example-chips__label">Try</span>
+              <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
+              <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
+              <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
+            </div>
+            <button type="submit" class="hero-single-input__submit" disabled>
+              <span>Create draft path</span>
+              <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13"></path>
+                <path d="m13 6 6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <!-- Library View Panel -->
