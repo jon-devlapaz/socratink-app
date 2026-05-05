@@ -181,6 +181,11 @@ body:not([data-map-open="true"]) .map-back-link {
   width: 100%;
   height: 100%;
   opacity: 0.9;
+  /* Feather the constellation edges so the field reads as atmospheric haze
+     rather than a fenced canvas. Without this, the canvas terminates at the
+     hero-card's bottom edge with a visible horizontal line. */
+  -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
+  mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) {
   align-items: start;
@@ -190,6 +195,13 @@ body:not([data-map-open="true"]) .map-back-link {
   margin: 24px 40px 32px;
   background: transparent;
   box-shadow: none;
+}
+@media (min-height: 800px) and (min-width: 768px) {
+  .hero-card:has(.hero-state-chip[data-state="empty"]) {
+    min-height: calc(100dvh - 120px);
+    display: grid;
+    align-content: center;
+  }
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) .intro-content {
   grid-template-columns: 1fr;
@@ -1042,6 +1054,13 @@ body:not([data-map-open="true"]) .map-back-link {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+.map-provisional-low-density {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-sub);
+  font-style: italic;
 }
 .map-first-room {
   display: flex;

@@ -41,10 +41,14 @@ The analogy must be:
 - Familiar to a typical adult learner — no domain expertise required to
   follow it
 - Mapped cleanly onto the target concept's causal structure
-- Generated fresh from the concept, NOT templated. The kitchen-meal
-  analogy works for photosynthesis but not for kubernetes; for kubernetes
-  use a shipping yard with containers; for cognitive bias use a familiar
-  perception illusion. Always derive from the concept, never template.
+- Generated fresh from the concept, NOT templated. Example shape, not a
+  template. Ask the learner to give one example of the concept — anywhere
+  they've encountered it, even a small detail. The 'one example' framing
+  is universal and works across concept types (processes, state quantities,
+  abstract nouns). For example: 'Give me one place you've seen this concept
+  come up — a moment in something you've read, or in your own experience.'
+  Always derive the surface phrasing from the concept; never reuse the
+  literal example.
 
 After the fallback question lands and the learner replies (substantive or
 not), the chat ends. There is no third real turn.
