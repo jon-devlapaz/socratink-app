@@ -435,9 +435,8 @@ const App = (() => {
       chip.addEventListener('click', () => {
         const value = chip.dataset.heroExample || '';
         if (!value) return;
-        AudioFX.playFocusTap();
         field.value = value;
-        field.focus();
+        field.focus(); // focus handler fires playFocusTap on the resulting focus transition
         field.setSelectionRange(value.length, value.length);
         sync();
       });
