@@ -15,6 +15,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import Mock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -296,6 +297,142 @@ class AdminDataTests(unittest.TestCase):
             "expected_mtime": data["mtime"] - 9999,
         })
         self.assertEqual(r.status_code, 409)
+
+
+class AdminFeedbackTests(unittest.TestCase):
+
+    def setUp(self):
+        self.client = TestClient(_build_app(_admin_state()))
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_list_hides_exception_details(self, mock_build):
+        mock_client = Mock()
+        mock_client.table().select().eq().order().execute.side_effect = Exception("Sensitive DB error: missing column xyz")
+        mock_build.return_value = mock_client
+
+        r = self.client.get("/api/admin/feedback")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["detail"], "Failed to fetch feedback")
+        self.assertNotIn("Sensitive DB error", r.text)
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_import_hides_exception_details(self, mock_build):
+        mock_client = Mock()
+        mock_client.table().select().eq().execute.side_effect = Exception("Sensitive DB error on import")
+        mock_build.return_value = mock_client
+
+        r = self.client.post("/api/admin/feedback/123/import")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["detail"], "Failed to import feedback")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_import_returns_404(self, mock_build):
+        mock_client = Mock()
+        mock_res = Mock()
+        mock_res.data = []
+        mock_client.table().select().eq().execute.return_value = mock_res
+        mock_build.return_value = mock_client
+
+        r = self.client.post("/api/admin/feedback/123/import")
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.json()["detail"], "Feedback not found")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_dismiss_hides_exception_details(self, mock_build):
+        mock_client = Mock()
+        mock_client.table().update().eq().execute.side_effect = Exception("Sensitive DB error on dismiss")
+        mock_build.return_value = mock_client
+
+        r = self.client.delete("/api/admin/feedback/123")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["detail"], "Failed to dismiss feedback")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_list_pgrst205_returns_empty_list(self, mock_build):
+        """PGRST205 error (missing table) should return 200 with empty feedback list, not 500."""
+        mock_client = Mock()
+        mock_client.table().select().eq().order().execute.side_effect = Exception(
+            "relation 'feedback' does not exist (PGRST205)"
+        )
+        mock_build.return_value = mock_client
+
+        r = self.client.get("/api/admin/feedback")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["feedback"], [])
+        self.assertIn("warning", body)
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_list_not_found_message_returns_empty_list(self, mock_build):
+        """'feedback ... not found' error also returns 200 with empty list."""
+        mock_client = Mock()
+        mock_client.table().select().eq().order().execute.side_effect = Exception(
+            "table feedback not found in schema"
+        )
+        mock_build.return_value = mock_client
+
+        r = self.client.get("/api/admin/feedback")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertEqual(body["feedback"], [])
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_list_returns_feedback_data_on_success(self, mock_build):
+        """Successful Supabase query returns the feedback rows."""
+        mock_client = Mock()
+        mock_res = Mock()
+        mock_res.data = [
+            {"id": "1", "message": "Great app!", "status": "pending", "user_id": "user-abc"},
+            {"id": "2", "message": "Fix the login", "status": "pending", "user_id": "user-xyz"},
+        ]
+        mock_client.table().select().eq().order().execute.return_value = mock_res
+        mock_build.return_value = mock_client
+
+        r = self.client.get("/api/admin/feedback")
+        self.assertEqual(r.status_code, 200)
+        body = r.json()
+        self.assertIn("feedback", body)
+        self.assertEqual(len(body["feedback"]), 2)
+        self.assertEqual(body["feedback"][0]["id"], "1")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_dismiss_returns_dismissed_status(self, mock_build):
+        """Successful dismiss returns {"status": "dismissed"}."""
+        mock_client = Mock()
+        mock_client.table().update().eq().execute.return_value = Mock()
+        mock_build.return_value = mock_client
+
+        r = self.client.delete("/api/admin/feedback/abc-123")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {"status": "dismissed"})
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_import_404_not_wrapped_as_500(self, mock_build):
+        """HTTPException(404) raised inside admin_feedback_import must not be caught and re-wrapped as 500."""
+        mock_client = Mock()
+        mock_res = Mock()
+        mock_res.data = []  # empty data → triggers 404
+        mock_client.table().select().eq().execute.return_value = mock_res
+        mock_build.return_value = mock_client
+
+        r = self.client.post("/api/admin/feedback/no-such-id/import")
+        # Must be 404, not 500
+        self.assertEqual(r.status_code, 404)
+        self.assertNotEqual(r.json()["detail"], "Failed to import feedback")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_dismiss_error_does_not_expose_internal_details(self, mock_build):
+        """The 500 response body for dismiss must not contain internal error text."""
+        mock_client = Mock()
+        mock_client.table().update().eq().execute.side_effect = Exception(
+            "password=secret123 connection refused"
+        )
+        mock_build.return_value = mock_client
+
+        r = self.client.delete("/api/admin/feedback/123")
+        self.assertEqual(r.status_code, 500)
+        self.assertNotIn("secret123", r.text)
+        self.assertNotIn("connection refused", r.text)
 
 
 class AdminRegistrationTests(unittest.TestCase):
