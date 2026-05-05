@@ -97,6 +97,7 @@ class FactoryTests(unittest.TestCase):
             with self.assertRaisesRegex(AuthConfigurationError, "SESSION_COOKIE_KEY is not a valid Fernet key"):
                 build_auth_service_from_env().load_session("anything")
 
+<<<<<<< coderabbitai/utg/19c111b
     def test_valid_session_cookie_key_does_not_raise_at_config(self):
         """A proper Fernet key should pass _require_enabled() without AuthConfigurationError."""
         with env(
@@ -253,6 +254,8 @@ class UnsealOrNoneTests(unittest.TestCase):
         result = svc._unseal_or_none(sealed)
         self.assertIsNone(result)
 
+=======
+>>>>>>> main
 
 if __name__ == "__main__":
     unittest.main()

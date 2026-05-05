@@ -33,7 +33,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
-from .errors import BlockedSource, FetchFailed, InvalidUrl, UnsupportedContent
+from .errors import BlockedSource, FetchFailed, InvalidUrl, TooLarge, UnsupportedContent
 
 ALLOWED_SCHEMES = frozenset({"http", "https"})
 ALLOWED_PORTS = frozenset({80, 443})
@@ -105,7 +105,7 @@ def _validate_outbound_target(url: str) -> list[str]:
     return validated_ips
 
 
-from .errors import FetchFailed, TooLarge
+
 
 
 def _read_with_cap(response, max_bytes: int) -> bytes:

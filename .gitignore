@@ -23,8 +23,9 @@
 # Python
 .env
 __pycache__/
-*.pyc
+*.py[cod]
 .venv*/
+.venv/
 .pytest_cache/
 
 # Node (anywhere in the tree — keep node_modules out of git/Vercel uploads)

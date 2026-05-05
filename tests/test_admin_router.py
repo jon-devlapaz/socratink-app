@@ -309,7 +309,11 @@ class AdminFeedbackTests(unittest.TestCase):
         mock_client = Mock()
         mock_client.table().select().eq().order().execute.side_effect = Exception("Sensitive DB error: missing column xyz")
         mock_build.return_value = mock_client
+<<<<<<< coderabbitai/utg/19c111b
 
+=======
+        
+>>>>>>> main
         r = self.client.get("/api/admin/feedback")
         self.assertEqual(r.status_code, 500)
         self.assertEqual(r.json()["detail"], "Failed to fetch feedback")
@@ -324,6 +328,10 @@ class AdminFeedbackTests(unittest.TestCase):
         r = self.client.post("/api/admin/feedback/123/import")
         self.assertEqual(r.status_code, 500)
         self.assertEqual(r.json()["detail"], "Failed to import feedback")
+<<<<<<< coderabbitai/utg/19c111b
+=======
+        self.assertNotIn("Sensitive DB error", r.text)
+>>>>>>> main
 
     @patch("admin.router.build_supabase_client")
     def test_feedback_import_returns_404(self, mock_build):
@@ -346,6 +354,7 @@ class AdminFeedbackTests(unittest.TestCase):
         r = self.client.delete("/api/admin/feedback/123")
         self.assertEqual(r.status_code, 500)
         self.assertEqual(r.json()["detail"], "Failed to dismiss feedback")
+<<<<<<< coderabbitai/utg/19c111b
 
     @patch("admin.router.build_supabase_client")
     def test_feedback_list_pgrst205_returns_empty_list(self, mock_build):
@@ -433,6 +442,9 @@ class AdminFeedbackTests(unittest.TestCase):
         self.assertEqual(r.status_code, 500)
         self.assertNotIn("secret123", r.text)
         self.assertNotIn("connection refused", r.text)
+=======
+        self.assertNotIn("Sensitive DB error", r.text)
+>>>>>>> main
 
 
 class AdminRegistrationTests(unittest.TestCase):
