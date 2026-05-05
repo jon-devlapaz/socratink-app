@@ -1323,11 +1323,16 @@ const App = (() => {
     // Banner names two strategic paths without consoling or naming the provider.
     function remountWithError(err, preservedState) {
       const dialog2 = mountCreationDialog();
-      dialog2.bannerSlot.appendChild(
-        buildSeedFailureBanner(
-          "socratink couldn't draft from this seed. You can try again, or attach source material for a different draft path."
-        )
-      );
+      // Prefer the server's strategy-framed message (422 returns
+      // {error, message} like "Add more to your sketch, or attach source
+      // material — either path opens the build."). Falls back to the
+      // generic seed-failure copy for non-422 transient failures.
+      const serverMessage = err && err.status === 422 && err.body && err.body.message
+        ? String(err.body.message)
+        : null;
+      const bannerCopy = serverMessage
+        || "socratink couldn't draft from this seed. You can try again, or attach source material for a different draft path.";
+      dialog2.bannerSlot.appendChild(buildSeedFailureBanner(bannerCopy));
       buildConversationalCreateUI(dialog2.shellContent, {
         seed: {
           name: preservedState?.name || seed?.name || "",
