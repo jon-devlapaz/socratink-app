@@ -14,6 +14,7 @@
 
 import { isSubstantiveSketch } from "./sketch-validation.js";
 import { emitTelemetry } from "./telemetry.js";
+import { AudioFX } from "./audio.js?v=1";
 
 const STAGE = Object.freeze({
   CHAT_TURN_1: "chat:turn-1",
@@ -362,6 +363,8 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       has_sketch: Boolean(sketch),
     });
 
+    let resolvedSource = state.source;
+
     // Pre-flight: signal the caller to close the dialog and mount the extract
     // overlay BEFORE any network call. The caller returns an overlayHandle that
     // the caller uses to tear down the overlay on success or error. If
@@ -369,12 +372,20 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     // it must not expect overlay teardown from the network-error path.
     const overlayHandle = onBeforeSubmit?.({ name: concept });
     if (overlayHandle === null) {
-      // Caller rejected the submit (e.g., library at cap). Don't proceed.
+      // Caller rejected the submit (e.g., library at cap). Don't celebrate.
       state.submitting = false;
       return;
     }
 
-    let resolvedSource = state.source;
+    // Submit accepted — play absorb animation + soft settle tone before the
+    // overlay takes over. Reduced-motion users skip the wait entirely.
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const summaryContainer = container.querySelector('.creation-summary');
+    if (summaryContainer && !reduce) {
+      summaryContainer.classList.add('anim-absorb');
+    }
+    AudioFX.playSubmitChime();
+    if (!reduce) await new Promise((r) => setTimeout(r, 360));
 
     // URL source path: hop through /api/extract-url first to materialise text.
     // The /api/extract dispatcher rejects URL sources directly (see main.py

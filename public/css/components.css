@@ -1441,6 +1441,59 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   transform: translateY(0);
   opacity: 1;
 }
+
+/* Threshold → dialog FLIP morph. Calm settle with --ease-standard, not a
+   spring overshoot — overshoot is reserved for solidified-state celebration
+   per the motion spec. */
+@keyframes thresholdMorphIn {
+  0% {
+    opacity: 0;
+    border-radius: 14px;
+    transform: translate(var(--flip-x), var(--flip-y)) scale(var(--flip-sx), var(--flip-sy));
+  }
+  35% { opacity: 1; }
+  100% {
+    opacity: 1;
+    border-radius: var(--radius-xl);
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.creation-dialog-shell.anim-antigravity-enter {
+  transform-origin: top left;
+  animation: thresholdMorphIn var(--duration-cozy, 320ms) var(--ease-standard) forwards;
+  transition: none !important;
+}
+
+/* Sketch absorbs upward into the extract overlay — soft, not snappy. */
+@keyframes thresholdAbsorb {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.94) translateY(-28px);
+    filter: blur(4px);
+  }
+}
+
+.anim-absorb {
+  animation: thresholdAbsorb var(--duration-cozy, 320ms) var(--ease-standard) forwards;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creation-dialog-shell.anim-antigravity-enter,
+  .anim-absorb {
+    animation: none !important;
+  }
+  .creation-dialog-shell.anim-antigravity-enter {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
 .creation-dialog-header {
   display: flex;
   justify-content: space-between;
@@ -1982,9 +2035,11 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
   resize: none;
   overflow: hidden;
   box-sizing: border-box;
+  transform-origin: center center;
   transition:
     border-color var(--duration-standard, 220ms) var(--ease-standard),
-    box-shadow var(--duration-standard, 220ms) var(--ease-standard);
+    box-shadow var(--duration-standard, 220ms) var(--ease-standard),
+    transform var(--duration-cozy, 320ms) var(--ease-standard);
 }
 .hero-single-input__field::placeholder {
   color: var(--text-sub);
@@ -1993,7 +2048,23 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
 .hero-single-input__field:focus-visible {
   outline: none;
   border-color: var(--accent-border-strong);
-  box-shadow: var(--accent-ring);
+  box-shadow: 0 6px 20px rgba(var(--violet-600-rgb), 0.10), var(--accent-ring);
+  transform: scale(1.005) translateY(-1px);
+}
+.hero-single-input__field:active,
+.hero-single-input__field.is-typing {
+  transform: scale(0.998);
+  box-shadow: 0 2px 8px rgba(var(--violet-600-rgb), 0.08), var(--accent-ring);
+  transition: transform var(--duration-micro, 140ms) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-single-input__field,
+  .hero-single-input__field:focus-visible,
+  .hero-single-input__field:active,
+  .hero-single-input__field.is-typing {
+    transform: none !important;
+  }
 }
 
 .hero-single-input__row {

@@ -188,20 +188,14 @@ body:not([data-map-open="true"]) .map-back-link {
   mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) {
-  align-items: start;
-  justify-items: center;
-  padding-top: 32px;
-  padding-bottom: 36px;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: clamp(96px, 18vh, 200px);
+  padding-bottom: clamp(48px, 8vh, 120px);
   margin: 24px 40px 32px;
+  min-height: calc(100dvh - 120px);
   background: transparent;
   box-shadow: none;
-}
-@media (min-height: 800px) and (min-width: 768px) {
-  .hero-card:has(.hero-state-chip[data-state="empty"]) {
-    min-height: calc(100dvh - 120px);
-    display: grid;
-    align-content: center;
-  }
 }
 .hero-card:has(.hero-state-chip[data-state="empty"]) .intro-content {
   grid-template-columns: 1fr;
@@ -883,6 +877,22 @@ body:not([data-map-open="true"]) .map-back-link {
   background: linear-gradient(180deg, var(--gradient-card-start), var(--gradient-card-end));
   border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-card);
+}
+
+.settings-sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-strong);
+  cursor: pointer;
+  user-select: none;
+}
+.settings-sound-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
 }
 
 .settings-health-list,
