@@ -3921,7 +3921,8 @@ const App = (() => {
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showSettings,
     importLibraryConcept,
-    toggleTheme, runHeroAction
+    toggleTheme, runHeroAction,
+    _readFile,  // exposed for concept-create.js's source-panel file uploader
   };
 
 })();

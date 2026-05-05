@@ -689,21 +689,42 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
         refreshAttachEnabled();
         return;
       }
-      const reader = new FileReader();
-      reader.onload = () => {
-        pendingFileText = String(reader.result || "");
-        pendingFileName = file.name;
+
+      const onReadOk = (text, filename) => {
+        pendingFileText = String(text || "");
+        pendingFileName = String(filename || file.name);
         fileFeedback.className = "overlay-dropfeedback ok";
-        fileFeedback.textContent = `${file.name} · ${pendingFileText.length.toLocaleString()} chars`;
+        fileFeedback.textContent = `${pendingFileName} · ${pendingFileText.length.toLocaleString()} chars`;
         refreshAttachEnabled();
       };
-      reader.onerror = () => {
+      const onReadError = (errMsg) => {
         fileFeedback.className = "overlay-dropfeedback error";
-        fileFeedback.textContent = "Couldn't read that file.";
+        fileFeedback.textContent = errMsg || "Couldn't read that file.";
         pendingFileText = "";
         pendingFileName = "";
         refreshAttachEnabled();
       };
+
+      // Prefer the app-level _readFile helper (handles PDFs via pdf.js, txt/md via
+      // readAsText). Falls back to readAsText for text files only when the helper
+      // isn't available (e.g., test harness loading concept-create in isolation).
+      const appReadFile = (typeof window !== "undefined" && window.App && typeof window.App._readFile === "function")
+        ? window.App._readFile
+        : null;
+      if (appReadFile) {
+        appReadFile(file, onReadOk, onReadError);
+        return;
+      }
+
+      // Fallback: only safe for text files. Reject PDFs explicitly so we never
+      // produce garbage extracted text.
+      if (/\.pdf$/i.test(file.name)) {
+        onReadError("PDF reader unavailable.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => onReadOk(reader.result, file.name);
+      reader.onerror = () => onReadError("Couldn't read that file.");
       reader.readAsText(file);
     }
 
