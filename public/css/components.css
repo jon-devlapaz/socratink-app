@@ -2317,13 +2317,13 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-title {
   margin-bottom: 0;
 }
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
-  margin-top: 34px;
+.ignition-view .hero-single-input {
+  margin-top: 12px;
 }
 
 @media (max-width: 720px) {
-  .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input {
-    margin-top: 28px;
+  .ignition-view .hero-single-input {
+    margin-top: 8px;
   }
   .hero-single-input__row {
     flex-wrap: wrap;
@@ -2640,3 +2640,11 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 
 .modal-status.ok { color: #4dba8a; }
 .modal-status.err { color: #b77b90; }
+
+/* Disabled nav items — used when Ignition is not yet unlocked */
+.sidebar-nav-item.disabled,
+.bottom-nav-item.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
+}

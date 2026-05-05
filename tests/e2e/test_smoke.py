@@ -40,6 +40,7 @@ to absorb any serverless cold-start latency before the browser tests run.
 from __future__ import annotations
 
 import time
+import re
 from urllib.parse import urljoin
 
 import pytest
@@ -82,6 +83,8 @@ def test_health_endpoint_ok(base_url: str) -> None:
 # --- 2. Homepage renders critical DOM ------------------------------------
 
 
+_cached_guest_cookies = None
+
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     """Navigate to base_url and bypass the /login redirect via the guest link.
 
@@ -89,16 +92,25 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     rewrite, so `/` may serve the app shell before the FastAPI redirect fires.
     In that case, explicitly check `/api/me` and enter through `/login`.
     """
+    global _cached_guest_cookies
+    if _cached_guest_cookies:
+        page.context.add_cookies(_cached_guest_cookies)
+
     page.goto(base_url)
     if "/login" not in page.url:
         session = _fetch_browser_session(page)
         if session.get("authenticated") or session.get("guest_mode"):
+            if not _cached_guest_cookies:
+                _cached_guest_cookies = page.context.cookies()
             return
         page.goto(urljoin(base_url + "/", "login?return_to=%2F"))
     if "/login" in page.url:
         expect(page.locator("#guest-continue-link")).to_be_visible()
-        page.locator("#guest-continue-link").click()
-        page.wait_for_url(lambda url: "/login" not in url, timeout=15_000)
+        expect(page.locator("#guest-continue-link")).to_have_attribute("href", re.compile(r"^/auth/guest"))
+        target_pattern = re.compile(r"^" + re.escape(base_url.rstrip("/")) + r"/?$")
+        with page.expect_navigation(url=target_pattern, timeout=15_000):
+            page.locator("#guest-continue-link").click()
+        _cached_guest_cookies = page.context.cookies()
 
 
 def _fetch_browser_session(page: Page) -> dict:

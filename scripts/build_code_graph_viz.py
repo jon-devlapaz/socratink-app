@@ -15,47 +15,48 @@ OUT = REPO / "docs" / "code-graph.html"
 
 def load_graph() -> dict:
     con = sqlite3.connect(DB)
-    con.row_factory = sqlite3.Row
+    try:
+        con.row_factory = sqlite3.Row
 
-    communities = {
-        row["id"]: {"id": row["id"], "name": row["name"], "size": row["size"]}
-        for row in con.execute("SELECT id, name, size FROM communities ORDER BY size DESC")
-    }
-
-    nodes_rows = con.execute(
-        "SELECT id, kind, name, qualified_name, file_path, line_start, "
-        "community_id FROM nodes"
-    ).fetchall()
-
-    qn_to_idx = {row["qualified_name"]: i for i, row in enumerate(nodes_rows)}
-
-    nodes = [
-        {
-            "i": i,
-            "id": row["qualified_name"],
-            "name": row["name"],
-            "kind": row["kind"],
-            "file": row["file_path"],
-            "line": row["line_start"] or 0,
-            "community": row["community_id"],
+        communities = {
+            row["id"]: {"id": row["id"], "name": row["name"], "size": row["size"]}
+            for row in con.execute("SELECT id, name, size FROM communities ORDER BY size DESC")
         }
-        for i, row in enumerate(nodes_rows)
-    ]
 
-    edges = []
-    for row in con.execute(
-        "SELECT kind, source_qualified, target_qualified FROM edges"
-    ):
-        s = qn_to_idx.get(row["source_qualified"])
-        t = qn_to_idx.get(row["target_qualified"])
-        if s is None or t is None or s == t:
-            continue
-        edges.append({"s": s, "t": t, "k": row["kind"]})
+        nodes_rows = con.execute(
+            "SELECT id, kind, name, qualified_name, file_path, line_start, "
+            "community_id FROM nodes"
+        ).fetchall()
 
-    meta_rows = list(con.execute("SELECT key, value FROM metadata"))
-    meta = {row["key"]: row["value"] for row in meta_rows}
+        qn_to_idx = {row["qualified_name"]: i for i, row in enumerate(nodes_rows)}
 
-    con.close()
+        nodes = [
+            {
+                "i": i,
+                "id": row["qualified_name"],
+                "name": row["name"],
+                "kind": row["kind"],
+                "file": row["file_path"],
+                "line": row["line_start"] or 0,
+                "community": row["community_id"],
+            }
+            for i, row in enumerate(nodes_rows)
+        ]
+
+        edges = []
+        for row in con.execute(
+            "SELECT kind, source_qualified, target_qualified FROM edges"
+        ):
+            s = qn_to_idx.get(row["source_qualified"])
+            t = qn_to_idx.get(row["target_qualified"])
+            if s is None or t is None or s == t:
+                continue
+            edges.append({"s": s, "t": t, "k": row["kind"]})
+
+        meta_rows = list(con.execute("SELECT key, value FROM metadata"))
+        meta = {row["key"]: row["value"] for row in meta_rows}
+    finally:
+        con.close()
 
     return {
         "communities": list(communities.values()),
