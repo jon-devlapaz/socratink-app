@@ -1367,15 +1367,21 @@ const App = (() => {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog(originRect);
     let isGuest = false;
+    let isDevMode = false;
     let session = null;
     try {
       session = await fetchAuthSession();
       isGuest = !!(session && session.guest_mode);
+      isDevMode = !!(session && session.dev_mode);
     } catch (err) {
       console.warn('Auth fetch failed during concept creation:', err);
     }
 
-    if (isGuest) {
+    // Guest sessions are normally gated out of LLM-extract concept creation.
+    // Dev mode (SOCRATINK_DEV_AUTOGUEST=1, hard-gated against Vercel/CI on the
+    // server) lifts the gate so local testing and agent flows work without a
+    // Google sign-in.
+    if (isGuest && !isDevMode) {
       dialog.bannerSlot.appendChild(buildGuestBanner());
       dialog.shellContent.appendChild(buildGuestActions(buildLoginHref('/')));
       const firstFocusable = dialog.shell.querySelector('a, button:not([disabled])');
