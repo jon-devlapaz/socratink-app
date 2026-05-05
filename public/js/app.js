@@ -269,7 +269,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.';
+    if (!concept) return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -286,7 +286,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
       default:
-        return 'Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.';
+        return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
     }
   }
 
@@ -2317,7 +2317,7 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Add a concept on the desk to begin.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">Ignition</a>.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
