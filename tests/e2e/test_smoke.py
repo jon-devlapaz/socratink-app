@@ -237,7 +237,7 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
 
     clean_page.once("dialog", accept_delete)
     delete_button.click()
-    expect(clean_page.locator("#title")).to_have_text("What do you want to understand?")
+    expect(clean_page.locator("#title")).to_have_text("Your draft paths.")
     expect(clean_page.locator(".concept-item")).to_have_count(0)
     expect(clean_page.locator("#concept-header-title")).not_to_be_visible()
     assert clean_page.locator("body").get_attribute("data-map-open") != "true"
