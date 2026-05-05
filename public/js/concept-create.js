@@ -385,7 +385,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       summaryContainer.classList.add('anim-absorb');
     }
     AudioFX.playSubmitChime();
-    if (!reduce) await new Promise((r) => setTimeout(r, 360));
+    if (summaryContainer && !reduce) await new Promise((r) => setTimeout(r, 360));
 
     // URL source path: hop through /api/extract-url first to materialise text.
     // The /api/extract dispatcher rejects URL sources directly (see main.py
