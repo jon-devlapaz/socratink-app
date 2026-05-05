@@ -108,9 +108,16 @@ uvicorn main:app --reload
 SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 
 # Opt out of the auto-guest dev escape hatch (test the /login wall locally).
-# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default, which trampolines
-# protected GETs through /auth/guest instead of /login. Hard-gated against
-# VERCEL / VERCEL_ENV / CI markers, so it never fires in deployed runtimes.
+# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default. Two effects, both
+# gated on this single env var (and hard-disabled in any VERCEL / VERCEL_ENV
+# / CI runtime):
+#   1. The auth gate trampolines protected GETs through /auth/guest instead
+#      of /login, so agents and ad-hoc local browsing skip the wall.
+#   2. /api/me returns dev_mode: true, which lets the frontend allow guest
+#      sessions through the concept-create dialog. Without dev_mode the
+#      dialog shows "Guest mode uses sample maps. Sign in to extract your
+#      own content into a draft map." and blocks the LLM extract path.
+# Restart the server after toggling — uvicorn --reload reloads code, not env.
 SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 ```
 
