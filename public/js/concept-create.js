@@ -100,6 +100,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     const turn = turnNumberForStage(state.stage);
     const question = questionForStage(state.stage);
     const hasPrior = state.sketchTurns.length > 0 || state.concept !== "";
+    const composerMaxLen = state.stage === STAGE.CHAT_TURN_1 ? 200 : 2000;
 
     container.innerHTML = `
       <div class="creation-chat" data-stage="${escHtml(state.stage)}">
@@ -111,7 +112,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
           class="creation-chat-composer"
           id="creation-chat-composer"
           aria-labelledby="creation-chat-question"
-          maxlength="2000"
+          maxlength="${composerMaxLen}"
           rows="3"
           placeholder=""></textarea>
         <div class="creation-footer">
@@ -662,6 +663,22 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     // checks). The client only enables Attach when the field is non-empty.
     urlInput.addEventListener("input", refreshAttachEnabled);
 
+    const onSourcePanelEscape = (e) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        e.preventDefault();
+        rerenderSummary();
+      }
+    };
+    textarea.addEventListener("keydown", onSourcePanelEscape);
+    urlInput.addEventListener("keydown", onSourcePanelEscape);
+    // Also wire the panel itself so Escape consistency is preserved
+    // when focus is on the Cancel/Attach buttons themselves.
+    const panelEl = valueEl.querySelector(".creation-source-panel");
+    if (panelEl) {
+      panelEl.addEventListener("keydown", onSourcePanelEscape);
+    }
+
     dropzone.addEventListener("click", () => fileInput.click());
     dropzone.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -677,6 +694,8 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     fileInput.addEventListener("change", () => {
       const f = fileInput.files?.[0];
       if (f) handleFile(f);
+      // Reset value so the same file can be re-selected after a cancel/error.
+      fileInput.value = "";
     });
 
     function handleFile(file) {
