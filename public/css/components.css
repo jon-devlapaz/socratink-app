@@ -2573,10 +2573,13 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 .modal-status.ok { color: #4dba8a; }
 .modal-status.err { color: #b77b90; }
 
-/* Disabled nav items — used when Ignition is not yet unlocked */
+/* Disabled-state nav items — used when Ignition is at the library cap.
+   Click stays enabled on purpose: it routes to the Ignition view, where
+   the cap-gate banner explains the situation and offers Open Library.
+   Removing pointer-events: none preserves the title-attribute tooltip
+   for mouse users (CodeRabbit finding). */
 .sidebar-nav-item.disabled,
 .bottom-nav-item.disabled {
   opacity: 0.45;
-  pointer-events: none;
   cursor: not-allowed;
 }
