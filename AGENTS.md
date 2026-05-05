@@ -62,6 +62,12 @@ Empirical comparison run on 2026-05-04 against this codebase:
 
 When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`). But note: in observed cases the result list often becomes empty rather than reordering — the underlying Voyage embedding for the query just doesn't score the Python chunks above the threshold. Falling back to CRG/`rg` is the right move.
 
+### Pitfalls observed in practice
+- **Frontend bundle topology inflates risk scores.** `get_impact_radius` on any file imported into `public/js/app.js` reports HIGH risk and 50+ affected files. That is a topology artifact, not a real blast radius. Trust the callers/callees list, distrust the headline risk score for client JS.
+- **Symbol-shaped queries beat prose for semantic search.** "AudioFX bindUnlock" finds nodes; "threshold sound autoplay unlock" returns 0. When `semantic_search_nodes` falls back to keyword mode, prose queries silently fail.
+- **JS parser under-reports more than Python.** `query_graph file_summary` on `public/js/audio.js` lists 4 of its functions and misses the `play*` helpers. The floor-not-ceiling rule is sharper for JS files than for Python.
+- **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it surfaces unrelated admin Python flows. Skip it; go straight to `query_graph importers_of <file>`.
+
 ## Common development commands
 ### Environment setup
 ```bash
