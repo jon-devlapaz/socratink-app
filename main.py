@@ -349,6 +349,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
     sketch_ok = is_substantive_sketch(sketch)
 
     if has_source_text:
+        assert req.source is not None
         return {"path": "extract", "text": (req.source.text or "").strip()}
 
     if has_source_url:
@@ -682,8 +683,8 @@ def submit_feedback(req: FeedbackRequest, request: Request):
     session = load_current_session_state(request)
     user_id = session.user.id if (session.authenticated and session.user) else None
 
-    supabase_url = os.environ.get("SUPABASE_URL")
-    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
 
     try:
         client = build_supabase_client(supabase_url, publishable_key)

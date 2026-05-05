@@ -251,8 +251,8 @@ def admin_todo_issue(payload: IssueRequest, request: Request):
 @admin_router.get("/api/admin/feedback")
 def admin_feedback_list(request: Request):
     _require_admin(request)
-    supabase_url = os.environ.get("SUPABASE_URL")
-    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
 
     try:
         client = build_supabase_client(supabase_url, publishable_key)
@@ -278,8 +278,8 @@ def admin_feedback_list(request: Request):
 @admin_router.post("/api/admin/feedback/{feedback_id}/import")
 def admin_feedback_import(feedback_id: str, request: Request):
     _require_admin(request)
-    supabase_url = os.environ.get("SUPABASE_URL")
-    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
 
     try:
         client = build_supabase_client(supabase_url, publishable_key)
@@ -344,8 +344,8 @@ def admin_feedback_import(feedback_id: str, request: Request):
 @admin_router.delete("/api/admin/feedback/{feedback_id}")
 def admin_feedback_dismiss(feedback_id: str, request: Request):
     _require_admin(request)
-    supabase_url = os.environ.get("SUPABASE_URL")
-    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY")
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
 
     try:
         client = build_supabase_client(supabase_url, publishable_key)
