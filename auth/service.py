@@ -141,6 +141,12 @@ class SupabaseAuthService:
             raise AuthConfigurationError(
                 f"Auth is enabled but missing: {', '.join(missing)}"
             )
+        if self.session_cookie_key:
+            from auth.session_seal import validate_session_cookie_key
+            try:
+                validate_session_cookie_key(self.session_cookie_key)
+            except ValueError as err:
+                raise AuthConfigurationError("SESSION_COOKIE_KEY is not a valid Fernet key.") from err
 
     def missing_required_settings(self) -> list[str]:
         return [
@@ -227,17 +233,17 @@ class SupabaseAuthService:
             client = self._make_supabase_client()
             client.auth.sign_out()
         except Exception:
-            pass
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug("Remote Supabase sign-out failed", exc_info=True)
 
     def _unseal_or_none(self, sealed_session: str):
-        from cryptography.fernet import InvalidToken
-
         from auth.session_seal import unseal_session_tokens
 
         try:
             assert self.session_cookie_key
             return unseal_session_tokens(sealed_session, key=self.session_cookie_key)
-        except InvalidToken:
+        except ValueError:
             return None
 
     def _make_supabase_client(self):
@@ -294,8 +300,6 @@ class SupabaseAuthService:
                 error_reason="no_session_cookie_provided",
             )
 
-        from cryptography.fernet import InvalidToken
-
         from auth.jwt_verify import (
             InvalidAccessToken,
             TokenExpired,
@@ -308,7 +312,7 @@ class SupabaseAuthService:
 
         try:
             tokens = unseal_session_tokens(sealed_session, key=self.session_cookie_key)
-        except InvalidToken:
+        except ValueError:
             return AuthSessionState(
                 auth_enabled=True,
                 authenticated=False,

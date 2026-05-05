@@ -15,6 +15,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import Mock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -296,6 +297,55 @@ class AdminDataTests(unittest.TestCase):
             "expected_mtime": data["mtime"] - 9999,
         })
         self.assertEqual(r.status_code, 409)
+
+
+class AdminFeedbackTests(unittest.TestCase):
+
+    def setUp(self):
+        self.client = TestClient(_build_app(_admin_state()))
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_list_hides_exception_details(self, mock_build):
+        mock_client = Mock()
+        mock_client.table().select().eq().order().execute.side_effect = Exception("Sensitive DB error: missing column xyz")
+        mock_build.return_value = mock_client
+        
+        r = self.client.get("/api/admin/feedback")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["detail"], "Failed to fetch feedback")
+        self.assertNotIn("Sensitive DB error", r.text)
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_import_hides_exception_details(self, mock_build):
+        mock_client = Mock()
+        mock_client.table().select().eq().execute.side_effect = Exception("Sensitive DB error on import")
+        mock_build.return_value = mock_client
+
+        r = self.client.post("/api/admin/feedback/123/import")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["detail"], "Failed to import feedback")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_import_returns_404(self, mock_build):
+        mock_client = Mock()
+        mock_res = Mock()
+        mock_res.data = []
+        mock_client.table().select().eq().execute.return_value = mock_res
+        mock_build.return_value = mock_client
+
+        r = self.client.post("/api/admin/feedback/123/import")
+        self.assertEqual(r.status_code, 404)
+        self.assertEqual(r.json()["detail"], "Feedback not found")
+
+    @patch("admin.router.build_supabase_client")
+    def test_feedback_dismiss_hides_exception_details(self, mock_build):
+        mock_client = Mock()
+        mock_client.table().update().eq().execute.side_effect = Exception("Sensitive DB error on dismiss")
+        mock_build.return_value = mock_client
+
+        r = self.client.delete("/api/admin/feedback/123")
+        self.assertEqual(r.status_code, 500)
+        self.assertEqual(r.json()["detail"], "Failed to dismiss feedback")
 
 
 class AdminRegistrationTests(unittest.TestCase):
