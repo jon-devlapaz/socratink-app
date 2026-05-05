@@ -1266,9 +1266,14 @@ const App = (() => {
   function finishConceptCreateAfterOverlay({ id, name, knowledgeMap, startedAtIso, startedPerf, startingSketch, source, overlayHandle }) {
     const startingMapContext = String(startingSketch || '').trim().slice(0, 1200);
 
-    // Derive content fields from source (URL already resolved by concept-create.js)
+    // Derive content fields from source (URL already resolved by concept-create.js
+    // — resolvedSource.type was rewritten "url"→"text" before submit, but
+    // resolvedSource.url is preserved. Recover the original type for the
+    // library card label by checking source.url presence first).
     const sourceText = (source && source.text) ? source.text : '';
-    const sourceType = (source && source.type) ? source.type : 'text';
+    const sourceType = (source && source.url)
+      ? 'url'
+      : (source && source.type) ? source.type : 'text';
     const sourceFilename = (source && source.filename) ? source.filename : null;
 
     const jsonPayload = { ...knowledgeMap, metadata: { ...(knowledgeMap.metadata || {}) } };
