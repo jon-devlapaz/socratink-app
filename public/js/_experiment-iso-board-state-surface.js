@@ -10,7 +10,6 @@ import { Bus } from './bus.js';
 (function () {
   const STORE_KEY = 'learnops_concepts';
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const BOARD_STATES = new Set(['locked', 'primed', 'drilled', 'solidified', 'fractured']);
 
   function loadConcepts() {
     try {
@@ -183,7 +182,12 @@ import { Bus } from './bus.js';
     // renderGrid(), so we never observe our own writes.
     Bus.on('grid:rendered', scheduleRefresh);
 
-    window.addEventListener('storage', scheduleRefresh);
+    // Filter on STORE_KEY so unrelated cross-tab writes (theme, sound,
+    // motion preferences) don't trigger a board re-render. RAF
+    // throttling helps but the wake-up itself is wasted work.
+    window.addEventListener('storage', (e) => {
+      if (e.key === STORE_KEY || e.key === null) scheduleRefresh();
+    });
     window.addEventListener('focus', scheduleRefresh);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) scheduleRefresh();
