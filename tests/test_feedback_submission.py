@@ -4,7 +4,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 import main
-from auth.service import AuthSessionState, AuthUser
+from auth.service import AuthConfigurationError, AuthSessionState, AuthUser
 
 
 class FakeAuthService:
@@ -122,6 +122,40 @@ class FeedbackSubmissionTests(unittest.TestCase):
             patch(
                 "main.build_supabase_client",
                 return_value=FakeSupabaseClient(feedback_table),
+            ),
+        ):
+            response = client.post(
+                "/api/feedback",
+                json={"message": "This feedback message is long enough."},
+            )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(
+            response.json()["detail"],
+            "Feedback storage is currently unavailable. Please try again later.",
+        )
+
+    def test_missing_supabase_env_returns_503_not_500(self):
+        """build_supabase_client raises AuthConfigurationError when
+        SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY is missing. Surface that
+        as a storage-unavailable 503, not as a generic 500.
+        """
+        state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=AuthUser(id="00000000-0000-0000-0000-000000000789"),
+        )
+        client = self._client(state)
+
+        with (
+            patch.dict(
+                main.os.environ,
+                {"SUPABASE_URL": "", "SUPABASE_PUBLISHABLE_KEY": ""},
+                clear=False,
+            ),
+            patch(
+                "main.build_supabase_client",
+                side_effect=AuthConfigurationError("SUPABASE_URL is required."),
             ),
         ):
             response = client.post(

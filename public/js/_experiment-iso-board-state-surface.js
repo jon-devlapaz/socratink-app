@@ -119,6 +119,13 @@ import { Bus } from './bus.js';
     tile.dataset.sourceState = concept.state || '';
     tile.dataset.boardState = boardState;
 
+    // Defensive: drop any stale empty affordance the previous render may
+    // have inserted. Canonical renderGrid flow wipes innerHTML before
+    // syncTile runs, but cross-tab storage events can fire syncTile
+    // without a preceding render and leave the "+" marker orphaned.
+    const staleAffordance = tile.querySelector('.empty-tile-affordance');
+    if (staleAffordance) staleAffordance.remove();
+
     const pin = tile.querySelector('.concept-pin');
     if (!pin) return;
 

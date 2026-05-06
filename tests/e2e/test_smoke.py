@@ -380,6 +380,14 @@ def test_desk_iso_board_state_surface_and_room_labels(
         "aria-label", "Open Primed Board Tile"
     )
 
+    # Populated tiles must not carry the empty "+" affordance from a prior
+    # render — syncTile drops it defensively in case the canonical
+    # renderGrid innerHTML rewrite was bypassed (cross-tab storage events).
+    populated_with_orphan_affordance = clean_page.locator(
+        "#grid-svg .tile-group:not(.empty) .empty-tile-affordance"
+    )
+    expect(populated_with_orphan_affordance).to_have_count(0)
+
     clean_page.locator("#tile-1").focus()
     expect(clean_page.locator(".room-label")).to_contain_text("Primed Board Tile")
     expect(clean_page.locator(".room-label")).to_contain_text("Open room")
@@ -524,7 +532,9 @@ def test_desk_layout_identical_when_empty_or_populated(
             f"got {sample['svg']}, expected {ref['svg']}"
         )
         for ref_tile, sample_tile in zip(
-            ref["tilePlatformPositions"], sample["tilePlatformPositions"]
+            ref["tilePlatformPositions"],
+            sample["tilePlatformPositions"],
+            strict=True,
         ):
             assert ref_tile["id"] == sample_tile["id"]
             assert ref_tile["platform"] == sample_tile["platform"], (

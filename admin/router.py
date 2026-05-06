@@ -23,7 +23,7 @@ from fastapi import APIRouter, FastAPI, HTTPException, Request
 from pydantic import BaseModel
 from starlette.responses import HTMLResponse, JSONResponse
 
-from auth import load_current_session_state
+from auth import AuthConfigurationError, load_current_session_state
 from auth.supabase_client import build_supabase_client
 from .static import ADMIN_TODO_HTML
 from .todo_parser import (
@@ -264,13 +264,19 @@ def admin_feedback_list(request: Request):
             .execute()
         )
         return JSONResponse({"feedback": res.data})
+    except AuthConfigurationError as err:
+        logger.warning("Feedback storage unavailable (auth config): %s", err)
+        raise HTTPException(
+            status_code=503,
+            detail="Feedback storage is currently unavailable.",
+        ) from err
     except Exception as err:
         # Gracefully handle missing table error (PGRST205)
         err_msg = str(err)
         if "PGRST205" in err_msg or "feedback" in err_msg and "not found" in err_msg.lower():
             logger.warning("Feedback table not found in Supabase. Returning empty list.")
             return JSONResponse({"feedback": [], "warning": "Feedback table not created in Supabase yet."})
-        
+
         logger.exception("Failed to fetch feedback")
         raise HTTPException(status_code=500, detail="Failed to fetch feedback") from err
 
@@ -336,6 +342,12 @@ def admin_feedback_import(feedback_id: str, request: Request):
         return JSONResponse({**_payload(new_text, new_mtime), "status": "imported"})
     except HTTPException:
         raise
+    except AuthConfigurationError as err:
+        logger.warning("Feedback storage unavailable (auth config): %s", err)
+        raise HTTPException(
+            status_code=503,
+            detail="Feedback storage is currently unavailable.",
+        ) from err
     except Exception as err:
         logger.exception("Failed to import feedback")
         raise HTTPException(status_code=500, detail="Failed to import feedback") from err
@@ -351,6 +363,12 @@ def admin_feedback_dismiss(feedback_id: str, request: Request):
         client = build_supabase_client(supabase_url, publishable_key)
         client.table("feedback").update({"status": "dismissed"}).eq("id", feedback_id).execute()
         return JSONResponse({"status": "dismissed"})
+    except AuthConfigurationError as err:
+        logger.warning("Feedback storage unavailable (auth config): %s", err)
+        raise HTTPException(
+            status_code=503,
+            detail="Feedback storage is currently unavailable.",
+        ) from err
     except Exception as err:
         logger.exception("Failed to dismiss feedback")
         raise HTTPException(status_code=500, detail="Failed to dismiss feedback") from err

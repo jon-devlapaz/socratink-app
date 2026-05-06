@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from starlette.responses import JSONResponse, RedirectResponse, Response
 
 from auth import (
+    AuthConfigurationError,
     auth_router,
     build_auth_service_from_env,
     load_current_session_state,
@@ -643,6 +644,10 @@ class FeedbackRequest(BaseModel):
 
 
 def _is_feedback_storage_unavailable(err: Exception) -> bool:
+    # Missing SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY at request time is a
+    # storage-unavailable condition, not an internal bug — surface as 503.
+    if isinstance(err, AuthConfigurationError):
+        return True
     err_msg = str(err)
     normalized = err_msg.lower()
     return (
