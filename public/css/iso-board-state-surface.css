@@ -1,5 +1,5 @@
-/* EXPERIMENTAL - Reversible Desk iso-board state surface.
-   Loaded after the board-first and approach-reveal experiment layers. */
+/* Desk iso-board state surface.
+ * Loaded after board-first.css and approach-reveals.css. */
 
 .tile-group {
   --iso-board-state-color: var(--accent-secondary);

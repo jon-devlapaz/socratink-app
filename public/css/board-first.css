@@ -1,13 +1,10 @@
-/* EXPERIMENTAL — NOT COMMITTED. Loaded last in styles.css to override.
-   Board-first Desk: hide hero-info, snug card around the iso board.
-
-   Two specificity bumps needed because the base styles are stronger than I
-   expected:
-   - .hero-card has explicit margin (not auto), so max-width needs auto-margins
-   - .intro-content is a 2-column grid, so the empty hero-info column kept
-     reserving space and pushed the board off-center. Override display: flex.
-
-   To revert: delete this file and remove its @import from styles.css. */
+/* Board-first Desk: hide hero-info, snug card around the iso board.
+ * Loaded after layout.css in styles.css to override.
+ *
+ * Two specificity bumps needed:
+ * - .hero-card has explicit margin (not auto), so max-width needs auto-margins.
+ * - .intro-content is a 2-column grid, so the empty hero-info column kept
+ *   reserving space and pushed the board off-center. Override display: flex. */
 
 /* Hide the left column entirely. */
 .hero-card .hero-info {

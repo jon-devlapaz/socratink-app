@@ -1,4 +1,4 @@
-// EXPERIMENTAL - Reversible Desk iso-board state surface.
+// Desk iso-board state surface.
 // Adds DOM-only state attributes, swaps circular pin heads for the existing
 // dual-diamond crystal vocabulary, and adds a quiet empty-tile affordance.
 //

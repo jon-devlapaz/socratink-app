@@ -1,14 +1,13 @@
-/* EXPERIMENTAL — NOT COMMITTED. Loaded last.
-   "Approach reveals" hover treatment for the iso board.
-
-   Critical: do NOT apply CSS transform or filter to the .tile-group <g>
-   element. CSS transform on an SVG <g> with an existing transform="..."
-   attribute REPLACES the attribute (not composes), causing the tile to
-   jump to (0,0) and the entire board to visually shift. We lift only the
-   inner concept-pin, which has transform-box: fill-box and behaves cleanly.
-
-   Hover effect: pin rises and grows. Tile-top brightens. Room-label fades
-   in (positioned by Floating UI in _experiment-floating-room-label.js). */
+/* "Approach reveals" hover treatment for the iso board. Loaded last.
+ *
+ * Critical: do NOT apply CSS transform or filter to the .tile-group <g>
+ * element. CSS transform on an SVG <g> with an existing transform="..."
+ * attribute REPLACES the attribute (not composes), causing the tile to
+ * jump to (0,0) and the entire board to visually shift. We lift only the
+ * inner concept-pin, which has transform-box: fill-box and behaves cleanly.
+ *
+ * Hover effect: pin rises and grows. Tile-top brightens. Room-label fades
+ * in (positioned by Floating UI in floating-room-label.js). */
 
 /* Cursor affordance only — no transform on the group. */
 .tile-group {

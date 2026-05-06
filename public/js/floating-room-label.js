@@ -1,6 +1,5 @@
-// EXPERIMENTAL — NOT COMMITTED.
-// Replaces the legacy #tile-tooltip's stale precomputed coords with a
-// Floating UI–anchored room-label that tracks the actual <g> element.
+// Floating UI–anchored room-label that tracks the actual <g> element,
+// replacing the legacy #tile-tooltip's stale precomputed coords.
 //
 // One singleton .room-label element is appended to <body>. On hover/focus
 // of a .tile-group, computePosition() places the label above the group;

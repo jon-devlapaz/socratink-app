@@ -577,7 +577,7 @@ const App = (() => {
       }
     });
 
-    // Listened to by _experiment-iso-board-state-surface.js to re-derive
+    // Listened to by iso-board-state-surface.js to re-derive
     // board-state attrs / re-inject crystal pin without a MutationObserver.
     Bus.emit('grid:rendered');
   }
@@ -2428,7 +2428,7 @@ const App = (() => {
     localStorage.removeItem('learnops-timer-start');
   }
 
-  // Tile hover labels are owned by _experiment-floating-room-label.js
+  // Tile hover labels are owned by floating-room-label.js
   // (Floating-UI anchored to each <g class="tile-group">). The legacy
   // #tile-tooltip path with precomputed pixel coords was deleted.
 
