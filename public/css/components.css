@@ -124,6 +124,11 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
     transition: none;
   }
 }
+html[data-motion="reduced"] .theme-toggle {
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+  transition: none;
+}
 
 .auth-controls {
   display: inline-flex;
@@ -1086,6 +1091,15 @@ body[data-theme="dark"] .hero-primary-action:disabled {
     transition: none;
   }
 }
+html[data-motion="reduced"] .creation-chat-composer,
+html[data-motion="reduced"] .creation-chip,
+html[data-motion="reduced"] .creation-chip-action,
+html[data-motion="reduced"] .creation-chip-input,
+html[data-motion="reduced"] .creation-chip-textarea,
+html[data-motion="reduced"] .creation-source-panel-cancel,
+html[data-motion="reduced"] .creation-source-panel-attach {
+  transition: none;
+}
 
 .btn-start-drill {
   background: var(--primary-fill);
@@ -1435,6 +1449,14 @@ body[data-theme="dark"] .hero-primary-action:disabled {
     transform: none !important;
   }
 }
+html[data-motion="reduced"] .creation-dialog-shell.anim-antigravity-enter,
+html[data-motion="reduced"] .anim-absorb {
+  animation: none !important;
+}
+html[data-motion="reduced"] .creation-dialog-shell.anim-antigravity-enter {
+  opacity: 1 !important;
+  transform: none !important;
+}
 .creation-dialog-header {
   display: flex;
   justify-content: space-between;
@@ -1545,6 +1567,10 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   .creation-dialog-shell {
     transition: none !important;
   }
+}
+html[data-motion="reduced"] .creation-dialog-scrim,
+html[data-motion="reduced"] .creation-dialog-shell {
+  transition: none !important;
 }
 
 /* ============================================================
@@ -1858,6 +1884,23 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
     opacity: 1;
   }
 }
+html[data-motion="reduced"] .first-run-welcome,
+html[data-motion="reduced"] .first-run-welcome__card,
+html[data-motion="reduced"] .first-run-welcome__frame,
+html[data-motion="reduced"] .first-run-welcome__crystal-face {
+  animation: none !important;
+  transition: none !important;
+}
+
+html[data-motion="reduced"] .first-run-welcome__card,
+html[data-motion="reduced"] .first-run-welcome__frame,
+html[data-motion="reduced"] .first-run-welcome[data-closing="true"] .first-run-welcome__card {
+  transform: none !important;
+}
+
+html[data-motion="reduced"] .first-run-welcome__card {
+  opacity: 1;
+}
 
 /* ─── Contextual help cues (tooltips) ────────────────────────── */
 .hero-eyebrow-row {
@@ -2032,6 +2075,13 @@ body[data-theme="dark"] .first-run-welcome__crystal-stage::before {
     animation: none !important;
     box-shadow: 0 6px 20px rgba(var(--violet-600-rgb), 0.10), var(--accent-ring) !important;
   }
+}
+html[data-motion="reduced"] .hero-single-input__field,
+html[data-motion="reduced"] .hero-single-input__field:focus-visible,
+html[data-motion="reduced"] .hero-single-input__field:active {
+  transform: none !important;
+  animation: none !important;
+  box-shadow: 0 6px 20px rgba(var(--violet-600-rgb), 0.10), var(--accent-ring) !important;
 }
 
 .hero-threshold-helper,
@@ -2315,6 +2365,7 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 @media (prefers-reduced-motion: reduce) {
   .hero-example-chip { transition: none; }
 }
+html[data-motion="reduced"] .hero-example-chip { transition: none; }
 
 .hero-info:has(.hero-state-chip[data-state="empty"]) {
   justify-content: flex-start;
@@ -2443,6 +2494,8 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   .help-tip { transition: opacity var(--duration-micro) ease; transform: none; }
   .help-tip[data-show="true"] { transform: none; }
 }
+html[data-motion="reduced"] .help-tip { transition: opacity var(--duration-micro) ease; transform: none; }
+html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
 
 [data-theme="dark"] {
   --help-tip-bg: rgba(48, 43, 73, 0.98);
