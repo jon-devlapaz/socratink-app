@@ -41,8 +41,9 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
 
   // Luminescent nodes for Antigravity Neuro-Aesthetic
   function getThemeColors() {
-    const isDarkMode = document.body.getAttribute('data-theme') === 'dark' || 
-                       (document.body.classList.contains('dark-mode') && document.body.getAttribute('data-theme') !== 'light');
+    // Codebase only sets body[data-theme="dark"] (and body.classList "night");
+    // the historical 'dark-mode' class is never applied anywhere.
+    const isDarkMode = document.body.getAttribute('data-theme') === 'dark';
     return isDarkMode ? [
       '158,139,255', // Bright lavender
       '144,103,198', // Deep purple
@@ -282,7 +283,9 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     last = now;
 
     const t = now * 0.001;
-    const currentColors = getThemeColors();
+    // currentColors removed — only draw() reads theme colors, and it
+    // re-queries via its own getThemeColors() call. Allocating here
+    // burned a per-frame DOM read for nothing.
     const focusX = width * 0.5;
     const focusY = height * 0.52;
     const typingLive = typing.energy > 0.015 || typing.spaceEnergy > 0.015 || now < typing.burstUntil;
