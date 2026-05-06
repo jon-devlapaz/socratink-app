@@ -33,7 +33,7 @@
 - `public/css/crystal.css` — same.
 - `public/css/layout.css` — same, for each of its 3 blocks. Add Settings-page styles. Remove dead `.settings-health-*`, `.settings-badge`, `.settings-input-wrap` rules.
 - `public/css/login.css` — same mirroring for its reduced-motion block.
-- `public/css/_experiment-iso-board-state-surface.css` — same.
+- `public/css/iso-board-state-surface.css` — same.
 
 **Modified — HTML**
 - `public/index.html` — extend the existing pre-paint IIFE (around line 31) with a `socratink.motion` reader that sets `html[data-motion]`.
@@ -398,7 +398,7 @@ git commit -m "feat(motion): mirror components.css 8 reduced-motion blocks under
 - Modify: `public/css/crystal.css:104`
 - Modify: `public/css/layout.css:521, 2078, 2444`
 - Modify: `public/css/login.css:404`
-- Modify: `public/css/_experiment-iso-board-state-surface.css:204`
+- Modify: `public/css/iso-board-state-surface.css:204`
 
 - [ ] **Step 1: Apply the same pattern to each remaining file**
 
@@ -411,7 +411,7 @@ In particular for `layout.css:2078` and `2444` (graph-board-related blocks), ope
 - [ ] **Step 3: Commit**
 
 ```bash
-git add public/css/crystal.css public/css/layout.css public/css/login.css public/css/_experiment-iso-board-state-surface.css
+git add public/css/crystal.css public/css/layout.css public/css/login.css public/css/iso-board-state-surface.css
 git commit -m "feat(motion): mirror crystal/layout/login/_experiment reduced-motion under data-motion"
 ```
 

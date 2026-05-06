@@ -2,9 +2,9 @@
 
 > **Status: complete (delivered 2026-05-05).** The Tier-1 work this brief commissioned landed:
 > - 3×3 isometric grid with `BOARD_SLOT_COUNT` cap (`public/js/dom.js`, `public/js/app.js`, `public/index.html`).
-> - State-aware tiles + crystal pin + quiet `+` empty-tile affordance (`public/css/_experiment-iso-board-state-surface.css`, `public/js/_experiment-iso-board-state-surface.js`).
+> - State-aware tiles + crystal pin + quiet `+` empty-tile affordance (`public/css/iso-board-state-surface.css`, `public/js/iso-board-state-surface.js`).
 > - Bus pub-sub re-sync (`Bus.emit('grid:rendered')` at the tail of `renderGrid`); no MutationObserver.
-> - Floating-UI room-label generalized to empty tiles (`public/js/_experiment-floating-room-label.js`).
+> - Floating-UI room-label generalized to empty tiles (`public/js/floating-room-label.js`).
 > - Legacy `#tile-tooltip` deleted from `app.js`, `index.html`, `components.css`.
 > - Smoke coverage: `tests/e2e/test_smoke.py::test_desk_iso_board_state_surface_and_room_labels`.
 >
@@ -44,11 +44,11 @@ If you skip these, your work will read as AI slop because socratink's voice is h
 
 **The CSS layers:**
 - `public/css/crystal.css` — base tile face/side/pin styles, plus `body.night` / `[data-theme="dark"]` overrides. Also has `.crystal-instance[data-state="..."]` rules for the brand-mark / wordmark crystals (NOT the board pins).
-- `public/css/_experiment-board-first.css` — current EXPERIMENT, hides `.hero-info`, snug-frames the card, overrides the 2-column grid.
-- `public/css/_experiment-approach-reveals.css` — current EXPERIMENT, hover/focus treatment for non-empty tiles, plus the Floating-UI `.room-label` tooltip styles.
-- `public/js/_experiment-floating-room-label.js` — current EXPERIMENT, JS that uses `@floating-ui/dom` (already used elsewhere in `public/js/tooltips.js`) to anchor a singleton `.room-label` element to the hovered/focused tile-group.
+- `public/css/board-first.css` — hides `.hero-info`, snug-frames the card, overrides the 2-column grid.
+- `public/css/approach-reveals.css` — hover/focus treatment for non-empty tiles, plus the Floating-UI `.room-label` tooltip styles.
+- `public/js/floating-room-label.js` — uses `@floating-ui/dom` (already used elsewhere in `public/js/tooltips.js`) to anchor a singleton `.room-label` element to the hovered/focused tile-group.
 
-**Both experiments are uncommitted on `dev`.** Decide whether to fold into a real commit or rework before publishing.
+**These files graduated from `_experiment-*` names to canonical names in commit c0aeaf8 and are committed on `dev`.**
 
 **The legacy `#tile-tooltip`** has been removed (deleted from `app.js`, `index.html`, `components.css`); the Floating-UI room-label is the only tooltip surface on the board.
 
@@ -74,7 +74,7 @@ If you skip these, your work will read as AI slop because socratink's voice is h
 
 - **Adjacency hints.** Tiles that share an edge in the iso layout already imply spatial relationship. When the bridge / interleaving feature lands (DESIGN.md §3, screen 6), adjacent tiles should hint at connection through a shared glow or seam highlight when one of them is in `primed`. This is read-only signal — never a trigger for action — and only activates when the room is interleaving-eligible.
 
-- ~~**Empty-tile treatment that invites without shouting.**~~ *Delivered* — quiet `+` empty-tile affordance shipped (`public/css/_experiment-iso-board-state-surface.css`, `public/js/_experiment-iso-board-state-surface.js`); empty-tile room-labels piggyback on the Floating-UI `.room-label`. See the status callout at the top of this brief.
+- ~~**Empty-tile treatment that invites without shouting.**~~ *Delivered* — quiet `+` empty-tile affordance shipped (`public/css/iso-board-state-surface.css`, `public/js/iso-board-state-surface.js`); empty-tile room-labels piggyback on the Floating-UI `.room-label`. See the status callout at the top of this brief.
 
 - **Selection trail.** When a learner returns to a concept they've previously drilled, the path between rooms (interleaving history) could quietly surface as a faint connecting line on the iso surface — *only* showing solid spaced reconstructions, never reading attempts. Lines drawn with sub-30% opacity, never as decoration.
 
@@ -114,7 +114,7 @@ bash scripts/dev.sh
 
 To force a state for visual testing: edit `localStorage['learnops_concepts']` directly in DevTools and set the `state` field on the active concept. Reload. The cap-aware logic uses the same key.
 
-**Keep changes reversible during exploration.** The current experiments live in `public/css/_experiment-*.css` and `public/js/_experiment-*.js`, imported via `public/styles.css` and a script tag in `public/index.html`. Adopt the same pattern: write enhancements as `_experiment-<name>.{css,js}`, gate via cache-busted import, never edit the canonical files until the user has approved the direction.
+**Keep changes reversible during exploration.** Earlier iterations of this work staged enhancements as `public/css/_experiment-*.css` and `public/js/_experiment-*.js`, imported via `public/styles.css` and a script tag in `public/index.html`, then graduated to canonical names once approved (commit c0aeaf8). Adopt the same pattern: write new enhancements as `_experiment-<name>.{css,js}`, gate via cache-busted import, never edit canonical files until the user has approved the direction.
 
 **Tests that matter:**
 
@@ -150,7 +150,7 @@ Recent IA + design work landed since `main` last merged:
 - Polish: Ignition view trimmed of two body paragraphs and a helper line; one eyebrow per surface; particles relocated from Desk-empty-state to `#ignition-view`
 - Tests: 12/12 in `test_auth_gate_supabase.py`, 9/9 e2e smoke
 
-The iso-board experiments described in section 2 are the uncommitted slice. Folding them into a real commit (after your further enhancement work) is part of the handoff.
+The iso-board experiments described in section 2 graduated to canonical filenames in commit c0aeaf8 and are now committed on `dev`.
 
 ---
 

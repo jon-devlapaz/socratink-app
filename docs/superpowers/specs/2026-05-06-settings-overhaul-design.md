@@ -166,7 +166,7 @@ The previous spec under-listed this. The actual reduced-motion surface in this r
 - `public/css/crystal.css` (`:104`)
 - `public/css/layout.css` (`:521`, `:2078`, `:2444`)
 - `public/css/login.css` (`:404`)
-- `public/css/_experiment-iso-board-state-surface.css` (`:204`)
+- `public/css/iso-board-state-surface.css` (`:204`)
 
 **JS files that branch on `matchMedia('(prefers-reduced-motion: reduce)').matches`:**
 - `public/js/audio.js` (`:49` — used to gate threshold cue playback)
