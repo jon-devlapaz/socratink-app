@@ -3785,7 +3785,65 @@ const App = (() => {
     wireSettingsSounds(settingsContent);
   }
 
-  function wireSettingsIdentity(_root) { /* implemented in Task 12 */ }
+  async function wireSettingsIdentity(root) {
+    const row = root.querySelector('#settings-identity-row');
+    const avatar = root.querySelector('#settings-avatar');
+    const emailEl = root.querySelector('#settings-identity-email');
+    const metaEl = root.querySelector('#settings-identity-meta');
+    const actionHost = root.querySelector('#settings-identity-action-host');
+    if (!row) return;
+
+    let session;
+    try {
+      session = await fetchAuthSession();
+    } catch (err) {
+      console.warn('Settings identity: /api/me unavailable', err);
+      row.hidden = true;
+      return;
+    }
+
+    if (session && session.auth_enabled === false) {
+      row.hidden = true;
+      return;
+    }
+
+    if (isGuestSession(session)) {
+      avatar.classList.add('is-guest');
+      emailEl.textContent = 'Guest';
+      metaEl.textContent = 'Not signed in';
+      const link = document.createElement('a');
+      link.className = 'settings-identity-action';
+      link.href = buildLoginHref();
+      link.textContent = 'Sign in';
+      actionHost.replaceChildren(link);
+      return;
+    }
+
+    if (isIdentifiedUserSession(session)) {
+      const email = session.user?.email || '…';
+      emailEl.textContent = email;
+      metaEl.textContent = 'Signed in';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'settings-identity-action';
+      btn.textContent = 'Log out';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await logout();
+          window.location.assign('/login');
+        } catch (err) {
+          console.warn('Logout failed', err);
+          btn.disabled = false;
+        }
+      });
+      actionHost.replaceChildren(btn);
+      return;
+    }
+
+    // Unknown session shape: omit the row rather than render placeholders.
+    row.hidden = true;
+  }
   function wireSettingsTheme(_root) { /* implemented in Task 13 */ }
   function wireSettingsMotion(_root) { /* implemented in Task 14 */ }
   function wireSettingsSounds(_root) { /* implemented in Task 15 */ }
