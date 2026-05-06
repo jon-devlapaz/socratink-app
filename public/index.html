@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,bolt,close,help,info,memory,settings,show_chart&display=block"
@@ -24,12 +24,20 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
   <link rel="stylesheet" href="styles.css?v=74">
+  <link rel="stylesheet" href="antigravity.css?v=1">
 </head>
 
 <body>
   <script>
     try {
-      if (localStorage.getItem('learnops-theme') === 'dark') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isAntigravity = urlParams.get('theme') === 'antigravity';
+      
+      if (isAntigravity) {
+        document.documentElement.dataset.theme = 'antigravity';
+        document.body.classList.add('night', 'antigravity-theme');
+        document.body.dataset.theme = 'antigravity';
+      } else if (localStorage.getItem('learnops-theme') === 'dark') {
         document.documentElement.dataset.theme = 'dark';
         document.body.classList.add('night');
         document.body.dataset.theme = 'dark';
@@ -413,6 +421,7 @@
   <script type="module" src="js/app.js?v=57"></script>
   <script src="js/intro-particles.js?v=4"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
+  <script type="module" src="js/_experiment-floating-room-label.js?v=1"></script>
   <script type="module" src="js/feedback.js?v=1"></script>
 
   <!-- Feedback Modal -->

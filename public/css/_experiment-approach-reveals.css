@@ -1,0 +1,95 @@
+/* EXPERIMENTAL — NOT COMMITTED. Loaded last.
+   "Approach reveals" hover treatment for the iso board.
+
+   Critical: do NOT apply CSS transform or filter to the .tile-group <g>
+   element. CSS transform on an SVG <g> with an existing transform="..."
+   attribute REPLACES the attribute (not composes), causing the tile to
+   jump to (0,0) and the entire board to visually shift. We lift only the
+   inner concept-pin, which has transform-box: fill-box and behaves cleanly.
+
+   Hover effect: pin rises and grows. Tile-top brightens. Room-label fades
+   in (positioned by Floating UI in _experiment-floating-room-label.js). */
+
+/* Cursor affordance only — no transform on the group. */
+.tile-group {
+  cursor: pointer;
+}
+.tile-group.empty {
+  cursor: default;
+}
+
+/* Tile face brightens on hover. Color-only changes don't affect layout. */
+.tile-top {
+  transition: fill 240ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.tile-group:not(.empty):hover .tile-top,
+.tile-group:not(.empty):focus-visible .tile-top {
+  fill: var(--accent-soft, rgba(144, 103, 198, 0.18));
+}
+
+/* The pin rises and grows on approach. transform-box keeps the origin
+   local to the pin, so it doesn't fight the parent <g>'s positioning. */
+.concept-pin {
+  transform-box: fill-box;
+  transform-origin: center center;
+  transition: transform 280ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.tile-group:not(.empty):hover .concept-pin,
+.tile-group:not(.empty):focus-visible .concept-pin {
+  transform: translateY(-3px) scale(1.08);
+}
+
+/* Hide the legacy #tile-tooltip; the Floating-UI room-label takes over. */
+#tile-tooltip {
+  display: none !important;
+}
+
+/* Keyboard focus: remove default focus ring on the group, since the pin
+   scale + label is the focus indicator. The tile-group will get tabindex
+   from JS so this matters. */
+.tile-group:focus {
+  outline: none;
+}
+
+/* Floating room-label — singleton element appended to <body> by JS,
+   positioned with computePosition + autoUpdate. */
+.room-label {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 11px 20px 13px;
+  border-radius: 14px;
+  background: var(--surface-card, rgba(255, 250, 246, 0.94));
+  color: var(--text, rgb(36, 32, 56));
+  border: 1px solid rgba(144, 103, 198, 0.20);
+  box-shadow:
+    0 12px 32px 0 rgba(144, 103, 198, 0.18),
+    inset 0 1px 0 0 rgba(255, 250, 246, 0.62);
+  font-family: var(--font-display, var(--font-body));
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 200ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    transform 200ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.room-label[data-show="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+.room-label__action {
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--primary, rgb(144, 103, 198));
+  text-transform: uppercase;
+}
