@@ -3831,7 +3831,9 @@ const App = (() => {
         btn.disabled = true;
         try {
           await logout();
-          window.location.assign('/login');
+          // Use the canonical redirect helper for consistency with
+          // the rest of the codebase (preserves return-to handling).
+          redirectToLogin('/');
         } catch (err) {
           console.warn('Logout failed', err);
           btn.disabled = false;
