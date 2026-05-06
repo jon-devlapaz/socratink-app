@@ -30,17 +30,14 @@
 <body>
   <script>
     try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const isAntigravity = urlParams.get('theme') === 'antigravity';
-      
-      if (isAntigravity) {
-        document.documentElement.dataset.theme = 'antigravity';
-        document.body.classList.add('night', 'antigravity-theme');
-        document.body.dataset.theme = 'antigravity';
-      } else if (localStorage.getItem('learnops-theme') === 'dark') {
+      document.body.classList.add('antigravity-theme');
+      if (localStorage.getItem('learnops-theme') === 'dark') {
         document.documentElement.dataset.theme = 'dark';
         document.body.classList.add('night');
         document.body.dataset.theme = 'dark';
+      } else {
+        document.documentElement.dataset.theme = 'light';
+        document.body.dataset.theme = 'light';
       }
     } catch (err) {
       console.warn('Theme preload skipped.', err);
