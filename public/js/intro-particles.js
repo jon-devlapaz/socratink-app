@@ -5,7 +5,17 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function isReducedMotion() {
+    const helper = window.SocratinkMotion?.prefersReducedMotion;
+    if (typeof helper === 'function') {
+      return helper();
+    }
+    // motion.js may not have loaded yet on first paint. Fall back to
+    // system preference only; the next call (after load) will pick up
+    // the user override automatically.
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+  }
+
   const pointer = { active: false, x: 0, y: 0 };
   const typing = {
     active: false,
@@ -184,7 +194,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   }
 
   function pulseFromTyping(strength = 1, mode = 'character') {
-    if (reduceMotion.matches) {
+    if (isReducedMotion()) {
       resize();
       draw(performance.now());
       return;
@@ -495,7 +505,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   function frame(now) {
     resize();
 
-    if (reduceMotion.matches) {
+    if (isReducedMotion()) {
       typing.active = false;
       typing.energy = 0;
       typing.ring = 0;
@@ -536,11 +546,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
 
   window.addEventListener('resize', () => {
     resize();
-    if (reduceMotion.matches && !raf) raf = requestAnimationFrame(frame);
-  });
-
-  reduceMotion.addEventListener?.('change', () => {
-    if (!raf) raf = requestAnimationFrame(frame);
+    if (isReducedMotion() && !raf) raf = requestAnimationFrame(frame);
   });
 
   document.addEventListener('visibilitychange', () => {
