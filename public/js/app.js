@@ -182,6 +182,16 @@ const App = (() => {
     applyThemePreference(themePreference === 'dark' ? 'light' : 'dark');
   }
 
+  // Single entry point for callers that know which theme they want
+  // (e.g. the Settings Theme row). applyThemePreference is the
+  // canonical implementation; this is just a stable, intent-revealing
+  // alias. Both this and toggleTheme write to localStorage["learnops-theme"]
+  // and update the corner toggle UI.
+  function setTheme(nextPreference) {
+    const normalized = nextPreference === 'dark' ? 'dark' : 'light';
+    applyThemePreference(normalized);
+  }
+
   function buildKnowledgeGraphMountConfig(rawData) {
     const graphStage = document.getElementById('graph-stage');
     const graphNodeDetail = document.getElementById('graph-node-detail');
@@ -4064,7 +4074,7 @@ const App = (() => {
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
     importLibraryConcept,
-    toggleTheme, runHeroAction,
+    toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
   };
 
