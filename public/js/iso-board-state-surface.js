@@ -9,7 +9,7 @@ import { Bus } from './bus.js';
 
 (function () {
   const STORE_KEY = 'learnops_concepts';
-  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const BOARD_STATES = new Set(['solidified', 'drilled', 'primed', 'locked', 'fractured']);
 
   function loadConcepts() {
     try {

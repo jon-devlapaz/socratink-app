@@ -5,6 +5,11 @@
 // of a .tile-group, computePosition() places the label above the group;
 // autoUpdate() keeps it correct under scroll/resize/transform.
 // On leave/blur the label hides.
+//
+// Re-binds whenever app.js's renderGrid() emits Bus.emit('grid:rendered'),
+// avoiding MutationObserver wake-ups on every tile innerHTML/class write.
+
+import { Bus } from './bus.js';
 
 (async function () {
   const STORE_KEY = 'learnops_concepts';
@@ -120,8 +125,7 @@
       return;
     }
     refresh();
-    const observer = new MutationObserver(() => refresh());
-    observer.observe(svg, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    Bus.on('grid:rendered', refresh);
   }
 
   if (document.readyState === 'loading') {
