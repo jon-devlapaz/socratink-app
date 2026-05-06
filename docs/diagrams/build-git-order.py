@@ -85,16 +85,6 @@ def add_arrow_binding(rect_element, arrow_id):
 elements = []
 
 
-def link(arrow_id, from_id, to_id, x, y, dx, dy, *, stroke=INK, stroke_width=1):
-    """Add an arrow + register it on both rect endpoints' boundElements."""
-    a = arrow(arrow_id, x, y, dx, dy, from_id, to_id, stroke=stroke, stroke_width=stroke_width)
-    elements.append(a)
-    for rect_id in (from_id, to_id):
-        for el in elements:
-            if el["id"] == rect_id and el["type"] == "rectangle":
-                add_arrow_binding(el, arrow_id)
-
-
 # ── Layout ──────────────────────────────────────────────────────────────
 
 # Override link() to also register on diamonds (template only handles rectangles).

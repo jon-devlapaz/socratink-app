@@ -5,7 +5,20 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  function isReducedMotion() {
+    // intro-particles is loaded as a classic script and runs BEFORE the
+    // ES-module bundle (motion.js) finishes loading. The bootstrap IIFE
+    // in <head> already set html[data-motion="reduced"] from localStorage
+    // by this point, so check the attribute directly first — that's the
+    // canonical source of truth for the user override.
+    if (document.documentElement?.dataset?.motion === 'reduced') return true;
+    const helper = window.SocratinkMotion?.prefersReducedMotion;
+    if (typeof helper === 'function') {
+      return helper();
+    }
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+  }
+
   const pointer = { active: false, x: 0, y: 0 };
   const typing = {
     active: false,
@@ -29,11 +42,23 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   let raf = null;
   let last = 0;
 
-  const colors = [
-    '144,103,198',
-    '141,134,201',
-    '202,196,206',
-  ];
+  // Luminescent nodes for Antigravity Neuro-Aesthetic
+  function getThemeColors() {
+    // Codebase only sets body[data-theme="dark"] (and body.classList "night");
+    // the historical 'dark-mode' class is never applied anywhere.
+    const isDarkMode = document.body.getAttribute('data-theme') === 'dark';
+    return isDarkMode ? [
+      '158,139,255', // Bright lavender
+      '144,103,198', // Deep purple
+      '60,221,199',  // Accent mint
+      '255,255,255', // Pure light
+    ] : [
+      '110,80,180',  // Darker lavender
+      '90,50,150',   // Deep solid purple
+      '40,180,150',  // Darker mint
+      '144,103,198', // Mid purple instead of pure white
+    ];
+  }
 
   function seededRandom() {
     let seed = 271828;
@@ -58,7 +83,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     const rand = seededRandom();
-    const count = Math.max(42, Math.min(86, Math.round((width * height) / 7400)));
+    const count = Math.max(30, Math.min(60, Math.round((width * height) / 9000))); // Fewer particles, more void
 
     particles = Array.from({ length: count }, (_, index) => {
       const x = width * (0.12 + rand() * 0.76);
@@ -69,13 +94,13 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
         y,
         homeX: x,
         homeY: y,
-        vx: (rand() - 0.5) * 0.18,
-        vy: (rand() - 0.5) * 0.18,
-        r: 1.3 + rand() * 2.4,
-        orbit: 8 + rand() * 28,
+        vx: (rand() - 0.5) * 0.1, // Slower base velocity
+        vy: (rand() - 0.5) * 0.1,
+        r: 1.5 + rand() * 3.5, // Slightly larger nodes
+        orbit: 10 + rand() * 40,
         phase: rand() * Math.PI * 2,
-        speed: 0.38 + rand() * 0.86,
-        color: colors[index % colors.length],
+        speed: 0.15 + rand() * 0.4, // Slower orbit (Intellectual calm)
+        colorIndex: index % 4,
       };
     });
   }
@@ -143,34 +168,37 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
 
   function addTypingSparks(amount, mode = 'character') {
     const isSpace = mode === 'space';
-    const count = Math.round(isSpace ? 8 + amount * 5 : 3 + amount * 3);
-    const spread = isSpace ? Math.min(180, typing.spaceWidth * 0.38) : 34;
+    // Doubled spawn count + omnidirectional emission for "agitated" feel.
+    const count = Math.round(isSpace ? 18 + amount * 10 : 7 + amount * 6);
+    const spread = isSpace ? Math.min(220, typing.spaceWidth * 0.46) : 50;
+    const palette = getThemeColors();
 
     for (let index = 0; index < count; index += 1) {
-      const angle = isSpace
-        ? -Math.PI * (0.2 + Math.random() * 0.6)
-        : -Math.PI * (0.22 + Math.random() * 0.58);
-      const speed = (isSpace ? 0.68 : 0.45) + Math.random() * 0.85 + amount * 0.18;
+      // Full 2π emission so sparks fly all directions, not just upward.
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (isSpace ? 1.05 : 0.85) + Math.random() * 1.15 + amount * 0.32;
       sparks.push({
         x: (isSpace ? typing.spaceX : typing.x) + (Math.random() - 0.5) * spread,
-        y: (isSpace ? typing.spaceY : typing.y) + (Math.random() - 0.5) * (isSpace ? 18 : 12),
-        vx: Math.cos(angle) * speed + (Math.random() - 0.5) * (isSpace ? 0.65 : 0.35),
-        vy: Math.sin(angle) * speed - (isSpace ? 0.34 : 0.18),
+        y: (isSpace ? typing.spaceY : typing.y) + (Math.random() - 0.5) * (isSpace ? 28 : 18),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
         life: 1,
-        decay: (isSpace ? 0.018 : 0.026) + Math.random() * 0.018,
-        size: (isSpace ? 1.2 : 0.9) + Math.random() * (isSpace ? 2.1 : 1.8),
+        // Slower decay → sparks linger longer.
+        decay: (isSpace ? 0.012 : 0.018) + Math.random() * 0.012,
+        size: (isSpace ? 1.5 : 1.1) + Math.random() * (isSpace ? 2.5 : 2.0),
         phase: Math.random() * Math.PI * 2,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        color: palette[Math.floor(Math.random() * palette.length)],
       });
     }
 
-    if (sparks.length > 48) {
-      sparks = sparks.slice(sparks.length - 48);
+    // Higher cap so dense bursts don't get culled mid-emission.
+    if (sparks.length > 96) {
+      sparks = sparks.slice(sparks.length - 96);
     }
   }
 
   function pulseFromTyping(strength = 1, mode = 'character') {
-    if (reduceMotion.matches) {
+    if (isReducedMotion()) {
       resize();
       draw(performance.now());
       return;
@@ -186,30 +214,34 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     typing.spaceX = fieldAnchor.x;
     typing.spaceY = fieldAnchor.y;
     typing.spaceWidth = fieldAnchor.width;
-    typing.energy = Math.min(1.8, typing.energy + (isSpace ? 0.72 : 0.48) * amount);
-    typing.ring = Math.min(1, typing.ring + (isSpace ? 0.52 : 0.26) * amount);
-    typing.spaceEnergy = Math.min(1.9, typing.spaceEnergy + (isSpace ? 1.05 : 0.12) * amount);
-    typing.spaceWave = Math.min(1, typing.spaceWave + (isSpace ? 0.72 : 0.08) * amount);
-    typing.burstUntil = performance.now() + (isSpace ? 760 : 560);
+    // Cranked energies — the field is now an "agitated" source that
+    // pushes hard and stays excited longer per keystroke.
+    typing.energy = Math.min(2.6, typing.energy + (isSpace ? 1.05 : 0.85) * amount);
+    typing.ring = Math.min(1.4, typing.ring + (isSpace ? 0.75 : 0.45) * amount);
+    typing.spaceEnergy = Math.min(2.6, typing.spaceEnergy + (isSpace ? 1.55 : 0.22) * amount);
+    typing.spaceWave = Math.min(1.4, typing.spaceWave + (isSpace ? 1.0 : 0.16) * amount);
+    typing.burstUntil = performance.now() + (isSpace ? 1100 : 820);
     addTypingSparks(amount, mode);
 
     for (const p of particles) {
       const sourceX = isSpace ? typing.spaceX : typing.x;
       const sourceY = isSpace ? typing.spaceY : typing.y;
-      const radius = isSpace ? 306 : 218;
+      // Wider blast radius so the burst reaches more particles.
+      const radius = isSpace ? 460 : 340;
       const dx = p.x - sourceX;
       const dy = p.y - sourceY;
       const distance = Math.hypot(dx, dy);
       if (distance <= 0 || distance >= radius) continue;
 
-      const force = Math.pow(1 - distance / radius, 2) * amount;
+      // ~2× the original force so particles visibly leap on each keystroke.
+      const force = Math.pow(1 - distance / radius, 2) * amount * 2.0;
       if (isSpace) {
         const direction = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : dx / Math.abs(dx);
-        p.vx += direction * force * 1.35 + (-dy / distance) * force * 0.22;
-        p.vy += (dy / distance) * force * 0.36 - force * 0.24;
+        p.vx += direction * force * 1.65 + (-dy / distance) * force * 0.32;
+        p.vy += (dy / distance) * force * 0.48 - force * 0.36;
       } else {
-        p.vx += (dx / distance) * force * 0.9 + (-dy / distance) * force * 0.28;
-        p.vy += (dy / distance) * force * 0.7 + (dx / distance) * force * 0.22;
+        p.vx += (dx / distance) * force * 1.40 + (-dy / distance) * force * 0.42;
+        p.vy += (dy / distance) * force * 1.10 + (dx / distance) * force * 0.34;
       }
     }
 
@@ -254,15 +286,19 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     last = now;
 
     const t = now * 0.001;
+    // No theme-color read here — draw() queries them per frame because
+    // draw is where they're actually used. update() doesn't read colors,
+    // so the prior `getThemeColors()` call here was a wasted DOM read.
     const focusX = width * 0.5;
     const focusY = height * 0.52;
     const typingLive = typing.energy > 0.015 || typing.spaceEnergy > 0.015 || now < typing.burstUntil;
 
     if (typingLive) {
-      typing.energy *= Math.pow(0.885, dt);
-      typing.ring *= Math.pow(0.9, dt);
-      typing.spaceEnergy *= Math.pow(0.865, dt);
-      typing.spaceWave *= Math.pow(0.88, dt);
+      // Slower decay so each keystroke stays visibly excited until the next.
+      typing.energy *= Math.pow(0.93, dt);
+      typing.ring *= Math.pow(0.94, dt);
+      typing.spaceEnergy *= Math.pow(0.91, dt);
+      typing.spaceWave *= Math.pow(0.92, dt);
     } else {
       typing.active = false;
       typing.energy = 0;
@@ -287,21 +323,22 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
       const targetX = p.homeX + Math.sin(t * p.speed + p.phase) * p.orbit;
       const targetY = p.homeY + Math.cos(t * p.speed * 0.72 + p.phase) * p.orbit * 0.44;
 
-      p.vx += (targetX - p.x) * 0.006 * dt;
-      p.vy += (targetY - p.y) * 0.006 * dt;
+      p.vx += (targetX - p.x) * 0.003 * dt; // Slower return to orbit
+      p.vy += (targetY - p.y) * 0.003 * dt;
 
-      p.vx += (focusX - p.x) * 0.00042 * dt;
-      p.vy += (focusY - p.y) * 0.00032 * dt;
+      p.vx += (focusX - p.x) * 0.0002 * dt;
+      p.vy += (focusY - p.y) * 0.00015 * dt;
 
       if (pointer.active) {
         const dx = p.x - pointer.x;
         const dy = p.y - pointer.y;
         const distance = Math.hypot(dx, dy);
 
-        if (distance > 0 && distance < 132) {
-          const force = Math.pow(1 - distance / 132, 2);
-          p.vx += (dx / distance) * force * 1.8 * dt;
-          p.vy += (dy / distance) * force * 1.8 * dt;
+        if (distance > 0 && distance < 160) {
+          const force = Math.pow(1 - distance / 160, 2);
+          // Gentle repel
+          p.vx += (dx / distance) * force * 0.8 * dt;
+          p.vy += (dy / distance) * force * 0.8 * dt;
         }
       }
 
@@ -335,8 +372,9 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
         }
       }
 
-      p.vx *= Math.pow(0.92, dt);
-      p.vy *= Math.pow(0.92, dt);
+      // Looser friction so particles travel farther after a burst.
+      p.vx *= Math.pow(0.965, dt);
+      p.vy *= Math.pow(0.965, dt);
       p.x += p.vx * dt;
       p.y += p.vy * dt;
     }
@@ -345,6 +383,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   function draw(now) {
     ctx.clearRect(0, 0, width, height);
 
+    const currentColors = getThemeColors();
     const linkLimit = Math.max(86, Math.min(126, width * 0.16));
     ctx.lineWidth = 0.9;
 
@@ -355,8 +394,14 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
         if (distance > linkLimit) continue;
 
-        const opacity = Math.pow(1 - distance / linkLimit, 2) * 0.2;
-        ctx.strokeStyle = `rgba(${a.color}, ${opacity})`;
+        const opacity = Math.pow(1 - distance / linkLimit, 2) * 0.12; // Softer links
+        
+        // Gradient link for ethereal feel
+        const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+        grad.addColorStop(0, `rgba(${currentColors[a.colorIndex]}, ${opacity})`);
+        grad.addColorStop(1, `rgba(${currentColors[b.colorIndex]}, ${opacity})`);
+        
+        ctx.strokeStyle = grad;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
@@ -365,22 +410,22 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     }
 
     if (typing.active && typing.energy > 0.02) {
-      const radius = 32 + typing.ring * 72 + Math.sin(now * 0.006) * 2;
-      const opacity = Math.min(0.26, typing.energy * 0.13);
+      const radius = 40 + typing.ring * 90 + Math.sin(now * 0.004) * 3;
+      const opacity = Math.min(0.4, typing.energy * 0.18);
       const gradient = ctx.createRadialGradient(typing.x, typing.y, 6, typing.x, typing.y, radius);
-      gradient.addColorStop(0, `rgba(247,236,225,${opacity * 0.72})`);
-      gradient.addColorStop(0.38, `rgba(141,134,201,${opacity})`);
-      gradient.addColorStop(1, 'rgba(141,134,201,0)');
+      gradient.addColorStop(0, `rgba(255,255,255,${opacity * 0.8})`);
+      gradient.addColorStop(0.3, `rgba(158,139,255,${opacity})`);
+      gradient.addColorStop(1, 'rgba(158,139,255,0)');
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(typing.x, typing.y, radius, 0, Math.PI * 2);
       ctx.fill();
 
-      ctx.strokeStyle = `rgba(144,103,198,${opacity * 0.58})`;
-      ctx.lineWidth = 0.8;
+      ctx.strokeStyle = `rgba(158,139,255,${opacity * 0.6})`;
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.arc(typing.x, typing.y, radius * 0.48, 0, Math.PI * 2);
+      ctx.arc(typing.x, typing.y, radius * 0.55, 0, Math.PI * 2);
       ctx.stroke();
       ctx.lineWidth = 0.9;
     }
@@ -440,16 +485,25 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     }
 
     for (const p of particles) {
-      const pulse = 0.75 + Math.sin(now * 0.002 + p.phase) * 0.16;
+      const pulse = 0.8 + Math.sin(now * 0.0015 + p.phase) * 0.25;
+      const glowOpacity = 0.8;
 
-      ctx.fillStyle = `rgba(${p.color}, 0.58)`;
+      // Outer glow
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.r * pulse * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${currentColors[p.colorIndex]}, ${glowOpacity * 0.15})`;
       ctx.fill();
 
-      ctx.fillStyle = 'rgba(247,236,225,0.70)';
+      // Inner core
       ctx.beginPath();
-      ctx.arc(p.x - p.r * 0.18, p.y - p.r * 0.2, Math.max(0.55, p.r * 0.32), 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.r * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${currentColors[p.colorIndex]}, ${glowOpacity})`;
+      ctx.fill();
+
+      // Bright center
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.beginPath();
+      ctx.arc(p.x - p.r * 0.15, p.y - p.r * 0.15, Math.max(0.6, p.r * 0.35), 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -457,7 +511,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   function frame(now) {
     resize();
 
-    if (reduceMotion.matches) {
+    if (isReducedMotion()) {
       typing.active = false;
       typing.energy = 0;
       typing.ring = 0;
@@ -498,11 +552,7 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
 
   window.addEventListener('resize', () => {
     resize();
-    if (reduceMotion.matches && !raf) raf = requestAnimationFrame(frame);
-  });
-
-  reduceMotion.addEventListener?.('change', () => {
-    if (!raf) raf = requestAnimationFrame(frame);
+    if (isReducedMotion() && !raf) raf = requestAnimationFrame(frame);
   });
 
   document.addEventListener('visibilitychange', () => {
@@ -512,6 +562,41 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     } else if (!document.hidden && !raf) {
       raf = requestAnimationFrame(frame);
     }
+  });
+
+  // Re-kick the RAF loop when the reduced-motion preference flips OFF.
+  // The frame loop self-cancels (raf=null) when isReducedMotion() returns
+  // true, so without these listeners, switching the preference back at
+  // runtime would leave particles frozen until reload or window resize.
+  function rekickIfNeeded() {
+    if (!raf && !isReducedMotion() && !document.hidden) {
+      raf = requestAnimationFrame(frame);
+    }
+  }
+
+  // (1) OS-level toggle of (prefers-reduced-motion: reduce).
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onMqChange = () => rekickIfNeeded();
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', onMqChange);
+    } else if (typeof mq.addListener === 'function') {
+      mq.addListener(onMqChange); // legacy Safari
+    }
+  }
+
+  // (2) Other-tab toggle of socratink.motion (Settings in a different tab).
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'socratink.motion' || e.key === null) rekickIfNeeded();
+  });
+
+  // (3) Same-tab toggle: Settings flips html[data-motion] directly. A
+  // MutationObserver on <html> catches that without coupling to the
+  // Settings module's internals.
+  const motionAttrObserver = new MutationObserver(rekickIfNeeded);
+  motionAttrObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-motion'],
   });
 
   resize();

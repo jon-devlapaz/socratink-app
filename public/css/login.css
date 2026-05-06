@@ -426,6 +426,29 @@ input {
     transform: none;
   }
 }
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+html[data-motion="reduced"] .star {
+  animation: none;
+  opacity: 0.34;
+}
+
+html[data-motion="reduced"] .aurora {
+  transition: none;
+}
+
+html[data-motion="reduced"] .google-button:hover,
+html[data-motion="reduced"] .guest-button:hover,
+html[data-motion="reduced"] .coffee-button:hover,
+html[data-motion="reduced"] .discord-link:hover {
+  transform: none;
+}
 
 @media (max-width: 600px) {
   .login-shell {

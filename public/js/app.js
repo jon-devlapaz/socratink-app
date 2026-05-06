@@ -24,7 +24,7 @@ import {
   getActiveId, setActiveId, getActiveConcept,
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
-import { AudioFX } from './audio.js?v=1';
+import { AudioFX } from './audio.js?v=4';
 
 import {
   card, titleEl, descEl, primaryControls, drillControls,
@@ -39,6 +39,7 @@ const App = (() => {
   const PHASE_B_RESUME_KEY = 'learnops-phase-b-resume';
   const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
+  const BOARD_SLOT_COUNT = TILE_IDS.length;
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
@@ -179,6 +180,16 @@ const App = (() => {
 
   function toggleTheme() {
     applyThemePreference(themePreference === 'dark' ? 'light' : 'dark');
+  }
+
+  // Single entry point for callers that know which theme they want
+  // (e.g. the Settings Theme row). applyThemePreference is the
+  // canonical implementation; this is just a stable, intent-revealing
+  // alias. Both this and toggleTheme write to localStorage["learnops-theme"]
+  // and update the corner toggle UI.
+  function setTheme(nextPreference) {
+    const normalized = nextPreference === 'dark' ? 'dark' : 'light';
+    applyThemePreference(normalized);
   }
 
   function buildKnowledgeGraphMountConfig(rawData) {
@@ -356,7 +367,6 @@ const App = (() => {
       if (!field) return;
       field.value = '';
       field.style.height = '';
-      field.classList.remove('is-typing');
     });
     const validation = document.getElementById('hero-threshold-validation');
     if (validation) {
@@ -463,15 +473,12 @@ const App = (() => {
         }
         if (isPrintable(e)) {
           AudioFX.playKeyClick();
-          field.classList.add('is-typing');
         }
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim() && isSubstantiveSketch(sketchField.value.trim())) {
           e.preventDefault();
           form?.requestSubmit?.();
         }
       });
-      field.addEventListener('keyup', () => field.classList.remove('is-typing'));
-      field.addEventListener('blur', () => field.classList.remove('is-typing'));
     });
 
     const chips = document.querySelectorAll('[data-hero-example]');
@@ -553,12 +560,26 @@ const App = (() => {
         (isEmpty ? ' empty' : '') +
         (isSelected ? ' selected' : ''));
 
+      // Button semantics for keyboard + assistive-tech parity with the
+      // SVG <g onclick> handler. tabindex is set here (not in the
+      // floating-room-label experiment) so it survives every render.
+      tileEl.setAttribute('role', 'button');
+      tileEl.setAttribute('tabindex', '0');
+      tileEl.setAttribute(
+        'aria-label',
+        isEmpty ? 'Begin a concept' : `Open ${concept.name}`
+      );
+
       if (isEmpty) {
         tileEl.innerHTML = EMPTY_TILE;
       } else {
         tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state);
       }
     });
+
+    // Listened to by iso-board-state-surface.js to re-derive
+    // board-state attrs / re-inject crystal pin without a MutationObserver.
+    Bus.emit('grid:rendered');
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
@@ -572,7 +593,10 @@ const App = (() => {
     document.body.dataset.drawerOpen = 'false';
     if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
   }
-  function toggleDrawer() { drawer.dataset.open === 'true' ? closeDrawer() : openDrawer(); }
+  function toggleDrawer() {
+    AudioFX.playDrawerToggle();
+    drawer.dataset.open === 'true' ? closeDrawer() : openDrawer();
+  }
 
   if (window.innerWidth >= 900) openDrawer();
 
@@ -1367,15 +1391,21 @@ const App = (() => {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog(originRect);
     let isGuest = false;
+    let isDevMode = false;
     let session = null;
     try {
       session = await fetchAuthSession();
       isGuest = !!(session && session.guest_mode);
+      isDevMode = !!(session && session.dev_mode);
     } catch (err) {
       console.warn('Auth fetch failed during concept creation:', err);
     }
 
-    if (isGuest) {
+    // Guest sessions are normally gated out of LLM-extract concept creation.
+    // Dev mode (SOCRATINK_DEV_AUTOGUEST=1, hard-gated against Vercel/CI on the
+    // server) lifts the gate so local testing and agent flows work without a
+    // Google sign-in.
+    if (isGuest && !isDevMode) {
       dialog.bannerSlot.appendChild(buildGuestBanner());
       dialog.shellContent.appendChild(buildGuestActions(buildLoginHref('/')));
       const firstFocusable = dialog.shell.querySelector('a, button:not([disabled])');
@@ -1453,13 +1483,13 @@ const App = (() => {
       seed,
       onCancel: () => closeCreationDialog(),
       onBeforeSubmit: ({ name }) => {
-        if (loadConcepts().length >= 4) {
-          // Library is at the 4-concept cap. Don't pay for an LLM call.
+        if (loadConcepts().length >= BOARD_SLOT_COUNT) {
+          // Library is at the visible board cap. Don't pay for an LLM call.
           // Don't close the dialog. Surface the cap inline so the learner
           // can either remove a concept or cancel.
           dialog.bannerSlot.innerHTML = '';
           dialog.bannerSlot.appendChild(
-            buildSeedFailureBanner('Library is full. Remove a concept first to add another.')
+            buildSeedFailureBanner('The board holds nine concepts. Retire one to start another.')
           );
           return null;
         }
@@ -1526,6 +1556,10 @@ const App = (() => {
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
+      // Tile-click cue (D·thud) is reserved for navigation INTO a populated
+      // tile. Empty tiles open the add-concept drawer instead — that
+      // transition has its own cue and should not double-fire.
+      AudioFX.playTileClick();
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
@@ -2174,17 +2208,19 @@ const App = (() => {
   }
 
   function renderIgnitionGate() {
-    const atCap = loadConcepts().length >= 4;
+    const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
     if (gate) gate.hidden = !atCap;
     if (form) form.hidden = atCap;
-    // Also disable the Ignition nav entry visually when at cap.
+    // The Ignition nav stays interactive at cap — clicking it shows
+    // the cap gate UI, which is the supported destination in this
+    // state. Surface the constraint via title only; do NOT advertise
+    // the link as disabled while still letting the click activate.
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.classList.toggle('disabled', atCap);
-      el.setAttribute('aria-disabled', atCap ? 'true' : 'false');
+      el.classList.toggle('at-cap', atCap);
       el.title = atCap ? 'Library full. Retire a concept to add another.' : '';
     });
   }
@@ -2397,40 +2433,31 @@ const App = (() => {
     localStorage.removeItem('learnops-timer-start');
   }
 
-  // Tile tooltip hover/tap
-  const tooltipEl = document.getElementById('tile-tooltip');
-  let tooltipTimeout = null;
+  // Tile hover labels are owned by floating-room-label.js
+  // (Floating-UI anchored to each <g class="tile-group">). The legacy
+  // #tile-tooltip path with precomputed pixel coords was deleted.
 
-  // Pixel coords (left, top) — tooltip bottom-center above each crystal apex within #grid-container
-  const TILE_TOOLTIP_POS = [
-    { left: 140, top: 37 },  // tile-0 (back center)
-    { left: 70, top: 77 },  // tile-1 (mid left)
-    { left: 210, top: 77 },  // tile-2 (mid right)
-    { left: 140, top: 117 },  // tile-3 (front center)
-  ];
-
-  function showTileTooltip(idx) {
-    const c = loadConcepts()[idx];
-    if (!c) return;
-    const pos = TILE_TOOLTIP_POS[idx];
-    tooltipEl.style.left = pos.left + 'px';
-    tooltipEl.style.top = pos.top + 'px';
-    tooltipEl.textContent = c.name + '  ·  ' + STATES[c.state].title;
-    tooltipEl.classList.add('visible');
-  }
-  function hideTileTooltip() {
-    tooltipEl.classList.remove('visible');
-  }
-
+  // Keyboard parity for the SVG <g onclick> handler. SVG groups don't
+  // fire click on Enter/Space natively, so wire it explicitly.
   tileEls.forEach((el, idx) => {
-    el.addEventListener('mouseenter', () => showTileTooltip(idx));
-    el.addEventListener('mouseleave', hideTileTooltip);
-    el.addEventListener('touchstart', () => {
-      showTileTooltip(idx);
-      clearTimeout(tooltipTimeout);
-      tooltipTimeout = setTimeout(hideTileTooltip, 1800);
-    }, { passive: true });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        selectTile(idx);
+      }
+    });
   });
+
+  // Side-menu tap sound. Bind to every sidebar nav item AND every
+  // bottom-nav item so a click on Desk / Library / Settings / Feedback
+  // gets the same paper-tap that Ignition incidentally got via its
+  // auto-focus on the hero input. Single throttled fire (150ms) means
+  // the nav-click + downstream auto-focus on a view collapses into one.
+  document
+    .querySelectorAll('.sidebar-nav-item, .bottom-nav-item')
+    .forEach((el) => {
+      el.addEventListener('click', () => AudioFX.playFocusTap());
+    });
 
   // Render grid first (populates polygon DOM nodes)
   themePreference = getStoredThemePreference();
@@ -3699,85 +3726,6 @@ const App = (() => {
     });
   }
 
-  function getStoredGeminiKey() {
-    try {
-      return localStorage.getItem('gemini_key') || '';
-    } catch (err) {
-      console.warn('Gemini key unavailable.', err);
-      return '';
-    }
-  }
-
-  function setStatusBadge(target, tone, text) {
-    if (!target) return;
-    target.className = `settings-badge ${tone}`;
-    target.textContent = text;
-  }
-
-  function renderAccountBody(container, session) {
-    if (!container) return;
-
-    if (isGuestSession(session)) {
-      container.innerHTML = `
-        <div class="settings-account-summary">
-          <div class="settings-account-title">Guest mode is active</div>
-          <p class="settings-subtext">This browser passed through the login wall as a guest. You can keep trying locally, upgrade into Google sign-in, or exit back to login.</p>
-        </div>
-        <div class="settings-actions">
-          ${session.auth_enabled ? `<a class="auth-link" href="${escHtml(buildLoginHref('/'))}">Continue with Google</a>` : ''}
-          <button id="settings-logout-btn" class="settings-test" type="button">Exit Guest</button>
-        </div>
-      `;
-      const logoutBtn = container.querySelector('#settings-logout-btn');
-      logoutBtn?.addEventListener('click', async () => {
-        logoutBtn.disabled = true;
-        try {
-          await logout();
-          redirectToLogin('/');
-        } catch (err) {
-          console.warn('Logout failed.', err);
-          logoutBtn.disabled = false;
-        }
-      });
-      return;
-    }
-
-    if (isIdentifiedUserSession(session)) {
-      const label = session.user.first_name || session.user.email || 'Signed in';
-      container.innerHTML = `
-        <div class="settings-account-summary">
-          <div class="settings-account-title">Signed in as ${escHtml(label)}</div>
-          <p class="settings-subtext">This browser has an authenticated session. Logging out will send you back to the login decision screen.</p>
-        </div>
-        <div class="settings-actions">
-          <button id="settings-logout-btn" class="settings-test" type="button">Log Out</button>
-        </div>
-      `;
-      const logoutBtn = container.querySelector('#settings-logout-btn');
-      logoutBtn?.addEventListener('click', async () => {
-        logoutBtn.disabled = true;
-        try {
-          await logout();
-          redirectToLogin('/');
-        } catch (err) {
-          console.warn('Logout failed.', err);
-          logoutBtn.disabled = false;
-        }
-      });
-      return;
-    }
-
-    container.innerHTML = `
-      <div class="settings-account-summary">
-        <div class="settings-account-title">Login required</div>
-        <p class="settings-subtext">This app now requires an entry decision before use. Choose Google sign-in or guest mode to continue.</p>
-      </div>
-      <div class="settings-actions">
-        <a class="auth-link" href="${escHtml(buildLoginHref('/'))}">${session?.auth_enabled ? 'Continue with Google' : 'Return to Login'}</a>
-      </div>
-    `;
-  }
-
   async function renderSettingsView() {
     const settingsContent = document.getElementById('settings-content');
     if (!settingsContent) return;
@@ -3785,197 +3733,220 @@ const App = (() => {
     settingsContent.innerHTML = `
       <div class="settings-shell">
         <header class="settings-page-header">
-          <div class="settings-page-kicker">Settings</div>
-          <h2 class="settings-page-title">Setup for a truthful trial run</h2>
-          <p class="settings-page-copy">Keep this page focused on what a friends-and-family user needs: backend reachability, Gemini key access, and account state.</p>
+          <span class="settings-page-kicker">
+            <span class="crystal-glyph" aria-hidden="true"></span> Settings
+          </span>
+          <h2 class="settings-page-title">Your reading room</h2>
+          <p class="settings-page-copy">Quiet preferences for how socratink looks and sounds. Saved to this browser.</p>
         </header>
 
-        <div class="settings-page-grid">
-          <article class="settings-page-card">
-            <div class="settings-section-header">
-              <h4>Runtime Access</h4>
-              <span class="settings-dot" id="settings-dot"></span>
-            </div>
-            <p class="settings-subtext">Backend reachability and key availability are separate checks. A green backend alone does not mean extract or drill is fully working.</p>
-            <div class="settings-health-list">
-              <div class="settings-health-row">
-                <span class="settings-health-label">Backend</span>
-                <span id="settings-backend-badge" class="settings-badge neutral">Checking...</span>
-              </div>
-              <p id="settings-backend-detail" class="settings-subtext">Checking the local API.</p>
-              <div class="settings-health-row">
-                <span class="settings-health-label">Model Access</span>
-                <span id="settings-ai-badge" class="settings-badge neutral">Checking...</span>
-              </div>
-              <p id="settings-ai-detail" class="settings-subtext">Looking for a server key or a locally saved Gemini key.</p>
-            </div>
-            <div class="settings-actions">
-              <button id="settings-test-btn" class="settings-test" type="button">Check Backend</button>
-            </div>
-            <div id="settings-status" class="settings-status"></div>
-          </article>
-
-          <article class="settings-page-card">
-            <div class="settings-section-header">
-              <h4>Gemini API Key</h4>
-            </div>
-            <p class="settings-subtext">This key is stored only in this browser. If the server already has <code>GEMINI_API_KEY</code>, the app can use that instead.</p>
-            <div class="settings-input-wrap">
-              <input type="password" id="settings-key-input" class="settings-input" placeholder="Paste Gemini API key" autocomplete="off" spellcheck="false">
-            </div>
-            <div class="settings-actions">
-              <button id="settings-key-save" class="settings-test" type="button">Save Key</button>
-              <button id="settings-key-remove" class="settings-test" type="button">Remove Key</button>
-            </div>
-            <div id="settings-key-status" class="settings-status"></div>
-          </article>
-
-          <article class="settings-page-card">
-            <div class="settings-section-header">
-              <h4>Account</h4>
-            </div>
-            <p class="settings-subtext">Every user now enters through login first. This panel shows whether this browser is signed in, in guest mode, or needs to re-enter through the login wall.</p>
-            <div id="settings-account-body" class="settings-account-body">
-              <div class="settings-account-summary">
-                <div class="settings-account-title">Loading account state...</div>
-              </div>
-            </div>
-          </article>
-
-          <article class="settings-page-card">
-            <div class="settings-section-header">
-              <h4>Sound</h4>
-            </div>
-            <p class="settings-subtext">Quiet sensory cues at the threshold — a soft tone on focus, a low settle on submit. On by default. Saved to this browser only.</p>
-            <label class="settings-sound-toggle" for="settings-sound-input">
-              <input type="checkbox" id="settings-sound-input">
-              <span>Enable threshold sounds</span>
-            </label>
-          </article>
+        <div class="settings-identity-row" id="settings-identity-row">
+          <div class="settings-avatar" id="settings-avatar"></div>
+          <div class="settings-identity-text">
+            <span class="settings-identity-email" id="settings-identity-email">…</span>
+            <span class="settings-identity-meta" id="settings-identity-meta"></span>
+          </div>
+          <span id="settings-identity-action-host"></span>
         </div>
+
+        <section class="settings-display">
+          <h4 class="settings-section-heading">Display</h4>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Theme</div>
+              <div class="settings-row-meta">Cream paper or obsidian sky</div>
+            </div>
+            <div class="settings-pill-group" role="radiogroup" aria-label="Theme">
+              <button type="button" class="settings-pill" role="radio" data-theme-value="light" aria-checked="false">Light</button>
+              <button type="button" class="settings-pill" role="radio" data-theme-value="dark" aria-checked="false">Dark</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Reduced motion</div>
+              <div class="settings-row-meta">Calm transitions, no settle bloom</div>
+            </div>
+            <button type="button" class="settings-toggle" id="settings-motion-toggle"
+                    role="switch" aria-checked="false" aria-label="Reduced motion"></button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Threshold sounds</div>
+              <div class="settings-row-meta">Soft cues at focus and submit</div>
+            </div>
+            <button type="button" class="settings-toggle" id="settings-sound-toggle"
+                    role="switch" aria-checked="false" aria-label="Threshold sounds"></button>
+          </div>
+        </section>
       </div>
     `;
 
-    const dot = settingsContent.querySelector('#settings-dot');
-    const testBtn = settingsContent.querySelector('#settings-test-btn');
-    const statusBox = settingsContent.querySelector('#settings-status');
-    const backendBadge = settingsContent.querySelector('#settings-backend-badge');
-    const backendDetail = settingsContent.querySelector('#settings-backend-detail');
-    const aiBadge = settingsContent.querySelector('#settings-ai-badge');
-    const aiDetail = settingsContent.querySelector('#settings-ai-detail');
-    const keyInput = settingsContent.querySelector('#settings-key-input');
-    const keySave = settingsContent.querySelector('#settings-key-save');
-    const keyRemove = settingsContent.querySelector('#settings-key-remove');
-    const keyStatus = settingsContent.querySelector('#settings-key-status');
-    const accountBody = settingsContent.querySelector('#settings-account-body');
+    wireSettingsIdentity(settingsContent);
+    wireSettingsTheme(settingsContent);
+    wireSettingsMotion(settingsContent);
+    wireSettingsSounds(settingsContent);
+  }
 
-    const refreshAiAccessUi = ({ backendReachable = false, serverKeyConfigured = false } = {}) => {
-      const localKey = getStoredGeminiKey();
-      if (!backendReachable) {
-        setStatusBadge(aiBadge, 'danger', 'Blocked');
-        aiDetail.textContent = 'The backend is unreachable, so extract and drill calls cannot run from this browser yet.';
-        return;
-      }
-      if (serverKeyConfigured) {
-        setStatusBadge(aiBadge, 'success', 'Server key active');
-        aiDetail.textContent = 'The server has a Gemini key configured. This browser does not need its own key to try extraction.';
-        return;
-      }
-      if (localKey) {
-        setStatusBadge(aiBadge, 'success', 'Local key saved');
-        aiDetail.textContent = 'This browser has a local Gemini key saved. The first real extract or drill still confirms provider access.';
-        return;
-      }
-      setStatusBadge(aiBadge, 'neutral', 'Needs key');
-      aiDetail.textContent = 'No server key is configured and this browser has no saved Gemini key yet.';
-    };
+  async function wireSettingsIdentity(root) {
+    const row = root.querySelector('#settings-identity-row');
+    const avatar = root.querySelector('#settings-avatar');
+    const emailEl = root.querySelector('#settings-identity-email');
+    const metaEl = root.querySelector('#settings-identity-meta');
+    const actionHost = root.querySelector('#settings-identity-action-host');
+    if (!row || !avatar || !emailEl || !metaEl || !actionHost) return;
 
-    const refreshBackendStatus = async () => {
-      testBtn.disabled = true;
-      testBtn.textContent = 'Checking...';
-      if (statusBox) {
-        statusBox.textContent = '';
-      }
-      try {
-        const data = await getHealth();
-        applyRuntimeConfig(data);
-        dot?.classList.add('connected');
-        dot?.classList.remove('error');
-        setStatusBadge(backendBadge, 'success', 'Connected');
-        backendDetail.textContent = 'The app can reach the backend from this browser.';
-        refreshAiAccessUi({ backendReachable: true, serverKeyConfigured: Boolean(data.server_key_configured) });
-        if (statusBox) {
-          statusBox.textContent = data.server_key_configured
-            ? 'Backend reachable. Server-managed Gemini access is available.'
-            : 'Backend reachable. Add a local Gemini key below or configure one on the server.';
-          statusBox.style.color = 'var(--primary)';
-        }
-      } catch (err) {
-        console.warn('Backend health check failed.', err);
-        dot?.classList.add('error');
-        dot?.classList.remove('connected');
-        setStatusBadge(backendBadge, 'danger', 'Unavailable');
-        backendDetail.textContent = 'Cannot reach the backend from this browser. Start the API before trying extract or drill.';
-        refreshAiAccessUi({ backendReachable: false, serverKeyConfigured: false });
-        if (statusBox) {
-          statusBox.textContent = 'Backend check failed. Start the API and try again.';
-          statusBox.style.color = 'var(--danger)';
-        }
-      } finally {
-        testBtn.disabled = false;
-        testBtn.textContent = 'Check Backend';
-      }
-    };
-
-    keyInput.value = getStoredGeminiKey();
-
-    keySave?.addEventListener('click', () => {
-      const nextValue = keyInput.value.trim();
-      if (!nextValue) {
-        keyStatus.textContent = 'Enter a Gemini key before saving.';
-        keyStatus.style.color = 'var(--danger)';
-        return;
-      }
-      localStorage.setItem('gemini_key', nextValue);
-      keyStatus.textContent = 'Key saved to this browser.';
-      keyStatus.style.color = 'var(--primary)';
-      refreshAiAccessUi({
-        backendReachable: backendBadge?.textContent === 'Connected',
-        serverKeyConfigured: aiBadge?.textContent === 'Server key active',
-      });
-    });
-
-    keyRemove?.addEventListener('click', () => {
-      localStorage.removeItem('gemini_key');
-      keyInput.value = '';
-      keyStatus.textContent = 'Local Gemini key removed from this browser.';
-      keyStatus.style.color = 'var(--text-sub)';
-      refreshAiAccessUi({
-        backendReachable: backendBadge?.textContent === 'Connected',
-        serverKeyConfigured: aiBadge?.textContent === 'Server key active',
-      });
-    });
-
-    testBtn?.addEventListener('click', refreshBackendStatus);
-
-    const soundInput = settingsContent.querySelector('#settings-sound-input');
-    if (soundInput) {
-      soundInput.checked = AudioFX.enabled;
-      soundInput.addEventListener('change', () => {
-        AudioFX.setEnabled(soundInput.checked);
-        if (soundInput.checked) AudioFX.playFocusTap();
-      });
-    }
-
+    let session;
     try {
-      const session = await fetchAuthSession();
-      renderAccountBody(accountBody, session);
+      session = await fetchAuthSession();
     } catch (err) {
-      console.warn('Settings account state unavailable.', err);
-      renderAccountBody(accountBody, { auth_enabled: false, authenticated: false, guest_mode: false });
+      console.warn('Settings identity: /api/me unavailable', err);
+      row.hidden = true;
+      return;
     }
 
-    await refreshBackendStatus();
+    if (session && session.auth_enabled === false) {
+      row.hidden = true;
+      return;
+    }
+
+    if (isGuestSession(session)) {
+      avatar.classList.add('is-guest');
+      emailEl.textContent = 'Guest';
+      metaEl.textContent = 'Not signed in';
+      const link = document.createElement('a');
+      link.className = 'settings-identity-action';
+      link.href = buildLoginHref();
+      link.textContent = 'Sign in';
+      actionHost.replaceChildren(link);
+      return;
+    }
+
+    if (isIdentifiedUserSession(session)) {
+      const email = session.user?.email || '…';
+      emailEl.textContent = email;
+      metaEl.textContent = 'Signed in';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'settings-identity-action';
+      btn.textContent = 'Log out';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await logout();
+          // Use the canonical redirect helper for consistency with
+          // the rest of the codebase (preserves return-to handling).
+          redirectToLogin('/');
+        } catch (err) {
+          console.warn('Logout failed', err);
+          btn.disabled = false;
+        }
+      });
+      actionHost.replaceChildren(btn);
+      return;
+    }
+
+    // Unknown session shape: omit the row rather than render placeholders.
+    row.hidden = true;
+  }
+  // Module-lifetime flag: ensures the corner-toggle sync listener is
+  // attached once. Without this, every renderSettingsView() call would
+  // stack another listener that closes over a stale pills NodeList.
+  let _settingsCornerSyncBound = false;
+
+  function wireSettingsTheme(root) {
+    const pills = root.querySelectorAll('.settings-pill[data-theme-value]');
+    if (!pills.length) return;
+
+    const syncPills = () => {
+      const current = getStoredThemePreference();
+      pills.forEach(p => {
+        p.setAttribute('aria-checked', String(p.dataset.themeValue === current));
+      });
+    };
+
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const next = pill.dataset.themeValue === 'dark' ? 'dark' : 'light';
+        // setTheme is the public alias over applyThemePreference; using
+        // it here keeps Settings consistent with anything else that
+        // wants to change theme intent-first ("set to X") rather than
+        // toggle-first ("flip from current").
+        setTheme(next);
+        syncPills();
+      });
+    });
+
+    syncPills();
+
+    // Corner toggle → re-sync the live pills. Bound once for module
+    // lifetime; the live querySelectorAll inside the handler always
+    // reflects the most-recently-rendered Settings view, so closures
+    // never go stale even though the listener never re-attaches.
+    if (!_settingsCornerSyncBound) {
+      const corner = document.getElementById('theme-toggle');
+      if (corner) {
+        corner.addEventListener('click', () => {
+          setTimeout(() => {
+            const livePills = document.querySelectorAll('.settings-pill[data-theme-value]');
+            if (!livePills.length) return;
+            const current = getStoredThemePreference();
+            livePills.forEach(p => {
+              p.setAttribute('aria-checked', String(p.dataset.themeValue === current));
+            });
+          }, 0);
+        });
+        _settingsCornerSyncBound = true;
+      }
+    }
+  }
+  function wireSettingsMotion(root) {
+    const toggle = root.querySelector('#settings-motion-toggle');
+    if (!toggle) return;
+
+    const readStored = () => {
+      try {
+        return localStorage.getItem('socratink.motion') === 'reduced';
+      } catch {
+        return false;
+      }
+    };
+
+    const apply = (isReduced) => {
+      if (isReduced) {
+        document.documentElement.dataset.motion = 'reduced';
+        try { localStorage.setItem('socratink.motion', 'reduced'); } catch {}
+      } else {
+        delete document.documentElement.dataset.motion;
+        try { localStorage.setItem('socratink.motion', 'system'); } catch {}
+      }
+      toggle.setAttribute('aria-checked', String(isReduced));
+    };
+
+    apply(readStored());
+
+    toggle.addEventListener('click', () => {
+      const next = toggle.getAttribute('aria-checked') !== 'true';
+      apply(next);
+    });
+  }
+  function wireSettingsSounds(root) {
+    const toggle = root.querySelector('#settings-sound-toggle');
+    if (!toggle) return;
+
+    toggle.setAttribute('aria-checked', String(Boolean(AudioFX.enabled)));
+
+    toggle.addEventListener('click', () => {
+      const next = toggle.getAttribute('aria-checked') !== 'true';
+      AudioFX.setEnabled(next);
+      toggle.setAttribute('aria-checked', String(next));
+      if (next) {
+        // Confirmation cue, matching the original checkbox behavior.
+        AudioFX.playFocusTap();
+      }
+    });
   }
 
   function showSettings() {
@@ -4052,7 +4023,7 @@ const App = (() => {
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
     importLibraryConcept,
-    toggleTheme, runHeroAction,
+    toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
   };
 

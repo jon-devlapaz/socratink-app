@@ -1,6 +1,6 @@
 import {
   computePosition, flip, shift, offset, arrow,
-} from 'https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.6.3/+esm';
+} from '/vendor/floating-ui-dom-1.6.3.esm.js';
 
 const OPEN_DELAY = 300;
 const CLOSE_DELAY = 150;

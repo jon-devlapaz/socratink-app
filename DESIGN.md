@@ -222,8 +222,21 @@ The aesthetic mirrors the work the product asks of its learners: **quiet, schola
 - **No noise, grain, or film overlays.** Warmth comes from the gradient.
 - **No left-border-accent cards.** Reads as AI-slop trope; clashes with the jeweled palette.
 
+> **In-app exception (Antigravity theme).** The shipping in-app shell (`public/index.html`) loads `public/antigravity.css` and applies `.antigravity-theme` to `<body>` unconditionally — a deliberate divergence from the cream-paper rules above. It introduces `--accent-color` / `--accent-mint`, a neutral `#F2F0F5` light page surface, a `#0B0D17` dark page, glassy panels, and Outfit (loaded from Google Fonts) for ignition/hero display headings. Marketing pages and external surfaces still follow the cream-paper rules verbatim. See `docs/design/socratink-design-system.md` and `docs/design/brand-reference.md` for the canonical exception details.
+
 ### Motion
-Drill surfaces are quiet. Standard easing for hover and press. **Spring easing only on `solidified`** — the one moment that earns celebration. Crystal polygon morphs at 600ms; everything else lives at 140 / 220 / 320ms. No 1s+ animations. No scroll-hijacking, no parallax, no autoplay video. `prefers-reduced-motion: reduce` is respected on every motion surface.
+Drill surfaces are quiet. Standard easing for hover and press. **Spring easing only on `solidified`** — the one moment that earns celebration. Crystal polygon morphs at 600ms; everything else lives at 140 / 220 / 320ms. No 1s+ animations. No scroll-hijacking, no parallax, no autoplay video. `prefers-reduced-motion: reduce` is respected on every motion surface, and the in-app Settings → Reduced motion toggle is an additive override: it persists `socratink.motion = "reduced"` to localStorage, surfaces as `html[data-motion="reduced"]` (preloaded inline by `public/index.html` and the login page), and is mirrored across base/components/crystal/layout/login/experiment stylesheets via the shared `public/js/motion.js` helper. Any new motion surface must gate on both the OS query and the data attribute.
+
+### Audio
+Material, not musical. The palette is canonical in `public/js/audio.js`; reach for that file when retuning. The vocabulary today:
+
+- **Typing** — `playKeyClick` (F·brush): lowpass noise around 600Hz, ~18ms. Bound to keystrokes in the threshold composer / drill input.
+- **Focus tap** — `playFocusTap` (I·breath): highpass noise around 4kHz, ~10ms. Sidebar, bottom-nav, and primary-control focus.
+- **Tile click** — `playTileClick` (D·thud): 60Hz square + bandpass noise. Iso-board tile activation.
+- **Drawer toggle** — `playDrawerToggle` (F·body): lowpass cloth around 1.1kHz, ~30ms. Open/close of the desk drawer.
+- **Threshold submit** — `playSubmitChime`: long G4→C4 settle. Reserved for the Ignition submit moment.
+
+On by default; toggled in Settings. Honors `prefers-reduced-motion: reduce`. No ambient loops, no notification stings, no UI-as-instrument.
 
 ### Hover, press, focus
 - **Hover** = the page lifts, it doesn't brighten. `translateY(-1 to -3px)` + border swap to `--accent-border-strong` + warmer shadow.

@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,bolt,close,help,info,memory,settings,show_chart&display=block"
@@ -23,19 +23,27 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=74">
+  <link rel="stylesheet" href="styles.css?v=82">
+  <link rel="stylesheet" href="antigravity.css?v=1">
 </head>
 
 <body>
   <script>
     try {
+      document.body.classList.add('antigravity-theme');
       if (localStorage.getItem('learnops-theme') === 'dark') {
         document.documentElement.dataset.theme = 'dark';
         document.body.classList.add('night');
         document.body.dataset.theme = 'dark';
+      } else {
+        document.documentElement.dataset.theme = 'light';
+        document.body.dataset.theme = 'light';
+      }
+      if (localStorage.getItem('socratink.motion') === 'reduced') {
+        document.documentElement.dataset.motion = 'reduced';
       }
     } catch (err) {
-      console.warn('Theme preload skipped.', err);
+      console.warn('Theme/motion preload skipped.', err);
     }
   </script>
 
@@ -255,7 +263,7 @@
           </div>
         </div>
 
-        <!-- 2×2 isometric crystal grid -->
+        <!-- 3×3 isometric crystal grid -->
         <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
           <!-- Floating spacing button (disabled in the current MVP) -->
           <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
@@ -267,7 +275,7 @@
             </svg>
           </button>
 
-          <svg id="grid-svg" viewBox="0 0 280 220" width="280" height="220" xmlns="http://www.w3.org/2000/svg"
+          <svg id="grid-svg" viewBox="0 0 420 320" width="420" height="320" xmlns="http://www.w3.org/2000/svg"
             style="overflow:visible;">
             <defs>
               <filter id="glow-filter" x="-40%" y="-40%" width="180%" height="180%">
@@ -276,12 +284,16 @@
               </filter>
             </defs>
             <!-- Paint order: back → front. Transforms are fixed. Content populated by renderGrid(). -->
-            <g id="tile-0" class="tile-group" transform="translate(70,45)" onclick="App.selectTile(0)"></g>
-            <g id="tile-1" class="tile-group" transform="translate(0,85)" onclick="App.selectTile(1)"></g>
-            <g id="tile-2" class="tile-group" transform="translate(140,85)" onclick="App.selectTile(2)"></g>
-            <g id="tile-3" class="tile-group" transform="translate(70,125)" onclick="App.selectTile(3)"></g>
+            <g id="tile-0" class="tile-group" transform="translate(140,45)" onclick="App.selectTile(0)"></g>
+            <g id="tile-1" class="tile-group" transform="translate(70,85)" onclick="App.selectTile(1)"></g>
+            <g id="tile-2" class="tile-group" transform="translate(210,85)" onclick="App.selectTile(2)"></g>
+            <g id="tile-3" class="tile-group" transform="translate(0,125)" onclick="App.selectTile(3)"></g>
+            <g id="tile-4" class="tile-group" transform="translate(140,125)" onclick="App.selectTile(4)"></g>
+            <g id="tile-5" class="tile-group" transform="translate(280,125)" onclick="App.selectTile(5)"></g>
+            <g id="tile-6" class="tile-group" transform="translate(70,165)" onclick="App.selectTile(6)"></g>
+            <g id="tile-7" class="tile-group" transform="translate(210,165)" onclick="App.selectTile(7)"></g>
+            <g id="tile-8" class="tile-group" transform="translate(140,205)" onclick="App.selectTile(8)"></g>
           </svg>
-          <div id="tile-tooltip"></div>
         </div>
       </div>
 
@@ -296,9 +308,9 @@
         <p class="ignition-eyebrow">Start here</p>
         <h1 class="ignition-title" id="ignition-title">What do you want to understand?</h1>
 
-        <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() when loadConcepts().length >= 4. -->
+        <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() at board capacity. -->
         <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
-          <p class="ignition-cap-gate__message">Library is full (4 concepts). Retire one before starting another.</p>
+          <p class="ignition-cap-gate__message">The board holds nine concepts. Retire one to start another.</p>
           <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
         </div>
 
@@ -330,7 +342,8 @@
             <div class="hero-example-chips" aria-label="Example concepts">
               <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
               <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
-              <button type="button" class="hero-example-chip" data-hero-example="The French Revolution">The French Revolution</button>
+              <button type="button" class="hero-example-chip" data-hero-example="Transformers">Transformers</button>
+              <button type="button" class="hero-example-chip" data-hero-example="Attention">Attention</button>
             </div>
             <button type="submit" class="hero-single-input__submit" disabled>
               <span>Create draft path</span>
@@ -410,9 +423,11 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=56"></script>
-  <script src="js/intro-particles.js?v=4"></script>
+  <script type="module" src="js/app.js?v=63"></script>
+  <script src="js/intro-particles.js?v=6"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
+  <script type="module" src="js/floating-room-label.js?v=4"></script>
+  <script type="module" src="js/iso-board-state-surface.js?v=5"></script>
   <script type="module" src="js/feedback.js?v=1"></script>
 
   <!-- Feedback Modal -->

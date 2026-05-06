@@ -14,7 +14,8 @@
 
 import { isSubstantiveSketch } from "./sketch-validation.js";
 import { emitTelemetry } from "./telemetry.js";
-import { AudioFX } from "./audio.js?v=1";
+import { AudioFX } from "./audio.js?v=4";
+import { prefersReducedMotion } from './motion.js';
 
 const STAGE = Object.freeze({
   CHAT_TURN_1: "chat:turn-1",
@@ -379,7 +380,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
 
     // Submit accepted — play absorb animation + soft settle tone before the
     // overlay takes over. Reduced-motion users skip the wait entirely.
-    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduce = prefersReducedMotion();
     const summaryContainer = container.querySelector('.creation-summary');
     if (summaryContainer && !reduce) {
       summaryContainer.classList.add('anim-absorb');

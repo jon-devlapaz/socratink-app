@@ -439,6 +439,24 @@ class AnonymousGuestTests(unittest.TestCase):
         self.assertIn("auth_error=authentication_failed", response.headers["location"])
         self.assertNotIn("sb_session=", response.headers.get("set-cookie", ""))
 
+    def test_login_html_has_motion_bootstrap(self):
+        """The login page must honor a user-set socratink.motion preference.
+
+        The override is stored in localStorage by Settings; when the user logs
+        out and lands on /login, that preference must continue to set
+        html[data-motion='reduced'] before first paint. Without this script,
+        the login page would briefly run full motion until the inline
+        script tag executed.
+        """
+        service = FakeSupabaseAuthService(enabled=True)
+        client = build_client(service)
+
+        response = client.get("/login")
+        assert response.status_code == 200
+        body = response.text
+        assert "socratink.motion" in body, "motion key not referenced in login HTML"
+        assert "dataset.motion" in body, "data-motion override not wired in login bootstrap"
+
 
 if __name__ == "__main__":
     unittest.main()

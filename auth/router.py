@@ -8,6 +8,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
+from runtime_env import dev_autoguest_enabled
+
 from .service import AuthConfigurationError, AuthSessionState
 
 auth_router = APIRouter()
@@ -615,6 +617,13 @@ def _render_login_html() -> str:
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="stylesheet" href="/css/tokens.css?v=2">
   <style>{css}</style>
+  <script>
+    try {{
+      if (localStorage.getItem('socratink.motion') === 'reduced') {{
+        document.documentElement.dataset.motion = 'reduced';
+      }}
+    }} catch (err) {{ /* localStorage unavailable; fall through */ }}
+  </script>
 </head>
 <body data-mode="signin">
   <div id="stardust-container" aria-hidden="true"></div>
@@ -782,7 +791,16 @@ def load_current_session_state(request: Request) -> AuthSessionState:
 @auth_router.get("/api/me")
 def get_current_user(request: Request):
     state = load_current_session_state(request)
-    response = JSONResponse(state.to_public_dict())
+    payload = state.to_public_dict()
+    # Expose dev-mode to the frontend so guest sessions can pass through
+    # the concept-create gate locally. The deny-list gate inside
+    # `runtime_env.dev_autoguest_enabled()` is LOAD-BEARING — read its
+    # SECURITY ASSUMPTION docstring before altering this line. Setting
+    # SOCRATINK_DEV_AUTOGUEST on any non-local env without first
+    # tightening the gate exposes guest-bypass to anyone who can reach
+    # /api/me.
+    payload["dev_mode"] = dev_autoguest_enabled()
+    response = JSONResponse(payload)
     if state.sealed_session:
         _apply_session_cookie(response, request, state.sealed_session)
     elif state.should_clear_cookie:
@@ -795,7 +813,7 @@ def login(request: Request, return_to: str | None = None):
     current = load_current_session_state(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated and not current.guest_mode:
-        response = RedirectResponse(url=sanitized_return_to, status_code=302)
+        response: Response = RedirectResponse(url=sanitized_return_to, status_code=302)
     else:
         response = HTMLResponse(_render_login_html())
     if current.should_clear_cookie:

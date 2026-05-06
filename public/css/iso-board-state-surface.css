@@ -1,0 +1,239 @@
+/* Desk iso-board state surface.
+ * Loaded after board-first.css and approach-reveals.css. */
+
+.tile-group {
+  --iso-board-state-color: var(--accent-secondary);
+  --iso-board-state-rgb: var(--lavender-500-rgb);
+}
+
+#grid-container {
+  width: min(420px, calc(100vw - 32px));
+}
+
+#grid-svg {
+  width: 100%;
+  height: auto;
+}
+
+.tile-group[data-board-state="locked"] {
+  --iso-board-state-color: var(--node-locked);
+  --iso-board-state-rgb: var(--node-locked-rgb);
+}
+
+.tile-group[data-board-state="primed"] {
+  --iso-board-state-color: var(--node-primed);
+  --iso-board-state-rgb: var(--node-primed-rgb);
+}
+
+.tile-group[data-board-state="drilled"] {
+  --iso-board-state-color: var(--node-drilled);
+  --iso-board-state-rgb: var(--node-drilled-rgb);
+}
+
+.tile-group[data-board-state="solidified"] {
+  --iso-board-state-color: var(--node-solidified);
+  --iso-board-state-rgb: var(--node-solidified-rgb);
+}
+
+.tile-group[data-board-state="fractured"] {
+  --iso-board-state-color: var(--danger);
+  --iso-board-state-rgb: var(--danger-rgb);
+}
+
+/* Top-front-left light: bright top, calmer left wall, deeper right wall. */
+.tile-group .tile-top {
+  fill: color-mix(in srgb, var(--tile-top) 92%, var(--iso-board-state-color) 8%);
+  stroke: color-mix(in srgb, var(--primary) 78%, var(--iso-board-state-color) 22%);
+}
+
+.tile-group .tile-left {
+  fill: color-mix(in srgb, var(--tile-left) 94%, var(--cream-50) 6%);
+}
+
+.tile-group .tile-right {
+  fill: color-mix(in srgb, var(--tile-right) 86%, var(--ink-900) 14%);
+}
+
+.tile-group[data-board-state] .tile-highlight {
+  stroke: var(--iso-board-state-color);
+}
+
+.tile-group.selected[data-board-state] .tile-highlight {
+  opacity: 0.86;
+}
+
+.tile-group.empty,
+.tile-group.empty .tile-hit {
+  cursor: pointer;
+}
+
+.concept-pin {
+  color: var(--iso-board-state-color);
+}
+
+.concept-pin-line {
+  stroke: color-mix(in srgb, var(--iso-board-state-color) 82%, var(--ink-900) 18%);
+  stroke-width: 1.65;
+}
+
+.concept-pin-shadow {
+  fill: rgba(var(--ink-900-rgb), 0.12);
+}
+
+.concept-pin-head,
+.concept-pin-core {
+  display: none;
+}
+
+.concept-pin-crystal {
+  transform-box: fill-box;
+  transform-origin: center center;
+  filter: drop-shadow(0 8px 13px rgba(var(--iso-board-state-rgb), 0.24));
+}
+
+.concept-pin-crystal .cp-glow {
+  opacity: 0.16;
+  filter: blur(4px);
+}
+
+.concept-pin-crystal polygon,
+.concept-pin-crystal path,
+.concept-pin-crystal ellipse {
+  transition:
+    fill var(--morph-ms) var(--ease-standard),
+    opacity var(--morph-ms) var(--ease-standard),
+    filter var(--duration-cozy) var(--ease-standard);
+}
+
+.concept-pin[data-state="locked"] .concept-pin-crystal {
+  opacity: 0.72;
+  filter: drop-shadow(0 5px 9px rgba(var(--mauve-200-rgb), 0.18));
+}
+
+.concept-pin[data-state="locked"] .cp-glow {
+  opacity: 0.08;
+}
+
+.concept-pin[data-state="primed"] .concept-pin-crystal {
+  filter:
+    drop-shadow(0 8px 13px rgba(var(--lavender-500-rgb), 0.28))
+    drop-shadow(0 0 10px rgba(var(--lavender-500-rgb), 0.16));
+}
+
+.concept-pin[data-state="drilled"] .concept-pin-crystal {
+  filter:
+    drop-shadow(0 8px 13px rgba(var(--node-drilled-rgb), 0.26))
+    drop-shadow(0 0 9px rgba(var(--node-drilled-rgb), 0.14));
+}
+
+.concept-pin[data-state="drilled"] .cp-glow {
+  opacity: 0.12;
+}
+
+.concept-pin[data-state="solidified"] .concept-pin-crystal {
+  filter:
+    drop-shadow(0 9px 15px rgba(var(--node-solidified-rgb), 0.30))
+    drop-shadow(0 0 12px rgba(var(--node-solidified-rgb), 0.22));
+}
+
+.concept-pin[data-state="fractured"] .concept-pin-crystal {
+  filter:
+    drop-shadow(0 8px 13px color-mix(in srgb, var(--danger) 18%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--danger) 12%, transparent));
+}
+
+.concept-pin[data-state="fractured"] .cp-glow {
+  opacity: 0.09;
+}
+
+.empty-tile-affordance {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-quick) var(--ease-standard);
+}
+
+.empty-tile-affordance__line {
+  stroke: rgba(var(--violet-600-rgb), 0.34);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.tile-group.empty:hover .empty-tile-affordance,
+.tile-group.empty:focus-within .empty-tile-affordance {
+  opacity: 0.78;
+}
+
+.tile-group.empty:hover .tile-top-empty,
+.tile-group.empty:focus-within .tile-top-empty {
+  fill: color-mix(in srgb, var(--tile-top) 78%, var(--accent-soft-strong) 22%);
+}
+
+.room-label[data-kind="empty"] {
+  border-style: dashed;
+}
+
+.room-label[data-kind="empty"] .room-label__action {
+  display: none;
+}
+
+body[data-theme="dark"] .concept-pin-line,
+body.night .concept-pin-line {
+  stroke: color-mix(in srgb, var(--iso-board-state-color) 76%, var(--cream-50) 24%);
+}
+
+body[data-theme="dark"] .concept-pin-shadow,
+body.night .concept-pin-shadow {
+  fill: rgba(var(--ink-900-rgb), 0.38);
+}
+
+body[data-theme="dark"] .tile-group .tile-left,
+body.night .tile-group .tile-left {
+  fill: color-mix(in srgb, var(--tile-left) 88%, var(--lavender-500) 12%);
+}
+
+body[data-theme="dark"] .tile-group .tile-right,
+body.night .tile-group .tile-right {
+  fill: color-mix(in srgb, var(--tile-right) 82%, var(--surface-page-theme) 18%);
+}
+
+body[data-theme="dark"] .empty-tile-affordance__line,
+body.night .empty-tile-affordance__line {
+  stroke: rgba(var(--lavender-500-rgb), 0.58);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .concept-pin,
+  .concept-pin-crystal,
+  .concept-pin-crystal *,
+  .empty-tile-affordance,
+  .room-label {
+    animation: none !important;
+    transition-duration: 0ms !important;
+  }
+
+  .tile-group:not(.empty):hover .concept-pin,
+  .tile-group:not(.empty):focus-visible .concept-pin {
+    transform: none !important;
+  }
+
+  .room-label {
+    transform: none !important;
+  }
+}
+html[data-motion="reduced"] .concept-pin,
+html[data-motion="reduced"] .concept-pin-crystal,
+html[data-motion="reduced"] .concept-pin-crystal *,
+html[data-motion="reduced"] .empty-tile-affordance,
+html[data-motion="reduced"] .room-label {
+  animation: none !important;
+  transition-duration: 0ms !important;
+}
+
+html[data-motion="reduced"] .tile-group:not(.empty):hover .concept-pin,
+html[data-motion="reduced"] .tile-group:not(.empty):focus-visible .concept-pin {
+  transform: none !important;
+}
+
+html[data-motion="reduced"] .room-label {
+  transform: none !important;
+}

@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from './motion.js';
+
 const WELCOME_STORAGE_PREFIX = 'socratink:firstSeenAt:v1';
 
 const FRAMES = [
@@ -44,10 +46,6 @@ function markWelcomeSeen(session) {
   } catch (err) {
     console.warn('Welcome state could not be saved.', err);
   }
-}
-
-function prefersReducedMotion() {
-  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }
 
 function focusThresholdComposer() {

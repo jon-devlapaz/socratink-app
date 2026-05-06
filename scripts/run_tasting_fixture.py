@@ -11,6 +11,7 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -253,7 +254,7 @@ def run_fixture(args: argparse.Namespace) -> int:
     print(f"type: {node['type']}")
     print(f"label: {node['label']}")
 
-    state = {
+    state: dict[str, Any] = {
         "messages": [],
         "probe_count": 0,
         "nodes_drilled": 0,

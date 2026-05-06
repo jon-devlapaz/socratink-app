@@ -11,6 +11,7 @@ escaping (which browsers do not unescape — RFC 6265 vs RFC 2109 mismatch).
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -50,7 +51,7 @@ def verify_state(token: str, *, secret: str, max_age_seconds: int) -> OAuthState
         wrapper = json.loads(wrapper_json)
         raw = wrapper["payload"]
         sig = wrapper["sig"]
-    except (ValueError, KeyError, TypeError, UnicodeDecodeError, base64.binascii.Error):
+    except (ValueError, KeyError, TypeError, UnicodeDecodeError, binascii.Error):
         return None
 
     expected = hmac.new(secret.encode(), raw.encode(), hashlib.sha256).hexdigest()
