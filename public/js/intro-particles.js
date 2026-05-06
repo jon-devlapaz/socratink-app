@@ -6,13 +6,16 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
   if (!ctx) return;
 
   function isReducedMotion() {
+    // intro-particles is loaded as a classic script and runs BEFORE the
+    // ES-module bundle (motion.js) finishes loading. The bootstrap IIFE
+    // in <head> already set html[data-motion="reduced"] from localStorage
+    // by this point, so check the attribute directly first — that's the
+    // canonical source of truth for the user override.
+    if (document.documentElement?.dataset?.motion === 'reduced') return true;
     const helper = window.SocratinkMotion?.prefersReducedMotion;
     if (typeof helper === 'function') {
       return helper();
     }
-    // motion.js may not have loaded yet on first paint. Fall back to
-    // system preference only; the next call (after load) will pick up
-    // the user override automatically.
     return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
   }
 
