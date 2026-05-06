@@ -36,7 +36,7 @@ If you skip these, your work will read as AI slop because socratink's voice is h
 
 ## 2. What the iso board is, structurally
 
-**The renderer.** `public/js/app.js:543` — `renderGrid(concepts = loadConcepts())`. Builds the SVG `<g>` for each of 4 tile slots. Each tile group has class `tile-group` plus `selected` (active concept) or `empty` (no concept yet). Tile transforms are precomputed: tile-0 at `translate(70,45)` (top-back), tile-1 at `translate(0,85)` (left), tile-2 at `translate(140,85)` (right), tile-3 at `translate(70,125)` (front). The viewBox is 280×220 with `overflow:visible` so lifted/scaled children can paint outside.
+**The renderer.** `public/js/app.js:543` — `renderGrid(concepts = loadConcepts())`. Builds the SVG `<g>` for each of `BOARD_SLOT_COUNT` (currently 9) tile slots in a 3×3 isometric grid (`TILE_IDS` in `public/js/dom.js`). Each tile group has class `tile-group` plus `selected` (active concept) or `empty` (no concept yet). The grid SVG `viewBox` is `0 0 420 320` (`public/index.html#grid-svg`) with `overflow:visible` so lifted/scaled children can paint outside. Tile transforms are precomputed in the renderer; consult `renderGrid` for the current per-slot translate values rather than relying on this brief.
 
 **The click handler.** `public/js/app.js:1531` — `selectTile(tileIdx)`. If the slot has a concept, calls `selectConcept(id)` then `showMapView(concept)` if there's `graphData`. If empty, opens the drawer and starts concept add. So clicking a populated tile already opens the room — no extra "Begin" button needed.
 
@@ -50,7 +50,7 @@ If you skip these, your work will read as AI slop because socratink's voice is h
 
 **Both experiments are uncommitted on `dev`.** Decide whether to fold into a real commit or rework before publishing.
 
-**The legacy `#tile-tooltip`** at `public/js/app.js:2407-2440` is still in code but visually hidden by the experiment CSS. Decide: replace its DOM/JS entirely with the Floating-UI room-label (clean delete), or keep it for backward-compat. Do not leave dead code shipping to prod.
+**The legacy `#tile-tooltip`** has been removed (deleted from `app.js`, `index.html`, `components.css`); the Floating-UI room-label is the only tooltip surface on the board.
 
 ---
 
@@ -74,7 +74,7 @@ If you skip these, your work will read as AI slop because socratink's voice is h
 
 - **Adjacency hints.** Tiles that share an edge in the iso layout already imply spatial relationship. When the bridge / interleaving feature lands (DESIGN.md §3, screen 6), adjacent tiles should hint at connection through a shared glow or seam highlight when one of them is in `primed`. This is read-only signal — never a trigger for action — and only activates when the room is interleaving-eligible.
 
-- **Empty-tile treatment that invites without shouting.** Currently empty tiles are dotted-outline at 0.34 opacity. They're quiet but they don't *invite* — clicking one calls `startAddConcept()` which opens the drawer + creation dialog. A discrete hover affordance (faint plus-mark in the floor, or "Begin a concept here →" approach-reveal label) would teach the affordance without adding chrome at rest.
+- ~~**Empty-tile treatment that invites without shouting.**~~ *Delivered* — quiet `+` empty-tile affordance shipped (`public/css/_experiment-iso-board-state-surface.css`, `public/js/_experiment-iso-board-state-surface.js`); empty-tile room-labels piggyback on the Floating-UI `.room-label`. See the status callout at the top of this brief.
 
 - **Selection trail.** When a learner returns to a concept they've previously drilled, the path between rooms (interleaving history) could quietly surface as a faint connecting line on the iso surface — *only* showing solid spaced reconstructions, never reading attempts. Lines drawn with sub-30% opacity, never as decoration.
 
@@ -88,7 +88,7 @@ If you skip these, your work will read as AI slop because socratink's voice is h
 
 - Do not add tile labels by default (only on hover/focus). DESIGN.md §3 screen 4 prohibits revealing the room before the cold attempt; tile labels at rest would be the same anti-pattern at the desk scale.
 - Do not add scoring, progress, or session-cap UI to the board. Those are session controls, not graph-truth surfaces.
-- Do not redesign the iso projection itself. The 280×220 viewBox and tile transforms are baked into renderGrid; staying within them is a hard constraint until a renderer rewrite is on the table (it is not).
+- Do not redesign the iso projection itself. The 420×320 viewBox and tile transforms are baked into renderGrid; staying within them is a hard constraint until a renderer rewrite is on the table (it is not).
 
 ---
 

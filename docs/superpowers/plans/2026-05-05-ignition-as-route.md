@@ -4,7 +4,7 @@
 
 **Goal:** Promote Concept Ignition from an embedded empty-state inside the Desk hero into its own first-class route, alongside Desk / Library / Settings, and remove the sidebar `+ new tink` add-trigger.
 
-**Architecture:** The threshold composer DOM moves out of `.hero-card` into a new sibling view `#ignition-view` (peer of `#library-view`, `#settings-view`). A new `showIgnition()` function and `nav-ignition` / `bn-ignition` entries are added to the sidebar and bottom nav. `.hero-card` becomes pure Desk (iso board + concept-specific hero info). The sidebar `add-trigger-area` element is deleted. First-run routing prefers Ignition when there are zero concepts; otherwise Desk. The library cap (4 concepts) gates the Ignition nav entry to a disabled `library full` state and surfaces an inline explanation on Ignition itself, rather than at submit-time.
+**Architecture:** The threshold composer DOM moves out of `.hero-card` into a new sibling view `#ignition-view` (peer of `#library-view`, `#settings-view`). A new `showIgnition()` function and `nav-ignition` / `bn-ignition` entries are added to the sidebar and bottom nav. `.hero-card` becomes pure Desk (iso board + concept-specific hero info). The sidebar `add-trigger-area` element is deleted. First-run routing prefers Ignition when there are zero concepts; otherwise Desk. The library cap (9 concepts, `BOARD_SLOT_COUNT`) gates the Ignition nav entry to a disabled `library full` state and surfaces an inline explanation on Ignition itself, rather than at submit-time.
 
 **Tech Stack:** Vanilla JS module (`public/js/app.js`), HTML (`public/index.html`), CSS modules (`public/css/components.css`, `public/css/layout.css`). No backend changes. Existing concept-create flow (`public/js/concept-create.js`) is reused unchanged via `startAddConcept({ name, sketchTurns, stage: "summary" })`.
 
@@ -26,7 +26,7 @@ These facts are verified in the current codebase before this plan was written; i
 - `public/js/app.js:347-410` — `runHeroAction()` reads the threshold composer fields, calls `showDashboard() → openDrawer() → startAddConcept({ name, sketchTurns: [startingMap], stage: 'summary' }, originRect)`. Submit is gated by `isSubstantiveSketch()` from `public/js/sketch-validation.js`.
 - `public/js/concept-create.js:46-58` — the concept-create UI accepts `seed.stage === "summary"` and lands directly at the summary card. No change needed there.
 - `public/js/dom.js:15` — `addTriggerArea` is exported and consumed by `app.js`.
-- Library cap: `public/js/app.js:621` — hardcoded `loadConcepts().length >= 4` in `renderAddTrigger()`. Same threshold appears in concept-create's pre-flight at `app.js:1480` (`loadConcepts().length >= 4`).
+- Library cap: `public/js/app.js:621` — `loadConcepts().length >= BOARD_SLOT_COUNT` (currently 9) in `renderAddTrigger()`. Same threshold appears in concept-create's pre-flight at `app.js:1480`.
 - `public/css/components.css:2318` — `.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input { margin-top: 34px }` and the matching mobile rule at line 2323. These are the rules the Ignition view will replace with a simpler centered layout.
 - Settings panel reuses `#add-trigger-area` as its container (`clearSettingsPanel` at app.js:579) — when we delete `add-trigger-area` we must point the settings panel elsewhere.
 
@@ -36,7 +36,7 @@ These facts are verified in the current codebase before this plan was written; i
 2. **Threshold composer DOM moves wholesale.** The form node migrates from `.hero-info` into `#ignition-view`. CSS rules that reference `.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-single-input` are replaced with rules scoped to `#ignition-view .hero-single-input`. Particles stay on the Desk hero only.
 3. **Desk no longer has an empty-state hero variant for new users.** The empty-state branch in `renderHero()` is unused for the threshold case; if a learner with 0 concepts lands on Desk directly, Desk shows a quiet "Begin at Ignition" pointer and the iso board renders empty.
 4. **First-run routing:** in `boot()`, after concepts load, route to Ignition if `loadConcepts().length === 0`, else Desk.
-5. **Cap gating moves to the nav entry.** When `loadConcepts().length >= 4`, the Ignition sidebar/bottom-nav entries render a disabled "library full" state. Clicking the disabled entry is a no-op; the title attribute names the reason. The inline cap banner inside `concept-create.js` (`'Library is full. Remove a concept first to add another.'`) stays as a defense-in-depth fallback.
+5. **Cap gating moves to the nav entry.** When `loadConcepts().length >= BOARD_SLOT_COUNT` (currently 9), the Ignition sidebar/bottom-nav entries render a disabled "library full" state. Clicking the disabled entry is a no-op; the title attribute names the reason. The inline cap banner inside `concept-create.js` (`'Library is full. Remove a concept first to add another.'`) stays as a defense-in-depth fallback.
 6. **`add-trigger-area` and `renderAddTrigger()` are removed.** The settings panel (which reused that container) is rehoused; see Task 7.
 7. **Telemetry/event names unchanged.** Existing `concept_create.*` events keep firing from the same hero submit handler; only the DOM container changed.
 8. **Feedback nav stays where it is.** `nav-feedback` is not promoted; only Ignition is added.
@@ -133,9 +133,9 @@ Expected: line numbers for both.
     <p class="ignition-guidance" id="ignition-guidance">Name one concept and sketch your starting map. The draft path is a hypothesis until reconstruction creates evidence.</p>
     <p class="ignition-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
 
-    <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() when loadConcepts().length >= 4. -->
+    <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() when loadConcepts().length >= BOARD_SLOT_COUNT. -->
     <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
-      <p class="ignition-cap-gate__message">Library is full (4 concepts). Retire one before starting another.</p>
+      <p class="ignition-cap-gate__message">The board holds nine concepts. Retire one to start another.</p>
       <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
     </div>
 
@@ -303,7 +303,7 @@ function hideIgnition() {
 }
 
 function renderIgnitionGate() {
-  const atCap = loadConcepts().length >= 4;
+  const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
   const gate = document.getElementById('ignition-cap-gate');
   const form = document.getElementById('hero-single-input');
   if (gate) gate.hidden = !atCap;
@@ -789,7 +789,7 @@ In a browser:
 2. Type concept + insubstantive sketch → submit disabled. ✓
 3. Type concept + substantive sketch → submit enabled → click → summary card appears with starting map preloaded → confirm → Desk shows new tile, threshold composer cleared. ✓
 4. With 1+ concept, Desk loads on reload. ✓
-5. With 4 concepts, Ignition nav entry shows disabled `library full`; clicking does nothing. Click Ignition directly via URL or focus — see cap-gate banner with "Open Library" CTA. ✓
+5. With 9 concepts (`BOARD_SLOT_COUNT`), Ignition nav entry shows disabled `library full`; clicking does nothing. Click Ignition directly via URL or focus — see cap-gate banner with "Open Library" CTA. ✓
 6. Settings panel still mounts/clears in sidebar. ✓
 7. No `+ new tink` button anywhere. ✓
 
