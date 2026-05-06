@@ -1,0 +1,41 @@
+/* EXPERIMENTAL — NOT COMMITTED. Loaded last in styles.css to override.
+   Board-first Desk: hide hero-info, snug card around the iso board.
+
+   Two specificity bumps needed because the base styles are stronger than I
+   expected:
+   - .hero-card has explicit margin (not auto), so max-width needs auto-margins
+   - .intro-content is a 2-column grid, so the empty hero-info column kept
+     reserving space and pushed the board off-center. Override display: flex.
+
+   To revert: delete this file and remove its @import from styles.css. */
+
+/* Hide the left column entirely. */
+.hero-card .hero-info {
+  display: none;
+}
+
+/* Tight card centered horizontally with auto margins. */
+.hero-card {
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 56px 40px;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Override the 2-column grid so the now-only child (the iso board) centers
+   in a single column. */
+.hero-card .intro-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
+
+/* No competing margins on the grid container. */
+#grid-container {
+  margin: 0;
+}
