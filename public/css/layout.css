@@ -2439,7 +2439,7 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   max-width: 520px;
   margin: 48px auto 96px;
   padding: 0 24px;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 
 .settings-page-header {
@@ -2467,7 +2467,7 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
 }
 
 .settings-page-title {
-  font-family: 'Outfit', 'Geom', system-ui, serif;
+  font-family: var(--font-display);
   font-weight: 400;
   font-size: clamp(24px, 4vw, 30px);
   line-height: 1.1;
@@ -2683,4 +2683,22 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
 }
 .settings-toggle[aria-checked="true"]::after {
   transform: translateX(14px);
+}
+
+/* Keyboard focus ring for all three Settings controls (a11y). */
+.settings-pill:focus-visible,
+.settings-toggle:focus-visible,
+.settings-identity-action:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+
+@media (max-width: 600px) {
+  .settings-shell {
+    margin: 36px auto 80px;
+    padding: 0 20px;
+  }
+  .settings-row {
+    align-items: flex-start;
+  }
 }

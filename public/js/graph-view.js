@@ -1,4 +1,4 @@
-import { prefersReducedMotion as motionReduced } from './motion.js';
+import { prefersReducedMotion as getReducedMotionPreference } from './motion.js';
 
 export function escHtml(value) {
   return String(value ?? '')
@@ -1814,7 +1814,7 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   );
 
   const graphTheme = getGraphThemeTokens();
-  const prefersReducedMotion = motionReduced();
+  const prefersReducedMotion = getReducedMotionPreference();
   const rewardTimeoutIds = [];
   const flashTimeoutByNodeId = new Map();
   const freshSolidIds = new Set();

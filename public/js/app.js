@@ -3791,7 +3791,7 @@ const App = (() => {
     const emailEl = root.querySelector('#settings-identity-email');
     const metaEl = root.querySelector('#settings-identity-meta');
     const actionHost = root.querySelector('#settings-identity-action-host');
-    if (!row) return;
+    if (!row || !avatar || !emailEl || !metaEl || !actionHost) return;
 
     let session;
     try {
@@ -3858,10 +3858,11 @@ const App = (() => {
     pills.forEach(pill => {
       pill.addEventListener('click', () => {
         const next = pill.dataset.themeValue === 'dark' ? 'dark' : 'light';
-        // applyThemePreference (in scope here) is the canonical helper —
-        // sets html[data-theme], persists to learnops-theme, and updates
-        // the corner toggle UI.
-        applyThemePreference(next);
+        // setTheme is the public alias over applyThemePreference; using
+        // it here keeps Settings consistent with anything else that
+        // wants to change theme intent-first ("set to X") rather than
+        // toggle-first ("flip from current").
+        setTheme(next);
         syncPills();
       });
     });
