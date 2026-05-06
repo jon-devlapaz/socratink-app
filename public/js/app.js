@@ -3909,7 +3909,22 @@ const App = (() => {
       apply(next);
     });
   }
-  function wireSettingsSounds(_root) { /* implemented in Task 15 */ }
+  function wireSettingsSounds(root) {
+    const toggle = root.querySelector('#settings-sound-toggle');
+    if (!toggle) return;
+
+    toggle.setAttribute('aria-checked', String(Boolean(AudioFX.enabled)));
+
+    toggle.addEventListener('click', () => {
+      const next = toggle.getAttribute('aria-checked') !== 'true';
+      AudioFX.setEnabled(next);
+      toggle.setAttribute('aria-checked', String(next));
+      if (next) {
+        // Confirmation cue, matching the original checkbox behavior.
+        AudioFX.playFocusTap();
+      }
+    });
+  }
 
   function showSettings() {
     setNavActive('nav-settings');
