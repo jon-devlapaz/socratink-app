@@ -24,7 +24,7 @@ import {
   getActiveId, setActiveId, getActiveConcept,
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
-import { AudioFX } from './audio.js?v=1';
+import { AudioFX } from './audio.js?v=4';
 
 import {
   card, titleEl, descEl, primaryControls, drillControls,
@@ -39,6 +39,7 @@ const App = (() => {
   const PHASE_B_RESUME_KEY = 'learnops-phase-b-resume';
   const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
+  const BOARD_SLOT_COUNT = TILE_IDS.length;
   let currentGraphController = null;
   let currentMapMode = 'study';
   let activeDrillNode = null;
@@ -356,7 +357,6 @@ const App = (() => {
       if (!field) return;
       field.value = '';
       field.style.height = '';
-      field.classList.remove('is-typing');
     });
     const validation = document.getElementById('hero-threshold-validation');
     if (validation) {
@@ -463,15 +463,12 @@ const App = (() => {
         }
         if (isPrintable(e)) {
           AudioFX.playKeyClick();
-          field.classList.add('is-typing');
         }
         if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim() && isSubstantiveSketch(sketchField.value.trim())) {
           e.preventDefault();
           form?.requestSubmit?.();
         }
       });
-      field.addEventListener('keyup', () => field.classList.remove('is-typing'));
-      field.addEventListener('blur', () => field.classList.remove('is-typing'));
     });
 
     const chips = document.querySelectorAll('[data-hero-example]');
@@ -553,12 +550,26 @@ const App = (() => {
         (isEmpty ? ' empty' : '') +
         (isSelected ? ' selected' : ''));
 
+      // Button semantics for keyboard + assistive-tech parity with the
+      // SVG <g onclick> handler. tabindex is set here (not in the
+      // floating-room-label experiment) so it survives every render.
+      tileEl.setAttribute('role', 'button');
+      tileEl.setAttribute('tabindex', '0');
+      tileEl.setAttribute(
+        'aria-label',
+        isEmpty ? 'Begin a concept' : `Open ${concept.name}`
+      );
+
       if (isEmpty) {
         tileEl.innerHTML = EMPTY_TILE;
       } else {
         tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state);
       }
     });
+
+    // Listened to by _experiment-iso-board-state-surface.js to re-derive
+    // board-state attrs / re-inject crystal pin without a MutationObserver.
+    Bus.emit('grid:rendered');
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
@@ -572,7 +583,10 @@ const App = (() => {
     document.body.dataset.drawerOpen = 'false';
     if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
   }
-  function toggleDrawer() { drawer.dataset.open === 'true' ? closeDrawer() : openDrawer(); }
+  function toggleDrawer() {
+    AudioFX.playDrawerToggle();
+    drawer.dataset.open === 'true' ? closeDrawer() : openDrawer();
+  }
 
   if (window.innerWidth >= 900) openDrawer();
 
@@ -1459,13 +1473,13 @@ const App = (() => {
       seed,
       onCancel: () => closeCreationDialog(),
       onBeforeSubmit: ({ name }) => {
-        if (loadConcepts().length >= 4) {
-          // Library is at the 4-concept cap. Don't pay for an LLM call.
+        if (loadConcepts().length >= BOARD_SLOT_COUNT) {
+          // Library is at the visible board cap. Don't pay for an LLM call.
           // Don't close the dialog. Surface the cap inline so the learner
           // can either remove a concept or cancel.
           dialog.bannerSlot.innerHTML = '';
           dialog.bannerSlot.appendChild(
-            buildSeedFailureBanner('Library is full. Remove a concept first to add another.')
+            buildSeedFailureBanner('The board holds nine concepts. Retire one to start another.')
           );
           return null;
         }
@@ -1529,6 +1543,7 @@ const App = (() => {
   }
 
   function selectTile(tileIdx) {
+    AudioFX.playTileClick();
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
@@ -2180,7 +2195,7 @@ const App = (() => {
   }
 
   function renderIgnitionGate() {
-    const atCap = loadConcepts().length >= 4;
+    const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
     if (gate) gate.hidden = !atCap;
@@ -2403,40 +2418,31 @@ const App = (() => {
     localStorage.removeItem('learnops-timer-start');
   }
 
-  // Tile tooltip hover/tap
-  const tooltipEl = document.getElementById('tile-tooltip');
-  let tooltipTimeout = null;
+  // Tile hover labels are owned by _experiment-floating-room-label.js
+  // (Floating-UI anchored to each <g class="tile-group">). The legacy
+  // #tile-tooltip path with precomputed pixel coords was deleted.
 
-  // Pixel coords (left, top) — tooltip bottom-center above each crystal apex within #grid-container
-  const TILE_TOOLTIP_POS = [
-    { left: 140, top: 37 },  // tile-0 (back center)
-    { left: 70, top: 77 },  // tile-1 (mid left)
-    { left: 210, top: 77 },  // tile-2 (mid right)
-    { left: 140, top: 117 },  // tile-3 (front center)
-  ];
-
-  function showTileTooltip(idx) {
-    const c = loadConcepts()[idx];
-    if (!c) return;
-    const pos = TILE_TOOLTIP_POS[idx];
-    tooltipEl.style.left = pos.left + 'px';
-    tooltipEl.style.top = pos.top + 'px';
-    tooltipEl.textContent = c.name + '  ·  ' + STATES[c.state].title;
-    tooltipEl.classList.add('visible');
-  }
-  function hideTileTooltip() {
-    tooltipEl.classList.remove('visible');
-  }
-
+  // Keyboard parity for the SVG <g onclick> handler. SVG groups don't
+  // fire click on Enter/Space natively, so wire it explicitly.
   tileEls.forEach((el, idx) => {
-    el.addEventListener('mouseenter', () => showTileTooltip(idx));
-    el.addEventListener('mouseleave', hideTileTooltip);
-    el.addEventListener('touchstart', () => {
-      showTileTooltip(idx);
-      clearTimeout(tooltipTimeout);
-      tooltipTimeout = setTimeout(hideTileTooltip, 1800);
-    }, { passive: true });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+        e.preventDefault();
+        selectTile(idx);
+      }
+    });
   });
+
+  // Side-menu tap sound. Bind to every sidebar nav item AND every
+  // bottom-nav item so a click on Desk / Library / Settings / Feedback
+  // gets the same paper-tap that Ignition incidentally got via its
+  // auto-focus on the hero input. Single throttled fire (150ms) means
+  // the nav-click + downstream auto-focus on a view collapses into one.
+  document
+    .querySelectorAll('.sidebar-nav-item, .bottom-nav-item')
+    .forEach((el) => {
+      el.addEventListener('click', () => AudioFX.playFocusTap());
+    });
 
   // Render grid first (populates polygon DOM nodes)
   themePreference = getStoredThemePreference();

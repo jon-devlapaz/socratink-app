@@ -19,7 +19,11 @@ export const chatHistory         = document.getElementById('chat-history');
 export const chatInput           = document.getElementById('chat-input');
 export const drillTitle          = document.getElementById('drill-title');
 
-export const TILE_IDS = ['tile-0','tile-1','tile-2','tile-3'];
+export const TILE_IDS = [
+  'tile-0', 'tile-1', 'tile-2',
+  'tile-3', 'tile-4', 'tile-5',
+  'tile-6', 'tile-7', 'tile-8',
+];
 export const tileEls  = TILE_IDS.map(id => document.getElementById(id));
 
 export const POLYGON_IDS = [

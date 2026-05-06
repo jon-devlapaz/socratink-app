@@ -187,24 +187,15 @@ body:not([data-map-open="true"]) .map-back-link {
   -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
   mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
 }
-.hero-card:has(.hero-state-chip[data-state="empty"]) {
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: clamp(96px, 18vh, 200px);
-  padding-bottom: clamp(48px, 8vh, 120px);
-  margin: 24px 40px 32px;
-  min-height: calc(100dvh - 120px);
-  background: transparent;
-  box-shadow: none;
-}
-.hero-card:has(.hero-state-chip[data-state="empty"]) .intro-content {
-  grid-template-columns: 1fr;
-  align-items: start;
-  justify-items: center;
-}
-.hero-card:has(.hero-state-chip[data-state="empty"]) #grid-container {
-  display: none;
-}
+/* Pre-board-first experiment, the desk hid the iso grid when there were
+   no concepts and reflowed the hero-card into a tall hero-info column.
+   With the 3×3 empty board (each tile carrying its own "+" hover
+   affordance), an empty desk should render identically to a populated
+   desk — same card, same grid, just empty tiles instead of crystal pins.
+   The legacy `:has(.hero-state-chip[data-state="empty"])` rules that
+   varied padding/margin/min-height/background/box-shadow/intro-content
+   layout were deleted here. */
+
 .hero-info {
   min-width: 0;
   max-width: 460px;
@@ -2497,20 +2488,22 @@ body:not([data-map-open="true"]) .map-back-link {
   z-index: 2;
 }
 .ignition-eyebrow {
-  margin: 0 0 -4px 0;
+  margin: 0 0 2px 0;
   font-family: var(--font-body);
   font-size: var(--text-xs, 12px);
   font-weight: 660;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-sub);
+  text-align: center;
 }
 .ignition-title {
-  margin: 0 0 4px 0;
+  margin: 0 0 8px 0;
   font-family: var(--font-display, var(--font-body));
   font-size: var(--text-3xl, 32px);
   line-height: var(--leading-tight, 1.18);
   color: var(--text);
+  text-align: center;
 }
 .ignition-guidance,
 .ignition-voice-line {

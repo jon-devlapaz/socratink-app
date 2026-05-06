@@ -154,29 +154,32 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
 
   function addTypingSparks(amount, mode = 'character') {
     const isSpace = mode === 'space';
-    const count = Math.round(isSpace ? 8 + amount * 5 : 3 + amount * 3);
-    const spread = isSpace ? Math.min(180, typing.spaceWidth * 0.38) : 34;
+    // Doubled spawn count + omnidirectional emission for "agitated" feel.
+    const count = Math.round(isSpace ? 18 + amount * 10 : 7 + amount * 6);
+    const spread = isSpace ? Math.min(220, typing.spaceWidth * 0.46) : 50;
+    const palette = getThemeColors();
 
     for (let index = 0; index < count; index += 1) {
-      const angle = isSpace
-        ? -Math.PI * (0.2 + Math.random() * 0.6)
-        : -Math.PI * (0.22 + Math.random() * 0.58);
-      const speed = (isSpace ? 0.68 : 0.45) + Math.random() * 0.85 + amount * 0.18;
+      // Full 2π emission so sparks fly all directions, not just upward.
+      const angle = Math.random() * Math.PI * 2;
+      const speed = (isSpace ? 1.05 : 0.85) + Math.random() * 1.15 + amount * 0.32;
       sparks.push({
         x: (isSpace ? typing.spaceX : typing.x) + (Math.random() - 0.5) * spread,
-        y: (isSpace ? typing.spaceY : typing.y) + (Math.random() - 0.5) * (isSpace ? 18 : 12),
-        vx: Math.cos(angle) * speed + (Math.random() - 0.5) * (isSpace ? 0.65 : 0.35),
-        vy: Math.sin(angle) * speed - (isSpace ? 0.34 : 0.18),
+        y: (isSpace ? typing.spaceY : typing.y) + (Math.random() - 0.5) * (isSpace ? 28 : 18),
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
         life: 1,
-        decay: (isSpace ? 0.018 : 0.026) + Math.random() * 0.018,
-        size: (isSpace ? 1.2 : 0.9) + Math.random() * (isSpace ? 2.1 : 1.8),
+        // Slower decay → sparks linger longer.
+        decay: (isSpace ? 0.012 : 0.018) + Math.random() * 0.012,
+        size: (isSpace ? 1.5 : 1.1) + Math.random() * (isSpace ? 2.5 : 2.0),
         phase: Math.random() * Math.PI * 2,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        color: palette[Math.floor(Math.random() * palette.length)],
       });
     }
 
-    if (sparks.length > 48) {
-      sparks = sparks.slice(sparks.length - 48);
+    // Higher cap so dense bursts don't get culled mid-emission.
+    if (sparks.length > 96) {
+      sparks = sparks.slice(sparks.length - 96);
     }
   }
 
@@ -197,30 +200,34 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     typing.spaceX = fieldAnchor.x;
     typing.spaceY = fieldAnchor.y;
     typing.spaceWidth = fieldAnchor.width;
-    typing.energy = Math.min(1.8, typing.energy + (isSpace ? 0.72 : 0.48) * amount);
-    typing.ring = Math.min(1, typing.ring + (isSpace ? 0.52 : 0.26) * amount);
-    typing.spaceEnergy = Math.min(1.9, typing.spaceEnergy + (isSpace ? 1.05 : 0.12) * amount);
-    typing.spaceWave = Math.min(1, typing.spaceWave + (isSpace ? 0.72 : 0.08) * amount);
-    typing.burstUntil = performance.now() + (isSpace ? 760 : 560);
+    // Cranked energies — the field is now an "agitated" source that
+    // pushes hard and stays excited longer per keystroke.
+    typing.energy = Math.min(2.6, typing.energy + (isSpace ? 1.05 : 0.85) * amount);
+    typing.ring = Math.min(1.4, typing.ring + (isSpace ? 0.75 : 0.45) * amount);
+    typing.spaceEnergy = Math.min(2.6, typing.spaceEnergy + (isSpace ? 1.55 : 0.22) * amount);
+    typing.spaceWave = Math.min(1.4, typing.spaceWave + (isSpace ? 1.0 : 0.16) * amount);
+    typing.burstUntil = performance.now() + (isSpace ? 1100 : 820);
     addTypingSparks(amount, mode);
 
     for (const p of particles) {
       const sourceX = isSpace ? typing.spaceX : typing.x;
       const sourceY = isSpace ? typing.spaceY : typing.y;
-      const radius = isSpace ? 306 : 218;
+      // Wider blast radius so the burst reaches more particles.
+      const radius = isSpace ? 460 : 340;
       const dx = p.x - sourceX;
       const dy = p.y - sourceY;
       const distance = Math.hypot(dx, dy);
       if (distance <= 0 || distance >= radius) continue;
 
-      const force = Math.pow(1 - distance / radius, 2) * amount;
+      // ~2× the original force so particles visibly leap on each keystroke.
+      const force = Math.pow(1 - distance / radius, 2) * amount * 2.0;
       if (isSpace) {
         const direction = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : dx / Math.abs(dx);
-        p.vx += direction * force * 1.35 + (-dy / distance) * force * 0.22;
-        p.vy += (dy / distance) * force * 0.36 - force * 0.24;
+        p.vx += direction * force * 1.65 + (-dy / distance) * force * 0.32;
+        p.vy += (dy / distance) * force * 0.48 - force * 0.36;
       } else {
-        p.vx += (dx / distance) * force * 0.9 + (-dy / distance) * force * 0.28;
-        p.vy += (dy / distance) * force * 0.7 + (dx / distance) * force * 0.22;
+        p.vx += (dx / distance) * force * 1.40 + (-dy / distance) * force * 0.42;
+        p.vy += (dy / distance) * force * 1.10 + (dx / distance) * force * 0.34;
       }
     }
 
@@ -271,10 +278,11 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     const typingLive = typing.energy > 0.015 || typing.spaceEnergy > 0.015 || now < typing.burstUntil;
 
     if (typingLive) {
-      typing.energy *= Math.pow(0.885, dt);
-      typing.ring *= Math.pow(0.9, dt);
-      typing.spaceEnergy *= Math.pow(0.865, dt);
-      typing.spaceWave *= Math.pow(0.88, dt);
+      // Slower decay so each keystroke stays visibly excited until the next.
+      typing.energy *= Math.pow(0.93, dt);
+      typing.ring *= Math.pow(0.94, dt);
+      typing.spaceEnergy *= Math.pow(0.91, dt);
+      typing.spaceWave *= Math.pow(0.92, dt);
     } else {
       typing.active = false;
       typing.energy = 0;
@@ -348,8 +356,9 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
         }
       }
 
-      p.vx *= Math.pow(0.94, dt); // Less friction for smoother glide
-      p.vy *= Math.pow(0.94, dt);
+      // Looser friction so particles travel farther after a burst.
+      p.vx *= Math.pow(0.965, dt);
+      p.vy *= Math.pow(0.965, dt);
       p.x += p.vx * dt;
       p.y += p.vy * dt;
     }

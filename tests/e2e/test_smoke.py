@@ -256,6 +256,286 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
     assert clean_page.locator("body").get_attribute("data-map-open") != "true"
 
 
+def test_desk_iso_board_state_surface_and_room_labels(
+    clean_page: Page, base_url: str, captured: dict
+) -> None:
+    """Desk board exposes truthful tile state and quiet hover/focus labels."""
+
+    def seed_board_concepts(count: int = 9) -> str:
+        return f"""(() => {{
+            const graph = (status, extra = {{}}) => JSON.stringify({{
+                metadata: {{
+                    core_thesis: 'Seeded thesis',
+                    drill_status: status,
+                    drill_phase: status === 'primed' ? 'study' : null,
+                    ...extra,
+                }},
+                backbone: [],
+                clusters: [],
+            }});
+            const concepts = [
+                {{
+                    id: 'locked-board-tile',
+                    name: 'Locked Board Tile',
+                    state: 'growing',
+                    createdAt: Date.now(),
+                    graphData: graph(null),
+                }},
+                {{
+                    id: 'primed-board-tile',
+                    name: 'Primed Board Tile',
+                    state: 'growing',
+                    createdAt: Date.now() + 1,
+                    graphData: graph('primed'),
+                }},
+                {{
+                    id: 'drilled-board-tile',
+                    name: 'Drilled Board Tile',
+                    state: 'fractured',
+                    createdAt: Date.now() + 2,
+                    graphData: graph('drilled', {{
+                        gap_type: 'causal_link',
+                        gap_description: 'A causal link needs another angle.',
+                    }}),
+                }},
+                {{
+                    id: 'solidified-board-tile',
+                    name: 'Solidified Board Tile',
+                    state: 'actualized',
+                    createdAt: Date.now() + 3,
+                    graphData: graph('solidified'),
+                }},
+                {{
+                    id: 'hibernating-board-tile',
+                    name: 'Hibernating Board Tile',
+                    state: 'hibernating',
+                    createdAt: Date.now() + 4,
+                    graphData: graph(null),
+                }},
+                {{
+                    id: 'legacy-locked-board-tile',
+                    name: 'Legacy Locked Board Tile',
+                    state: 'instantiated',
+                    createdAt: Date.now() + 5,
+                    graphData: graph(null),
+                }},
+                {{
+                    id: 'direct-primed-board-tile',
+                    name: 'Direct Primed Board Tile',
+                    state: 'primed',
+                    createdAt: Date.now() + 6,
+                    graphData: graph(null),
+                }},
+                {{
+                    id: 'solid-alias-board-tile',
+                    name: 'Solid Alias Board Tile',
+                    state: 'growing',
+                    createdAt: Date.now() + 7,
+                    graphData: graph('solid'),
+                }},
+                {{
+                    id: 'front-board-tile',
+                    name: 'Front Board Tile',
+                    state: 'actualized',
+                    createdAt: Date.now() + 8,
+                    graphData: graph('solidified'),
+                }},
+            ].slice(0, {count});
+            localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+            localStorage.setItem('learnops_active', concepts[0]?.id || '');
+        }})()"""
+
+    clean_page.add_init_script(
+        """(() => {
+            const now = new Date().toISOString();
+            localStorage.setItem('socratink:firstSeenAt:v1:guest', now);
+            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
+        })()"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.evaluate(seed_board_concepts(9))
+    clean_page.reload()
+    _wait_for_app_settled(clean_page)
+    clean_page.locator("#nav-dashboard").click()
+    expect(clean_page.locator("#grid-svg .tile-group")).to_have_count(9)
+
+    expected_states = {
+        "#tile-0": ("growing", "locked"),
+        "#tile-1": ("growing", "primed"),
+        "#tile-2": ("fractured", "drilled"),
+        "#tile-3": ("actualized", "solidified"),
+        "#tile-4": ("hibernating", "locked"),
+        "#tile-7": ("growing", "solidified"),
+        "#tile-8": ("actualized", "solidified"),
+    }
+    for selector, (source_state, board_state) in expected_states.items():
+        tile = clean_page.locator(selector)
+        expect(tile).to_have_attribute("data-source-state", source_state)
+        expect(tile).to_have_attribute("data-board-state", board_state)
+
+    # Button semantics so screen readers announce tiles as actionable.
+    expect(clean_page.locator("#tile-1")).to_have_attribute("role", "button")
+    expect(clean_page.locator("#tile-1")).to_have_attribute("tabindex", "0")
+    expect(clean_page.locator("#tile-1")).to_have_attribute(
+        "aria-label", "Open Primed Board Tile"
+    )
+
+    clean_page.locator("#tile-1").focus()
+    expect(clean_page.locator(".room-label")).to_contain_text("Primed Board Tile")
+    expect(clean_page.locator(".room-label")).to_contain_text("Open room")
+
+    # Keyboard activation: SVG <g> doesn't fire click on Enter natively,
+    # so app.js binds a keydown handler explicitly.
+    clean_page.locator("#tile-8").focus()
+    clean_page.keyboard.press("Enter")
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Front Board Tile")
+    assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+
+    clean_page.evaluate(seed_board_concepts(8))
+    clean_page.reload()
+    _wait_for_app_settled(clean_page)
+    clean_page.locator("#nav-dashboard").click()
+    expect(clean_page.locator("#tile-8")).to_have_class(re.compile(r"\bempty\b"))
+    expect(clean_page.locator("#tile-8")).to_have_attribute(
+        "aria-label", "Begin a concept"
+    )
+
+    clean_page.locator("#tile-8").focus()
+    expect(clean_page.locator(".room-label")).to_contain_text("Begin a concept")
+    assert captured["console_errors"] == []
+    assert captured["failed_requests"] == []
+
+
+def test_desk_layout_identical_when_empty_or_populated(
+    clean_page: Page, base_url: str, captured: dict
+) -> None:
+    """Empty desk (0 concepts) renders the same iso board geometry as populated.
+
+    Regression: the layout.css empty-state rule used to hide #grid-container
+    entirely, leaving an empty desk blank. The iso-board state-surface
+    experiment overrides that so the 9-tile board is visible at all sizes
+    of the library — its empty tiles invite creation via the + affordance.
+    This guards that the hero-card, grid-container, svg, and per-tile
+    positions are pixel-identical regardless of how many concepts exist.
+    """
+
+    # Tile bboxes intentionally NOT compared: populated tiles render a
+    # crystal pin that extends above the iso platform, so their full bbox
+    # is taller than empty tiles. We compare the iso platform (.tile-top
+    # polygon — present in both states) instead, which captures the
+    # structural layout the user cares about.
+    sample_script = """(() => {
+        if (typeof App !== 'undefined' && App.showDashboard) App.showDashboard();
+        const r = (el) => {
+            const b = el?.getBoundingClientRect();
+            return b ? { x: Math.round(b.left), y: Math.round(b.top),
+                         w: Math.round(b.width), h: Math.round(b.height) } : null;
+        };
+        const heroCard = document.querySelector('.hero-card.intro-page');
+        const gridContainer = document.getElementById('grid-container');
+        const grid = document.getElementById('grid-svg');
+        const tiles = Array.from(document.querySelectorAll('#grid-svg .tile-group'));
+        return {
+            heroCard: r(heroCard),
+            gridContainer: r(gridContainer),
+            gridContainerDisplay: gridContainer
+                ? window.getComputedStyle(gridContainer).display : null,
+            svg: r(grid),
+            tileCount: tiles.length,
+            tilePlatformPositions: tiles.map(t => {
+                const top = t.querySelector('.tile-top, .tile-top-empty');
+                const b = top ? r(top) : null;
+                return { id: t.id, platform: b };
+            }),
+        };
+    })()"""
+
+    def seed_n_concepts(count: int) -> str:
+        return f"""(() => {{
+            const concepts = [];
+            const states = ['growing', 'fractured', 'actualized', 'hibernating'];
+            for (let i = 0; i < {count}; i++) {{
+                concepts.push({{
+                    id: 'seed-' + i,
+                    name: 'Concept ' + (i + 1),
+                    state: states[i % states.length],
+                    createdAt: Date.now() + i,
+                    graphData: JSON.stringify({{
+                        metadata: {{ core_thesis: 'seed',
+                                     drill_status: i % 2 ? 'primed' : null }},
+                        backbone: [],
+                        clusters: [],
+                    }}),
+                }});
+            }}
+            localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+            if (concepts.length) {{
+                localStorage.setItem('learnops_active', concepts[0].id);
+            }} else {{
+                localStorage.removeItem('learnops_active');
+            }}
+        }})()"""
+
+    clean_page.add_init_script(
+        """(() => {
+            const now = new Date().toISOString();
+            localStorage.setItem('socratink:firstSeenAt:v1:guest', now);
+            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
+        })()"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+    samples = {}
+    for count in [0, 1, 5, 9]:
+        clean_page.evaluate(seed_n_concepts(count))
+        clean_page.reload()
+        _wait_for_app_settled(clean_page)
+        clean_page.locator("#nav-dashboard").click()
+        samples[count] = clean_page.evaluate(sample_script)
+
+    # Reference is the populated state (9 concepts) — that's the layout
+    # contract everyone expects. Empty (0) and partial (1, 5) must match.
+    ref = samples[9]
+    assert ref["tileCount"] == 9, "9-concept desk must render 9 tiles"
+    assert ref["gridContainerDisplay"] == "block"
+    assert ref["heroCard"] is not None
+    assert ref["gridContainer"]["w"] > 0 and ref["gridContainer"]["h"] > 0
+
+    for count, sample in samples.items():
+        if count == 9:
+            continue
+        assert sample["tileCount"] == 9, (
+            f"desk at {count} concepts must still render all 9 tile slots, "
+            f"got {sample['tileCount']}"
+        )
+        assert sample["gridContainerDisplay"] == "block", (
+            f"#grid-container hidden at {count} concepts (was display="
+            f"{sample['gridContainerDisplay']!r}); empty desk regression"
+        )
+        assert sample["heroCard"] == ref["heroCard"], (
+            f"hero-card geometry differs at {count} concepts: "
+            f"got {sample['heroCard']}, expected {ref['heroCard']}"
+        )
+        assert sample["gridContainer"] == ref["gridContainer"], (
+            f"grid-container geometry differs at {count}: "
+            f"got {sample['gridContainer']}, expected {ref['gridContainer']}"
+        )
+        assert sample["svg"] == ref["svg"], (
+            f"grid-svg geometry differs at {count}: "
+            f"got {sample['svg']}, expected {ref['svg']}"
+        )
+        for ref_tile, sample_tile in zip(
+            ref["tilePlatformPositions"], sample["tilePlatformPositions"]
+        ):
+            assert ref_tile["id"] == sample_tile["id"]
+            assert ref_tile["platform"] == sample_tile["platform"], (
+                f"tile {ref_tile['id']} iso platform drifted at {count} concepts: "
+                f"got {sample_tile['platform']}, expected {ref_tile['platform']}"
+            )
+
+    assert captured["console_errors"] == []
+    assert captured["failed_requests"] == []
+
+
 # --- 3. No console errors on first paint ---------------------------------
 
 

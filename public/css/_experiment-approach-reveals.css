@@ -39,11 +39,6 @@
   transform: translateY(-3px) scale(1.08);
 }
 
-/* Hide the legacy #tile-tooltip; the Floating-UI room-label takes over. */
-#tile-tooltip {
-  display: none !important;
-}
-
 /* Keyboard focus: remove default focus ring on the group, since the pin
    scale + label is the focus indicator. The tile-group will get tabindex
    from JS so this matters. */

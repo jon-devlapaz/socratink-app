@@ -3,8 +3,8 @@
 // Floating UI–anchored room-label that tracks the actual <g> element.
 //
 // One singleton .room-label element is appended to <body>. On hover/focus
-// of a non-empty .tile-group, computePosition() places the label above
-// the group; autoUpdate() keeps it correct under scroll/resize/transform.
+// of a .tile-group, computePosition() places the label above the group;
+// autoUpdate() keeps it correct under scroll/resize/transform.
 // On leave/blur the label hides.
 
 (async function () {
@@ -38,7 +38,7 @@
     el.dataset.show = 'false';
     el.innerHTML = `
       <span class="room-label__name"></span>
-      <span class="room-label__action">Open room →</span>
+      <span class="room-label__action">Open room</span>
     `;
     document.body.appendChild(el);
     return el;
@@ -47,10 +47,12 @@
   let activeCleanup = null;
   let activeAnchor = null;
 
-  function show(anchor, conceptName) {
+  function show(anchor, { name, action, kind }) {
     if (activeCleanup) activeCleanup();
     const label = ensureLabel();
-    label.querySelector('.room-label__name').textContent = conceptName;
+    label.dataset.kind = kind || 'room';
+    label.querySelector('.room-label__name').textContent = name;
+    label.querySelector('.room-label__action').textContent = action || '';
     activeAnchor = anchor;
 
     activeCleanup = autoUpdate(anchor, label, async () => {
@@ -81,21 +83,20 @@
   function bindTile(tileGroup, conceptIdx) {
     if (tileGroup.dataset.roomLabelBound === '1') return;
     tileGroup.dataset.roomLabelBound = '1';
-    tileGroup.setAttribute('tabindex', '0');
+    // tabindex / role / aria-label are owned by app.js renderGrid() so
+    // they survive every render and stay in sync with the concept name.
 
-    tileGroup.addEventListener('mouseenter', () => {
+    const showForTile = () => {
       const concepts = loadConcepts();
       const concept = concepts[conceptIdx];
-      if (!concept) return;
-      show(tileGroup, concept.name);
-    });
+      show(tileGroup, concept
+        ? { name: concept.name, action: 'Open room', kind: 'room' }
+        : { name: 'Begin a concept', action: '', kind: 'empty' });
+    };
+
+    tileGroup.addEventListener('mouseenter', showForTile);
     tileGroup.addEventListener('mouseleave', () => hide(tileGroup));
-    tileGroup.addEventListener('focus', () => {
-      const concepts = loadConcepts();
-      const concept = concepts[conceptIdx];
-      if (!concept) return;
-      show(tileGroup, concept.name);
-    });
+    tileGroup.addEventListener('focus', showForTile);
     tileGroup.addEventListener('blur', () => hide(tileGroup));
   }
 
@@ -107,7 +108,6 @@
       // Pull idx from id (tile-N) since DOM order can shift with re-renders.
       const m = /^tile-(\d+)$/.exec(tile.id);
       const conceptIdx = m ? Number(m[1]) : idx;
-      if (tile.classList.contains('empty')) return; // bind only non-empty
       bindTile(tile, conceptIdx);
     });
   }

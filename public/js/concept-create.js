@@ -14,7 +14,7 @@
 
 import { isSubstantiveSketch } from "./sketch-validation.js";
 import { emitTelemetry } from "./telemetry.js";
-import { AudioFX } from "./audio.js?v=1";
+import { AudioFX } from "./audio.js?v=4";
 
 const STAGE = Object.freeze({
   CHAT_TURN_1: "chat:turn-1",
