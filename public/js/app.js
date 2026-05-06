@@ -3844,6 +3844,11 @@ const App = (() => {
     // Unknown session shape: omit the row rather than render placeholders.
     row.hidden = true;
   }
+  // Module-lifetime flag: ensures the corner-toggle sync listener is
+  // attached once. Without this, every renderSettingsView() call would
+  // stack another listener that closes over a stale pills NodeList.
+  let _settingsCornerSyncBound = false;
+
   function wireSettingsTheme(root) {
     const pills = root.querySelectorAll('.settings-pill[data-theme-value]');
     if (!pills.length) return;
@@ -3869,15 +3874,25 @@ const App = (() => {
 
     syncPills();
 
-    // If the corner toggle changes the theme while Settings is open,
-    // re-sync the pills so they reflect the actual state.
-    const corner = document.getElementById('theme-toggle');
-    if (corner) {
-      corner.addEventListener('click', () => {
-        // Run after applyThemePreference completes. setTimeout(0) is
-        // sufficient — applyThemePreference is synchronous.
-        setTimeout(syncPills, 0);
-      });
+    // Corner toggle → re-sync the live pills. Bound once for module
+    // lifetime; the live querySelectorAll inside the handler always
+    // reflects the most-recently-rendered Settings view, so closures
+    // never go stale even though the listener never re-attaches.
+    if (!_settingsCornerSyncBound) {
+      const corner = document.getElementById('theme-toggle');
+      if (corner) {
+        corner.addEventListener('click', () => {
+          setTimeout(() => {
+            const livePills = document.querySelectorAll('.settings-pill[data-theme-value]');
+            if (!livePills.length) return;
+            const current = getStoredThemePreference();
+            livePills.forEach(p => {
+              p.setAttribute('aria-checked', String(p.dataset.themeValue === current));
+            });
+          }, 0);
+        });
+        _settingsCornerSyncBound = true;
+      }
     }
   }
   function wireSettingsMotion(root) {
