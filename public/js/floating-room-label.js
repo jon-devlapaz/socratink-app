@@ -52,6 +52,7 @@ import { Bus } from './bus.js';
 
   let activeCleanup = null;
   let activeAnchor = null;
+  let pendingShowFrame = 0;
 
   function show(anchor, { name, action, kind }) {
     if (activeCleanup) activeCleanup();
@@ -70,13 +71,26 @@ import { Bus } from './bus.js';
       label.style.top = `${y}px`;
     });
     // Defer the show flag one frame so the position lands before fade-in.
-    requestAnimationFrame(() => {
-      label.dataset.show = 'true';
+    // Cancel any earlier pending show — quick enter/leave/enter sequences
+    // would otherwise fire stale RAFs that flip data-show back on after
+    // hide() ran.
+    if (pendingShowFrame) cancelAnimationFrame(pendingShowFrame);
+    pendingShowFrame = requestAnimationFrame(() => {
+      pendingShowFrame = 0;
+      // Guard against the anchor having been swapped/hidden between
+      // schedule and execution.
+      if (anchor === activeAnchor) {
+        label.dataset.show = 'true';
+      }
     });
   }
 
   function hide(anchor) {
     if (anchor && anchor !== activeAnchor) return;
+    if (pendingShowFrame) {
+      cancelAnimationFrame(pendingShowFrame);
+      pendingShowFrame = 0;
+    }
     const label = document.querySelector('.room-label');
     if (label) label.dataset.show = 'false';
     if (activeCleanup) {
