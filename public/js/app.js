@@ -3844,7 +3844,41 @@ const App = (() => {
     // Unknown session shape: omit the row rather than render placeholders.
     row.hidden = true;
   }
-  function wireSettingsTheme(_root) { /* implemented in Task 13 */ }
+  function wireSettingsTheme(root) {
+    const pills = root.querySelectorAll('.settings-pill[data-theme-value]');
+    if (!pills.length) return;
+
+    const syncPills = () => {
+      const current = getStoredThemePreference();
+      pills.forEach(p => {
+        p.setAttribute('aria-checked', String(p.dataset.themeValue === current));
+      });
+    };
+
+    pills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const next = pill.dataset.themeValue === 'dark' ? 'dark' : 'light';
+        // applyThemePreference (in scope here) is the canonical helper —
+        // sets html[data-theme], persists to learnops-theme, and updates
+        // the corner toggle UI.
+        applyThemePreference(next);
+        syncPills();
+      });
+    });
+
+    syncPills();
+
+    // If the corner toggle changes the theme while Settings is open,
+    // re-sync the pills so they reflect the actual state.
+    const corner = document.getElementById('theme-toggle');
+    if (corner) {
+      corner.addEventListener('click', () => {
+        // Run after applyThemePreference completes. setTimeout(0) is
+        // sufficient — applyThemePreference is synchronous.
+        setTimeout(syncPills, 0);
+      });
+    }
+  }
   function wireSettingsMotion(_root) { /* implemented in Task 14 */ }
   function wireSettingsSounds(_root) { /* implemented in Task 15 */ }
 
