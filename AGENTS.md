@@ -119,6 +119,10 @@ SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 #      own content into a draft map." and blocks the LLM extract path.
 # Restart the server after toggling — uvicorn --reload reloads code, not env.
 SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
+
+# Free localhost:8000–8009 if a previous uvicorn / smoke run left a listener
+# behind. SIGTERM first, then SIGKILL only for survivors.
+bash scripts/kill-800x.sh
 ```
 
 ### Tests
