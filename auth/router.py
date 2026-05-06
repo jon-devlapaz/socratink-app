@@ -617,6 +617,13 @@ def _render_login_html() -> str:
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="stylesheet" href="/css/tokens.css?v=2">
   <style>{css}</style>
+  <script>
+    try {{
+      if (localStorage.getItem('socratink.motion') === 'reduced') {{
+        document.documentElement.dataset.motion = 'reduced';
+      }}
+    }} catch (err) {{ /* localStorage unavailable; fall through */ }}
+  </script>
 </head>
 <body data-mode="signin">
   <div id="stardust-container" aria-hidden="true"></div>
