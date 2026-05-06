@@ -39,8 +39,11 @@
         document.documentElement.dataset.theme = 'light';
         document.body.dataset.theme = 'light';
       }
+      if (localStorage.getItem('socratink.motion') === 'reduced') {
+        document.documentElement.dataset.motion = 'reduced';
+      }
     } catch (err) {
-      console.warn('Theme preload skipped.', err);
+      console.warn('Theme/motion preload skipped.', err);
     }
   </script>
 
