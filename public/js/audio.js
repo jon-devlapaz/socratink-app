@@ -14,6 +14,8 @@
  * On by default; toggle in Settings. Honors prefers-reduced-motion.
  */
 
+import { prefersReducedMotion } from './motion.js';
+
 const STORAGE_KEY = 'socratink:sound';
 
 // Compensates for the /_lab/ master-gain default at 0.7. Apply at recipe
@@ -43,10 +45,6 @@ function readPreference() {
   } catch {
     return true;
   }
-}
-
-function reducedMotion() {
-  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 function ensureCtx() {
@@ -124,7 +122,7 @@ export const AudioFX = {
   // lowered from 5000 → 4000Hz to take the edge off the "hiss." 150ms
   // throttle so a nav-click + auto-focus on a view doesn't double-fire.
   playFocusTap() {
-    if (!this.enabled || reducedMotion()) return;
+    if (!this.enabled || prefersReducedMotion()) return;
     const now = performance.now();
     if (now - lastFocusTapAt < 150) return;
     lastFocusTapAt = now;
@@ -137,7 +135,7 @@ export const AudioFX = {
 
   // F·brush — velvet click, lowpass cloth. Frequent (per-keystroke) → throttled.
   playKeyClick() {
-    if (!this.enabled || reducedMotion()) return;
+    if (!this.enabled || prefersReducedMotion()) return;
     const now = performance.now();
     if (now - lastKeyClickAt < 90) return;
     lastKeyClickAt = now;
@@ -150,7 +148,7 @@ export const AudioFX = {
 
   // D·thud — mechanical key, weighty. Used for deliberate tile-click on the desk board.
   playTileClick() {
-    if (!this.enabled || reducedMotion()) return;
+    if (!this.enabled || prefersReducedMotion()) return;
     softTone({
       type: 'square',
       freqStart: 60,
@@ -169,7 +167,7 @@ export const AudioFX = {
   // Used for drawer open/close: reads as fabric reveal, distinct from
   // F·brush (typing) by way of longer duration + higher lowpass cutoff.
   playDrawerToggle() {
-    if (!this.enabled || reducedMotion()) return;
+    if (!this.enabled || prefersReducedMotion()) return;
     noiseBurst({
       duration: 0.030,
       peak: 0.34 * LAB_MASTER_GAIN,
@@ -179,7 +177,7 @@ export const AudioFX = {
 
   // Threshold submit is capture, not celebration — single low settle, no chord.
   playSubmitChime() {
-    if (!this.enabled || reducedMotion()) return;
+    if (!this.enabled || prefersReducedMotion()) return;
     softTone({ freqStart: 392, freqEnd: 261.63, peak: 0.14, decay: 0.7 }); // G4 → C4 settle
   },
 };
