@@ -2210,12 +2210,14 @@ const App = (() => {
     const form = document.getElementById('hero-single-input');
     if (gate) gate.hidden = !atCap;
     if (form) form.hidden = atCap;
-    // Also disable the Ignition nav entry visually when at cap.
+    // The Ignition nav stays interactive at cap — clicking it shows
+    // the cap gate UI, which is the supported destination in this
+    // state. Surface the constraint via title only; do NOT advertise
+    // the link as disabled while still letting the click activate.
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.classList.toggle('disabled', atCap);
-      el.setAttribute('aria-disabled', atCap ? 'true' : 'false');
+      el.classList.toggle('at-cap', atCap);
       el.title = atCap ? 'Library full. Retire a concept to add another.' : '';
     });
   }

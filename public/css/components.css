@@ -2633,10 +2633,9 @@ html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
 /* Disabled-state nav items — used when Ignition is at the library cap.
    Click stays enabled on purpose: it routes to the Ignition view, where
    the cap-gate banner explains the situation and offers Open Library.
-   Removing pointer-events: none preserves the title-attribute tooltip
-   for mouse users (CodeRabbit finding). */
-.sidebar-nav-item.disabled,
-.bottom-nav-item.disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+   The nav link stays activatable at cap so it serves as the route TO
+   the cap-gate UI; we only dim it as a passive hint. */
+.sidebar-nav-item.at-cap,
+.bottom-nav-item.at-cap {
+  opacity: 0.55;
 }
