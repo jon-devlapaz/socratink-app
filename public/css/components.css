@@ -2068,7 +2068,10 @@ html[data-motion="reduced"] .first-run-welcome__card {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-single-input__field,
+  .hero-single-input__field {
+    transform: none !important;
+    animation: none !important;
+  }
   .hero-single-input__field:focus-visible,
   .hero-single-input__field:active {
     transform: none !important;
@@ -2076,7 +2079,10 @@ html[data-motion="reduced"] .first-run-welcome__card {
     box-shadow: 0 6px 20px rgba(var(--violet-600-rgb), 0.10), var(--accent-ring) !important;
   }
 }
-html[data-motion="reduced"] .hero-single-input__field,
+html[data-motion="reduced"] .hero-single-input__field {
+  transform: none !important;
+  animation: none !important;
+}
 html[data-motion="reduced"] .hero-single-input__field:focus-visible,
 html[data-motion="reduced"] .hero-single-input__field:active {
   transform: none !important;

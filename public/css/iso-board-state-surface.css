@@ -37,7 +37,7 @@
 
 .tile-group[data-board-state="fractured"] {
   --iso-board-state-color: var(--danger);
-  --iso-board-state-rgb: var(--lavender-500-rgb);
+  --iso-board-state-rgb: var(--danger-rgb);
 }
 
 /* Top-front-left light: bright top, calmer left wall, deeper right wall. */
@@ -159,12 +159,12 @@
 }
 
 .tile-group.empty:hover .empty-tile-affordance,
-.tile-group.empty:focus-visible .empty-tile-affordance {
+.tile-group.empty:focus-within .empty-tile-affordance {
   opacity: 0.78;
 }
 
 .tile-group.empty:hover .tile-top-empty,
-.tile-group.empty:focus-visible .tile-top-empty {
+.tile-group.empty:focus-within .tile-top-empty {
   fill: color-mix(in srgb, var(--tile-top) 78%, var(--accent-soft-strong) 22%);
 }
 

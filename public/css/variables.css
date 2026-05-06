@@ -231,6 +231,7 @@
   --primary:    var(--accent-primary);
   --locked:     var(--mauve-200);
   --danger:     #e05c6b;
+  --danger-rgb: 224, 92, 107;
   --success:    #4dba8a;
   --drawer-bg:  var(--surface-panel-theme);
   --border:     var(--border-subtle);
