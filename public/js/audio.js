@@ -18,10 +18,6 @@ import { prefersReducedMotion } from './motion.js';
 
 const STORAGE_KEY = 'socratink:sound';
 
-// Compensates for the /_lab/ master-gain default at 0.7. Apply at recipe
-// peak so the effective output matches what was auditioned in the lab.
-const LAB_MASTER_GAIN = 0.7;
-
 let audioCtx = null;
 let lastKeyClickAt = 0;
 let lastFocusTapAt = 0;
@@ -128,7 +124,7 @@ export const AudioFX = {
     lastFocusTapAt = now;
     noiseBurst({
       duration: 0.010,
-      peak: 0.38 * LAB_MASTER_GAIN,
+      peak: 0.266,
       filter: { type: 'highpass', freq: 4000 },
     });
   },
@@ -141,7 +137,7 @@ export const AudioFX = {
     lastKeyClickAt = now;
     noiseBurst({
       duration: 0.018,
-      peak: 0.28 * LAB_MASTER_GAIN,
+      peak: 0.196,
       filter: { type: 'lowpass', freq: 600, q: 0.8 },
     });
   },
@@ -152,13 +148,13 @@ export const AudioFX = {
     softTone({
       type: 'square',
       freqStart: 60,
-      peak: 0.14 * LAB_MASTER_GAIN,
+      peak: 0.098,
       attack: 0.001,
       decay: 0.022,
     });
     noiseBurst({
       duration: 0.025,
-      peak: 0.18 * LAB_MASTER_GAIN,
+      peak: 0.126,
       filter: { type: 'bandpass', freq: 1800, q: 2.5 },
     });
   },
@@ -170,7 +166,7 @@ export const AudioFX = {
     if (!this.enabled || prefersReducedMotion()) return;
     noiseBurst({
       duration: 0.030,
-      peak: 0.34 * LAB_MASTER_GAIN,
+      peak: 0.238,
       filter: { type: 'lowpass', freq: 1100, q: 1.2 },
     });
   },
