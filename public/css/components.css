@@ -2261,10 +2261,10 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
 
 /* Example chips — blank-page guidance for the empty-state hero */
 .hero-example-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  gap: 6px 8px;
+  gap: 8px;
   padding: 0;
   flex: 1 1 280px;
   min-width: 0;
@@ -2288,6 +2288,10 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   color: var(--text-sub);
   cursor: pointer;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  min-width: 0;
   box-shadow: none;
   transition:
     color var(--duration-micro, 140ms) var(--ease-standard, ease),
