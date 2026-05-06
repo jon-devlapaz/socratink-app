@@ -36,7 +36,7 @@ The driving intent for this overhaul is all of the following at once:
 
 Single centered column inside the existing `#settings-view` full-page route, `max-width: 520px`. Top-to-bottom:
 
-```
+```text
 [ kicker: ◇ SETTINGS ]
 [ headline: Your reading room ]
 [ lede: Quiet preferences for how socratink looks and sounds. Saved to this browser. ]
