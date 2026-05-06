@@ -17,10 +17,12 @@
     }
   }
 
-  // Same import URL the rest of the app uses.
+  // Locally-bundled Floating UI (vendored from jsDelivr's @floating-ui/dom@1.6.3
+  // ESM build). Vendoring removes the runtime CDN dependency — no silent
+  // label loss when jsDelivr is blocked, down, or rate-limited.
   let floatingUi;
   try {
-    floatingUi = await import('https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.6.3/+esm');
+    floatingUi = await import('/vendor/floating-ui-dom-1.6.3.esm.js');
   } catch (err) {
     console.warn('[room-label] failed to load Floating UI', err);
     return;
