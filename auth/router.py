@@ -792,9 +792,13 @@ def load_current_session_state(request: Request) -> AuthSessionState:
 def get_current_user(request: Request):
     state = load_current_session_state(request)
     payload = state.to_public_dict()
-    # Expose dev-mode to the frontend so guest sessions can pass through the
-    # concept-create gate locally. Hard-gated against Vercel/CI in
-    # runtime_env.dev_autoguest_enabled.
+    # Expose dev-mode to the frontend so guest sessions can pass through
+    # the concept-create gate locally. The deny-list gate inside
+    # `runtime_env.dev_autoguest_enabled()` is LOAD-BEARING — read its
+    # SECURITY ASSUMPTION docstring before altering this line. Setting
+    # SOCRATINK_DEV_AUTOGUEST on any non-local env without first
+    # tightening the gate exposes guest-bypass to anyone who can reach
+    # /api/me.
     payload["dev_mode"] = dev_autoguest_enabled()
     response = JSONResponse(payload)
     if state.sealed_session:

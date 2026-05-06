@@ -41,6 +41,32 @@ def dev_autoguest_enabled() -> bool:
       2. /api/me returns dev_mode=True so the frontend can let guest
          sessions through the concept-create flow that's otherwise gated
          to authenticated users.
+
+    SECURITY ASSUMPTION (load-bearing — read before changing).
+    --------------------------------------------------------
+    This gate is DENY-LIST shaped: dev mode is on for any environment
+    that does not look like Vercel or CI. Today the assumption is safe
+    because SOCRATINK_DEV_AUTOGUEST is only set by `scripts/dev.sh`,
+    which only runs locally.
+
+    If you start setting SOCRATINK_DEV_AUTOGUEST anywhere other than a
+    developer's local machine — e.g. a non-Vercel staging box, a
+    self-hosted preview, a docker-compose'd integration env — this
+    function will return True there and /api/me will expose
+    `dev_mode: true` to anyone who can reach the endpoint. That bypasses
+    the concept-create auth gate for guest sessions. Either:
+
+      (a) extend the deny-list with a marker for the new env (preferred:
+          a positive `SOCRATINK_LOCAL=1` allow-list signal that
+          `scripts/dev.sh` sets explicitly, then flip this function to
+          allow-list shape — require BOTH SOCRATINK_DEV_AUTOGUEST AND
+          SOCRATINK_LOCAL), OR
+      (b) leave SOCRATINK_DEV_AUTOGUEST unset on the new env (the
+          conservative default; production-shaped env markers below are
+          a backstop, not the contract).
+
+    Tests in tests/test_auth_gate_supabase.py cover the Vercel-shadowing
+    case but cannot cover envs we have not invented yet.
     """
     if not _truthy_env("SOCRATINK_DEV_AUTOGUEST"):
         return False
