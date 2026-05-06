@@ -108,6 +108,20 @@ import { Bus } from './bus.js';
     if (!concept) {
       tile.removeAttribute('data-source-state');
       tile.removeAttribute('data-board-state');
+      // Cross-tab storage events can call syncTile without a preceding
+      // renderGrid(). When a tab deletes the concept that previously
+      // owned this tile, the populated pin/crystal markup stays in the
+      // DOM unless we explicitly clear it. Strip any populated children
+      // here so the empty affordance is the only contents.
+      const pin = tile.querySelector('.concept-pin');
+      if (pin) {
+        pin.removeAttribute('data-source-state');
+        pin.removeAttribute('data-state');
+        pin.querySelectorAll('.concept-pin-head, .concept-pin-core, .concept-pin-crystal')
+           .forEach((el) => el.remove());
+        const line = pin.querySelector('.concept-pin-line');
+        if (line) line.remove();
+      }
       if (!tile.querySelector('.empty-tile-affordance')) {
         tile.insertAdjacentHTML('beforeend', emptyAffordanceMarkup());
       }
