@@ -3879,7 +3879,36 @@ const App = (() => {
       });
     }
   }
-  function wireSettingsMotion(_root) { /* implemented in Task 14 */ }
+  function wireSettingsMotion(root) {
+    const toggle = root.querySelector('#settings-motion-toggle');
+    if (!toggle) return;
+
+    const readStored = () => {
+      try {
+        return localStorage.getItem('socratink.motion') === 'reduced';
+      } catch {
+        return false;
+      }
+    };
+
+    const apply = (isReduced) => {
+      if (isReduced) {
+        document.documentElement.dataset.motion = 'reduced';
+        try { localStorage.setItem('socratink.motion', 'reduced'); } catch {}
+      } else {
+        delete document.documentElement.dataset.motion;
+        try { localStorage.setItem('socratink.motion', 'system'); } catch {}
+      }
+      toggle.setAttribute('aria-checked', String(isReduced));
+    };
+
+    apply(readStored());
+
+    toggle.addEventListener('click', () => {
+      const next = toggle.getAttribute('aria-checked') !== 'true';
+      apply(next);
+    });
+  }
   function wireSettingsSounds(_root) { /* implemented in Task 15 */ }
 
   function showSettings() {
