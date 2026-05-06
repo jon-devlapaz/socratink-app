@@ -286,9 +286,9 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     last = now;
 
     const t = now * 0.001;
-    // currentColors removed — only draw() reads theme colors, and it
-    // re-queries via its own getThemeColors() call. Allocating here
-    // burned a per-frame DOM read for nothing.
+    // No theme-color read here — draw() queries them per frame because
+    // draw is where they're actually used. update() doesn't read colors,
+    // so the prior `getThemeColors()` call here was a wasted DOM read.
     const focusX = width * 0.5;
     const focusY = height * 0.52;
     const typingLive = typing.energy > 0.015 || typing.spaceEnergy > 0.015 || now < typing.burstUntil;
@@ -562,6 +562,41 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     } else if (!document.hidden && !raf) {
       raf = requestAnimationFrame(frame);
     }
+  });
+
+  // Re-kick the RAF loop when the reduced-motion preference flips OFF.
+  // The frame loop self-cancels (raf=null) when isReducedMotion() returns
+  // true, so without these listeners, switching the preference back at
+  // runtime would leave particles frozen until reload or window resize.
+  function rekickIfNeeded() {
+    if (!raf && !isReducedMotion() && !document.hidden) {
+      raf = requestAnimationFrame(frame);
+    }
+  }
+
+  // (1) OS-level toggle of (prefers-reduced-motion: reduce).
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const onMqChange = () => rekickIfNeeded();
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', onMqChange);
+    } else if (typeof mq.addListener === 'function') {
+      mq.addListener(onMqChange); // legacy Safari
+    }
+  }
+
+  // (2) Other-tab toggle of socratink.motion (Settings in a different tab).
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'socratink.motion' || e.key === null) rekickIfNeeded();
+  });
+
+  // (3) Same-tab toggle: Settings flips html[data-motion] directly. A
+  // MutationObserver on <html> catches that without coupling to the
+  // Settings module's internals.
+  const motionAttrObserver = new MutationObserver(rekickIfNeeded);
+  motionAttrObserver.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-motion'],
   });
 
   resize();
