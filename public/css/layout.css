@@ -2493,6 +2493,7 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   margin-bottom: 28px;
   border-bottom: 1px solid var(--border-subtle);
 }
+.settings-identity-row[hidden] { display: none; }
 
 .settings-avatar {
   width: 36px;
@@ -2541,6 +2542,7 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   background: none;
   border: 0;
   padding: 0;
+  min-height: 0;
   color: var(--text-muted);
   font-size: 12px;
   text-decoration: underline;
