@@ -1553,10 +1553,13 @@ const App = (() => {
   }
 
   function selectTile(tileIdx) {
-    AudioFX.playTileClick();
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
+      // Tile-click cue (D·thud) is reserved for navigation INTO a populated
+      // tile. Empty tiles open the add-concept drawer instead — that
+      // transition has its own cue and should not double-fire.
+      AudioFX.playTileClick();
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
