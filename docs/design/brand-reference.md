@@ -228,6 +228,10 @@ Warm-muted jewel tones on a cream-paper page. Five primitives, plus two reserved
 | Secondary | `--lavender-500` | `#8D86C9` | Kicker text, dust on surfaces, crystal mid-planes, locked and legacy spacing shell states. |
 | Neutral | `--mauve-200` | `#CAC4CE` | Locked tiles, empty-tile dashes, inactive chips. Calm, never sad. |
 | Page | `--cream-50` | `#F7ECE1` | Every page background. **Never pure white** in the light theme. |
+| App surface (light) | — | `#F2F0F5` | Antigravity in-app theme only — neutral page beneath glassy panels. |
+| App surface (dark) | — | `#0B0D17` | Antigravity in-app theme only — dark-mode page. |
+| App accent | `--accent-color` | `#9067C6` light / `#9E8BFF` dark | Antigravity in-app theme only. |
+| App mint | `--accent-mint` | `#4DBA8A` light / `#3CDDC7` dark | Antigravity in-app theme only — paired accent, not the solidified semantic. |
 | White | `--white` | `#FFFFFF` | Raised card faces only; never a page. |
 | Success | `--success` | `#4DBA8A` | `solidified` state. Single celebrant color. |
 | Danger | `--danger` | `#E05C6B` | Reserved. Used only on `fractured` crystal glow — rarely, and muted. |
@@ -239,6 +243,7 @@ The palette explicitly **excludes**: neon purples, pure white pages, clinical Sa
 - **Geom** for display (variable weight + matching italic). The brand face — self-hosted from `fonts/Geom-VariableFont_wght.ttf` and `fonts/Geom-Italic-VariableFont_wght.ttf`. Geometric but humanist — enough softness for cream paper, enough structure for scientific tone.
 - **Manrope** (variable) is loaded as the secondary display fallback, from `fonts/Manrope-VariableFont_wght.ttf`.
 - **Inter** (variable, optical sizes + italic) for body — self-hosted from `fonts/Inter-VariableFont_opsz,wght.ttf` and `fonts/Inter-Italic-VariableFont_opsz,wght.ttf`. Weights 300–600 in practice.
+- **Outfit** (variable) is used **only by the in-app Antigravity theme** for ignition/hero display headings and eyebrows. Loaded from Google Fonts via `public/index.html`; this is the one sanctioned exception to the self-hosted, no-Google-Fonts rule. Do not extend to marketing or external surfaces.
 - **Fluid clamp() scales** (`--text-xs` through `--text-display`) so one rule works from phone to large desktop. No responsive breakpoint overrides for type.
 - **Tracking is a load-bearing signal:**
   - `--tracking-hero: -0.06em` — huge display headlines

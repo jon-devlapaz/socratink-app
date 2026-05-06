@@ -2,9 +2,8 @@
  * Quiet sensory cues for socratink.
  * Reading-room, not dashboard. Material, not musical.
  *
- * Recipes were dialed in via /_lab/sound-lab.html (cluster · sibling · role).
- * When a sound needs re-tuning, audition in the lab first, then port the
- * new parameters here.
+ * Recipes are tuned by ear and ported here directly. Re-tune in place when
+ * a sound needs to change; the historical sound-lab page is no longer shipped.
  *
  *   typing       playKeyClick       F·brush   lowpass noise 600Hz, 18ms
  *   focus tab    playFocusTap       I·breath  highpass noise 5kHz, 10ms
