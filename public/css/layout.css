@@ -523,6 +523,9 @@ body:not([data-map-open="true"]) .map-back-link {
     opacity: 0.72;
   }
 }
+html[data-motion="reduced"] #intro-particle-canvas {
+  opacity: 0.72;
+}
 
 /* Desktop hides mobile drawer footer — chrome handles theme + sign-in */
 @media (min-width: 900px) {
@@ -2108,6 +2111,37 @@ body:not([data-map-open="true"]) .map-back-link {
     transition: none;
   }
 }
+html[data-motion="reduced"] .graph-stage-stars span,
+html[data-motion="reduced"] .graph-stage-stars-far span {
+  animation: none;
+  opacity: 0.5;
+}
+
+html[data-motion="reduced"] .graph-svg .graph-beam,
+html[data-motion="reduced"] .graph-svg .graph-beam-arrival,
+html[data-motion="reduced"] .graph-svg .graph-node-ripple,
+html[data-motion="reduced"] .graph-svg .graph-breadcrumb-pip,
+html[data-motion="reduced"] .graph-svg .graph-breadcrumb-arrival {
+  animation: none !important;
+  display: none !important;
+}
+html[data-motion="reduced"] .graph-svg .graph-edge.is-next-suggestion line,
+html[data-motion="reduced"] .graph-svg .graph-edge.is-next-suggestion path {
+  stroke-dasharray: 6 4;
+  opacity: 0.72 !important;
+}
+
+html[data-motion="reduced"] .graph-node .graph-node-halo,
+html[data-motion="reduced"] .graph-node .graph-node-body,
+html[data-motion="reduced"] .graph-node .graph-node-arrival-glow {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+html[data-motion="reduced"] .graph-repair-predict-pill {
+  transition: none;
+}
 
 .graph-detail-meta-compact {
   margin-top: 6px;
@@ -2462,6 +2496,26 @@ body:not([data-map-open="true"]) .map-back-link {
   .graph-node-detail.is-solid-reward-panel {
     box-shadow: 0 10px 24px rgba(124, 111, 205, 0.14);
   }
+}
+html[data-motion="reduced"] .graph-node-detail.is-primed-reward-panel .graph-study-card,
+html[data-motion="reduced"] .graph-node-detail.is-primed-reward-panel .graph-study-next,
+html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel,
+html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel .graph-detail-title,
+html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel .graph-detail-pill.success,
+html[data-motion="reduced"] .graph-repair-card.is-dealing,
+html[data-motion="reduced"] .graph-repair-bridge.is-revealing,
+html[data-motion="reduced"] .graph-repair-complete {
+  animation: none !important;
+}
+
+html[data-motion="reduced"] .graph-node-detail.is-primed-reward-panel .graph-study-card,
+html[data-motion="reduced"] .graph-node-detail.is-primed-reward-panel .graph-study-next {
+  border-color: rgba(110, 174, 209, 0.24);
+  box-shadow: 0 8px 18px rgba(110, 174, 209, 0.1);
+}
+
+html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
+  box-shadow: 0 10px 24px rgba(124, 111, 205, 0.14);
 }
 
 /* ── Ignition view ────────────────────────────────────────────── */

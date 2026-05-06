@@ -220,3 +220,20 @@ body.night .empty-tile-affordance__line {
     transform: none !important;
   }
 }
+html[data-motion="reduced"] .concept-pin,
+html[data-motion="reduced"] .concept-pin-crystal,
+html[data-motion="reduced"] .concept-pin-crystal *,
+html[data-motion="reduced"] .empty-tile-affordance,
+html[data-motion="reduced"] .room-label {
+  animation: none !important;
+  transition-duration: 0ms !important;
+}
+
+html[data-motion="reduced"] .tile-group:not(.empty):hover .concept-pin,
+html[data-motion="reduced"] .tile-group:not(.empty):focus-visible .concept-pin {
+  transform: none !important;
+}
+
+html[data-motion="reduced"] .room-label {
+  transform: none !important;
+}

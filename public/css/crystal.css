@@ -115,6 +115,18 @@
     animation-duration: 0ms !important;
   }
 }
+html[data-motion="reduced"] .tile-left,
+html[data-motion="reduced"] .tile-right,
+html[data-motion="reduced"] .tile-top,
+html[data-motion="reduced"] .tile-highlight,
+html[data-motion="reduced"] .concept-marker-anim,
+html[data-motion="reduced"] .concept-pin-line,
+html[data-motion="reduced"] .concept-pin-head,
+html[data-motion="reduced"] .concept-pin-core,
+html[data-motion="reduced"] .crystal-instance polygon {
+  transition-duration: 0ms !important;
+  animation-duration: 0ms !important;
+}
 
 body.night .tile-group.empty .tile-left,
 body.night .tile-group.empty .tile-right,
