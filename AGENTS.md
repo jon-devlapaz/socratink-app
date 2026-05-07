@@ -98,6 +98,9 @@ playwright install chromium
 ### Run locally
 ```bash
 # Preferred: validates local auth env before starting the login-gated app.
+# Binds Uvicorn to 127.0.0.1 by default (loopback-only). For on-device mobile
+# QA (see docs/qa/antigravity-mobile-qa-prompt.md), override with
+# HOST=0.0.0.0 bash scripts/dev.sh so it's reachable at http://<your-LAN-IP>:8000.
 bash scripts/dev.sh
 
 # Direct fallback if you already ran the preflight:

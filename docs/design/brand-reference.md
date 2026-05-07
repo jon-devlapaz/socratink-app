@@ -229,7 +229,7 @@ Warm-muted jewel tones on a cream-paper page. Five primitives, plus two reserved
 | Neutral | `--mauve-200` | `#CAC4CE` | Locked tiles, empty-tile dashes, inactive chips. Calm, never sad. |
 | Page | `--cream-50` | `#F7ECE1` | Every page background. **Never pure white** in the light theme. |
 | App surface (light) | — | `#F2F0F5` | Antigravity in-app theme only — neutral page beneath glassy panels. |
-| App surface (dark) | — | `#0B0D17` | Antigravity in-app theme only — dark-mode page. |
+| App surface (dark) | — | `#18181b` | Antigravity in-app theme only — graphite dark-mode page (Pattern A unified scale; supersedes the earlier `#0B0D17` indigo). |
 | App accent | `--accent-color` | `#9067C6` light / `#9E8BFF` dark | Antigravity in-app theme only. |
 | App mint | `--accent-mint` | `#4DBA8A` light / `#3CDDC7` dark | Antigravity in-app theme only — paired accent, not the solidified semantic. |
 | White | `--white` | `#FFFFFF` | Raised card faces only; never a page. |

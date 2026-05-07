@@ -66,7 +66,7 @@ function getStatusLabel(status) {
 function getGapLabel(gapType) {
   if (gapType === 'deep') return 'Needs one more clean pass';
   if (gapType === 'shallow') return 'Needs a fuller mechanism';
-  if (gapType === 'misconception') return 'Needs correction';
+  if (gapType === 'misconception') return 'Needs a different causal link';
   return gapType ? shortenLabel(String(gapType), 28) : '';
 }
 
@@ -110,19 +110,19 @@ function getInspectPrompt(data) {
   if (!data) return 'Start here and rebuild the mechanism from memory.';
 
   if (data.drillPhase === 'study') {
-    return 'Targeted study is open for this node. Re-enter the mechanism view, then return to the map when you are ready to let it incubate.';
+    return 'Targeted study is open for this entry. Re-open the mechanism view, then return to the map when you are ready to let it incubate.';
   }
 
   if (data.drillStatus === 'primed') {
     return data.type === 'core' || data.type === 'backbone'
       ? 'Study is on record. Let this idea incubate while you work another reachable branch, then return for spaced re-drill.'
-      : 'This room is primed. Work another reachable node before coming back for spaced re-drill.';
+      : 'This entry is primed. Work another reachable entry before coming back for spaced re-drill.';
   }
 
   if (data.drillStatus === 'drilled') {
     return data.type === 'core' || data.type === 'backbone'
       ? 'This idea is still settling. Shift outward to another branch, then come back for a cleaner reconstruction.'
-      : 'This room still needs another pass. Interleave a different node, then come back for the next re-drill.';
+      : 'This entry still needs another pass. Interleave a different entry, then come back for the next re-drill.';
   }
 
   if (data.type === 'core') {
@@ -137,25 +137,25 @@ function getInspectPrompt(data) {
 
   if (data.type === 'cluster') {
     return data.available
-      ? 'This branch is open. The drill happens inside its rooms, not in the container itself.'
-      : 'Work the prerequisite rooms to reveal this branch.';
+      ? 'This branch is open. The drill happens inside its entries, not in the section itself.'
+      : 'Work the prerequisite entries to reveal this branch.';
   }
 
   if (data.type === 'subnode') {
     return data.available
-      ? 'This room is available. Enter with your current model. Study stays hidden until you attempt.'
-      : 'Work the branch before drilling this room.';
+      ? 'This entry is available. Open with your current model. Study stays hidden until you attempt.'
+      : 'Work the branch before drilling this entry.';
   }
 
-  return 'Choose a reachable room and make the next attempt.';
+  return 'Choose a reachable entry and make the next attempt.';
 }
 
 function getInspectHeading(data) {
   if (!data) return '';
   if (data.state === 'locked' && !data.available) {
     if (data.type === 'backbone') return 'Locked branch';
-    if (data.type === 'cluster') return 'Locked room set';
-    if (data.type === 'subnode') return 'Locked room';
+    if (data.type === 'cluster') return 'Locked section';
+    if (data.type === 'subnode') return 'Locked entry';
   }
   if (data.type === 'backbone') return data.label || data.fullLabel || 'Backbone Principle';
   return data.fullLabel || data.label || '';
@@ -388,8 +388,8 @@ export function transformKnowledgeMapToGraph(rawData) {
         state: deriveClusterState(cluster),
         available: clusterAvailable ? 1 : 0,
         label: clusterLabel,
-        teaserLabel: 'Locked container',
-        fullLabel: cluster.label || `Cluster ${clusterIndex + 1}`,
+        teaserLabel: 'Locked section',
+        fullLabel: cluster.label || `Section ${clusterIndex + 1}`,
         detail: cluster.description || '',
         orbitLevel: 1,
         subnodeCount: Array.isArray(cluster.subnodes) ? cluster.subnodes.length : 0,
@@ -407,7 +407,7 @@ export function transformKnowledgeMapToGraph(rawData) {
             target: clusterId,
             type: 'structural',
             label: 'Backbone branch',
-            description: 'This cluster depends on the connected backbone principle.',
+            description: 'This section depends on the connected backbone principle.',
             available: clusterAvailable ? 1 : 0,
           },
           classes: 'edge-structural',
@@ -421,7 +421,7 @@ export function transformKnowledgeMapToGraph(rawData) {
           target: clusterId,
           type: 'structural',
           label: 'Backbone branch',
-          description: 'This cluster branches from the core thesis.',
+          description: 'This section branches from the core thesis.',
           available: clusterAvailable ? 1 : 0,
         },
         classes: 'edge-structural',
@@ -438,8 +438,8 @@ export function transformKnowledgeMapToGraph(rawData) {
           state: deriveSubnodeState(subnode),
           available: clusterAvailable ? 1 : 0,
           label: subnodeLabel,
-          teaserLabel: 'Locked room',
-          fullLabel: subnode.label || `Drill Node ${subIndex + 1}`,
+          teaserLabel: 'Locked entry',
+          fullLabel: subnode.label || `Entry ${subIndex + 1}`,
           detail: subnode.mechanism || '',
           parentCluster: clusterId,
           orbitLevel: 2,
@@ -462,8 +462,8 @@ export function transformKnowledgeMapToGraph(rawData) {
           source: clusterId,
           target: subnodeId,
           type: 'structural',
-          label: 'Drill branch',
-          description: subnode.mechanism || 'This drill node belongs to the selected cluster.',
+          label: 'Entry branch',
+          description: subnode.mechanism || 'This drill node belongs to the selected section.',
           available: clusterAvailable ? 1 : 0,
         },
         classes: 'edge-structural edge-subnode-link',
@@ -627,7 +627,7 @@ function repairRepsMarkupForNode(data, repairState = {}) {
         <div class="graph-detail-kicker">Repair Reps</div>
         ${repairProgressMarkup({ currentIndex: -1, total: 3 })}
         <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
-        <p class="graph-detail-copy">Building three causal reps for this node. This is practice, not graph-truth evidence.</p>
+        <p class="graph-detail-copy">Building three causal reps for this entry. This is practice, not graph-truth evidence.</p>
       </section>
     `;
   }
@@ -681,7 +681,7 @@ function repairRepsMarkupForNode(data, repairState = {}) {
       ${repairContextStripMarkup({ nodeLabel, phaseLabel: 'Repair Reps' })}
       <div class="graph-detail-kicker">Repair Reps</div>
       <h3 class="graph-detail-title">${escHtml(nodeLabel)}</h3>
-      <p class="graph-detail-copy">Repair Reps are not ready for this node yet.</p>
+      <p class="graph-detail-copy">Repair Reps are not ready for this entry yet.</p>
       <button class="${actionButtonClass} trigger-repair-exit">Back to graph</button>
     `;
   }
@@ -772,8 +772,8 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     const nextStepCopy = next
       ? (next.action === 're-drill'
           ? `Next evidence move: spaced re-drill ${escHtml(next.label)}.`
-          : `Next spacing move: enter ${escHtml(next.label)}.`)
-      : 'Leave this node to incubate. Work on other nodes before returning to spaced re-drill.';
+          : `Next spacing move: open ${escHtml(next.label)}.`)
+      : 'Leave this entry to incubate. Work on other entries before returning to spaced re-drill.';
     return `
       <div class="graph-study-shell">
         <section class="graph-detail-surface graph-study-card">
@@ -799,8 +799,8 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       : data.type === 'backbone'
         ? 'Backbone Principle'
         : data.type === 'cluster'
-          ? 'Cluster Focus'
-          : 'Drill Node';
+          ? 'Section'
+          : 'Entry';
     const thresholdHtml = mode === 'cold-attempt-active' && data.startingMapContext
       ? `
         <div class="graph-threshold-anchor">
@@ -813,7 +813,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       ${thresholdHtml}
-      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'That context belongs to the whole map. This room asks one smaller question before any study appears.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
+      <p class="graph-detail-copy">${mode === 'cold-attempt-active' ? 'That context belongs to the whole map. This entry asks one smaller question before any study appears.' : 'Explain this from memory. The map stays in the background until the drill resolves.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${outcomeMeta.pills}
       </div>
@@ -827,23 +827,17 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
       : data.type === 'backbone'
       ? 'Backbone Result'
         : data.type === 'cluster'
-          ? 'Cluster Result'
-          : 'Drill Result';
-    const trajectoryHtml = isSolid && data.reDrillBand
-      ? `<p class="graph-detail-copy" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
-           Cold attempt: exploratory guess. Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That change is the evidence on record.
-         </p>`
-      : '';
+          ? 'Section Result'
+          : 'Entry Result';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
-      <p class="graph-detail-copy">${isSolid ? 'Solidified through spaced reconstruction. This is evidence, not a permanent claim.' : 'Attempt logged. This room is worth revisiting.'}</p>
+      <p class="graph-detail-copy">${isSolid ? 'Solidified through spaced reconstruction. This is evidence, not a permanent claim.' : 'Attempt logged. This entry is worth revisiting.'}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
         ${isSolid
           ? '<span class="graph-detail-pill success">solidified through spaced reconstruction</span>'
           : outcomeMeta.pills}
       </div>
-      ${trajectoryHtml}
       ${data.gapDescription && !isSolid ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
       ${!isSolid ? `
         <div class="graph-detail-block">
@@ -877,7 +871,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Enter Core Thesis</button>`}
+      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Open Core Thesis</button>`}
       ${secondaryInspectButtonHtml}
     `;
   }
@@ -892,7 +886,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start Cold Attempt</button>`) : ''}
+      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Try from memory</button>`) : ''}
       ${data.available ? secondaryInspectButtonHtml : ''}
     `;
   }
@@ -903,11 +897,11 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
 
   if (data.type === 'cluster') {
     return `
-      <div class="graph-detail-kicker">Cluster</div>
+      <div class="graph-detail-kicker">Section</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-        <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
+        <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} entries`)}</span>
         ${getReachabilityPill(data)}
         ${isDrilled ? '<span class="graph-detail-pill warning">attempts recorded</span>' : ''}
       </div>
@@ -915,7 +909,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
   }
 
   return `
-    <div class="graph-detail-kicker">Drill Node</div>
+    <div class="graph-detail-kicker">Entry</div>
     <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
     <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
     <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
@@ -945,7 +939,7 @@ function detailMarkupForEdge(edge, cy) {
     ? 'held until attempt'
     : (target.data('label') || data.target);
   const body = hasLockedEndpoint
-    ? 'This connection is part of the proposed route. Its mechanism stays out of view until the adjacent rooms have learner evidence.'
+    ? 'This connection is part of the proposed route. Its mechanism stays out of view until the adjacent entries have learner evidence.'
     : (data.description || 'No explanatory text available for this relationship.');
 
   return `
@@ -963,8 +957,8 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
   if (mode === 'drill-active') {
     detailEl.innerHTML = `
       <div class="graph-detail-kicker">Active Drill</div>
-      <h3 class="graph-detail-title">One node at a time</h3>
-      <p class="graph-detail-copy">Use the chat to reconstruct the active node from memory. The graph updates only when the outcome provides evidence.</p>
+      <h3 class="graph-detail-title">One entry at a time</h3>
+      <p class="graph-detail-copy">Use the chat to reconstruct the active entry from memory. The graph updates only when the outcome provides evidence.</p>
     `;
     return;
   }
@@ -973,7 +967,7 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
   const thresholdSnippet = getStartingMapSnippet(source);
   const starterPrompt = escHtml('What governing idea explains how this whole system behaves? Start here, then take your best guess.');
   detailEl.innerHTML = `
-    <div class="graph-detail-kicker">Starting Room</div>
+    <div class="graph-detail-kicker">Starting Entry</div>
     <h3 class="graph-detail-title">${backboneTitle}</h3>
     ${thresholdSnippet ? `
       <div class="graph-threshold-anchor">
@@ -982,15 +976,15 @@ function setEmptyDetail(detailEl, source, mode = 'inspect') {
       </div>
     ` : ''}
     <p class="graph-detail-copy">${thresholdSnippet
-      ? 'This is the first room. It asks one smaller question from the global context you gave.'
-      : 'This is the first room. It asks one smaller question to anchor the map.'}</p>
+      ? 'This is the first entry. It asks one smaller question from the global context you gave.'
+      : 'This is the first entry. It asks one smaller question to anchor the map.'}</p>
     <p class="graph-detail-copy">${starterPrompt}</p>
     <div class="graph-detail-meta">
       <span class="graph-detail-pill">core thesis first</span>
       <span class="graph-detail-pill">bright means ready</span>
       <span class="graph-detail-pill">ghosted means locked</span>
     </div>
-    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">Start first room</button>
+    <button class="btn-start-drill trigger-drill" style="width:100%; margin-top: 16px;">Start first entry</button>
   `;
 }
 
@@ -1788,8 +1782,8 @@ export function mountKnowledgeGraph({ container, detailEl, rawData, onNodeSelect
   const getDisplayLabelForNode = (node) => {
     const isUnavailableLocked = node.state === 'locked' && !node.available;
     if (isUnavailableLocked && node.type === 'backbone') return 'Locked branch';
-    if (isUnavailableLocked && node.type === 'cluster') return 'Locked room set';
-    if (isUnavailableLocked && node.type === 'subnode') return 'Locked room';
+    if (isUnavailableLocked && node.type === 'cluster') return 'Locked section';
+    if (isUnavailableLocked && node.type === 'subnode') return 'Locked entry';
     if (node.type === 'core') return String(node.label || 'Core Thesis').toUpperCase();
     return String(node.label || node.fullLabel || '');
   };

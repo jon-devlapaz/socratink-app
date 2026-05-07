@@ -7,7 +7,7 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=9';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=13';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -17,8 +17,9 @@ import {
   logout,
   redirectToLogin,
 } from './auth.js?v=3';
-import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
+import { maybeShowFirstRunWelcome } from './welcome.js?v=8';
 import { isSubstantiveSketch } from './sketch-validation.js';
+import { prefersReducedMotion } from './motion.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -280,7 +281,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
+    if (!concept) return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -293,11 +294,11 @@ const App = (() => {
       case 'fractured':
         return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
       case 'hibernating':
-        return 'This room is spacing. Work elsewhere or return when re-drill is eligible.';
+        return 'This entry is spacing. Work elsewhere or return when re-drill is eligible.';
       case 'actualized':
-        return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
+        return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
-        return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
+        return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
     }
   }
 
@@ -481,16 +482,35 @@ const App = (() => {
       });
     });
 
-    const chips = document.querySelectorAll('[data-hero-example]');
-    chips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const value = chip.dataset.heroExample || '';
-        if (!value) return;
-        conceptField.value = value;
-        sketchField.focus(); // focus handler fires playFocusTap on the resulting focus transition
-        sketchField.setSelectionRange(sketchField.value.length, sketchField.value.length);
-        sync();
-      });
+    const examples = ['Photosynthesis', 'Entropy', 'Transformers', 'Attention'];
+    let exampleIdx = 0;
+    const writePlaceholder = () => {
+      const next = `e.g. ${examples[exampleIdx]}`;
+      if (conceptField.placeholder !== next) conceptField.placeholder = next;
+    };
+    writePlaceholder();
+    let placeholderTimer = null;
+    const tickPlaceholder = () => {
+      if (prefersReducedMotion()) return;
+      if (!ignitionView?.classList.contains('visible')) return;
+      if (document.activeElement === conceptField) return;
+      if (conceptField.value.length > 0) return;
+      exampleIdx = (exampleIdx + 1) % examples.length;
+      writePlaceholder();
+    };
+    const startPlaceholderTimer = () => {
+      if (placeholderTimer != null) return;
+      placeholderTimer = setInterval(tickPlaceholder, 3200);
+    };
+    const stopPlaceholderTimer = () => {
+      if (placeholderTimer == null) return;
+      clearInterval(placeholderTimer);
+      placeholderTimer = null;
+    };
+    if (!document.hidden) startPlaceholderTimer();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopPlaceholderTimer();
+      else startPlaceholderTimer();
     });
     sync();
   }
@@ -621,7 +641,7 @@ const App = (() => {
       item.innerHTML = `
         <div class="concept-dot" data-state="${c.state}"></div>
         <span class="concept-item-name">${escHtml(c.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" title="Delete concept">
+        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" aria-label="Delete concept ${escHtml(c.name)}" title="Delete concept">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1054,9 +1074,9 @@ const App = (() => {
   // by the first call's scheduled timeout.
   function mountExtractOverlay({ name }) {
     const OVERLAY_TIPS = [
-      'socratink is drafting your starting map.',
+      'socratink is drafting your starting sketch.',
       'Spacing retrieval over time helps short-term recall become more durable.',
-      'socratink is structuring the rooms.',
+      'socratink is structuring the entries.',
       'Answering before the explanation appears gives study something specific to repair.',
       'socratink is sketching the draft route.',
       'The graph records evidence from attempts and spaced reconstruction, not exposure.',
@@ -1112,7 +1132,7 @@ const App = (() => {
         </svg>
         <div class="eo-pill eo-pill-top">
           <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
-          <span class="eo-status-label">Analyzing</span>
+          <span class="eo-status-label">Drafting</span>
         </div>
         <div class="eo-pill eo-pill-bottom">
           <span class="material-symbols-outlined eo-pill-icon">memory</span>
@@ -1123,7 +1143,7 @@ const App = (() => {
         <span class="eo-meta-text">Parsing source content...</span>
       </div>
       <div class="eo-tip">
-        <p class="eo-tip-text">&ldquo;socratink is drafting your starting map.&rdquo;</p>
+        <p class="eo-tip-text">&ldquo;socratink is drafting your starting sketch.&rdquo;</p>
       </div>
       <footer class="eo-footer">
         <div class="eo-progress-meta">
@@ -1556,9 +1576,6 @@ const App = (() => {
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
-      // Tile-click cue (D·thud) is reserved for navigation INTO a populated
-      // tile. Empty tiles open the add-concept drawer instead — that
-      // transition has its own cue and should not double-fire.
       AudioFX.playTileClick();
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
@@ -1628,7 +1645,7 @@ const App = (() => {
     stopTimer();
     const btnDrill = document.getElementById('btn-drill');
     const consolidateBtn = document.querySelector('#consolidate-controls button');
-    if (btnDrill) btnDrill.textContent = 'Start room';
+    if (btnDrill) btnDrill.textContent = 'Start entry';
     if (consolidateBtn) {
       consolidateBtn.disabled = true;
       consolidateBtn.textContent = 'Spacing gate unavailable';
@@ -1913,7 +1930,7 @@ const App = (() => {
     if (drillBtn) {
       const showDrill = concept.state === 'growing' || concept.state === 'fractured';
       drillBtn.hidden = !showDrill;
-      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Start Cold Attempt';
+      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Try from memory';
     }
 
     const domMechs = rels.domain_mechanics || [];
@@ -1943,7 +1960,7 @@ const App = (() => {
         drill_status: item?.drill_status || null,
       })),
       ...clusters.flatMap((cluster) => (cluster.subnodes || []).map((subnode) => ({
-        label: subnode?.label || 'Drill room',
+        label: subnode?.label || 'Entry',
         drill_status: subnode?.drill_status || null,
       }))),
     ];
@@ -1969,7 +1986,7 @@ const App = (() => {
       <section class="map-zone map-threshold-zone">
         <div class="map-section-title">Concept Threshold</div>
         <div class="map-threshold-panel">
-          <p class="map-threshold-lead">This is global context. The first room will ask one smaller question.</p>
+          <p class="map-threshold-lead">This is global context. The first entry will ask one smaller question.</p>
           <blockquote class="map-threshold-quote">${escHtml(startingMapContext || 'No threshold context was captured for this concept.')}</blockquote>
         </div>
       </section>
@@ -1991,11 +2008,11 @@ const App = (() => {
         <div class="map-section-title">First Cold Attempt</div>
         <div class="map-first-room">
           <div>
-            <div class="map-first-room-kicker">Starting Room</div>
+            <div class="map-first-room-kicker">Starting Entry</div>
             <h3>Core thesis</h3>
-            <p>The first room asks for the governing idea, not the whole source.</p>
+            <p>The first entry asks for the governing idea, not the whole source.</p>
           </div>
-          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first room</button>
+          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first entry</button>
         </div>
       </section>
     `;
@@ -2006,7 +2023,7 @@ const App = (() => {
       backbone.forEach((b, idx) => {
         const hasEvidence = hasStudyEvidence(b);
         const stateLabel = hasEvidence ? 'primed for study' : 'locked';
-        const routeLabel = hasEvidence ? (b.principle || `Backbone room ${idx + 1}`) : `Backbone room ${idx + 1}`;
+        const routeLabel = hasEvidence ? (b.principle || `Backbone entry ${idx + 1}`) : `Backbone entry ${idx + 1}`;
         html += `
           <div class="map-backbone-item">
             <span>${escHtml(shortOnboardingText(routeLabel, 110))}</span>
@@ -2019,11 +2036,11 @@ const App = (() => {
 
     if (clusters.length > 0) {
       html += '<div class="map-zone zone-3">';
-      html += '<div class="map-section-title">Nearby Rooms</div>';
+      html += '<div class="map-section-title">Nearby Entries</div>';
       clusters.forEach((c, idx) => {
         const isFirst = idx === 0 ? 'expanded' : '';
         const clusterHasEvidence = hasStudyEvidence(c) || (c.subnodes || []).some((subnode) => hasStudyEvidence(subnode));
-        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby room set ${idx + 1}`) : `Nearby room set ${idx + 1}`;
+        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby section ${idx + 1}`) : `Nearby section ${idx + 1}`;
         html += `
           <div class="map-cluster-card ${isFirst}" onclick="App.toggleCluster(this)">
             <div class="map-cluster-header">
@@ -2037,10 +2054,10 @@ const App = (() => {
         subnodes.forEach((sub, subIdx) => {
           const subHasEvidence = hasStudyEvidence(sub);
           const stateClass = nodeStateClass(sub.drill_status);
-          const roomLabel = subHasEvidence ? (sub.label || `Room ${subIdx + 1}`) : `Locked room ${subIdx + 1}`;
+          const roomLabel = subHasEvidence ? (sub.label || `Entry ${subIdx + 1}`) : `Locked entry ${subIdx + 1}`;
           const mechanismCopy = subHasEvidence
             ? (sub.mechanism || 'Study material available after the recorded attempt.')
-            : 'locked study silhouette. Enter the room before the mechanism appears.';
+            : 'locked study silhouette. Open the entry before the mechanism appears.';
           html += `
              <div class="map-subnode-row">
                <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
@@ -2068,7 +2085,7 @@ const App = (() => {
       html += `
         <div class="map-zone map-locked-study-zone">
           <div class="map-section-title">Locked Study Silhouette</div>
-          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one room has a cold attempt on record.</p>
+          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one entry has a cold attempt on record.</p>
         </div>
       `;
     }
@@ -2321,8 +2338,8 @@ const App = (() => {
       <div class="library-kicker">Library</div>
 
       <div class="library-section">
-        <h3 class="library-section-title">Documentation Concepts</h3>
-        <p class="library-section-copy">Curated draft paths you can enter without treating the map as learner evidence.</p>
+        <h2 class="library-section-title">Reference Concepts</h2>
+        <p class="library-section-copy">Curated draft paths you can open without treating the map as learner evidence.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
             const alreadyAdded = existingConceptNames.has(item.name);
@@ -2348,12 +2365,12 @@ const App = (() => {
       </div>
       
       <div class="library-section" style="margin-top: 40px;">
-        <h3 class="library-section-title">Your Library</h3>
-        <p class="library-section-copy">Draft paths and evidence maps you can reopen.</p>
+        <h2 class="library-section-title">Your Library</h2>
+        <p class="library-section-copy">Your library shows what you've reconstructed, not what you've saved.</p>
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">Ignition</a>.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">New Entry</a>.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
@@ -2370,8 +2387,8 @@ const App = (() => {
             <div class="library-card-meta">
               ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
               ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
-              <span class="library-card-pill">${escHtml(`${meta.clusterCount} clusters`)}</span>
-              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} drill nodes`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.clusterCount} ${meta.clusterCount === 1 ? 'section' : 'sections'}`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} ${meta.subnodeCount === 1 ? 'entry' : 'entries'}`)}</span>
             </div>
             <div class="library-card-cta">Open concept</div>
           </div>`;
@@ -2714,7 +2731,7 @@ const App = (() => {
   function getSpacingBlockReason(nodeData, nodeId) {
     if (!nodeData?.re_drill_eligible_after) {
       return {
-        headline: 'Study this node first',
+        headline: 'Study this entry first',
         body: 'Finish the study step before you try a spaced re-drill.',
       };
     }
@@ -2722,13 +2739,13 @@ const App = (() => {
     const eligibleAtMs = Date.parse(nodeData.re_drill_eligible_after);
     if (!Number.isNaN(eligibleAtMs) && Date.now() < eligibleAtMs) {
       return {
-        headline: 'Work on another node first',
-        body: 'This re-drill needs a short buffer before it counts. Work another node, then come back.',
+        headline: 'Work on another entry first',
+        body: 'This re-drill needs a short buffer before it counts. Work another entry, then come back.',
       };
     }
 
     return {
-      headline: 'Interleave one more node first',
+      headline: 'Interleave one more entry first',
       body: 'Finish one other cold attempt or study step before returning here. That buffer helps the graph tell the truth.',
     };
   }
@@ -2867,7 +2884,7 @@ const App = (() => {
 
     return {
       kind: 'start-cold-attempt',
-      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Start Cold Attempt',
+      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Try from memory',
     };
   }
 
@@ -3460,10 +3477,10 @@ const App = (() => {
 
       if (drillMode === 'cold_attempt' && data.generative_commitment === true) {
         const normalizationMessages = [
-          'You made the first mark. Now the room can show the gap.',
+          'You made the first mark. Now the entry can show the gap.',
           'That guess gives study something to work against.',
-          'The first attempt gives this room a shape.',
-          'The room stayed quiet until you tried. Now study has a target.',
+          'The first attempt gives this entry a shape.',
+          'The entry stayed quiet until you tried. Now study has a target.',
         ];
         const msgIdx = drillState._normalizationIdx % normalizationMessages.length;
         drillState._normalizationIdx += 1;
@@ -3507,7 +3524,7 @@ const App = (() => {
     if (nodeData.drill_status === 'solidified') {
       currentGraphController?.showBlockedMessage?.(
         'Solid evidence already recorded',
-        'This room already has a solid spaced reconstruction on record. Pick a node without that record to keep the graph truthful.'
+        'This entry already has a solid spaced reconstruction on record. Pick an entry without that record to keep the graph truthful.'
       );
       return;
     }
@@ -3531,7 +3548,7 @@ const App = (() => {
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
         'Session node limit reached',
-        'You have drilled 4 nodes this session. This is a good stopping point. Spacing retrieval across sessions improves long-term retention.'
+        'You have drilled 4 entries this session. This is a good stopping point. Spacing retrieval across sessions improves long-term retention.'
       );
       return;
     }
@@ -3544,7 +3561,7 @@ const App = (() => {
     if (!bypassSessionLimits && (sessionState.retriesByNode[nodeContext.id] || 0) >= 3) {
       currentGraphController?.showBlockedMessage?.(
         'Retrieval ceiling reached',
-        'You have attempted this node 3 times this session. Space your attempts and return in a future session.'
+        'You have attempted this entry 3 times this session. Space your attempts and return in a future session.'
       );
       return;
     }
@@ -3574,7 +3591,7 @@ const App = (() => {
     }
     if (drillTitle) {
       const label = nodeContext?.label || nodeContext?.fullLabel || concept.name;
-      drillTitle.textContent = `Active room: ${label}`;
+      drillTitle.textContent = `Active entry: ${label}`;
     }
 
     let initialMode = 'cold-attempt-active';
@@ -3591,7 +3608,7 @@ const App = (() => {
     requestDrillTurn().catch((err) => {
       console.error(err);
       hideTypingIndicator();
-      appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
+      appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
       drillState.pending = false;
       if (chatInput) chatInput.disabled = false;
       currentGraphController?.setInteractionMode?.('inspect');
@@ -3687,11 +3704,11 @@ const App = (() => {
       <ul class="first-attempt-creed__list">
         <li>
           <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
-          <span><strong>You tried first.</strong> The room stayed quiet until your guess existed.</span>
+          <span><strong>You tried first.</strong> The entry stayed quiet until your guess existed.</span>
         </li>
         <li>
           <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
-          <span><strong>Study has a target now.</strong> Repair the gap this room exposed.</span>
+          <span><strong>Study has a target now.</strong> Repair the gap this entry exposed.</span>
         </li>
         <li>
           <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
@@ -3718,7 +3735,7 @@ const App = (() => {
         requestDrillTurn(text).catch((err) => {
           console.error(err);
           hideTypingIndicator();
-          appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
+          appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
           drillState.pending = false;
           if (chatInput) chatInput.disabled = false;
         });
@@ -3750,7 +3767,7 @@ const App = (() => {
         </div>
 
         <section class="settings-display">
-          <h4 class="settings-section-heading">Display</h4>
+          <h3 class="settings-section-heading">Display</h3>
 
           <div class="settings-row">
             <div>
@@ -3965,10 +3982,8 @@ const App = (() => {
     const isGuest = !!(session && session.guest_mode);
     const authEnabled = !!(session && session.auth_enabled);
     const chip = document.getElementById('drawer-footer-chip');
-    const exitBtn = document.getElementById('drawer-exit-btn');
     const signinLink = document.getElementById('drawer-signin-link');
     if (chip) chip.hidden = !isGuest;
-    if (exitBtn) exitBtn.hidden = !isGuest;
     if (signinLink) {
       const show = isGuest && authEnabled;
       signinLink.hidden = !show;
@@ -3976,18 +3991,11 @@ const App = (() => {
     }
   }
 
-  async function exitGuestFromDrawer() {
-    try { await logout(); } catch (err) { console.warn('Guest exit failed.', err); }
-    closeDrawer();
-    redirectToLogin('/');
-  }
-
   void refreshRuntimeConfig();
 
   return {
     toggleDrawer, openDrawer, closeDrawer,
     refreshDrawerFooter,
-    exitGuestFromDrawer,
     cancelDrill, startDrill, startDrillFromMap: () => {
       const concept = getActiveConcept();
       if (!concept?.graphData) return;

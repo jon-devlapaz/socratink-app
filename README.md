@@ -34,6 +34,11 @@ bash scripts/dev.sh
 
 Then open [http://localhost:8000](http://localhost:8000).
 
+`scripts/dev.sh` binds Uvicorn to `127.0.0.1` by default (loopback-only).
+For on-device mobile testing (see `docs/qa/antigravity-mobile-qa-prompt.md`),
+override with `HOST=0.0.0.0 bash scripts/dev.sh` so the dev server is also
+reachable at `http://<your-LAN-IP>:8000`.
+
 `scripts/dev.sh` refuses to run without `.venv/` (to avoid accidentally using
 global/pyenv site-packages). It runs `scripts/check-local-auth.py` before
 starting Uvicorn to catch missing `.env` / `.env.local` auth configuration.

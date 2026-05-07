@@ -28,7 +28,7 @@ Read these first — in this order:
 
 The shipping in-app surface (`public/index.html`) loads `public/antigravity.css` and applies `.antigravity-theme` to `<body>` unconditionally. The rules below describe the **canonical marketing aesthetic** and remain authoritative for any cream-paper surface; treat the Antigravity layer as a deliberate, user-approved exception for the in-app shell:
 
-- **Palette** — Antigravity light keeps `--cream-50` / `--ink-900` underneath but introduces `--accent-color` `#9067C6` (light) / `#9E8BFF` (dark) and `--accent-mint` `#4DBA8A` (light) / `#3CDDC7` (dark) as paired accents, with a dark-mode page of `#0B0D17` and a light-mode neutral surface of `#F2F0F5` for glassy panels. The mint is no longer reserved solely for the solidified state inside this theme.
+- **Palette** — Antigravity light keeps `--cream-50` / `--ink-900` underneath but introduces `--accent-color` `#9067C6` (light) / `#9E8BFF` (dark) and `--accent-mint` `#4DBA8A` (light) / `#3CDDC7` (dark) as paired accents, with a graphite dark-mode page of `#18181b` (Pattern A unified scale) and a light-mode neutral surface of `#F2F0F5` for glassy panels. The mint is no longer reserved solely for the solidified state inside this theme.
 - **Type** — Outfit (variable) is loaded alongside Inter and Manrope from Google Fonts and used for in-app display headings (`.ignition-title`, `.hero-title`, ignition/hero eyebrows). This is the only sanctioned fourth family and the only sanctioned Google-Fonts dependency; do not extend it to additional surfaces without explicit approval.
 
 For marketing pages and external exports, fall back to the Core rules below verbatim.

@@ -157,6 +157,17 @@ button:disabled { background-color:var(--locked); cursor:not-allowed; transform:
   button { min-height: 48px; }
 }
 
+/* Screen-reader-only utility (visually hidden, kept in the a11y tree). */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 #timer-display {
   font-size:22px; font-family:'SF Mono','Fira Code',monospace;
   font-weight:700; letter-spacing:2px; color:var(--primary);

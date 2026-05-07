@@ -1,5 +1,7 @@
 # Dark-Mode Surface Audit
 
+> **Superseded (commit a6de9bf, 2026-05-06).** The fix that shipped is **Pattern A graphite unification**, not the near-black indigo (`#0e0b1a` / `#1a1730`) proposed in section (4) below. The dark-mode tokens in `public/css/variables.css` now resolve to a graphite scale: `--surface-page-theme: #18181b`, `--surface-card-theme: #27272a`, `--surface-high: #3f3f46`, `--surface-highest: #27272a`, with regenerated `--gradient-card-*` pairs and a page-background gradient that no longer carries the violet radial blooms. Treat the primitives table, failure-mode diagnosis, and proposed systemic fix in this document as a historical record of the problem space — they do not describe what is in the codebase today. Per-surface follow-ups in section (4) (`bar-track`, `graph-detail-disclosure`/`-surface`, repair-reps cyan, `login.html`) may still apply; verify against current code before acting.
+
 Audit only — no fixes. Dashboard fix deferred behind funnel work.
 
 ## Method

@@ -17,4 +17,4 @@ UVICORN_BIN=".venv/bin/uvicorn"
 export SOCRATINK_DEV_AUTOGUEST="${SOCRATINK_DEV_AUTOGUEST:-1}"
 
 "$PYTHON_BIN" scripts/check-local-auth.py --port "${PORT:-8000}"
-exec "$UVICORN_BIN" main:app --reload --port "${PORT:-8000}"
+exec "$UVICORN_BIN" main:app --reload --host "${HOST:-127.0.0.1}" --port "${PORT:-8000}"
