@@ -690,6 +690,36 @@ def extract_knowledge_map(
     return result.parsed  # type: ignore[return-value]
 
 
+SMALLEST_ROUTE_MAX_DRILLABLE_NODES = 4
+"""C-prime spec §5.1: ≤4 drillable nodes total (1 first target + ≤3 hints)."""
+
+
+class SmallestRouteCapExceeded(ValueError):
+    """Raised when source-less generation returns a ProvisionalMap exceeding
+    the smallest-route cap. Server returns 500 in this case (it's a
+    generation-side failure, not a client-input failure)."""
+
+
+def _validate_smallest_route(pm: ProvisionalMap) -> None:
+    """Enforce C-prime spec §5.1 ≤4-node cap.
+
+    Counts drillable clusters on the ProvisionalMap. Raises
+    SmallestRouteCapExceeded if the count is 0 or >4.
+    """
+    drillable = list(pm.clusters) if pm.clusters is not None else []
+    n = len(drillable)
+    if n == 0:
+        raise SmallestRouteCapExceeded(
+            "smallest route must have at least one drillable node "
+            "(the suggested first target / core thesis)"
+        )
+    if n > SMALLEST_ROUTE_MAX_DRILLABLE_NODES:
+        raise SmallestRouteCapExceeded(
+            f"smallest route exceeded cap: {n} drillable nodes "
+            f"(max {SMALLEST_ROUTE_MAX_DRILLABLE_NODES})"
+        )
+
+
 def generate_provisional_map_from_sketch(
     concept: str,
     sketch: str,
