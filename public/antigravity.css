@@ -138,7 +138,7 @@ body.antigravity-theme {
   background-color: #F2F0F5 !important;
 }
 html[data-theme="dark"] body.antigravity-theme {
-  background-color: #0B0D17 !important;
+  background-color: #18181b !important;
 }
 
 @media (max-width: 899px) {
