@@ -26,7 +26,7 @@ from ai_service import (
     MissingAPIKeyError,
     drill_chat,
     extract_knowledge_map,
-    generate_provisional_map_from_sketch,
+    generate_smallest_provisional_map,
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
@@ -549,9 +549,9 @@ def extract(req: ExtractRequest):
                     output_tokens=result.usage.output_tokens,
                 )
 
-            provisional_map = generate_provisional_map_from_sketch(
+            provisional_map = generate_smallest_provisional_map(
                 concept=decision["name"],
-                sketch=decision["sketch"],
+                threshold=decision["sketch"],  # `sketch` key in decision is the threshold per C-prime
                 lc_context=lc_context,
                 api_key=req.api_key,
                 on_call_complete=_on_sketch_call,

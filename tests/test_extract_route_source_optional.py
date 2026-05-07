@@ -87,7 +87,7 @@ def _minimal_map() -> ProvisionalMap:
 def test_substantive_sketch_no_source_dispatches_to_sketch_path(client):
     fake_map = _minimal_map()
     with patch(
-        "main.generate_provisional_map_from_sketch",
+        "main.generate_smallest_provisional_map",
         return_value=fake_map,
     ) as fake_gen, patch("main.extract_knowledge_map") as fake_extract:
         response = client.post("/api/extract", json={
@@ -96,7 +96,7 @@ def test_substantive_sketch_no_source_dispatches_to_sketch_path(client):
             "source": None,
         })
     assert response.status_code == 200
-    assert fake_gen.called, "must call generate_provisional_map_from_sketch"
+    assert fake_gen.called, "must call generate_smallest_provisional_map"
     assert not fake_extract.called, "must NOT call extract_knowledge_map"
 
 
@@ -115,7 +115,7 @@ def test_thin_sketch_no_source_returns_422_thin_sketch(client):
 def test_substantive_sketch_with_source_dispatches_to_extract_path(client):
     fake_map = _minimal_map()
     with patch("main.extract_knowledge_map", return_value=fake_map) as fake_extract, \
-         patch("main.generate_provisional_map_from_sketch") as fake_gen:
+         patch("main.generate_smallest_provisional_map") as fake_gen:
         response = client.post("/api/extract", json={
             "name": "Photosynthesis",
             "starting_sketch": "Plants take in light and make sugar from water and CO2.",
@@ -130,7 +130,7 @@ def test_thin_sketch_with_source_dispatches_to_extract_path(client):
     """Thin sketch is OK when source carries the structural seed."""
     fake_map = _minimal_map()
     with patch("main.extract_knowledge_map", return_value=fake_map) as fake_extract, \
-         patch("main.generate_provisional_map_from_sketch") as fake_gen:
+         patch("main.generate_smallest_provisional_map") as fake_gen:
         response = client.post("/api/extract", json={
             "name": "Photosynthesis",
             "starting_sketch": "idk",
@@ -191,7 +191,7 @@ def test_lc_enrichment_is_attempted_for_source_less_path(client):
             description="x" * 60, jurisdiction="Multi-State", score=0.75,
         )],
     )
-    with patch("main.generate_provisional_map_from_sketch", return_value=fake_map) as fake_gen, \
+    with patch("main.generate_smallest_provisional_map", return_value=fake_map) as fake_gen, \
          patch("main.LCClient") as fake_lc_cls:
         fake_lc_cls.return_value.search_concept.return_value = fake_lc_result
         response = client.post("/api/extract", json={
