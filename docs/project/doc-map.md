@@ -33,7 +33,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
 | [product/ux-framework.md](../product/ux-framework.md) | deprecated | no | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | [/DESIGN.md](../../DESIGN.md) |
 | [/PRODUCT.md](../../PRODUCT.md) | deprecated | no | Brand personality, anti-references, product purpose, design principles. | [/DESIGN.md](../../DESIGN.md) |
-| [theta/state.md](../theta/state.md) | canonical | yes | Evidence posture and confidence ratings for product-science claims; phase grounding; product language rules. | — |
+| [project/theta-state.md](theta-state.md) | canonical | yes | Evidence posture and confidence ratings for product-science claims; phase grounding; product language rules. | — |
 
 ## Implementation-Facing Specs
 
@@ -45,12 +45,17 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [drill/evaluation.md](../drill/evaluation.md) | evidence | yes | Manual eval set, answer modes, obvious-break checklist, evidence capture for the thermostat loop. | — |
 | [product/repair-reps.md](../product/repair-reps.md) | implementation | yes | Unified implementation spec for Repair Reps (focused layout, card-stack visuals, self-rating evidence schema). | — |
 | [project/auth-rollout.md](auth-rollout.md) | implementation | yes | Auth rollout phases, release gates, test plan, deferred work. | — |
+| [design/handoffs/2026-05-02-extraction-evals-and-rubric.md](../design/handoffs/2026-05-02-extraction-evals-and-rubric.md) | implementation | yes | Evaluation rubric and rubrics for extraction quality. | — |
+| [design/handoffs/2026-05-04-conversational-concept-creation-frontend.md](../design/handoffs/2026-05-04-conversational-concept-creation-frontend.md) | implementation | yes | Conversational concept creation frontend implementation. | — |
+| [design/handoffs/2026-05-05-desk-iso-board-handoff.md](../design/handoffs/2026-05-05-desk-iso-board-handoff.md) | implementation | yes | Desk isometric board implementation handoff. | — |
 
 ## Artifacts (Design Storyboards)
 
 | Doc | Status | Binding | Purpose | Superseded By |
 | --- | --- | --- | --- | --- |
 | [product/starting-map-flow-artifact.md](../product/starting-map-flow-artifact.md) | artifact | no | Storyboard for the starting-map concept-entry flow. Informs `evidence-weighted-map.md` §11 and future canonical/implementation work. Not itself an implementation contract. | Operational rules live in [evidence-weighted-map.md](../product/evidence-weighted-map.md). |
+| [design/handoffs/2026-05-01-new-concept-modal-redesign.md](../design/handoffs/2026-05-01-new-concept-modal-redesign.md) | artifact | no | Design storyboard for the new concept modal. | — |
+| [codex/landing-page-brief.md](../codex/landing-page-brief.md) | artifact | no | Strategic brief for the Socratink landing page. | — |
 
 ## Release Gates & Evidence
 
@@ -59,6 +64,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [project/state.md](state.md) | release-gate | yes | Current release gate, stage, priorities, active risks, product constraints. `socratinker` consolidates this. | — |
 | [project/mvp-happy-path.md](mvp-happy-path.md) | release-gate | yes | Narrow manual ship gate for the thermostat loop. | — |
 | [project/operations.md](operations.md) | release-gate | yes | Merge standard, release checks, evidence policy, near-term priorities. | — |
+| [qa/antigravity-mobile-qa-prompt.md](../qa/antigravity-mobile-qa-prompt.md) | release-gate | yes | Mobile layout regression audit prompt and checklist. | — |
 
 ## Workflow & Agent Infra
 
@@ -71,6 +77,8 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |
 | [codex/decision-log.md](../codex/decision-log.md) | workflow | yes | Append-only architectural/product decision log. Empty template at time of writing. | — |
 | [codex/agent-review-log.md](../codex/agent-review-log.md) | workflow | yes | Append-only Glenna review log. | — |
+| [project/code-review-graph-sop.md](code-review-graph-sop.md) | workflow | yes | Standard operating procedure for using the Code-Review Graph. | — |
+| [project/crg-hooks-handoff.md](crg-hooks-handoff.md) | workflow | yes | Git hook integration for the CRG. | — |
 
 ## Reference Fixtures
 
@@ -80,11 +88,13 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [reference/extraction-catalog.md](../reference/extraction-catalog.md) | reference | no | Inventory of backend, prompt, and frontend files involved in the extraction phase. Developer orientation aid; not a contract. |
 | `docs/reference/hermes-agent-concept-source.md` | reference | no | Compressed Socratink-ready source for creating a Hermes Agent documentation concept. Derived from public Nous Research Hermes Agent docs and kept under the current extraction input limit. |
 | `docs/reference/hermes-agent-docs-manifest.md` | reference | no | Full manifest of upstream Hermes Agent documentation pages, source paths, raw URLs, sizes, and headings used to build the compressed Hermes concept source. |
+| [project/crg-architecture-snapshot-2026-05-04.md](crg-architecture-snapshot-2026-05-04.md) | reference | no | Architectural orientation for the Socratink codebase. |
 
 ## Historical / Deprecated Notes
 
 - **`docs/codex/session-bootstrap.md`** — deprecated alias. All bootstrap reads should resolve to `docs/codex/onboarding.md`. Do not add new content here.
 - **`docs/product/ux-framework.md`** — deprecated. Consolidated into `/DESIGN.md` as the canonical UX doctrine.
+- **`docs/archive/naming-refactor/`** — historical project phase documentation.
 - No other docs are currently deprecated. Items flagged as stale during the evidence-weighted-map pivot are updated in place (see `evidence-weighted-map.md` for the binding doctrine and surgical edits to the canonical docs in this registry).
 
 ## Lean-Startup Consolidation Candidates (Post-MVP)
