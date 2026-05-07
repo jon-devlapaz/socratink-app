@@ -48,6 +48,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [design/handoffs/2026-05-02-extraction-evals-and-rubric.md](../design/handoffs/2026-05-02-extraction-evals-and-rubric.md) | implementation | yes | Evaluation rubric and rubrics for extraction quality. | — |
 | [design/handoffs/2026-05-04-conversational-concept-creation-frontend.md](../design/handoffs/2026-05-04-conversational-concept-creation-frontend.md) | implementation | yes | Conversational concept creation frontend implementation. | — |
 | [design/handoffs/2026-05-05-desk-iso-board-handoff.md](../design/handoffs/2026-05-05-desk-iso-board-handoff.md) | implementation | yes | Desk isometric board implementation handoff. | — |
+| [design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md](../design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md) | implementation | yes | Agent brief for C-prime concept entry: progressive disclosure for learners, progressive route materialization, source/no-source contracts, and implementation guardrails. | — |
 
 ## Artifacts (Design Storyboards)
 
