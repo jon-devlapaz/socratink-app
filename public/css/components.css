@@ -2658,3 +2658,146 @@ body[data-theme="dark"] .hero-source-attach[aria-expanded="true"] {
 .hero-source-panel[hidden] {
   display: none;
 }
+
+/* ── Launch Pad (C-prime §3.2) ──────────────────────────────────────────── */
+/* The launch pad captures the learner's threshold for source-less concepts. */
+/* Hidden by default via the [hidden] attribute; revealed when showLaunchPad  */
+/* removes that attribute.                                                    */
+
+.launch-pad-view {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(56px, 10vh, 96px) 24px clamp(80px, 14vh, 128px);
+  position: relative;
+  overflow-y: auto;
+}
+.launch-pad-view:not([hidden]) {
+  display: flex;
+}
+.launch-pad-view__inner {
+  max-width: 620px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.launch-pad-concept-name {
+  font-size: var(--text-xs, 12px);
+  font-weight: 660;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 24px;
+  text-align: center;
+}
+.launch-pad-title {
+  font-family: var(--font-display, var(--font-body));
+  font-size: var(--text-3xl, 32px);
+  line-height: var(--leading-tight, 1.18);
+  color: var(--text);
+  margin: 0 0 12px;
+  text-align: center;
+  font-weight: 500;
+}
+.launch-pad-helper {
+  font-size: var(--text-sm, 14px);
+  color: var(--text-muted);
+  margin: 0 0 28px;
+  text-align: center;
+}
+.launch-pad-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.launch-pad-field {
+  display: block;
+}
+.launch-pad-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-strong, rgba(0,0,0,0.16));
+  border-radius: 8px;
+  resize: vertical;
+  font-family: inherit;
+  font-size: var(--text-base, 16px);
+  line-height: 1.5;
+  background: var(--surface, #fff);
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.launch-pad-input:focus {
+  outline: none;
+  border-color: var(--accent-primary, #9067c6);
+  box-shadow: var(--accent-ring, 0 0 0 3px rgba(144,103,198,0.14));
+}
+.launch-pad-validation {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
+  margin: 8px 0 0;
+  min-height: 16px;
+}
+.launch-pad-form__row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+/* Single hard-violet anchor per screen (one violet per surface principle). */
+.launch-pad-submit {
+  background: var(--accent-primary, #9067c6);
+  color: #fff;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: var(--text-sm, 14px);
+  font-weight: 560;
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+.launch-pad-submit:not([disabled]):hover {
+  box-shadow: var(--accent-shadow-sm, 0 4px 10px rgba(144,103,198,0.20));
+}
+.launch-pad-submit:not([disabled]):focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring, 0 0 0 3px rgba(144,103,198,0.14));
+}
+.launch-pad-submit[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.launch-pad-submit svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.launch-pad-footer {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-muted);
+  margin: 28px 0 0;
+  text-align: center;
+}
+
+/* Dark-mode overrides */
+body[data-theme="dark"] .launch-pad-input {
+  background: rgba(var(--cream-50-rgb, 254,250,242), 0.05);
+  border-color: var(--border-subtle, rgba(254,250,242,0.14));
+  color: var(--cream-50, #fefaf2);
+}
+body[data-theme="dark"] .launch-pad-input:focus {
+  border-color: var(--accent-primary, #9067c6);
+  box-shadow: var(--accent-ring, 0 0 0 3px rgba(144,103,198,0.14));
+}
+body[data-theme="dark"] .launch-pad-submit {
+  background: var(--accent-primary, #9067c6);
+}

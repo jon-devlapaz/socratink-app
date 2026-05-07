@@ -25,6 +25,7 @@ import {
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
 import { AudioFX } from './audio.js?v=4';
+import { showLaunchPad as _showLaunchPad, runLaunchPadAction as _runLaunchPadAction } from './launch-pad.js';
 
 import {
   card, titleEl, descEl, primaryControls, drillControls,
@@ -1481,6 +1482,72 @@ const App = (() => {
     overlayHandle.removeOverlay(true);
   }
 
+  // ── persistCreatedConceptFromLaunchPad ────────────────────────────────────
+  // Mirrors the persistence phase of finishConceptCreateAfterOverlay for the
+  // C-prime launch-pad flow. No overlay to tear down; no source material.
+  // Caller (launch-pad.js) clears the pending shell ONLY AFTER this returns
+  // without throwing, maintaining the persistence-then-clear ordering contract.
+  //
+  // Parameters:
+  //   map       — ProvisionalMap object returned by /api/extract.
+  //   shell     — pending shell { name, ts } read from sessionStorage.
+  //   threshold — the learner's raw threshold text (stored as startingMapContext).
+  function persistCreatedConceptFromLaunchPad(map, shell, threshold) {
+    if (!map || typeof map !== 'object') {
+      throw new Error('launch_pad: invalid map returned from /api/extract');
+    }
+
+    const id = generateId();
+    const startingMapContext = String(threshold || '').trim().slice(0, 1200);
+
+    const jsonPayload = { ...map, metadata: { ...(map.metadata || {}) } };
+    jsonPayload.metadata.starting_map_context = startingMapContext;
+    jsonPayload.metadata.map_maturity = 'provisional';
+
+    const concepts = loadConcepts();
+    const concept = {
+      id,
+      name: shell.name,
+      state: 'growing',
+      createdAt: Date.now(),
+      timerStart: null,
+      contentPreview: '',
+      contentType: 'sketch',
+      contentFilename: null,
+      sourceUrl: null,
+      startingMapContext,
+      graphData: JSON.stringify(jsonPayload),
+    };
+    // No source text — contentStore is not written for source-less concepts.
+    concepts.push(concept);
+    saveConcepts(concepts);
+    renderGrid(concepts);
+    renderConceptList(concepts);
+    renderIgnitionGate();
+    clearHeroThresholdComposer();
+    // Select the concept so it becomes the active concept for subsequent
+    // showMapView/setMapMode calls. setActiveId via activateConceptSelection.
+    activateConceptSelection(id);
+  }
+
+  // ── navigateToGraphViewFromLaunchPad ──────────────────────────────────────
+  // Navigate to the graph view after a successful launch-pad submit.
+  // Passes opts.fromLaunchPad = true so Round E's skeleton-line hook can
+  // detect a fresh-route arrival (Task 8 of the implementation plan).
+  //
+  // Parameters:
+  //   opts — { fromLaunchPad: boolean }
+  function navigateToGraphViewFromLaunchPad(opts) {
+    const concept = getActiveConcept();
+    if (!concept) return;
+    hidePrimaryViews();
+    showMapView(concept);
+    setMapMode('study');
+    // Round E: render skeleton-line if opts.fromLaunchPad === true.
+    // No-op in Round D — the framing line is Task 8.
+    void opts;
+  }
+
   async function startAddConcept(seed, originRect) {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog(originRect);
@@ -2218,10 +2285,14 @@ const App = (() => {
     const ignitionView = document.getElementById('ignition-view');
     const libraryView = document.getElementById('library-view');
     const settingsView = document.getElementById('settings-view');
+    const launchPadView = document.getElementById('launch-pad-view');
     if (heroCard) heroCard.style.display = 'none';
     if (ignitionView) ignitionView.classList.remove('visible');
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
+    // C-prime launch pad: uses [hidden] attribute (not .visible class) to match
+    // its aria-labelledby pattern and align with the HTML hidden attribute.
+    if (launchPadView) launchPadView.setAttribute('hidden', '');
   }
 
   function setMapMode(mode = 'study') {
@@ -4111,14 +4182,22 @@ const App = (() => {
     // Set by the source-attach onAttach callback; cleared by clearHeroThresholdComposer.
     // Null when no source is attached at the door.
     _pendingDoorSource: null,
-    // C-prime launch-pad navigation stub. Round D replaces this with the real
-    // launch-pad surface mounting. For now, writes to console so the plumbing
-    // is visible without a UI regression.
-    showLaunchPad() {
-      console.warn('App.showLaunchPad(): launch-pad surface coming in Round D. Pending shell written to sessionStorage.');
-      // Round D will: hide ignition-view, show launch-pad-view, hydrate concept name
-      // from sessionStorage, bind submit → POST /api/extract → persist → clear shell.
-    },
+    // C-prime launch pad — Round D implementation.
+    // showLaunchPad is called by the no-source door path in runHeroAction after
+    // writing the pending shell to sessionStorage. It hides the ignition view and
+    // mounts the threshold-capture surface via launch-pad.js.
+    showLaunchPad() { _showLaunchPad(App); },
+    // runLaunchPadAction is called by the launch-pad form onsubmit handler.
+    // It reads the pending shell, posts to /api/extract, persists, and navigates.
+    runLaunchPadAction(event) { return _runLaunchPadAction(event, App); },
+    // persistCreatedConceptFromLaunchPad — called by launch-pad.js after a
+    // successful /api/extract response. Performs localStorage write, grid
+    // refresh, and concept selection. Throws on invalid map so launch-pad.js
+    // can leave the pending shell in place for retry.
+    persistCreatedConceptFromLaunchPad,
+    // navigateToGraphViewFromLaunchPad — called by launch-pad.js after
+    // persistence succeeds and the shell has been cleared.
+    navigateToGraphViewFromLaunchPad,
   };
 
 })();

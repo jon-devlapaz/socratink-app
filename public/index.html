@@ -321,6 +321,36 @@
       </div>
     </section>
 
+    <!-- Launch Pad: threshold capture for source-less concepts (C-prime) -->
+    <section id="launch-pad-view" class="primary-view launch-pad-view" aria-labelledby="launch-pad-title" hidden>
+      <div class="launch-pad-view__inner">
+        <p class="launch-pad-concept-name" id="launch-pad-concept-name"></p>
+        <h1 class="launch-pad-title" id="launch-pad-title">What do you already think is inside this concept?</h1>
+        <p class="launch-pad-helper">Name the parts, guesses, examples, or confusions you have.</p>
+        <form class="launch-pad-form" id="launch-pad-form" onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
+          <label class="launch-pad-field" for="launch-pad-input">
+            <span class="launch-pad-field__label sr-only">Your starting model</span>
+            <textarea class="launch-pad-input"
+                      id="launch-pad-input"
+                      rows="5"
+                      maxlength="1200"
+                      aria-describedby="launch-pad-validation"
+                      aria-label="Your starting model"></textarea>
+          </label>
+          <p class="launch-pad-validation" id="launch-pad-validation" aria-live="polite"></p>
+          <div class="launch-pad-form__row">
+            <button type="submit" class="launch-pad-submit" id="launch-pad-submit" disabled>
+              <span>Build my map</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13"></path><path d="m13 6 6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+          <p class="launch-pad-footer">Study content stays locked until the cold attempt.</p>
+        </form>
+      </div>
+    </section>
+
     <!-- Library View Panel -->
     <section id="library-view" class="library-view">
       <div id="library-content"></div>
