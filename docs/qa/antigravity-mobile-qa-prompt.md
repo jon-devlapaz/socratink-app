@@ -14,10 +14,12 @@
 > ```bash
 > cd /Users/jondev/dev/socratink/prod/socratink-app
 > lsof -ti :8000 | xargs kill -9 2>/dev/null
-> bash scripts/dev.sh &
+> HOST=0.0.0.0 bash scripts/dev.sh &   # LAN-bind override; default is 127.0.0.1
 > sleep 4
 > curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/   # expect 302
 > ```
+> `scripts/dev.sh` defaults to loopback-only (`127.0.0.1`). The `HOST=0.0.0.0` override above is required so on-device mobile QA (or a Browser Sub-Agent running on a different host) can reach the server at `http://<your-LAN-IP>:8000`.
+>
 > Default-guest login is auto-minted via `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`); you should land on the empty-state Ignition view without a login wall.
 >
 > **App map.**
@@ -25,7 +27,7 @@
 > - Bottom nav: Ignition / Desk / Library / Settings (mobile only, `<900px`)
 > - Top chrome: floating hamburger button only (fixed, translucent blur scrim on mobile)
 > - Library has a seed "Hermes Agent" draft path — clicking it opens the Map view (`#map-view`) with a draft Route + Graph
-> - Map view chrome (mobile): segmented "Route / Graph" switch (peripheral, ~30 px tall) + sticky bottom action bar with "Start Cold Attempt" CTA
+> - Map view chrome (mobile): segmented "Route / Graph" switch (peripheral, ~30 px tall) + sticky bottom action bar with "Try from memory" CTA (or "Start first entry" on a fresh first-room map)
 > - Drilling activates `body.is-drilling`. **Mobile only (`<900px`)**: chrome, bottom nav, segmented switch, and action bar are all hidden — full-screen takeover. **Desktop (`≥900px`)**: drilling is inline in the right column of `.graph-layout` (`#drill-ui` inside `#graph-detail`); the sidebar/drawer and `.main-header` STAY VISIBLE by design — do NOT flag this as a bug on desktop.
 >
 > **Tooling fallbacks.** If your Browser Sub-Agent cannot natively resize the viewport or inject CDN scripts, use these escape hatches BEFORE skipping a pass:
@@ -105,8 +107,8 @@
 > Run each flow and assert at every step. Capture a Walkthrough for each.
 >
 > 1. **Empty-state hero → submit gate.** Type "Photosynthesis" in Concept, leave Starting-map empty. Submit must be disabled. Type a 6-word sketch. Submit must enable. Submit (don't follow). Verify `App.runHeroAction` fires.
-> 2. **Library → Hermes draft path → Map view.** From Library, click Hermes Agent. Wait for `#concept-start-drill` to be unhidden. Verify "Start Cold Attempt" button text. Verify segmented switch shows Route active. Click Graph. Verify `body.is-drilling` is unset, `#graph-content` is no longer `hidden`, `#map-content` is hidden. Click Route. Reverse holds.
-> 3. **Start Cold Attempt drill.** From Map view, click Start Cold Attempt. Verify `body.classList.contains('is-drilling')` becomes true. **Only on mobile (`<900px`)**, verify chrome, bottom nav, segmented switch, and action bar all set `display: none`. **On desktop (`≥900px`)**, verify the sidebar/`.main-header` REMAIN visible (this is intended) and the drill UI appears inline within `.graph-detail`. In both cases, verify `#drill-ui` is visible and chat input is focused.
+> 2. **Library → Hermes draft path → Map view.** From Library, click Hermes Agent. Wait for `#concept-start-drill` to be unhidden. Verify the button text reads "Try from memory" (or "Repair Gap" if the concept state is `fractured`; "Start first entry" appears only on a fresh first-room map). Verify segmented switch shows Route active. Click Graph. Verify `body.is-drilling` is unset, `#graph-content` is no longer `hidden`, `#map-content` is hidden. Click Route. Reverse holds.
+> 3. **Try-from-memory drill.** From Map view, click the primary action ("Try from memory"). Verify `body.classList.contains('is-drilling')` becomes true. **Only on mobile (`<900px`)**, verify chrome, bottom nav, segmented switch, and action bar all set `display: none`. **On desktop (`≥900px`)**, verify the sidebar/`.main-header` REMAIN visible (this is intended) and the drill UI appears inline within `.graph-detail`. In both cases, verify `#drill-ui` is visible and chat input is focused.
 > 4. **Cancel drill.** Click "← Back" inside drill. Verify `is-drilling` removes, all chrome restored.
 > 5. **Empty-tile click in Desk.** From Desk view (after creating a concept), click a blank tile. Verify `AudioFX.playTileClick()` fires (assert via `console.log` instrumentation OR by listening for the underlying `<audio>` start event), then verify the add-concept drawer opens.
 > 6. **Bottom-nav cycling.** Tap each nav item; verify the corresponding view becomes `.visible` and others lose `.visible` within 400ms. Verify URL or in-memory route updates.
@@ -117,7 +119,7 @@
 > For each (viewport × theme × motion × view) cell, take a full-page screenshot. Run a vision pass with these prompts and report findings:
 >
 > 1. *"Is there any visible color seam, hard edge, or banding between the top floating chrome and the page background? Describe the gradient transition. The intended look is a soft translucent blur with no hard edge."*
-> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended primary action on the Map view is 'Start Cold Attempt' in a sticky bottom bar."*
+> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended primary action on the Map view is 'Try from memory' (or 'Start first entry' on a fresh first-room map) in a sticky bottom bar."*
 > 3. *"Describe the segmented control labeled 'Route / Graph' (if present). Is its visual weight peripheral (subtle, ≤30px tall, content-width) or primary (heavy, full-width, deep saturation)? Intended: peripheral."*
 > 4. *"Are any controls or text clipped, cut off, or overlapped by other UI? List positions."*
 > 5. *"Does the bottom nav have any element overlapping it? Describe the gap between the bottom nav and the closest non-nav element above."*
