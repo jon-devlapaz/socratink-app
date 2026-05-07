@@ -18,7 +18,6 @@ import {
   redirectToLogin,
 } from './auth.js?v=3';
 import { maybeShowFirstRunWelcome } from './welcome.js?v=8';
-import { isSubstantiveSketch } from './sketch-validation.js';
 import { prefersReducedMotion } from './motion.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
@@ -475,6 +474,8 @@ const App = (() => {
     submitBtn.disabled = !(conceptField.value || '').trim();
   }
 
+  let _sourcePanelGen = 0;
+
   function _bindDoorSourceAttach() {
     const btn = document.getElementById('hero-source-attach');
     const panel = document.getElementById('hero-source-panel');
@@ -483,7 +484,8 @@ const App = (() => {
     btn.addEventListener('click', () => {
       const isOpen = btn.getAttribute('aria-expanded') === 'true';
       if (isOpen) {
-        // Collapse and clear.
+        // Collapse and clear. Bump generation so any in-flight import bails.
+        _sourcePanelGen += 1;
         panel.hidden = true;
         panel.innerHTML = '';
         btn.setAttribute('aria-expanded', 'false');
@@ -492,9 +494,12 @@ const App = (() => {
         _doorUpdateSubmitState();
       } else {
         // Expand and mount the source panel module (extracted in Round B).
+        const myGen = ++_sourcePanelGen;
         panel.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
         import('./source-panel.js').then(({ mountSourcePanel }) => {
+          // If the user collapsed before the import resolved, bail out.
+          if (myGen !== _sourcePanelGen) return;
           mountSourcePanel(panel, {
             onAttach(payload) {
               App._pendingDoorSource = payload;
