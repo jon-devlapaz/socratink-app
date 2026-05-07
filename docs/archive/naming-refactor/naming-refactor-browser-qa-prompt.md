@@ -221,7 +221,7 @@ In DevTools → Elements, run a quick text content sweep:
 
 Return a single markdown report with:
 
-```
+```md
 # Browser QA report — naming refactor (dev)
 
 ## Environment

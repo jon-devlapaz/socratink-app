@@ -1560,10 +1560,10 @@ const App = (() => {
   }
 
   function selectTile(tileIdx) {
-    AudioFX.playTileClick();
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
+      AudioFX.playTileClick();
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
@@ -2374,8 +2374,8 @@ const App = (() => {
             <div class="library-card-meta">
               ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
               ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
-              <span class="library-card-pill">${escHtml(`${meta.clusterCount} sections`)}</span>
-              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} entries`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.clusterCount} ${meta.clusterCount === 1 ? 'section' : 'sections'}`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} ${meta.subnodeCount === 1 ? 'entry' : 'entries'}`)}</span>
             </div>
             <div class="library-card-cta">Open concept</div>
           </div>`;

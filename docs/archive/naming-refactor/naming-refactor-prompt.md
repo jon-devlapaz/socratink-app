@@ -50,7 +50,7 @@ After motif approval:
 3. Cross-reference inventory against the **pre-discovered findings** below; confirm each finding's location and add a row.
 4. For each inventory entry, propose a rename row:
 
-   ```
+   ```md
    | Surface (file:line) | Current label/copy | Proposed rename / fate | Rationale | Risk |
    ```
 
@@ -184,7 +184,7 @@ If a rename of in-scope copy would benefit from a class/id rename or token-strin
 
 A document with this exact structure:
 
-```
+```md
 # Motif candidates for socratink vernacular revamp
 
 ## Candidate A: <motif name>
