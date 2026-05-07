@@ -44,7 +44,7 @@ import { Bus } from './bus.js';
     el.dataset.show = 'false';
     el.innerHTML = `
       <span class="room-label__name"></span>
-      <span class="room-label__action">Open room</span>
+      <span class="room-label__action">Open entry</span>
     `;
     document.body.appendChild(el);
     return el;
@@ -110,7 +110,7 @@ import { Bus } from './bus.js';
       const concepts = loadConcepts();
       const concept = concepts[conceptIdx];
       show(tileGroup, concept
-        ? { name: concept.name, action: 'Open room', kind: 'room' }
+        ? { name: concept.name, action: 'Open entry', kind: 'room' }
         : { name: 'Begin a concept', action: '', kind: 'empty' });
     };
 

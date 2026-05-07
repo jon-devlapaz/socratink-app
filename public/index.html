@@ -212,7 +212,7 @@
             <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
           </div>
           <h1 class="hero-title" id="title">Your draft paths.</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter a room, or start a new draft path at New Entry.</p>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter an entry, or start a new draft path at New Entry.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
             <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
@@ -228,7 +228,7 @@
 
           <!-- Action Controls (Hidden for Board-First UX) -->
           <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button id="btn-drill" onclick="App.drill()">Start room</button>
+            <button id="btn-drill" onclick="App.drill()">Start entry</button>
           </div>
           <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
             <button onclick="App.drillFail()">Needs repair</button>
@@ -395,10 +395,10 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=71"></script>
+  <script type="module" src="js/app.js?v=72"></script>
   <script src="js/intro-particles.js?v=6"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
-  <script type="module" src="js/floating-room-label.js?v=4"></script>
+  <script type="module" src="js/floating-room-label.js?v=5"></script>
   <script type="module" src="js/iso-board-state-surface.js?v=5"></script>
   <script type="module" src="js/feedback.js?v=1"></script>
 

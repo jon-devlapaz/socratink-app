@@ -7,7 +7,7 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=11';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=12';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -17,7 +17,7 @@ import {
   logout,
   redirectToLogin,
 } from './auth.js?v=3';
-import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
+import { maybeShowFirstRunWelcome } from './welcome.js?v=7';
 import { isSubstantiveSketch } from './sketch-validation.js';
 import { prefersReducedMotion } from './motion.js';
 import {
@@ -281,7 +281,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to enter a room, or start a new draft path at New Entry.';
+    if (!concept) return 'Pick a tile to enter an entry, or start a new draft path at New Entry.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -294,11 +294,11 @@ const App = (() => {
       case 'fractured':
         return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
       case 'hibernating':
-        return 'This room is spacing. Work elsewhere or return when re-drill is eligible.';
+        return 'This entry is spacing. Work elsewhere or return when re-drill is eligible.';
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
-        return 'Pick a tile to enter a room, or start a new draft path at New Entry.';
+        return 'Pick a tile to enter an entry, or start a new draft path at New Entry.';
     }
   }
 
@@ -1063,7 +1063,7 @@ const App = (() => {
     const OVERLAY_TIPS = [
       'socratink is drafting your starting map.',
       'Spacing retrieval over time helps short-term recall become more durable.',
-      'socratink is structuring the rooms.',
+      'socratink is structuring the entries.',
       'Answering before the explanation appears gives study something specific to repair.',
       'socratink is sketching the draft route.',
       'The graph records evidence from attempts and spaced reconstruction, not exposure.',
@@ -1632,7 +1632,7 @@ const App = (() => {
     stopTimer();
     const btnDrill = document.getElementById('btn-drill');
     const consolidateBtn = document.querySelector('#consolidate-controls button');
-    if (btnDrill) btnDrill.textContent = 'Start room';
+    if (btnDrill) btnDrill.textContent = 'Start entry';
     if (consolidateBtn) {
       consolidateBtn.disabled = true;
       consolidateBtn.textContent = 'Spacing gate unavailable';
@@ -1947,7 +1947,7 @@ const App = (() => {
         drill_status: item?.drill_status || null,
       })),
       ...clusters.flatMap((cluster) => (cluster.subnodes || []).map((subnode) => ({
-        label: subnode?.label || 'Drill room',
+        label: subnode?.label || 'Entry',
         drill_status: subnode?.drill_status || null,
       }))),
     ];
@@ -1973,7 +1973,7 @@ const App = (() => {
       <section class="map-zone map-threshold-zone">
         <div class="map-section-title">Concept Threshold</div>
         <div class="map-threshold-panel">
-          <p class="map-threshold-lead">This is global context. The first room will ask one smaller question.</p>
+          <p class="map-threshold-lead">This is global context. The first entry will ask one smaller question.</p>
           <blockquote class="map-threshold-quote">${escHtml(startingMapContext || 'No threshold context was captured for this concept.')}</blockquote>
         </div>
       </section>
@@ -1995,11 +1995,11 @@ const App = (() => {
         <div class="map-section-title">First Cold Attempt</div>
         <div class="map-first-room">
           <div>
-            <div class="map-first-room-kicker">Starting Room</div>
+            <div class="map-first-room-kicker">Starting Entry</div>
             <h3>Core thesis</h3>
-            <p>The first room asks for the governing idea, not the whole source.</p>
+            <p>The first entry asks for the governing idea, not the whole source.</p>
           </div>
-          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first room</button>
+          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first entry</button>
         </div>
       </section>
     `;
@@ -2010,7 +2010,7 @@ const App = (() => {
       backbone.forEach((b, idx) => {
         const hasEvidence = hasStudyEvidence(b);
         const stateLabel = hasEvidence ? 'primed for study' : 'locked';
-        const routeLabel = hasEvidence ? (b.principle || `Backbone room ${idx + 1}`) : `Backbone room ${idx + 1}`;
+        const routeLabel = hasEvidence ? (b.principle || `Backbone entry ${idx + 1}`) : `Backbone entry ${idx + 1}`;
         html += `
           <div class="map-backbone-item">
             <span>${escHtml(shortOnboardingText(routeLabel, 110))}</span>
@@ -2023,11 +2023,11 @@ const App = (() => {
 
     if (clusters.length > 0) {
       html += '<div class="map-zone zone-3">';
-      html += '<div class="map-section-title">Nearby Rooms</div>';
+      html += '<div class="map-section-title">Nearby Entries</div>';
       clusters.forEach((c, idx) => {
         const isFirst = idx === 0 ? 'expanded' : '';
         const clusterHasEvidence = hasStudyEvidence(c) || (c.subnodes || []).some((subnode) => hasStudyEvidence(subnode));
-        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby room set ${idx + 1}`) : `Nearby room set ${idx + 1}`;
+        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby section ${idx + 1}`) : `Nearby section ${idx + 1}`;
         html += `
           <div class="map-cluster-card ${isFirst}" onclick="App.toggleCluster(this)">
             <div class="map-cluster-header">
@@ -2041,10 +2041,10 @@ const App = (() => {
         subnodes.forEach((sub, subIdx) => {
           const subHasEvidence = hasStudyEvidence(sub);
           const stateClass = nodeStateClass(sub.drill_status);
-          const roomLabel = subHasEvidence ? (sub.label || `Room ${subIdx + 1}`) : `Locked room ${subIdx + 1}`;
+          const roomLabel = subHasEvidence ? (sub.label || `Entry ${subIdx + 1}`) : `Locked entry ${subIdx + 1}`;
           const mechanismCopy = subHasEvidence
             ? (sub.mechanism || 'Study material available after the recorded attempt.')
-            : 'locked study silhouette. Enter the room before the mechanism appears.';
+            : 'locked study silhouette. Enter the entry before the mechanism appears.';
           html += `
              <div class="map-subnode-row">
                <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
@@ -2072,7 +2072,7 @@ const App = (() => {
       html += `
         <div class="map-zone map-locked-study-zone">
           <div class="map-section-title">Locked Study Silhouette</div>
-          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one room has a cold attempt on record.</p>
+          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one entry has a cold attempt on record.</p>
         </div>
       `;
     }
@@ -2718,7 +2718,7 @@ const App = (() => {
   function getSpacingBlockReason(nodeData, nodeId) {
     if (!nodeData?.re_drill_eligible_after) {
       return {
-        headline: 'Study this node first',
+        headline: 'Study this entry first',
         body: 'Finish the study step before you try a spaced re-drill.',
       };
     }
@@ -2726,13 +2726,13 @@ const App = (() => {
     const eligibleAtMs = Date.parse(nodeData.re_drill_eligible_after);
     if (!Number.isNaN(eligibleAtMs) && Date.now() < eligibleAtMs) {
       return {
-        headline: 'Work on another node first',
-        body: 'This re-drill needs a short buffer before it counts. Work another node, then come back.',
+        headline: 'Work on another entry first',
+        body: 'This re-drill needs a short buffer before it counts. Work another entry, then come back.',
       };
     }
 
     return {
-      headline: 'Interleave one more node first',
+      headline: 'Interleave one more entry first',
       body: 'Finish one other cold attempt or study step before returning here. That buffer helps the graph tell the truth.',
     };
   }
@@ -3464,10 +3464,10 @@ const App = (() => {
 
       if (drillMode === 'cold_attempt' && data.generative_commitment === true) {
         const normalizationMessages = [
-          'You made the first mark. Now the room can show the gap.',
+          'You made the first mark. Now the entry can show the gap.',
           'That guess gives study something to work against.',
-          'The first attempt gives this room a shape.',
-          'The room stayed quiet until you tried. Now study has a target.',
+          'The first attempt gives this entry a shape.',
+          'The entry stayed quiet until you tried. Now study has a target.',
         ];
         const msgIdx = drillState._normalizationIdx % normalizationMessages.length;
         drillState._normalizationIdx += 1;
@@ -3511,7 +3511,7 @@ const App = (() => {
     if (nodeData.drill_status === 'solidified') {
       currentGraphController?.showBlockedMessage?.(
         'Solid evidence already recorded',
-        'This room already has a solid spaced reconstruction on record. Pick a node without that record to keep the graph truthful.'
+        'This entry already has a solid spaced reconstruction on record. Pick an entry without that record to keep the graph truthful.'
       );
       return;
     }
@@ -3535,7 +3535,7 @@ const App = (() => {
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
         'Session node limit reached',
-        'You have drilled 4 nodes this session. This is a good stopping point. Spacing retrieval across sessions improves long-term retention.'
+        'You have drilled 4 entries this session. This is a good stopping point. Spacing retrieval across sessions improves long-term retention.'
       );
       return;
     }
@@ -3548,7 +3548,7 @@ const App = (() => {
     if (!bypassSessionLimits && (sessionState.retriesByNode[nodeContext.id] || 0) >= 3) {
       currentGraphController?.showBlockedMessage?.(
         'Retrieval ceiling reached',
-        'You have attempted this node 3 times this session. Space your attempts and return in a future session.'
+        'You have attempted this entry 3 times this session. Space your attempts and return in a future session.'
       );
       return;
     }
@@ -3578,7 +3578,7 @@ const App = (() => {
     }
     if (drillTitle) {
       const label = nodeContext?.label || nodeContext?.fullLabel || concept.name;
-      drillTitle.textContent = `Active room: ${label}`;
+      drillTitle.textContent = `Active entry: ${label}`;
     }
 
     let initialMode = 'cold-attempt-active';
@@ -3691,11 +3691,11 @@ const App = (() => {
       <ul class="first-attempt-creed__list">
         <li>
           <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
-          <span><strong>You tried first.</strong> The room stayed quiet until your guess existed.</span>
+          <span><strong>You tried first.</strong> The entry stayed quiet until your guess existed.</span>
         </li>
         <li>
           <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
-          <span><strong>Study has a target now.</strong> Repair the gap this room exposed.</span>
+          <span><strong>Study has a target now.</strong> Repair the gap this entry exposed.</span>
         </li>
         <li>
           <span class="first-attempt-creed__diamond" aria-hidden="true"></span>
