@@ -84,12 +84,12 @@
 >
 > ### Pass 3 — iOS auto-zoom prevention
 >
-> Every focusable form element (`input`, `textarea`, `select`) on every view: read computed `font-size`. **Fail if any < 16px** at viewport ≤414px. (iOS Safari auto-zooms on focus when a form field's font-size is under 16px.) Currently expected to FAIL on `#hero-single-input-field` at 15px — record as known issue if seen, do not flag again per cell.
+> Every focusable form element (`input`, `textarea`, `select`) on every view: read computed `font-size`. **Fail if any < 16px** at viewport ≤414px. (iOS Safari auto-zooms on focus when a form field's font-size is under 16px.) `#hero-single-input-field` is now expected to be ≥16px — flag any regression below that floor.
 >
 > ### Pass 4 — Accessibility (axe-core via DevTools)
 >
 > 1. Inject `axe-core` from CDN (`https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js`) and run `axe.run()` on each view. Report all violations with their nodes; treat `serious` and `critical` as fail, `moderate` and `minor` as warning.
-> 2. Verify the segmented `.map-mode-switch` has `role="tablist"`, both `.map-mode-btn` have `aria-pressed`, and the active state's `aria-pressed="true"` matches the `.active` class.
+> 2. Verify the segmented `.map-mode-switch` has `role="group"`, both `.map-mode-btn` have `aria-pressed`, and the active state's `aria-pressed="true"` matches the `.active` class.
 > 3. Verify the floating hamburger has a non-empty `aria-label` and `aria-expanded` toggles when the drawer opens.
 > 4. Check focus-visible ring renders on all interactive elements when tabbed: navigate with `Tab` and screenshot the focused element each time. **Fail if any focused element has no visible focus indicator.**
 > 5. Verify color contrast on key text against background using axe; report any below WCAG AA (4.5:1 normal, 3:1 large).
@@ -165,7 +165,7 @@
 > ...
 > ```
 >
-> And a known-issues block listing things you saw but did not flag (e.g., the 15px concept textarea pre-existing).
+> And a known-issues block listing things you saw but did not flag (pre-existing rough edges out of scope for this pass).
 >
 > ---
 >
