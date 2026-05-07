@@ -55,7 +55,7 @@
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
       <span class="material-symbols-outlined">bolt</span>
-      <span class="bottom-nav-label">Ignition</span>
+      <span class="bottom-nav-label">New Entry</span>
     </a>
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
       <span class="material-symbols-outlined">auto_awesome</span>
@@ -80,7 +80,7 @@
 
     <nav class="sidebar-nav">
       <a id="nav-ignition" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> Ignition</a>
+        onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> New Entry</a>
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
         onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
@@ -212,11 +212,11 @@
             <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
           </div>
           <h1 class="hero-title" id="title">Your draft paths.</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter a room, or start a new draft path at Ignition.</p>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter a room, or start a new draft path at New Entry.</p>
           <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
           <div class="hero-actions">
             <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
-              <span class="hero-primary-action__label">Begin at Ignition</span>
+              <span class="hero-primary-action__label">Begin at New Entry</span>
               <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>
@@ -352,7 +352,7 @@
               <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Graph</button>
             </div>
             <div class="map-action-bar">
-              <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Cold Attempt</button>
+              <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Try from memory</button>
             </div>
           </div>
         </header>
@@ -395,7 +395,7 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=70"></script>
+  <script type="module" src="js/app.js?v=71"></script>
   <script src="js/intro-particles.js?v=6"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=4"></script>

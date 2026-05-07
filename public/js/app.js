@@ -7,7 +7,7 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=10';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=11';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -281,7 +281,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
+    if (!concept) return 'Pick a tile to enter a room, or start a new draft path at New Entry.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -298,7 +298,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
-        return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
+        return 'Pick a tile to enter a room, or start a new draft path at New Entry.';
     }
   }
 
@@ -1917,7 +1917,7 @@ const App = (() => {
     if (drillBtn) {
       const showDrill = concept.state === 'growing' || concept.state === 'fractured';
       drillBtn.hidden = !showDrill;
-      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Start Cold Attempt';
+      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Try from memory';
     }
 
     const domMechs = rels.domain_mechanics || [];
@@ -2357,7 +2357,7 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">Ignition</a>.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">New Entry</a>.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
@@ -2871,7 +2871,7 @@ const App = (() => {
 
     return {
       kind: 'start-cold-attempt',
-      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Start Cold Attempt',
+      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Try from memory',
     };
   }
 

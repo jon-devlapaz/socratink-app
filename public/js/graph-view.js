@@ -886,7 +886,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Start Cold Attempt</button>`) : ''}
+      ${data.available ? (inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Try from memory</button>`) : ''}
       ${data.available ? secondaryInspectButtonHtml : ''}
     `;
   }
