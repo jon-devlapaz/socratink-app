@@ -7,7 +7,7 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=12';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=13';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -17,7 +17,7 @@ import {
   logout,
   redirectToLogin,
 } from './auth.js?v=3';
-import { maybeShowFirstRunWelcome } from './welcome.js?v=7';
+import { maybeShowFirstRunWelcome } from './welcome.js?v=8';
 import { isSubstantiveSketch } from './sketch-validation.js';
 import { prefersReducedMotion } from './motion.js';
 import {
@@ -281,7 +281,7 @@ const App = (() => {
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to enter an entry, or start a new draft path at New Entry.';
+    if (!concept) return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -298,7 +298,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
-        return 'Pick a tile to enter an entry, or start a new draft path at New Entry.';
+        return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
     }
   }
 
@@ -1061,7 +1061,7 @@ const App = (() => {
   // by the first call's scheduled timeout.
   function mountExtractOverlay({ name }) {
     const OVERLAY_TIPS = [
-      'socratink is drafting your starting map.',
+      'socratink is drafting your starting sketch.',
       'Spacing retrieval over time helps short-term recall become more durable.',
       'socratink is structuring the entries.',
       'Answering before the explanation appears gives study something specific to repair.',
@@ -1130,7 +1130,7 @@ const App = (() => {
         <span class="eo-meta-text">Parsing source content...</span>
       </div>
       <div class="eo-tip">
-        <p class="eo-tip-text">&ldquo;socratink is drafting your starting map.&rdquo;</p>
+        <p class="eo-tip-text">&ldquo;socratink is drafting your starting sketch.&rdquo;</p>
       </div>
       <footer class="eo-footer">
         <div class="eo-progress-meta">
@@ -2044,7 +2044,7 @@ const App = (() => {
           const roomLabel = subHasEvidence ? (sub.label || `Entry ${subIdx + 1}`) : `Locked entry ${subIdx + 1}`;
           const mechanismCopy = subHasEvidence
             ? (sub.mechanism || 'Study material available after the recorded attempt.')
-            : 'locked study silhouette. Enter the entry before the mechanism appears.';
+            : 'locked study silhouette. Open the entry before the mechanism appears.';
           html += `
              <div class="map-subnode-row">
                <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
@@ -2326,7 +2326,7 @@ const App = (() => {
 
       <div class="library-section">
         <h2 class="library-section-title">Documentation Concepts</h2>
-        <p class="library-section-copy">Curated draft paths you can enter without treating the map as learner evidence.</p>
+        <p class="library-section-copy">Curated draft paths you can open without treating the map as learner evidence.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
             const alreadyAdded = existingConceptNames.has(item.name);

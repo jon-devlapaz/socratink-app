@@ -110,7 +110,7 @@ function getInspectPrompt(data) {
   if (!data) return 'Start here and rebuild the mechanism from memory.';
 
   if (data.drillPhase === 'study') {
-    return 'Targeted study is open for this entry. Re-enter the mechanism view, then return to the map when you are ready to let it incubate.';
+    return 'Targeted study is open for this entry. Re-open the mechanism view, then return to the map when you are ready to let it incubate.';
   }
 
   if (data.drillStatus === 'primed') {
@@ -143,7 +143,7 @@ function getInspectPrompt(data) {
 
   if (data.type === 'subnode') {
     return data.available
-      ? 'This entry is available. Enter with your current model. Study stays hidden until you attempt.'
+      ? 'This entry is available. Open with your current model. Study stays hidden until you attempt.'
       : 'Work the branch before drilling this entry.';
   }
 
@@ -772,7 +772,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
     const nextStepCopy = next
       ? (next.action === 're-drill'
           ? `Next evidence move: spaced re-drill ${escHtml(next.label)}.`
-          : `Next spacing move: enter ${escHtml(next.label)}.`)
+          : `Next spacing move: open ${escHtml(next.label)}.`)
       : 'Leave this entry to incubate. Work on other entries before returning to spaced re-drill.';
     return `
       <div class="graph-study-shell">
@@ -871,7 +871,7 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         ${outcomeMeta.pills}
         ${outcomeMeta.descriptionPills}
       </div>
-      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Enter Core Thesis</button>`}
+      ${inspectButtonHtml || `<button class="${actionButtonClass} trigger-drill" data-action-kind="start-drill">Open Core Thesis</button>`}
       ${secondaryInspectButtonHtml}
     `;
   }

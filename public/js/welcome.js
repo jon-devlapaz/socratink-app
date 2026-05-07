@@ -8,7 +8,7 @@ const FRAMES = [
     kicker: 'welcome',
     title: 'socratink is a reading room, not a dashboard.',
     description: 'Bring what you have. The first entry stays quiet until you begin.',
-    action: 'enter the first entry',
+    action: 'open the first entry',
   },
 ];
 

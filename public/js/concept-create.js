@@ -228,13 +228,13 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     // user attaches source, the override yields to the normal truth-table so
     // the CTA accurately names the new build path.
     if (state.ctaOverride && !state.source) return state.ctaOverride;
-    if (state.source && sketchIsSubstantive()) return "Build from my map and source";
+    if (state.source && sketchIsSubstantive()) return "Build from my sketch and source";
     if (state.source && !sketchIsSubstantive()) return "Build from source";
-    if (!state.source && sketchIsSubstantive()) return "Build from my starting map";
-    // Disabled state — copy still reads "Build from my starting map" so the
+    if (!state.source && sketchIsSubstantive()) return "Build from my starting sketch";
+    // Disabled state — copy still reads "Build from my starting sketch" so the
     // CTA does not flicker text on every keystroke; the disabled attribute +
     // the sketch-chip footer copy carry the strategy framing instead.
-    return "Build from my starting map";
+    return "Build from my starting sketch";
   }
 
   function ctaEnabledForState() {
@@ -280,7 +280,7 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
       <div class="creation-summary">
         <p class="creation-chat-breadcrumb" aria-hidden="true">${breadcrumbLabel}</p>
 
-        <span class="creation-section-eyebrow">STARTING MAP</span>
+        <span class="creation-section-eyebrow">STARTING SKETCH</span>
 
         <article class="creation-chip" data-chip="concept">
           <div class="creation-chip-label-row">
