@@ -2353,7 +2353,7 @@ const App = (() => {
       
       <div class="library-section" style="margin-top: 40px;">
         <h2 class="library-section-title">Your Library</h2>
-        <p class="library-section-copy">Draft paths and evidence maps you can reopen.</p>
+        <p class="library-section-copy">Your library shows what you've reconstructed, not what you've saved.</p>
     `;
 
     if (concepts.length === 0) {

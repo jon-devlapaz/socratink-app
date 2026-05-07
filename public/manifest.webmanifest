@@ -1,7 +1,7 @@
 {
   "name": "socratink",
   "short_name": "socratink",
-  "description": "A mobile-friendly Socratic learning canvas built for truthful study and spaced return.",
+  "description": "A study tool for learning by reconstruction. See what you can actually explain.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
