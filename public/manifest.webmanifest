@@ -1,6 +1,6 @@
 {
-  "name": "Socratink",
-  "short_name": "Socratink",
+  "name": "socratink",
+  "short_name": "socratink",
   "description": "A mobile-friendly Socratic learning canvas built for truthful study and spaced return.",
   "start_url": "/",
   "scope": "/",

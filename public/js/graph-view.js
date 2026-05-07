@@ -66,7 +66,7 @@ function getStatusLabel(status) {
 function getGapLabel(gapType) {
   if (gapType === 'deep') return 'Needs one more clean pass';
   if (gapType === 'shallow') return 'Needs a fuller mechanism';
-  if (gapType === 'misconception') return 'Needs correction';
+  if (gapType === 'misconception') return 'Needs a different causal link';
   return gapType ? shortenLabel(String(gapType), 28) : '';
 }
 
@@ -388,7 +388,7 @@ export function transformKnowledgeMapToGraph(rawData) {
         state: deriveClusterState(cluster),
         available: clusterAvailable ? 1 : 0,
         label: clusterLabel,
-        teaserLabel: 'Locked container',
+        teaserLabel: 'Locked section',
         fullLabel: cluster.label || `Cluster ${clusterIndex + 1}`,
         detail: cluster.description || '',
         orbitLevel: 1,
@@ -829,11 +829,6 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
         : data.type === 'cluster'
           ? 'Cluster Result'
           : 'Drill Result';
-    const trajectoryHtml = isSolid && data.reDrillBand
-      ? `<p class="graph-detail-copy" style="margin-top: 10px; font-size: 0.85em; color: var(--text-secondary);">
-           Cold attempt: exploratory guess. Spaced re-drill: <strong>${escHtml(data.reDrillBand)}</strong>. That change is the evidence on record.
-         </p>`
-      : '';
     return `
       <div class="graph-detail-kicker">${escHtml(kicker)}</div>
       <h3 class="graph-detail-title">${escHtml(data.fullLabel)}</h3>
@@ -843,7 +838,6 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
           ? '<span class="graph-detail-pill success">solidified through spaced reconstruction</span>'
           : outcomeMeta.pills}
       </div>
-      ${trajectoryHtml}
       ${data.gapDescription && !isSolid ? `<p class="graph-detail-copy">${escHtml(data.gapDescription)}</p>` : ''}
       ${!isSolid ? `
         <div class="graph-detail-block">
@@ -903,11 +897,11 @@ function detailMarkupForNode(node, mode = 'inspect', options = {}) {
 
   if (data.type === 'cluster') {
     return `
-      <div class="graph-detail-kicker">Cluster</div>
+      <div class="graph-detail-kicker">Section</div>
       <h3 class="graph-detail-title">${escHtml(getInspectHeading(data))}</h3>
       <p class="graph-detail-copy">${escHtml(getInspectPrompt(data))}</p>
       <div class="graph-detail-meta" style="flex-wrap:wrap; margin-bottom: 8px;">
-        <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} drill nodes`)}</span>
+        <span class="graph-detail-pill">${escHtml(`${data.subnodeCount || 0} entries`)}</span>
         ${getReachabilityPill(data)}
         ${isDrilled ? '<span class="graph-detail-pill warning">attempts recorded</span>' : ''}
       </div>

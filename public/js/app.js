@@ -7,7 +7,7 @@ import {
   runDrillTurn,
   loadLibraryConcept,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=9';
+import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=10';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -296,7 +296,7 @@ const App = (() => {
       case 'hibernating':
         return 'This room is spacing. Work elsewhere or return when re-drill is eligible.';
       case 'actualized':
-        return 'Spaced evidence is on record. Re-drill later if you want to challenge it.';
+        return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
         return 'Pick a tile to enter a room, or start a new draft path at Ignition.';
     }
@@ -2374,8 +2374,8 @@ const App = (() => {
             <div class="library-card-meta">
               ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
               ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
-              <span class="library-card-pill">${escHtml(`${meta.clusterCount} clusters`)}</span>
-              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} drill nodes`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.clusterCount} sections`)}</span>
+              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} entries`)}</span>
             </div>
             <div class="library-card-cta">Open concept</div>
           </div>`;
