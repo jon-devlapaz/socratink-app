@@ -275,13 +275,12 @@
 
     </section>
 
-    <!-- Ignition View: threshold composer for starting a new concept -->
+    <!-- Ignition View: door for new concept entry (C-prime) -->
     <section id="ignition-view" class="primary-view ignition-view" aria-labelledby="ignition-title">
       <div class="intro-particles" aria-hidden="true">
         <canvas id="intro-particle-canvas"></canvas>
       </div>
       <div class="ignition-view__inner">
-        <p class="ignition-eyebrow">Start here</p>
         <h1 class="ignition-title" id="ignition-title">What do you want to understand?</h1>
 
         <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() at board capacity. -->
@@ -290,33 +289,28 @@
           <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
         </div>
 
-        <!-- Threshold composer. Hidden by renderIgnitionGate() when at cap. -->
+        <!-- Door composer. -->
         <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <div class="hero-threshold-fields">
-            <label class="hero-threshold-field" for="hero-single-input-field">
-              <span class="hero-threshold-field__label">Concept</span>
-              <textarea class="hero-single-input__field hero-single-input__field--concept"
-                        id="hero-single-input-field"
-                        rows="1"
-                        maxlength="200"
-                        placeholder='e.g. Photosynthesis'
-                        aria-label="What do you want to understand?"
-                        aria-describedby="hero-threshold-validation"></textarea>
-            </label>
-            <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
-              <span class="hero-threshold-field__label">Starting sketch</span>
-              <textarea class="hero-single-input__field hero-single-input__field--sketch"
-                        id="hero-starting-map-field"
-                        rows="3"
-                        maxlength="1200"
-                        placeholder="Parts, guesses, examples, confusions. No polished answer needed."
-                        aria-describedby="hero-threshold-validation"></textarea>
-            </label>
-            <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
-          </div>
+          <label class="hero-threshold-field" for="hero-single-input-field">
+            <span class="hero-threshold-field__label sr-only">Concept</span>
+            <textarea class="hero-single-input__field hero-single-input__field--concept"
+                      id="hero-single-input-field"
+                      rows="2"
+                      maxlength="200"
+                      placeholder="e.g. photosynthesis, the Krebs cycle, recursion in Python…"
+                      aria-label="What do you want to understand?"></textarea>
+          </label>
+
+          <button type="button" class="hero-source-attach" id="hero-source-attach"
+                  aria-expanded="false" aria-controls="hero-source-panel">
+            + add source material
+          </button>
+          <div class="hero-source-panel" id="hero-source-panel" hidden></div>
+
           <div class="hero-single-input__row">
-            <button type="submit" class="hero-single-input__submit" disabled>
-              <span>Create draft path</span>
+            <button type="submit" class="hero-single-input__submit" id="hero-door-submit" disabled
+                    aria-label="Continue">
+              <span class="sr-only">Continue</span>
               <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>

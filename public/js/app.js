@@ -362,46 +362,76 @@ const App = (() => {
   }
 
   function clearHeroThresholdComposer() {
+    // C-prime door: only one text field (concept). Clear it and reset submit.
     const conceptField = document.getElementById('hero-single-input-field');
-    const sketchField = document.getElementById('hero-starting-map-field');
-    [conceptField, sketchField].forEach((field) => {
-      if (!field) return;
-      field.value = '';
-      field.style.height = '';
-    });
-    const validation = document.getElementById('hero-threshold-validation');
-    if (validation) {
-      validation.textContent = '';
+    if (conceptField) {
+      conceptField.value = '';
+      conceptField.style.height = '';
     }
-    const submit = document.querySelector('.hero-single-input__submit');
-    if (submit instanceof HTMLButtonElement) {
-      submit.disabled = true;
-      submit.title = 'Add one concept and one guess, example, or confusion before socratink builds the draft path.';
+    // Reset any pending source selection from the door affordance.
+    App._pendingDoorSource = null;
+    const sourceAttachBtn = document.getElementById('hero-source-attach');
+    const sourcePanel = document.getElementById('hero-source-panel');
+    if (sourceAttachBtn) {
+      sourceAttachBtn.setAttribute('aria-expanded', 'false');
+      sourceAttachBtn.textContent = '+ add source material';
+    }
+    if (sourcePanel) {
+      sourcePanel.hidden = true;
+      sourcePanel.innerHTML = '';
+    }
+    const submitBtn = document.getElementById('hero-door-submit');
+    if (submitBtn instanceof HTMLButtonElement) {
+      submitBtn.disabled = true;
     }
   }
 
   function runHeroAction(evtOrNothing) {
-    // Form submit path from the Ignition threshold composer. Captures the Concept
-    // Threshold seed (concept name + global starting-map context) and hands off
-    // to the existing creation flow at the summary card stage. The post-create
-    // navigation to Desk happens inside finishConceptCreateAfterOverlay.
+    // C-prime door submit handler. Reads the concept input and the pending
+    // source (if the learner expanded the source-attach panel). Branches:
+    //   source attached → existing concept-create modal flow (source path)
+    //   no source       → write sessionStorage pending shell → showLaunchPad()
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       const conceptField = document.getElementById('hero-single-input-field');
-      const sketchField = document.getElementById('hero-starting-map-field');
-      const conceptName = (conceptField ? conceptField.value : '').trim();
-      const startingMap = (sketchField ? sketchField.value : '').trim();
-      if (!conceptName || !isSubstantiveSketch(startingMap)) return false;
-      const originRect = sketchField ? sketchField.getBoundingClientRect() : null;
-      startAddConcept({
-        name: conceptName,
-        sketchTurns: [startingMap],
-        stage: 'summary',
-      }, originRect);
+      const name = (conceptField ? conceptField.value : '').trim();
+      if (!name) return false;
+
+      const sourcePayload = App._pendingDoorSource || null;
+
+      if (sourcePayload) {
+        // Source-attached path: hand off to the existing creation flow.
+        // The modal handles /api/extract (or the URL two-step) and persistence.
+        const originRect = conceptField ? conceptField.getBoundingClientRect() : null;
+        startAddConcept({
+          name,
+          sketchTurns: [],
+          source: sourcePayload,
+          stage: 'summary',
+        }, originRect);
+        return false;
+      }
+
+      // Source-less path: write pending shell to sessionStorage, then navigate
+      // to the launch pad. DO NOT call /api/extract here — the launch pad
+      // captures the learner's threshold first (C-prime principle #2).
+      try {
+        sessionStorage.setItem(
+          'socratink:pendingShell',
+          JSON.stringify({ name, ts: Date.now() }),
+        );
+      } catch (err) {
+        // sessionStorage unavailable (disabled by the browser, quota exceeded, etc.)
+        // Surface the error without navigating — the learner must be able to retry.
+        console.error('socratink: sessionStorage unavailable', err);
+        alert('Your browser has storage disabled. Please enable session storage to continue.');
+        return false;
+      }
+      App.showLaunchPad();
       return false;
     }
 
-    // Non-empty-state path: the Begin button drives Begin/Extract/Drill/Open-map.
+    // Non-form path: the Begin button drives Begin/Extract/Drill/Open-map.
     const concept = getActiveConcept();
     const action = heroPrimaryActionEl?.dataset.action || (!concept ? 'add' : '');
     if (action === 'add') {
@@ -425,63 +455,103 @@ const App = (() => {
     }
   }
 
-  // Wire up the empty-state Concept Threshold: autogrow both fields, require a
-  // concept plus one global starting-map detail, and seed the existing creation
-  // summary rather than creating a parallel entry flow.
-  function initHeroSingleInput() {
-    const conceptField = document.getElementById('hero-single-input-field');
-    const sketchField = document.getElementById('hero-starting-map-field');
-    if (!(conceptField instanceof HTMLTextAreaElement) || !(sketchField instanceof HTMLTextAreaElement)) return;
-    const form = document.getElementById('hero-single-input');
-    const submit = form?.querySelector('.hero-single-input__submit');
-    const validation = document.getElementById('hero-threshold-validation');
-    const thresholdFields = [conceptField, sketchField];
-    const autogrowField = (field) => {
-      field.style.height = 'auto';
-      field.style.height = Math.min(field.scrollHeight, 240) + 'px';
-    };
-    const autogrow = () => thresholdFields.forEach(autogrowField);
-    const sync = () => {
-      const hasConcept = conceptField.value.trim().length > 0;
-      const sketchText = sketchField.value.trim();
-      const sketchIsSubstantive = isSubstantiveSketch(sketchText);
-      if (submit instanceof HTMLButtonElement) {
-        submit.disabled = !(hasConcept && sketchIsSubstantive);
-        submit.title = hasConcept && sketchIsSubstantive
-          ? 'Create draft path'
-          : 'Add a few words about how you think it works before socratink builds the draft path.';
-      }
-      if (validation) {
-        validation.textContent = hasConcept && !sketchIsSubstantive
-          ? 'Add a few words about how you think it works before socratink builds the draft path.'
-          : '';
-      }
-      autogrow();
-    };
-    thresholdFields.forEach((field) => field.addEventListener('input', sync));
+  // ── C-prime door wiring ────────────────────────────────────────────────
+  // Wires the concept input → submit-state, the source-attach toggle,
+  // and the rotating placeholder. Replaces the old two-field
+  // initHeroSingleInput (sketch field removed in C-prime).
 
+  function _doorDescribeSource(payload) {
+    if (!payload) return '';
+    if (payload.type === 'text') return `${(payload.text || '').length} chars pasted`;
+    if (payload.type === 'url') return payload.url || 'URL';
+    if (payload.type === 'file') return `${payload.filename || 'file'} · ${(payload.text || '').length} chars`;
+    return payload.type;
+  }
+
+  function _doorUpdateSubmitState() {
+    const conceptField = document.getElementById('hero-single-input-field');
+    const submitBtn = document.getElementById('hero-door-submit');
+    if (!conceptField || !submitBtn) return;
+    submitBtn.disabled = !(conceptField.value || '').trim();
+  }
+
+  function _bindDoorSourceAttach() {
+    const btn = document.getElementById('hero-source-attach');
+    const panel = document.getElementById('hero-source-panel');
+    if (!btn || !panel) return;
+
+    btn.addEventListener('click', () => {
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      if (isOpen) {
+        // Collapse and clear.
+        panel.hidden = true;
+        panel.innerHTML = '';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '+ add source material';
+        App._pendingDoorSource = null;
+        _doorUpdateSubmitState();
+      } else {
+        // Expand and mount the source panel module (extracted in Round B).
+        panel.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        import('./source-panel.js').then(({ mountSourcePanel }) => {
+          mountSourcePanel(panel, {
+            onAttach(payload) {
+              App._pendingDoorSource = payload;
+              btn.textContent = `Source: ${_doorDescribeSource(payload)} (replace)`;
+              _doorUpdateSubmitState();
+            },
+            onCancel() {
+              panel.hidden = true;
+              panel.innerHTML = '';
+              btn.setAttribute('aria-expanded', 'false');
+              btn.textContent = '+ add source material';
+              App._pendingDoorSource = null;
+              _doorUpdateSubmitState();
+            },
+          });
+        }).catch((err) => {
+          // If the module fails to load, collapse gracefully.
+          console.error('socratink: failed to load source-panel.js', err);
+          panel.hidden = true;
+          btn.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
+  }
+
+  function initHeroSingleInput() {
+    // C-prime door: one concept textarea + source-attach toggle.
+    const conceptField = document.getElementById('hero-single-input-field');
+    if (!(conceptField instanceof HTMLTextAreaElement)) return;
+
+    const form = document.getElementById('hero-single-input');
+
+    // Enable/disable submit based on non-empty concept input.
+    conceptField.addEventListener('input', _doorUpdateSubmitState);
+    _doorUpdateSubmitState();
+
+    // Audio feedback (preserve existing behavior).
     const isPrintable = (e) =>
       !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
       (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
 
-    thresholdFields.forEach((field) => {
-      field.addEventListener('focus', () => AudioFX.playFocusTap());
-      field.addEventListener('keydown', (e) => {
-        if (field === conceptField && e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-          e.preventDefault();
-          sketchField.focus();
-          return;
-        }
-        if (isPrintable(e)) {
-          AudioFX.playKeyClick();
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim() && isSubstantiveSketch(sketchField.value.trim())) {
-          e.preventDefault();
-          form?.requestSubmit?.();
-        }
-      });
+    conceptField.addEventListener('focus', () => AudioFX.playFocusTap());
+    conceptField.addEventListener('keydown', (e) => {
+      if (isPrintable(e)) {
+        AudioFX.playKeyClick();
+      }
+      // Cmd/Ctrl+Enter submits if concept is non-empty (single-field door).
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim()) {
+        e.preventDefault();
+        form?.requestSubmit?.();
+      }
     });
 
+    // Wire the source-attach toggle.
+    _bindDoorSourceAttach();
+
+    // Rotating placeholder animation (concept examples).
     const examples = ['Photosynthesis', 'Entropy', 'Transformers', 'Attention'];
     let exampleIdx = 0;
     const writePlaceholder = () => {
@@ -512,7 +582,6 @@ const App = (() => {
       if (document.hidden) stopPlaceholderTimer();
       else startPlaceholderTimer();
     });
-    sync();
   }
 
 
@@ -4033,6 +4102,18 @@ const App = (() => {
     importLibraryConcept,
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
+    // C-prime door state: pending source from the door's + add source material panel.
+    // Set by the source-attach onAttach callback; cleared by clearHeroThresholdComposer.
+    // Null when no source is attached at the door.
+    _pendingDoorSource: null,
+    // C-prime launch-pad navigation stub. Round D replaces this with the real
+    // launch-pad surface mounting. For now, writes to console so the plumbing
+    // is visible without a UI regression.
+    showLaunchPad() {
+      console.warn('App.showLaunchPad(): launch-pad surface coming in Round D. Pending shell written to sessionStorage.');
+      // Round D will: hide ignition-view, show launch-pad-view, hydrate concept name
+      // from sessionStorage, bind submit → POST /api/extract → persist → clear shell.
+    },
   };
 
 })();

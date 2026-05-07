@@ -1959,7 +1959,7 @@ html[data-motion="reduced"] .first-run-welcome__card {
   border-color: var(--accent-border-strong);
 }
 
-/* Empty-state voice line */
+/* Empty-state voice line (removed in C-prime; rule kept as no-op to avoid merge conflicts) */
 .hero-voice-line { display: none; margin: 0; }
 
 /* Threshold composer. Lives only inside #ignition-view. */
@@ -2032,9 +2032,7 @@ html[data-motion="reduced"] .first-run-welcome__card {
 .hero-single-input__field--concept {
   min-height: 48px;
 }
-.hero-single-input__field--sketch {
-  min-height: 112px;
-}
+/* .hero-single-input__field--sketch removed in C-prime (sketch field moved to launch pad) */
 .hero-single-input__field::placeholder {
   color: var(--text-sub);
   opacity: 0.85;
@@ -2093,18 +2091,14 @@ html[data-motion="reduced"] .hero-single-input__field:active {
   box-shadow: 0 6px 20px rgba(var(--violet-600-rgb), 0.10), var(--accent-ring) !important;
 }
 
-.hero-threshold-helper,
-.hero-threshold-validation {
+.hero-threshold-helper {
   margin: 0;
   color: var(--text-sub);
   font-family: var(--font-body);
   font-size: var(--text-xs, 12px);
   line-height: var(--leading-snug, 1.4);
 }
-.hero-threshold-validation {
-  min-height: 17px;
-  color: var(--accent-primary);
-}
+/* .hero-threshold-validation removed in C-prime (field moved to launch pad) */
 
 .hero-single-input__row {
   display: flex;
@@ -2589,4 +2583,78 @@ html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
 .sidebar-nav-item.at-cap,
 .bottom-nav-item.at-cap {
   opacity: 0.55;
+}
+
+/* ── C-prime: source-attach affordance on the door (Task 6) ─────────── */
+
+/* Visually-hidden utility for a11y (acceptance #14 — release-blocker).
+   Hides text from sighted users while keeping it accessible to screen
+   readers. Apply to <span class="sr-only"> children inside icon-only
+   buttons so the accessible name is non-empty. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Ghost button that expands the source-attach panel inline on the door. */
+.hero-source-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px dashed var(--border-subtle, #c8c2b9);
+  color: var(--text-sub, #6b6358);
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--text-sm, 13px);
+  font-weight: 500;
+  margin-top: 4px;
+  transition:
+    background var(--duration-standard, 220ms) var(--ease-standard),
+    border-color var(--duration-standard, 220ms) var(--ease-standard),
+    color var(--duration-standard, 220ms) var(--ease-standard);
+}
+.hero-source-attach:hover {
+  background: rgba(var(--lavender-500-rgb, 179, 157, 219), 0.08);
+  border-color: rgba(var(--violet-600-rgb, 107, 78, 224), 0.30);
+  color: var(--accent-primary, #6b4ee0);
+}
+.hero-source-attach:focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+  border-color: rgba(var(--violet-600-rgb, 107, 78, 224), 0.40);
+}
+.hero-source-attach[aria-expanded="true"] {
+  background: var(--surface-card, rgba(255, 250, 246, 0.62));
+  border-style: solid;
+  border-color: rgba(var(--violet-600-rgb, 107, 78, 224), 0.24);
+  color: var(--accent-primary, #6b4ee0);
+}
+
+body[data-theme="dark"] .hero-source-attach {
+  color: rgba(var(--cream-50-rgb, 254, 250, 242), 0.60);
+  border-color: rgba(var(--lavender-500-rgb, 179, 157, 219), 0.22);
+}
+body[data-theme="dark"] .hero-source-attach:hover,
+body[data-theme="dark"] .hero-source-attach[aria-expanded="true"] {
+  background: rgba(var(--lavender-500-rgb, 179, 157, 219), 0.10);
+  border-color: rgba(var(--lavender-500-rgb, 179, 157, 219), 0.38);
+  color: var(--cream-50, #fefaf2);
+}
+
+/* Mount point for the source panel. Hidden until the affordance is toggled. */
+.hero-source-panel {
+  margin-top: 8px;
+}
+.hero-source-panel[hidden] {
+  display: none;
 }
