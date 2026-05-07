@@ -489,16 +489,29 @@ const App = (() => {
       if (conceptField.placeholder !== next) conceptField.placeholder = next;
     };
     writePlaceholder();
-    setInterval(() => {
-      // Bail when nothing meaningful would change. Re-checks each tick because
-      // Settings can flip reduced-motion at runtime.
+    let placeholderTimer = null;
+    const tickPlaceholder = () => {
       if (prefersReducedMotion()) return;
       if (!ignitionView?.classList.contains('visible')) return;
       if (document.activeElement === conceptField) return;
       if (conceptField.value.length > 0) return;
       exampleIdx = (exampleIdx + 1) % examples.length;
       writePlaceholder();
-    }, 3200);
+    };
+    const startPlaceholderTimer = () => {
+      if (placeholderTimer != null) return;
+      placeholderTimer = setInterval(tickPlaceholder, 3200);
+    };
+    const stopPlaceholderTimer = () => {
+      if (placeholderTimer == null) return;
+      clearInterval(placeholderTimer);
+      placeholderTimer = null;
+    };
+    if (!document.hidden) startPlaceholderTimer();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopPlaceholderTimer();
+      else startPlaceholderTimer();
+    });
     sync();
   }
 
@@ -1560,10 +1573,10 @@ const App = (() => {
   }
 
   function selectTile(tileIdx) {
-    AudioFX.playTileClick();
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
+      AudioFX.playTileClick();
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
