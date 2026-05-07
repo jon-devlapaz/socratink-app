@@ -16,6 +16,7 @@ import { isSubstantiveSketch } from "./sketch-validation.js";
 import { emitTelemetry } from "./telemetry.js";
 import { AudioFX } from "./audio.js?v=4";
 import { prefersReducedMotion } from './motion.js';
+import { mountSourcePanel } from "./source-panel.js";
 
 const STAGE = Object.freeze({
   CHAT_TURN_1: "chat:turn-1",
@@ -602,186 +603,29 @@ export function buildConversationalCreateUI(container, { onSubmit, onCancel, onB
     const sourceChip = container.querySelector('[data-chip="source"]');
     if (!sourceChip) return;
     const valueEl = sourceChip.querySelector('[data-role="source-value"]');
-    valueEl.innerHTML = `
-      <div class="creation-source-panel">
-        <div class="overlay-tabs creation-source-tabs">
-          <button class="overlay-tab active" type="button" data-tab="paste">Text</button>
-          <button class="overlay-tab" type="button" data-tab="url">URL</button>
-          <button class="overlay-tab" type="button" data-tab="upload">File</button>
-        </div>
-        <div class="overlay-panel" data-panel="paste">
-          <textarea class="overlay-textarea" placeholder="Paste source material here." maxlength="500000"></textarea>
-        </div>
-        <div class="overlay-panel" data-panel="url" style="display:none">
-          <input class="overlay-url-input" type="url" placeholder="https://example.com/article">
-          <p class="overlay-dropfeedback overlay-url-feedback"></p>
-        </div>
-        <div class="overlay-panel" data-panel="upload" style="display:none">
-          <div class="overlay-dropzone">
-            Drop a file or click to browse<br>
-            <span style="font-size:11px;opacity:0.65">.txt &nbsp; .md &nbsp; .pdf &nbsp; up to 2MB</span>
-          </div>
-          <input type="file" accept=".txt,.md,.pdf" style="display:none">
-          <p class="overlay-dropfeedback overlay-file-feedback"></p>
-        </div>
-        <div class="creation-source-panel-footer">
-          <button class="creation-source-panel-cancel" type="button">Cancel</button>
-          <button class="creation-source-panel-attach" type="button" disabled>Attach</button>
-        </div>
-      </div>
-    `;
 
-    const tabs = valueEl.querySelectorAll(".overlay-tab");
-    const panels = valueEl.querySelectorAll(".overlay-panel");
-    let activeTab = "paste";
-    let pendingFileText = "";
-    let pendingFileName = "";
-
-    const textarea = valueEl.querySelector(".overlay-textarea");
-    const urlInput = valueEl.querySelector(".overlay-url-input");
-    const dropzone = valueEl.querySelector(".overlay-dropzone");
-    const fileInput = valueEl.querySelector('input[type="file"]');
-    const fileFeedback = valueEl.querySelector(".overlay-file-feedback");
-    const cancelBtn = valueEl.querySelector(".creation-source-panel-cancel");
-    const attachBtn = valueEl.querySelector(".creation-source-panel-attach");
-
-    function panelHasContent() {
-      if (activeTab === "paste") return textarea.value.trim().length > 0;
-      if (activeTab === "url") return urlInput.value.trim().length > 0;
-      return pendingFileText.length > 0;
-    }
-    function refreshAttachEnabled() {
-      attachBtn.disabled = !panelHasContent();
-    }
-
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        activeTab = tab.dataset.tab;
-        tabs.forEach((t) => t.classList.toggle("active", t.dataset.tab === activeTab));
-        panels.forEach((p) => {
-          p.style.display = p.dataset.panel === activeTab ? "" : "none";
-        });
-        valueEl.querySelectorAll(".overlay-dropfeedback").forEach((f) => {
-          f.textContent = "";
-          f.className = "overlay-dropfeedback";
-        });
-        refreshAttachEnabled();
-      });
-    });
-
-    textarea.addEventListener("input", refreshAttachEnabled);
-    // URL validation is server-side: Task 9 hops through /api/extract-url, which
-    // applies source_intake's allow-list (private-IP block, video-host block, scheme
-    // checks). The client only enables Attach when the field is non-empty.
-    urlInput.addEventListener("input", refreshAttachEnabled);
-
-    const onSourcePanelEscape = (e) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        e.preventDefault();
+    mountSourcePanel(valueEl, {
+      onAttach({ type, text, url, filename }) {
+        // Mirror the previous inline persistence path: write to state.source,
+        // emit telemetry, then re-render the summary chip to reflect the attachment.
+        if (type === "text") {
+          state.source = { type: "text", text };
+        } else if (type === "url") {
+          // The Plan A backend expects URL fetching to go through /api/extract-url
+          // (separate endpoint). The chip stores the URL and the fetched text once
+          // the URL endpoint succeeds. url, text, and filename come from the panel.
+          state.source = { type: "url", url, text: text || "", filename: filename || "" };
+        } else {
+          // file
+          state.source = { type: "file", text, filename };
+        }
+        emitTelemetry("concept_create.source.added", { type: state.source.type });
         rerenderSummary();
-      }
-    };
-    textarea.addEventListener("keydown", onSourcePanelEscape);
-    urlInput.addEventListener("keydown", onSourcePanelEscape);
-    // Also wire the panel itself so Escape consistency is preserved
-    // when focus is on the Cancel/Attach buttons themselves.
-    const panelEl = valueEl.querySelector(".creation-source-panel");
-    if (panelEl) {
-      panelEl.addEventListener("keydown", onSourcePanelEscape);
-    }
-
-    dropzone.addEventListener("click", () => fileInput.click());
-    dropzone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      dropzone.classList.add("dragover");
-    });
-    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
-    dropzone.addEventListener("drop", (e) => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-      const f = e.dataTransfer.files?.[0];
-      if (f) handleFile(f);
-    });
-    fileInput.addEventListener("change", () => {
-      const f = fileInput.files?.[0];
-      if (f) handleFile(f);
-      // Reset value so the same file can be re-selected after a cancel/error.
-      fileInput.value = "";
-    });
-
-    function handleFile(file) {
-      // Two-megabyte cap mirrors the form-era constraint.
-      if (file.size > 2 * 1024 * 1024) {
-        fileFeedback.className = "overlay-dropfeedback error";
-        fileFeedback.textContent = "File is over 2MB.";
-        pendingFileText = "";
-        pendingFileName = "";
-        refreshAttachEnabled();
-        return;
-      }
-
-      const onReadOk = (text, filename) => {
-        pendingFileText = String(text || "");
-        pendingFileName = String(filename || file.name);
-        fileFeedback.className = "overlay-dropfeedback ok";
-        fileFeedback.textContent = `${pendingFileName} · ${pendingFileText.length.toLocaleString()} chars`;
-        refreshAttachEnabled();
-      };
-      const onReadError = (errMsg) => {
-        fileFeedback.className = "overlay-dropfeedback error";
-        fileFeedback.textContent = errMsg || "Couldn't read that file.";
-        pendingFileText = "";
-        pendingFileName = "";
-        refreshAttachEnabled();
-      };
-
-      // Prefer the app-level _readFile helper (handles PDFs via pdf.js, txt/md via
-      // readAsText). Falls back to readAsText for text files only when the helper
-      // isn't available (e.g., test harness loading concept-create in isolation).
-      const appReadFile = (typeof window !== "undefined" && window.App && typeof window.App._readFile === "function")
-        ? window.App._readFile
-        : null;
-      if (appReadFile) {
-        appReadFile(file, onReadOk, onReadError);
-        return;
-      }
-
-      // Fallback: only safe for text files. Reject PDFs explicitly so we never
-      // produce garbage extracted text.
-      if (/\.pdf$/i.test(file.name)) {
-        onReadError("PDF reader unavailable.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => onReadOk(reader.result, file.name);
-      reader.onerror = () => onReadError("Couldn't read that file.");
-      reader.readAsText(file);
-    }
-
-    cancelBtn.addEventListener("click", () => rerenderSummary());
-
-    attachBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (attachBtn.disabled) return;
-      if (activeTab === "paste") {
-        const text = textarea.value.trim();
-        if (!text) return;
-        state.source = { type: "text", text };
-      } else if (activeTab === "url") {
-        // The Plan A backend expects URL fetching to go through /api/extract-url
-        // (separate endpoint). For now we capture the URL on the client; Task 9
-        // routes URL submits through that endpoint. The chip stores the URL
-        // and the fetched text once the URL endpoint succeeds.
-        const url = urlInput.value.trim();
-        if (!url) return;
-        state.source = { type: "url", url, text: "", filename: "" };
-      } else {
-        if (!pendingFileText) return;
-        state.source = { type: "file", text: pendingFileText, filename: pendingFileName };
-      }
-      emitTelemetry("concept_create.source.added", { type: state.source.type });
-      rerenderSummary();
+      },
+      onCancel() {
+        // Restore the chip to its prior state by re-rendering the summary card.
+        rerenderSummary();
+      },
     });
   }
 
