@@ -1119,7 +1119,7 @@ const App = (() => {
         </svg>
         <div class="eo-pill eo-pill-top">
           <span class="material-symbols-outlined eo-pill-icon">auto_awesome</span>
-          <span class="eo-status-label">Analyzing</span>
+          <span class="eo-status-label">Drafting</span>
         </div>
         <div class="eo-pill eo-pill-bottom">
           <span class="material-symbols-outlined eo-pill-icon">memory</span>
@@ -2325,7 +2325,7 @@ const App = (() => {
       <div class="library-kicker">Library</div>
 
       <div class="library-section">
-        <h2 class="library-section-title">Documentation Concepts</h2>
+        <h2 class="library-section-title">Reference Concepts</h2>
         <p class="library-section-copy">Curated draft paths you can open without treating the map as learner evidence.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
@@ -3595,7 +3595,7 @@ const App = (() => {
     requestDrillTurn().catch((err) => {
       console.error(err);
       hideTypingIndicator();
-      appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
+      appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
       drillState.pending = false;
       if (chatInput) chatInput.disabled = false;
       currentGraphController?.setInteractionMode?.('inspect');
@@ -3722,7 +3722,7 @@ const App = (() => {
         requestDrillTurn(text).catch((err) => {
           console.error(err);
           hideTypingIndicator();
-          appendBubble('ai', 'The drill service failed to respond. Check the backend or API key and try again.');
+          appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
           drillState.pending = false;
           if (chatInput) chatInput.disabled = false;
         });
