@@ -272,7 +272,7 @@ const App = (() => {
   function getHeroStateLabel(state) {
     switch (state) {
       case 'instantiated': return 'source captured';
-      case 'growing': return 'draft path';
+      case 'growing': return 'concept';
       case 'fractured': return 'worth revisiting';
       case 'hibernating': return 'spacing';
       case 'actualized': return 'spaced evidence';
@@ -285,12 +285,12 @@ const App = (() => {
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
-          ? 'Open the draft path. It is a hypothesis, not evidence yet.'
-          : 'Map this source into a draft path. The draft is not learner evidence.';
+          ? 'Open the concept. It is a hypothesis, not evidence yet.'
+          : 'Map this source into a concept. The concept is not learner evidence.';
       case 'growing':
         return concept.graphData
-          ? 'Open the draft path. Start with one cold attempt before study appears.'
-          : 'Continue by mapping this concept into a draft path.';
+          ? 'Open the concept. Start with one cold attempt before study appears.'
+          : 'Continue by mapping this concept into a concept.';
       case 'fractured':
         return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
       case 'hibernating':
