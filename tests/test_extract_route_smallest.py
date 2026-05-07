@@ -86,3 +86,33 @@ def test_extract_substantive_threshold_returns_smallest_route(client):
     _args, kwargs = mocked.call_args
     # concept should be passed either as positional or keyword
     assert kwargs.get("concept") == "Photosynthesis" or (len(_args) > 0 and _args[0] == "Photosynthesis")
+
+
+def test_extract_smallest_route_cap_exceeded_returns_500(client):
+    """SmallestRouteCapExceeded must surface as 500, not 422.
+
+    Spec §5.1: the cap exceeded is a server-side generation failure, not a
+    client input failure, so the endpoint must return HTTP 500 with a clear
+    error field.
+    """
+    from ai_service import SmallestRouteCapExceeded
+
+    with patch(
+        "main.generate_smallest_provisional_map",
+        side_effect=SmallestRouteCapExceeded("generated 7 drillable nodes, cap is 4"),
+    ):
+        r = client.post("/api/extract", json={
+            "name": "Photosynthesis",
+            "starting_sketch": "plants take in light and somehow make sugar through leaves",
+            "source": None,
+        })
+
+    assert r.status_code == 500, (
+        f"Expected 500 (server-side generation failure) but got {r.status_code}. "
+        "SmallestRouteCapExceeded must not be swallowed by the generic 422 ValueError handler."
+    )
+    body = r.json()
+    detail = body.get("detail", {})
+    assert detail.get("error") == "smallest_route_cap_exceeded", (
+        f"Expected error='smallest_route_cap_exceeded' in detail, got: {detail}"
+    )

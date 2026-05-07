@@ -24,6 +24,7 @@ from ai_service import (
     GeminiRateLimitError,
     GeminiServiceError,
     MissingAPIKeyError,
+    SmallestRouteCapExceeded,
     drill_chat,
     extract_knowledge_map,
     generate_smallest_provisional_map,
@@ -624,6 +625,19 @@ def extract(req: ExtractRequest):
         raise HTTPException(
             status_code=503,
             detail="The AI service is temporarily unavailable. Please try again shortly.",
+        )
+    except SmallestRouteCapExceeded as err:
+        # C-prime spec §5.1: cap exceeded is a server-side generation failure,
+        # not a client input failure → 500 (not 422). Must be caught BEFORE the
+        # generic ValueError handler below because SmallestRouteCapExceeded
+        # subclasses ValueError.
+        logger.error("extract: smallest_route_cap_exceeded: %s", err)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "smallest_route_cap_exceeded",
+                "message": "Source-less generation exceeded the ≤4-node cap. Retry or adjust the prompt.",
+            },
         )
     except ValueError as err:
         # Pydantic structural-validation errors raised by ProvisionalMap
