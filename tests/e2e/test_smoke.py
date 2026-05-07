@@ -184,7 +184,7 @@ def test_drawer_toggle_remains_visible_in_concept_view(
     expect(toggle).to_be_visible()
 
     clean_page.locator("#nav-library").click()
-    expect(clean_page.get_by_text("Documentation Concepts")).to_be_visible()
+    expect(clean_page.get_by_text("Reference Concepts")).to_be_visible()
 
     clean_page.locator(".library-card-vault", has_text="Hermes Agent").click()
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Hermes Agent")
@@ -390,7 +390,7 @@ def test_desk_iso_board_state_surface_and_room_labels(
 
     clean_page.locator("#tile-1").focus()
     expect(clean_page.locator(".room-label")).to_contain_text("Primed Board Tile")
-    expect(clean_page.locator(".room-label")).to_contain_text("Open room")
+    expect(clean_page.locator(".room-label")).to_contain_text("Open entry")
 
     # Keyboard activation: SVG <g> doesn't fire click on Enter natively,
     # so app.js binds a keydown handler explicitly.
@@ -405,11 +405,11 @@ def test_desk_iso_board_state_surface_and_room_labels(
     clean_page.locator("#nav-dashboard").click()
     expect(clean_page.locator("#tile-8")).to_have_class(re.compile(r"\bempty\b"))
     expect(clean_page.locator("#tile-8")).to_have_attribute(
-        "aria-label", "Begin a concept"
+        "aria-label", "New concept"
     )
 
     clean_page.locator("#tile-8").focus()
-    expect(clean_page.locator(".room-label")).to_contain_text("Begin a concept")
+    expect(clean_page.locator(".room-label")).to_contain_text("New concept")
     assert captured["console_errors"] == []
     assert captured["failed_requests"] == []
 

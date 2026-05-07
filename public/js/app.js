@@ -662,7 +662,7 @@ const App = (() => {
       tileEl.setAttribute('tabindex', '0');
       tileEl.setAttribute(
         'aria-label',
-        isEmpty ? 'Begin a concept' : `Open ${concept.name}`
+        isEmpty ? 'New concept' : `Open ${concept.name}`
       );
 
       if (isEmpty) {
@@ -2525,7 +2525,7 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">New Entry</a>.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No concepts yet. Start one at <a href="javascript:void(0)" onclick="App.showIgnition()">New concept</a>.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
