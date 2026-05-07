@@ -771,6 +771,65 @@ def generate_provisional_map_from_sketch(
     return result.parsed  # type: ignore[return-value]
 
 
+GENERATE_SMALLEST_ROUTE_PROMPT_PATH = PROMPT_DIR / "generate-smallest-route-system-v1.txt"
+GENERATE_SMALLEST_ROUTE_PROMPT_VERSION = "v1"
+GENERATE_SMALLEST_ROUTE_TEMPERATURE = GENERATE_FROM_SKETCH_TEMPERATURE  # reuse
+
+
+def generate_smallest_provisional_map(
+    concept: str,
+    threshold: str,
+    *,
+    llm: LLMClient | None = None,
+    api_key: str | None = None,
+    lc_context: list["LCStandard"] | None = None,
+    telemetry_context: dict | None = None,
+    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
+) -> ProvisionalMap:
+    """Generate a smallest actionable route from {concept, threshold}.
+
+    C-prime spec §5.1: returns a ProvisionalMap with ≤4 drillable nodes
+    total (one suggested first target which carries the core thesis,
+    plus up to 3 backbone hints). Raises SmallestRouteCapExceeded if the
+    model returns more.
+
+    Optional ``lc_context`` is grounding-only, never authoritative.
+    """
+    from learning_commons import LCStandard  # local import to avoid cycle
+
+    client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
+
+    user_prompt_parts: list[str] = [
+        f"<concept>{concept}</concept>",
+        f"<threshold>{threshold}</threshold>",
+    ]
+    if lc_context:
+        lc_block_lines = ["<lc_context>"]
+        for std in lc_context:
+            code = f" [{std.statement_code}]" if std.statement_code else ""
+            lc_block_lines.append(f"- {std.jurisdiction}{code}: {std.description}")
+        lc_block_lines.append("</lc_context>")
+        user_prompt_parts.append("\n".join(lc_block_lines))
+
+    user_prompt = "\n\n".join(user_prompt_parts)
+
+    request = StructuredLLMRequest(
+        system_prompt=GENERATE_SMALLEST_ROUTE_PROMPT_PATH.read_text(),
+        user_prompt=user_prompt,
+        response_schema=ProvisionalMap,
+        temperature=GENERATE_SMALLEST_ROUTE_TEMPERATURE,
+        task_name="smallest_route_from_threshold",
+        prompt_version=GENERATE_SMALLEST_ROUTE_PROMPT_VERSION,
+    )
+    result = client.generate_structured(request)
+    if on_call_complete is not None:
+        on_call_complete(result)
+
+    pm: ProvisionalMap = result.parsed  # type: ignore[assignment]
+    _validate_smallest_route(pm)
+    return pm
+
+
 def _validate_repair_reps_result(
     evaluation: RepairRepsEvaluation, *, expected_count: int
 ) -> None:
