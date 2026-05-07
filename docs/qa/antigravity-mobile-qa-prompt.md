@@ -121,7 +121,7 @@
 > 3. *"Describe the segmented control labeled 'Route / Graph' (if present). Is its visual weight peripheral (subtle, ≤30px tall, content-width) or primary (heavy, full-width, deep saturation)? Intended: peripheral."*
 > 4. *"Are any controls or text clipped, cut off, or overlapped by other UI? List positions."*
 > 5. *"Does the bottom nav have any element overlapping it? Describe the gap between the bottom nav and the closest non-nav element above."*
-> 6. *"In the dark theme, list any element whose color reads as out-of-system (off-brand). socratink's palette is deep navy (#0B0D17) backgrounds with violet (#9067C6) accents and warm cream paper (#F2F0F5) for the light theme."*
+> 6. *"In the dark theme, list any element whose color reads as out-of-system (off-brand). socratink's palette is graphite (#18181b, Pattern A) backgrounds with violet (#9067C6) accents and warm cream paper (#F2F0F5) for the light theme."*
 > 7. *"Are there any 'awkward' surface transitions — places where two adjacent surfaces have noticeably different tones with a visible seam between them?"*
 >
 > ### Pass 8 — Console + network hygiene
