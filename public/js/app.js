@@ -286,11 +286,11 @@ const App = (() => {
       case 'instantiated':
         return concept.graphData
           ? 'Open the concept. It is a hypothesis, not evidence yet.'
-          : 'Map this source into a concept. The concept is not learner evidence.';
+          : 'Map this source into a concept. The map is not learner evidence.';
       case 'growing':
         return concept.graphData
           ? 'Open the concept. Start with one cold attempt before study appears.'
-          : 'Continue by mapping this concept into a concept.';
+          : 'Continue by mapping this source into a concept.';
       case 'fractured':
         return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
       case 'hibernating':
