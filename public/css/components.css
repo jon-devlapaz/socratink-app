@@ -2801,3 +2801,16 @@ body[data-theme="dark"] .launch-pad-input:focus {
 body[data-theme="dark"] .launch-pad-submit {
   background: var(--accent-primary, #9067c6);
 }
+
+/* Skeleton line for fresh-route concept views (C-prime) */
+.graph-skeleton-line {
+  font-size: var(--text-xs, 13px);
+  color: var(--text-sub, #6b6358);
+  text-align: center;
+  margin: 12px 0;
+  font-style: italic;
+  padding: 0;
+}
+.graph-skeleton-line[hidden] {
+  display: none;
+}

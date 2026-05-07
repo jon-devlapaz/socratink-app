@@ -205,18 +205,17 @@
               <!-- #hero-state-chip is the data-state hook that CSS :has() rules depend on.
                    In empty state we hide the wrapping .hero-meta-row entirely (see components.css).
                    Non-empty states render the chip text via renderHero(). -->
-              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">no map yet</div>
+              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">no concepts yet</div>
             </div>
           </div>
           <div class="hero-eyebrow-row">
             <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
           </div>
-          <h1 class="hero-title" id="title">Your draft paths.</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to open an entry, or start a new draft path at New Entry.</p>
-          <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
+          <h1 class="hero-title" id="title">Your concepts.</h1>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter, or start a new concept.</p>
           <div class="hero-actions">
             <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
-              <span class="hero-primary-action__label">Begin at New Entry</span>
+              <span class="hero-primary-action__label">New concept</span>
               <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>
@@ -365,6 +364,7 @@
     <!-- Map View Panel -->
     <section id="map-view" class="map-view">
       <div class="map-view-shell">
+        <p class="graph-skeleton-line" id="graph-skeleton-line" hidden></p>
         <header class="concept-header" id="concept-header">
           <div class="concept-header-main">
             <h2 class="concept-header-title" id="concept-header-title"></h2>

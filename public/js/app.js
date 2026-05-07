@@ -276,12 +276,12 @@ const App = (() => {
       case 'fractured': return 'worth revisiting';
       case 'hibernating': return 'spacing';
       case 'actualized': return 'spaced evidence';
-      default: return 'no map yet';
+      default: return 'no concepts yet';
     }
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
+    if (!concept) return 'Pick a tile to enter, or start a new concept.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
@@ -298,7 +298,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
-        return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
+        return 'Pick a tile to enter, or start a new concept.';
     }
   }
 
@@ -335,7 +335,7 @@ const App = (() => {
       titleEl.textContent = 'What do you want to understand?';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
-        heroStateChipEl.textContent = 'no map yet';
+        heroStateChipEl.textContent = 'no concepts yet';
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
@@ -1537,15 +1537,24 @@ const App = (() => {
   //
   // Parameters:
   //   opts — { fromLaunchPad: boolean }
+  function renderSkeletonLineIfFresh(opts) {
+    const banner = document.getElementById("graph-skeleton-line");
+    if (!banner) return;
+    if (opts && opts.fromLaunchPad) {
+      banner.textContent = "This is the skeleton. It will grow as you reconstruct.";
+      banner.hidden = false;
+    } else {
+      banner.hidden = true;
+    }
+  }
+
   function navigateToGraphViewFromLaunchPad(opts) {
     const concept = getActiveConcept();
     if (!concept) return;
     hidePrimaryViews();
     showMapView(concept);
     setMapMode('study');
-    // Round E: render skeleton-line if opts.fromLaunchPad === true.
-    // No-op in Round D — the framing line is Task 8.
-    void opts;
+    renderSkeletonLineIfFresh(opts);
   }
 
   async function startAddConcept(seed, originRect) {
@@ -2062,7 +2071,7 @@ const App = (() => {
     if (tagsEl) {
       let tagsHtml = '';
       const stateLabel = getHeroStateLabel(concept.state);
-      if (stateLabel && stateLabel !== 'no map yet') {
+      if (stateLabel && stateLabel !== 'no concepts yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
       if (meta.low_density) tagsHtml += `<span class="map-low-density">lightweight draft</span>`;
@@ -2274,6 +2283,7 @@ const App = (() => {
     setMapShellOpen(false);
     if (heroCard) heroCard.style.display = showHero ? 'flex' : 'none';
     if (navId) setNavActive(navId);
+    renderSkeletonLineIfFresh({ fromLaunchPad: false });
   }
 
   function hideMapView() {
