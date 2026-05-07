@@ -4175,6 +4175,7 @@ const App = (() => {
     fastForward,
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
+    hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     importLibraryConcept,
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader

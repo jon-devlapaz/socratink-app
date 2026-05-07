@@ -26,9 +26,16 @@ const PENDING_SHELL_KEY = 'socratink:pendingShell';
 const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // Substantiveness gate for the launch-pad threshold (C-prime spec §3.2).
-// Uses the simpler 3+ words / no-idk heuristic — NOT the stricter 8-token
-// rule from sketch-validation.js (which applies to the conversational flow).
-// The server-side `is_substantive_sketch` mirrors this gate.
+// Uses a simpler 3+ word / no-idk heuristic — intentionally lighter than the
+// stricter 8-token server gate (`is_substantive_sketch` in sketch_validation.py)
+// and the identical JS port in sketch-validation.js (which applies to the
+// conversational flow). This client gate fails fast on obvious non-answers;
+// the server applies the stricter 8-token check and can still return a 422.
+//
+// IDK_PATTERN covers the same "don't know" terms as the server's
+// _DONT_KNOW_PATTERNS list (`idk`, `i don't know`, `no idea`, `no clue`,
+// `dunno`, `not sure`) plus repeated-punctuation/ellipsis sequences (\?+ …+)
+// that the server handles via its _REPEATED_CHAR_RE (`^(.)\1{4,}$`).
 const SUBSTANTIVE_MIN_WORDS = 3;
 const IDK_PATTERN = /^(\?+|…+|idk|i\s*don'?t\s*know|no\s*idea|no\s*clue|dunno|not\s*sure)$/i;
 
@@ -103,25 +110,17 @@ export function showLaunchPad(App) {
     emitTelemetry('concept_create.launch_pad.evaporated', {
       age_ms: rawShell ? rawShell.age_ms : 0,
     });
-    // Restore the door if it was hidden.
-    const ignition = document.getElementById('ignition-view');
-    if (ignition) ignition.classList.add('visible');
-    const lpView = document.getElementById('launch-pad-view');
-    if (lpView) lpView.setAttribute('hidden', '');
+    // Restore the door: hide all primary views, then reveal ignition.
+    App.hidePrimaryViews();
+    const ignitionEl = document.getElementById('ignition-view');
+    if (ignitionEl) ignitionEl.classList.add('visible');
     return;
   }
 
-  // Hide the ignition view and all other primary views, then reveal the launch pad.
-  // hidePrimaryViews() is not accessible from the module directly, so we
-  // manipulate the elements directly — same approach as showIgnition in app.js.
-  const ignition = document.getElementById('ignition-view');
-  if (ignition) ignition.classList.remove('visible');
-  const heroCard = document.querySelector('.hero-card');
-  if (heroCard) heroCard.style.display = 'none';
-  const libraryView = document.getElementById('library-view');
-  if (libraryView) libraryView.classList.remove('visible');
-  const settingsView = document.getElementById('settings-view');
-  if (settingsView) settingsView.classList.remove('visible');
+  // Hide all primary views via shared helper, then reveal the launch pad.
+  // App.hidePrimaryViews() also sets [hidden] on launch-pad-view, so we
+  // call it first, then remove [hidden] to mount this surface.
+  App.hidePrimaryViews();
 
   const view = document.getElementById('launch-pad-view');
   if (!view) return;
@@ -210,12 +209,12 @@ export async function runLaunchPadAction(event, App) {
   if (submit) submit.disabled = true;
   if (validation) validation.textContent = '';
 
-  emitTelemetry('concept_create.launch_pad.submit', {
-    threshold_len: threshold.length,
-    build_blocked: false,
-  });
-
   // ── Step 1: POST /api/extract ─────────────────────────────────────────────
+  // Telemetry is emitted AFTER the network result is known — one event per
+  // submit with the resolved build_blocked value.
+  //   2xx  → emit submit { build_blocked: false }
+  //   422  → emit submit { build_blocked: true }
+  //   5xx / network / persistence → NO submit event (request didn't complete)
   let data;
   try {
     const apiKey =
@@ -243,11 +242,18 @@ export async function runLaunchPadAction(event, App) {
       return false;
     }
     // Network error, 5xx, or other failure: surface retry copy, leave shell.
+    // No submit telemetry — the request did not complete cleanly.
     console.error('launch_pad: extract failed', err);
     if (validation) validation.textContent = 'Something went wrong. Try again.';
     if (submit) submit.disabled = false;
     return false;
   }
+
+  // 2xx success — emit exactly one submit event.
+  emitTelemetry('concept_create.launch_pad.submit', {
+    threshold_len: threshold.length,
+    build_blocked: false,
+  });
 
   const provisionalMap = data.provisional_map || data.knowledge_map || null;
 
