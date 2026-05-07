@@ -457,10 +457,10 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 }
 
 .drawer-close {
-  position:absolute; top:28px; right:20px;
+  position:absolute; top:24px; right:16px;
   background:none; border:none; cursor:pointer; color:var(--text-sub);
   padding:0; border-radius:8px;
-  width:32px; height:32px; min-height:32px;
+  width:40px; height:40px; min-height:40px;
   display:inline-flex; align-items:center; justify-content:center;
   flex:none; transition:all 0.15s;
 }
@@ -488,7 +488,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 }
 .concept-item:hover { background-color:var(--border); }
 .concept-item.active { background-color:var(--accent-soft); }
-.concept-item.active .concept-item-name { color:var(--primary); font-weight:600; }
+.concept-item.active .concept-item-name { color:var(--primary-readable); font-weight:600; }
 
 .concept-dot {
   width:8px; height:8px; border-radius:50%; flex-shrink:0;
@@ -511,7 +511,9 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .concept-delete {
   background:none; border:none; cursor:pointer; color:transparent;
   font-size:16px; line-height:1; padding:0; border-radius:6px;
-  flex:none; width:26px; height:26px; min-height:26px;
+  /* 36×36 touch target meets the polish floor while remaining unobtrusive
+     until the row is hovered (color stays transparent until then). */
+  flex:none; width:36px; height:36px; min-height:36px;
   display:inline-flex; align-items:center; justify-content:center;
   transition:color 0.15s, background-color 0.15s;
 }
@@ -635,7 +637,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--primary);
+  color: var(--primary-readable);
   margin-bottom: 16px;
 }
 .library-intro {
@@ -2007,7 +2009,8 @@ html[data-motion="reduced"] .first-run-welcome__card {
 
 .hero-single-input__field {
   font-family: var(--font-body);
-  font-size: var(--text-md, 15px);
+  /* 16px floor prevents iOS Safari auto-zoom on focus. */
+  font-size: 16px;
   line-height: var(--leading-relaxed, 1.55);
   color: var(--text-strong);
   width: 100%;
@@ -2106,7 +2109,7 @@ html[data-motion="reduced"] .hero-single-input__field:active {
 .hero-single-input__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 12px 16px;
 }
@@ -2314,64 +2317,6 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
     flex-wrap: wrap;
   }
 }
-
-/* Example chips — blank-page guidance for the empty-state hero */
-.hero-example-chips {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  flex: 1 1 280px;
-  min-width: 0;
-}
-.hero-example-chips__label {
-  font-family: var(--font-body);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--accent-secondary, var(--text-sub));
-  margin-right: 4px;
-}
-.hero-example-chip {
-  background: transparent;
-  border: 1px solid var(--border-subtle, var(--border));
-  border-radius: 999px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-sub);
-  cursor: pointer;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-align: center;
-  min-width: 0;
-  box-shadow: none;
-  transition:
-    color var(--duration-micro, 140ms) var(--ease-standard, ease),
-    border-color var(--duration-micro, 140ms) var(--ease-standard, ease),
-    background-color var(--duration-micro, 140ms) var(--ease-standard, ease),
-    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease),
-    transform var(--duration-micro, 140ms) var(--ease-standard, ease);
-}
-.hero-example-chip:hover {
-  color: var(--text);
-  border-color: var(--accent-soft-strong, var(--primary));
-  background: var(--accent-soft);
-  box-shadow: 0 4px 12px 0 rgba(144, 103, 198, 0.12);
-  transform: translateY(-1px);
-}
-.hero-example-chip:focus-visible {
-  outline: none;
-  box-shadow: var(--accent-ring);
-  border-color: var(--primary);
-}
-@media (prefers-reduced-motion: reduce) {
-  .hero-example-chip { transition: none; }
-}
-html[data-motion="reduced"] .hero-example-chip { transition: none; }
 
 .hero-info:has(.hero-state-chip[data-state="empty"]) {
   justify-content: flex-start;

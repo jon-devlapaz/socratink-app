@@ -132,29 +132,6 @@ html[data-theme="dark"] body.antigravity-theme .hero-single-input__submit:disabl
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* Chips */
-body.antigravity-theme .hero-example-chip {
-  background: var(--surface-2);
-  border: 1px solid var(--border-color);
-  color: var(--text-muted);
-  border-radius: 100px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
-}
-
-body.antigravity-theme .hero-example-chip:hover {
-  background: rgba(144, 103, 198, 0.1);
-  border-color: rgba(144, 103, 198, 0.3);
-  color: var(--text-main);
-  transform: translateY(-1px);
-}
-
-html[data-theme="dark"] body.antigravity-theme .hero-example-chip:hover {
-  background: rgba(158, 139, 255, 0.1);
-  border-color: rgba(158, 139, 255, 0.3);
-}
-
 /* Digital Void Background for Ignition View */
 body.antigravity-theme {
   align-items: stretch;
@@ -179,13 +156,14 @@ body.antigravity-theme #ignition-view {
   background-image: radial-gradient(circle at 50% 50%, rgba(144, 103, 198, 0.04) 0%, transparent 70%);
   position: absolute;
   inset: 0;
-  justify-content: center;
   box-sizing: border-box;
 }
 
-body.antigravity-theme .main-header {
-  position: relative;
-  z-index: 10;
+@media (min-width: 900px) {
+  body.antigravity-theme .main-header {
+    position: relative;
+    z-index: 10;
+  }
 }
 
 @media (max-width: 899px) {
@@ -195,12 +173,12 @@ body.antigravity-theme .main-header {
 }
 
 html[data-theme="dark"] body.antigravity-theme #ignition-view {
-  background-color: #0B0D17; /* Deep obsidian base */
-  background-image: radial-gradient(circle at 50% 50%, rgba(144, 103, 198, 0.08) 0%, transparent 70%);
+  background-color: #18181b; /* Graphite page surface (option A unified) */
+  background-image: none;
 }
 
 body.antigravity-theme .intro-particles {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
@@ -212,4 +190,5 @@ body.antigravity-theme .intro-particles {
 body.antigravity-theme .ignition-view__inner {
   position: relative;
   z-index: 1;
+  margin: auto 0;
 }

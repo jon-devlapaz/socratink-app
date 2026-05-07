@@ -229,11 +229,24 @@
   --text:       var(--text-strong);
   --text-sub:   var(--text-muted);
   --primary:    var(--accent-primary);
+  /* Theme-aware foreground violet for text on tinted backgrounds. Each
+     theme picks the shade of brand violet that clears AA contrast against
+     its own surface family. */
+  --primary-readable: var(--primary-fill-hover);
   --locked:     var(--mauve-200);
   --danger:     #e05c6b;
   --danger-rgb: 224, 92, 107;
   --success:    #4dba8a;
-  --drawer-bg:  var(--surface-panel-theme);
+  --drawer-bg:  var(--surface-page-theme);
+  /* iOS-toolbar-style scrim used by the floating top chrome and the
+     bottom action bar. Theme-tinted alpha + 14px blur. */
+  --chrome-blur:    blur(14px) saturate(140%);
+  --chrome-scrim-bg: rgba(242, 240, 245, 0.55);
+  /* Mobile chrome heights (top hamburger bar, bottom nav, sticky action
+     bar). Driven from one place so view paddings stay in sync. */
+  --chrome-h-top:    calc(64px + env(safe-area-inset-top));
+  --chrome-h-bottom: calc(80px + env(safe-area-inset-bottom));
+  --action-bar-h:    64px;
   --border:     var(--border-subtle);
   --tile-top:   var(--graph-tile-top);
   --tile-left:  var(--graph-tile-left);
@@ -438,12 +451,19 @@
    Re-ordering imports will break cascade order.
    ============================================================ */
 [data-theme="dark"] {
-  --surface-page-theme: #1f1b31;
-  --surface-card-theme: #302b49;
+  /* Graphite scale — page surfaces share the same neutral family as the
+     drawer (no violet tint on solid surfaces). Violet stays as accent
+     (chips, hover, focus rings) via --accent-* tokens below. */
+  --surface-page-theme: #18181b;
+  --surface-card-theme: #27272a;
+  /* Foreground violet on graphite (active labels, link accents). Brand
+     violet --primary stays #9067c6 for fills/borders. */
+  --primary-readable: #b09ce0;
+  --chrome-scrim-bg: rgba(11, 13, 23, 0.55);
   --surface-panel-theme:  rgba(var(--lavender-500-rgb), 0.18);
   --surface-nested-theme: rgba(var(--lavender-500-rgb), 0.24);
-  --surface-high:    #3b3658;
-  --surface-highest: #2d2846;
+  --surface-high:    #3f3f46;
+  --surface-highest: #27272a;
 
   --text-strong:      var(--cream-50);
   --text-muted:       rgba(var(--cream-50-rgb), 0.72);
@@ -467,10 +487,12 @@
   --graph-tile-left:  #3b3658;
   --graph-tile-right: #443e67;
 
-  --gradient-card-start:  rgba(66, 59, 101, 0.96);
-  --gradient-card-end:    rgba(47, 42, 74, 0.98);
-  --gradient-panel-start: rgba(59, 53, 91, 0.94);
-  --gradient-panel-end:   rgba(45, 40, 70, 0.98);
+  /* Card and panel gradients in graphite scale (option A unified). Stage
+     gradient below keeps its violet glow — that's the graph hero moment. */
+  --gradient-card-start:  rgba(39, 39, 42, 0.96);
+  --gradient-card-end:    rgba(31, 31, 35, 0.98);
+  --gradient-panel-start: rgba(35, 35, 39, 0.94);
+  --gradient-panel-end:   rgba(28, 28, 32, 0.98);
   --gradient-stage-accent: rgba(var(--lavender-500-rgb), 0.22);
   --gradient-stage-start:  rgba(72, 65, 110, 0.94);
   --gradient-stage-end:    rgba(43, 37, 67, 0.98);
@@ -487,10 +509,7 @@
   --beacon-edge: rgba(var(--violet-600-rgb), 0.96);
 
   --page-background:
-    radial-gradient(circle at 14% 14%, rgba(var(--lavender-500-rgb), 0.28), transparent 28%),
-    radial-gradient(circle at 82% 16%, rgba(var(--violet-600-rgb),   0.24), transparent 24%),
-    radial-gradient(circle at 50% 100%, rgba(66, 59, 101, 0.22), transparent 38%),
-    linear-gradient(180deg, #241f39 0%, #1f1b31 100%);
+    linear-gradient(180deg, #1c1c20 0%, #18181b 60%, #16161a 100%);
 
   --graph-shell-bg: linear-gradient(180deg, rgba(18, 12, 36, 0.94) 0%, rgba(7, 5, 15, 0.98) 100%);
   --graph-shell-border: rgba(var(--lavender-500-rgb), 0.20);

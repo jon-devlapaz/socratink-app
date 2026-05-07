@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#f7ece1">
   <meta name="application-name" content="Socratink">
   <meta name="mobile-web-app-capable" content="yes">
@@ -23,8 +23,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=82">
-  <link rel="stylesheet" href="antigravity.css?v=1">
+  <link rel="stylesheet" href="styles.css?v=83">
+  <link rel="stylesheet" href="antigravity.css?v=3">
 </head>
 
 <body>
@@ -72,7 +72,7 @@
   </nav>
 
   <!-- Left sidebar (desktop) -->
-  <div id="drawer" data-open="false">
+  <aside id="drawer" data-open="false" aria-label="Sidebar">
     <div class="sidebar-brand">
       <img src="/brand/socratink-mark-square.png?v=1" alt="Socratink brand mark" class="sidebar-brand-mark">
       <span class="sidebar-brand-name">socra<span class="brand-accent">tink</span></span>
@@ -113,32 +113,7 @@
         <span class="drawer-signin-label">Continue with Google</span>
         <span class="drawer-signin-arrow" aria-hidden="true">→</span>
       </a>
-      <div class="drawer-footer-row">
-        <button class="drawer-theme-toggle" id="drawer-theme-toggle" type="button"
-          onclick="App.toggleTheme()" aria-label="Toggle theme">
-          <svg class="drawer-theme-icon drawer-theme-icon-sun" width="14" height="14" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-            aria-hidden="true">
-            <circle cx="12" cy="12" r="4.5"></circle>
-            <path d="M12 2.5v3"></path>
-            <path d="M12 18.5v3"></path>
-            <path d="M4.9 4.9l2.1 2.1"></path>
-            <path d="M17 17l2.1 2.1"></path>
-            <path d="M2.5 12h3"></path>
-            <path d="M18.5 12h3"></path>
-            <path d="M4.9 19.1L7 17"></path>
-            <path d="M17 7l2.1-2.1"></path>
-          </svg>
-          <svg class="drawer-theme-icon drawer-theme-icon-moon" width="14" height="14" viewBox="0 0 24 24"
-            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-            aria-hidden="true">
-            <path d="M20.5 15.2A8.8 8.8 0 1 1 12.8 3.5a7.2 7.2 0 0 0 7.7 11.7z"></path>
-          </svg>
-          <span class="drawer-theme-label">Theme</span>
-        </button>
-        <button class="drawer-exit-btn" id="drawer-exit-btn" type="button"
-          onclick="App.exitGuestFromDrawer()" hidden>Exit guest</button>
-      </div>
+      <!-- Theme toggle and Exit guest live in the Settings tab; not duplicated here. -->
     </div>
 
     <!-- Close button (mobile only) -->
@@ -148,10 +123,11 @@
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
-  </div>
+  </aside>
 
   <!-- Main content -->
-  <div id="card">
+  <main id="card">
+    <h1 class="visually-hidden">socratink</h1>
 
     <!-- Header bar (desktop) -->
     <header class="main-header">
@@ -339,12 +315,6 @@
             <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
           </div>
           <div class="hero-single-input__row">
-            <div class="hero-example-chips" aria-label="Example concepts">
-              <button type="button" class="hero-example-chip" data-hero-example="Photosynthesis">Photosynthesis</button>
-              <button type="button" class="hero-example-chip" data-hero-example="Entropy">Entropy</button>
-              <button type="button" class="hero-example-chip" data-hero-example="Transformers">Transformers</button>
-              <button type="button" class="hero-example-chip" data-hero-example="Attention">Attention</button>
-            </div>
             <button type="submit" class="hero-single-input__submit" disabled>
               <span>Create draft path</span>
               <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -377,11 +347,13 @@
             <div class="concept-header-tags" id="concept-header-tags"></div>
           </div>
           <div class="concept-header-actions">
-            <div class="map-mode-switch" role="tablist" aria-label="Map display mode">
+            <div class="map-mode-switch" aria-label="Map display mode" role="group">
               <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Route</button>
               <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Graph</button>
             </div>
-            <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Cold Attempt</button>
+            <div class="map-action-bar">
+              <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Start Cold Attempt</button>
+            </div>
           </div>
         </header>
         <div id="map-content"></div>
@@ -396,7 +368,7 @@
               </div>
               <div id="graph-stage" class="graph-stage"></div>
             </div>
-            <aside id="graph-detail" class="graph-detail">
+            <div id="graph-detail" class="graph-detail">
               <div id="graph-node-detail" class="graph-node-detail"></div>
               <div class="drill-ui drill-ui-embedded" id="drill-ui">
                 <div class="drill-header">
@@ -409,13 +381,13 @@
                     rows="2"></textarea>
                 </div>
               </div>
-            </aside>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
-  </div>
+  </main>
 
   <!-- PDF.js for robust client-side extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -423,7 +395,7 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=63"></script>
+  <script type="module" src="js/app.js?v=69"></script>
   <script src="js/intro-particles.js?v=6"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=4"></script>

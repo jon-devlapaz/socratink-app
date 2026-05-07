@@ -237,7 +237,7 @@ body:not([data-map-open="true"]) .map-back-link {
   body { flex-direction: column; align-items: center; justify-content: center; }
 
   #drawer {
-    background-color: var(--surface-card);
+    background-color: var(--drawer-bg);
     border-right: 1px solid var(--border-strong);
     box-shadow: var(--shadow-raised);
     z-index: 1000;
@@ -282,11 +282,10 @@ body:not([data-map-open="true"]) .map-back-link {
     flex: 0 0 auto;
   }
   .drawer-footer-chip-state {
-    color: var(--text-muted);
-    opacity: 0.72;
+    color: var(--text-sub);
     font-weight: 500;
   }
-  /* Primary CTA — Continue with Google */
+  /* Primary CTA — Continue with Google. */
   .drawer-signin-link {
     display: inline-flex;
     align-items: center;
@@ -295,7 +294,7 @@ body:not([data-map-open="true"]) .map-back-link {
     min-height: 44px;
     padding: var(--space-2) var(--space-4);
     border-radius: 12px;
-    background: var(--accent-primary);
+    background: var(--primary-fill);
     color: var(--text-on-primary);
     font-size: 0.85rem;
     font-weight: 600;
@@ -441,9 +440,8 @@ body:not([data-map-open="true"]) .map-back-link {
     transform: scale(0.92);
   }
 
-  /* #4 — Active indicator dot for bottom nav */
   .bottom-nav-item.active {
-    color: var(--primary);
+    color: var(--primary-readable);
   }
   .bottom-nav-item.active::before {
     content: '';
@@ -467,13 +465,17 @@ body:not([data-map-open="true"]) .map-back-link {
     font-weight: 600;
   }
 
-  /* Keep header but position hamburger absolutely within card */
+  /* Floating chrome scrim — transparent base, soft blur over content
+     scrolling beneath. Matches iOS HIG translucent toolbar pattern. */
   .main-header {
-    position: absolute;
+    position: fixed;
     top: 0; left: 0; right: 0;
     padding: 14px 16px;
-    background: transparent;
-    z-index: 2;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    background: var(--chrome-scrim-bg);
+    backdrop-filter: var(--chrome-blur);
+    -webkit-backdrop-filter: var(--chrome-blur);
+    z-index: 100;
   }
   .main-header-right { gap: 8px; }
   .main-header-title { display: none; }
@@ -482,7 +484,7 @@ body:not([data-map-open="true"]) .map-back-link {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 56px 20px 80px; /* auth controls hidden on mobile so less top padding needed */
+    padding: var(--chrome-h-top) 20px 80px;
     margin: 0;
     border-radius: var(--radius-hero);
     box-shadow: var(--shadow-card);
@@ -508,7 +510,7 @@ body:not([data-map-open="true"]) .map-back-link {
   
   /* Add padding to views so content is not obscured by bottom nav */
   .library-view, .settings-view {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom));
+    padding-bottom: var(--chrome-h-bottom);
   }
 
   /* #5 — View entrance transitions */
@@ -823,8 +825,8 @@ html[data-motion="reduced"] #intro-particle-canvas {
 .map-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .map-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: none; letter-spacing: 0.01em; }
 .map-badge.arch { background: var(--accent-soft-strong); color: var(--primary); }
-.map-badge.diff { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
-.map-badge.state { background: var(--surface-nested); color: var(--text-sub); border: 1px solid var(--border); }
+.map-badge.diff { background: var(--surface-nested); color: var(--text); border: 1px solid var(--border); }
+.map-badge.state { background: var(--surface-nested); color: var(--text); border: 1px solid var(--border); }
 .map-badge-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto; background: var(--text-sub); }
 .map-badge.state[data-state="instantiated"] .map-badge-dot { background: var(--crystal-instantiated-lower-right); }
 .map-badge.state[data-state="growing"] .map-badge-dot      { background: var(--crystal-growing-upper-left); }
@@ -1026,7 +1028,7 @@ html[data-motion="reduced"] #intro-particle-canvas {
   width: auto;
   border: none;
   background: transparent;
-  color: var(--text-sub);
+  color: var(--text);
   padding: 8px 14px;
   border-radius: 999px;
   font-size: 12px;
@@ -1039,7 +1041,7 @@ html[data-motion="reduced"] #intro-particle-canvas {
 }
 .map-mode-btn.active {
   background: var(--accent-soft-strong);
-  color: var(--primary);
+  color: var(--text);
 }
 .map-mode-btn:hover:not(:disabled) {
   background: var(--accent-soft);
@@ -2023,14 +2025,26 @@ html[data-motion="reduced"] .graph-repair-predict-pill {
 
 /* Mobile adjustments for map and library views */
 @media (max-width: 899px) {
+  /* Chrome (.main-header) is fixed-position on mobile; pad each view's top
+     so its content sits below the floating menu. 64px chrome + safe area. */
+  /* Top padding clears the fixed top chrome; bottom padding clears the
+     bottom-nav + (Map only) the sticky action bar. */
   .map-view {
-    padding: 16px 20px 24px;
+    padding: var(--chrome-h-top) 20px calc(var(--chrome-h-bottom) + var(--action-bar-h) + 16px);
     border-radius: 0;
     box-sizing: border-box;
   }
   .library-view {
-    padding: 24px 16px;
+    margin-top: 0;
+    padding: var(--chrome-h-top) 16px var(--chrome-h-bottom);
     border-radius: 0;
+  }
+  .settings-view {
+    margin-top: 0;
+    padding-top: var(--chrome-h-top);
+  }
+  #ignition-view {
+    padding-top: calc(56px + env(safe-area-inset-top));
   }
   .library-hero {
     margin-bottom: 24px;
@@ -2050,8 +2064,16 @@ html[data-motion="reduced"] .graph-repair-predict-pill {
   }
   .map-core-thesis { font-size: 17px; }
   .map-view-shell { gap: 16px; padding-top: 0; }
-  .map-mode-switch { width: 100%; }
-  .map-mode-btn { flex: 1; }
+  /* Lighter segmented control — peripheral chrome, content-width, right-aligned. */
+  .map-mode-switch {
+    align-self: flex-end;
+    padding: 2px;
+    gap: 2px;
+  }
+  .map-mode-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
   .map-first-room {
     align-items: stretch;
     flex-direction: column;
@@ -2083,11 +2105,36 @@ html[data-motion="reduced"] .graph-repair-predict-pill {
     gap: 10px;
   }
   .concept-header-actions .map-mode-switch {
-    width: 100%;
+    width: auto;
+    min-height: 0;
+  }
+  .concept-header-actions .map-mode-btn {
+    min-height: 0;
   }
 
-  /* Make the primary attempt action a prominent full-width CTA on mobile */
-  .btn-start-drill {
+  /* Primary CTA promoted to a sticky bottom action bar on mobile, above
+     the bottom-nav, with the same iOS-toolbar scrim as the top chrome. */
+  .map-action-bar {
+    position: fixed;
+    left: 0; right: 0;
+    bottom: var(--chrome-h-bottom);
+    padding: 10px 16px;
+    background: var(--chrome-scrim-bg);
+    backdrop-filter: var(--chrome-blur);
+    -webkit-backdrop-filter: var(--chrome-blur);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    z-index: 80;
+  }
+  body.antigravity-theme:not(.night) .map-action-bar {
+    border-top-color: rgba(0, 0, 0, 0.06);
+  }
+  /* Bar lives statically in concept-header-actions; coupling visibility to
+     the inner button avoids a JS write path on every concept-state change.
+     Uses :has() — Safari 15.4+. */
+  .map-action-bar:has(.btn-start-drill[hidden]) {
+    display: none;
+  }
+  .map-action-bar .btn-start-drill {
     width: 100%;
     max-width: none;
     justify-content: center;
@@ -2099,7 +2146,7 @@ html[data-motion="reduced"] .graph-repair-predict-pill {
     border-color: var(--primary-fill);
     box-shadow: var(--accent-shadow-sm);
   }
-  .btn-start-drill:active {
+  .map-action-bar .btn-start-drill:active {
     transform: scale(0.97);
     box-shadow: none;
   }
@@ -2126,10 +2173,14 @@ html[data-motion="reduced"] .graph-repair-predict-pill {
     padding-top: calc(18px + env(safe-area-inset-top));
   }
   
-  /* Full screen drill takeover */
+  /* Full screen drill takeover. Includes #drawer for the case where the
+     drawer was opened (via hamburger) before drilling — without this, the
+     open drawer would survive the takeover and overlap the drill UI. */
   body.is-drilling .bottom-nav,
   body.is-drilling .map-mode-switch,
   body.is-drilling .map-close-btn,
+  body.is-drilling .map-action-bar,
+  body.is-drilling #drawer,
   body.is-drilling .main-header {
     display: none !important;
   }
@@ -2347,7 +2398,8 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   padding: clamp(56px, 10vh, 96px) 24px clamp(80px, 14vh, 128px);
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 #ignition-view.visible {
   display: flex;
@@ -2454,7 +2506,7 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--lavender-500);
+  color: var(--primary-readable);
   margin-bottom: 12px;
 }
 
@@ -2541,8 +2593,10 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   font: inherit;
   background: none;
   border: 0;
-  padding: 0;
-  min-height: 0;
+  /* Vertical padding gives ≥40px tap target without changing the visual weight
+     of the underlined link itself. */
+  padding: 12px 4px;
+  min-height: 40px;
   color: var(--text-muted);
   font-size: 12px;
   text-decoration: underline;
@@ -2639,7 +2693,7 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
 }
 .settings-pill[aria-checked="true"] {
   background: rgba(var(--violet-600-rgb), 0.16);
-  color: var(--violet-600);
+  color: var(--primary-readable);
   box-shadow: inset 0 0 0 1px rgba(var(--violet-600-rgb), 0.34);
 }
 

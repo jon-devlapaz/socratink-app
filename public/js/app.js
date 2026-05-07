@@ -19,6 +19,7 @@ import {
 } from './auth.js?v=3';
 import { maybeShowFirstRunWelcome } from './welcome.js?v=6';
 import { isSubstantiveSketch } from './sketch-validation.js';
+import { prefersReducedMotion } from './motion.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
@@ -481,17 +482,23 @@ const App = (() => {
       });
     });
 
-    const chips = document.querySelectorAll('[data-hero-example]');
-    chips.forEach((chip) => {
-      chip.addEventListener('click', () => {
-        const value = chip.dataset.heroExample || '';
-        if (!value) return;
-        conceptField.value = value;
-        sketchField.focus(); // focus handler fires playFocusTap on the resulting focus transition
-        sketchField.setSelectionRange(sketchField.value.length, sketchField.value.length);
-        sync();
-      });
-    });
+    const examples = ['Photosynthesis', 'Entropy', 'Transformers', 'Attention'];
+    let exampleIdx = 0;
+    const writePlaceholder = () => {
+      const next = `e.g. ${examples[exampleIdx]}`;
+      if (conceptField.placeholder !== next) conceptField.placeholder = next;
+    };
+    writePlaceholder();
+    setInterval(() => {
+      // Bail when nothing meaningful would change. Re-checks each tick because
+      // Settings can flip reduced-motion at runtime.
+      if (prefersReducedMotion()) return;
+      if (!ignitionView?.classList.contains('visible')) return;
+      if (document.activeElement === conceptField) return;
+      if (conceptField.value.length > 0) return;
+      exampleIdx = (exampleIdx + 1) % examples.length;
+      writePlaceholder();
+    }, 3200);
     sync();
   }
 
@@ -621,7 +628,7 @@ const App = (() => {
       item.innerHTML = `
         <div class="concept-dot" data-state="${c.state}"></div>
         <span class="concept-item-name">${escHtml(c.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" title="Delete concept">
+        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" aria-label="Delete concept ${escHtml(c.name)}" title="Delete concept">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1553,13 +1560,10 @@ const App = (() => {
   }
 
   function selectTile(tileIdx) {
+    AudioFX.playTileClick();
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
-      // Tile-click cue (D·thud) is reserved for navigation INTO a populated
-      // tile. Empty tiles open the add-concept drawer instead — that
-      // transition has its own cue and should not double-fire.
-      AudioFX.playTileClick();
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
@@ -2321,7 +2325,7 @@ const App = (() => {
       <div class="library-kicker">Library</div>
 
       <div class="library-section">
-        <h3 class="library-section-title">Documentation Concepts</h3>
+        <h2 class="library-section-title">Documentation Concepts</h2>
         <p class="library-section-copy">Curated draft paths you can enter without treating the map as learner evidence.</p>
         <div class="library-vault-grid">
           ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
@@ -2348,7 +2352,7 @@ const App = (() => {
       </div>
       
       <div class="library-section" style="margin-top: 40px;">
-        <h3 class="library-section-title">Your Library</h3>
+        <h2 class="library-section-title">Your Library</h2>
         <p class="library-section-copy">Draft paths and evidence maps you can reopen.</p>
     `;
 
@@ -3750,7 +3754,7 @@ const App = (() => {
         </div>
 
         <section class="settings-display">
-          <h4 class="settings-section-heading">Display</h4>
+          <h3 class="settings-section-heading">Display</h3>
 
           <div class="settings-row">
             <div>
@@ -3965,10 +3969,8 @@ const App = (() => {
     const isGuest = !!(session && session.guest_mode);
     const authEnabled = !!(session && session.auth_enabled);
     const chip = document.getElementById('drawer-footer-chip');
-    const exitBtn = document.getElementById('drawer-exit-btn');
     const signinLink = document.getElementById('drawer-signin-link');
     if (chip) chip.hidden = !isGuest;
-    if (exitBtn) exitBtn.hidden = !isGuest;
     if (signinLink) {
       const show = isGuest && authEnabled;
       signinLink.hidden = !show;
@@ -3976,18 +3978,11 @@ const App = (() => {
     }
   }
 
-  async function exitGuestFromDrawer() {
-    try { await logout(); } catch (err) { console.warn('Guest exit failed.', err); }
-    closeDrawer();
-    redirectToLogin('/');
-  }
-
   void refreshRuntimeConfig();
 
   return {
     toggleDrawer, openDrawer, closeDrawer,
     refreshDrawerFooter,
-    exitGuestFromDrawer,
     cancelDrill, startDrill, startDrillFromMap: () => {
       const concept = getActiveConcept();
       if (!concept?.graphData) return;
