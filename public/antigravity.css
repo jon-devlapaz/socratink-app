@@ -246,9 +246,10 @@ html[data-theme="dark"] body.antigravity-theme .ignition-title {
 body.antigravity-theme .ignition-title .ig-highlight {
   background: linear-gradient(
     135deg,
-    var(--accent-color) 0%,
-    var(--accent-mint) 52%,
-    var(--accent-color) 100%
+    #6b3fa0 0%,
+    #9067c6 42%,
+    #3d7abd 76%,
+    #6b3fa0 100%
   );
   background-size: 200% 100%;
   -webkit-background-clip: text;
@@ -256,6 +257,22 @@ body.antigravity-theme .ignition-title .ig-highlight {
   -webkit-text-fill-color: transparent;
   animation: ag-title-shimmer 4s ease-in-out infinite;
   display: inline;
+  filter: drop-shadow(0 1px 0 rgba(107, 63, 160, 0.18));
+}
+
+html[data-theme="dark"] body.antigravity-theme .ignition-title .ig-highlight {
+  background: linear-gradient(
+    135deg,
+    #c8a8f7 0%,
+    #a97ef4 42%,
+    #7dd4f8 76%,
+    #c8a8f7 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(200, 168, 247, 0.22));
 }
 
 @keyframes ag-title-shimmer {
