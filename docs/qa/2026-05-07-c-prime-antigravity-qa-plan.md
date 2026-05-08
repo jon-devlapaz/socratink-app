@@ -504,7 +504,7 @@ Build 9 concepts. Try to start a 10th from the door. The cap-gate panel should a
 
 ### TC-111 — Backend smallest-route cap exceeded → 500
 
-If the model can be forced to emit >4 drillable nodes (mock the AI response or temporarily relax the prompt), confirm the endpoint returns **500** with `error: smallest_route_cap_exceeded` (not 422). The launch pad should surface "Something went wrong. Try again." in the validation footer and leave the pending shell intact.
+If the model can be forced to emit >4 drillable nodes (mock the AI response or temporarily relax the prompt), confirm the endpoint returns **500** with `error: smallest_route_cap_exceeded` (not 422). The launch pad should surface the server-supplied message ("Source-less generation exceeded the ≤4-node cap. Retry or adjust the prompt.") in the validation footer and leave the pending shell intact.
 
 ### TC-112 — Re-running TC-01 with different concepts
 

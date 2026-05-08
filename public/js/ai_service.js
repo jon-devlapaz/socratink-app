@@ -50,6 +50,18 @@ export async function submitConceptCreate({ name, startingSketch, source, apiKey
     throw err;
   }
   if (!response.ok) {
+    // Try to parse a JSON `{detail: {error, message}}` body so callers can
+    // surface actionable server messages (e.g. smallest_route_cap_exceeded)
+    // rather than generic retry copy. Falls back to text on parse failure.
+    const ct = response.headers.get("content-type") || "";
+    if (ct.includes("application/json")) {
+      const payload = await response.json().catch(() => ({}));
+      const detail = payload.detail || payload || {};
+      const err = new Error(detail.message || `Server error ${response.status}`);
+      err.status = response.status;
+      err.body = detail;
+      throw err;
+    }
     const txt = await response.text().catch(() => "");
     const err = new Error(`Server error ${response.status}: ${txt}`);
     err.status = response.status;

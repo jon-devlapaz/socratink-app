@@ -243,8 +243,15 @@ export async function runLaunchPadAction(event, App) {
     }
     // Network error, 5xx, or other failure: surface retry copy, leave shell.
     // No submit telemetry — the request did not complete cleanly.
+    // For server-side cap exceeded, forward the actionable server message so
+    // the learner knows to adjust the prompt rather than retry blindly.
     console.error('launch_pad: extract failed', err);
-    if (validation) validation.textContent = 'Something went wrong. Try again.';
+    const capExceeded =
+      err && err.status === 500 && err.body && err.body.error === 'smallest_route_cap_exceeded';
+    const fallbackMsg = capExceeded && err.body.message
+      ? String(err.body.message)
+      : 'Something went wrong. Try again.';
+    if (validation) validation.textContent = fallbackMsg;
     if (submit) submit.disabled = false;
     return false;
   }

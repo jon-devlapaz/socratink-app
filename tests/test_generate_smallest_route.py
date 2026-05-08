@@ -4,81 +4,9 @@ from __future__ import annotations
 import pytest
 
 from ai_service import _validate_smallest_route, SmallestRouteCapExceeded
-from models.provisional_map import (
-    BackboneItem,
-    Cluster,
-    Metadata,
-    ProvisionalMap,
-    Relationships,
-    Subnode,
+from tests._helpers.provisional_map_factory import (
+    provisional_map_with_node_count as _provisional_map_with_node_count,
 )
-
-
-def _provisional_map_with_node_count(n: int) -> ProvisionalMap:
-    """Build a ProvisionalMap with `n` drillable cluster nodes for the cap test.
-
-    Each cluster has one subnode (satisfying the drillability rule).
-    The backbone covers all clusters. Relationships and frameworks are empty.
-    """
-    clusters = [
-        Cluster(
-            id=f"c{i + 1}",
-            label=f"Cluster {i + 1}",
-            description=f"Test cluster {i + 1}",
-            subnodes=[
-                Subnode(
-                    id=f"c{i + 1}_s1",
-                    label=f"Node {i + 1}",
-                    mechanism="test mechanism",
-                )
-            ],
-        )
-        for i in range(n)
-    ]
-
-    if n == 0:
-        # An empty cluster list would fail the backbone coverage rule, so we
-        # short-circuit: build a ProvisionalMap that has no clusters by
-        # bypassing normal model validation. We use object.__setattr__ to
-        # inject the empty list after construction of a 1-node map, then
-        # replace it — but that would mutate a frozen model.
-        #
-        # Instead: use model_construct to skip validators entirely so we can
-        # produce a deliberately malformed object that _validate_smallest_route
-        # must catch.
-        return ProvisionalMap.model_construct(
-            metadata=Metadata(
-                source_title="test",
-                core_thesis="test thesis",
-                architecture_type="causal_chain",
-                difficulty="medium",
-            ),
-            backbone=[],
-            clusters=[],
-            relationships=Relationships(),
-            frameworks=[],
-        )
-
-    backbone = [
-        BackboneItem(
-            id="b1",
-            principle="Test backbone",
-            dependent_clusters=[f"c{i + 1}" for i in range(n)],
-        )
-    ]
-
-    return ProvisionalMap(
-        metadata=Metadata(
-            source_title="test",
-            core_thesis="test thesis",
-            architecture_type="causal_chain",
-            difficulty="medium",
-        ),
-        backbone=backbone,
-        clusters=clusters,
-        relationships=Relationships(),
-        frameworks=[],
-    )
 
 
 def test_smallest_route_validator_accepts_one_node():

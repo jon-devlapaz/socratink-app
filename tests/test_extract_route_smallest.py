@@ -69,9 +69,9 @@ def test_extract_idk_sketch_no_source_rejected(client):
 
 def test_extract_substantive_threshold_returns_smallest_route(client):
     """Source-less + substantive threshold → smallest ProvisionalMap (≤4)."""
-    from tests.test_generate_smallest_route import _provisional_map_with_node_count
+    from tests._helpers.provisional_map_factory import provisional_map_with_node_count
 
-    fake_pm = _provisional_map_with_node_count(3)
+    fake_pm = provisional_map_with_node_count(3)
 
     with patch("main.generate_smallest_provisional_map", return_value=fake_pm) as mocked:
         r = client.post("/api/extract", json={
