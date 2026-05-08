@@ -403,7 +403,7 @@ Save to `/tmp/socratink-cprime-qa-screenshots/` or include in the breakfix repor
 
 1. Open DevTools → Elements. Click the door submit button (the arrow icon).
 2. Switch to the Accessibility pane (Chrome) or Inspector → Accessibility (Firefox). Verify:
-   - **Name:** `Continue` (NOT empty, NOT just the SVG path data)
+   - **Name:** non-empty, AND not raw SVG path data. Any short label is fine (`Continue`, `Build my map`, etc.) — the contract is "the screen-reader user gets words, not path coordinates".
    - **Role:** `button`
    - **Disabled state:** matches the input's empty/non-empty state
 3. Run a Lighthouse Accessibility audit on the door surface:
@@ -579,7 +579,7 @@ Fill in below. **Do not delete unfilled rows** — leave them as `NOT EXECUTED` 
 - FAIL: {count}
 - BLOCKED: {count}
 - NOT EXECUTED: {count}
-- RELEASE BLOCKERS: {count}  ← any FAIL on TC-01, TC-04, TC-07, TC-13 a11y, or TC-113 persistence-then-clear
+- RELEASE BLOCKERS: {count}  ← any FAIL on TC-01, TC-04, TC-07, TC-14 a11y, or TC-113 persistence-then-clear
 
 ## Verdict
 

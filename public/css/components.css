@@ -292,7 +292,7 @@ html[data-motion="reduced"] .theme-toggle {
   border-radius: 999px;
   background: rgba(var(--white-rgb), 0.18);
   fill: none;
-  stroke: currentColor;
+  stroke: currentcolor;
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -2141,7 +2141,7 @@ html[data-motion="reduced"] .hero-single-input__field:active {
 .hero-single-input__attach-icon {
   display: inline-flex;
   align-items: center;
-  color: currentColor;
+  color: currentcolor;
 }
 
 .hero-single-input__submit {
@@ -2225,7 +2225,7 @@ html[data-motion="reduced"] .hero-single-input__field:active {
   border-radius: 999px;
   background: rgba(var(--white-rgb), 0.18);
   fill: none;
-  stroke: currentColor;
+  stroke: currentcolor;
   stroke-width: 1.9;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -2787,7 +2787,7 @@ body[data-theme="dark"] .hero-source-attach[aria-expanded="true"] {
   width: 16px;
   height: 16px;
   fill: none;
-  stroke: currentColor;
+  stroke: currentcolor;
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;

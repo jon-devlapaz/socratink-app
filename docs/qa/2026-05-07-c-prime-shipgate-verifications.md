@@ -118,7 +118,7 @@ The C-prime spec §3.2 requires the launch-pad to clear `socratink:pendingShell`
    Verify the console returns the new function reference (no error).
 4. Click the door's arrow submit. Verify in DevTools → Application → Session Storage: `socratink:pendingShell = {"name":"TC-B persistence test","ts":<recent>}`.
 5. The launch pad should mount. Type:
-   ```
+   ```text
    This is a forced-failure test of the persist-then-clear ordering contract. Long enough threshold to pass both client and server gates.
    ```
    The submit button enables.

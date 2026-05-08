@@ -1522,6 +1522,14 @@ const App = (() => {
   //   shell     — pending shell { name, ts } read from sessionStorage.
   //   threshold — the learner's raw threshold text (stored as startingMapContext).
   function persistCreatedConceptFromLaunchPad(map, shell, threshold) {
+    // Defensive shell guard: refuse to persist a nameless concept rather
+    // than create a confusing record with name === undefined / empty if
+    // the caller somehow lost track of the pending shell.
+    if (!shell || typeof shell.name !== 'string' || shell.name.trim() === '') {
+      const err = new Error('launch_pad: invalid shell (missing or empty name)');
+      err.code = 'invalid_shell';
+      throw err;
+    }
     if (!map || typeof map !== 'object') {
       throw new Error('launch_pad: invalid map returned from /api/extract');
     }

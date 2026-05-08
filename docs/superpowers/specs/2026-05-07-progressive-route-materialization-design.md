@@ -125,7 +125,9 @@ Only reached when no source was attached at the door. Reads the pending concept 
 
 **Pending shell hydration.** On mount, the launch pad reads `socratink:pendingShell` from `sessionStorage`. If absent or stale (>24h), the user is bounced back to the door — the launch pad cannot be visited directly without a pending shell.
 
-**Validation.** `Build my map` is enabled when the threshold input meets the existing cold-attempt threshold per `docs/product/spec.md` §2 Phase 1: *3+ words, no "idk" pattern.* This is the existing product gate.
+**Validation.** `Build my map` is enabled when the threshold input meets the launch-pad's lighter cold-attempt gate (3+ words, no "idk" pattern, per `docs/product/spec.md` §2 Phase 1 — implemented in `public/js/launch-pad.js::isSubstantiveThreshold`).
+
+**Client/server gate divergence (intentional, not parity).** The launch-pad's lighter gate is fail-fast UX, not the authoritative contract. The server applies the stricter `is_substantive_sketch` check (8 non-stopword tokens per `models/sketch_validation.py`) at `POST /api/extract`. A learner can pass the client gate and still receive 422 `thin_sketch_no_source`. The launch-pad detects this code and renders its own strategy-framed footer locally (overriding the server message — see §5.2), so the divergence is invisible to learners but explicit in the code.
 
 **Validation copy when blocked.** Strategy-framed footer line: *"A few words about how you think it works will give socratink something to draft from."* Never consolation copy.
 
@@ -270,7 +272,7 @@ The `bypass_rejected` event is load-bearing for principle #8 enforcement — it 
 
 The source panel currently lives inline inside `concept-create.js::beginEditSource` (line 601). To mount it on the door, it has to be extracted into a reusable helper.
 
-- Factor `beginEditSource` and its handlers (`creation-source-panel`, `creation-source-panel-cancel`, `creation-source-panel-attach`, paste/clipboard/file/url handlers) into a new module `public/js/source-panel.js` exporting `mountSourcePanel(targetEl, onAttach, onCancel)`. Both the existing modal and the new door call it.
+- Factor `beginEditSource` and its handlers (`creation-source-panel`, `creation-source-panel-cancel`, `creation-source-panel-attach`, paste/clipboard/file/url handlers) into a new module `public/js/source-panel.js` exporting `mountSourcePanel(targetEl, opts = {})` where `opts = { onAttach, onCancel }`. Callers invoke it as `mountSourcePanel(panel, { onAttach: ..., onCancel: ... })`. Both the existing modal (via `beginEditSource`) and the new door (via `_bindDoorSourceAttach`) call it. After changing call sites, re-run Acceptance criterion #5 to verify the original concept-create modal source flow still works.
 - Acceptance criterion #5 below requires verifying the existing concept-create modal source flow still works after extraction.
 
 ### 6.3 What stays

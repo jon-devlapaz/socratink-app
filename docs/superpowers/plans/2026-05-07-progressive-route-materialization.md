@@ -54,7 +54,7 @@ The new prompt copies the schema/voice rules from this file and adds the ≤4-no
 
 Create `app_prompts/generate-smallest-route-system-v1.txt` with content:
 
-```
+```text
 You generate a smallest actionable route for a learner who has provided
 a concept name and a rough starting sketch (their threshold). Your output
 is a ProvisionalMap.

@@ -82,9 +82,23 @@ export function mountSourcePanel(targetEl, opts = {}) {
   const attachBtn = targetEl.querySelector(".creation-source-panel-attach");
   let fileReadId = 0;
 
+  // Reject URLs the server's /api/extract-url won't accept (non-http/https
+  // schemes, malformed). Same heuristic is reused at attach time so the
+  // Attach button doesn't enable on inputs that would fail downstream.
+  function isValidHttpUrl(s) {
+    const trimmed = String(s || "").trim();
+    if (!trimmed) return false;
+    try {
+      const u = new URL(trimmed);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function panelHasContent() {
     if (activeTab === "paste") return textarea.value.trim().length > 0;
-    if (activeTab === "url") return urlInput.value.trim().length > 0;
+    if (activeTab === "url") return isValidHttpUrl(urlInput.value);
     return pendingFileText.length > 0;
   }
   function refreshAttachEnabled() {
@@ -222,7 +236,9 @@ export function mountSourcePanel(targetEl, opts = {}) {
       // routes URL submits through that endpoint. The chip stores the URL
       // and the fetched text once the URL endpoint succeeds.
       const url = urlInput.value.trim();
-      if (!url) return;
+      // Defensive: reject non-http(s) / malformed URLs at attach time so the
+      // /api/extract-url call downstream doesn't have to.
+      if (!isValidHttpUrl(url)) return;
       payload = { type: "url", url, text: "", filename: "" };
     } else {
       if (!pendingFileText) return;
