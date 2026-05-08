@@ -50,7 +50,7 @@ export function mountSourcePanel(targetEl, opts = {}) {
         <p class="overlay-dropfeedback overlay-url-feedback"></p>
       </div>
       <div class="overlay-panel" data-panel="upload" style="display:none">
-        <div class="overlay-dropzone">
+        <div class="overlay-dropzone" tabindex="0" role="button" aria-label="Attach a file">
           Drop a file or click to browse<br>
           <span style="font-size:11px;opacity:0.65">.txt &nbsp; .md &nbsp; .pdf &nbsp; up to 2MB</span>
         </div>
@@ -77,6 +77,7 @@ export function mountSourcePanel(targetEl, opts = {}) {
   const fileFeedback = targetEl.querySelector(".overlay-file-feedback");
   const cancelBtn = targetEl.querySelector(".creation-source-panel-cancel");
   const attachBtn = targetEl.querySelector(".creation-source-panel-attach");
+  let fileReadId = 0;
 
   function panelHasContent() {
     if (activeTab === "paste") return textarea.value.trim().length > 0;
@@ -125,6 +126,12 @@ export function mountSourcePanel(targetEl, opts = {}) {
   }
 
   dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
   dropzone.addEventListener("dragover", (e) => {
     e.preventDefault();
     dropzone.classList.add("dragover");
@@ -144,6 +151,8 @@ export function mountSourcePanel(targetEl, opts = {}) {
   });
 
   function handleFile(file) {
+    const myReadId = ++fileReadId;
+
     // Two-megabyte cap mirrors the form-era constraint.
     if (file.size > 2 * 1024 * 1024) {
       fileFeedback.className = "overlay-dropfeedback error";
@@ -155,6 +164,7 @@ export function mountSourcePanel(targetEl, opts = {}) {
     }
 
     const onReadOk = (text, filename) => {
+      if (myReadId !== fileReadId) return; // stale; a newer file selection took priority
       pendingFileText = String(text || "");
       pendingFileName = String(filename || file.name);
       fileFeedback.className = "overlay-dropfeedback ok";
@@ -162,6 +172,7 @@ export function mountSourcePanel(targetEl, opts = {}) {
       refreshAttachEnabled();
     };
     const onReadError = (errMsg) => {
+      if (myReadId !== fileReadId) return; // stale; a newer file selection took priority
       fileFeedback.className = "overlay-dropfeedback error";
       fileFeedback.textContent = errMsg || "Couldn't read that file.";
       pendingFileText = "";
