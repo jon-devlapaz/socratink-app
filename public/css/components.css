@@ -2505,8 +2505,11 @@ html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
   padding: 0;
   line-height: 1;
   border-radius: 50%;
+  flex: 0 0 32px;
   width: 32px;
   height: 32px;
+  min-height: 32px;
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: center;
