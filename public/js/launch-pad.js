@@ -111,10 +111,9 @@ export function showLaunchPad(App) {
     emitTelemetry('concept_create.launch_pad.evaporated', {
       age_ms: rawShell ? rawShell.age_ms : 0,
     });
-    // Restore the door: hide all primary views, then reveal ignition.
-    App.hidePrimaryViews();
-    const ignitionEl = document.getElementById('ignition-view');
-    if (ignitionEl) ignitionEl.classList.add('visible');
+    // Restore the door via the canonical entry point so nav highlight,
+    // cap-gate, and hero-card visibility all stay in sync.
+    App.showIgnition();
     return;
   }
 

@@ -515,7 +515,7 @@ const App = (() => {
           mountSourcePanel(panel, {
             onAttach(payload) {
               App._pendingDoorSource = payload;
-              btn.textContent = `Source: ${_doorDescribeSource(payload)} (replace)`;
+              btn.textContent = `Source: ${_doorDescribeSource(payload)} (clear)`;
               _doorUpdateSubmitState();
             },
             onCancel() {
@@ -1569,9 +1569,10 @@ const App = (() => {
     const concept = getActiveConcept();
     if (!concept) return;
     hidePrimaryViews();
-    showMapView(concept);
+    // Pass opts through so showMapView decides skeleton-line state itself
+    // (no implicit hide-then-show via teardown ordering).
+    showMapView(concept, opts);
     setMapMode('study');
-    renderSkeletonLineIfFresh(opts);
   }
 
   async function startAddConcept(seed, originRect) {
@@ -2049,7 +2050,7 @@ const App = (() => {
 
   // ── 16. Map View UI ────────────────────────────────────────
 
-  function showMapView(concept) {
+  function showMapView(concept, opts = {}) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
     const graphContent = document.getElementById('graph-content');
@@ -2286,6 +2287,10 @@ const App = (() => {
     if (window.innerWidth < 900) closeDrawer();
     setMapMode('study');
     restoreStudyResume(concept, data);
+    // Skeleton-line is opt-in via opts.fromLaunchPad (default off). Centralised
+    // here so callers don't have to hide-then-show after the teardown that
+    // hidePrimaryViews triggers.
+    renderSkeletonLineIfFresh(opts);
   }
 
   function teardownMapView({ showHero = false, navId = null } = {}) {
