@@ -244,7 +244,7 @@ There is no `/api/concepts/shell` and no `/api/concepts/<id>/route`. The single 
 ### 5.5 Telemetry
 
 - `concept_create.door.submit` — `{has_source, source_type, sourceless: bool}`
-- `concept_create.launch_pad.entered` — `{from_localstorage_age_ms}` — fires when the launch pad mounts with a valid pending shell.
+- `concept_create.launch_pad.entered` — `{age_ms}` — fires when the launch pad mounts with a valid pending shell.
 - `concept_create.launch_pad.evaporated` — `{age_ms}` — fires when the launch pad is mounted with an expired pending shell and the learner is bounced. Tells us how often the sessionStorage state is lost.
 - `concept_create.launch_pad.submit` — `{threshold_len, build_blocked: bool}`
 - `concept_create.bypass_rejected` — `{path: "client" | "server"}` — fires when the name-only/source-null bypass is caught. `client` is the disabled-button path; `server` is `/api/extract` 422. In a healthy state, every block fires as `client`; `server` blocks indicate an old/buggy/malicious client and are worth knowing about.

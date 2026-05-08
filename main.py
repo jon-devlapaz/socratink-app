@@ -636,7 +636,7 @@ def extract(req: ExtractRequest):
             status_code=500,
             detail={
                 "error": "smallest_route_cap_exceeded",
-                "message": "Source-less generation exceeded the ≤4-node cap. Retry or adjust the prompt.",
+                "message": "Could not generate a valid starting map. Try again or adjust the prompt.",
             },
         )
     except ValueError as err:

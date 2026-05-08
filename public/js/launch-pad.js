@@ -131,7 +131,7 @@ export function showLaunchPad(App) {
   if (nameEl) nameEl.textContent = shell.name;
 
   emitTelemetry('concept_create.launch_pad.entered', {
-    from_localstorage_age_ms: Date.now() - shell.ts,
+    age_ms: Date.now() - shell.ts,
   });
 
   // Reset validation and input from any prior visit.

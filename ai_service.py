@@ -783,7 +783,6 @@ def generate_smallest_provisional_map(
     llm: LLMClient | None = None,
     api_key: str | None = None,
     lc_context: list["LCStandard"] | None = None,
-    telemetry_context: dict | None = None,
     on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
     """Generate a smallest actionable route from {concept, threshold}.
