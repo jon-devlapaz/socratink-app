@@ -3,9 +3,10 @@
 // Launch pad for source-less concept creation (C-prime spec §3.2).
 //
 // Reads the pending shell from sessionStorage, captures the learner's
-// launch attempt (threshold), POSTs to /api/extract via App.submitConceptCreate,
-// persists the returned ProvisionalMap through App.persistCreatedConceptFromLaunchPad,
-// and only then clears the pending shell from sessionStorage.
+// launch attempt (threshold), POSTs to /api/extract via submitConceptCreate
+// (imported from ai_service.js), persists the returned ProvisionalMap through
+// App.persistCreatedConceptFromLaunchPad, and only then clears the pending
+// shell from sessionStorage.
 //
 // Exported functions are wired into the App namespace in app.js:
 //   App.showLaunchPad      = () => showLaunchPad(App)

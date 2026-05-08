@@ -400,15 +400,14 @@ const App = (() => {
 
       const sourcePayload = App._pendingDoorSource || null;
 
-      emitTelemetry('concept_create.door.submit', {
-        has_source: !!sourcePayload,
-        source_type: sourcePayload?.type || null,
-        sourceless: !sourcePayload,
-      });
-
       if (sourcePayload) {
         // Source-attached path: hand off to the existing creation flow.
         // The modal handles /api/extract (or the URL two-step) and persistence.
+        emitTelemetry('concept_create.door.submit', {
+          has_source: true,
+          source_type: sourcePayload?.type || null,
+          sourceless: false,
+        });
         const originRect = conceptField ? conceptField.getBoundingClientRect() : null;
         startAddConcept({
           name,
@@ -434,6 +433,11 @@ const App = (() => {
         alert('Your browser has storage disabled. Please enable session storage to continue.');
         return false;
       }
+      emitTelemetry('concept_create.door.submit', {
+        has_source: false,
+        source_type: null,
+        sourceless: true,
+      });
       App.showLaunchPad();
       return false;
     }
