@@ -147,9 +147,14 @@ class _ScriptedHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         if delay_seconds_per_kb:
+            spec["_bytes_written"] = 0
             for i in range(0, len(body), 1024):
-                self.wfile.write(body[i : i + 1024])
-                self.wfile.flush()
+                try:
+                    self.wfile.write(body[i : i + 1024])
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    return
+                spec["_bytes_written"] += min(1024, len(body) - i)
                 time.sleep(delay_seconds_per_kb)
         else:
             self.wfile.write(body)
