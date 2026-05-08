@@ -83,7 +83,7 @@ The accepted flow is C-prime: launch pad, not graph.
 - Do not collapse launch attempt and cold attempt. Launch attempt is global threshold capture; cold attempt is local reconstruction.
 - Do not add progressive expansion logic in v1. The smallest route is terminal for this slice.
 - Do not add `creation_phase`, `/api/concepts/shell`, or `/api/concepts/<id>/route` for v1.
-- `/api/extract` must reject name-only/source-null/thin-sketch bypasses with `422` and `error: "name_only_bypass"`.
+- `/api/extract` must reject name-only/source-null/thin-sketch bypasses with `422` and `error: "thin_sketch_no_source"` (blank concept name returns `error: "missing_concept"`).
 - The source-less route must be `ProvisionalMap`-compatible because current graph rendering and drill flows consume that shape.
 - Keep the source-attached URL two-step. Raw URL source directly to `/api/extract` remains rejected.
 - Keep graph truth language evidence-bound. Never imply the graph knows what the learner knows.

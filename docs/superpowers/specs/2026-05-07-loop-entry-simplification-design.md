@@ -49,7 +49,7 @@ Two stages now (was three). The summary-card stage from the deferred 2026-05-02 
 
 ### 3.1 Stage A — entry screen
 
-```
+```text
                     What do you want to understand?
 
          ┌────────────────────────────────────────────────────┐

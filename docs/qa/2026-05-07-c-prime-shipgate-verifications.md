@@ -17,9 +17,11 @@ Estimated total time: ~10 minutes. Output: a 30-line report.
 
 ### 0.1 Backend up
 
+Run from repo root:
+
 ```bash
-cd /Users/jondev/dev/socratink/prod/socratink-app
-bash scripts/dev-host.sh   # backend at http://127.0.0.1:8000
+cd "$(git rev-parse --show-toplevel)"
+bash ./scripts/dev-host.sh   # backend at http://127.0.0.1:8000
 ```
 
 Wait for `Application startup complete`.
@@ -50,8 +52,10 @@ curl -i -s -X POST http://127.0.0.1:8000/api/extract \
 
 If raw curl is auth-blocked, run via FastAPI TestClient (auth bypass via the project's `_FakeAuthService` fixture):
 
+Run from repo root:
+
 ```bash
-cd /Users/jondev/dev/socratink/prod/socratink-app
+cd "$(git rev-parse --show-toplevel)"
 python -c "
 from fastapi.testclient import TestClient
 from main import app

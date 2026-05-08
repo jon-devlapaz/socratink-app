@@ -518,7 +518,7 @@ curl -i -X POST http://localhost:8000/api/extract \
 
 Expected: HTTP/1.1 422; body contains `"error":"thin_sketch_no_source"`.
 
-(Note: spec §5.2 calls this error `name_only_bypass` while existing code uses `thin_sketch_no_source`. The behavior is identical; the existing name is what's wired through telemetry. Use the existing name.)
+(Note: spec §5.2 and the agent brief use `thin_sketch_no_source`, which matches the name wired through telemetry. Use the existing name.)
 
 - [ ] **Step 7: Commit**
 

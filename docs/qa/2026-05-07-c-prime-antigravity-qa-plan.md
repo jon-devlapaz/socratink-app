@@ -15,11 +15,13 @@ This plan is written for a browser-capable agent (e.g. Antigravity, Playwright, 
 
 ### 0.1 Start the local stack
 
+Run from repo root:
+
 ```bash
-cd /Users/jondev/dev/socratink/prod/socratink-app
-bash scripts/bootstrap-python.sh   # only if first run
-playwright install chromium        # only if first run
-bash scripts/dev-host.sh           # backend at http://127.0.0.1:8000
+cd "$(git rev-parse --show-toplevel)"
+bash ./scripts/bootstrap-python.sh   # only if first run
+playwright install chromium          # only if first run
+bash ./scripts/dev-host.sh           # backend at http://127.0.0.1:8000
 ```
 
 Wait until the server logs `Application startup complete`. If `dev-host.sh` is not the canonical launcher in this repo, run `ls scripts/` and pick the launcher prefixed with `dev` or `serve` and matches the project's convention.
@@ -249,8 +251,10 @@ If you cannot reach the modal independently, walk through the door with no sourc
 
 **Steps:**
 
+Run from repo root:
+
 ```bash
-cd /Users/jondev/dev/socratink/prod/socratink-app
+cd "$(git rev-parse --show-toplevel)"
 pytest tests/test_generate_smallest_route.py tests/test_extract_route_smallest.py -v
 ```
 

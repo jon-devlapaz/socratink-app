@@ -226,7 +226,7 @@ The existing `/api/extract` endpoint dispatches both paths:
 |---|---|
 | `name` non-empty + `source` present | Today's `extract_knowledge_map` pipeline. Full ProvisionalMap. |
 | `name` non-empty + `source` null + `starting_sketch` substantive (3+ words, not idk) | New `generate_smallest_provisional_map(name, starting_sketch)` path. Smallest ProvisionalMap (≤4 nodes). |
-| `name` non-empty + `source` null + `starting_sketch` null/empty/thin | **`422 Unprocessable Entity`** with `{"error": "name_only_bypass", "message": "A few words about how you think it works will give socratink something to draft from."}`. |
+| `name` non-empty + `source` null + `starting_sketch` null/empty/thin | **`422 Unprocessable Entity`** with `{"error": "thin_sketch_no_source", "message": "Add more to your sketch, or attach source material — either path opens the build."}`. |
 | `name` empty/whitespace-only | `422` with `{"error": "missing_concept", "message": "Concept name required."}` (today's behavior). |
 
 The third row is the bypass guard codex required: *"/api/extract must reject name-only/source-null bypasses."* Without it, a buggy or malicious client could `POST {name: "X", source: null, starting_sketch: ""}` and get a graph back from concept name alone — exactly the doctrine break this spec exists to prevent. This server-side check is non-optional.
@@ -287,7 +287,7 @@ The redesign ships when **all** of these hold:
 1. **Source-less happy path.** Learner enters concept name with no source, taps door submit (arrow), lands on launch pad showing the canonical helper copy, enters substantive threshold (3+ words, not idk), taps `Build my map`, lands on a graph view with a smallest ProvisionalMap (≤4 drillable nodes) AND the *"This is the skeleton. It will grow as you reconstruct."* framing line visible.
 2. **Source-attached happy path (text/file).** Existing `/api/extract` pipeline runs, full ProvisionalMap returned, no launch pad shown.
 3. **Source-attached happy path (URL).** Two-step through `/api/extract-url` then `/api/extract`. No launch pad shown. Server-side rejection of raw URL source on `/api/extract` is preserved.
-4. **Bypass rejection (server-side).** A direct POST to `/api/extract` with `{name: "X", source: null, starting_sketch: ""}` returns `422` with `error: "name_only_bypass"`. Verified with curl.
+4. **Bypass rejection (server-side).** A direct POST to `/api/extract` with `{name: "X", source: null, starting_sketch: ""}` returns `422` with `error: "thin_sketch_no_source"`. Verified with curl.
 5. **Source panel extraction does not regress the existing modal.** After the source-panel module extraction, the existing concept-create modal's source-attach flow (text, URL, file) continues to work. Manual smoke + any existing tests pass.
 6. **sessionStorage shell hydration.** After submitting the door with no source: opening DevTools shows `socratink:pendingShell` set with the typed name and a recent ts. After successfully building or canceling: the key is cleared. Loading the launch pad URL directly without a pending shell bounces the learner to the door.
 7. **Smallest-route cap enforced.** A regression that returned a ProvisionalMap with >4 drillable nodes from the source-less generation path is rejected by the validator with `500`. Tested with a deliberately permissive prompt fixture.
@@ -317,7 +317,7 @@ The redesign ships when **all** of these hold:
 1. **Backend foundation.**
    - Add `generate_smallest_provisional_map(concept, threshold, lc_context=None)` in the AI service module. New prompt at `app_prompts/generate-smallest-route-system-v1.txt`. Validator enforces ≤4 drillable nodes.
    - Add `is_substantive_threshold(text: str) -> bool` helper. Shared test fixture.
-   - Update `/api/extract` dispatch to handle the three rows in §5.2's table. Add the `name_only_bypass` 422 path.
+   - Update `/api/extract` dispatch to handle the three rows in §5.2's table. Add the `thin_sketch_no_source` 422 path.
    - Existing `extract_knowledge_map` and `/api/extract-url` are unchanged; `starting_sketch` is now optional on the source-attached path (it was previously always sent).
    - Test all paths with curl + golden fixtures *before* touching frontend.
 2. **Source-panel extraction.**
@@ -345,7 +345,7 @@ The redesign ships when **all** of these hold:
 | Smallest-route generation produces a worse first-cold-attempt experience than today's full extraction. | The cold-attempt UX is unchanged; the cold attempt fires against the suggested first target, which is a normal drillable node. Telemetry on time-to-first-substantive-cold-attempt + cold-attempt completion rate post-launch will confirm. |
 | Asymmetry between source-attached (full ProvisionalMap) and source-less (smallest ProvisionalMap) confuses learners. | Acknowledged; v1 trade-off. Convergence is a future call. |
 | The smallest-route prompt fails to produce a useful suggested first target for niche concepts. | Validator enforces ≤4 nodes; prompt enforces structure. If generation fails repeatedly, the server returns `500` and the launch pad surfaces a retry affordance ("socratink could not draft a route from this; try elaborating the threshold further"). |
-| The `name_only_bypass` server-side guard regresses (someone "fixes" the 422 to allow a graceful default). | Acceptance criterion #4 tests for it explicitly. Telemetry on `bypass_rejected{path: "server"}` makes any regression visible immediately — server bypasses should be near-zero in steady state. |
+| The `thin_sketch_no_source` server-side guard regresses (someone "fixes" the 422 to allow a graceful default). | Acceptance criterion #4 tests for it explicitly. Telemetry on `bypass_rejected{path: "server"}` makes any regression visible immediately — server bypasses should be near-zero in steady state. |
 | Source-panel extraction breaks the existing concept-create modal. | Acceptance criterion #5 requires explicit verification. The extraction is mechanical (move markup + handlers behind a module export), but it touches a working surface; manual smoke is non-optional. |
 | Concept-name-only generation re-emerges as a "let's just generate something" suggestion during implementation. | Principle #2 is binding. Acceptance criteria #4 and #8 specifically test for it. The supersession note in `2026-05-07-loop-entry-simplification-design.md` preserves the warning. |
 | Increased AI cost from running smallest-route generation on source-less concepts. | Source-less concepts run smallest-route generation only (one model call); source-attached concepts run extraction only (one model call). Net per concept created: still one model call, different prompt, smaller output. LC enrichment adds at most one HTTP call. Cost impact is bounded and tracked via `concept_create.ai_call`. |
