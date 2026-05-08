@@ -977,192 +977,15 @@ const App = (() => {
     };
   }
 
-  // ── Dialog helpers (C6a) ─────────────────────────────────────
-  let __dialogInertedNodes = [];
-  function mountCreationDialog(originRect) {
-    let node = document.getElementById('creation-dialog');
-    const firstMount = !node;
-    if (firstMount) {
-      node = document.createElement('div');
-      node.id = 'creation-dialog';
-      node.className = 'creation-dialog';
-      node.setAttribute('role', 'dialog');
-      node.setAttribute('aria-modal', 'true');
-      node.setAttribute('aria-labelledby', 'creation-dialog-title');
-      node.innerHTML = `
-        <div class="creation-dialog-scrim"></div>
-        <div class="creation-dialog-shell">
-          <div class="creation-dialog-header">
-            <span class="creation-dialog-kicker">NEW CONCEPT</span>
-            <button class="creation-dialog-close" type="button" aria-label="Close">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-          <h3 id="creation-dialog-title" class="creation-dialog-title">Start a concept</h3>
-          <div class="creation-dialog-banner-slot"></div>
-          <div class="creation-dialog-content"></div>
-          <p class="creation-dialog-meta">Study content stays locked until the cold attempt.</p>
-        </div>
-      `;
-      document.body.appendChild(node);
-      node.querySelector('.creation-dialog-close').addEventListener('click', () => closeCreationDialog());
-      node.querySelector('.creation-dialog-scrim').addEventListener('click', () => closeCreationDialog());
-      node.querySelector('.creation-dialog-shell').addEventListener('keydown', trapFocusHandler);
-    }
-    
-    // Apply FLIP coordinates for the Antigravity spring animation
-    if (originRect) {
-      const shell = node.querySelector('.creation-dialog-shell');
-      shell.style.opacity = '0'; // hide while measuring
-      requestAnimationFrame(() => {
-        const finalRect = shell.getBoundingClientRect();
-        const deltaX = originRect.left - finalRect.left;
-        const deltaY = originRect.top - finalRect.top;
-        const scaleX = originRect.width / finalRect.width;
-        const scaleY = originRect.height / finalRect.height;
-        
-        shell.style.setProperty('--flip-x', `${deltaX}px`);
-        shell.style.setProperty('--flip-y', `${deltaY}px`);
-        shell.style.setProperty('--flip-sx', `${scaleX}`);
-        shell.style.setProperty('--flip-sy', `${scaleY}`);
-        
-        shell.style.opacity = ''; // reset
-        shell.classList.remove('anim-antigravity-enter');
-        void shell.offsetWidth; // trigger reflow
-        shell.classList.add('anim-antigravity-enter');
-      });
-    } else {
-      node.querySelector('.creation-dialog-shell').classList.remove('anim-antigravity-enter');
-    }
-
-    node.dataset.open = 'true';
-    __dialogInertedNodes = Array.from(document.body.children).filter(
-      (el) => el !== node && !el.hasAttribute('inert')
-    );
-    __dialogInertedNodes.forEach((el) => el.setAttribute('inert', ''));
-    document.addEventListener('keydown', creationDialogKeyHandler);
-    return {
-      node,
-      shell: node.querySelector('.creation-dialog-shell'),
-      shellContent: node.querySelector('.creation-dialog-content'),
-      bannerSlot: node.querySelector('.creation-dialog-banner-slot'),
-    };
-  }
-
-  function closeCreationDialog() {
-    const node = document.getElementById('creation-dialog');
-    if (!node) return;
-    node.dataset.open = 'false';
-    __dialogInertedNodes.forEach((el) => el.removeAttribute('inert'));
-    __dialogInertedNodes = [];
-    document.removeEventListener('keydown', creationDialogKeyHandler);
-    setTimeout(() => {
-      if (node.dataset.open === 'false') {
-        node.querySelector('.creation-dialog-banner-slot').innerHTML = '';
-        node.querySelector('.creation-dialog-content').innerHTML = '';
-      }
-    }, 350);
-    (window.__creationDialogTrigger || document.body).focus?.();
-  }
-
-  function creationDialogKeyHandler(e) {
-    if (e.key === 'Escape') closeCreationDialog();
-  }
-
-  function trapFocusHandler(e) {
-    if (e.key !== 'Tab') return;
-    const container = e.currentTarget;
-    const focusables = container.querySelectorAll(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
-    if (!focusables.length) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
-  }
-
-  function buildGuestBanner() {
-    const banner = document.createElement('div');
-    banner.className = 'creation-banner creation-banner--guest';
-    banner.innerHTML = `
-      <div>
-        <strong>Guest mode uses sample maps.</strong><br>
-        Sign in to extract your own content into a draft map.
-      </div>
-    `;
-    return banner;
-  }
-
   // Contract invariant — extraction success path must validate payload shape
   // BEFORE any state mutation. Prevents BLOCKER UX-todo #4 silent-discard
-  // where an empty/malformed jsonPayload created a concept anyway.
+  // where an empty/malformed jsonPayload created a concept anyway. Used by
+  // both the launch-pad persistence path and runSourceAttachedSubmit.
   function isValidKnowledgeMap(map) {
     if (!map || typeof map !== 'object') return false;
     if (!Array.isArray(map.backbone) || map.backbone.length === 0) return false;
     if (!Array.isArray(map.clusters)) return false;
     return true;
-  }
-
-  // User-facing, never echoes raw err.message — auth headers / stack
-  // fragments leak through otherwise.
-  function sanitizeExtractError(err) {
-    if (!err) return 'Something went wrong. Try again when ready.';
-    const msg = String(err.message || '');
-    if (/\b401|unauthor/i.test(msg)) return 'Sign in required to run extraction.';
-    if (/\b403|forbidden/i.test(msg)) return 'That request was not allowed.';
-    if (/\b429|rate limit/i.test(msg)) return 'Extraction service is throttled. Give it a minute and retry.';
-    if (/\b5\d{2}|server error/i.test(msg)) return 'The extraction service hiccuped. Try again when ready.';
-    if (/invalid map/i.test(msg)) return 'The extraction service returned an unexpected result. Try again when ready.';
-    return 'The network or service was unreachable. Try again when ready.';
-  }
-
-  function buildErrorBanner(sanitizedMessage) {
-    const banner = document.createElement('div');
-    banner.className = 'creation-banner creation-banner--error';
-    banner.innerHTML = `
-      <div>
-        <strong>Extraction stopped.</strong><br>
-        ${escHtml(sanitizedMessage)}
-      </div>
-    `;
-    return banner;
-  }
-
-  // Calm, seed-specific error banner used in error-recovery remount.
-  // Distinct from buildErrorBanner (which prefixes "Extraction stopped.") to
-  // avoid the console-y tone on what may be a transient model-output issue.
-  function buildSeedFailureBanner(message) {
-    const banner = document.createElement('div');
-    banner.className = 'creation-banner creation-banner--error';
-    banner.innerHTML = `
-      <div>
-        ${escHtml(message)}
-      </div>
-    `;
-    return banner;
-  }
-
-  function buildGuestActions(loginHref) {
-    const row = document.createElement('div');
-    row.className = 'creation-guest-actions';
-    row.innerHTML = `
-      <button class="btn-browse-starters" type="button">Browse starter maps</button>
-      <a class="auth-link" href="${escHtml(loginHref)}">Continue with Google</a>
-    `;
-    row.querySelector('.btn-browse-starters').addEventListener('click', () => {
-      closeCreationDialog();
-      showLibrary();
-    });
-    return row;
   }
 
   // ── mountExtractOverlay ─────────────────────────────────────
@@ -1697,9 +1520,13 @@ const App = (() => {
         apiKey,
       });
       const provisionalMap = data.provisional_map || data.knowledge_map || null;
-      if (!provisionalMap) {
+      // Same shape gate the (now-retired) modal handleSubmit applied. Without
+      // it a malformed extract result would still persist a corrupt concept.
+      if (!isValidKnowledgeMap(provisionalMap)) {
         overlayHandle.removeOverlay(false);
-        setDoorError('The map came back empty. Try again or adjust the source.');
+        setDoorError(
+          'The extraction service returned an unexpected result. Try again, or attach a different source.',
+        );
         return;
       }
       finishConceptCreateAfterOverlay({
@@ -1732,125 +1559,6 @@ const App = (() => {
       }
       setDoorError(message);
     }
-  }
-
-  async function startAddConcept(seed, originRect) {
-    window.__creationDialogTrigger = document.activeElement;
-    const dialog = mountCreationDialog(originRect);
-    let isGuest = false;
-    let isDevMode = false;
-    let session = null;
-    try {
-      session = await fetchAuthSession();
-      isGuest = !!(session && session.guest_mode);
-      isDevMode = !!(session && session.dev_mode);
-    } catch (err) {
-      console.warn('Auth fetch failed during concept creation:', err);
-    }
-
-    // Guest sessions are normally gated out of LLM-extract concept creation.
-    // Dev mode (SOCRATINK_DEV_AUTOGUEST=1, hard-gated against Vercel/CI on the
-    // server) lifts the gate so local testing and agent flows work without a
-    // Google sign-in.
-    if (isGuest && !isDevMode) {
-      dialog.bannerSlot.appendChild(buildGuestBanner());
-      dialog.shellContent.appendChild(buildGuestActions(buildLoginHref('/')));
-      const firstFocusable = dialog.shell.querySelector('a, button:not([disabled])');
-      firstFocusable?.focus();
-      return;
-    }
-
-    const { buildConversationalCreateUI } = await import('./concept-create.js');
-
-    // Re-mount the creation dialog at the summary card stage, preserving the
-    // learner's concept, sketchTurns, and source from the failed submit.
-    // Banner names two strategic paths without consoling or naming the provider.
-    function remountWithError(err, preservedState) {
-      const dialog2 = mountCreationDialog(); // No origin rect needed for remount
-      // Prefer the server's strategy-framed message (422 returns
-      // {error, message} like "Add more to your sketch, or attach source
-      // material — either path opens the build."). Falls back to the
-      // generic seed-failure copy for non-422 transient failures.
-      const serverMessage = err && err.status === 422 && err.body && err.body.message
-        ? String(err.body.message)
-        : null;
-      const bannerCopy = serverMessage
-        || "socratink couldn't draft from this seed. You can try again, or attach source material for a different draft path.";
-      dialog2.bannerSlot.appendChild(buildSeedFailureBanner(bannerCopy));
-      buildConversationalCreateUI(dialog2.shellContent, {
-        seed: {
-          name: preservedState?.name || seed?.name || "",
-          sketchTurns: preservedState?.sketchTurns || [],
-          source: preservedState?.source || null,
-          stage: "summary",
-          ctaOverrideCopy: "Try again",
-        },
-        onCancel: () => closeCreationDialog(),
-        onBeforeSubmit: ({ name: n }) => {
-          closeCreationDialog();
-          return mountExtractOverlay({ name: n });
-        },
-        onSubmit: handleSubmit,
-        onSubmitError: ({ overlayHandle, error, preservedState: ps }) => {
-          if (overlayHandle) overlayHandle.removeOverlay(false);
-          remountWithError(error, ps);
-        },
-      });
-    }
-
-    function handleSubmit({ name, startingSketch, source, provisionalMap, overlayHandle }) {
-      if (!isValidKnowledgeMap(provisionalMap)) {
-        // The dialog is already closed (onBeforeSubmit closed it). Tear down
-        // the overlay and re-mount the dialog with an error banner.
-        // Preserve the learner's sketch and source so the re-mounted summary
-        // card is populated — same effort-preservation as the network-error path.
-        if (overlayHandle) overlayHandle.removeOverlay(false);
-        const preservedState = {
-          name,
-          sketchTurns: startingSketch ? [startingSketch] : [],
-          source,
-        };
-        remountWithError(new Error('invalid map'), preservedState);
-        return;
-      }
-
-      finishConceptCreateAfterOverlay({
-        id: generateId(),
-        name,
-        knowledgeMap: provisionalMap,
-        startedAtIso: new Date().toISOString(),
-        startedPerf: performance.now(),
-        startingSketch,
-        source,
-        overlayHandle,
-      });
-    }
-
-    buildConversationalCreateUI(dialog.shellContent, {
-      seed,
-      onCancel: () => closeCreationDialog(),
-      onBeforeSubmit: ({ name }) => {
-        if (loadConcepts().length >= BOARD_SLOT_COUNT) {
-          // Library is at the visible board cap. Don't pay for an LLM call.
-          // Don't close the dialog. Surface the cap inline so the learner
-          // can either remove a concept or cancel.
-          dialog.bannerSlot.innerHTML = '';
-          dialog.bannerSlot.appendChild(
-            buildSeedFailureBanner('The board holds nine concepts. Retire one to start another.')
-          );
-          return null;
-        }
-        // Pre-flight: close the dialog and mount the overlay BEFORE the
-        // network call so there is no silent-wait gap after clicking Build.
-        closeCreationDialog();
-        return mountExtractOverlay({ name });
-      },
-      onSubmit: handleSubmit,
-      onSubmitError: ({ overlayHandle, error, preservedState }) => {
-        if (overlayHandle) overlayHandle.removeOverlay(false);
-        remountWithError(error, preservedState);
-      },
-    });
   }
 
   function deleteConcept(id, btnEl) {
