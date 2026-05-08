@@ -42,7 +42,7 @@ Pydantic validation and the request errors):
 REFERENCE-CLOSURE RULES (the validators check every one of these):
 
 - Every cluster id you reference (in backbone.dependent_clusters, in
-  relationships.domain_mechanics, in relationships.learning_prereqs,
+  relationships.domain_mechanics, in relationships.learning_prerequisites,
   in frameworks[].source_clusters) MUST exist in the clusters[] array.
 - Every cluster MUST appear in at least one backbone's dependent_clusters
   list. Do not leave orphan clusters.

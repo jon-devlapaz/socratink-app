@@ -1507,6 +1507,13 @@ const App = (() => {
     if (!map || typeof map !== 'object') {
       throw new Error('launch_pad: invalid map returned from /api/extract');
     }
+    if (!isValidKnowledgeMap(map)) {
+      throw new Error('invalid map shape from launch-pad generation');
+    }
+    const concepts = loadConcepts();
+    if (concepts.length >= BOARD_SLOT_COUNT) {
+      throw new Error('board is at capacity (' + BOARD_SLOT_COUNT + ')');
+    }
 
     const id = generateId();
     const startingMapContext = String(threshold || '').trim().slice(0, 1200);
@@ -1515,7 +1522,6 @@ const App = (() => {
     jsonPayload.metadata.starting_map_context = startingMapContext;
     jsonPayload.metadata.map_maturity = 'provisional';
 
-    const concepts = loadConcepts();
     const concept = {
       id,
       name: shell.name,
@@ -1523,7 +1529,7 @@ const App = (() => {
       createdAt: Date.now(),
       timerStart: null,
       contentPreview: '',
-      contentType: 'sketch',
+      contentType: null,
       contentFilename: null,
       sourceUrl: null,
       startingMapContext,

@@ -18,9 +18,12 @@ from models.provisional_map import (
 def provisional_map_with_node_count(n: int) -> ProvisionalMap:
     """Build a ProvisionalMap with `n` drillable cluster nodes for the cap test.
 
+    n must be >= 0. Raises ValueError for negative values.
     Each cluster has one subnode (satisfying the drillability rule).
     The backbone covers all clusters. Relationships and frameworks are empty.
     """
+    if n < 0:
+        raise ValueError(f"n must be >= 0, got {n}")
     clusters = [
         Cluster(
             id=f"c{i + 1}",

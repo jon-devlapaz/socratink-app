@@ -638,7 +638,7 @@ def extract(req: ExtractRequest):
                 "error": "smallest_route_cap_exceeded",
                 "message": "Could not generate a valid starting map. Try again or adjust the prompt.",
             },
-        )
+        ) from err
     except ValueError as err:
         # Pydantic structural-validation errors raised by ProvisionalMap
         # (closure rules, identifier grammar). The message here is OUR
