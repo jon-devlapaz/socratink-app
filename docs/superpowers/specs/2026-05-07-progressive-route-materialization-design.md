@@ -226,7 +226,7 @@ The existing `/api/extract` endpoint dispatches both paths:
 |---|---|
 | `name` non-empty + `source` present | Today's `extract_knowledge_map` pipeline. Full ProvisionalMap. |
 | `name` non-empty + `source` null + `starting_sketch` substantive (3+ words, not idk) | New `generate_smallest_provisional_map(name, starting_sketch)` path. Smallest ProvisionalMap (≤4 nodes). |
-| `name` non-empty + `source` null + `starting_sketch` null/empty/thin | **`422 Unprocessable Entity`** with `{"error": "thin_sketch_no_source", "message": "Add more to your sketch, or attach source material — either path opens the build."}`. |
+| `name` non-empty + `source` null + `starting_sketch` null/empty/thin | **`422 Unprocessable Entity`** with `{"error": "thin_sketch_no_source", "message": "A few words about how you think it works will give socratink something to draft from."}`. Message matches the launch-pad's strategy-framed copy (§3.2 line 130); the C-prime architecture only reaches this 422 from the launch-pad surface, which has no source-attach affordance, so the prior "attach source material" suggestion was a dead end here. |
 | `name` empty/whitespace-only | `422` with `{"error": "missing_concept", "message": "Concept name required."}` (today's behavior). |
 
 The third row is the bypass guard codex required: *"/api/extract must reject name-only/source-null bypasses."* Without it, a buggy or malicious client could `POST {name: "X", source: null, starting_sketch: ""}` and get a graph back from concept name alone — exactly the doctrine break this spec exists to prevent. This server-side check is non-optional.

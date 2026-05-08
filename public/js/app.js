@@ -1601,7 +1601,17 @@ const App = (() => {
 
   function navigateToGraphViewFromLaunchPad(opts) {
     const concept = getActiveConcept();
-    if (!concept) return;
+    if (!concept) {
+      // No active concept — likely activateConceptSelection was inside the
+      // post-save try/catch in persistCreatedConceptFromLaunchPad and
+      // threw. The concept IS saved (saveConcepts ran first), so falling
+      // back to the desk lets the user see and click their newly-saved
+      // concept rather than getting stuck on the launch-pad with no
+      // feedback (the shell was already cleared by the caller).
+      console.warn('navigateToGraphViewFromLaunchPad: no active concept; falling back to desk');
+      showDashboard();
+      return;
+    }
     hidePrimaryViews();
     // Pass opts through so showMapView decides skeleton-line state itself
     // (no implicit hide-then-show via teardown ordering). showMapView
