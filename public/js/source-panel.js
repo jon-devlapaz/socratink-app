@@ -27,9 +27,12 @@
 //   opts.onCancel(): called when the learner clicks Cancel or presses
 //     Escape inside the panel.
 //
-//   teardown(): removes event listeners. For v1, the modal does not call
-//     this (it relies on the chip being re-rendered via rerenderSummary).
-//     The door surface uses teardown to collapse the panel cleanly.
+//   teardown(): NO-OP. Listeners attach to children of targetEl, so
+//     callers clean up by replacing innerHTML on the mount point (which
+//     drops the listener-bearing nodes — the GC handles the rest). Both
+//     the concept-create modal and the door rely on this pattern. The
+//     return shape includes teardown only so future callers that need
+//     explicit cleanup can opt in by replacing the implementation.
 
 export function mountSourcePanel(targetEl, opts = {}) {
   const onAttach = opts.onAttach || (() => {});

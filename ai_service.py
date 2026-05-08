@@ -703,11 +703,17 @@ class SmallestRouteCapExceeded(ValueError):
 def _validate_smallest_route(pm: ProvisionalMap) -> None:
     """Enforce C-prime spec §5.1 ≤4-node cap.
 
-    Counts drillable clusters on the ProvisionalMap. Raises
-    SmallestRouteCapExceeded if the count is 0 or >4.
+    Counts total drillable subnodes across all clusters on the
+    ProvisionalMap. Raises SmallestRouteCapExceeded if the count is 0
+    or >4.
+
+    Counting subnodes rather than top-level clusters is the actual
+    structural defence of the spec invariant: ProvisionalMap permits
+    multiple subnodes per cluster, so a 4-cluster x N-subnode-each
+    response would otherwise bypass the cap.
     """
-    drillable = list(pm.clusters) if pm.clusters is not None else []
-    n = len(drillable)
+    clusters = list(pm.clusters) if pm.clusters is not None else []
+    n = sum(len(c.subnodes or []) for c in clusters)
     if n == 0:
         raise SmallestRouteCapExceeded(
             "smallest route must have at least one drillable node "

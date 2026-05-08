@@ -1556,13 +1556,27 @@ const App = (() => {
     // No source text — contentStore is not written for source-less concepts.
     concepts.push(concept);
     saveConcepts(concepts);
-    renderGrid(concepts);
-    renderConceptList(concepts);
-    renderIgnitionGate();
-    clearHeroThresholdComposer();
-    // Select the concept so it becomes the active concept for subsequent
-    // showMapView/setMapMode calls. setActiveId via activateConceptSelection.
-    activateConceptSelection(id);
+    // Post-save side effects (render, composer-clear, active-concept set) are
+    // wrapped in try/catch so a render hiccup doesn't propagate as a
+    // persistence failure. The concept is already on disk; treating a render
+    // throw as failure would cause runLaunchPadAction to leave the pending
+    // shell intact, and a retry would either duplicate the concept or hit
+    // BOARD_SLOT_COUNT. Logged but swallowed; the next render cycle picks
+    // up the new concept correctly.
+    try {
+      renderGrid(concepts);
+      renderConceptList(concepts);
+      renderIgnitionGate();
+      clearHeroThresholdComposer();
+      // Select the concept so it becomes the active concept for subsequent
+      // showMapView/setMapMode calls. setActiveId via activateConceptSelection.
+      activateConceptSelection(id);
+    } catch (renderErr) {
+      console.error(
+        'persistCreatedConceptFromLaunchPad: post-save render failed (concept saved successfully)',
+        renderErr,
+      );
+    }
   }
 
   // ── navigateToGraphViewFromLaunchPad ──────────────────────────────────────
@@ -1588,9 +1602,9 @@ const App = (() => {
     if (!concept) return;
     hidePrimaryViews();
     // Pass opts through so showMapView decides skeleton-line state itself
-    // (no implicit hide-then-show via teardown ordering).
+    // (no implicit hide-then-show via teardown ordering). showMapView
+    // already calls setMapMode('study') near the end of its body.
     showMapView(concept, opts);
-    setMapMode('study');
   }
 
   async function startAddConcept(seed, originRect) {
