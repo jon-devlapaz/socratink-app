@@ -344,14 +344,15 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     if not sketch_ok:
         # Spec §3.2 row 1: thin sketch + no source → block.
-        # Message matches the launch-pad's strategy-framed copy
-        # (THIN_THRESHOLD_COPY in launch-pad.js + spec §3.2 line 130).
-        # Drops the "attach source material" suggestion because in C-prime
-        # this 422 is only reached by the launch-pad surface, which has no
-        # source-attach affordance.
+        # Server-side message names BOTH escape paths (sketch or source)
+        # because the conversational concept-create modal can also reach
+        # this 422 (modal has both a sketch chip and a source chip).
+        # The launch-pad surface has no source-attach affordance, so it
+        # overrides this copy locally — see launch-pad.js handling of the
+        # thin_sketch_no_source code, which routes to THIN_THRESHOLD_COPY.
         return {"path": "error", "status": 422,
                 "error": "thin_sketch_no_source",
-                "message": "A few words about how you think it works will give socratink something to draft from."}
+                "message": "Add more to your sketch, or attach source material — either path opens the build."}
 
     return {"path": "from_threshold", "name": name, "threshold": sketch}
 

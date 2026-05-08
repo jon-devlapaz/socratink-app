@@ -229,12 +229,20 @@ export async function runLaunchPadAction(event, App) {
     });
   } catch (err) {
     if (err && err.status === 422) {
-      // Server-side thin-sketch rejection (thin_sketch_no_source).
-      // Render the strategy-framed footer, emit blocked telemetry, leave shell.
-      const serverMsg = (err.body && err.body.message)
-        ? String(err.body.message)
-        : THIN_THRESHOLD_COPY;
-      if (validation) validation.textContent = serverMsg;
+      // Server-side thin-sketch rejection (thin_sketch_no_source) or other 422.
+      // For thin_sketch_no_source specifically, override the server message
+      // with THIN_THRESHOLD_COPY because the launch-pad has no source-attach
+      // affordance — the server message names "or attach source material" as
+      // an escape path, but that path only exists at the door / modal. For
+      // other 422 codes, surface the server message verbatim.
+      const code = err.body && err.body.error;
+      const isThinSketch = code === 'thin_sketch_no_source';
+      const validationCopy = isThinSketch
+        ? THIN_THRESHOLD_COPY
+        : ((err.body && err.body.message)
+          ? String(err.body.message)
+          : THIN_THRESHOLD_COPY);
+      if (validation) validation.textContent = validationCopy;
       if (submit) submit.disabled = false;
       emitTelemetry('concept_create.launch_pad.submit', {
         threshold_len: threshold.length,
