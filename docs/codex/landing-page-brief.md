@@ -8,7 +8,7 @@ The app itself lives at `app.socratink.ai` (separate property; not edited by thi
 
 ## What socratink is (one paragraph)
 
-socratink is a metacognitive learning tool for learning by reconstruction. The learner brings source material, names a concept they want to understand, writes a **starting sketch** of how they think it works, then makes an unscored **cold attempt** before any explanation is shown. socratink shows targeted study only after the attempt, then asks the learner to reconstruct it again later under spacing. The graph of what's "learned" updates only when the learner provides reconstruction evidence — never from reading, viewing, or generating.
+socratink is a metacognitive learning tool for learning by reconstruction. The learner names a concept they want to understand, optionally attaches source material, and is taken straight into a **smallest actionable route** through the idea. The learner makes an unscored **cold attempt** before any explanation is shown. socratink shows targeted study only after the attempt, then asks the learner to reconstruct it again later under spacing. The graph of what's "learned" updates only when the learner provides reconstruction evidence — never from reading, viewing, or generating.
 
 The core promise: **see what you can actually explain.**
 
@@ -69,7 +69,7 @@ The chosen voice register is **reading room and field journal**. Scholarly-natur
 | Product | `socratink` | Always lowercase. |
 | Empty-state nav for starting a new concept | `New Entry` | (replaces older "Ignition") |
 | Primary action — the unscored attempt | `Try from memory` | (replaces older "Start Cold Attempt") |
-| The artifact you write before the cold attempt | `Starting Sketch` | (the field heading on the empty page) |
+| The smallest viable path the learner is taken into for a source-less concept | `smallest actionable route` | (replaces the older "Starting Sketch" composer; deprecated 2026-05-07) |
 | The act of attempting from memory before any explanation | `cold attempt` / `first cold attempt` | Domain noun. |
 | The learning unit in the graph (learner-facing) | `entry` | (replaces the older internal "room" / "node") |
 | A grouping of entries under a backbone branch | `section` | (replaces the older internal "cluster") |
@@ -145,7 +145,7 @@ Or:
 
 ### CTA
 
-Primary CTA: `Open socratink` or `Begin a starting sketch` or `Try from memory →`
+Primary CTA: `Open socratink` or `Open a smallest route` or `Try from memory →`
 
 **NOT acceptable CTAs:**
 - "Get started for free" (SaaS marketing register)
@@ -190,7 +190,7 @@ If the agent has free rein on structure, recommend:
 1. **Hero** — wordmark + one-line method statement + primary CTA. No animation. No "particles" or "constellation" effects (those are app chrome, not marketing).
 2. **The loop (how it works)** — four numbered steps as above.
 3. **What socratink is not** — anti-pitch list. Crucial differentiator.
-4. **A worked example** — one concrete walk-through using a real concept (e.g., "How a learner uses socratink to study photosynthesis"). Show: the starting sketch, the cold attempt, the targeted repair, the spaced re-drill. Keep it text-heavy, scholarly. *Optional: skippable.*
+4. **A worked example** — one concrete walk-through using a real concept (e.g., "How a learner uses socratink to study photosynthesis"). Show: the smallest actionable route, the cold attempt, the targeted repair, the spaced re-drill. Keep it text-heavy, scholarly. *Optional: skippable.*
 5. **Trust paragraph** — the evidence-based promise; what the graph means and doesn't mean.
 6. **Sign-in / try-it CTA** — Continue with Google + Continue as guest, with one-line "we keep what you write on this device until you sign in" reassurance.
 7. **Footer** — socratink lowercase wordmark, links (about, contact, privacy), no social-icon row larger than the wordmark itself.

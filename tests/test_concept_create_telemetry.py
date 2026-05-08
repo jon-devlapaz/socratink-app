@@ -109,7 +109,7 @@ def test_lc_queried_emitted_after_search(client, caplog):
         )],
     )
     with patch("main.LCClient") as fake_lc_cls, \
-         patch("main.generate_provisional_map_from_sketch", return_value=fake_map):
+         patch("main.generate_smallest_provisional_map", return_value=fake_map):
         fake_lc_cls.return_value.search_concept.return_value = fake_lc_result
         client.post("/api/extract", json={
             "name": "Photosynthesis",
@@ -133,7 +133,7 @@ def test_lc_queried_emitted_even_when_lc_returns_none(client, caplog):
     caplog.set_level(logging.INFO)
     fake_map = _minimal_map()
     with patch("main.LCClient") as fake_lc_cls, \
-         patch("main.generate_provisional_map_from_sketch", return_value=fake_map):
+         patch("main.generate_smallest_provisional_map", return_value=fake_map):
         fake_lc_cls.return_value.search_concept.return_value = None
         fake_lc_cls.return_value.last_status = "ok"
         client.post("/api/extract", json={
@@ -152,7 +152,7 @@ def test_lc_skip_reason_is_error_when_lcclient_raises(client, caplog):
     # Set the env var so the reason is NOT key_missing
     with patch.dict(os.environ, {"LEARNING_COMMONS_API_KEY": "sk_test_xxx"}), \
          patch("main.LCClient", side_effect=RuntimeError("LC client init failed")), \
-         patch("main.generate_provisional_map_from_sketch", return_value=fake_map):
+         patch("main.generate_smallest_provisional_map", return_value=fake_map):
         client.post("/api/extract", json={
             "name": "Photosynthesis",
             "starting_sketch": "Plants take in light and make sugar from water and carbon dioxide.",
@@ -230,7 +230,7 @@ def test_lc_skip_reason_is_timeout_when_socket_timeout(client, caplog):
     caplog.set_level(logging.INFO)
     fake_map = _minimal_map()
     with patch("main.LCClient") as fake_lc_cls, \
-         patch("main.generate_provisional_map_from_sketch", return_value=fake_map):
+         patch("main.generate_smallest_provisional_map", return_value=fake_map):
         instance = fake_lc_cls.return_value
         instance.search_concept.return_value = None
         instance.last_status = "timeout"

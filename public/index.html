@@ -55,7 +55,7 @@
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
       <span class="material-symbols-outlined">bolt</span>
-      <span class="bottom-nav-label">New Entry</span>
+      <span class="bottom-nav-label">New concept</span>
     </a>
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
       <span class="material-symbols-outlined">auto_awesome</span>
@@ -80,7 +80,7 @@
 
     <nav class="sidebar-nav">
       <a id="nav-ignition" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> New Entry</a>
+        onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> New concept</a>
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
         onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
@@ -205,18 +205,17 @@
               <!-- #hero-state-chip is the data-state hook that CSS :has() rules depend on.
                    In empty state we hide the wrapping .hero-meta-row entirely (see components.css).
                    Non-empty states render the chip text via renderHero(). -->
-              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">no map yet</div>
+              <div class="hero-state-chip" id="hero-state-chip" data-state="empty">no concepts yet</div>
             </div>
           </div>
           <div class="hero-eyebrow-row">
             <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
           </div>
-          <h1 class="hero-title" id="title">Your draft paths.</h1>
-          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to open an entry, or start a new draft path at New Entry.</p>
-          <p class="hero-voice-line">The map stays honest because evidence comes from your reconstruction.</p>
+          <h1 class="hero-title" id="title">Your concepts.</h1>
+          <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter, or start a new concept.</p>
           <div class="hero-actions">
             <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
-              <span class="hero-primary-action__label">Begin at New Entry</span>
+              <span class="hero-primary-action__label">New concept</span>
               <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>
@@ -275,13 +274,12 @@
 
     </section>
 
-    <!-- Ignition View: threshold composer for starting a new concept -->
+    <!-- Ignition View: door for new concept entry (C-prime) -->
     <section id="ignition-view" class="primary-view ignition-view" aria-labelledby="ignition-title">
       <div class="intro-particles" aria-hidden="true">
         <canvas id="intro-particle-canvas"></canvas>
       </div>
       <div class="ignition-view__inner">
-        <p class="ignition-eyebrow">Start here</p>
         <h1 class="ignition-title" id="ignition-title">What do you want to understand?</h1>
 
         <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() at board capacity. -->
@@ -290,39 +288,66 @@
           <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
         </div>
 
-        <!-- Threshold composer. Hidden by renderIgnitionGate() when at cap. -->
+        <!-- Door composer. -->
         <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <div class="hero-threshold-fields">
-            <label class="hero-threshold-field" for="hero-single-input-field">
-              <span class="hero-threshold-field__label">Concept</span>
-              <textarea class="hero-single-input__field hero-single-input__field--concept"
-                        id="hero-single-input-field"
-                        rows="1"
-                        maxlength="200"
-                        placeholder='e.g. Photosynthesis'
-                        aria-label="What do you want to understand?"
-                        aria-describedby="hero-threshold-validation"></textarea>
-            </label>
-            <label class="hero-threshold-field hero-threshold-field--sketch" for="hero-starting-map-field">
-              <span class="hero-threshold-field__label">Starting sketch</span>
-              <textarea class="hero-single-input__field hero-single-input__field--sketch"
-                        id="hero-starting-map-field"
-                        rows="3"
-                        maxlength="1200"
-                        placeholder="Parts, guesses, examples, confusions. No polished answer needed."
-                        aria-describedby="hero-threshold-validation"></textarea>
-            </label>
-            <p class="hero-threshold-validation" id="hero-threshold-validation" aria-live="polite"></p>
-          </div>
+          <label class="hero-threshold-field" for="hero-single-input-field">
+            <span class="hero-threshold-field__label sr-only">Concept</span>
+            <textarea class="hero-single-input__field hero-single-input__field--concept"
+                      id="hero-single-input-field"
+                      rows="2"
+                      maxlength="200"
+                      placeholder="e.g. photosynthesis, the Krebs cycle, recursion in Python…"
+                      aria-label="What do you want to understand?"></textarea>
+          </label>
+
+          <button type="button" class="hero-source-attach" id="hero-source-attach"
+                  aria-expanded="false" aria-controls="hero-source-panel">
+            + add source material
+          </button>
+          <div class="hero-source-panel" id="hero-source-panel" hidden></div>
+
+          <p class="hero-door-error" id="hero-door-error" role="status" aria-live="polite" hidden></p>
+
           <div class="hero-single-input__row">
-            <button type="submit" class="hero-single-input__submit" disabled>
-              <span>Create draft path</span>
+            <button type="submit" class="hero-single-input__submit" id="hero-door-submit" disabled
+                    aria-label="Continue">
+              <span class="sr-only">Continue</span>
               <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h13"></path>
                 <path d="m13 6 6 6-6 6"></path>
               </svg>
             </button>
           </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Launch Pad: threshold capture for source-less concepts (C-prime) -->
+    <section id="launch-pad-view" class="primary-view launch-pad-view" aria-labelledby="launch-pad-title" hidden>
+      <div class="launch-pad-view__inner">
+        <p class="launch-pad-concept-name" id="launch-pad-concept-name"></p>
+        <h1 class="launch-pad-title" id="launch-pad-title">What do you already think is inside this concept?</h1>
+        <p class="launch-pad-helper">Name the parts, guesses, examples, or confusions you have.</p>
+        <form class="launch-pad-form" id="launch-pad-form" onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
+          <label class="launch-pad-field" for="launch-pad-input">
+            <span class="launch-pad-field__label sr-only">Your starting model</span>
+            <textarea class="launch-pad-input"
+                      id="launch-pad-input"
+                      rows="5"
+                      maxlength="1200"
+                      aria-describedby="launch-pad-validation"
+                      aria-label="Your starting model"></textarea>
+          </label>
+          <p class="launch-pad-validation" id="launch-pad-validation" aria-live="polite"></p>
+          <div class="launch-pad-form__row">
+            <button type="submit" class="launch-pad-submit" id="launch-pad-submit" disabled>
+              <span>Build my map</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13"></path><path d="m13 6 6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+          <p class="launch-pad-footer">Study content stays locked until the cold attempt.</p>
         </form>
       </div>
     </section>
@@ -341,6 +366,7 @@
     <!-- Map View Panel -->
     <section id="map-view" class="map-view">
       <div class="map-view-shell">
+        <p class="graph-skeleton-line" id="graph-skeleton-line" hidden></p>
         <header class="concept-header" id="concept-header">
           <div class="concept-header-main">
             <h2 class="concept-header-title" id="concept-header-title"></h2>

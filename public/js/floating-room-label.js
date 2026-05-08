@@ -111,7 +111,7 @@ import { Bus } from './bus.js';
       const concept = concepts[conceptIdx];
       show(tileGroup, concept
         ? { name: concept.name, action: 'Open entry', kind: 'room' }
-        : { name: 'Begin a concept', action: '', kind: 'empty' });
+        : { name: 'New concept', action: '', kind: 'empty' });
     };
 
     tileGroup.addEventListener('mouseenter', showForTile);

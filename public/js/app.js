@@ -18,7 +18,6 @@ import {
   redirectToLogin,
 } from './auth.js?v=3';
 import { maybeShowFirstRunWelcome } from './welcome.js?v=8';
-import { isSubstantiveSketch } from './sketch-validation.js';
 import { prefersReducedMotion } from './motion.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
@@ -26,6 +25,8 @@ import {
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
 import { AudioFX } from './audio.js?v=4';
+import { showLaunchPad as _showLaunchPad, runLaunchPadAction as _runLaunchPadAction } from './launch-pad.js';
+import { emitTelemetry } from './telemetry.js';
 
 import {
   card, titleEl, descEl, primaryControls, drillControls,
@@ -272,25 +273,25 @@ const App = (() => {
   function getHeroStateLabel(state) {
     switch (state) {
       case 'instantiated': return 'source captured';
-      case 'growing': return 'draft path';
+      case 'growing': return 'concept';
       case 'fractured': return 'worth revisiting';
       case 'hibernating': return 'spacing';
       case 'actualized': return 'spaced evidence';
-      default: return 'no map yet';
+      default: return 'no concepts yet';
     }
   }
 
   function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
+    if (!concept) return 'Pick a tile to enter, or start a new concept.';
     switch (concept.state) {
       case 'instantiated':
         return concept.graphData
-          ? 'Open the draft path. It is a hypothesis, not evidence yet.'
-          : 'Map this source into a draft path. The draft is not learner evidence.';
+          ? 'Open the concept. It is a hypothesis, not evidence yet.'
+          : 'Map this source into a concept. The map is not learner evidence.';
       case 'growing':
         return concept.graphData
-          ? 'Open the draft path. Start with one cold attempt before study appears.'
-          : 'Continue by mapping this concept into a draft path.';
+          ? 'Open the concept. Start with one cold attempt before study appears.'
+          : 'Continue by mapping this source into a concept.';
       case 'fractured':
         return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
       case 'hibernating':
@@ -298,7 +299,7 @@ const App = (() => {
       case 'actualized':
         return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
       default:
-        return 'Pick a tile to open an entry, or start a new draft path at New Entry.';
+        return 'Pick a tile to enter, or start a new concept.';
     }
   }
 
@@ -335,7 +336,7 @@ const App = (() => {
       titleEl.textContent = 'What do you want to understand?';
       descEl.textContent = getHeroGuidance(null);
       if (heroStateChipEl) {
-        heroStateChipEl.textContent = 'no map yet';
+        heroStateChipEl.textContent = 'no concepts yet';
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
@@ -362,46 +363,90 @@ const App = (() => {
   }
 
   function clearHeroThresholdComposer() {
+    // C-prime door: only one text field (concept). Clear it and reset submit.
     const conceptField = document.getElementById('hero-single-input-field');
-    const sketchField = document.getElementById('hero-starting-map-field');
-    [conceptField, sketchField].forEach((field) => {
-      if (!field) return;
-      field.value = '';
-      field.style.height = '';
-    });
-    const validation = document.getElementById('hero-threshold-validation');
-    if (validation) {
-      validation.textContent = '';
+    if (conceptField) {
+      conceptField.value = '';
+      conceptField.style.height = '';
     }
-    const submit = document.querySelector('.hero-single-input__submit');
-    if (submit instanceof HTMLButtonElement) {
-      submit.disabled = true;
-      submit.title = 'Add one concept and one guess, example, or confusion before socratink builds the draft path.';
+    // Reset any pending source selection from the door affordance.
+    App._pendingDoorSource = null;
+    const sourceAttachBtn = document.getElementById('hero-source-attach');
+    const sourcePanel = document.getElementById('hero-source-panel');
+    if (sourceAttachBtn) {
+      sourceAttachBtn.setAttribute('aria-expanded', 'false');
+      sourceAttachBtn.textContent = '+ add source material';
+    }
+    if (sourcePanel) {
+      sourcePanel.hidden = true;
+      sourcePanel.innerHTML = '';
+    }
+    const submitBtn = document.getElementById('hero-door-submit');
+    if (submitBtn instanceof HTMLButtonElement) {
+      submitBtn.disabled = true;
     }
   }
 
   function runHeroAction(evtOrNothing) {
-    // Form submit path from the Ignition threshold composer. Captures the Concept
-    // Threshold seed (concept name + global starting-map context) and hands off
-    // to the existing creation flow at the summary card stage. The post-create
-    // navigation to Desk happens inside finishConceptCreateAfterOverlay.
+    // C-prime door submit handler. Reads the concept input and the pending
+    // source (if the learner expanded the source-attach panel). Branches:
+    //   source attached → existing concept-create modal flow (source path)
+    //   no source       → write sessionStorage pending shell → showLaunchPad()
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       const conceptField = document.getElementById('hero-single-input-field');
-      const sketchField = document.getElementById('hero-starting-map-field');
-      const conceptName = (conceptField ? conceptField.value : '').trim();
-      const startingMap = (sketchField ? sketchField.value : '').trim();
-      if (!conceptName || !isSubstantiveSketch(startingMap)) return false;
-      const originRect = sketchField ? sketchField.getBoundingClientRect() : null;
-      startAddConcept({
-        name: conceptName,
-        sketchTurns: [startingMap],
-        stage: 'summary',
-      }, originRect);
+      const name = (conceptField ? conceptField.value : '').trim();
+      if (!name) return false;
+
+      const sourcePayload = App._pendingDoorSource || null;
+
+      if (sourcePayload) {
+        // Source-attached path: hand off to the existing creation flow.
+        // The modal handles /api/extract (or the URL two-step) and persistence.
+        emitTelemetry('concept_create.door.submit', {
+          has_source: true,
+          source_type: sourcePayload?.type || null,
+          sourceless: false,
+        });
+        const originRect = conceptField ? conceptField.getBoundingClientRect() : null;
+        startAddConcept({
+          name,
+          sketchTurns: [],
+          source: sourcePayload,
+          stage: 'summary',
+        }, originRect);
+        return false;
+      }
+
+      // Source-less path: write pending shell to sessionStorage, then navigate
+      // to the launch pad. DO NOT call /api/extract here — the launch pad
+      // captures the learner's threshold first (C-prime principle #2).
+      try {
+        sessionStorage.setItem(
+          'socratink:pendingShell',
+          JSON.stringify({ name, ts: Date.now() }),
+        );
+      } catch (err) {
+        // sessionStorage unavailable (disabled by the browser, quota exceeded, etc.)
+        // Surface the error without navigating — the learner must be able to retry.
+        console.error('socratink: sessionStorage unavailable', err);
+        const errEl = document.getElementById('hero-door-error');
+        if (errEl) {
+          errEl.textContent = 'Your browser has storage disabled. Enable session storage to continue.';
+          errEl.hidden = false;
+        }
+        return false;
+      }
+      emitTelemetry('concept_create.door.submit', {
+        has_source: false,
+        source_type: null,
+        sourceless: true,
+      });
+      App.showLaunchPad();
       return false;
     }
 
-    // Non-empty-state path: the Begin button drives Begin/Extract/Drill/Open-map.
+    // Non-form path: the Begin button drives Begin/Extract/Drill/Open-map.
     const concept = getActiveConcept();
     const action = heroPrimaryActionEl?.dataset.action || (!concept ? 'add' : '');
     if (action === 'add') {
@@ -425,63 +470,123 @@ const App = (() => {
     }
   }
 
-  // Wire up the empty-state Concept Threshold: autogrow both fields, require a
-  // concept plus one global starting-map detail, and seed the existing creation
-  // summary rather than creating a parallel entry flow.
-  function initHeroSingleInput() {
-    const conceptField = document.getElementById('hero-single-input-field');
-    const sketchField = document.getElementById('hero-starting-map-field');
-    if (!(conceptField instanceof HTMLTextAreaElement) || !(sketchField instanceof HTMLTextAreaElement)) return;
-    const form = document.getElementById('hero-single-input');
-    const submit = form?.querySelector('.hero-single-input__submit');
-    const validation = document.getElementById('hero-threshold-validation');
-    const thresholdFields = [conceptField, sketchField];
-    const autogrowField = (field) => {
-      field.style.height = 'auto';
-      field.style.height = Math.min(field.scrollHeight, 240) + 'px';
-    };
-    const autogrow = () => thresholdFields.forEach(autogrowField);
-    const sync = () => {
-      const hasConcept = conceptField.value.trim().length > 0;
-      const sketchText = sketchField.value.trim();
-      const sketchIsSubstantive = isSubstantiveSketch(sketchText);
-      if (submit instanceof HTMLButtonElement) {
-        submit.disabled = !(hasConcept && sketchIsSubstantive);
-        submit.title = hasConcept && sketchIsSubstantive
-          ? 'Create draft path'
-          : 'Add a few words about how you think it works before socratink builds the draft path.';
-      }
-      if (validation) {
-        validation.textContent = hasConcept && !sketchIsSubstantive
-          ? 'Add a few words about how you think it works before socratink builds the draft path.'
-          : '';
-      }
-      autogrow();
-    };
-    thresholdFields.forEach((field) => field.addEventListener('input', sync));
+  // ── C-prime door wiring ────────────────────────────────────────────────
+  // Wires the concept input → submit-state, the source-attach toggle,
+  // and the rotating placeholder. Replaces the old two-field
+  // initHeroSingleInput (sketch field removed in C-prime).
 
+  function _doorDescribeSource(payload) {
+    if (!payload) return '';
+    if (payload.type === 'text') return `${(payload.text || '').length} chars pasted`;
+    if (payload.type === 'url') return payload.url || 'URL';
+    if (payload.type === 'file') return `${payload.filename || 'file'} · ${(payload.text || '').length} chars`;
+    return payload.type;
+  }
+
+  function _doorUpdateSubmitState() {
+    const conceptField = document.getElementById('hero-single-input-field');
+    const submitBtn = document.getElementById('hero-door-submit');
+    if (!conceptField || !submitBtn) return;
+    submitBtn.disabled = !(conceptField.value || '').trim();
+  }
+
+  let _sourcePanelGen = 0;
+
+  function _bindDoorSourceAttach() {
+    const btn = document.getElementById('hero-source-attach');
+    const panel = document.getElementById('hero-source-panel');
+    if (!btn || !panel) return;
+
+    btn.addEventListener('click', () => {
+      const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      const hasSource = !!App._pendingDoorSource;
+      if (isOpen) {
+        // Panel is open — collapse and abandon any in-progress source pick.
+        // Bump generation so any in-flight dynamic import bails on resolve.
+        _sourcePanelGen += 1;
+        panel.hidden = true;
+        panel.innerHTML = '';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.textContent = '+ add source material';
+        App._pendingDoorSource = null;
+        _doorUpdateSubmitState();
+      } else if (hasSource) {
+        // Panel is closed and a source is attached — the button is now the
+        // "(clear)" affordance. Click clears the source without re-opening.
+        btn.textContent = '+ add source material';
+        App._pendingDoorSource = null;
+        _doorUpdateSubmitState();
+      } else {
+        // Panel is closed and no source — expand and mount the source panel
+        // module (extracted in Round B).
+        const myGen = ++_sourcePanelGen;
+        panel.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        import('./source-panel.js').then(({ mountSourcePanel }) => {
+          // If the user collapsed before the import resolved, bail out.
+          if (myGen !== _sourcePanelGen) return;
+          mountSourcePanel(panel, {
+            onAttach(payload) {
+              // Collapse the panel on attach (chip-style); the button label
+              // becomes the persistent affordance for clearing.
+              App._pendingDoorSource = payload;
+              panel.hidden = true;
+              panel.innerHTML = '';
+              btn.setAttribute('aria-expanded', 'false');
+              btn.textContent = `Source: ${_doorDescribeSource(payload)} (clear)`;
+              _doorUpdateSubmitState();
+            },
+            onCancel() {
+              panel.hidden = true;
+              panel.innerHTML = '';
+              btn.setAttribute('aria-expanded', 'false');
+              btn.textContent = '+ add source material';
+              App._pendingDoorSource = null;
+              _doorUpdateSubmitState();
+            },
+          });
+        }).catch((err) => {
+          // If the module fails to load, collapse gracefully.
+          console.error('socratink: failed to load source-panel.js', err);
+          panel.hidden = true;
+          btn.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
+  }
+
+  function initHeroSingleInput() {
+    // C-prime door: one concept textarea + source-attach toggle.
+    const conceptField = document.getElementById('hero-single-input-field');
+    if (!(conceptField instanceof HTMLTextAreaElement)) return;
+
+    const form = document.getElementById('hero-single-input');
+
+    // Enable/disable submit based on non-empty concept input.
+    conceptField.addEventListener('input', _doorUpdateSubmitState);
+    _doorUpdateSubmitState();
+
+    // Audio feedback (preserve existing behavior).
     const isPrintable = (e) =>
       !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
       (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
 
-    thresholdFields.forEach((field) => {
-      field.addEventListener('focus', () => AudioFX.playFocusTap());
-      field.addEventListener('keydown', (e) => {
-        if (field === conceptField && e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-          e.preventDefault();
-          sketchField.focus();
-          return;
-        }
-        if (isPrintable(e)) {
-          AudioFX.playKeyClick();
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim() && isSubstantiveSketch(sketchField.value.trim())) {
-          e.preventDefault();
-          form?.requestSubmit?.();
-        }
-      });
+    conceptField.addEventListener('focus', () => AudioFX.playFocusTap());
+    conceptField.addEventListener('keydown', (e) => {
+      if (isPrintable(e)) {
+        AudioFX.playKeyClick();
+      }
+      // Cmd/Ctrl+Enter submits if concept is non-empty (single-field door).
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim()) {
+        e.preventDefault();
+        form?.requestSubmit?.();
+      }
     });
 
+    // Wire the source-attach toggle.
+    _bindDoorSourceAttach();
+
+    // Rotating placeholder animation (concept examples).
     const examples = ['Photosynthesis', 'Entropy', 'Transformers', 'Attention'];
     let exampleIdx = 0;
     const writePlaceholder = () => {
@@ -512,7 +617,6 @@ const App = (() => {
       if (document.hidden) stopPlaceholderTimer();
       else startPlaceholderTimer();
     });
-    sync();
   }
 
 
@@ -587,7 +691,7 @@ const App = (() => {
       tileEl.setAttribute('tabindex', '0');
       tileEl.setAttribute(
         'aria-label',
-        isEmpty ? 'Begin a concept' : `Open ${concept.name}`
+        isEmpty ? 'New concept' : `Open ${concept.name}`
       );
 
       if (isEmpty) {
@@ -1407,6 +1511,122 @@ const App = (() => {
     overlayHandle.removeOverlay(true);
   }
 
+  // ── persistCreatedConceptFromLaunchPad ────────────────────────────────────
+  // Mirrors the persistence phase of finishConceptCreateAfterOverlay for the
+  // C-prime launch-pad flow. No overlay to tear down; no source material.
+  // Caller (launch-pad.js) clears the pending shell ONLY AFTER this returns
+  // without throwing, maintaining the persistence-then-clear ordering contract.
+  //
+  // Parameters:
+  //   map       — ProvisionalMap object returned by /api/extract.
+  //   shell     — pending shell { name, ts } read from sessionStorage.
+  //   threshold — the learner's raw threshold text (stored as startingMapContext).
+  function persistCreatedConceptFromLaunchPad(map, shell, threshold) {
+    // Defensive shell guard: refuse to persist a nameless concept rather
+    // than create a confusing record with name === undefined / empty if
+    // the caller somehow lost track of the pending shell.
+    if (!shell || typeof shell.name !== 'string' || shell.name.trim() === '') {
+      const err = new Error('launch_pad: invalid shell (missing or empty name)');
+      err.code = 'invalid_shell';
+      throw err;
+    }
+    if (!map || typeof map !== 'object') {
+      throw new Error('launch_pad: invalid map returned from /api/extract');
+    }
+    if (!isValidKnowledgeMap(map)) {
+      throw new Error('invalid map shape from launch-pad generation');
+    }
+    const concepts = loadConcepts();
+    if (concepts.length >= BOARD_SLOT_COUNT) {
+      const err = new Error('board is at capacity (' + BOARD_SLOT_COUNT + ')');
+      err.code = 'board_at_capacity';
+      throw err;
+    }
+
+    const id = generateId();
+    const startingMapContext = String(threshold || '').trim().slice(0, 1200);
+
+    const jsonPayload = { ...map, metadata: { ...(map.metadata || {}) } };
+    jsonPayload.metadata.starting_map_context = startingMapContext;
+    jsonPayload.metadata.map_maturity = 'provisional';
+
+    const concept = {
+      id,
+      name: shell.name,
+      state: 'growing',
+      createdAt: Date.now(),
+      timerStart: null,
+      contentPreview: '',
+      contentType: null,
+      contentFilename: null,
+      sourceUrl: null,
+      startingMapContext,
+      graphData: JSON.stringify(jsonPayload),
+    };
+    // No source text — contentStore is not written for source-less concepts.
+    concepts.push(concept);
+    saveConcepts(concepts);
+    // Post-save side effects (render, composer-clear, active-concept set) are
+    // wrapped in try/catch so a render hiccup doesn't propagate as a
+    // persistence failure. The concept is already on disk; treating a render
+    // throw as failure would cause runLaunchPadAction to leave the pending
+    // shell intact, and a retry would either duplicate the concept or hit
+    // BOARD_SLOT_COUNT. Logged but swallowed; the next render cycle picks
+    // up the new concept correctly.
+    try {
+      renderGrid(concepts);
+      renderConceptList(concepts);
+      renderIgnitionGate();
+      clearHeroThresholdComposer();
+      // Select the concept so it becomes the active concept for subsequent
+      // showMapView/setMapMode calls. setActiveId via activateConceptSelection.
+      activateConceptSelection(id);
+    } catch (renderErr) {
+      console.error(
+        'persistCreatedConceptFromLaunchPad: post-save render failed (concept saved successfully)',
+        renderErr,
+      );
+    }
+  }
+
+  // ── navigateToGraphViewFromLaunchPad ──────────────────────────────────────
+  // Navigate to the graph view after a successful launch-pad submit.
+  // Passes opts.fromLaunchPad = true so Round E's skeleton-line hook can
+  // detect a fresh-route arrival (Task 8 of the implementation plan).
+  //
+  // Parameters:
+  //   opts — { fromLaunchPad: boolean }
+  function renderSkeletonLineIfFresh(opts) {
+    const banner = document.getElementById("graph-skeleton-line");
+    if (!banner) return;
+    if (opts && opts.fromLaunchPad) {
+      banner.textContent = "This is the skeleton. It will grow as you reconstruct.";
+      banner.hidden = false;
+    } else {
+      banner.hidden = true;
+    }
+  }
+
+  function navigateToGraphViewFromLaunchPad(opts) {
+    const concept = getActiveConcept();
+    if (!concept) {
+      // No active concept — likely activateConceptSelection was inside the
+      // post-save try/catch in persistCreatedConceptFromLaunchPad and
+      // threw. The concept IS saved (saveConcepts ran first), so falling
+      // back to the desk lets the user see and click their newly-saved
+      // concept rather than getting stuck on the launch-pad with no
+      // feedback (the shell was already cleared by the caller).
+      console.warn('navigateToGraphViewFromLaunchPad: no active concept; falling back to desk');
+      showDashboard();
+      return;
+    }
+    hidePrimaryViews();
+    // Pass opts through so showMapView decides skeleton-line state itself
+    // (no implicit hide-then-show via teardown ordering). showMapView
+    // already calls setMapMode('study') near the end of its body.
+    showMapView(concept, opts);
+  }
+
   async function startAddConcept(seed, originRect) {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog(originRect);
@@ -1882,7 +2102,7 @@ const App = (() => {
 
   // ── 16. Map View UI ────────────────────────────────────────
 
-  function showMapView(concept) {
+  function showMapView(concept, opts = {}) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
     const graphContent = document.getElementById('graph-content');
@@ -1921,7 +2141,7 @@ const App = (() => {
     if (tagsEl) {
       let tagsHtml = '';
       const stateLabel = getHeroStateLabel(concept.state);
-      if (stateLabel && stateLabel !== 'no map yet') {
+      if (stateLabel && stateLabel !== 'no concepts yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
       if (meta.low_density) tagsHtml += `<span class="map-low-density">lightweight draft</span>`;
@@ -2119,6 +2339,10 @@ const App = (() => {
     if (window.innerWidth < 900) closeDrawer();
     setMapMode('study');
     restoreStudyResume(concept, data);
+    // Skeleton-line is opt-in via opts.fromLaunchPad (default off). Centralised
+    // here so callers don't have to hide-then-show after the teardown that
+    // hidePrimaryViews triggers.
+    renderSkeletonLineIfFresh(opts);
   }
 
   function teardownMapView({ showHero = false, navId = null } = {}) {
@@ -2133,6 +2357,7 @@ const App = (() => {
     setMapShellOpen(false);
     if (heroCard) heroCard.style.display = showHero ? 'flex' : 'none';
     if (navId) setNavActive(navId);
+    renderSkeletonLineIfFresh({ fromLaunchPad: false });
   }
 
   function hideMapView() {
@@ -2144,10 +2369,14 @@ const App = (() => {
     const ignitionView = document.getElementById('ignition-view');
     const libraryView = document.getElementById('library-view');
     const settingsView = document.getElementById('settings-view');
+    const launchPadView = document.getElementById('launch-pad-view');
     if (heroCard) heroCard.style.display = 'none';
     if (ignitionView) ignitionView.classList.remove('visible');
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
+    // C-prime launch pad: uses [hidden] attribute (not .visible class) to match
+    // its aria-labelledby pattern and align with the HTML hidden attribute.
+    if (launchPadView) launchPadView.setAttribute('hidden', '');
   }
 
   function setMapMode(mode = 'study') {
@@ -2370,7 +2599,7 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No draft paths yet. Begin one at <a href="javascript:void(0)" onclick="App.showIgnition()">New Entry</a>.</p>';
+      html += '<p class="library-empty" style="margin-top:10px;">No concepts yet. Start one at <a href="javascript:void(0)" onclick="App.showIgnition()">New concept</a>.</p>';
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
@@ -4030,9 +4259,30 @@ const App = (() => {
     fastForward,
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
+    hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     importLibraryConcept,
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
+    // C-prime door state: pending source from the door's + add source material panel.
+    // Set by the source-attach onAttach callback; cleared by clearHeroThresholdComposer.
+    // Null when no source is attached at the door.
+    _pendingDoorSource: null,
+    // C-prime launch pad — Round D implementation.
+    // showLaunchPad is called by the no-source door path in runHeroAction after
+    // writing the pending shell to sessionStorage. It hides the ignition view and
+    // mounts the threshold-capture surface via launch-pad.js.
+    showLaunchPad() { _showLaunchPad(App); },
+    // runLaunchPadAction is called by the launch-pad form onsubmit handler.
+    // It reads the pending shell, posts to /api/extract, persists, and navigates.
+    runLaunchPadAction(event) { return _runLaunchPadAction(event, App); },
+    // persistCreatedConceptFromLaunchPad — called by launch-pad.js after a
+    // successful /api/extract response. Performs localStorage write, grid
+    // refresh, and concept selection. Throws on invalid map so launch-pad.js
+    // can leave the pending shell in place for retry.
+    persistCreatedConceptFromLaunchPad,
+    // navigateToGraphViewFromLaunchPad — called by launch-pad.js after
+    // persistence succeeds and the shell has been cleared.
+    navigateToGraphViewFromLaunchPad,
   };
 
 })();

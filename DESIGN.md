@@ -48,7 +48,11 @@ Enter concept
 
 ### What each screen does — and refuses to do
 
-**1. Concept Threshold.** The learner describes their *global* current model — parts, guesses, examples, confusions. **No graph mutation.** Copy distinguishes it from the cold attempt: *"This is global context. The first room will ask one smaller question."*
+**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures only the concept name (and optional source attach). Source-less concepts pass through a **launch pad** that captures the learner's threshold (rough whole-concept model) before any AI generation runs. See `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`.
+
+The launch pad replaces the previous in-form "Starting sketch" textarea. The threshold is no longer a field on the door; it is a dedicated post-commit surface. This change preserves the learner-seeded route contract: no graph or thesis is generated from the concept name alone.
+
+*Prior implementation (pre-C-prime):* Threshold was captured as a two-textarea form on Ignition alongside the concept name. Copy distinguished it from the cold attempt: *"This is global context. The first room will ask one smaller question."*
 
 **2. Provisional Graph.** A draft route, framed as a hypothesis. Legend is constrained to three words: *draft route · ready for first attempt · locked.* No mutation.
 

@@ -291,7 +291,10 @@ def should_enrich_with_lc(
 
     Returns the top 2-3 standards when all gates pass, ``None`` otherwise.
     The caller passes the returned list (or ``None``) into
-    ``generate_provisional_map_from_sketch(..., lc_context=...)``.
+    ``generate_smallest_provisional_map(..., lc_context=...)`` (the source-less
+    branch of ``/api/extract``). ``generate_provisional_map_from_sketch`` is
+    retained only as a back-compat shim and is no longer wired into the
+    production extract path.
     """
     # Gate 1 (API responded) is implicit: if this function received a
     # result at all, the call returned successfully. Network/timeout

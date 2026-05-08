@@ -24,9 +24,10 @@ from ai_service import (
     GeminiRateLimitError,
     GeminiServiceError,
     MissingAPIKeyError,
+    SmallestRouteCapExceeded,
     drill_chat,
     extract_knowledge_map,
-    generate_provisional_map_from_sketch,
+    generate_smallest_provisional_map,
     generate_repair_reps,
     get_drill_session_time_limit_seconds,
 )
@@ -295,7 +296,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     Returns one of:
       {"path": "extract", "text": str}
-      {"path": "from_sketch", "name": str, "sketch": str}
+      {"path": "from_threshold", "name": str, "threshold": str}
       {"path": "error", "status": 422, "error": str, "message": str}
 
     Spec §3.2 truth table is enforced here as defense in depth.
@@ -343,11 +344,17 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     if not sketch_ok:
         # Spec §3.2 row 1: thin sketch + no source → block.
+        # Server-side message names BOTH escape paths (sketch or source)
+        # because the conversational concept-create modal can also reach
+        # this 422 (modal has both a sketch chip and a source chip).
+        # The launch-pad surface has no source-attach affordance, so it
+        # overrides this copy locally — see launch-pad.js handling of the
+        # thin_sketch_no_source code, which routes to THIN_THRESHOLD_COPY.
         return {"path": "error", "status": 422,
                 "error": "thin_sketch_no_source",
                 "message": "Add more to your sketch, or attach source material — either path opens the build."}
 
-    return {"path": "from_sketch", "name": name, "sketch": sketch}
+    return {"path": "from_threshold", "name": name, "threshold": sketch}
 
 
 class UrlExtractRequest(BaseModel):
@@ -490,7 +497,7 @@ def extract(req: ExtractRequest):
         })
 
     try:
-        if decision["path"] == "from_sketch":
+        if decision["path"] == "from_threshold":
             lc_result = None
             lc_query_failed = False
             lc_client = None
@@ -549,9 +556,9 @@ def extract(req: ExtractRequest):
                     output_tokens=result.usage.output_tokens,
                 )
 
-            provisional_map = generate_provisional_map_from_sketch(
+            provisional_map = generate_smallest_provisional_map(
                 concept=decision["name"],
-                sketch=decision["sketch"],
+                threshold=decision["threshold"],
                 lc_context=lc_context,
                 api_key=req.api_key,
                 on_call_complete=_on_sketch_call,
@@ -625,6 +632,19 @@ def extract(req: ExtractRequest):
             status_code=503,
             detail="The AI service is temporarily unavailable. Please try again shortly.",
         )
+    except SmallestRouteCapExceeded as err:
+        # C-prime spec §5.1: cap exceeded is a server-side generation failure,
+        # not a client input failure → 500 (not 422). Must be caught BEFORE the
+        # generic ValueError handler below because SmallestRouteCapExceeded
+        # subclasses ValueError.
+        logger.error("extract: smallest_route_cap_exceeded: %s", err)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "smallest_route_cap_exceeded",
+                "message": "Could not generate a valid starting map. Try again or adjust the prompt.",
+            },
+        ) from err
     except ValueError as err:
         # Pydantic structural-validation errors raised by ProvisionalMap
         # (closure rules, identifier grammar). The message here is OUR

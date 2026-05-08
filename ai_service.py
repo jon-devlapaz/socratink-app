@@ -690,6 +690,46 @@ def extract_knowledge_map(
     return result.parsed  # type: ignore[return-value]
 
 
+SMALLEST_ROUTE_MAX_DRILLABLE_NODES = 4
+"""C-prime spec §5.1: ≤4 drillable nodes total (1 first target + ≤3 hints)."""
+
+
+class SmallestRouteCapExceeded(ValueError):
+    """Raised when source-less generation returns a ProvisionalMap exceeding
+    the smallest-route cap. Server returns 500 in this case (it's a
+    generation-side failure, not a client-input failure)."""
+
+
+def _validate_smallest_route(pm: ProvisionalMap) -> None:
+    """Enforce C-prime spec §5.1 ≤4-node cap.
+
+    Counts total drillable subnodes across all clusters on the
+    ProvisionalMap. Raises SmallestRouteCapExceeded if the count is 0
+    or >4.
+
+    Counting subnodes rather than top-level clusters is the actual
+    structural defence of the spec invariant: ProvisionalMap permits
+    multiple subnodes per cluster, so a 4-cluster x N-subnode-each
+    response would otherwise bypass the cap.
+    """
+    if pm is None:
+        raise SmallestRouteCapExceeded(
+            "smallest route generation returned no map (parsed=None)"
+        )
+    clusters = list(pm.clusters) if pm.clusters is not None else []
+    n = sum(len(c.subnodes or []) for c in clusters)
+    if n == 0:
+        raise SmallestRouteCapExceeded(
+            "smallest route must have at least one drillable node "
+            "(the suggested first target / core thesis)"
+        )
+    if n > SMALLEST_ROUTE_MAX_DRILLABLE_NODES:
+        raise SmallestRouteCapExceeded(
+            f"smallest route exceeded cap: {n} drillable nodes "
+            f"(max {SMALLEST_ROUTE_MAX_DRILLABLE_NODES})"
+        )
+
+
 def generate_provisional_map_from_sketch(
     concept: str,
     sketch: str,
@@ -739,6 +779,64 @@ def generate_provisional_map_from_sketch(
     if on_call_complete is not None:
         on_call_complete(result)
     return result.parsed  # type: ignore[return-value]
+
+
+GENERATE_SMALLEST_ROUTE_PROMPT_PATH = PROMPT_DIR / "generate-smallest-route-system-v1.txt"
+GENERATE_SMALLEST_ROUTE_PROMPT_VERSION = "v1"
+GENERATE_SMALLEST_ROUTE_TEMPERATURE = GENERATE_FROM_SKETCH_TEMPERATURE  # reuse
+
+
+def generate_smallest_provisional_map(
+    concept: str,
+    threshold: str,
+    *,
+    llm: LLMClient | None = None,
+    api_key: str | None = None,
+    lc_context: list["LCStandard"] | None = None,
+    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
+) -> ProvisionalMap:
+    """Generate a smallest actionable route from {concept, threshold}.
+
+    C-prime spec §5.1: returns a ProvisionalMap with ≤4 drillable nodes
+    total (one suggested first target which carries the core thesis,
+    plus up to 3 backbone hints). Raises SmallestRouteCapExceeded if the
+    model returns more.
+
+    Optional ``lc_context`` is grounding-only, never authoritative.
+    """
+    from learning_commons import LCStandard  # local import to avoid cycle
+
+    client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
+
+    user_prompt_parts: list[str] = [
+        f"<concept>{concept}</concept>",
+        f"<threshold>{threshold}</threshold>",
+    ]
+    if lc_context:
+        lc_block_lines = ["<lc_context>"]
+        for std in lc_context:
+            code = f" [{std.statement_code}]" if std.statement_code else ""
+            lc_block_lines.append(f"- {std.jurisdiction}{code}: {std.description}")
+        lc_block_lines.append("</lc_context>")
+        user_prompt_parts.append("\n".join(lc_block_lines))
+
+    user_prompt = "\n\n".join(user_prompt_parts)
+
+    request = StructuredLLMRequest(
+        system_prompt=GENERATE_SMALLEST_ROUTE_PROMPT_PATH.read_text(),
+        user_prompt=user_prompt,
+        response_schema=ProvisionalMap,
+        temperature=GENERATE_SMALLEST_ROUTE_TEMPERATURE,
+        task_name="smallest_route_from_threshold",
+        prompt_version=GENERATE_SMALLEST_ROUTE_PROMPT_VERSION,
+    )
+    result = client.generate_structured(request)
+    if on_call_complete is not None:
+        on_call_complete(result)
+
+    pm: ProvisionalMap = result.parsed  # type: ignore[assignment]
+    _validate_smallest_route(pm)
+    return pm
 
 
 def _validate_repair_reps_result(
