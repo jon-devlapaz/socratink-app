@@ -1530,7 +1530,9 @@ const App = (() => {
     }
     const concepts = loadConcepts();
     if (concepts.length >= BOARD_SLOT_COUNT) {
-      throw new Error('board is at capacity (' + BOARD_SLOT_COUNT + ')');
+      const err = new Error('board is at capacity (' + BOARD_SLOT_COUNT + ')');
+      err.code = 'board_at_capacity';
+      throw err;
     }
 
     const id = generateId();

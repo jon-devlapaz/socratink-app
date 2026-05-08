@@ -296,7 +296,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     Returns one of:
       {"path": "extract", "text": str}
-      {"path": "from_sketch", "name": str, "threshold": str}
+      {"path": "from_threshold", "name": str, "threshold": str}
       {"path": "error", "status": 422, "error": str, "message": str}
 
     Spec §3.2 truth table is enforced here as defense in depth.
@@ -348,7 +348,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
                 "error": "thin_sketch_no_source",
                 "message": "Add more to your sketch, or attach source material — either path opens the build."}
 
-    return {"path": "from_sketch", "name": name, "threshold": sketch}
+    return {"path": "from_threshold", "name": name, "threshold": sketch}
 
 
 class UrlExtractRequest(BaseModel):
@@ -491,7 +491,7 @@ def extract(req: ExtractRequest):
         })
 
     try:
-        if decision["path"] == "from_sketch":
+        if decision["path"] == "from_threshold":
             lc_result = None
             lc_query_failed = False
             lc_client = None

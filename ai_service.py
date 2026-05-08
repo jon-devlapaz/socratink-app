@@ -712,6 +712,10 @@ def _validate_smallest_route(pm: ProvisionalMap) -> None:
     multiple subnodes per cluster, so a 4-cluster x N-subnode-each
     response would otherwise bypass the cap.
     """
+    if pm is None:
+        raise SmallestRouteCapExceeded(
+            "smallest route generation returned no map (parsed=None)"
+        )
     clusters = list(pm.clusters) if pm.clusters is not None else []
     n = sum(len(c.subnodes or []) for c in clusters)
     if n == 0:

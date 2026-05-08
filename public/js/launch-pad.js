@@ -286,7 +286,14 @@ export async function runLaunchPadAction(event, App) {
   } catch (err) {
     // Persistence failure — leave the shell so the learner can retry.
     console.error('launch_pad: persistence failed', err);
-    if (validation) validation.textContent = 'Could not save the concept locally. Try again.';
+    // Board-at-capacity is a special case: a retry will not succeed, the
+    // learner needs to retire a concept first. Surface a directive message
+    // instead of the generic "try again" copy.
+    const isBoardCap = err && err.code === 'board_at_capacity';
+    const msg = isBoardCap
+      ? 'The board holds nine concepts. Retire one in your library to start another.'
+      : 'Could not save the concept locally. Try again.';
+    if (validation) validation.textContent = msg;
     if (submit) submit.disabled = false;
     return false;
   }
