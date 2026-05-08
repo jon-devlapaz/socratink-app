@@ -89,3 +89,9 @@ docs/pipeline/
 docs/code-graph.html
 # QA test artifacts (local Playwright + axe-core runs)
 .qa-runs/
+
+# Personal tooling (not for version control — hard-coded local paths
+# and repo references; would not work for a fresh contributor)
+create_issues.py
+push_issues.py
+issues_preview.json
