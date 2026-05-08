@@ -46,7 +46,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [product/repair-reps.md](../product/repair-reps.md) | implementation | yes | Unified implementation spec for Repair Reps (focused layout, card-stack visuals, self-rating evidence schema). | — |
 | [project/auth-rollout.md](auth-rollout.md) | implementation | yes | Auth rollout phases, release gates, test plan, deferred work. | — |
 | [design/handoffs/2026-05-02-extraction-evals-and-rubric.md](../design/handoffs/2026-05-02-extraction-evals-and-rubric.md) | implementation | yes | Evaluation rubric and rubrics for extraction quality. | — |
-| [design/handoffs/2026-05-04-conversational-concept-creation-frontend.md](../design/handoffs/2026-05-04-conversational-concept-creation-frontend.md) | implementation | yes | Conversational concept creation frontend implementation. | — |
+| [design/handoffs/2026-05-04-conversational-concept-creation-frontend.md](../design/handoffs/2026-05-04-conversational-concept-creation-frontend.md) | historical | no | Conversational concept creation frontend implementation (Threshold composer / Starting sketch flow). Deprecated 2026-05-07; the surface it described has been replaced by the Door + Launch Pad flow. | [design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md](../design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md) |
 | [design/handoffs/2026-05-05-desk-iso-board-handoff.md](../design/handoffs/2026-05-05-desk-iso-board-handoff.md) | implementation | yes | Desk isometric board implementation handoff. | — |
 | [design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md](../design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md) | implementation | yes | Agent brief for C-prime concept entry: progressive disclosure for learners, progressive route materialization, source/no-source contracts, and implementation guardrails. | — |
 
@@ -66,6 +66,8 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [project/mvp-happy-path.md](mvp-happy-path.md) | release-gate | yes | Narrow manual ship gate for the thermostat loop. | — |
 | [project/operations.md](operations.md) | release-gate | yes | Merge standard, release checks, evidence policy, near-term priorities. | — |
 | [qa/antigravity-mobile-qa-prompt.md](../qa/antigravity-mobile-qa-prompt.md) | release-gate | yes | Mobile layout regression audit prompt and checklist. | — |
+| [qa/2026-05-07-c-prime-antigravity-qa-plan.md](../qa/2026-05-07-c-prime-antigravity-qa-plan.md) | release-gate | yes | Browser QA plan for C-prime concept entry (Door + Launch Pad). Antigravity-runnable test cases and breakfix report. | — |
+| [qa/2026-05-07-c-prime-shipgate-verifications.md](../qa/2026-05-07-c-prime-shipgate-verifications.md) | release-gate | yes | C-prime ship-gate verifications: server-side bypass guard and persistence-then-clear ordering under failure injection. | — |
 
 ## Workflow & Agent Infra
 

@@ -20,9 +20,15 @@ export async function generateKnowledgeMap(rawText, onProgress) {
 /**
  * Conversational concept-create submit. Posts the spec §5.3 payload shape
  * and returns the parsed `provisional_map` (no source) or `knowledge_map`
- * (source attached). On 422, throws an Error with `.status` and `.body`
- * (the parsed `{error, message}` payload) so the caller can render the
- * message inline.
+ * (source attached).
+ *
+ * On any non-OK JSON response, throws an Error with `.status` and `.body`
+ * (the parsed `{error, message}` payload) so the caller can render
+ * `err.body.message` inline. This covers both the 422 bypass-rejected case
+ * and the 500 `smallest_route_cap_exceeded` case emitted by the source-less
+ * branch when the smallest-route generator returns more than the drillable
+ * node cap. Non-JSON error bodies fall back to a generic
+ * `Server error <status>: <text>` message with `.status` set.
  *
  * @param {{ name: string, startingSketch: string,
  *           source: null | { type: 'text'|'url'|'file', text?: string, url?: string, filename?: string },

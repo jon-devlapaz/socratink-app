@@ -1,5 +1,7 @@
 # Starting Map Flow Artifact
 
+> **Status (2026-05-07):** Storyboard only. The threshold flow has now shipped as **C-prime** (Door + Launch Pad → smallest route). For the operational rules and current contracts, see the agent brief at [docs/design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md](../design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md) and the canonical doctrine in [docs/product/evidence-weighted-map.md](evidence-weighted-map.md). This artifact is preserved for design context; do not cite it as the implementation contract.
+
 Purpose: a lightweight product design artifact for understanding the metacognitive happy path before implementation.
 
 This is not the binding implementation spec. It is a simple storyboard for the flow where concept entry onboards the learner into their own current model, not into the content.

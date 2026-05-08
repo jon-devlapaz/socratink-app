@@ -11,6 +11,7 @@ These files handle the core data processing, API routing, and AI interactions.
 | [ai_service.py](file:///Users/jondev/dev/socratink/prod/socratink-app/ai_service.py) | **Core Engine:** Contains the `extract_knowledge` logic. Orchestrates calls to the Gemini model, manages retries, normalizes errors, and structures the resulting knowledge map. |
 | [main.py](file:///Users/jondev/dev/socratink/prod/socratink-app/main.py) | **API Router:** Defines and wires the `/api/extract` and `/api/extract-url` endpoints, which act as the entry points for extraction requests. |
 | [extract-system-v1.txt](file:///Users/jondev/dev/socratink/prod/socratink-app/app_prompts/extract-system-v1.txt) | **AI Prompt:** The system prompt injected into the LLM defining the strict schema and behavioral rules for concept extraction. |
+| [generate-smallest-route-system-v1.txt](file:///Users/jondev/dev/socratink/prod/socratink-app/app_prompts/generate-smallest-route-system-v1.txt) | **AI Prompt (C-prime):** System prompt for the source-less branch of `/api/extract`. Drives `generate_smallest_provisional_map` to emit a provisional map of ≤4 drillable nodes (cap-exceeded yields a 500 `smallest_route_cap_exceeded`). |
 
 ## 💻 Frontend & Visualization
 
@@ -20,6 +21,8 @@ These files manage how the extraction is triggered by the user and how the resul
 | :--- | :--- |
 | [app.js](file:///Users/jondev/dev/socratink/prod/socratink-app/public/js/app.js) | **App Controller:** Manages the main UI state, captures user form input, and coordinates the start and end of the extraction phase. |
 | [ai_service.js](file:///Users/jondev/dev/socratink/prod/socratink-app/public/js/ai_service.js) | **API Client:** The frontend wrapper responsible for making the asynchronous fetch requests to the backend API. |
+| [source-panel.js](file:///Users/jondev/dev/socratink/prod/socratink-app/public/js/source-panel.js) | **Door (C-prime):** Mounts the concept-name + optional source entry (the "Door"). Routes source-attached submissions to the source-aware extract path. |
+| [launch-pad.js](file:///Users/jondev/dev/socratink/prod/socratink-app/public/js/launch-pad.js) | **Launch Pad (C-prime):** Mounts the threshold for source-less concepts. Drives the smallest-route extract branch and surfaces cap-exceeded server messages. |
 | [graph-view.js](file:///Users/jondev/dev/socratink/prod/socratink-app/public/js/graph-view.js) | **Visualization logic:** Responsible for taking the JSON concept map data and rendering the interactive node/edge graph in the browser. |
 | [index.html](file:///Users/jondev/dev/socratink/prod/socratink-app/public/index.html) | **Markup:** Contains the DOM structure for the extraction input forms, loading indicators, and the canvas/container for the concept map. |
 | [layout.css](file:///Users/jondev/dev/socratink/prod/socratink-app/public/css/layout.css) | **Styles:** CSS classes that handle the layout positioning of the map and extraction UI elements. |
