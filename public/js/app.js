@@ -26,6 +26,7 @@ import {
 } from './store.js';
 import { AudioFX } from './audio.js?v=4';
 import { showLaunchPad as _showLaunchPad, runLaunchPadAction as _runLaunchPadAction } from './launch-pad.js';
+import { emitTelemetry } from './telemetry.js';
 
 import {
   card, titleEl, descEl, primaryControls, drillControls,
@@ -398,6 +399,12 @@ const App = (() => {
       if (!name) return false;
 
       const sourcePayload = App._pendingDoorSource || null;
+
+      emitTelemetry('concept_create.door.submit', {
+        has_source: !!sourcePayload,
+        source_type: sourcePayload?.type || null,
+        sourceless: !sourcePayload,
+      });
 
       if (sourcePayload) {
         // Source-attached path: hand off to the existing creation flow.

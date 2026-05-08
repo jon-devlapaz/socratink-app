@@ -219,9 +219,8 @@ export function mountSourcePanel(targetEl, opts = {}) {
 
   return {
     teardown() {
-      // Remove any listeners attached above. For the v1 cut, modal-side
-      // teardown is a no-op (the chip is replaced wholesale via rerenderSummary).
-      // The door surface uses teardown to collapse the panel cleanly.
+      // No-op: callers release listeners by replacing this panel's container
+      // innerHTML (rerenderSummary on the modal, panel collapse on the door).
     },
   };
 }

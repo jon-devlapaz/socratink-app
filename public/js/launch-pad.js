@@ -202,6 +202,7 @@ export async function runLaunchPadAction(event, App) {
     // Client-side gate: the submit button should already be disabled, but
     // handle direct invocation (assistive tech, test harness) defensively.
     if (validation) validation.textContent = THIN_THRESHOLD_COPY;
+    emitTelemetry('concept_create.bypass_rejected', { path: 'client' });
     return false;
   }
 
@@ -239,6 +240,7 @@ export async function runLaunchPadAction(event, App) {
         threshold_len: threshold.length,
         build_blocked: true,
       });
+      emitTelemetry('concept_create.bypass_rejected', { path: 'server' });
       return false;
     }
     // Network error, 5xx, or other failure: surface retry copy, leave shell.
