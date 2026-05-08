@@ -430,7 +430,11 @@ const App = (() => {
         // sessionStorage unavailable (disabled by the browser, quota exceeded, etc.)
         // Surface the error without navigating — the learner must be able to retry.
         console.error('socratink: sessionStorage unavailable', err);
-        alert('Your browser has storage disabled. Please enable session storage to continue.');
+        const errEl = document.getElementById('hero-door-error');
+        if (errEl) {
+          errEl.textContent = 'Your browser has storage disabled. Enable session storage to continue.';
+          errEl.hidden = false;
+        }
         return false;
       }
       emitTelemetry('concept_create.door.submit', {
@@ -495,8 +499,10 @@ const App = (() => {
 
     btn.addEventListener('click', () => {
       const isOpen = btn.getAttribute('aria-expanded') === 'true';
+      const hasSource = !!App._pendingDoorSource;
       if (isOpen) {
-        // Collapse and clear. Bump generation so any in-flight import bails.
+        // Panel is open — collapse and abandon any in-progress source pick.
+        // Bump generation so any in-flight dynamic import bails on resolve.
         _sourcePanelGen += 1;
         panel.hidden = true;
         panel.innerHTML = '';
@@ -504,8 +510,15 @@ const App = (() => {
         btn.textContent = '+ add source material';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
+      } else if (hasSource) {
+        // Panel is closed and a source is attached — the button is now the
+        // "(clear)" affordance. Click clears the source without re-opening.
+        btn.textContent = '+ add source material';
+        App._pendingDoorSource = null;
+        _doorUpdateSubmitState();
       } else {
-        // Expand and mount the source panel module (extracted in Round B).
+        // Panel is closed and no source — expand and mount the source panel
+        // module (extracted in Round B).
         const myGen = ++_sourcePanelGen;
         panel.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
@@ -514,7 +527,12 @@ const App = (() => {
           if (myGen !== _sourcePanelGen) return;
           mountSourcePanel(panel, {
             onAttach(payload) {
+              // Collapse the panel on attach (chip-style); the button label
+              // becomes the persistent affordance for clearing.
               App._pendingDoorSource = payload;
+              panel.hidden = true;
+              panel.innerHTML = '';
+              btn.setAttribute('aria-expanded', 'false');
               btn.textContent = `Source: ${_doorDescribeSource(payload)} (clear)`;
               _doorUpdateSubmitState();
             },

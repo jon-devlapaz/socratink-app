@@ -244,12 +244,22 @@ export async function runLaunchPadAction(event, App) {
       return false;
     }
     // Network error, 5xx, or other failure: surface retry copy, leave shell.
-    // No submit telemetry — the request did not complete cleanly.
     // For server-side cap exceeded, forward the actionable server message so
-    // the learner knows to adjust the prompt rather than retry blindly.
+    // the learner knows to adjust the prompt rather than retry blindly, AND
+    // emit submit telemetry so cap-exceeded rate is visible in dashboards
+    // (parallel to the 422 branch above).
     console.error('launch_pad: extract failed', err);
     const capExceeded =
       err && err.status === 500 && err.body && err.body.error === 'smallest_route_cap_exceeded';
+    if (capExceeded) {
+      emitTelemetry('concept_create.launch_pad.submit', {
+        threshold_len: threshold.length,
+        build_blocked: true,
+      });
+      emitTelemetry('concept_create.cap_exceeded', { path: 'server' });
+    }
+    // Other transport failures (network, 5xx without cap-exceeded) emit no
+    // submit telemetry — the request did not complete cleanly.
     const fallbackMsg = capExceeded && err.body.message
       ? String(err.body.message)
       : 'Something went wrong. Try again.';

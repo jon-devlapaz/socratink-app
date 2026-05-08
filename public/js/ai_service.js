@@ -62,10 +62,17 @@ export async function submitConceptCreate({ name, startingSketch, source, apiKey
     const ct = response.headers.get("content-type") || "";
     if (ct.includes("application/json")) {
       const payload = await response.json().catch(() => ({}));
-      const detail = payload.detail || payload || {};
-      const err = new Error(detail.message || `Server error ${response.status}`);
+      // FastAPI's HTTPException(detail="…") yields a string; HTTPException(detail={...})
+      // yields a dict. Normalize so callers always get (msg: string, body: object).
+      const rawDetail = payload.detail !== undefined ? payload.detail : payload;
+      const isStringDetail = typeof rawDetail === "string";
+      const msg = isStringDetail
+        ? rawDetail
+        : (rawDetail && rawDetail.message) || `Server error ${response.status}`;
+      const body = isStringDetail ? {} : (rawDetail || {});
+      const err = new Error(msg);
       err.status = response.status;
-      err.body = detail;
+      err.body = body;
       throw err;
     }
     const txt = await response.text().catch(() => "");

@@ -2651,6 +2651,17 @@ body[data-theme="dark"] .hero-source-attach[aria-expanded="true"] {
   color: var(--cream-50, #fefaf2);
 }
 
+/* Inline error surface for the door (e.g. sessionStorage unavailable).
+   Quiet by default — error path is rare; uses calm reading-room voice. */
+.hero-door-error {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin: 8px 0 0;
+  text-align: center;
+  min-height: 18px;
+}
+.hero-door-error[hidden] { display: none; }
+
 /* Mount point for the source panel. Hidden until the affordance is toggled. */
 .hero-source-panel {
   margin-top: 8px;
