@@ -251,27 +251,12 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     const field = getThresholdField();
     if (!field) return;
 
-    typing.lastValueLength = field.value.length;
-    let spaceQueued = false;
-
+    // Focus arrival keeps a single calm pulse so the field reads as "alive"
+    // when the learner lands on it. Per-keystroke bursts were removed: the
+    // typing-reactive bloom was visually noisy and pulled attention away from
+    // the threshold the learner is composing.
     field.addEventListener('focus', () => {
       pulseFromTyping(0.55);
-    });
-
-    field.addEventListener('keydown', (event) => {
-      spaceQueued = event.code === 'Space' && !event.metaKey && !event.ctrlKey && !event.altKey;
-    });
-
-    field.addEventListener('input', (event) => {
-      const nextLength = field.value.length;
-      const delta = Math.abs(nextLength - typing.lastValueLength);
-      const selectionIndex = typeof field.selectionStart === 'number' ? field.selectionStart : field.value.length;
-      const insertedSpace =
-        (typeof InputEvent !== 'undefined' && event instanceof InputEvent && event.inputType === 'insertText' && event.data === ' ') ||
-        (spaceQueued && field.value.charAt(Math.max(0, selectionIndex - 1)) === ' ');
-      typing.lastValueLength = nextLength;
-      spaceQueued = false;
-      pulseFromTyping(delta || 1, insertedSpace ? 'space' : 'character');
     });
   }
 

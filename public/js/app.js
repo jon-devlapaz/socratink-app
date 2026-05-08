@@ -401,20 +401,19 @@ const App = (() => {
       const sourcePayload = App._pendingDoorSource || null;
 
       if (sourcePayload) {
-        // Source-attached path: hand off to the existing creation flow.
-        // The modal handles /api/extract (or the URL two-step) and persistence.
+        // Source-attached path: skip the (now-retired) conversational modal
+        // and run the extract pipeline directly. The learner already supplied
+        // name + source on the door; the modal's summary-card review step was
+        // pure friction. runSourceAttachedSubmit mounts the extract overlay,
+        // posts /api/extract (with the URL two-step when applicable), and
+        // either navigates to the graph view on success or surfaces the error
+        // inline on the door so the learner can retry without a modal remount.
         emitTelemetry('concept_create.door.submit', {
           has_source: true,
           source_type: sourcePayload?.type || null,
           sourceless: false,
         });
-        const originRect = conceptField ? conceptField.getBoundingClientRect() : null;
-        startAddConcept({
-          name,
-          sketchTurns: [],
-          source: sourcePayload,
-          stage: 'summary',
-        }, originRect);
+        runSourceAttachedSubmit({ name, source: sourcePayload });
         return false;
       }
 
@@ -450,9 +449,11 @@ const App = (() => {
     const concept = getActiveConcept();
     const action = heroPrimaryActionEl?.dataset.action || (!concept ? 'add' : '');
     if (action === 'add') {
-      showDashboard();
-      openDrawer();
-      startAddConcept();
+      // The conversational creation modal is retired. The Begin button's
+      // "add" action lands the learner on the New-concept (ignition) view —
+      // the same single canonical entry that the sidebar's New concept link
+      // and empty desk tiles use.
+      showIgnition();
       return;
     }
     if (action === 'extract') {
@@ -1627,6 +1628,112 @@ const App = (() => {
     showMapView(concept, opts);
   }
 
+  // ── runSourceAttachedSubmit ─────────────────────────────────────────────
+  // Direct source-attached extract path. Replaces the conversational modal
+  // for the door's "name + source" submit: the learner already typed the
+  // concept name and attached source via the inline source-panel, so the
+  // modal's chat + summary card was pure ceremony. We mount the extract
+  // overlay, run the same submit pipeline as the launch pad / former modal
+  // (URL fetch → /api/extract → persist → navigate), and surface failures
+  // back on the door so the learner can retry without a modal remount.
+  //
+  // Inputs:
+  //   name   — non-empty trimmed concept name string from the door
+  //   source — { type: 'text'|'url'|'file', text?, url?, filename? } payload
+  //            captured by the door's source-panel.
+  async function runSourceAttachedSubmit({ name, source }) {
+    const setDoorError = (msg) => {
+      const errEl = document.getElementById('hero-door-error');
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.hidden = !msg;
+      }
+    };
+    setDoorError('');
+
+    if (loadConcepts().length >= BOARD_SLOT_COUNT) {
+      // Library is at the visible board cap. Don't pay for an LLM call.
+      setDoorError('The board holds nine concepts. Retire one to start another.');
+      return;
+    }
+
+    AudioFX.playSubmitChime();
+    const overlayHandle = mountExtractOverlay({ name });
+
+    let resolvedSource = source;
+
+    // URL source path: hop through /api/extract-url first to materialise text,
+    // mirroring the former modal's doSubmit flow. The /api/extract dispatcher
+    // rejects URL sources directly (see main.py _resolve_extract_path).
+    if (resolvedSource && resolvedSource.type === 'url' && !resolvedSource.text) {
+      try {
+        const { extractUrl } = await import('./api-client.js');
+        const fetched = await extractUrl({ url: resolvedSource.url });
+        resolvedSource = {
+          type: 'text',
+          text: String(fetched.text || ''),
+          url: resolvedSource.url,
+        };
+      } catch (err) {
+        overlayHandle.removeOverlay(false);
+        emitTelemetry('concept_create.build_failed', {
+          stage: 'submit',
+          error_kind: 'url_fetch',
+        });
+        setDoorError("Couldn't fetch that URL. Check the link and try again.");
+        return;
+      }
+    }
+
+    try {
+      const { submitConceptCreate } = await import('./ai_service.js');
+      const apiKey =
+        (typeof localStorage !== 'undefined' && localStorage.getItem('gemini_key')) ||
+        undefined;
+      const data = await submitConceptCreate({
+        name,
+        startingSketch: '',
+        source: resolvedSource,
+        apiKey,
+      });
+      const provisionalMap = data.provisional_map || data.knowledge_map || null;
+      if (!provisionalMap) {
+        overlayHandle.removeOverlay(false);
+        setDoorError('The map came back empty. Try again or adjust the source.');
+        return;
+      }
+      finishConceptCreateAfterOverlay({
+        id: generateId(),
+        name,
+        knowledgeMap: provisionalMap,
+        startedAtIso: new Date().toISOString(),
+        startedPerf: performance.now(),
+        startingSketch: '',
+        source: resolvedSource,
+        overlayHandle,
+      });
+    } catch (err) {
+      overlayHandle.removeOverlay(false);
+      const status = err && err.status;
+      const code = err && err.body && err.body.error;
+      const message = (err && err.body && err.body.message)
+        ? String(err.body.message)
+        : 'Something went wrong. Try again.';
+      if (status === 422) {
+        emitTelemetry('concept_create.build_blocked', {
+          reason: code || 'unknown_422',
+          origin: 'server',
+        });
+      } else {
+        emitTelemetry('concept_create.build_failed', {
+          stage: 'submit',
+          error_kind: status ? `http_${status}` : 'transport',
+        });
+      }
+      setDoorError(message);
+    }
+  }
+
   async function startAddConcept(seed, originRect) {
     window.__creationDialogTrigger = document.activeElement;
     const dialog = mountCreationDialog(originRect);
@@ -1800,8 +1907,12 @@ const App = (() => {
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
-      openDrawer();
-      startAddConcept();
+      // Empty tile → route straight to the New-concept (ignition) view
+      // rather than opening the conversational creation modal. Same surface
+      // the sidebar's "New concept" link uses; keeps a single canonical
+      // entry into concept creation and avoids the modal layer entirely.
+      AudioFX.playTileClick();
+      showIgnition();
     }
   }
 
@@ -4254,7 +4365,6 @@ const App = (() => {
     getNodeInspectAction,
     runInspectAction,
     deleteConcept,
-    startAddConcept,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,

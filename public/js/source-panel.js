@@ -34,6 +34,14 @@
 //     return shape includes teardown only so future callers that need
 //     explicit cleanup can opt in by replacing the implementation.
 
+import { AudioFX } from "./audio.js";
+
+// Same printable-key heuristic used by the door (app.js) and launch pad —
+// keeps audio cues consistent across every text-entry surface.
+const _isPrintableSourceKey = (e) =>
+  !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
+  (e.key.length === 1 || e.key === "Backspace" || e.key === "Enter");
+
 export function mountSourcePanel(targetEl, opts = {}) {
   const onAttach = opts.onAttach || (() => {});
   const onCancel = opts.onCancel || (() => {});
@@ -218,6 +226,28 @@ export function mountSourcePanel(targetEl, opts = {}) {
     reader.onload = () => onReadOk(reader.result, file.name);
     reader.onerror = () => onReadError("Couldn't read that file.");
     reader.readAsText(file);
+  }
+
+  // Audio cues — match the door + launch-pad pattern so the source-attach
+  // surface is sonically consistent with the rest of the create flow.
+  // Textboxes: focus tap on arrival + key click per printable keystroke.
+  // Buttons (tabs, dropzone, Cancel, Attach): single focus tap on click.
+  const _bindFieldAudio = (el) => {
+    if (!el) return;
+    el.addEventListener("focus", () => AudioFX.playFocusTap());
+    el.addEventListener("keydown", (e) => {
+      if (_isPrintableSourceKey(e)) AudioFX.playKeyClick();
+    });
+  };
+  _bindFieldAudio(textarea);
+  _bindFieldAudio(urlInput);
+  tabs.forEach((tab) => tab.addEventListener("click", () => AudioFX.playFocusTap()));
+  if (dropzone) dropzone.addEventListener("click", () => AudioFX.playFocusTap());
+  if (cancelBtn) cancelBtn.addEventListener("click", () => AudioFX.playFocusTap());
+  if (attachBtn) {
+    attachBtn.addEventListener("click", () => {
+      if (!attachBtn.disabled) AudioFX.playFocusTap();
+    });
   }
 
   cancelBtn.addEventListener("click", () => onCancel());

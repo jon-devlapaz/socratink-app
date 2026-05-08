@@ -20,7 +20,10 @@
     flex-shrink: 0;
     border-right: 1px solid var(--border);
     box-shadow: none;
-    z-index: auto;
+    /* Sit above the antigravity-theme intro-particles canvas (position: fixed,
+       z-index: 0 in antigravity.css), which otherwise paints over the sidebar
+       because it's later in DOM order at the same stacking level. */
+    z-index: 1;
     transition: margin-left 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
     margin-left: 0;
   }

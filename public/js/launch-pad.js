@@ -22,6 +22,14 @@
 
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
+import { AudioFX } from './audio.js';
+
+// Same printable-key heuristic the door uses (app.js) so launch-pad audio
+// stays consistent: typing fires playKeyClick on visible keys + Backspace +
+// Enter, but skips modifier combos and key-repeat.
+const _isPrintableLaunchPadKey = (e) =>
+  !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
+  (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
 
 const PENDING_SHELL_KEY = 'socratink:pendingShell';
 const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -41,8 +49,11 @@ const SUBSTANTIVE_MIN_WORDS = 3;
 const IDK_PATTERN = /^(\?+|…+|idk|i\s*don'?t\s*know|no\s*idea|no\s*clue|dunno|not\s*sure)$/i;
 
 // Strategy-framed footer copy shown when the input is non-empty but not substantive.
+// Names the *kind* of words that move the sketch over the line so the learner
+// has something concrete to add, rather than the older "a few words" hand-wave
+// which left users guessing why a 16-word sketch was being rejected.
 const THIN_THRESHOLD_COPY =
-  'A few words about how you think it works will give socratink something to draft from.';
+  'Try naming a part, a guessed step, or where the picture gets fuzzy — that gives socratink something to draft from.';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -157,6 +168,24 @@ export function showLaunchPad(App) {
           : '';
       }
     });
+
+    // Audio cues mirror the door's concept-input pattern (app.js): focus tap
+    // on arrival, key click on each printable keystroke. Keeps the threshold
+    // surface sonically consistent with the door.
+    fresh.addEventListener('focus', () => AudioFX.playFocusTap());
+    fresh.addEventListener('keydown', (e) => {
+      if (_isPrintableLaunchPadKey(e)) AudioFX.playKeyClick();
+    });
+
+    // Submit button matches the sidebar/bottom-nav click cue (app.js):
+    // a single playFocusTap on click. Disabled state guards against
+    // "thin threshold" double-fires; a successful click then triggers
+    // navigation, so this listener naturally fires once per submit.
+    if (submit) {
+      submit.addEventListener('click', () => {
+        if (!submit.disabled) AudioFX.playFocusTap();
+      });
+    }
 
     // Focus the textarea on entry — the surface is blank and the learner's
     // task is immediate.

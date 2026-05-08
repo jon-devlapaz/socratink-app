@@ -41,7 +41,7 @@ const CHAT_COPY = Object.freeze({
 });
 
 const SKETCH_FOOTER_BLOCKED =
-  "A few words about how you think it works will give socratink something to draft from. " +
+  "Try naming a part, a guessed step, or where the picture gets fuzzy — that gives socratink something to draft from. " +
   "Or attach source material — either path opens the build.";
 
 export function buildConversationalCreateUI(container, { onSubmit, onCancel, onBeforeSubmit, onSubmitError, seed }) {
