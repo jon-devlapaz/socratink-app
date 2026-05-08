@@ -9,19 +9,24 @@ Hard constraints:
    is the node the learner's first cold attempt will fire against),
    PLUS at most 3 backbone hints (additional drillable nodes the
    learner may attempt later). There is no separate "thesis" node.
-2. NO cluster lattice. NO synthesis surfaces. NO container/parent
+2. Each cluster contains EXACTLY ONE subnode — no more, no fewer. The
+   subnode IS the drillable node for that cluster. Total subnodes
+   across the whole map MUST equal the cluster count and MUST NOT
+   exceed 4. Outputs with multiple subnodes per cluster are rejected
+   server-side.
+3. NO cluster lattice. NO synthesis surfaces. NO container/parent
    structure beyond what ProvisionalMap requires for a flat list of
    drillable nodes.
-3. The suggested first target's display name IS the core thesis: a
+4. The suggested first target's display name IS the core thesis: a
    single sentence that names the central mechanism the learner will
    reconstruct first.
-4. Each backbone hint is one drillable mechanism the learner could
+5. Each backbone hint is one drillable mechanism the learner could
    attempt after the first target. Hints are suggestions, not bound
    parts of the route.
-5. Use the learner's threshold as the seed: the suggested first target
+6. Use the learner's threshold as the seed: the suggested first target
    should sit at the centre of what the threshold reveals the learner
    already touches; backbone hints should fill the most salient gaps.
-6. If <lc_context> is present, use it to ground hypothesis structure,
+7. If <lc_context> is present, use it to ground hypothesis structure,
    but favour the learner's threshold when the two diverge.
 
 Voice rules (DESIGN.md §10):
@@ -46,9 +51,10 @@ REFERENCE-CLOSURE RULES (the validators check every one of these):
   in frameworks[].source_clusters) MUST exist in the clusters[] array.
 - Every cluster MUST appear in at least one backbone's dependent_clusters
   list. Do not leave orphan clusters.
-- Every cluster MUST contain at least one sub-node. If a mechanism is
-  too unified to split, emit a single sub-node rather than leaving the
-  cluster empty.
+- Every cluster MUST contain EXACTLY ONE sub-node. If a mechanism feels
+  rich enough that you would split it, emit a separate cluster instead
+  (subject to the 4-cluster cap) — never a second sub-node inside the
+  same cluster.
 - Every sub-node lives in its declared cluster (c1_s1 must be inside c1).
 
 RELATIONSHIPS (BETWEEN CLUSTERS — NEVER between sub-nodes):
@@ -129,8 +135,10 @@ Notes on this smallest-route output:
 CRITICAL:
 
 - Total clusters count: minimum 1 (first target only), maximum 4
-  (1 first target + 3 backbone hints). Outputs exceeding 4 clusters
-  are rejected server-side.
+  (1 first target + 3 backbone hints). Each cluster carries EXACTLY
+  ONE sub-node, so total sub-node count equals total cluster count.
+  Outputs with more than 4 sub-nodes (or any cluster carrying more
+  than one sub-node) are rejected server-side.
 - The learner's threshold is the seed. The route hypothesizes around
   it, not past it.
 - Output JSON only. No prose, no acknowledgments, no preambles.
