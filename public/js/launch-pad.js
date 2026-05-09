@@ -23,6 +23,7 @@
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
 import { AudioFX } from './audio.js';
+import { prefersReducedMotion } from './motion.js';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
 // stays consistent: typing fires playKeyClick on visible keys + Backspace +
@@ -136,6 +137,9 @@ export function showLaunchPad(App) {
   const view = document.getElementById('launch-pad-view');
   if (!view) return;
   view.removeAttribute('hidden');
+  // Clear any lingering busy state from a prior submit attempt.
+  view.removeAttribute('aria-busy');
+  view.classList.remove('is-building-route');
 
   // Earned-motion ignition handoff. Add `ag-lp-arriving` so the
   // antigravity theme's staggered fade-up reveal runs once on mount
@@ -252,6 +256,25 @@ export async function runLaunchPadAction(event, App) {
   if (submit) submit.disabled = true;
   if (validation) validation.textContent = '';
 
+  // Mark the launch-pad surface as busy while the extract is in flight.
+  // - aria-busy="true" tells assistive tech the surface is updating.
+  // - .is-building-route triggers the antigravity 320ms threshold-absorb
+  //   transition (form recedes 3px, sibling text dims to 0.58 opacity)
+  //   so the form visually steps back while the system works. Reduced-
+  //   motion users skip the class but still get the aria-busy hint.
+  // Salvaged from the wonder-round race entry on motion/codex; the
+  // patch was the only piece worth keeping from that whole arc.
+  const view = document.getElementById('launch-pad-view');
+  if (view) {
+    view.setAttribute('aria-busy', 'true');
+    if (!prefersReducedMotion()) view.classList.add('is-building-route');
+  }
+  const clearBuildingState = () => {
+    if (!view) return;
+    view.removeAttribute('aria-busy');
+    view.classList.remove('is-building-route');
+  };
+
   // ── Step 1: POST /api/extract ─────────────────────────────────────────────
   // Telemetry is emitted AFTER the network result is known — one event per
   // submit with the resolved build_blocked value.
@@ -286,6 +309,7 @@ export async function runLaunchPadAction(event, App) {
           : THIN_THRESHOLD_COPY);
       if (validation) validation.textContent = validationCopy;
       if (submit) submit.disabled = false;
+      clearBuildingState();
       emitTelemetry('concept_create.launch_pad.submit', {
         threshold_len: threshold.length,
         build_blocked: true,
@@ -315,6 +339,7 @@ export async function runLaunchPadAction(event, App) {
       : 'Something went wrong. Try again.';
     if (validation) validation.textContent = fallbackMsg;
     if (submit) submit.disabled = false;
+    clearBuildingState();
     return false;
   }
 
@@ -345,6 +370,7 @@ export async function runLaunchPadAction(event, App) {
       : 'Could not save the concept locally. Try again.';
     if (validation) validation.textContent = msg;
     if (submit) submit.disabled = false;
+    clearBuildingState();
     return false;
   }
 

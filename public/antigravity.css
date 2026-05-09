@@ -1876,3 +1876,62 @@ html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.ag-lp-arrivi
     text-decoration-color: LinkText !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   .is-building-route — extract-call-in-flight state
+   ══════════════════════════════════════════════════════════════
+
+   Salvaged from the wonder-round race entry on motion/codex; the
+   only piece worth keeping from that whole arc. When the learner
+   submits the threshold and the /api/extract call is in flight,
+   launch-pad.js sets aria-busy="true" + adds .is-building-route.
+   The form recedes 3px on a 320ms threshold-absorb, sibling text
+   dims to 0.58, and the submit-button arrow nudges 4px right.
+
+   This is calm state-coupled motion: tied to a real network event,
+   under DESIGN.md §12's 320ms ceiling, communicates state to both
+   sighted and assistive users. No theater, no decoration. The kind
+   of crystallinity the brand actually earns.
+
+   Reduced-motion users skip the absorb animation; the dim + arrow
+   shift remain (they're transitions, not keyframe motion). */
+
+body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-title,
+body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-helper,
+body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-input,
+body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-footer {
+  opacity: 0.58;
+  transition: opacity 220ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-form {
+  animation: ag-threshold-absorb 320ms cubic-bezier(0.16, 0.84, 0.44, 1) both;
+}
+
+body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-submit svg {
+  transform: translateX(4px);
+  transition: transform 220ms cubic-bezier(0.16, 0.84, 0.44, 1);
+}
+
+@keyframes ag-threshold-absorb {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: var(--ag-glass-shadow);
+  }
+  100% {
+    transform: translateY(3px) scale(0.992);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.80) inset,
+      0 16px 42px rgba(144, 103, 198, 0.14),
+      0 0 0 1px rgba(144, 103, 198, 0.20);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-form {
+    animation: none !important;
+  }
+}
+html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.is-building-route .launch-pad-form {
+  animation: none !important;
+}
