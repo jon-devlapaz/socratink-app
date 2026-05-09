@@ -242,43 +242,25 @@ html[data-theme="dark"] body.antigravity-theme .ignition-title {
     0 6px 32px rgba(158, 139, 255, 0.22);
 }
 
-/* Title: animated gradient shimmer on the key word */
+/* Title key word — solid violet ink with a soft textbook underline.
+   Reads as "noted term in a study book" rather than "AI startup hero
+   word." No shimmer, no gradient text (impeccable absolute ban), no
+   filter drop-shadow. Emphasis is carried by weight + color + the
+   thin underline mark. */
 body.antigravity-theme .ignition-title .ig-highlight {
-  background: linear-gradient(
-    135deg,
-    #6b3fa0 0%,
-    #9067c6 42%,
-    #3d7abd 76%,
-    #6b3fa0 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: ag-title-shimmer 4s ease-in-out infinite;
   display: inline;
-  filter: drop-shadow(0 1px 0 rgba(107, 63, 160, 0.18));
+  color: #6b3fa0;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(107, 63, 160, 0.55);
+  text-decoration-thickness: 0.10em;
+  text-underline-offset: 0.16em;
+  text-decoration-skip-ink: none;
 }
 
 html[data-theme="dark"] body.antigravity-theme .ignition-title .ig-highlight {
-  background: linear-gradient(
-    135deg,
-    #c8a8f7 0%,
-    #a97ef4 42%,
-    #7dd4f8 76%,
-    #c8a8f7 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 1px 0 rgba(200, 168, 247, 0.22));
-}
-
-@keyframes ag-title-shimmer {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  color: #c8a8f7;
+  text-decoration-color: rgba(200, 168, 247, 0.70);
 }
 
 html[data-motion="reduced"] body.antigravity-theme .ignition-title .ig-highlight,
