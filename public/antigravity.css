@@ -1714,8 +1714,20 @@ body.antigravity-theme .settings-toggle::after {
 }
 
 body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  background: linear-gradient(135deg, var(--ag-violet), var(--ag-mint));
-  box-shadow: 0 4px 12px rgba(144, 103, 198, 0.32);
+  /* Solid violet, not violet→mint gradient. The brand's "one accent
+     per screen" rule (DESIGN.md §12) — and the surface only gets
+     so many violet/mint stops before it stops reading as accent
+     and starts reading as gamified UI. */
+  background: var(--ag-violet);
+  /* Soft violet glow on the cream theme; suppressed entirely on
+     dark theme below to stop the shadow from blooming through
+     the navy surface as a stray purple dot. */
+  box-shadow: 0 4px 12px rgba(144, 103, 198, 0.20);
+}
+
+html[data-theme="dark"] body.antigravity-theme .settings-toggle[aria-checked="true"] {
+  background: var(--ag-violet);
+  box-shadow: none;
 }
 
 body.antigravity-theme .settings-toggle[aria-checked="true"]::after {

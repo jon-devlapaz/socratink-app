@@ -3836,6 +3836,10 @@ const App = (() => {
             <button type="button" class="settings-toggle" id="settings-motion-toggle"
                     role="switch" aria-checked="false" aria-label="Reduced motion"></button>
           </div>
+        </section>
+
+        <section class="settings-display">
+          <h3 class="settings-section-heading">Sound</h3>
 
           <div class="settings-row">
             <div>
