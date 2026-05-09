@@ -598,7 +598,7 @@ const App = (() => {
     let placeholderTimer = null;
     const tickPlaceholder = () => {
       if (prefersReducedMotion()) return;
-      if (!ignitionView?.classList.contains('visible')) return;
+      if (ignitionView?.hidden) return;
       if (document.activeElement === conceptField) return;
       if (conceptField.value.length > 0) return;
       exampleIdx = (exampleIdx + 1) % examples.length;
@@ -2190,7 +2190,7 @@ const App = (() => {
     const settingsView = document.getElementById('settings-view');
     const launchPadView = document.getElementById('launch-pad-view');
     if (heroCard) heroCard.style.display = 'none';
-    if (ignitionView) ignitionView.classList.remove('visible');
+    if (ignitionView) ignitionView.hidden = true;
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
     // C-prime launch pad: uses [hidden] attribute (not .visible class) to match
@@ -2256,32 +2256,39 @@ const App = (() => {
     clearSettingsPanel();
     teardownMapView();
     hidePrimaryViews();
-    const view = document.getElementById('ignition-view');
-    if (view) view.classList.add('visible');
+    document.getElementById('ignition-view').hidden = false;
     renderIgnitionGate();
     if (window.innerWidth < 900) closeDrawer();
-    // Focus the concept field so the threshold composer is immediately usable.
-    const conceptField = document.getElementById('hero-single-input-field');
-    if (conceptField instanceof HTMLTextAreaElement) {
-      requestAnimationFrame(() => conceptField.focus());
-    }
+    // Focus the writing surface directly; aria-label provides SR announcement.
+    const field = document.getElementById('hero-single-input-field');
+    if (field) requestAnimationFrame(() => field.focus());
   }
 
   function hideIgnition() {
-    const view = document.getElementById('ignition-view');
-    if (view) view.classList.remove('visible');
+    document.getElementById('ignition-view').hidden = true;
   }
 
   function renderIgnitionGate() {
     const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
+    const field = document.getElementById('hero-single-input-field');
+    const submit = document.getElementById('hero-door-submit');
+    const capCta = gate?.querySelector('.ig-button');
+
     if (gate) gate.hidden = !atCap;
-    if (form) form.hidden = atCap;
-    // The Ignition nav stays interactive at cap — clicking it shows
-    // the cap gate UI, which is the supported destination in this
-    // state. Surface the constraint via title only; do NOT advertise
-    // the link as disabled while still letting the click activate.
+    if (form) form.dataset.state = atCap ? 'locked' : '';
+    if (field) field.disabled = atCap;
+    if (submit) {
+      const fieldValue = (field?.value || '').trim();
+      const ready = fieldValue.length >= 2;
+      submit.disabled = atCap || !ready;
+    }
+
+    if (atCap && document.activeElement === field && capCta) {
+      capCta.focus();
+    }
+
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
