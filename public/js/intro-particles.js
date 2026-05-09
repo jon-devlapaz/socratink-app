@@ -94,12 +94,12 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
         y,
         homeX: x,
         homeY: y,
-        vx: (rand() - 0.5) * 0.1, // Slower base velocity
-        vy: (rand() - 0.5) * 0.1,
+        vx: (rand() - 0.5) * 0.18,
+        vy: (rand() - 0.5) * 0.18,
         r: 1.5 + rand() * 3.5, // Slightly larger nodes
-        orbit: 10 + rand() * 40,
+        orbit: 18 + rand() * 52,
         phase: rand() * Math.PI * 2,
-        speed: 0.15 + rand() * 0.4, // Slower orbit (Intellectual calm)
+        speed: 0.32 + rand() * 0.62,
         colorIndex: index % 4,
       };
     });
@@ -251,12 +251,14 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
     const field = getThresholdField();
     if (!field) return;
 
-    // Focus arrival keeps a single calm pulse so the field reads as "alive"
-    // when the learner lands on it. Per-keystroke bursts were removed: the
-    // typing-reactive bloom was visually noisy and pulled attention away from
-    // the threshold the learner is composing.
     field.addEventListener('focus', () => {
       pulseFromTyping(0.55);
+    });
+    field.addEventListener('input', () => {
+      const nextLength = field.value.length;
+      const delta = Math.abs(nextLength - typing.lastValueLength);
+      typing.lastValueLength = nextLength;
+      pulseFromTyping(Math.min(1.15, 0.38 + delta * 0.14), /\s$/.test(field.value) ? 'space' : 'character');
     });
   }
 
@@ -302,8 +304,8 @@ function mountIntroParticles(canvasId = 'intro-particle-canvas') {
       const targetX = p.homeX + Math.sin(t * p.speed + p.phase) * p.orbit;
       const targetY = p.homeY + Math.cos(t * p.speed * 0.72 + p.phase) * p.orbit * 0.44;
 
-      p.vx += (targetX - p.x) * 0.003 * dt; // Slower return to orbit
-      p.vy += (targetY - p.y) * 0.003 * dt;
+      p.vx += (targetX - p.x) * 0.006 * dt;
+      p.vy += (targetY - p.y) * 0.006 * dt;
 
       p.vx += (focusX - p.x) * 0.0002 * dt;
       p.vy += (focusY - p.y) * 0.00015 * dt;
