@@ -704,7 +704,7 @@ Locate the existing `#ignition-view` and `#launch-pad-view` blocks (currently li
 
       <div class="composer-card__actions">
         <button type="submit" class="ig-button" id="launch-pad-submit" disabled>
-          <span>Build my map</span>
+          <span>Save sketch</span>
           <svg viewBox="0 0 24 24" width="14" height="14"
                fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

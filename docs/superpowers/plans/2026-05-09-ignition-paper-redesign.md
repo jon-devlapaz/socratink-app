@@ -897,7 +897,7 @@ Replace the entire `<section id="launch-pad-view">` block through its closing `<
 
       <div class="composer-card__actions">
         <button type="submit" class="ig-button" id="launch-pad-submit" disabled>
-          <span>Build my map</span>
+          <span>Save sketch</span>
           <svg viewBox="0 0 24 24" width="14" height="14"
                fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1240,7 +1240,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Tab to submit — `--accent-ring` visible, no transform jitter.
 - Click `add` — source panel expands inline, focus moves to URL input.
 - URL flow → submit with no source → launch-pad appears: "on Photosynthesis", tall composer.
-- Type 3+ words → "Build my map" enables.
+- Type 3+ words → "Save sketch" enables.
 - Submit → composer dims (`data-state="busy"`) → graph view appears on success.
 
 - [ ] **Step 3: Manual flow — dark mode**
