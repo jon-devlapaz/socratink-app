@@ -1,0 +1,24 @@
+/* ════════════════════════════════════════════════════════════════════
+   index.css — Single import root for the app stylesheet bundle.
+   Declares cascade-layer order; imports the existing styles.css chain
+   and the antigravity overlay into their respective layers, plus
+   reserves a 'paper' layer for Wave 1+ to introduce new component
+   rules that beat the antigravity overlay.
+
+   Layer order (later wins regardless of selector specificity):
+     components — base layout/components/etc. via styles.css chain
+     legacy     — antigravity.css; wins over components on every
+                  unmigrated view, exactly as before
+     paper      — reserved; first consumed in Paper Wave 1
+
+   Cache-busting query strings on @imports preserve the prior link-tag
+   versioning behavior. Bump them when shipping a stylesheet update.
+
+   See docs/superpowers/specs/2026-05-09-paper-tokens-cascade-layers-refactor-design.md
+   ════════════════════════════════════════════════════════════════════ */
+
+@layer components, legacy, paper;
+
+@import url('../styles.css?v=86')      layer(components);
+@import url('../antigravity.css?v=15') layer(legacy);
+@import url('paper.css?v=5')           layer(paper);

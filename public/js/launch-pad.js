@@ -48,11 +48,6 @@ const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const SUBSTANTIVE_MIN_WORDS = 3;
 const IDK_PATTERN = /^(\?+|…+|idk|i\s*don'?t\s*know|no\s*idea|no\s*clue|dunno|not\s*sure)$/i;
 
-// Cleanup-timer handle for the `.ag-lp-arriving` reveal class. Cancelled +
-// rescheduled on each showLaunchPad mount so a quick re-entry doesn't have
-// a stale 700ms timeout from the prior mount stripping the class mid-flight.
-let _lpArrivingCleanup = null;
-
 // Strategy-framed footer copy shown when the input is non-empty but not substantive.
 // Names the *kind* of words that move the sketch over the line so the learner
 // has something concrete to add, rather than the older "a few words" hand-wave
@@ -135,34 +130,15 @@ export function showLaunchPad(App) {
 
   // Hide all primary views via shared helper, then reveal the launch pad.
   // App.hidePrimaryViews() also sets [hidden] on launch-pad-view, so we
-  // call it first, then remove [hidden] to mount this surface.
+  // call it first, then flip the attribute off to mount this surface.
   App.hidePrimaryViews();
 
   const view = document.getElementById('launch-pad-view');
   if (!view) return;
-  view.removeAttribute('hidden');
-  // Clear any lingering busy state from a prior submit attempt.
+  view.hidden = false;
   view.removeAttribute('aria-busy');
-  view.classList.remove('is-building-route');
-
-  // Earned-motion ignition handoff. Add `ag-lp-arriving` so the
-  // antigravity theme's staggered fade-up reveal runs once on mount
-  // (see public/antigravity.css "Earned motion" block). Toggling the
-  // class off then on (via removeAttribute('hidden') + class flip)
-  // ensures the animation re-plays if the learner re-enters the
-  // launch pad later in the same session. The 700ms cleanup margin
-  // covers the longest stagger (320ms delay + 320ms duration = 640ms).
-  view.classList.remove('ag-lp-arriving');
-  // Force a reflow so re-adding the class restarts the animation.
-  void view.offsetWidth;
-  view.classList.add('ag-lp-arriving');
-  // Cancel any pending cleanup from a prior mount before scheduling a
-  // new one, so a quick re-entry doesn't strip the class mid-animation.
-  if (_lpArrivingCleanup) window.clearTimeout(_lpArrivingCleanup);
-  _lpArrivingCleanup = window.setTimeout(() => {
-    view.classList.remove('ag-lp-arriving');
-    _lpArrivingCleanup = null;
-  }, 700);
+  const form = document.getElementById('launch-pad-form');
+  if (form) form.dataset.state = '';
 
   // Hydrate concept name.
   const nameEl = document.getElementById('launch-pad-concept-name');
@@ -266,28 +242,28 @@ export async function runLaunchPadAction(event, App) {
   if (submit) submit.disabled = true;
   if (validation) validation.textContent = '';
 
-  // Mark the launch-pad surface as busy while the extract is in flight.
-  // - aria-busy="true" tells assistive tech the surface is updating.
-  // - .is-building-route triggers the antigravity 320ms threshold-absorb
-  //   transition (form recedes 3px, sibling text dims to 0.58 opacity)
-  //   so the form visually steps back while the system works. Reduced-
-  //   motion users skip the class but still get the aria-busy hint.
-  // Salvaged from the wonder-round race entry on motion/codex; the
-  // patch was the only piece worth keeping from that whole arc.
-  const view = document.getElementById('launch-pad-view');
-  if (view) {
-    view.setAttribute('aria-busy', 'true');
-    // Always add .is-building-route. Reduced-motion users still get the
-    // dim + arrow cue (transitions, not keyframes); only the threshold-
-    // absorb keyframe is suppressed via the antigravity.css @media rule.
-    // Earlier code gated this with prefersReducedMotion() which removed
-    // the cue entirely — reduced-motion is "calmer," not "no signal."
-    view.classList.add('is-building-route');
+  // Swap the submit label to a quiet status word during the ~10-20s extract.
+  // Persona QA on the busy state flagged the unchanged "Save sketch" label
+  // + opacity dim alone as too quiet for a 15-second wait. A single-word
+  // swap to "Drafting…" communicates progress without adding chrome.
+  // (Restored to the original label on any error path so the user can retry.)
+  const originalSubmitLabel = submit ? submit.textContent : '';
+  if (submit) submit.textContent = 'Drafting…';
+
+  // Mark the composer as busy while the extract is in flight.
+  // aria-busy="true" tells assistive tech the surface is updating;
+  // form.dataset.state='busy' drives the paper composer's dim
+  // (paper.css .composer-card[data-state="busy"]).
+  const form = document.getElementById('launch-pad-form');
+  if (form) {
+    form.setAttribute('aria-busy', 'true');
+    form.dataset.state = 'busy';
   }
   const clearBuildingState = () => {
-    if (!view) return;
-    view.removeAttribute('aria-busy');
-    view.classList.remove('is-building-route');
+    if (!form) return;
+    form.removeAttribute('aria-busy');
+    form.dataset.state = '';
+    if (submit) submit.textContent = originalSubmitLabel;
   };
 
   // ── Step 1: POST /api/extract ─────────────────────────────────────────────

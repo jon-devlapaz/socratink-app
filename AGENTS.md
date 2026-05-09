@@ -2,6 +2,30 @@
 
 This file provides guidance to all coding agents and automation working in this repository.
 
+### Boil the ocean
+
+The marginal cost of completeness is
+near zero with AI. Do the whole thing.
+Do it right. Do it with tests. Do it
+with documentation. Do it so well that
+Jon is genuinely impressed, not
+politely satisfied, actually impressed.
+Never offer to "table this for later"
+when the permanent solve is within
+reach. Never leave a dangling thread
+when tying it off takes five more
+minutes. Never present a workaround
+when the real fix exists. The standard
+isn't "good enough" it's "holy shit,
+that's done." Search before building.
+Test before shipping. Ship the
+complete thing. When Jon asks for
+something, the answer is the finished
+product, not a plan to build it. Time
+is not an excuse. Fatigue is not an
+excuse. Complexity is not an excuse.
+Boil the ocean.
+
 ## First principles for this repo
 - Keep changes surgical and scope-locked. Do not broaden features or refactor unrelated areas.
 - Prefer the simplest implementation that satisfies the task.
@@ -180,6 +204,15 @@ bash scripts/verify-deploy.sh HEAD
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`
   - serverless function excludes tests, docs, logs, local env files, caches, and agent/tooling artifacts
+
+### Stylesheet cache-bust discipline
+- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `index.css` `@imports` `tokens.css`, `styles.css`, `antigravity.css`, `paper.css` (each with their own `?v=M` cache-bust pins).
+- **When editing a stylesheet that's imported via `@import` in `index.css`, bump BOTH version pins:**
+  1. The inner `?v=M` on the `@import` line inside `public/css/index.css` (e.g., `?v=14` → `?v=15` for an antigravity edit).
+  2. The outer `?v=N` on the `<link>` to `/css/index.css` inside `public/index.html` (e.g., `?v=3` → `?v=4`).
+- Bumping only the inner pin is **not enough** — the browser keeps serving the cached `index.css?v=N`, which still has the old `?v=M-1` import baked in. The cached outer file points at the cached inner file; bumping only one breaks the chain at the wrong link.
+- The two numbers don't have to match — only that each changes when its file changes. When in doubt, bump both.
+- Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
 
 ## Agent bootstrap discovery
 - Canonical session bootstrap: `docs/codex/onboarding.md`.

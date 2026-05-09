@@ -2409,99 +2409,44 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
   box-shadow: 0 10px 24px rgba(124, 111, 205, 0.14);
 }
 
-/* ── Ignition view ────────────────────────────────────────────── */
-#ignition-view {
-  display: none;
+/* ── Ignition + Launch Pad view shells (paper system) ──────────
+   Visibility is driven by the [hidden] attribute, which base.css
+   already declares as `display: none !important`. No display:none
+   toggle on these IDs.
+   See docs/superpowers/specs/2026-05-09-ignition-paper-redesign-design.md
+   ─────────────────────────────────────────────────────────── */
+
+#ignition-view,
+#launch-pad-view {
+  display: flex;
   flex-direction: column;
   align-items: center;
-  padding: clamp(56px, 10vh, 96px) 24px clamp(80px, 14vh, 128px);
+  padding: clamp(56px, 10vh, 96px) var(--space-5) clamp(80px, 14vh, 128px);
   position: relative;
   isolation: isolate;
   overflow-x: hidden;
   overflow-y: auto;
+  background: var(--surface-page);
 }
-#ignition-view.visible {
-  display: flex;
-}
-.ignition-view__inner {
-  /* 620px matches the form's max width so eyebrow, title, fields, chips,
-     and submit all share the same left and right edges. */
-  width: min(100%, 620px);
+
+.ignition-view__inner,
+.launch-pad-view__inner {
+  width: min(100%, 480px);
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  position: relative;
-  z-index: 2;
+  align-items: stretch;
+  gap: var(--space-4);
+  animation: ig-screen-in var(--duration-cozy) var(--ease-standard) both;
 }
-.ignition-eyebrow {
-  margin: 0 0 2px 0;
-  font-family: var(--font-body);
-  font-size: var(--text-xs, 12px);
-  font-weight: 660;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-sub);
-  text-align: center;
+
+@keyframes ig-screen-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.ignition-title {
-  margin: 0 0 8px 0;
-  font-family: var(--font-display, var(--font-body));
-  font-size: var(--text-3xl, 32px);
-  line-height: var(--leading-tight, 1.18);
-  color: var(--text);
-  text-align: center;
-}
-.ignition-guidance,
-.ignition-voice-line {
-  margin: 0;
-  color: var(--text-sub);
-  font-family: var(--font-body);
-  line-height: var(--leading-relaxed, 1.55);
-}
-.ignition-cap-gate {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 22px 24px;
-  border: 1px solid rgba(144, 103, 198, 0.18);
-  border-radius: 14px;
-  background: var(--surface-card, rgba(255, 250, 246, 0.62));
-  box-shadow:
-    0 8px 24px 0 rgba(144, 103, 198, 0.10),
-    inset 0 1px 0 0 rgba(255, 250, 246, 0.62);
-}
-.ignition-cap-gate__message {
-  margin: 0;
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--text-md, 15px);
-  line-height: var(--leading-relaxed, 1.55);
-}
-.ignition-cap-gate__cta {
-  appearance: none;
-  border: 1px solid var(--primary);
-  background: transparent;
-  color: var(--primary);
-  padding: 9px 16px;
-  border-radius: 12px;
-  font: inherit;
-  font-size: var(--text-sm, 14px);
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color var(--duration-micro, 140ms) var(--ease-standard, ease),
-    color var(--duration-micro, 140ms) var(--ease-standard, ease),
-    transform var(--duration-micro, 140ms) var(--ease-standard, ease),
-    box-shadow var(--duration-micro, 140ms) var(--ease-standard, ease);
-}
-.ignition-cap-gate__cta:hover {
-  background: var(--accent-soft, rgba(144, 103, 198, 0.08));
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px 0 rgba(144, 103, 198, 0.15);
-}
-.ignition-cap-gate__cta:active {
-  transform: scale(0.97);
+
+@media (prefers-reduced-motion: reduce) {
+  .ignition-view__inner,
+  .launch-pad-view__inner { animation: none; }
 }
 
 /* ── Settings (single calm column) ────────────────────────── */

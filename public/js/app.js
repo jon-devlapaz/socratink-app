@@ -334,7 +334,12 @@ const App = (() => {
   function renderHero(concept) {
     if (!concept) {
       titleEl.textContent = 'What do you want to understand?';
-      descEl.textContent = getHeroGuidance(null);
+      // Empty-state desc dropped per silent-surface principle: the iso
+      // board's nine empty slots make the affordance obvious; a
+      // narrator line "Pick a tile to enter…" is unearned chrome.
+      // Populated states still get state-specific guidance (the else
+      // branch below still calls getHeroGuidance(concept)).
+      descEl.textContent = '';
       if (heroStateChipEl) {
         heroStateChipEl.textContent = 'no concepts yet';
         heroStateChipEl.dataset.state = 'empty';
@@ -373,10 +378,12 @@ const App = (() => {
     App._pendingDoorSource = null;
     const sourceAttachBtn = document.getElementById('hero-source-attach');
     const sourcePanel = document.getElementById('hero-source-panel');
+    const sourceValue = document.getElementById('hero-source-value');
     if (sourceAttachBtn) {
       sourceAttachBtn.setAttribute('aria-expanded', 'false');
-      sourceAttachBtn.textContent = '+ add source material';
+      sourceAttachBtn.textContent = 'add';
     }
+    if (sourceValue) sourceValue.textContent = 'none yet';
     if (sourcePanel) {
       sourcePanel.hidden = true;
       sourcePanel.innerHTML = '';
@@ -484,11 +491,21 @@ const App = (() => {
     return payload.type;
   }
 
+  // Single source of truth for "is the door ready to submit?".
+  // Used by _doorUpdateSubmitState (input handler) AND by
+  // renderIgnitionGate (cap-state computation) so the button-disabled
+  // logic and the keyboard-submit gate share the same predicate.
+  // ≥2 trimmed chars matches the brainstorm spec for the door.
+  function _doorReady() {
+    const f = document.getElementById('hero-single-input-field');
+    return !!f && (f.value || '').trim().length >= 2;
+  }
   function _doorUpdateSubmitState() {
-    const conceptField = document.getElementById('hero-single-input-field');
     const submitBtn = document.getElementById('hero-door-submit');
-    if (!conceptField || !submitBtn) return;
-    submitBtn.disabled = !(conceptField.value || '').trim();
+    if (!submitBtn) return;
+    // Mirror the at-cap gate: if at cap, stay disabled regardless of input.
+    const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
+    submitBtn.disabled = atCap || !_doorReady();
   }
 
   let _sourcePanelGen = 0;
@@ -501,6 +518,7 @@ const App = (() => {
     btn.addEventListener('click', () => {
       const isOpen = btn.getAttribute('aria-expanded') === 'true';
       const hasSource = !!App._pendingDoorSource;
+      const valueEl = document.getElementById('hero-source-value');
       if (isOpen) {
         // Panel is open — collapse and abandon any in-progress source pick.
         // Bump generation so any in-flight dynamic import bails on resolve.
@@ -508,13 +526,15 @@ const App = (() => {
         panel.hidden = true;
         panel.innerHTML = '';
         btn.setAttribute('aria-expanded', 'false');
-        btn.textContent = '+ add source material';
+        btn.textContent = 'add';
+        if (valueEl) valueEl.textContent = 'none yet';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else if (hasSource) {
-        // Panel is closed and a source is attached — the button is now the
-        // "(clear)" affordance. Click clears the source without re-opening.
-        btn.textContent = '+ add source material';
+        // Panel is closed and a source is attached — the button is the
+        // "remove" affordance. Click clears the source without re-opening.
+        btn.textContent = 'add';
+        if (valueEl) valueEl.textContent = 'none yet';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else {
@@ -534,14 +554,21 @@ const App = (() => {
               panel.hidden = true;
               panel.innerHTML = '';
               btn.setAttribute('aria-expanded', 'false');
-              btn.textContent = `Source: ${_doorDescribeSource(payload)} (clear)`;
+              // Paper-style source-meta line: value span shows source ID,
+              // button toggles to "remove" (matches the "add" ↔ "remove"
+              // affordance pattern persona-validated in Paper Wave 1).
+              btn.textContent = 'remove';
+              const v = document.getElementById('hero-source-value');
+              if (v) v.textContent = _doorDescribeSource(payload);
               _doorUpdateSubmitState();
             },
             onCancel() {
               panel.hidden = true;
               panel.innerHTML = '';
               btn.setAttribute('aria-expanded', 'false');
-              btn.textContent = '+ add source material';
+              btn.textContent = 'add';
+              const v = document.getElementById('hero-source-value');
+              if (v) v.textContent = 'none yet';
               App._pendingDoorSource = null;
               _doorUpdateSubmitState();
             },
@@ -577,10 +604,18 @@ const App = (() => {
       if (isPrintable(e)) {
         AudioFX.playKeyClick();
       }
-      // Cmd/Ctrl+Enter submits if concept is non-empty (single-field door).
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim()) {
-        e.preventDefault();
-        form?.requestSubmit?.();
+      // Cmd/Ctrl+Enter submits — but only if the same gate the submit
+      // button uses says we're ready (≥2 chars trimmed AND not at the
+      // 9-concept cap). Previously this check just truthy-checked the
+      // trimmed value, which let a 1-char concept submit via keyboard
+      // even though the button was correctly disabled, AND let a kb
+      // user bypass cap-state by hitting Cmd+Enter.
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
+        if (!atCap && _doorReady()) {
+          e.preventDefault();
+          form?.requestSubmit?.();
+        }
       }
     });
 
@@ -598,7 +633,7 @@ const App = (() => {
     let placeholderTimer = null;
     const tickPlaceholder = () => {
       if (prefersReducedMotion()) return;
-      if (!ignitionView?.classList.contains('visible')) return;
+      if (ignitionView?.hidden) return;
       if (document.activeElement === conceptField) return;
       if (conceptField.value.length > 0) return;
       exampleIdx = (exampleIdx + 1) % examples.length;
@@ -2190,7 +2225,7 @@ const App = (() => {
     const settingsView = document.getElementById('settings-view');
     const launchPadView = document.getElementById('launch-pad-view');
     if (heroCard) heroCard.style.display = 'none';
-    if (ignitionView) ignitionView.classList.remove('visible');
+    if (ignitionView) ignitionView.hidden = true;
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
     // C-prime launch pad: uses [hidden] attribute (not .visible class) to match
@@ -2256,32 +2291,49 @@ const App = (() => {
     clearSettingsPanel();
     teardownMapView();
     hidePrimaryViews();
-    const view = document.getElementById('ignition-view');
-    if (view) view.classList.add('visible');
+    document.getElementById('ignition-view').hidden = false;
     renderIgnitionGate();
     if (window.innerWidth < 900) closeDrawer();
-    // Focus the concept field so the threshold composer is immediately usable.
-    const conceptField = document.getElementById('hero-single-input-field');
-    if (conceptField instanceof HTMLTextAreaElement) {
-      requestAnimationFrame(() => conceptField.focus());
-    }
+    // Focus the writing surface directly; aria-label provides SR announcement.
+    const field = document.getElementById('hero-single-input-field');
+    if (field) requestAnimationFrame(() => field.focus());
   }
 
   function hideIgnition() {
-    const view = document.getElementById('ignition-view');
-    if (view) view.classList.remove('visible');
+    document.getElementById('ignition-view').hidden = true;
   }
 
   function renderIgnitionGate() {
     const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
+    const field = document.getElementById('hero-single-input-field');
+    const submit = document.getElementById('hero-door-submit');
+    const sourceAttach = document.getElementById('hero-source-attach');
+    const capCta = gate?.querySelector('.ig-button');
+
     if (gate) gate.hidden = !atCap;
-    if (form) form.hidden = atCap;
-    // The Ignition nav stays interactive at cap — clicking it shows
-    // the cap gate UI, which is the supported destination in this
-    // state. Surface the constraint via title only; do NOT advertise
-    // the link as disabled while still letting the click activate.
+    if (form) form.dataset.state = atCap ? 'locked' : '';
+
+    // Focus handoff MUST run BEFORE disabling the field. Setting
+    // .disabled on a focused element synchronously blurs it, which
+    // shifts document.activeElement to <body> immediately. If we
+    // disable first, the activeElement === field check below always
+    // fails and the keyboard user gets stranded with focus on body.
+    if (atCap && document.activeElement === field && capCta) {
+      capCta.focus();
+    }
+
+    if (field) field.disabled = atCap;
+    // pointer-events:none on the form's data-state="locked" stops mouse
+    // input but does not prevent keyboard focus; setting disabled also
+    // removes the button from the tab order so kb users can't Enter it
+    // and accidentally expand the source panel while at cap.
+    if (sourceAttach) sourceAttach.disabled = atCap;
+    if (submit) {
+      submit.disabled = atCap || !_doorReady();
+    }
+
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;

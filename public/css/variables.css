@@ -58,6 +58,13 @@
   --border-subtle:      rgba(var(--ink-900-rgb), 0.10);
   --border-strong:      rgba(var(--ink-900-rgb), 0.16);
 
+  /* Paper-system additions (Paper Wave 0/1) — used by ruled-paper composer
+     and disabled-button surface in the Ignition + Launch Pad views. See:
+     docs/superpowers/specs/2026-05-09-ignition-paper-redesign-design.md */
+  --rule-line:          rgba(var(--ink-900-rgb), 0.07);
+  --rule-step:          32px;
+  --surface-disabled:   var(--mauve-200);
+
   --graph-tile-top:     rgba(var(--cream-50-rgb), 0.98);
   --graph-tile-left:    rgba(var(--mauve-200-rgb), 0.92);
   --graph-tile-right:   rgba(var(--lavender-500-rgb), 0.42);
@@ -102,8 +109,15 @@
   /* Node state tokens — learner-facing graph states (C2 pills consume) */
   --node-locked:        var(--mauve-200);
   --node-primed:        var(--lavender-500);
-  --node-drilled:       #d8a867;
-  --node-solidified:    var(--success);
+  /* Wave 2 polish: --node-drilled and --node-solidified desaturated per
+     persona QA on the dashboard ("if my dashboard turns into a neon grid
+     of red and green progress dots, I'm going to hate looking at it").
+     Same hue family, chroma turned down — grey-amber and grey-green.
+     --node-solidified is decoupled from --success so the broader success
+     vocabulary (pills, badges, alerts) keeps the saturated brand green;
+     only the iso-board / crystal lifecycle quiets down. */
+  --node-drilled:       #b69e7e;
+  --node-solidified:    #6e9c8a;
 
   /* Knowledge graph semantic tokens — kept separate from pill state tokens
      so Cytoscape can retheme without changing analytics/status surfaces. */
@@ -437,8 +451,8 @@
   /* Node state rgb channels (alpha compositing for pills, glows) */
   --node-locked-rgb:      202, 196, 206;
   --node-primed-rgb:      141, 134, 201;
-  --node-drilled-rgb:     216, 168, 103;
-  --node-solidified-rgb:   77, 186, 138;
+  --node-drilled-rgb:     182, 158, 126;     /* matches grey-amber #b69e7e */
+  --node-solidified-rgb:   110, 156, 138;    /* matches grey-green #6e9c8a */
 }
 
 /* ============================================================
@@ -482,6 +496,19 @@
 
   --border-subtle: rgba(var(--cream-50-rgb), 0.14);
   --border-strong: rgba(var(--cream-50-rgb), 0.22);
+  --rule-line:        rgba(var(--cream-50-rgb), 0.10);
+
+  /* Dark-mode accent — desaturated grey-violet ("ink not LED").
+     Persona QA on Paper Wave 1 caught the brand violet (--violet-600) on
+     graphite reading as "glowing synthetic LED" rather than ink. Light mode
+     keeps the saturated violet (it reads as ink ON paper); dark mode pulls
+     toward grey-violet so the same accent role reads as "marked-up paper at
+     night." Contrast values verified ≥4.5:1 AA Normal on graphite-800 card
+     and on cream button text. See DESIGN.md §12 silent-surface block. */
+  --accent-primary:     #a09aac;     /* accent text on graphite card — 5.3:1 */
+  --primary-fill:       #5e576c;     /* button enabled bg — cream text 6.95:1 */
+  --primary-fill-hover: #6f6680;     /* hover lift, still passes AA */
+  --surface-disabled:   #2c2a35;     /* near-graphite disabled fill — no glow */
 
   --graph-tile-top:   #554f7b;
   --graph-tile-left:  #3b3658;

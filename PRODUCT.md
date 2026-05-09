@@ -39,6 +39,7 @@ The product should feel like a quiet reading room with a rigorous tutor present.
 3. One active cognitive target. Each screen should foreground the current room, phase, and next move while lowering the visual weight of everything else.
 4. Repair is specific, not flattering. Feedback should name the hinge between the learner's attempt and the mechanism without praise that sounds like proof.
 5. Spacing is a valid choice. Interleaving and breaks are part of the learning loop, not consolation states or rewards.
+6. Silent surface — every visible element earns its keep. The default is a screen that says nothing it has not earned the right to say. Eyebrows, helper lines, emphasis treatments, decorative icons, branded vocabulary, and progress indicators are guilty until proven load-bearing. The earned elements are usually one title + one input + one commit button + any footnote that names a system constraint the system actually enforces. Adjacent-surface vocabulary clashes — the same word with two different referents on a single screen — are a real bug class, not a stylistic concern; scan for them before locking any copy pair. (See DESIGN.md §10 and §12 for the longer treatment.)
 
 ## Accessibility & Inclusion
 

@@ -23,8 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="styles.css?v=85">
-  <link rel="stylesheet" href="antigravity.css?v=13">
+  <link rel="stylesheet" href="/css/index.css?v=9">
 </head>
 
 <body>
@@ -208,18 +207,11 @@
               <div class="hero-state-chip" id="hero-state-chip" data-state="empty">no concepts yet</div>
             </div>
           </div>
-          <div class="hero-eyebrow-row">
-            <div class="hero-eyebrow" id="hero-eyebrow">Desk</div>
-          </div>
           <h1 class="hero-title" id="title">Your concepts.</h1>
           <p class="desc hero-guidance" id="desc" aria-live="polite">Pick a tile to enter, or start a new concept.</p>
           <div class="hero-actions">
             <button class="hero-primary-action" type="button" onclick="App.showIgnition()">
               <span class="hero-primary-action__label">New concept</span>
-              <svg class="hero-primary-action__arrow" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h13"></path>
-                <path d="m13 6 6 6-6 6"></path>
-              </svg>
             </button>
           </div>
 
@@ -274,81 +266,100 @@
 
     </section>
 
-    <!-- Ignition View: door for new concept entry (C-prime) -->
-    <section id="ignition-view" class="primary-view ignition-view" aria-labelledby="ignition-title">
-      <div class="intro-particles" aria-hidden="true">
-        <canvas id="intro-particle-canvas"></canvas>
-      </div>
+    <!-- Ignition View: door for new concept entry (paper system) -->
+    <section id="ignition-view" class="primary-view ignition-view"
+             aria-labelledby="ignition-title" hidden>
       <div class="ignition-view__inner">
-        <h1 class="ignition-title" id="ignition-title">What do you want to <span class="ig-highlight">understand</span>?</h1>
-
-        <!-- Library-cap gate. Hidden by default; shown by renderIgnitionGate() at board capacity. -->
-        <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
-          <p class="ignition-cap-gate__message">The board holds nine concepts. Retire one to start another.</p>
-          <button class="ignition-cap-gate__cta" type="button" onclick="App.showLibrary()">Open Library</button>
+        <div class="witness-anchor" aria-hidden="true">
+          <svg viewBox="0 0 28 28" width="28" height="28">
+            <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
+          </svg>
         </div>
 
-        <!-- Door composer. -->
-        <form class="hero-single-input" id="hero-single-input" onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <label class="hero-threshold-field" for="hero-single-input-field">
-            <span class="hero-threshold-field__label sr-only">Concept</span>
-            <textarea class="hero-single-input__field hero-single-input__field--concept"
-                      id="hero-single-input-field"
-                      rows="2"
-                      maxlength="200"
-                      placeholder="e.g. photosynthesis, the Krebs cycle, recursion in Python…"
-                      aria-label="What do you want to understand?"></textarea>
-          </label>
+        <h1 class="ig-title" id="ignition-title" tabindex="-1">
+          What do you want to explain?
+        </h1>
 
-          <button type="button" class="hero-source-attach" id="hero-source-attach"
-                  aria-expanded="false" aria-controls="hero-source-panel">
-            + add source material
-          </button>
-          <div class="hero-source-panel" id="hero-source-panel" hidden></div>
+        <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
+          <p class="ignition-cap-gate__message">
+            The board holds nine concepts. Retire one to start another.
+          </p>
+          <button type="button" class="ig-button ig-button--ghost"
+                  onclick="App.showLibrary()">Open library</button>
+        </div>
 
-          <p class="hero-door-error" id="hero-door-error" role="status" aria-live="polite" hidden></p>
+        <form class="composer-card" id="hero-single-input"
+              onsubmit="return App.runHeroAction(event)" autocomplete="off">
+          <textarea class="composer-card__field" id="hero-single-input-field"
+                    rows="2" maxlength="200"
+                    placeholder="e.g. photosynthesis, the Krebs cycle, recursion in Python…"
+                    aria-label="What do you want to explain?"></textarea>
 
-          <div class="hero-single-input__row">
-            <button type="submit" class="hero-single-input__submit" id="hero-door-submit" disabled
-                    aria-label="Continue">
-              <span class="sr-only">Continue</span>
-              <svg class="hero-single-input__submit-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h13"></path>
-                <path d="m13 6 6 6-6 6"></path>
-              </svg>
-            </button>
+          <div class="journal-meta">
+            <span class="journal-meta__key">source</span>
+            <span class="journal-meta__value" id="hero-source-value">none yet</span>
+            <span class="journal-meta__sep" aria-hidden="true">—</span>
+            <button type="button" class="journal-meta__add"
+                    id="hero-source-attach" aria-expanded="false"
+                    aria-controls="hero-source-panel">add</button>
+          </div>
+
+          <div class="creation-source-panel" id="hero-source-panel" hidden></div>
+
+          <p class="ig-error" id="hero-door-error"
+             role="status" aria-live="polite"></p>
+
+          <div class="composer-card__actions">
+            <button type="submit" class="ig-button" id="hero-door-submit"
+                    disabled aria-label="Continue to sketch">Continue</button>
           </div>
         </form>
       </div>
     </section>
 
-    <!-- Launch Pad: threshold capture for source-less concepts (C-prime) -->
-    <section id="launch-pad-view" class="primary-view launch-pad-view" aria-labelledby="launch-pad-title" hidden>
+    <!-- Launch Pad: starting-sketch capture (paper system) -->
+    <section id="launch-pad-view" class="primary-view launch-pad-view"
+             aria-labelledby="launch-pad-title" hidden>
       <div class="launch-pad-view__inner">
-        <p class="launch-pad-concept-name" id="launch-pad-concept-name"></p>
-        <h1 class="launch-pad-title" id="launch-pad-title">What do you already think is inside this concept?</h1>
-        <p class="launch-pad-helper">Name the parts, guesses, examples, or confusions you have.</p>
-        <form class="launch-pad-form" id="launch-pad-form" onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
-          <label class="launch-pad-field" for="launch-pad-input">
-            <span class="launch-pad-field__label sr-only">Your starting model</span>
-            <textarea class="launch-pad-input"
-                      id="launch-pad-input"
-                      rows="5"
-                      maxlength="1200"
-                      aria-describedby="launch-pad-validation"
-                      aria-label="Your starting model"></textarea>
-          </label>
-          <p class="launch-pad-validation" id="launch-pad-validation" aria-live="polite"></p>
-          <div class="launch-pad-form__row">
-            <button type="submit" class="launch-pad-submit" id="launch-pad-submit" disabled>
-              <span>Build my map</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h13"></path><path d="m13 6 6 6-6 6"></path>
-              </svg>
-            </button>
+        <div class="witness-anchor" aria-hidden="true">
+          <svg viewBox="0 0 28 28" width="28" height="28">
+            <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
+          </svg>
+        </div>
+
+        <p class="ig-concept-mark">
+          <span class="ig-concept-mark__key">on </span><span
+            class="ig-concept-mark__name" id="launch-pad-concept-name"></span>
+        </p>
+
+        <h1 class="ig-title" id="launch-pad-title" tabindex="-1">
+          What do you already think<br>is inside this concept?
+        </h1>
+
+        <p class="ig-helper">
+          Name the parts, guesses, examples, or confusions you have.
+        </p>
+
+        <form class="composer-card composer-card--tall" id="launch-pad-form"
+              onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
+          <textarea class="composer-card__field" id="launch-pad-input"
+                    rows="5" maxlength="1200"
+                    placeholder="A sentence or two is plenty — be specific over comprehensive."
+                    aria-describedby="launch-pad-validation"
+                    aria-label="What do you already think is inside this concept?"></textarea>
+
+          <p class="ig-error" id="launch-pad-validation"
+             role="status" aria-live="polite"></p>
+
+          <div class="composer-card__actions">
+            <button type="submit" class="ig-button" id="launch-pad-submit"
+                    disabled>Save sketch</button>
           </div>
-          <p class="launch-pad-footer">Study content stays locked until the cold attempt.</p>
         </form>
+
+        <p class="ig-footnote">
+          Study content stays locked until the cold attempt.
+        </p>
       </div>
     </section>
 
@@ -421,7 +432,7 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=78"></script>
+  <script type="module" src="js/app.js?v=81"></script>
   <script src="js/intro-particles.js?v=8"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=5"></script>
