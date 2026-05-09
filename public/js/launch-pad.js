@@ -137,6 +137,19 @@ export function showLaunchPad(App) {
   if (!view) return;
   view.removeAttribute('hidden');
 
+  // Earned-motion ignition handoff. Add `ag-lp-arriving` so the
+  // antigravity theme's staggered fade-up reveal runs once on mount
+  // (see public/antigravity.css "Earned motion" block). Toggling the
+  // class off then on (via removeAttribute('hidden') + class flip)
+  // ensures the animation re-plays if the learner re-enters the
+  // launch pad later in the same session. The 700ms cleanup margin
+  // covers the longest stagger (320ms delay + 320ms duration = 640ms).
+  view.classList.remove('ag-lp-arriving');
+  // Force a reflow so re-adding the class restarts the animation.
+  void view.offsetWidth;
+  view.classList.add('ag-lp-arriving');
+  window.setTimeout(() => view.classList.remove('ag-lp-arriving'), 700);
+
   // Hydrate concept name.
   const nameEl = document.getElementById('launch-pad-concept-name');
   if (nameEl) nameEl.textContent = shell.name;

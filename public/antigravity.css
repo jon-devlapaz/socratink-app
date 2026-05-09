@@ -34,8 +34,7 @@ body.antigravity-theme h2,
 body.antigravity-theme h3,
 body.antigravity-theme .ignition-title,
 body.antigravity-theme .hero-title,
-body.antigravity-theme .hero-eyebrow,
-body.antigravity-theme .ignition-eyebrow {
+body.antigravity-theme .hero-eyebrow {
   font-family: 'Outfit', 'Inter', sans-serif;
   letter-spacing: -0.02em;
 }
@@ -47,14 +46,6 @@ body.antigravity-theme .ignition-title {
 
 html[data-theme="dark"] body.antigravity-theme .ignition-title {
   text-shadow: 0 4px 24px rgba(158, 139, 255, 0.15);
-}
-
-body.antigravity-theme .ignition-eyebrow {
-  color: var(--accent-color);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-  opacity: 0.9;
 }
 
 /* Concept Ignition Dialog (Hero Single Input) */
@@ -198,19 +189,17 @@ body.antigravity-theme .ignition-view__inner {
    Additive layer; does not remove any existing functionality.
    ══════════════════════════════════════════════════════════════ */
 
-/* ── Background: layered depth with animated aurora bloom ──── */
+/* ── Background: layered depth with static aurora gradients ────
+   Previously animated via ag-bg-breathe (12s infinite); removed
+   per DESIGN.md §12 (no 1s+ animations) and persona feedback that
+   ambient page respiration reads as "AI app trying to feel alive."
+   The radial gradients alone supply the sense of warm light. */
 body.antigravity-theme #ignition-view {
   background-color: #F2F0F5;
   background-image:
     radial-gradient(ellipse 72% 56% at 50% 28%, rgba(144, 103, 198, 0.10) 0%, transparent 68%),
     radial-gradient(ellipse 44% 36% at 20% 80%, rgba(141, 134, 201, 0.07) 0%, transparent 60%),
     radial-gradient(ellipse 40% 32% at 82% 72%, rgba(77, 186, 138, 0.05) 0%, transparent 56%);
-  animation: ag-bg-breathe 12s ease-in-out infinite alternate;
-}
-
-@keyframes ag-bg-breathe {
-  0%   { background-size: 100% 100%, 100% 100%, 100% 100%; }
-  100% { background-size: 110% 110%, 105% 105%, 108% 108%; }
 }
 
 html[data-theme="dark"] body.antigravity-theme #ignition-view {
@@ -268,45 +257,9 @@ html[data-motion="reduced"] body.antigravity-theme #ignition-view {
   animation: none !important;
 }
 
-/* ── Eyebrow: badge-style treatment ─────────────────────────── */
-body.antigravity-theme .ignition-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 14px;
-  border-radius: 999px;
-  background: rgba(144, 103, 198, 0.10);
-  border: 1px solid rgba(144, 103, 198, 0.22);
-  color: var(--accent-color);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-body.antigravity-theme .ignition-eyebrow::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent-color);
-  box-shadow: 0 0 6px var(--accent-color);
-  flex-shrink: 0;
-  animation: ag-dot-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes ag-dot-pulse {
-  0%, 100% { opacity: 1;   transform: scale(1); }
-  50%       { opacity: 0.5; transform: scale(0.7); }
-}
-
-html[data-theme="dark"] body.antigravity-theme .ignition-eyebrow {
-  background: rgba(158, 139, 255, 0.12);
-  border-color: rgba(158, 139, 255, 0.24);
-}
+/* `.ignition-eyebrow` rules removed — no element in the markup uses
+   that class. The launch-pad-concept-name pill (separate selector)
+   still serves as the eyebrow on the launch pad surface. */
 
 /* ── Ignition inner: tighter vertical rhythm ─────────────────── */
 body.antigravity-theme .ignition-view__inner {
@@ -526,7 +479,6 @@ body.antigravity-theme #ignition-view::before {
   left: -120px;
   background: radial-gradient(circle, rgba(144, 103, 198, 0.08) 0%, transparent 68%);
   filter: blur(32px);
-  animation: ag-orb-drift-a 16s ease-in-out infinite alternate;
 }
 
 body.antigravity-theme #ignition-view::after {
@@ -536,7 +488,6 @@ body.antigravity-theme #ignition-view::after {
   right: -80px;
   background: radial-gradient(circle, rgba(77, 186, 138, 0.07) 0%, transparent 64%);
   filter: blur(28px);
-  animation: ag-orb-drift-b 18s ease-in-out infinite alternate;
 }
 
 html[data-theme="dark"] body.antigravity-theme #ignition-view::before {
@@ -546,14 +497,12 @@ html[data-theme="dark"] body.antigravity-theme #ignition-view::after {
   background: radial-gradient(circle, rgba(60, 221, 199, 0.08) 0%, transparent 64%);
 }
 
-@keyframes ag-orb-drift-a {
-  0%   { transform: translate(0,   0)   scale(1); }
-  100% { transform: translate(60px, 40px) scale(1.12); }
-}
-@keyframes ag-orb-drift-b {
-  0%   { transform: translate(0,   0)   scale(1); }
-  100% { transform: translate(-50px, -30px) scale(1.08); }
-}
+/* The two ::before/::after orbs above are now static atmospheric
+   blobs. ag-orb-drift-a/b were 16s and 18s infinite alternate loops
+   — removed per DESIGN.md §12 (no 1s+ animations) and persona
+   feedback that drifting orbs read as decorative theater. The
+   blobs stay because they shape ambient light at the page edges;
+   they do not need to move to do that. */
 
 html[data-motion="reduced"] body.antigravity-theme #ignition-view::before,
 html[data-motion="reduced"] body.antigravity-theme #ignition-view::after,
@@ -712,7 +661,10 @@ body.antigravity-theme .hero-eyebrow::before {
   border-radius: 50%;
   background: var(--ag-violet);
   box-shadow: 0 0 6px var(--ag-violet);
-  animation: ag-dot-pulse 2.4s ease-in-out infinite;
+  /* Dot is static. Previous 2.4s ag-dot-pulse infinite read as a
+     SaaS-dashboard "live" indicator on a screen where nothing is
+     actually live — flagged in the persona test. The pill shape
+     and the dot together still mark this as the active context. */
 }
 
 html[data-theme="dark"] body.antigravity-theme .hero-eyebrow {
@@ -856,17 +808,13 @@ body.antigravity-theme #grid-container::before {
   filter: blur(40px);
   z-index: 0;
   pointer-events: none;
-  animation: ag-grid-halo 8s ease-in-out infinite alternate;
+  /* Static halo. ag-grid-halo (8s infinite alternate) was removed per
+     §12 and persona feedback — the halo is decorative, not state. */
 }
 
 html[data-theme="dark"] body.antigravity-theme #grid-container::before {
   background:
     radial-gradient(circle at 50% 50%, rgba(158, 139, 255, 0.20) 0%, transparent 60%);
-}
-
-@keyframes ag-grid-halo {
-  0%   { opacity: 0.65; transform: scale(1); }
-  100% { opacity: 1;    transform: scale(1.08); }
 }
 
 body.antigravity-theme #grid-svg {
@@ -921,7 +869,6 @@ body.antigravity-theme #launch-pad-view::before {
   left: -120px;
   background: radial-gradient(circle, rgba(144, 103, 198, 0.08) 0%, transparent 68%);
   filter: blur(32px);
-  animation: ag-orb-drift-a 16s ease-in-out infinite alternate;
 }
 
 body.antigravity-theme #launch-pad-view::after {
@@ -931,7 +878,6 @@ body.antigravity-theme #launch-pad-view::after {
   right: -80px;
   background: radial-gradient(circle, rgba(77, 186, 138, 0.07) 0%, transparent 64%);
   filter: blur(28px);
-  animation: ag-orb-drift-b 18s ease-in-out infinite alternate;
 }
 
 html[data-theme="dark"] body.antigravity-theme #launch-pad-view::before {
@@ -1852,5 +1798,77 @@ html[data-theme="dark"] body.antigravity-theme .bottom-nav-item.active .material
   body.antigravity-theme #launch-pad-view::before,
   body.antigravity-theme #launch-pad-view::after {
     display: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Earned motion — event-coupled reveal, no infinite ambient loops
+   ══════════════════════════════════════════════════════════════
+
+   The wonder-at-concept-start moment. When the learner commits to
+   a concept on the door, the launch pad mounts via App.showLaunchPad
+   (launch-pad.js), which adds `.ag-lp-arriving` to #launch-pad-view
+   for one render frame. Each surface inside fades-and-rises in
+   sequence at 80ms intervals, then the class is removed.
+
+   Per-element duration: 320ms (top of DESIGN.md §12 budget).
+   Total stagger: 320ms + 240ms delays = 560ms one-shot.
+   No infinite loops. Reduced-motion suppresses the animation
+   entirely; elements render at their static end-state.
+*/
+
+@keyframes ag-lp-arrival {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-concept-name,
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-title,
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-helper,
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-form,
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-footer {
+  animation: ag-lp-arrival 320ms cubic-bezier(0.16, 0.84, 0.44, 1) both;
+}
+
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-concept-name { animation-delay: 0ms; }
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-title        { animation-delay: 80ms; }
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-helper       { animation-delay: 160ms; }
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-form         { animation-delay: 240ms; }
+body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-footer       { animation-delay: 320ms; }
+
+/* Respect motion preferences — both the OS query and the in-app
+   data-motion="reduced" override (DESIGN.md §12). Snap straight to
+   the end state instead of running the keyframes. */
+@media (prefers-reduced-motion: reduce) {
+  body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-concept-name,
+  body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-title,
+  body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-helper,
+  body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-form,
+  body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-footer {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-concept-name,
+html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-title,
+html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-helper,
+html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-form,
+html[data-motion="reduced"] body.antigravity-theme #launch-pad-view.ag-lp-arriving .launch-pad-footer {
+  animation: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Forced-colors fallback for the .ig-highlight underline. The PR's
+   gradient-clipped text was already swapped for solid violet ink in
+   commit aee5407, so the headline word stays visible in Windows
+   high-contrast mode. This fallback locks the system colors so the
+   underline doesn't disappear and the word doesn't lose emphasis. */
+@media (forced-colors: active) {
+  body.antigravity-theme .ignition-title .ig-highlight {
+    color: LinkText !important;
+    text-decoration-color: LinkText !important;
   }
 }
