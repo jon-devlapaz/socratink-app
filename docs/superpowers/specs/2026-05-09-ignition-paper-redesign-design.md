@@ -37,20 +37,32 @@ Redesign the `#ignition-view` (Screen 1: name the concept) and `#launch-pad-view
 
 ## Files changed
 
-### New CSS rules in `public/css/components.css`
+### New file `public/css/paper.css`
 
-Wrapped under a block comment marker for future migration discoverability:
+Wave 0 reserved a `paper` layer at the top of the cascade. Wave 1 introduces this file and registers it in `index.css` as `@import url('paper.css') layer(paper);`. **All new rules go in this file**, not in `components.css` — the layer assignment is what makes them beat the `legacy` layer (antigravity), and only file-level `@import layer(paper)` puts them there. Adding `@layer paper { … }` *inside* `components.css` would create a `components.paper` sublayer that still loses to `legacy` (sublayers inherit parent-layer ordering).
+
+File header:
 
 ```css
 /* ════════════════════════════════════════════════════════════════════
    PAPER SYSTEM — composer-card, witness-anchor, ig-title, journal-meta,
-   source-panel restyle, ig-button. Reference only semantic tokens.
-   No body.antigravity-theme ancestor.
+   source-panel restyle, ig-button. References only semantic tokens.
+   No body.antigravity-theme ancestor. Imported via index.css into
+   @layer paper, which beats @layer legacy on migrated surfaces.
    See docs/superpowers/specs/2026-05-09-paper-migration-plan.md
    ════════════════════════════════════════════════════════════════════ */
 ```
 
-Components added (all referencing semantic tokens; no body.antigravity-theme ancestor):
+### Updated `public/css/index.css`
+
+Add the paper import after the legacy import:
+
+```css
+@import url('../antigravity.css') layer(legacy);
+@import url('paper.css')          layer(paper);   /* NEW in Wave 1 */
+```
+
+### Components in `paper.css` (all reference semantic tokens; no body.antigravity-theme ancestor)
 
 - `.composer-card` — paper background, hairline border, soft shadow, 8px radius
 - `.composer-card__field` — `<textarea>` with rule-grid background-attachment:local
@@ -75,8 +87,12 @@ Token reference: see Wave 0 (`tokens.css`).
 Replace the existing `#ignition-view` and `#launch-pad-view` blocks (currently lines 2412–2505) with:
 
 ```css
-#ignition-view,
-#launch-pad-view {
+/* The :not([hidden]) scope ensures the [hidden] attribute (UA `display:none`)
+   beats this rule when the view is hidden. Without :not(), the ID-selector
+   specificity (1,0,0) would override [hidden] (0,1,0) and the views would
+   never actually hide. */
+#ignition-view:not([hidden]),
+#launch-pad-view:not([hidden]) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -101,6 +117,11 @@ Replace the existing `#ignition-view` and `#launch-pad-view` blocks (currently l
 @keyframes ig-screen-in {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ignition-view__inner,
+  .launch-pad-view__inner { animation: none; }
 }
 ```
 
@@ -212,7 +233,7 @@ Remove the `display: none` / `.visible` toggle from the base CSS — visibility 
                 rows="5" maxlength="1200"
                 placeholder="A sentence or two is plenty — be specific over comprehensive."
                 aria-describedby="launch-pad-validation"
-                aria-label="Your starting model"></textarea>
+                aria-label="What do you already think is inside this concept?"></textarea>
 
       <p class="ig-error" id="launch-pad-validation"
          role="status" aria-live="polite"></p>
@@ -254,15 +275,12 @@ function showIgnition() {
   document.getElementById('ignition-view').hidden = false;
   renderIgnitionGate();
   if (window.innerWidth < 900) closeDrawer();
-  // Focus heading first so SR announces view title; advance to field next frame.
-  const heading = document.getElementById('ignition-title');
+  // Focus the writing surface directly. Its aria-label carries the same text
+  // as the heading, so screen readers announce "What do you want to actually
+  // explain?" on focus. A separate heading-focus + rAF bounce would interrupt
+  // the SR announcement; that pattern is rejected on purpose.
   const field = document.getElementById('hero-single-input-field');
-  if (heading) {
-    heading.focus({ preventScroll: true });
-    requestAnimationFrame(() => field?.focus());
-  } else if (field) {
-    field.focus();
-  }
+  if (field) requestAnimationFrame(() => field.focus());
 }
 
 function hideIgnition() {
@@ -321,22 +339,17 @@ The busy CSS handles the visual via the locked/busy attribute selector in `compo
 
 ### Updated `public/js/launch-pad.js`
 
-#### `showLaunchPad` — focus heading first
+#### `showLaunchPad` — focus the field directly
 
 ```js
 const view = document.getElementById('launch-pad-view');
 view.hidden = false;
 view.removeAttribute('aria-busy');
 view.dataset.state = '';
-// Focus heading first; advance to field on next frame.
-const heading = document.getElementById('launch-pad-title');
+// Same rationale as showIgnition: focus the field directly. The textarea's
+// aria-label provides the announcement; a heading-bounce would interrupt SR.
 const field = document.getElementById('launch-pad-input');
-if (heading) {
-  heading.focus({ preventScroll: true });
-  requestAnimationFrame(() => field?.focus());
-} else if (field) {
-  field.focus();
-}
+if (field) requestAnimationFrame(() => field.focus());
 ```
 
 Drop the `ag-lp-arriving` class manipulation and the `_lpArrivingCleanup` timer — animation now lives on `.launch-pad-view__inner` via the `ig-screen-in` keyframe (Section 3 layout).

@@ -15,7 +15,7 @@ The current `public/antigravity.css` is 1955 lines, owns 121 unique selectors, a
 
 ## Migration architecture (locked)
 
-- **CSS Cascade Layers** (`@layer tokens, legacy, components, utilities`) handle cascade order so paper rules win over antigravity regardless of selector specificity. Browser support is universal as of Chrome 99 / Firefox 97 / Safari 15.4 (early 2022).
+- **CSS Cascade Layers** (`@layer tokens, components, utilities, legacy, paper`) handle cascade order so paper rules win over antigravity regardless of selector specificity, while preserving antigravity's win over base components on every unmigrated view. Browser support is universal as of Chrome 99 / Firefox 97 / Safari 15.4 (early 2022).
 - **Three-tier design tokens** in `public/css/tokens.css`: primitive (`--violet-700: #6f4da1`), semantic (`--accent-deep: var(--violet-700)`), with light as default and `html[data-theme="dark"]` overriding the semantic layer for night-paper mode.
 - **Single import root** `public/css/index.css` declares the layer order and imports all stylesheets in their assigned layers. `public/index.html` keeps one `<link>` to `index.css`.
 - **Strangler Fig discipline:** each wave deletes its rules from `antigravity.css` in the same PR. No fallback class. No commented-out blocks. When `antigravity.css` is empty, the file is deleted.

@@ -135,16 +135,25 @@ html[data-theme="dark"] {
 ### `public/css/index.css` (new)
 
 ```css
-@layer tokens, legacy, components, utilities;
+@layer tokens, components, utilities, legacy, paper;
 
-@import url('tokens.css')      layer(tokens);
-@import url('layout.css')      layer(components);
-@import url('components.css')  layer(components);
-@import url('../styles.css')   layer(utilities);
+@import url('tokens.css')         layer(tokens);
+@import url('layout.css')         layer(components);
+@import url('components.css')     layer(components);
+@import url('../styles.css')      layer(utilities);
 @import url('../antigravity.css') layer(legacy);
+/* paper layer reserved for Wave 1; no import yet */
 ```
 
-Layer order: tokens first (no rules with side effects, just custom property declarations), legacy next (antigravity.css unchanged), components third (the future home of the paper rules + the existing layout.css/components.css, which already win over legacy via layer order), utilities last (styles.css final overrides).
+**Layer order is critical and must match this exactly.** In CSS Cascade Layers, *later layers win over earlier layers regardless of selector specificity*. The order above preserves current cascade behavior on every unmigrated view:
+
+- `tokens` (layer 1) — only `:root` custom property declarations, no rules with side effects.
+- `components` (layer 2) — base component styles in `layout.css` and `components.css`.
+- `utilities` (layer 3) — `styles.css` glue.
+- `legacy` (layer 4) — `antigravity.css`. Loads later than `components`, so its `body.antigravity-theme …` theme overrides still beat the base components, exactly as in the pre-migration cascade.
+- `paper` (layer 5) — reserved. Wave 1 introduces `paper.css` here. Paper rules will beat `legacy`, which is exactly what we want for migrated surfaces.
+
+If the order were `tokens, legacy, components, utilities` (legacy before components), `components.css` would override every antigravity theme rule on the dashboard, library, and settings — instantly violating the "zero visible change" mandate of this wave. **Do not flip this order.**
 
 ### `public/index.html` change
 
@@ -174,7 +183,7 @@ Same — assigned to layers via the import statement, files themselves unchanged
 3. `public/css/tokens.css` and `public/css/index.css` exist and parse cleanly.
 4. **Browser smoke** (`bash scripts/qa-smoke.sh local`) passes against `dev` HEAD.
 5. **Manual visual verification:** open the dashboard, ignition view, library view, settings view in light AND dark mode. Each view is pixel-identical to `main`. (Open both branches in two browser windows side by side.)
-6. **DevTools cascade panel verification:** inspect any `.hero-card` rule on the dashboard. Confirm `@layer legacy` is shown as the source layer in DevTools' Computed > Cascade pane.
+6. **DevTools cascade panel verification:** inspect any `.hero-card` rule on the dashboard. Confirm `@layer legacy` is shown as the source layer in DevTools' Computed > Cascade pane, and that it sits *above* `@layer components` in the layer-order display (later layer wins).
 7. **No console errors** in any view, light or dark.
 
 ## Browser support
