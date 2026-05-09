@@ -1707,39 +1707,37 @@ body.antigravity-theme .settings-toggle::after {
   height: 20px;
   border-radius: 50%;
   background: #FFFFFF;
-  /* Knob definition. The first shadow stop (0 0 0 1px) is a hairline
-     ring that gives the knob a defined edge against the gradient
-     track — without it, white-on-mint at the ON end of the pill
-     reads low-contrast and the knob looks swallowed. Followed by
-     a softer drop and an inset highlight for the 3D feel. */
   box-shadow:
     0 0 0 1px rgba(36, 32, 56, 0.16),
     0 2px 6px rgba(36, 32, 56, 0.22),
     0 1px 0 rgba(255, 255, 255, 0.85) inset;
-  transition: left 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition:
+    transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    box-shadow 0.2s ease;
 }
 
 body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  /* Mint → violet gradient (left → right). The knob sits on the
-     right when ON, so it lands on violet — keeps the white knob
-     readable against a strong-contrast color. The mint half is
-     the "filled active track" trailing the knob; reading violet
-     under the knob and mint as the active fill is closer to how
-     iOS/material toggles tune contrast. */
-  background: linear-gradient(90deg, var(--ag-mint), var(--ag-violet));
-  /* Soft violet glow on the cream theme; suppressed entirely on
-     dark theme below — the same shadow at 0.32 alpha bloomed
-     onto the navy surface as a stray purple dot below the pill. */
+  background: var(--ag-violet);
   box-shadow: 0 4px 12px rgba(144, 103, 198, 0.20);
 }
 
 html[data-theme="dark"] body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  background: linear-gradient(90deg, var(--ag-mint), var(--ag-violet));
+  background: var(--ag-violet);
   box-shadow: none;
 }
 
 body.antigravity-theme .settings-toggle[aria-checked="true"]::after {
-  left: 21px;
+  transform: translateX(18px);
+}
+
+body.antigravity-theme .settings-toggle[aria-checked="true"]:focus-visible {
+  box-shadow:
+    var(--accent-ring),
+    0 4px 12px rgba(144, 103, 198, 0.20);
+}
+
+html[data-theme="dark"] body.antigravity-theme .settings-toggle[aria-checked="true"]:focus-visible {
+  box-shadow: var(--accent-ring);
 }
 
 /* ══════════════════════════════════════════════════════════════
