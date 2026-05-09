@@ -28,15 +28,10 @@ html[data-theme="dark"] body.antigravity-theme {
   --surface-2: rgba(255, 255, 255, 0.06);
 }
 
-/* Typography Overrides */
-body.antigravity-theme h1,
-body.antigravity-theme h2,
-body.antigravity-theme h3,
-body.antigravity-theme .hero-title,
-body.antigravity-theme .hero-eyebrow {
-  font-family: 'Outfit', 'Inter', sans-serif;
-  letter-spacing: -0.02em;
-}
+/* Typography overrides removed in Paper Wave 2 — h1/h2/h3 fall back to
+   the base --font-display ("Geom") from variables.css, which is the
+   canonical brand display family. Outfit-as-override was a holdover
+   from when the app shell ran independently of the canonical system. */
 
 /* Page background */
 body.antigravity-theme {
@@ -105,221 +100,15 @@ html[data-theme="dark"] body.antigravity-theme {
   --ag-ink:    #FFFFFF;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   1. DASHBOARD (DESK) — hero card
-   ══════════════════════════════════════════════════════════════ */
-
-body.antigravity-theme .hero-card.intro-page {
-  position: relative;
-  background:
-    radial-gradient(ellipse 60% 48% at 18% 22%, rgba(144, 103, 198, 0.10) 0%, transparent 64%),
-    radial-gradient(ellipse 48% 38% at 82% 78%, rgba(77, 186, 138, 0.07) 0%, transparent 60%);
-}
-
-html[data-theme="dark"] body.antigravity-theme .hero-card.intro-page {
-  background:
-    radial-gradient(ellipse 60% 48% at 18% 22%, rgba(158, 139, 255, 0.12) 0%, transparent 64%),
-    radial-gradient(ellipse 48% 38% at 82% 78%, rgba(60, 221, 199, 0.08) 0%, transparent 60%);
-}
-
-/* Eyebrow badge */
-body.antigravity-theme .hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(144, 103, 198, 0.10);
-  border: 1px solid rgba(144, 103, 198, 0.22);
-  color: var(--ag-violet);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-body.antigravity-theme .hero-eyebrow::before {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--ag-violet);
-  box-shadow: 0 0 6px var(--ag-violet);
-  /* Dot is static. Previous 2.4s ag-dot-pulse infinite read as a
-     SaaS-dashboard "live" indicator on a screen where nothing is
-     actually live — flagged in the persona test. The pill shape
-     and the dot together still mark this as the active context. */
-}
-
-html[data-theme="dark"] body.antigravity-theme .hero-eyebrow {
-  background: rgba(158, 139, 255, 0.12);
-  border-color: rgba(158, 139, 255, 0.24);
-}
-
-/* Hero title — bold, fluid, tight */
-body.antigravity-theme .hero-title {
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
-  font-size: clamp(2rem, 3.4vw + 0.6rem, 3rem);
-  font-weight: 800;
-  letter-spacing: -0.032em;
-  line-height: 1.08;
-  color: var(--text-main);
-  text-wrap: balance;
-  margin-top: 12px;
-  text-shadow:
-    0 2px 0 rgba(255, 255, 255, 0.55),
-    0 6px 28px rgba(144, 103, 198, 0.12);
-}
-
-html[data-theme="dark"] body.antigravity-theme .hero-title {
-  text-shadow:
-    0 2px 0 rgba(255, 255, 255, 0.05),
-    0 6px 28px rgba(158, 139, 255, 0.20);
-}
-
-/* Hero guidance copy */
-body.antigravity-theme .desc.hero-guidance,
-body.antigravity-theme .hero-guidance {
-  color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1.55;
-  max-width: 36ch;
-  font-weight: 500;
-  margin-top: 10px;
-  text-wrap: pretty;
-}
-
-/* State chip */
-body.antigravity-theme .hero-state-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  background: rgba(36, 32, 56, 0.06);
-  border: 1px solid rgba(36, 32, 56, 0.10);
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: lowercase;
-  color: var(--text-muted);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-html[data-theme="dark"] body.antigravity-theme .hero-state-chip {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-/* Primary "New concept" CTA */
-body.antigravity-theme .hero-primary-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 22px 12px 24px;
-  border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--ag-violet) 0%, #7a59aa 50%, var(--ag-mint) 100%);
-  background-size: 200% 100%;
-  color: #FFFFFF;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: -0.005em;
-  cursor: pointer;
-  box-shadow:
-    0 10px 28px rgba(144, 103, 198, 0.32),
-    0 3px 10px rgba(36, 32, 56, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  transition:
-    transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    box-shadow 0.3s ease,
-    background-position 0.4s ease;
-  margin-top: 22px;
-}
-
-body.antigravity-theme .hero-primary-action:hover {
-  transform: translateY(-3px);
-  background-position: 100% 0;
-  box-shadow:
-    0 16px 36px rgba(144, 103, 198, 0.42),
-    0 6px 16px rgba(36, 32, 56, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.36);
-}
-
-body.antigravity-theme .hero-primary-action:active {
-  transform: translateY(-1px) scale(0.98);
-}
-
-body.antigravity-theme .hero-primary-action__arrow {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform 0.3s ease;
-}
-
-body.antigravity-theme .hero-primary-action:hover .hero-primary-action__arrow {
-  transform: translateX(3px);
-}
-
-/* Timer display — quiet but elegant */
-body.antigravity-theme #timer-display {
-  font-family: 'Outfit', 'Inter', sans-serif;
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--text-muted);
-  font-size: 13px;
-  letter-spacing: 0.06em;
-  margin-top: 18px;
-  opacity: 0.7;
-}
-
-/* Crystal grid container — soft halo behind the board */
-body.antigravity-theme #grid-container {
-  position: relative;
-}
-
-body.antigravity-theme #grid-container::before {
-  content: "";
-  position: absolute;
-  inset: 6% 8%;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(144, 103, 198, 0.16) 0%, transparent 60%);
-  filter: blur(40px);
-  z-index: 0;
-  pointer-events: none;
-  /* Static halo. ag-grid-halo (8s infinite alternate) was removed per
-     §12 and persona feedback — the halo is decorative, not state. */
-}
-
-html[data-theme="dark"] body.antigravity-theme #grid-container::before {
-  /* Toned down per persona test: dark mode invited the PR's worst
-     instincts — the iso-board glow at 0.20 alpha read like a
-     sci-fi loading screen, not a reading room. Drop to 0.07 so
-     the grid still has presence without competing with the tiles. */
-  background:
-    radial-gradient(circle at 50% 50%, rgba(158, 139, 255, 0.07) 0%, transparent 60%);
-}
-
-body.antigravity-theme #grid-svg {
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 8px 24px rgba(36, 32, 56, 0.10));
-}
-
-html[data-theme="dark"] body.antigravity-theme #grid-svg {
-  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.40));
-}
-
-html[data-motion="reduced"] body.antigravity-theme #grid-container::before {
-  animation: none !important;
-}
+/* Migrated to paper.css / base styles — Paper Wave 2.
+   .hero-card.intro-page (radial-gradient backdrop), .hero-eyebrow
+   (pill badge — markup also removed), .hero-title (Outfit + text-shadow),
+   .desc.hero-guidance, .hero-state-chip, .hero-primary-action (gradient
+   button + arrow), #timer-display, #grid-container halo + ::before glow,
+   and #grid-svg drop-shadow are all gone. The base components.css /
+   layout.css render the dashboard as paper using the canonical token
+   system; the persona-flagged "DESK" eyebrow + arrow on the New-concept
+   button are now removed from markup. */
 
 /* Migrated to paper.css — launch-pad-view background, ambient orbs,
    .launch-pad-view__inner, .launch-pad-concept-name, .launch-pad-title,
@@ -956,7 +745,6 @@ html[data-theme="dark"] body.antigravity-theme .bottom-nav-item.active .material
    Mobile adjustments for new view enhancements
    ══════════════════════════════════════════════════════════════ */
 @media (max-width: 720px) {
-  body.antigravity-theme .hero-title,
   body.antigravity-theme .settings-page-title {
     font-size: clamp(1.7rem, 6.5vw, 2.2rem);
     letter-spacing: -0.025em;

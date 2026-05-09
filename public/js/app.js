@@ -334,7 +334,12 @@ const App = (() => {
   function renderHero(concept) {
     if (!concept) {
       titleEl.textContent = 'What do you want to understand?';
-      descEl.textContent = getHeroGuidance(null);
+      // Empty-state desc dropped per silent-surface principle: the iso
+      // board's nine empty slots make the affordance obvious; a
+      // narrator line "Pick a tile to enter…" is unearned chrome.
+      // Populated states still get state-specific guidance (the else
+      // branch below still calls getHeroGuidance(concept)).
+      descEl.textContent = '';
       if (heroStateChipEl) {
         heroStateChipEl.textContent = 'no concepts yet';
         heroStateChipEl.dataset.state = 'empty';
