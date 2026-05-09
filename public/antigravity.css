@@ -1707,19 +1707,26 @@ body.antigravity-theme .settings-toggle::after {
   height: 20px;
   border-radius: 50%;
   background: #FFFFFF;
+  /* Knob definition. The first shadow stop (0 0 0 1px) is a hairline
+     ring that gives the knob a defined edge against the gradient
+     track — without it, white-on-mint at the ON end of the pill
+     reads low-contrast and the knob looks swallowed. Followed by
+     a softer drop and an inset highlight for the 3D feel. */
   box-shadow:
-    0 2px 6px rgba(36, 32, 56, 0.25),
-    0 1px 0 rgba(36, 32, 56, 0.10) inset;
+    0 0 0 1px rgba(36, 32, 56, 0.16),
+    0 2px 6px rgba(36, 32, 56, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.85) inset;
   transition: left 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  /* Violet → mint gradient on the active track. The brand's
-     accent rule technically wants a single violet, but the user
-     chose to keep this dual-color treatment specifically for the
-     toggle — it's a small, isolated affordance and the gradient
-     reads as "earned active" rather than as a competing accent. */
-  background: linear-gradient(135deg, var(--ag-violet), var(--ag-mint));
+  /* Mint → violet gradient (left → right). The knob sits on the
+     right when ON, so it lands on violet — keeps the white knob
+     readable against a strong-contrast color. The mint half is
+     the "filled active track" trailing the knob; reading violet
+     under the knob and mint as the active fill is closer to how
+     iOS/material toggles tune contrast. */
+  background: linear-gradient(90deg, var(--ag-mint), var(--ag-violet));
   /* Soft violet glow on the cream theme; suppressed entirely on
      dark theme below — the same shadow at 0.32 alpha bloomed
      onto the navy surface as a stray purple dot below the pill. */
@@ -1727,7 +1734,7 @@ body.antigravity-theme .settings-toggle[aria-checked="true"] {
 }
 
 html[data-theme="dark"] body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  background: linear-gradient(135deg, var(--ag-violet), var(--ag-mint));
+  background: linear-gradient(90deg, var(--ag-mint), var(--ag-violet));
   box-shadow: none;
 }
 
