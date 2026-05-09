@@ -241,7 +241,6 @@ def run_fixture(args: argparse.Namespace) -> int:
     provisional_map = extract_knowledge_map(
         fixture["source_text"],
         api_key=args.api_key,
-        telemetry_context=base_telemetry,
     )
     knowledge_map = provisional_map.model_dump()
     print_map_summary(knowledge_map)
@@ -277,7 +276,6 @@ def run_fixture(args: argparse.Namespace) -> int:
         help_turn_count=0,
         session_start_iso=state["session_start_iso"],
         api_key=args.api_key,
-        telemetry_context=base_telemetry,
     )
     print("\n== Opening Prompt ==")
     print(init_result["agent_response"])
@@ -341,7 +339,6 @@ def run_fixture(args: argparse.Namespace) -> int:
             help_turn_count=state["help_turn_count"],
             session_start_iso=state["session_start_iso"],
             api_key=args.api_key,
-            telemetry_context=turn_telemetry,
         )
         render_turn_result(result, chosen)
         state["messages"].append(

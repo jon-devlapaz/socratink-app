@@ -643,7 +643,6 @@ def extract_knowledge_map(
     *,
     llm: LLMClient | None = None,
     api_key: str | None = None,
-    telemetry_context: dict | None = None,
     on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
     """Generate a Provisional map from learner-supplied text.
@@ -948,7 +947,6 @@ def drill_chat(
     session_start_iso: str | None = None,
     bypass_session_limits: bool = False,
     api_key: str | None = None,
-    telemetry_context: dict | None = None,
 ) -> DrillTurnResult:
     if session_phase not in {"init", "turn"}:
         raise ValueError("session_phase must be 'init' or 'turn'.")
