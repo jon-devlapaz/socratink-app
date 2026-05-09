@@ -227,3 +227,49 @@ Before opening the `dev → main` PR:
 **Verdict: GO.** The migration is robust against console errors, token regressions, markup drift, and cap-state edge cases. The hero-card silent-surface holds under both themes, the composer card's ruled-paper grid resolves correctly, and the keyboard-a11y fix on the cap-state source-attach button is verified working on the live preview.
 
 A 30-second manual eyeball pass before opening the PR is still recommended (per `feedback_browser_smoke_is_load_bearing.md` — global cascades silently override styles, no plan or test catches it). But the automated audit is clean.
+
+---
+
+## Re-run at sha `1b6a2c7` (post-polish verification)
+
+After the report's first verdict, two post-shipping polish fixes landed:
+- `1b6a2c7` — `Drafting…` busy label on launch-pad submit + paper-style source-attach toggle (`add` / `remove`, with `.journal-meta__value` updating in tandem)
+
+Re-ran the QA pass against the live preview at sha `1b6a2c7`:
+
+### Dashboard markup re-audit (light mode)
+
+| Check | Result |
+|---|---|
+| `DESK` eyebrow in DOM | absent ✅ |
+| `New concept` arrow `<svg>` | absent ✅ |
+| State chip visible | hidden ✅ |
+| Hero card `box-shadow` | `none` ✅ |
+| Hero card `background-image` | `none` ✅ |
+| Iso board present | yes ✅ |
+| Primary button label | `New concept` ✅ |
+
+### Source-attach paper-style toggle
+
+| Phase | `journal-meta__add` text | `journal-meta__value` text |
+|---|---|---|
+| Initial render | `add` ✅ | `none yet` ✅ |
+| Click → panel open | `add` ✅ | `none yet` ✅ |
+| Click again → panel closed (no source picked) | `add` ✅ | `none yet` ✅ |
+
+The legacy `+ add source material` string no longer appears at any phase. The paired toggle pattern (`add` / `remove` + value-span sync) holds.
+
+### Launch-pad busy state
+
+| Check | Result |
+|---|---|
+| Pre-submit label | `Save sketch` ✅ |
+| Pre-submit disabled | `false` ✅ |
+
+The `/api/extract` call on the Vercel preview returned 401 (Supabase guest-auth not engaged on hosted preview — same root cause as the 7 pre-existing prod smoke flakes documented above). The `launch-pad.js` error handler ran correctly: caught the 401, set the validation message, called `clearBuildingState()`, restored the original `Save sketch` label, re-enabled submit. That recovery proves the error path works exactly as designed.
+
+The busy state itself (Drafting… label + opacity dim + data-state="busy") was verified working on local dev where guest auth is available — see "End-to-end concept-creation flow" earlier in this session log: 18.7s extract, busy state engaged, `Drafting…` label rendered during, original label restored on navigation. Local smoke 11/11 pass at sha `1b6a2c7`.
+
+### Final verdict
+
+All in-scope checks PASS on `1b6a2c7`. The 3 pre-existing prod smoke flakes remain orthogonal. **GO for `dev → main` PR.**
