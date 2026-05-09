@@ -491,11 +491,21 @@ const App = (() => {
     return payload.type;
   }
 
+  // Single source of truth for "is the door ready to submit?".
+  // Used by _doorUpdateSubmitState (input handler) AND by
+  // renderIgnitionGate (cap-state computation) so the button-disabled
+  // logic and the keyboard-submit gate share the same predicate.
+  // ≥2 trimmed chars matches the brainstorm spec for the door.
+  function _doorReady() {
+    const f = document.getElementById('hero-single-input-field');
+    return !!f && (f.value || '').trim().length >= 2;
+  }
   function _doorUpdateSubmitState() {
-    const conceptField = document.getElementById('hero-single-input-field');
     const submitBtn = document.getElementById('hero-door-submit');
-    if (!conceptField || !submitBtn) return;
-    submitBtn.disabled = !(conceptField.value || '').trim();
+    if (!submitBtn) return;
+    // Mirror the at-cap gate: if at cap, stay disabled regardless of input.
+    const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
+    submitBtn.disabled = atCap || !_doorReady();
   }
 
   let _sourcePanelGen = 0;
@@ -2296,6 +2306,16 @@ const App = (() => {
 
     if (gate) gate.hidden = !atCap;
     if (form) form.dataset.state = atCap ? 'locked' : '';
+
+    // Focus handoff MUST run BEFORE disabling the field. Setting
+    // .disabled on a focused element synchronously blurs it, which
+    // shifts document.activeElement to <body> immediately. If we
+    // disable first, the activeElement === field check below always
+    // fails and the keyboard user gets stranded with focus on body.
+    if (atCap && document.activeElement === field && capCta) {
+      capCta.focus();
+    }
+
     if (field) field.disabled = atCap;
     // pointer-events:none on the form's data-state="locked" stops mouse
     // input but does not prevent keyboard focus; setting disabled also
@@ -2303,13 +2323,7 @@ const App = (() => {
     // and accidentally expand the source panel while at cap.
     if (sourceAttach) sourceAttach.disabled = atCap;
     if (submit) {
-      const fieldValue = (field?.value || '').trim();
-      const ready = fieldValue.length >= 2;
-      submit.disabled = atCap || !ready;
-    }
-
-    if (atCap && document.activeElement === field && capCta) {
-      capCta.focus();
+      submit.disabled = atCap || !_doorReady();
     }
 
     ['nav-ignition', 'bn-ignition'].forEach((id) => {

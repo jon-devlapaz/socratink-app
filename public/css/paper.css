@@ -239,7 +239,11 @@
   box-shadow: none;
   padding: 0;
   cursor: pointer;
-  font: inherit;
+  /* Inherit family + size from the meta line, but DON'T use the `font:`
+     shorthand — it resets font-weight back to inherit and overrides the
+     700 declared above, leaving the link rendering at body weight. */
+  font-family: inherit;
+  font-size: inherit;
 }
 .composer-card .journal-meta__add:hover {
   text-decoration-color: var(--accent-primary);
