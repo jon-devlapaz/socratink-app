@@ -604,10 +604,18 @@ const App = (() => {
       if (isPrintable(e)) {
         AudioFX.playKeyClick();
       }
-      // Cmd/Ctrl+Enter submits if concept is non-empty (single-field door).
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && conceptField.value.trim()) {
-        e.preventDefault();
-        form?.requestSubmit?.();
+      // Cmd/Ctrl+Enter submits — but only if the same gate the submit
+      // button uses says we're ready (≥2 chars trimmed AND not at the
+      // 9-concept cap). Previously this check just truthy-checked the
+      // trimmed value, which let a 1-char concept submit via keyboard
+      // even though the button was correctly disabled, AND let a kb
+      // user bypass cap-state by hitting Cmd+Enter.
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
+        if (!atCap && _doorReady()) {
+          e.preventDefault();
+          form?.requestSubmit?.();
+        }
       }
     });
 

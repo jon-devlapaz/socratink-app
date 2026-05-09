@@ -156,7 +156,6 @@
   color: var(--text-strong);
   text-wrap: balance;
   overflow-wrap: anywhere;
-  word-break: break-word;
   hyphens: auto;
 }
 /* ── Concept mark (Screen 2) ───────────────────────────────── */
