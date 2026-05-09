@@ -109,8 +109,15 @@
   /* Node state tokens — learner-facing graph states (C2 pills consume) */
   --node-locked:        var(--mauve-200);
   --node-primed:        var(--lavender-500);
-  --node-drilled:       #d8a867;
-  --node-solidified:    var(--success);
+  /* Wave 2 polish: --node-drilled and --node-solidified desaturated per
+     persona QA on the dashboard ("if my dashboard turns into a neon grid
+     of red and green progress dots, I'm going to hate looking at it").
+     Same hue family, chroma turned down — grey-amber and grey-green.
+     --node-solidified is decoupled from --success so the broader success
+     vocabulary (pills, badges, alerts) keeps the saturated brand green;
+     only the iso-board / crystal lifecycle quiets down. */
+  --node-drilled:       #b69e7e;
+  --node-solidified:    #6e9c8a;
 
   /* Knowledge graph semantic tokens — kept separate from pill state tokens
      so Cytoscape can retheme without changing analytics/status surfaces. */
@@ -444,8 +451,8 @@
   /* Node state rgb channels (alpha compositing for pills, glows) */
   --node-locked-rgb:      202, 196, 206;
   --node-primed-rgb:      141, 134, 201;
-  --node-drilled-rgb:     216, 168, 103;
-  --node-solidified-rgb:   77, 186, 138;
+  --node-drilled-rgb:     182, 158, 126;     /* matches grey-amber #b69e7e */
+  --node-solidified-rgb:   110, 156, 138;    /* matches grey-green #6e9c8a */
 }
 
 /* ============================================================
