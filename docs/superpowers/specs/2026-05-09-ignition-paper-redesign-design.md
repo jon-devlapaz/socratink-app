@@ -1,12 +1,25 @@
 # Paper Wave 1 — Ignition + Launch Pad redesign
 
-**Status:** ready for plan
+**Status:** SHIPPED on `dev`
 **Owner:** Jon
 **Created:** 2026-05-09
-**Last revised:** 2026-05-09 — corrected after a fresh-subagent verification pass; original draft invented parallel token names that conflicted with the existing `public/css/variables.css`. This revision references only existing tokens (plus the two new ones added in Wave 0).
+**Last revised:** 2026-05-09 — post-implementation persona QA round triggered four subtractive changes (recorded under "Post-shipping revisions" below). Markup + CSS blocks below have been updated to reflect shipped state.
 **Type:** redesign — visible change, scope-locked to ignition + launch-pad
 **Umbrella:** `2026-05-09-paper-migration-plan.md`
 **Prerequisite:** Wave 0 merged (`2026-05-09-paper-tokens-cascade-layers-refactor-design.md`).
+
+## Post-shipping revisions (persona QA, 2026-05-09)
+
+After Wave 1 landed on `dev`, a customer-persona walkthrough using `docs/codex/customer-persona-prompt-template.md` flagged four elements as "branded or conversational vocabulary" that didn't earn their keep. The persona converged on the most-subtractive option for each. All four changes shipped:
+
+1. **Removed `IGNITION · 1 OF 2` eyebrow** — read as product-launch jargon, not reading-room language. Sidebar nav already labels the destination "New concept"; orientation is sufficient.
+2. **Removed Screen 1 helper line** "This is global context. The first room will ask one smaller question." — mixed retired vocabulary ("room") with narrator-explaining-app pattern. Screen 2 helper retained (it's instructional, persona-approved).
+3. **Removed both button arrows (`→`)** — SaaS landing-page reflex. The button labels (`Continue`, `Save sketch`) already name their commit semantics.
+4. **Removed the word "actually" + the `.ig-title__emphasis` typography** — title is now plain `What do you want to explain?` in solid ink. The trap-warning the word was carrying ("you may think you understand, but can you explain it?") is now structurally embodied by the system itself: the cold-attempt gate, the locked-until-cold-attempt footnote, the ruled-paper sketch surface. The word was redundant; the typography was preachy.
+
+Plus an earlier rename round shipped separately: launch-pad submit `Build my map → Save sketch` (file-cabinet register; persona caught the original as B2B SaaS jargon).
+
+The CSS classes `.ig-eyebrow`, `.ig-eyebrow__dot`, and `.ig-title__emphasis` were removed from `paper.css` along with their markup; future paper waves should not reintroduce them.
 
 ## Goal
 
@@ -188,39 +201,8 @@ Full content of `paper.css`:
   word-break: break-word;
   hyphens: auto;
 }
-.ig-title__emphasis {
-  font-style: italic;
-  font-weight: 700;
-  color: var(--accent-primary);
-  text-decoration: underline;
-  text-decoration-color: var(--accent-border-strong);  /* rgba(violet, 0.30) */
-  text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.16em;
-  text-decoration-skip-ink: none;
-}
-
-/* ── Eyebrow (Screen 1) ────────────────────────────────────── */
-
-.ig-eyebrow {
-  margin: 0 0 var(--space-4);
-  text-align: center;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--accent-primary);
-  letter-spacing: var(--tracking-kicker);
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-.ig-eyebrow__dot {
-  display: inline-block;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: currentColor;
-  margin: 0 6px;
-  vertical-align: middle;
-  opacity: 0.55;
-}
+/* (Removed post-shipping: .ig-title__emphasis, .ig-eyebrow, .ig-eyebrow__dot —
+   see "Post-shipping revisions" at the top of this spec.) */
 
 /* ── Concept mark (Screen 2) ───────────────────────────────── */
 
@@ -606,19 +588,9 @@ Locate the existing `#ignition-view` and `#launch-pad-view` blocks (currently li
       </svg>
     </div>
 
-    <p class="ig-eyebrow">
-      <span>Ignition</span>
-      <span class="ig-eyebrow__dot" aria-hidden="true"></span>
-      <span>1 of 2</span>
-    </p>
-
     <h1 class="ig-title" id="ignition-title" tabindex="-1">
-      What do you want to <span class="ig-title__emphasis">actually explain</span>?
+      What do you want to explain?
     </h1>
-
-    <p class="ig-helper">
-      This is global context. The first room will ask one smaller question.
-    </p>
 
     <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
       <p class="ignition-cap-gate__message">
@@ -633,7 +605,7 @@ Locate the existing `#ignition-view` and `#launch-pad-view` blocks (currently li
       <textarea class="composer-card__field" id="hero-single-input-field"
                 rows="2" maxlength="200"
                 placeholder="e.g. photosynthesis, the Krebs cycle, recursion in Python…"
-                aria-label="What do you want to actually explain?"></textarea>
+                aria-label="What do you want to explain?"></textarea>
 
       <div class="journal-meta">
         <span class="journal-meta__key">source</span>
@@ -651,15 +623,7 @@ Locate the existing `#ignition-view` and `#launch-pad-view` blocks (currently li
 
       <div class="composer-card__actions">
         <button type="submit" class="ig-button" id="hero-door-submit"
-                disabled aria-label="Continue to sketch">
-          <span>Continue</span>
-          <svg viewBox="0 0 24 24" width="16" height="16"
-               fill="none" stroke="currentColor" stroke-width="2.2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </button>
+                disabled aria-label="Continue to sketch">Continue</button>
       </div>
     </form>
   </div>
@@ -703,15 +667,8 @@ Locate the existing `#ignition-view` and `#launch-pad-view` blocks (currently li
          role="status" aria-live="polite"></p>
 
       <div class="composer-card__actions">
-        <button type="submit" class="ig-button" id="launch-pad-submit" disabled>
-          <span>Save sketch</span>
-          <svg viewBox="0 0 24 24" width="14" height="14"
-               fill="none" stroke="currentColor" stroke-width="2.2"
-               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </button>
+        <button type="submit" class="ig-button" id="launch-pad-submit"
+                disabled>Save sketch</button>
       </div>
     </form>
 

@@ -132,40 +132,6 @@
   word-break: break-word;
   hyphens: auto;
 }
-.ig-title__emphasis {
-  font-style: italic;
-  font-weight: 700;
-  color: var(--accent-primary);
-  text-decoration: underline;
-  text-decoration-color: var(--accent-border-strong);
-  text-decoration-thickness: 0.08em;
-  text-underline-offset: 0.16em;
-  text-decoration-skip-ink: none;
-}
-
-/* ── Eyebrow (Screen 1) ────────────────────────────────────── */
-
-.ig-eyebrow {
-  margin: 0 0 var(--space-4);
-  text-align: center;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--accent-primary);
-  letter-spacing: var(--tracking-kicker);
-  text-transform: uppercase;
-  overflow-wrap: anywhere;
-}
-.ig-eyebrow__dot {
-  display: inline-block;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: currentColor;
-  margin: 0 6px;
-  vertical-align: middle;
-  opacity: 0.55;
-}
-
 /* ── Concept mark (Screen 2) ───────────────────────────────── */
 
 .ig-concept-mark {

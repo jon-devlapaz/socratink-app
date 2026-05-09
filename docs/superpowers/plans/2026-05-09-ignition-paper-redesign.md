@@ -1,5 +1,7 @@
 # Paper Wave 1 — Ignition + Launch Pad redesign — Implementation Plan
 
+> **STATUS: SHIPPED on `dev` (2026-05-09).** Plan was executed in a single subagent dispatch; final state on `dev` differs from the original plan in five places (four post-shipping persona-driven subtractions + the launch-pad button rename). **Future implementers reading this plan: do NOT re-introduce the eyebrow, Screen 1 helper, button arrows, or "actually explain" emphasis. See the spec's "Post-shipping revisions" section for rationale, and the markup blocks in the spec (not this plan) as the canonical reference.** This plan is preserved as the build record; the spec carries the current truth.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Redesign the Ignition + Launch Pad views to mirror socratink.ai's paper journal identity. Behavioral pipeline preserved unchanged.
