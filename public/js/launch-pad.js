@@ -242,6 +242,14 @@ export async function runLaunchPadAction(event, App) {
   if (submit) submit.disabled = true;
   if (validation) validation.textContent = '';
 
+  // Swap the submit label to a quiet status word during the ~10-20s extract.
+  // Persona QA on the busy state flagged the unchanged "Save sketch" label
+  // + opacity dim alone as too quiet for a 15-second wait. A single-word
+  // swap to "Drafting…" communicates progress without adding chrome.
+  // (Restored to the original label on any error path so the user can retry.)
+  const originalSubmitLabel = submit ? submit.textContent : '';
+  if (submit) submit.textContent = 'Drafting…';
+
   // Mark the composer as busy while the extract is in flight.
   // aria-busy="true" tells assistive tech the surface is updating;
   // form.dataset.state='busy' drives the paper composer's dim
@@ -255,6 +263,7 @@ export async function runLaunchPadAction(event, App) {
     if (!form) return;
     form.removeAttribute('aria-busy');
     form.dataset.state = '';
+    if (submit) submit.textContent = originalSubmitLabel;
   };
 
   // ── Step 1: POST /api/extract ─────────────────────────────────────────────

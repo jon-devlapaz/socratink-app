@@ -378,10 +378,12 @@ const App = (() => {
     App._pendingDoorSource = null;
     const sourceAttachBtn = document.getElementById('hero-source-attach');
     const sourcePanel = document.getElementById('hero-source-panel');
+    const sourceValue = document.getElementById('hero-source-value');
     if (sourceAttachBtn) {
       sourceAttachBtn.setAttribute('aria-expanded', 'false');
-      sourceAttachBtn.textContent = '+ add source material';
+      sourceAttachBtn.textContent = 'add';
     }
+    if (sourceValue) sourceValue.textContent = 'none yet';
     if (sourcePanel) {
       sourcePanel.hidden = true;
       sourcePanel.innerHTML = '';
@@ -506,6 +508,7 @@ const App = (() => {
     btn.addEventListener('click', () => {
       const isOpen = btn.getAttribute('aria-expanded') === 'true';
       const hasSource = !!App._pendingDoorSource;
+      const valueEl = document.getElementById('hero-source-value');
       if (isOpen) {
         // Panel is open — collapse and abandon any in-progress source pick.
         // Bump generation so any in-flight dynamic import bails on resolve.
@@ -513,13 +516,15 @@ const App = (() => {
         panel.hidden = true;
         panel.innerHTML = '';
         btn.setAttribute('aria-expanded', 'false');
-        btn.textContent = '+ add source material';
+        btn.textContent = 'add';
+        if (valueEl) valueEl.textContent = 'none yet';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else if (hasSource) {
-        // Panel is closed and a source is attached — the button is now the
-        // "(clear)" affordance. Click clears the source without re-opening.
-        btn.textContent = '+ add source material';
+        // Panel is closed and a source is attached — the button is the
+        // "remove" affordance. Click clears the source without re-opening.
+        btn.textContent = 'add';
+        if (valueEl) valueEl.textContent = 'none yet';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else {
@@ -539,14 +544,21 @@ const App = (() => {
               panel.hidden = true;
               panel.innerHTML = '';
               btn.setAttribute('aria-expanded', 'false');
-              btn.textContent = `Source: ${_doorDescribeSource(payload)} (clear)`;
+              // Paper-style source-meta line: value span shows source ID,
+              // button toggles to "remove" (matches the "add" ↔ "remove"
+              // affordance pattern persona-validated in Paper Wave 1).
+              btn.textContent = 'remove';
+              const v = document.getElementById('hero-source-value');
+              if (v) v.textContent = _doorDescribeSource(payload);
               _doorUpdateSubmitState();
             },
             onCancel() {
               panel.hidden = true;
               panel.innerHTML = '';
               btn.setAttribute('aria-expanded', 'false');
-              btn.textContent = '+ add source material';
+              btn.textContent = 'add';
+              const v = document.getElementById('hero-source-value');
+              if (v) v.textContent = 'none yet';
               App._pendingDoorSource = null;
               _doorUpdateSubmitState();
             },
