@@ -24,6 +24,18 @@
   letter-spacing: normal;
 }
 
+/* ── Hero card (dashboard) — silent-surface override ─────────
+   Persona QA on the Paper Wave 2 dashboard flagged the inherited
+   base-components.css .hero-card shadow ("rgba(144, 103, 198, 0.06)
+   0 40px 100px") as reading like a "startup pricing tier card
+   floating on a webpage." The card is on paper; it doesn't need to
+   levitate. Drop the shadow entirely; the 1px hairline (or its
+   absence) is sufficient. Border-radius left alone for now —
+   persona hedged on it. */
+.hero-card.intro-page {
+  box-shadow: none;
+}
+
 /* ── Composer card ──────────────────────────────────────────── */
 
 .composer-card {
