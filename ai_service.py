@@ -273,26 +273,6 @@ def _resolve_target_cluster_id(knowledge_map: dict, target_node_id: str) -> str 
     return None
 
 
-def _infer_node_type(knowledge_map: dict, node_id: str) -> str:
-    if node_id == "core-thesis":
-        return "core"
-
-    for backbone_item in knowledge_map.get("backbone", []):
-        if isinstance(backbone_item, dict) and backbone_item.get("id") == node_id:
-            return "backbone"
-
-    for cluster in knowledge_map.get("clusters", []):
-        if not isinstance(cluster, dict):
-            continue
-        if cluster.get("id") == node_id:
-            return "cluster"
-        for subnode in cluster.get("subnodes", []):
-            if isinstance(subnode, dict) and subnode.get("id") == node_id:
-                return "subnode"
-
-    return "unknown"
-
-
 def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
     metadata = knowledge_map.get("metadata") or {}
     pruned: dict[str, Any] = {
