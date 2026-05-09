@@ -490,7 +490,18 @@
   --border-subtle: rgba(var(--cream-50-rgb), 0.14);
   --border-strong: rgba(var(--cream-50-rgb), 0.22);
   --rule-line:        rgba(var(--cream-50-rgb), 0.10);
-  --surface-disabled: rgba(var(--lavender-500-rgb), 0.52);
+
+  /* Dark-mode accent — desaturated grey-violet ("ink not LED").
+     Persona QA on Paper Wave 1 caught the brand violet (--violet-600) on
+     graphite reading as "glowing synthetic LED" rather than ink. Light mode
+     keeps the saturated violet (it reads as ink ON paper); dark mode pulls
+     toward grey-violet so the same accent role reads as "marked-up paper at
+     night." Contrast values verified ≥4.5:1 AA Normal on graphite-800 card
+     and on cream button text. See DESIGN.md §12 silent-surface block. */
+  --accent-primary:     #a09aac;     /* accent text on graphite card — 5.3:1 */
+  --primary-fill:       #5e576c;     /* button enabled bg — cream text 6.95:1 */
+  --primary-fill-hover: #6f6680;     /* hover lift, still passes AA */
+  --surface-disabled:   #2c2a35;     /* near-graphite disabled fill — no glow */
 
   --graph-tile-top:   #554f7b;
   --graph-tile-left:  #3b3658;
