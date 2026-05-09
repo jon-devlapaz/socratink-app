@@ -31,9 +31,24 @@
    floating on a webpage." The card is on paper; it doesn't need to
    levitate. Drop the shadow entirely; the 1px hairline (or its
    absence) is sufficient. Border-radius left alone for now —
-   persona hedged on it. */
+   persona hedged on it.
+
+   Plus: on the populated dashboard, hide the .hero-state-chip
+   ("primed for study", etc.) entirely. Persona's verdict: "It's
+   fake-minimalist startup confetti masquerading as metadata. The
+   button explicitly tells me what to click, the helper text
+   explains what to expect, and the tile color shows me the big
+   picture — the chip is a redundant cheerleader repeating what
+   the rest of the screen is already saying." The JS continues to
+   set `heroStateChipEl.textContent` and `data-state` (kept for the
+   :has() rules in components.css that key off data-state="empty");
+   we just hide the chip's wrapper so the visible UI loses the
+   redundant cue. The iso-tile color still carries lifecycle state. */
 .hero-card.intro-page {
   box-shadow: none;
+}
+.hero-card.intro-page .hero-state-chip-group {
+  display: none;
 }
 
 /* ── Composer card ──────────────────────────────────────────── */
