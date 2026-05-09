@@ -271,7 +271,7 @@
   box-shadow: var(--accent-ring), var(--accent-shadow-md);
 }
 .ig-button:disabled {
-  background: var(--locked);
+  background: var(--surface-disabled);
   color: var(--text-muted);
   border-color: transparent;
   cursor: not-allowed;
@@ -379,9 +379,13 @@
   background: transparent;
   cursor: pointer;
 }
-.creation-source-panel .overlay-dropzone:focus-visible {
+.creation-source-panel .overlay-dropzone:focus-visible,
+.creation-source-panel .overlay-dropzone.dragover {
   outline: none;
   border-color: var(--accent-primary);
+  border-style: solid;
+  background: var(--accent-soft);
+  color: var(--text-strong);
   box-shadow: var(--accent-ring);
 }
 .creation-source-panel .overlay-dropfeedback {
@@ -430,7 +434,7 @@
   cursor: pointer;
 }
 .creation-source-panel-attach:disabled {
-  background: var(--locked);
+  background: var(--surface-disabled);
   color: var(--text-muted);
   border-color: transparent;
   cursor: not-allowed;

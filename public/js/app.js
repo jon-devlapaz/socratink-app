@@ -2274,11 +2274,17 @@ const App = (() => {
     const form = document.getElementById('hero-single-input');
     const field = document.getElementById('hero-single-input-field');
     const submit = document.getElementById('hero-door-submit');
+    const sourceAttach = document.getElementById('hero-source-attach');
     const capCta = gate?.querySelector('.ig-button');
 
     if (gate) gate.hidden = !atCap;
     if (form) form.dataset.state = atCap ? 'locked' : '';
     if (field) field.disabled = atCap;
+    // pointer-events:none on the form's data-state="locked" stops mouse
+    // input but does not prevent keyboard focus; setting disabled also
+    // removes the button from the tab order so kb users can't Enter it
+    // and accidentally expand the source panel while at cap.
+    if (sourceAttach) sourceAttach.disabled = atCap;
     if (submit) {
       const fieldValue = (field?.value || '').trim();
       const ready = fieldValue.length >= 2;
