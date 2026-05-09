@@ -141,7 +141,6 @@ def _read_with_cap(response, max_bytes: int) -> bytes:
 import socket as _socket
 from urllib.parse import urljoin
 
-import urllib3
 from urllib3.connection import HTTPConnection, HTTPSConnection
 from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 from urllib3.exceptions import (

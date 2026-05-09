@@ -18,7 +18,6 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 import main
-from main import app
 from auth.service import AuthSessionState
 from models.provisional_map import (
     BackboneItem, Cluster, Metadata, ProvisionalMap, Relationships, Subnode,

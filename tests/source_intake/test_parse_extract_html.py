@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from source_intake.errors import ParseEmpty
-from source_intake.parse import ParsedPage, extract_html
+from source_intake.parse import extract_html
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

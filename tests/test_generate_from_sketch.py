@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
 
 from ai_service import generate_provisional_map_from_sketch
 from learning_commons import LCStandard

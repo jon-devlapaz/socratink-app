@@ -4,7 +4,6 @@
 Order: BOM → Content-Type charset → <meta charset> → charset-normalizer fallback → utf-8 errors=replace.
 """
 
-import pytest
 
 from source_intake.parse import decode
 

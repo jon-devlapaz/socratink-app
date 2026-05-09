@@ -2,7 +2,6 @@
 from __future__ import annotations
 import itertools
 import json
-import random
 from pathlib import Path
 
 # Resolves relative to this script — works regardless of cwd.

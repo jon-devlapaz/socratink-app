@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 from llm.errors import (
     LLMClientError,
-    LLMError,
     LLMMissingKeyError,
     LLMRateLimitError,
     LLMServiceError,

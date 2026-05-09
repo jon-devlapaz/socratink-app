@@ -749,7 +749,6 @@ def generate_provisional_map_from_sketch(
     Returns a structurally-validated ProvisionalMap. Same Pydantic model
     as extraction; same closure validators; same error semantics.
     """
-    from learning_commons import LCStandard  # local import to avoid cycle on module load
 
     client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
 
@@ -804,7 +803,6 @@ def generate_smallest_provisional_map(
 
     Optional ``lc_context`` is grounding-only, never authoritative.
     """
-    from learning_commons import LCStandard  # local import to avoid cycle
 
     client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
 
