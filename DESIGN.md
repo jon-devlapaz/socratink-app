@@ -205,6 +205,14 @@ The product has no human teacher to manage attributions in real time. The interf
 - Streaks, XP, combos, unlocks-as-reward, power-ups, level-ups, ranks.
 - "Our AI." Say what the system does instead — *identifies what depends on what · prompts for elaboration · halts drilling at three successful retrievals.*
 
+### Adjacent-surface vocabulary clash
+
+Before locking copy that sits inside a frame with other copy — button + footnote, eyebrow + title, helper + label, modal title + body — explicitly scan the content words (verbs, nouns) of both strings for shared roots. If `attempt`, `commit`, `save`, `record`, `solidify`, `room`, `entry`, `sketch`, or any other project-vocabulary term appears in two adjacent strings with different referents, that is a bug class, not a stylistic concern.
+
+Example — caught during the Paper Wave 1 button-rename round (2026-05-09): the candidate label `Commit attempt` for the launch-pad submit button sat directly above the footnote *"Study content stays locked until the cold attempt."* Same word, two referents, three inches apart. The persona caught it instantly: *"the footnote right below this button says the next phase is the cold attempt. If I click 'Commit attempt' here, I'm going to be confused about whether I just did the cold attempt or it's still coming."* Resolution: rename the button to `Save sketch` (names the artifact, not the act), leaving the footnote's `cold attempt` unambiguous.
+
+The fastest test is the persona walkthrough: ask *"what does the reader think `X` refers to in each spot?"* If the two answers differ, rewrite the less-load-bearing string. This rule is sharper than usual for socratink because the ubiquitous language (`cold attempt`, `recorded`, `solidified`, `primed`, `drilled`, `sketch`, `entry`) carries project-binding meaning that everyday-English will overwrite if a clash exists.
+
 ---
 
 ## 11. The trajectory bands (post-attempt only)
@@ -250,6 +258,23 @@ On by default; toggled in Settings. Honors `prefers-reduced-motion: reduce`. No 
 
 ### One active cognitive target
 At any moment one thing is foregrounded; everything else dims to 0.5–0.6 opacity. Never more than three peers at equal prominence on a drill surface. Two to three visual hierarchy levels per screen — kicker → heading → body. If a fourth tier is needed, the screen has too many things.
+
+### Silent surface — every visible element earns its keep
+
+The default for any socratink UI is silence: a screen that says nothing it has not earned the right to say. Every visible element — eyebrow, helper line, emphasis treatment, decorative icon, branded vocabulary, progress indicator — must justify its presence against the question *"would the screen still work without this?"* If yes, cut it.
+
+The earned elements are usually small in number: one title, one input surface, one commit button, and any boundary footnote that names a real system constraint (e.g., *"Study content stays locked until the cold attempt"* — earned because the system actually enforces it). Almost everything else is silent-surface debt.
+
+Specifically reject:
+- SaaS-CTA arrows (`→`) on commit buttons. The label already names the action.
+- Progress hand-holding for short flows (`1 of 2`). The user clicked a labeled nav link to get here; orientation is sufficient.
+- Helper lines that explain how the app works *in advance of the user needing to know.* Trust the user to discover the next step from the structure.
+- Typographic emphasis (italic + color + underline) as a substitute for prose discipline. If a word is doing real work, the prose makes that obvious; if the prose doesn't, the typography is preaching.
+- Brand-internal vocabulary as user-facing eyebrows (e.g., `IGNITION` on the New-concept screen). Internal labels stay internal.
+
+This rule was hammered out during the Paper Wave 1 first-principles persona round (2026-05-09). The persona converged on the most-subtractive option for every single decision and named the category-level rule directly: *"strip out absolutely every piece of branded or conversational vocabulary so the interface goes completely silent."* All four subtractions shipped; the result reads as a "quiet, serious notebook" — the brand register the prior atmospheric design was failing.
+
+The corollary discipline: when authoring a new surface, start from blank paper + a single title, then add only what the screen visibly fails without. This is harder than starting full and trimming — but the additive bias is exactly what produces silent-surface debt in the first place.
 
 ---
 
