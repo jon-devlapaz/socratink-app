@@ -342,33 +342,56 @@
       </div>
     </section>
 
-    <!-- Launch Pad: threshold capture for source-less concepts (C-prime) -->
-    <section id="launch-pad-view" class="primary-view launch-pad-view" aria-labelledby="launch-pad-title" hidden>
+    <!-- Launch Pad: starting-sketch capture (paper system) -->
+    <section id="launch-pad-view" class="primary-view launch-pad-view"
+             aria-labelledby="launch-pad-title" hidden>
       <div class="launch-pad-view__inner">
-        <p class="launch-pad-concept-name" id="launch-pad-concept-name"></p>
-        <h1 class="launch-pad-title" id="launch-pad-title">What do you already think is inside this concept?</h1>
-        <p class="launch-pad-helper">Name the parts, guesses, examples, or confusions you have.</p>
-        <form class="launch-pad-form" id="launch-pad-form" onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
-          <label class="launch-pad-field" for="launch-pad-input">
-            <span class="launch-pad-field__label sr-only">Your starting model</span>
-            <textarea class="launch-pad-input"
-                      id="launch-pad-input"
-                      rows="5"
-                      maxlength="1200"
-                      aria-describedby="launch-pad-validation"
-                      aria-label="Your starting model"></textarea>
-          </label>
-          <p class="launch-pad-validation" id="launch-pad-validation" aria-live="polite"></p>
-          <div class="launch-pad-form__row">
-            <button type="submit" class="launch-pad-submit" id="launch-pad-submit" disabled>
+        <div class="witness-anchor" aria-hidden="true">
+          <svg viewBox="0 0 28 28" width="28" height="28">
+            <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
+          </svg>
+        </div>
+
+        <p class="ig-concept-mark">
+          <span class="ig-concept-mark__key">on </span><span
+            class="ig-concept-mark__name" id="launch-pad-concept-name"></span>
+        </p>
+
+        <h1 class="ig-title" id="launch-pad-title" tabindex="-1">
+          What do you already think<br>is inside this concept?
+        </h1>
+
+        <p class="ig-helper">
+          Name the parts, guesses, examples, or confusions you have.
+        </p>
+
+        <form class="composer-card composer-card--tall" id="launch-pad-form"
+              onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
+          <textarea class="composer-card__field" id="launch-pad-input"
+                    rows="5" maxlength="1200"
+                    placeholder="A sentence or two is plenty — be specific over comprehensive."
+                    aria-describedby="launch-pad-validation"
+                    aria-label="What do you already think is inside this concept?"></textarea>
+
+          <p class="ig-error" id="launch-pad-validation"
+             role="status" aria-live="polite"></p>
+
+          <div class="composer-card__actions">
+            <button type="submit" class="ig-button" id="launch-pad-submit" disabled>
               <span>Build my map</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h13"></path><path d="m13 6 6 6-6 6"></path>
+              <svg viewBox="0 0 24 24" width="14" height="14"
+                   fill="none" stroke="currentColor" stroke-width="2.2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
               </svg>
             </button>
           </div>
-          <p class="launch-pad-footer">Study content stays locked until the cold attempt.</p>
         </form>
+
+        <p class="ig-footnote">
+          Study content stays locked until the cold attempt.
+        </p>
       </div>
     </section>
 
