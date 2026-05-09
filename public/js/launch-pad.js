@@ -23,7 +23,6 @@
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
 import { AudioFX } from './audio.js';
-import { prefersReducedMotion } from './motion.js';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
 // stays consistent: typing fires playKeyClick on visible keys + Backspace +
@@ -48,6 +47,11 @@ const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 // that the server handles via its _REPEATED_CHAR_RE (`^(.)\1{4,}$`).
 const SUBSTANTIVE_MIN_WORDS = 3;
 const IDK_PATTERN = /^(\?+|…+|idk|i\s*don'?t\s*know|no\s*idea|no\s*clue|dunno|not\s*sure)$/i;
+
+// Cleanup-timer handle for the `.ag-lp-arriving` reveal class. Cancelled +
+// rescheduled on each showLaunchPad mount so a quick re-entry doesn't have
+// a stale 700ms timeout from the prior mount stripping the class mid-flight.
+let _lpArrivingCleanup = null;
 
 // Strategy-framed footer copy shown when the input is non-empty but not substantive.
 // Names the *kind* of words that move the sketch over the line so the learner
@@ -152,7 +156,13 @@ export function showLaunchPad(App) {
   // Force a reflow so re-adding the class restarts the animation.
   void view.offsetWidth;
   view.classList.add('ag-lp-arriving');
-  window.setTimeout(() => view.classList.remove('ag-lp-arriving'), 700);
+  // Cancel any pending cleanup from a prior mount before scheduling a
+  // new one, so a quick re-entry doesn't strip the class mid-animation.
+  if (_lpArrivingCleanup) window.clearTimeout(_lpArrivingCleanup);
+  _lpArrivingCleanup = window.setTimeout(() => {
+    view.classList.remove('ag-lp-arriving');
+    _lpArrivingCleanup = null;
+  }, 700);
 
   // Hydrate concept name.
   const nameEl = document.getElementById('launch-pad-concept-name');
@@ -267,7 +277,12 @@ export async function runLaunchPadAction(event, App) {
   const view = document.getElementById('launch-pad-view');
   if (view) {
     view.setAttribute('aria-busy', 'true');
-    if (!prefersReducedMotion()) view.classList.add('is-building-route');
+    // Always add .is-building-route. Reduced-motion users still get the
+    // dim + arrow cue (transitions, not keyframes); only the threshold-
+    // absorb keyframe is suppressed via the antigravity.css @media rule.
+    // Earlier code gated this with prefersReducedMotion() which removed
+    // the cue entirely — reduced-motion is "calmer," not "no signal."
+    view.classList.add('is-building-route');
   }
   const clearBuildingState = () => {
     if (!view) return;
