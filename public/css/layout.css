@@ -190,6 +190,14 @@ body:not([data-map-open="true"]) .map-back-link {
   -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
   mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
 }
+
+/* Dark-mode tone-down per persona test: the constellation field at
+   0.9 opacity read as a sci-fi loading screen against the navy.
+   Drop to 0.32 so the field is present-but-quiet, "ink on a dark page"
+   rather than "stage lighting." Light mode keeps the original 0.9. */
+html[data-theme="dark"] #intro-particle-canvas {
+  opacity: 0.32;
+}
 /* Pre-board-first experiment, the desk hid the iso grid when there were
    no concepts and reflowed the hero-card into a tall hero-info column.
    With the 3×3 empty board (each tile carrying its own "+" hover

@@ -813,8 +813,12 @@ body.antigravity-theme #grid-container::before {
 }
 
 html[data-theme="dark"] body.antigravity-theme #grid-container::before {
+  /* Toned down per persona test: dark mode invited the PR's worst
+     instincts — the iso-board glow at 0.20 alpha read like a
+     sci-fi loading screen, not a reading room. Drop to 0.07 so
+     the grid still has presence without competing with the tiles. */
   background:
-    radial-gradient(circle at 50% 50%, rgba(158, 139, 255, 0.20) 0%, transparent 60%);
+    radial-gradient(circle at 50% 50%, rgba(158, 139, 255, 0.07) 0%, transparent 60%);
 }
 
 body.antigravity-theme #grid-svg {
