@@ -1714,19 +1714,20 @@ body.antigravity-theme .settings-toggle::after {
 }
 
 body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  /* Solid violet, not violet→mint gradient. The brand's "one accent
-     per screen" rule (DESIGN.md §12) — and the surface only gets
-     so many violet/mint stops before it stops reading as accent
-     and starts reading as gamified UI. */
-  background: var(--ag-violet);
+  /* Violet → mint gradient on the active track. The brand's
+     accent rule technically wants a single violet, but the user
+     chose to keep this dual-color treatment specifically for the
+     toggle — it's a small, isolated affordance and the gradient
+     reads as "earned active" rather than as a competing accent. */
+  background: linear-gradient(135deg, var(--ag-violet), var(--ag-mint));
   /* Soft violet glow on the cream theme; suppressed entirely on
-     dark theme below to stop the shadow from blooming through
-     the navy surface as a stray purple dot. */
+     dark theme below — the same shadow at 0.32 alpha bloomed
+     onto the navy surface as a stray purple dot below the pill. */
   box-shadow: 0 4px 12px rgba(144, 103, 198, 0.20);
 }
 
 html[data-theme="dark"] body.antigravity-theme .settings-toggle[aria-checked="true"] {
-  background: var(--ag-violet);
+  background: linear-gradient(135deg, var(--ag-violet), var(--ag-mint));
   box-shadow: none;
 }
 
