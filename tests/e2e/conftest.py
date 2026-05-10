@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import os
 import re
+import json
+import uuid
 from collections.abc import Iterator
 from typing import Any
 from urllib.parse import urlparse
@@ -25,6 +27,36 @@ from playwright.sync_api import BrowserContext, ConsoleMessage, Page, Request
 
 
 DEFAULT_BASE_URL = "http://localhost:8000"
+
+@pytest.fixture(autouse=True)
+def _v8_coverage(page: Page) -> Iterator[None]:
+    """Automatically collect V8 JS coverage via Chrome DevTools Protocol."""
+    if page.context.browser.browser_type.name != "chromium":
+        yield
+        return
+
+    client = page.context.new_cdp_session(page)
+    client.send("Profiler.enable")
+    client.send("Profiler.startPreciseCoverage", {"callCount": True, "detailed": True})
+
+    yield
+
+    try:
+        coverage = client.send("Profiler.takePreciseCoverage")
+        client.send("Profiler.stopPreciseCoverage")
+        client.send("Profiler.disable")
+
+        out_dir = os.path.join(".qa-runs", "v8-coverage")
+        os.makedirs(out_dir, exist_ok=True)
+        # MCR expects the v8 format, which is the result array
+        v8_data = coverage.get("result", [])
+
+        out_file = os.path.join(out_dir, f"coverage-{uuid.uuid4().hex}.json")
+        with open(out_file, "w") as f:
+            json.dump(v8_data, f)
+    except Exception as e:
+        # Ignore errors if the page closed early
+        pass
 
 # Allow-list of console-error message substrings the suite should ignore.
 # Keep this tiny and add only with proven justification (link to a commit/PR).

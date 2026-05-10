@@ -73,6 +73,8 @@ uv.lock
 .superpowers/
 
 # QA + tool artifacts (do not track)
+.coverage
+coverage.xml
 .playwright-mcp/
 *.excalidraw
 !docs/diagrams/*.excalidraw
