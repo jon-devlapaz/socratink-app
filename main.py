@@ -764,10 +764,6 @@ def drill(req: DrillRequest):
             session_start_iso=req.session_start_iso,
             bypass_session_limits=req.bypass_session_limits,
             api_key=req.api_key,
-            telemetry_context={
-                "drill_session_id": req.drill_session_id,
-                "client_turn_index": req.client_turn_index,
-            },
         )
         response_payload = {"concept_id": req.concept_id, **result}
         return response_payload

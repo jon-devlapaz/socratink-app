@@ -39,7 +39,7 @@ def test_smallest_route_validator_rejects_zero_nodes():
 # Task 3 — wiring tests for generate_smallest_provisional_map
 # ---------------------------------------------------------------------------
 
-from unittest.mock import MagicMock, patch  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
 from ai_service import generate_smallest_provisional_map  # noqa: E402
 
 

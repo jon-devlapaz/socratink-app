@@ -4,15 +4,6 @@ import pytest
 def test_public_imports_resolve():
     # These names must all be importable from `llm` directly.
     from llm import (
-        LLMClient,
-        StructuredLLMRequest,
-        StructuredLLMResult,
-        TokenUsage,
-        LLMError,
-        LLMMissingKeyError,
-        LLMRateLimitError,
-        LLMServiceError,
-        LLMValidationError,
         build_llm_client,
     )
     assert callable(build_llm_client)

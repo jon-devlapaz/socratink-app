@@ -9,7 +9,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main
-from main import app
 from auth.service import AuthSessionState
 
 

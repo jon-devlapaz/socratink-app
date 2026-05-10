@@ -36,10 +36,6 @@ DRILL_PROMPT_VERSION = "drill-system-v1"
 REPAIR_REPS_PROMPT_VERSION = "repair-reps-system-v1"
 DRILL_SYSTEM_BASE = DRILL_PROMPT_PATH.read_text()
 REPAIR_REPS_SYSTEM_BASE = REPAIR_REPS_PROMPT_PATH.read_text()
-# Source-less generation (spec §5.1).
-GENERATE_FROM_SKETCH_PROMPT_PATH = PROMPT_DIR / "generate-from-sketch-system-v1.txt"
-GENERATE_FROM_SKETCH_PROMPT_VERSION = "v1"
-GENERATE_FROM_SKETCH_TEMPERATURE = 0.4  # slightly higher than extraction; we want a hypothesis, not a transcription
 MAX_RETRIES = 3
 BACKOFF_BASE = 2
 RETRYABLE_CODES = {429, 503, 500}
@@ -271,26 +267,6 @@ def _resolve_target_cluster_id(knowledge_map: dict, target_node_id: str) -> str 
                 return cluster_id
 
     return None
-
-
-def _infer_node_type(knowledge_map: dict, node_id: str) -> str:
-    if node_id == "core-thesis":
-        return "core"
-
-    for backbone_item in knowledge_map.get("backbone", []):
-        if isinstance(backbone_item, dict) and backbone_item.get("id") == node_id:
-            return "backbone"
-
-    for cluster in knowledge_map.get("clusters", []):
-        if not isinstance(cluster, dict):
-            continue
-        if cluster.get("id") == node_id:
-            return "cluster"
-        for subnode in cluster.get("subnodes", []):
-            if isinstance(subnode, dict) and subnode.get("id") == node_id:
-                return "subnode"
-
-    return "unknown"
 
 
 def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
@@ -663,7 +639,6 @@ def extract_knowledge_map(
     *,
     llm: LLMClient | None = None,
     api_key: str | None = None,
-    telemetry_context: dict | None = None,
     on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
     """Generate a Provisional map from learner-supplied text.
@@ -730,60 +705,10 @@ def _validate_smallest_route(pm: ProvisionalMap) -> None:
         )
 
 
-def generate_provisional_map_from_sketch(
-    concept: str,
-    sketch: str,
-    *,
-    llm: LLMClient | None = None,
-    api_key: str | None = None,
-    lc_context: list["LCStandard"] | None = None,
-    telemetry_context: dict | None = None,
-    on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
-) -> ProvisionalMap:
-    """Generate a Provisional map from concept name + learner sketch alone.
-
-    Spec §3.3.2, §5.1. The sketch is the baseline; the AI hypothesizes
-    structure around it. Optional ``lc_context`` is grounding-only,
-    never authoritative.
-
-    Returns a structurally-validated ProvisionalMap. Same Pydantic model
-    as extraction; same closure validators; same error semantics.
-    """
-    from learning_commons import LCStandard  # local import to avoid cycle on module load
-
-    client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
-
-    user_prompt_parts: list[str] = [
-        f"<concept>{concept}</concept>",
-        f"<starting_sketch>{sketch}</starting_sketch>",
-    ]
-    if lc_context:
-        lc_block_lines = ["<lc_context>"]
-        for std in lc_context:
-            code = f" [{std.statement_code}]" if std.statement_code else ""
-            lc_block_lines.append(f"- {std.jurisdiction}{code}: {std.description}")
-        lc_block_lines.append("</lc_context>")
-        user_prompt_parts.append("\n".join(lc_block_lines))
-
-    user_prompt = "\n\n".join(user_prompt_parts)
-
-    request = StructuredLLMRequest(
-        system_prompt=GENERATE_FROM_SKETCH_PROMPT_PATH.read_text(),
-        user_prompt=user_prompt,
-        response_schema=ProvisionalMap,
-        temperature=GENERATE_FROM_SKETCH_TEMPERATURE,
-        task_name="provisional_map_from_sketch",
-        prompt_version=GENERATE_FROM_SKETCH_PROMPT_VERSION,
-    )
-    result = client.generate_structured(request)
-    if on_call_complete is not None:
-        on_call_complete(result)
-    return result.parsed  # type: ignore[return-value]
-
-
 GENERATE_SMALLEST_ROUTE_PROMPT_PATH = PROMPT_DIR / "generate-smallest-route-system-v1.txt"
 GENERATE_SMALLEST_ROUTE_PROMPT_VERSION = "v1"
-GENERATE_SMALLEST_ROUTE_TEMPERATURE = GENERATE_FROM_SKETCH_TEMPERATURE  # reuse
+# Slightly higher than extraction; we want a hypothesis, not a transcription.
+GENERATE_SMALLEST_ROUTE_TEMPERATURE = 0.4
 
 
 def generate_smallest_provisional_map(
@@ -804,7 +729,6 @@ def generate_smallest_provisional_map(
 
     Optional ``lc_context`` is grounding-only, never authoritative.
     """
-    from learning_commons import LCStandard  # local import to avoid cycle
 
     client: LLMClient = llm if llm is not None else build_llm_client(api_key=api_key)
 
@@ -970,7 +894,6 @@ def drill_chat(
     session_start_iso: str | None = None,
     bypass_session_limits: bool = False,
     api_key: str | None = None,
-    telemetry_context: dict | None = None,
 ) -> DrillTurnResult:
     if session_phase not in {"init", "turn"}:
         raise ValueError("session_phase must be 'init' or 'turn'.")
