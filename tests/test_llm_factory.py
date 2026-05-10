@@ -2,11 +2,11 @@ import pytest
 
 
 def test_public_imports_resolve():
-    # These names must all be importable from `llm` directly.
-    from llm import (
-        build_llm_client,
-    )
-    assert callable(build_llm_client)
+    """The full `llm.__all__` public surface must be importable from `llm` directly."""
+    import llm
+    missing = [name for name in llm.__all__ if not hasattr(llm, name)]
+    assert not missing, f"missing from llm package: {missing}"
+    assert callable(llm.build_llm_client)
 
 
 def test_build_llm_client_default_provider_is_gemini(monkeypatch):
