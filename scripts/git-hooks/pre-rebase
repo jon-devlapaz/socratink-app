@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Block rebases of protected branches.
+#
+# Why: same as pre-merge-commit. Rebasing local 'dev' on top of origin/dev
+# after the no-mistakes daemon has already rebased your commits produces
+# content-duplicate commits and corrupts the post-gate sync model.
+#
+# This hook fires for `git rebase` and `git pull --rebase`.
+#
+# Recover with:    git rebase --abort   (if mid-rebase)
+#                  git fetch origin <branch>
+#                  git reset --hard origin/<branch>     (or just: snm)
+#
+# Bypass (rare):   temporarily disable the hook or rename it. `git rebase`
+#                  has no --no-verify flag.
+
+# pre-rebase args: $1 = upstream, $2 = (optional) branch being rebased.
+rebased_branch="${2:-$(git symbolic-ref --short HEAD 2>/dev/null || true)}"
+
+case "$rebased_branch" in
+  dev|main)
+    cat >&2 <<EOF
+[pre-rebase] ERROR: refusing to rebase '$rebased_branch'.
+
+The no-mistakes daemon rewrites origin/$rebased_branch on every gate cycle.
+Rebasing local on top creates content-duplicate commits.
+
+Sync correctly:
+  git fetch origin $rebased_branch
+  git reset --hard origin/$rebased_branch
+
+Or run: snm
+EOF
+    exit 1
+    ;;
+esac
+
+exit 0
