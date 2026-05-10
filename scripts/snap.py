@@ -43,6 +43,17 @@ OUT_DIR = ROOT / ".playwright-mcp"
 DEFAULT_BASE = "http://127.0.0.1:8000"
 
 
+def is_full_url(s: str) -> bool:
+    return s.startswith(("http://", "https://"))
+
+
+def with_variant_param(url: str, value: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    query = [(k, v) for k, v in urllib.parse.parse_qsl(parts.query, keep_blank_values=True) if k != "v"]
+    query.append(("v", value))
+    return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(query)))
+
+
 def list_lab_surfaces() -> list[str]:
     if not LAB_DIR.is_dir():
         return []
@@ -55,8 +66,9 @@ def resolve_surface(surface: str, base: str) -> tuple[str, str, Path | None]:
     `local_path` is the on-disk HTML file when the surface is local; None
     when the surface was a full URL.
     """
-    if surface.startswith(("http://", "https://")):
-        slug = surface.rsplit("/", 1)[-1].split("?")[0].removesuffix(".html") or "page"
+    if is_full_url(surface):
+        path = urllib.parse.urlsplit(surface).path
+        slug = path.rsplit("/", 1)[-1].removesuffix(".html") or "page"
         return surface, slug, None
 
     name = surface.removeprefix("_lab/").removesuffix(".html")
@@ -138,7 +150,8 @@ def main() -> int:
         p.error("surface is required (try --list to see what's available)")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    check_dev_server(args.base)
+    if not is_full_url(args.surface):
+        check_dev_server(args.base)
 
     url, slug, local_path = resolve_surface(args.surface, args.base)
     requested = [v.strip() for v in args.variants.split(",") if v.strip()]
@@ -178,7 +191,7 @@ def main() -> int:
         page.goto(args.base, wait_until="domcontentloaded")
 
         for v in requested:
-            target = f"{url}?v={v}"
+            target = with_variant_param(url, v)
             page.goto(target, wait_until="networkidle")
             if theme_js:
                 page.evaluate(theme_js)

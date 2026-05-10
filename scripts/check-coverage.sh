@@ -24,4 +24,18 @@ node scripts/generate-frontend-coverage.js
 echo "Running diff-cover on full stack..."
 # We compare against the main branch, prioritizing origin/main with a fallback.
 # This ensures it works locally and in CI/agent worktrees.
-diff-cover coverage.xml .qa-runs/coverage-reports/cobertura-coverage.xml --compare-branch=${COMPARE_BRANCH:-origin/main} --fail-under=100
+resolve_compare_branch() {
+    for candidate in "$COMPARE_BRANCH" origin/main main HEAD; do
+        [ -z "$candidate" ] && continue
+        if git rev-parse --verify --quiet "$candidate" >/dev/null; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+RESOLVED_COMPARE_BRANCH=$(resolve_compare_branch) || {
+    echo "check-coverage.sh: no valid compare branch (tried COMPARE_BRANCH, origin/main, main, HEAD)" >&2
+    exit 1
+}
+diff-cover coverage.xml .qa-runs/coverage-reports/cobertura-coverage.xml --compare-branch="$RESOLVED_COMPARE_BRANCH" --fail-under=100

@@ -752,6 +752,19 @@ html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item.active:focus-vi
     0 0 0 2px rgba(158, 139, 255, 0.55);
 }
 
+/* Forced-colors / High Contrast: box-shadow is stripped, so the violet
+   ring above disappears. Restore a solid system-colored outline so
+   keyboard focus remains visible. */
+@media (forced-colors: active) {
+  body.antigravity-theme .sidebar-nav-item:focus-visible,
+  body.antigravity-theme .sidebar-nav-item.active:focus-visible,
+  html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item:focus-visible,
+  html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item.active:focus-visible {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
+  }
+}
+
 body.antigravity-theme .bottom-nav-item.active {
   color: var(--ag-violet);
 }
