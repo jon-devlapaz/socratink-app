@@ -212,6 +212,35 @@ bash scripts/verify-deploy.sh <sha>
 bash scripts/verify-deploy.sh HEAD
 ```
 
+### Variant prototyping (UI register / copy decisions)
+For UI surfaces where the right answer is "what should this look/read like" rather
+than "what should this do," follow the `prototype` skill at
+`.claude/skills/prototype/SKILL.md`: build several variants on a single
+`?v=A|B|C|D` route under `public/_lab/<surface>-variants.html`, then capture and
+review them. Two scripts compress the loop:
+
+```bash
+# Sweep the variants and screenshot each (defaults: dark mode, full page).
+# Pre-flight checks: dev server reachable, surface exists in public/_lab/,
+# every -v token actually has a `data-variant=...` attribute on the page.
+scripts/snap.py library-empty-variants
+scripts/snap.py library-empty-variants -v A,D,E --open    # custom variants + auto-Preview (macOS)
+scripts/snap.py --list                                    # what _lab surfaces exist?
+
+# Pipe a customer-persona prompt through Gemini, filtered and auto-logged
+# to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
+# template live at docs/codex/customer-persona-prompt-template.md.
+scripts/persona.sh <prompt-file>
+cat prompt.txt | scripts/persona.sh
+scripts/persona.sh --template      # print template path
+```
+
+Capture the verdict in a sibling `<surface>-variants.NOTES.md` next to the
+prototype HTML so the answer survives the lab being deleted (the prototype
+skill's "delete or absorb when done" rule). When a variant choice is
+load-bearing for the domain — i.e., the meaning of a surface or term
+changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
+
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
 - There is no repository lint configuration checked in (no ruff/flake8/mypy config at repo root). Do not invent lint commands.
