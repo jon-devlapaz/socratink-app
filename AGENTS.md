@@ -184,6 +184,21 @@ SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
 python scripts/run_tasting_fixture.py
 ```
 
+### Coverage gate
+```bash
+# Full-stack diff-coverage gate. Runs the Python suite with coverage.xml,
+# captures Chromium V8 coverage from the e2e smoke run via the Chrome
+# DevTools Protocol, normalizes it through monocart-coverage-reports into
+# cobertura, then runs diff-cover against origin/main with --fail-under=100.
+# Fails the script (exit 1) with the offending file and line numbers if any
+# new line in the diff lacks a covering test.
+./scripts/check-coverage.sh
+```
+- Threshold is on the diff, not the project total. Brand-new code without coverage fails; existing legacy gaps are not scored.
+- Pure-deletion diffs, doc-only diffs, and config-only diffs are correctly no-ops — diff-cover only scores added/modified executable lines.
+- Backend scope is `admin api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
+- If the script crashes outside of a coverage failure (missing V8 data, missing `coverage.xml`), inspect `.qa-runs/v8-coverage/*.json` and `.qa-runs/coverage-reports/cobertura-coverage.xml` before reaching for `--no-verify`-style escapes. The gate is the brake; do not bypass it silently.
+
 ### Deploy verification
 ```bash
 # Validate the same dependency/build surface Vercel will use
@@ -196,6 +211,35 @@ bash scripts/verify-deploy.sh
 bash scripts/verify-deploy.sh <sha>
 bash scripts/verify-deploy.sh HEAD
 ```
+
+### Variant prototyping (UI register / copy decisions)
+For UI surfaces where the right answer is "what should this look/read like" rather
+than "what should this do," follow the `prototype` skill at
+`.claude/skills/prototype/SKILL.md`: build several variants on a single
+`?v=A|B|C|D` route under `public/_lab/<surface>-variants.html`, then capture and
+review them. Two scripts compress the loop:
+
+```bash
+# Sweep the variants and screenshot each (defaults: dark mode, full page).
+# Pre-flight checks: dev server reachable, surface exists in public/_lab/,
+# every -v token actually has a `data-variant=...` attribute on the page.
+scripts/snap.py library-empty-variants
+scripts/snap.py library-empty-variants -v A,D,E --open    # custom variants + auto-Preview (macOS)
+scripts/snap.py --list                                    # what _lab surfaces exist?
+
+# Pipe a customer-persona prompt through Gemini, filtered and auto-logged
+# to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
+# template live at docs/codex/customer-persona-prompt-template.md.
+scripts/persona.sh <prompt-file>
+cat prompt.txt | scripts/persona.sh
+scripts/persona.sh --template      # print template path
+```
+
+Capture the verdict in a sibling `<surface>-variants.NOTES.md` next to the
+prototype HTML so the answer survives the lab being deleted (the prototype
+skill's "delete or absorb when done" rule). When a variant choice is
+load-bearing for the domain — i.e., the meaning of a surface or term
+changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
@@ -260,3 +304,4 @@ bash scripts/verify-deploy.sh HEAD
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; do not allow-list failures unless they are proven third-party.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
 - The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
+- Before declaring an implementation task complete on production code — Python under the backend scope (`admin/`, `api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.

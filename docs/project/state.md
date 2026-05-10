@@ -11,14 +11,14 @@
 - Evidence source of truth: live logs plus the operational docs in this repo
 
 ## Current Phase
-The original thermostat starter-map MVP loop shipped. The old multi-concept starter shelf is removed while Library concepts are being revamped; the Library now includes one curated Hermes Agent documentation concept. Current smoke tests should use either freshly created concepts or that curated documentation concept. The product is now in Build-Measure-Learn: build features, measure with instrumentation and Socratink Brain, learn from compiled evidence.
+The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library now shows only the user's own reconstructed work — both the multi-concept starter shelf and the curated Hermes Agent fixture have been removed. Current smoke tests seed a concept directly into `learnops_concepts` localStorage. The product is now in Build-Measure-Learn: build features, measure with instrumentation and Socratink Brain, learn from compiled evidence.
 
 ## Active Risks
 - Hosted behavior may still diverge from local behavior.
 - `localStorage` is fragile and easy to wipe.
 - Chat/test instrumentation is incomplete, so some regressions will still be harder to reconstruct than they should be.
 - External ingestion paths still need defensive hosted behavior and graceful fallback.
-- The old built-in Library starter shelf is intentionally removed pending a concept/library revamp; the curated Hermes Agent documentation concept is the only checked-in Library fixture.
+- Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user with no concepts must bring their own source.
 
 ## Product Constraints
 - Generation Before Recognition is non-negotiable.

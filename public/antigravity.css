@@ -729,6 +729,42 @@ html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item.active {
   box-shadow: inset 0 0 0 1px rgba(158, 139, 255, 0.22);
 }
 
+/* Focus ring — DESIGN.md §12 "soft violet ring." The active-state inset
+   shadow alone (1px, ~22% violet) fails the WCAG 3:1 non-text-contrast
+   bar against graphite. These rules live in the legacy layer so they
+   actually override the antigravity active rule above; the components-
+   layer focus-visible rule is shadowed by the legacy cascade. */
+body.antigravity-theme .sidebar-nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(144, 103, 198, 0.55);
+}
+body.antigravity-theme .sidebar-nav-item.active:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px rgba(144, 103, 198, 0.20),
+    0 0 0 2px rgba(144, 103, 198, 0.55);
+}
+html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item:focus-visible {
+  box-shadow: 0 0 0 2px rgba(158, 139, 255, 0.55);
+}
+html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item.active:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px rgba(158, 139, 255, 0.22),
+    0 0 0 2px rgba(158, 139, 255, 0.55);
+}
+
+/* Forced-colors / High Contrast: box-shadow is stripped, so the violet
+   ring above disappears. Restore a solid system-colored outline so
+   keyboard focus remains visible. */
+@media (forced-colors: active) {
+  body.antigravity-theme .sidebar-nav-item:focus-visible,
+  body.antigravity-theme .sidebar-nav-item.active:focus-visible,
+  html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item:focus-visible,
+  html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item.active:focus-visible {
+    outline: 2px solid ButtonText;
+    outline-offset: 2px;
+  }
+}
+
 body.antigravity-theme .bottom-nav-item.active {
   color: var(--ag-violet);
 }

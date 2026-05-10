@@ -63,8 +63,3 @@ export async function runRepairReps(body) {
 export async function runDrillTurn(body) {
   return postJson('/api/drill', body);
 }
-
-export async function loadLibraryConcept(filename) {
-  // Static asset path served by FastAPI's StaticFiles mount, not /api/*.
-  return getJson(`/data/library/${filename}`);
-}

@@ -232,12 +232,17 @@
   text-decoration-color: var(--accent-border);
   text-decoration-thickness: 0.06em;
   text-underline-offset: 0.2em;
-  background: 0;
-  border: 0;
-  border-radius: 0;
+  background: transparent;
+  /* Hit-target padding: text reads inline (negative margin pulls visual
+     baseline back into the meta-row rhythm) but the touch box expands to
+     ~40×30. Hover gets a quiet wash so the affordance reads. */
+  padding: 8px 12px;
+  margin: -8px -4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
   box-shadow: none;
-  padding: 0;
   cursor: pointer;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out;
   /* Inherit family + size from the meta line, but DON'T use the `font:`
      shorthand — it resets font-weight back to inherit and overrides the
      700 declared above, leaving the link rendering at body weight. */
@@ -246,6 +251,8 @@
 }
 .composer-card .journal-meta__add:hover {
   text-decoration-color: var(--accent-primary);
+  background-color: rgba(var(--lavender-500-rgb), 0.08);
+  border-color: rgba(var(--lavender-500-rgb), 0.18);
 }
 
 /* ── Primary action button ─────────────────────────────────── */

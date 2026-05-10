@@ -55,13 +55,32 @@ bash scripts/qa-smoke.sh local
 bash scripts/qa-smoke.sh live
 ```
 
+### Diff coverage gate
+
+Changed lines on this branch are required to be 100% covered across both the
+Python backend and the JavaScript frontend. The gate runs in CI and locally:
+
+```bash
+bash scripts/test-cov.sh        # collect Python (pytest-cov) + frontend (monocart) coverage
+bash scripts/check-coverage.sh  # enforce 100% diff coverage vs. main using diff-cover
+```
+
+The frontend leg (`scripts/generate-frontend-coverage.js`) requires Node (run
+`npm install` once to fetch `monocart-coverage-reports`). The Python leg adds
+`pytest-cov` and `diff-cover` from `requirements-dev.txt`.
+
 ## Dependency Updates & Deployment
 
-This repo keeps Python dependency management intentionally simple:
+This repo keeps dependency management intentionally simple:
 
 - `requirements.txt` is the Vercel runtime install surface.
-- `requirements-dev.txt` is local-only test and tooling surface.
-- Keep both files flat: one pinned package per line, no `-r` includes, no hash blocks.
+- `requirements-dev.txt` is local-only test and tooling surface (includes
+  `pytest-cov` and `diff-cover` for the coverage gate).
+- `package.json` / `package-lock.json` carry the local-only Node tooling for
+  the frontend coverage gate (`monocart-coverage-reports`); none of it ships
+  to Vercel.
+- Keep the Python files flat: one pinned package per line, no `-r` includes,
+  no hash blocks.
 
 ### Deployment Validation
 

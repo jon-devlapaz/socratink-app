@@ -2,7 +2,7 @@
 
 This document defines the smallest useful evaluation set for the current MVP loop.
 
-The old built-in starter shelf is intentionally removed while Library concepts are being revamped. For manual drill evaluation, create or reopen a concept with a clear causal structure, or use the curated Hermes Agent documentation concept now checked into the Library.
+Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library shows only the user's own reconstructed work; there are no checked-in fixture concepts. For manual drill evaluation, create or reopen a concept with a clear causal structure.
 
 ## 1. Manual Eval Set
 

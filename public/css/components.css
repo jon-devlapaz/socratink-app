@@ -447,6 +447,21 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-weight: 700;
 }
 
+/* DESIGN.md §12 prescribes "soft violet ring" for focus. Default browser
+   outline is suppressed on these tiles; previously focus relied on the
+   active-state inset shadow alone (~22% violet inset 1px), which fails the
+   WCAG 3:1 non-text-contrast bar against graphite. Promote to outer 2px at
+   55% violet — visible without becoming a "thick blue outline." */
+.sidebar-nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(var(--lavender-500-rgb), 0.55);
+}
+.sidebar-nav-item.active:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px var(--accent-border),
+    0 0 0 2px rgba(var(--lavender-500-rgb), 0.55);
+}
+
 .sidebar-divider { height:1px; background:var(--border); margin:8px 12px; flex-shrink:0; }
 
 .sidebar-section-label {
@@ -454,6 +469,16 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-size:10px; font-weight:700; letter-spacing:0.8px;
   text-transform:uppercase; color:var(--text-sub);
   padding:8px 20px 4px; flex-shrink:0; display:block;
+}
+
+/* Hide the divider + "Concepts" eyebrow when the user has no concepts.
+   Per DESIGN.md §12 silent-surface: every visible element must justify
+   its presence. An eyebrow with nothing below promises content that
+   isn't there. The :has(:empty) pair re-shows them once renderConceptList
+   populates #concept-list. */
+#drawer:has(#concept-list:empty) > .sidebar-divider,
+#drawer:has(#concept-list:empty) > .sidebar-section-label {
+  display: none;
 }
 
 .drawer-close {
