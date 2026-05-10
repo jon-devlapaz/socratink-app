@@ -2431,7 +2431,10 @@ html[data-motion="reduced"] .graph-node-detail.is-solid-reward-panel {
 
 .ignition-view__inner,
 .launch-pad-view__inner {
-  width: min(100%, 480px);
+  /* Was 480px — widened to 600 so the 36px display-weight title sits on a
+     single line at desktop widths instead of breaking mid-thought. The
+     composer card still feels form-as-hero proportioned at 600. */
+  width: min(100%, 600px);
   display: flex;
   flex-direction: column;
   align-items: stretch;
