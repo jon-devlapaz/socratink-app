@@ -18,7 +18,7 @@ Legacy alias: `docs/codex/session-bootstrap.md` exists only to redirect older in
 ## Current Repo Reality
 - Product: socratink
 - Stage: MVP stabilization, not expansion
-- Release gate: freshly created concept loop or curated Hermes Agent documentation concept while the old Library starter shelf is removed
+- Release gate: freshly created concept loop. Per ADR-0004, Library shows only the user's own reconstructed work; there is no built-in starter shelf or curated fixture concept.
 - Core architecture: cold attempt -> targeted study -> spaced re-drill
 - Core node states: `locked -> primed -> drilled -> solidified`
 - Hosted runtime: Vercel serverless

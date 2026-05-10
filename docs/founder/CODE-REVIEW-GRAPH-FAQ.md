@@ -122,7 +122,7 @@ Two options:
    in with `get_community_tool`.
 2. **Flows** — `list_flows_tool` returns the main user-journey call chains
    sorted by criticality (here, top flows are `selectTile`, `runHeroAction`,
-   `toggleTheme`, `importLibraryConcept`).
+   `toggleTheme`, `renderGrid`).
 
 When you've been away from the code for a while, communities + flows is faster
 than any README.

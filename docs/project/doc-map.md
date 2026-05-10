@@ -29,6 +29,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | --- | --- | --- | --- | --- |
 | [/DESIGN.md](../../DESIGN.md) | canonical | yes | The canonical UX doctrine: unifying metaphor, metacognitive happy path, state claims, session guardrails, AI contracts, and ethical engagement. | — |
 | [/UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md) | canonical | yes | Project-wide DDD glossary: binding terms (Graph truth, Recorded evidence, Reconstruction evidence, the four learning-loop states) and explicit Aliases to avoid. Authoritative term list referenced by the Precedence block above. | — |
+| [/CONTEXT.md](../../CONTEXT.md) | canonical | yes | Domain glossary for terms whose meaning shapes a specific surface (e.g. Library). Canonical for the surface-level terms it defines; complements `/UBIQUITOUS_LANGUAGE.md` (which governs cross-cutting graph/loop vocabulary). If code or copy disagrees with this file, the code or copy is wrong. | — |
 | [product/evidence-weighted-map.md](../product/evidence-weighted-map.md) | canonical | yes | Defines the evidence-weighted map doctrine, true game loop, starting-map-as-anchor, map-maturity language, and graph-claim rules. Overrides other docs on graph-truth claims. | — |
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
 | [product/ux-framework.md](../product/ux-framework.md) | deprecated | no | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | [/DESIGN.md](../../DESIGN.md) |
@@ -89,8 +90,6 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | --- | --- | --- | --- |
 | `docs/reference/example-extraction-output.json` | reference | no | Sample extraction output for prompts and testing. Not a contract. |
 | [reference/extraction-catalog.md](../reference/extraction-catalog.md) | reference | no | Inventory of backend, prompt, and frontend files involved in the extraction phase. Developer orientation aid; not a contract. |
-| `docs/reference/hermes-agent-concept-source.md` | reference | no | Compressed Socratink-ready source for creating a Hermes Agent documentation concept. Derived from public Nous Research Hermes Agent docs and kept under the current extraction input limit. |
-| `docs/reference/hermes-agent-docs-manifest.md` | reference | no | Full manifest of upstream Hermes Agent documentation pages, source paths, raw URLs, sizes, and headings used to build the compressed Hermes concept source. |
 | [project/crg-architecture-snapshot-2026-05-04.md](crg-architecture-snapshot-2026-05-04.md) | reference | no | Architectural orientation for the Socratink codebase. |
 
 ## Historical / Deprecated Notes

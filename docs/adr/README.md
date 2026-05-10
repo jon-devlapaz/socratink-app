@@ -33,3 +33,4 @@ Keep them short. Link to the spec / plan / commits that drove the decision rathe
 - [ADR-0001 — `ProvisionalMap` as a typed cognitive artifact contract](0001-provisional-map-typed-contract.md)
 - [ADR-0002 — LLM provider lives behind a seam; application asks for cognitive artifacts](0002-llm-seam.md)
 - [ADR-0003 — Retry contract is encoded in the type system via `RetriableLLMError`](0003-retriable-error-marker.md)
+- [ADR-0004 — Library shows only the user's own reconstructed work](0004-library-is-users-work-only.md)

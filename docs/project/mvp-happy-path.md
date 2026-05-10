@@ -54,7 +54,7 @@ Expected:
 
 ### 3. Create Or Open A Test Concept
 
-Create a concept from source material that should extract into a Core Thesis, backbone rooms, clusters, and child drill rooms, or open the curated Hermes Agent documentation concept from the Library. The previous multi-concept starter shelf has been removed while the Library model is being revamped.
+Create a concept from source material that should extract into a Core Thesis, backbone rooms, clusters, and child drill rooms. Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library shows only the user's own reconstructed work; there is no built-in starter shelf or curated fixture concept.
 
 Expected:
 - graph loads without crashing
