@@ -2,7 +2,15 @@
 set -e
 
 echo "Registering untracked files in git index for diff-cover..."
-git add -N .
+UNTRACKED_FILES=$(git ls-files --others --exclude-standard)
+if [ -n "$UNTRACKED_FILES" ]; then
+    # shellcheck disable=SC2086
+    printf '%s\n' "$UNTRACKED_FILES" | xargs -I{} git add -N -- "{}"
+    cleanup_intent_to_add() {
+        printf '%s\n' "$UNTRACKED_FILES" | xargs -I{} git reset --quiet -- "{}" 2>/dev/null || true
+    }
+    trap cleanup_intent_to_add EXIT
+fi
 
 echo "Clearing old V8 coverage data..."
 rm -rf .qa-runs/v8-coverage .qa-runs/coverage-reports

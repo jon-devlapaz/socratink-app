@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import json
 import uuid
 from collections.abc import Iterator
@@ -31,7 +32,8 @@ DEFAULT_BASE_URL = "http://localhost:8000"
 @pytest.fixture(autouse=True)
 def _v8_coverage(page: Page) -> Iterator[None]:
     """Automatically collect V8 JS coverage via Chrome DevTools Protocol."""
-    if page.context.browser.browser_type.name != "chromium":
+    browser = page.context.browser
+    if browser is None or browser.browser_type.name != "chromium":
         yield
         return
 
@@ -55,8 +57,7 @@ def _v8_coverage(page: Page) -> Iterator[None]:
         with open(out_file, "w") as f:
             json.dump(v8_data, f)
     except Exception as e:
-        # Ignore errors if the page closed early
-        pass
+        print(f"v8 coverage capture failed: {e}", file=sys.stderr)
 
 # Allow-list of console-error message substrings the suite should ignore.
 # Keep this tiny and add only with proven justification (link to a commit/PR).

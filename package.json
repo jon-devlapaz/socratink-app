@@ -2,7 +2,6 @@
   "name": "socratink-app",
   "version": "1.0.0",
   "description": "socratink-app is an MVP-stage learning product deployed on Vercel serverless.",
-  "main": "mcr.config.js",
   "directories": {
     "doc": "docs",
     "test": "tests"
