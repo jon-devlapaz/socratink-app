@@ -5,7 +5,6 @@ import {
   extractUrl,
   runRepairReps,
   runDrillTurn,
-  loadLibraryConcept,
 } from './api-client.js?v=1';
 import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=13';
 import {
@@ -2342,59 +2341,6 @@ const App = (() => {
     });
   }
 
-  const BUILT_IN_LIBRARY_CONCEPTS = [
-    {
-      file: 'hermes_agent.json',
-      name: 'Hermes Agent',
-      kicker: 'Documentation concept',
-      summary: 'Reconstruct the Nous Research Hermes Agent system: persistent memory, skills, tools, providers, messaging gateways, environments, automations, and safety boundaries.',
-      architecture: 'system description',
-      sourceShape: 'dense documentation',
-    },
-  ];
-
-  async function importLibraryConcept(filename, conceptName) {
-    const concepts = loadConcepts();
-    const existingConcept = concepts.find((concept) => concept.name === conceptName && concept.graphData);
-
-    if (existingConcept) {
-      selectConcept(existingConcept.id);
-      hideLibrary();
-      showMapView(existingConcept);
-      setMapMode('graph');
-      return;
-    }
-
-    try {
-      const data = await loadLibraryConcept(filename);
-
-      const newConcept = {
-        id: generateId(),
-        name: conceptName,
-        createdAt: new Date().toISOString(),
-        state: 'growing',
-        contentPreview: data?.metadata?.core_thesis || '',
-        contentType: 'library',
-        contentFilename: 'Hermes Agent documentation',
-        graphData: JSON.stringify(data),
-      };
-
-      concepts.push(newConcept);
-      saveConcepts(concepts);
-
-      renderGrid(concepts);
-      renderConceptList(concepts);
-      renderIgnitionGate();
-      selectConcept(newConcept.id);
-      hideLibrary();
-      showMapView(newConcept);
-      setMapMode('graph');
-    } catch (error) {
-      console.error('Error loading library concept:', error);
-      alert('Failed to load this library concept.');
-    }
-  }
-
   function getLibraryConceptMeta(concept) {
     let graph = null;
     try {
@@ -2432,39 +2378,11 @@ const App = (() => {
     teardownMapView();
     hidePrimaryViews();
     const concepts = loadConcepts().filter(c => c.graphData);
-    const existingConceptNames = new Set(concepts.map((concept) => concept.name));
 
     let html = `
       <div class="library-kicker">Library</div>
 
       <div class="library-section">
-        <h2 class="library-section-title">Reference Concepts</h2>
-        <p class="library-section-copy">Curated draft paths you can open without treating the map as learner evidence.</p>
-        <div class="library-vault-grid">
-          ${BUILT_IN_LIBRARY_CONCEPTS.map((item) => {
-            const alreadyAdded = existingConceptNames.has(item.name);
-            return `
-              <div class="library-card library-card-vault" style="cursor:pointer;" onclick="App.importLibraryConcept('${item.file}', '${item.name}')">
-                <div class="library-card-header">
-                  <div>
-                    <div class="library-card-kicker">${escHtml(item.kicker)}</div>
-                    <span class="library-card-name">${escHtml(item.name)}</span>
-                  </div>
-                  <span class="library-card-state">${alreadyAdded ? 'in library' : 'draft path'}</span>
-                </div>
-                <p class="library-card-summary">${escHtml(item.summary)}</p>
-                <div class="library-card-meta">
-                  <span class="library-card-pill">${escHtml(item.architecture)}</span>
-                  <span class="library-card-pill">${escHtml(item.sourceShape)}</span>
-                </div>
-                <div class="library-card-cta">${alreadyAdded ? 'Open concept' : 'Add concept'}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-      
-      <div class="library-section" style="margin-top: 40px;">
         <h2 class="library-section-title">Your Library</h2>
         <p class="library-section-copy">Your library shows what you've reconstructed, not what you've saved.</p>
     `;
@@ -4134,7 +4052,6 @@ const App = (() => {
     hideMapView, setMapMode, toggleCluster,
     showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
-    importLibraryConcept,
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
     // C-prime door state: pending source from the door's + add source material panel.
