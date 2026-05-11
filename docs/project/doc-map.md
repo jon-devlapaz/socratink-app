@@ -69,6 +69,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [qa/antigravity-mobile-qa-prompt.md](../qa/antigravity-mobile-qa-prompt.md) | release-gate | yes | Mobile layout regression audit prompt and checklist. | — |
 | [qa/2026-05-07-c-prime-antigravity-qa-plan.md](../qa/2026-05-07-c-prime-antigravity-qa-plan.md) | release-gate | yes | Browser QA plan for C-prime concept entry (Door + Launch Pad). Antigravity-runnable test cases and breakfix report. | — |
 | [qa/2026-05-07-c-prime-shipgate-verifications.md](../qa/2026-05-07-c-prime-shipgate-verifications.md) | release-gate | yes | C-prime ship-gate verifications: server-side bypass guard and persistence-then-clear ordering under failure injection. | — |
+| [qa/2026-05-11-mvp-browser-test.md](../qa/2026-05-11-mvp-browser-test.md) | release-gate | yes | Pre-merge browser QA prompt for the Gemini-3-Pro MVP gate: end-to-end Socratic-loop walkthrough with evidence-capture rules. | — |
 
 ## Workflow & Agent Infra
 

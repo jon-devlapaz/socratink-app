@@ -23,7 +23,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=12">
+  <link rel="stylesheet" href="/css/index.css?v=32">
+  <link rel="stylesheet" href="css/drill-chamber.css?v=5">
 </head>
 
 <body>
@@ -199,6 +200,17 @@
       <h2 class="visually-hidden" id="desk-title">Desk</h2>
 
       <div class="intro-content">
+        <header class="desk-frame">
+          <span class="desk-eyebrow">
+            <span class="desk-eyebrow-dot" aria-hidden="true"></span>
+            On the desk
+            <span class="desk-eyebrow-sep" aria-hidden="true">·</span>
+            <time id="desk-date" class="desk-eyebrow-date"></time>
+          </span>
+          <h2 class="desk-title">Reconstructions in progress.</h2>
+          <p class="desk-helper">Concepts you’ve started, in the order you laid them down.</p>
+        </header>
+
         <div class="hero-info" id="hero-info">
           <div class="hero-meta-row">
             <div class="hero-state-chip-group">
@@ -263,6 +275,21 @@
             <g id="tile-8" class="tile-group" transform="translate(140,205)" onclick="App.selectTile(8)"></g>
           </svg>
         </div>
+
+        <div class="desk-legend" role="list" aria-label="Tile-state legend">
+          <span class="desk-legend-item" role="listitem" data-state="locked">
+            <span class="desk-legend-facet" aria-hidden="true"></span>locked
+          </span>
+          <span class="desk-legend-item" role="listitem" data-state="primed">
+            <span class="desk-legend-facet" aria-hidden="true"></span>primed
+          </span>
+          <span class="desk-legend-item" role="listitem" data-state="drilled">
+            <span class="desk-legend-facet" aria-hidden="true"></span>needs repair
+          </span>
+          <span class="desk-legend-item" role="listitem" data-state="solidified">
+            <span class="desk-legend-facet" aria-hidden="true"></span>solidified
+          </span>
+        </div>
       </div>
 
     </section>
@@ -293,7 +320,7 @@
               onsubmit="return App.runHeroAction(event)" autocomplete="off">
           <textarea class="composer-card__field" id="hero-single-input-field"
                     rows="2" maxlength="200"
-                    placeholder="e.g. photosynthesis, the Krebs cycle, recursion in Python…"
+                    placeholder=""
                     aria-label="What do you want to explain?"></textarea>
 
           <div class="journal-meta">
@@ -384,41 +411,40 @@
             <h2 class="concept-header-title" id="concept-header-title"></h2>
             <div class="concept-header-tags" id="concept-header-tags"></div>
           </div>
-          <div class="concept-header-actions">
-            <div class="map-mode-switch" aria-label="Map display mode" role="group">
-              <button id="map-mode-study" class="map-mode-btn active" data-map-mode="study" type="button" aria-pressed="true">Route</button>
-              <button id="map-mode-graph" class="map-mode-btn" data-map-mode="graph" type="button" aria-pressed="false">Graph</button>
-            </div>
-            <div class="map-action-bar">
-              <button class="btn-start-drill" id="concept-start-drill" type="button" onclick="App.startDrillFromMap()" hidden>Try from memory</button>
-            </div>
-          </div>
         </header>
         <div id="map-content"></div>
-        <div id="graph-content" class="graph-content" hidden>
-          <div class="graph-layout">
-            <div class="graph-stage-wrap">
-              <div class="graph-stage-header">
-                <div>
-                  <div class="graph-stage-kicker">Draft Route</div>
-                  <h3 class="graph-stage-title">Evidence Map</h3>
-                </div>
-              </div>
-              <div id="graph-stage" class="graph-stage"></div>
-            </div>
-            <div id="graph-detail" class="graph-detail">
-              <div id="graph-node-detail" class="graph-node-detail"></div>
-              <div class="drill-ui drill-ui-embedded" id="drill-ui">
-                <div class="drill-header">
-                  <button class="drill-back" onclick="App.cancelDrill()">← Back</button>
-                  <span class="drill-title" id="drill-title">Cold Attempt</span>
-                </div>
-                <div class="chat-history" id="chat-history"></div>
-                <div class="chat-input-area">
-                  <textarea class="chat-input" id="chat-input" placeholder="Write what you can reconstruct from memory."
-                    rows="2"></textarea>
-                </div>
-              </div>
+      </div>
+    </section>
+
+    <section id="drill-chamber-view" class="drill-chamber-view" hidden aria-label="Drill chamber">
+      <div class="drill-chamber__inner">
+        <nav class="drill-chamber__crumb" aria-label="Drill location">
+          <a href="javascript:void(0)" id="chamber-exit" aria-label="Return to map">
+            <svg class="drill-chamber__back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            Return to map
+          </a>
+          <span class="drill-chamber__sep" aria-hidden="true">·</span>
+          <span id="chamber-concept-name">—</span>
+          <span class="drill-chamber__sep" aria-hidden="true">·</span>
+          <span class="drill-chamber__here" id="chamber-entry-name">—</span>
+        </nav>
+
+        <div class="drill-chamber__history" id="chamber-history-widget" hidden>
+          <div class="drill-chamber__history-summary">
+            <span class="drill-chamber__history-count" id="chamber-history-count">0</span>
+            earlier turns this attempt
+          </div>
+          <button class="drill-chamber__history-toggle" id="chamber-history-toggle" type="button" aria-expanded="false" aria-controls="chamber-history-expanded">show</button>
+          <div class="drill-chamber__history-expanded" id="chamber-history-expanded"></div>
+        </div>
+
+        <div class="drill-chamber__active" id="chamber-active">
+          <p class="drill-chamber__question" id="chamber-question">—</p>
+          <div class="drill-chamber__composer">
+            <textarea id="chamber-composer" placeholder="Write what comes to mind. Fragments are fine." aria-label="Your reply" rows="3"></textarea>
+            <div class="drill-chamber__composer-foot">
+              <span class="drill-chamber__hint">a sentence is enough · cmd · return to send</span>
+              <button class="drill-chamber__send" id="chamber-send" type="button">Send turn</button>
             </div>
           </div>
         </div>
@@ -429,11 +455,11 @@
 
   <!-- PDF.js for robust client-side extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script type="module" src="js/app.js?v=81"></script>
+  <script src="js/drill-chamber.js?v=6"></script>
+  <script type="module" src="js/app.js?v=97"></script>
   <script src="js/intro-particles.js?v=8"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=5"></script>

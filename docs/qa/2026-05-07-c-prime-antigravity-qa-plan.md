@@ -1,5 +1,7 @@
 # C-prime Concept Entry — Browser QA Plan (Antigravity-runnable)
 
+> **Superseded surface (2026-05-11, strip-as-nav port).** The Cytoscape graph view (`public/js/graph-view.js`, `#graph-content`) was deleted in the strip-as-nav port. Wherever this plan says "graph view," "graph-fresh", or "graph-revisit", read it as the **strip + concept page** surface (`public/js/drill-chamber.js`, `public/css/concept-page.css`, `public/css/drill-chamber.css`). Screenshot keys named `graph-*` should be re-keyed to `strip-*` / `concept-page-*` when capturing evidence against current code.
+
 **Date:** 2026-05-07
 **Branch under test:** `dev` (16 commits ahead of `origin/dev`)
 **Spec:** `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`

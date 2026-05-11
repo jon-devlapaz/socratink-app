@@ -421,7 +421,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-family:var(--font-display);
   font-size:20px; font-weight:800; letter-spacing:-0.5px; color:var(--text);
 }
-.brand-accent { color: var(--accent-primary); }
+.brand-accent { color: inherit; }
 
 /* Sidebar navigation */
 .sidebar-nav {

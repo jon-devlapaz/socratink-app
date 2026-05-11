@@ -88,7 +88,12 @@
   font-size: var(--text-base);
   line-height: var(--rule-step);
   color: var(--text-strong);
-  padding: var(--composer-grid-offset, 8px) 0 0 0;
+  /* padding-top calibrated to land text baseline on the first rule line.
+     rule-step 32px puts the first rule at y=31 from textarea top.
+     Inter at 32px line-height has baseline at ~y=padding-top+25.
+     padding-top:6 -> baseline at 31, exactly on the rule. */
+  padding: 6px 14px 0 14px;
+  caret-color: var(--accent-primary);
   min-height: calc(var(--rule-step) * 3);
 }
 
@@ -141,6 +146,20 @@
   stroke: var(--text-muted);
   stroke-width: 1.2;
   vector-effect: non-scaling-stroke;
+  transition:
+    fill 320ms cubic-bezier(0.16, 1, 0.3, 1),
+    stroke 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Launch pad — the diamond actualizes. The learner committed a concept
+   on the door; the pad shows the mark filling in to reflect that the
+   idea is no longer abstract. Solid violet + soft halo. */
+.launch-pad-view .witness-anchor__shape {
+  fill: var(--accent-primary);
+  stroke: var(--accent-primary);
+}
+.launch-pad-view .witness-anchor svg {
+  filter: drop-shadow(0 0 6px rgba(var(--violet-600-rgb), 0.35));
 }
 
 /* ── Title ─────────────────────────────────────────────────── */

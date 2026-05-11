@@ -1,5 +1,7 @@
 # Repair Reps — Unified Implementation Spec
 
+> **Superseded surface (2026-05-11).** The Cytoscape graph view (`public/js/graph-view.js`) has been removed in the strip-as-nav port. All references below to `repairRepsMarkupForNode()`, `renderCurrentDetail()`, `repairRatingMarkup()`, `repairContextStripMarkup()`, `.graph-layout.mode-repair-reps`, `.graph-detail.is-repair-reps`, and the `.graph-repair-*` CSS family describe the prior implementation site. The repair-reps state machine (`startRepairReps`, `revealRepairRep`, `rateRepairRep`, `nextRepairRep`, `exitRepairReps`) still lives in `public/js/app.js`; only the rendering surface has moved. New rendering surface will land on the strip + concept-page (`public/css/concept-page.css`) or inside the drill chamber view (`public/js/drill-chamber.js`, `public/css/drill-chamber.css`). Treat the markup, CSS, and event-listener tables below as historical until the rendering surface is re-pointed.
+
 This document consolidates the implementation spec for Repair Reps, governing focused layout, card-stack animations, and self-rating behavior.
 
 ---

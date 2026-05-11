@@ -23,7 +23,8 @@ These files manage how the extraction is triggered by the user and how the resul
 | [ai_service.js](../../public/js/ai_service.js) | **API Client:** The frontend wrapper responsible for making the asynchronous fetch requests to the backend API. |
 | [source-panel.js](../../public/js/source-panel.js) | **Door (C-prime):** Mounts the concept-name + optional source entry (the "Door"). Routes source-attached submissions to the source-aware extract path. |
 | [launch-pad.js](../../public/js/launch-pad.js) | **Launch Pad (C-prime):** Mounts the threshold for source-less concepts. Drives the smallest-route extract branch and surfaces cap-exceeded server messages. |
-| [graph-view.js](../../public/js/graph-view.js) | **Visualization logic:** Responsible for taking the JSON concept map data and rendering the interactive node/edge graph in the browser. |
+| [app.js](../../public/js/app.js) + [concept-page.css](../../public/css/concept-page.css) | **Concept view:** Strip-as-nav navigator plus the B-2 concept page that replaced the Cytoscape graph view. Renders the extraction map as a list/strip of nodes and a per-node detail surface. |
+| [drill-chamber.js](../../public/js/drill-chamber.js) + [drill-chamber.css](../../public/css/drill-chamber.css) | **Drill chamber view:** Full-screen drill surface (`#drill-chamber-view`) that hosts cold-attempt, study, and re-drill flows after a strip node is selected. |
 | [index.html](../../public/index.html) | **Markup:** Contains the DOM structure for the extraction input forms, loading indicators, and the canvas/container for the concept map. |
 | [layout.css](../../public/css/layout.css) | **Styles:** CSS classes that handle the layout positioning of the map and extraction UI elements. |
 

@@ -1,0 +1,434 @@
+/* concept-page.css
+   Production styles for the B-2 "Strip + page" concept page layout.
+   Design-of-record: public/_lab/concept-page-iterations.html?variant=page
+   Synthesis from Linear (single-pane work column) + Heptabase
+   (constellation as orientation) + Notion (faint nearby list).
+   Founder pick. Customer-validated. */
+
+/* ============================================================
+   Eyebrow -- the small uppercase mono label used throughout
+   the concept page (strip overlay, entry eyebrow, nearby header).
+   Without this base rule, .eyebrow inherits body text size and
+   reads as a heading, not a label.
+   ============================================================ */
+.concept-page-b2 .eyebrow,
+.concept-strip .eyebrow {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-secondary);
+  font-weight: 500;
+}
+[data-theme="dark"] .concept-page-b2 .eyebrow,
+[data-theme="dark"] .concept-strip .eyebrow {
+  color: rgba(176, 156, 224, 0.78);
+}
+
+/* ============================================================
+   concept-strip -- constellation compressed to a band
+   ============================================================ */
+.concept-strip {
+  max-width: 1100px;
+  margin: 18px auto 0;
+  padding: 0 36px;
+}
+.concept-strip__inner {
+  position: relative;
+  height: 110px;
+  border-radius: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(144, 103, 198, 0.06), transparent 70%),
+    var(--surface-card-theme, #ffffff);
+  border: 1px solid var(--border-subtle);
+  box-shadow:
+    0 1px 2px rgba(36, 32, 56, 0.04),
+    0 6px 18px rgba(144, 103, 198, 0.04);
+}
+[data-theme="dark"] .concept-strip__inner {
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 50%, rgba(176, 156, 224, 0.10), transparent 70%),
+    #0c0820;
+  border-color: rgba(141, 134, 201, 0.20);
+  box-shadow:
+    inset 0 1px 0 rgba(247, 236, 225, 0.04),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.concept-strip__svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+.concept-strip__overlay {
+  position: absolute; left: 16px; top: 14px; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+}
+.concept-strip__overlay .eyebrow {
+  background: var(--surface-card-theme);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+[data-theme="dark"] .concept-strip__overlay .eyebrow {
+  background: rgba(7, 5, 15, 0.65);
+  color: rgba(176, 156, 224, 0.90);
+}
+.concept-strip__active-name {
+  font-size: 12px;
+  color: var(--text-strong);
+  background: var(--surface-card-theme);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+[data-theme="dark"] .concept-strip__active-name {
+  background: rgba(7, 5, 15, 0.65);
+  color: rgba(247, 236, 225, 0.92);
+}
+
+/* SVG node styles for the strip */
+.concept-strip__edge { stroke: rgba(144, 103, 198, 0.20); stroke-width: 1.2; fill: none; }
+.concept-strip__edge.is-active { stroke: rgba(144, 103, 198, 0.55); stroke-width: 1.6; }
+[data-theme="dark"] .concept-strip__edge { stroke: rgba(215, 190, 255, 0.22); }
+[data-theme="dark"] .concept-strip__edge.is-active { stroke: rgba(215, 190, 255, 0.55); }
+.concept-strip__node circle { transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.concept-strip__node--locked circle { fill: rgba(36, 32, 56, 0.18); stroke: rgba(36, 32, 56, 0.10); stroke-dasharray: 3 2; }
+.concept-strip__node--primed circle { fill: var(--accent-primary, #9067C6); stroke: var(--accent-primary, #9067C6); }
+.concept-strip__node--primed.is-active circle { stroke-width: 3; filter: drop-shadow(0 0 6px rgba(144, 103, 198, 0.55)); }
+[data-theme="dark"] .concept-strip__node--locked circle { fill: rgba(141, 134, 201, 0.40); stroke: rgba(141, 134, 201, 0.22); }
+[data-theme="dark"] .concept-strip__node--primed circle { fill: #9fd5ed; stroke: #9fd5ed; filter: drop-shadow(0 0 8px rgba(159, 213, 237, 0.55)); }
+.concept-strip__node text {
+  font-family: 'Inter', sans-serif;
+  font-size: 9px;
+  text-anchor: middle;
+  letter-spacing: 0.04em;
+  fill: var(--text-muted);
+}
+[data-theme="dark"] .concept-strip__node text { fill: rgba(247, 236, 225, 0.62); }
+.concept-strip__node--primed.is-active text { fill: var(--text-strong); font-weight: 600; }
+[data-theme="dark"] .concept-strip__node--primed.is-active text { fill: rgba(247, 236, 225, 0.96); }
+
+/* ============================================================
+   B-2 -- STRIP + PAGE
+   Strip on top; below reads as a single continuous document.
+   Threshold quoted at top. Active entry as a single page block
+   with H2 and CTA. Locked nearby entries as a faint quiet list.
+   ============================================================ */
+.concept-page-b2__doc {
+  max-width: 680px;
+  margin: 48px auto 100px;
+  padding: 0 36px;
+}
+.concept-page-b2__threshold {
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.7;
+  padding: 0 0 0 22px;
+  border-left: 2px solid var(--accent-primary);
+  margin-bottom: 56px;
+}
+[data-theme="dark"] .concept-page-b2__threshold { border-left-color: rgba(176, 156, 224, 0.55); }
+.concept-page-b2__threshold--empty { opacity: 0.55; }
+.concept-page-b2__entry-eyebrow { display: block; margin-bottom: 14px; }
+.concept-page-b2__entry-title { font-size: 36px; line-height: 1.15; font-weight: 600; margin: 0 0 16px; color: var(--text-strong); }
+.concept-page-b2__entry-purpose { color: var(--text-muted); font-size: 16px; line-height: 1.65; margin: 0 0 32px; max-width: 520px; }
+.concept-page-b2__entry-cta {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--accent-primary);
+  color: var(--cream-50, #F7ECE1);
+  padding: 12px 26px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit; font-size: 14px; font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.concept-page-b2__entry-cta:hover { background: var(--primary-fill, #7a59aa); transform: translateY(-1px); }
+.concept-page-b2__entry-cta::after {
+  content: "\2192";
+  font-size: 16px;
+  transform: translateX(0);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.concept-page-b2__entry-cta:hover::after { transform: translateX(4px); }
+
+.concept-page-b2__nearby {
+  margin-top: 80px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-subtle);
+}
+.concept-page-b2__nearby-eyebrow { display: block; margin-bottom: 18px; }
+.concept-page-b2__nearby-list { display: flex; flex-direction: column; gap: 4px; }
+.concept-page-b2__nearby-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 10px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  border-bottom: 1px dashed var(--border-subtle);
+  opacity: 0.62;
+}
+.concept-page-b2__nearby-item:last-child { border-bottom: 0; }
+.concept-page-b2__nearby-num {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--accent-secondary);
+  letter-spacing: 0.06em;
+}
+.concept-page-b2__nearby-status {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  opacity: 0.55;
+}
+
+/* ============================================================
+   Strip nodes: interactive states (strip-as-nav)
+   ============================================================ */
+
+.concept-strip__node {
+  cursor: pointer;
+  outline: none;
+}
+.concept-strip__node circle {
+  transition:
+    r 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    fill 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    stroke 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.concept-strip__node:hover:not(.is-active) circle {
+  filter: drop-shadow(0 0 6px rgba(var(--violet-600-rgb), 0.30));
+}
+.concept-strip__node:focus-visible circle {
+  stroke: var(--accent-primary);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(var(--violet-600-rgb), 0.55));
+}
+[data-theme="dark"] .concept-strip__node:focus-visible circle {
+  stroke: rgba(176, 156, 224, 0.95);
+}
+
+/* Hover tooltip: entry title near the strip on hover of a non-active node.
+   Solid background + subtle shadow. No glassmorphism. No blur. */
+.concept-strip__tooltip {
+  position: absolute;
+  z-index: 10;
+  background: var(--surface-card-theme);
+  color: var(--text-strong);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  font-family: 'Inter', system-ui, sans-serif;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(36, 32, 56, 0.12);
+  transform: translate(-50%, -100%);
+  opacity: 0;
+  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.concept-strip__tooltip[data-visible="true"] {
+  opacity: 1;
+}
+[data-theme="dark"] .concept-strip__tooltip {
+  background: rgba(18, 12, 36, 0.96);
+  border-color: rgba(176, 156, 224, 0.32);
+  color: rgba(247, 236, 225, 0.96);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+/* Work-column fade transition (paired with setActiveEntry) */
+.concept-page-b2__doc {
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.concept-page-b2__doc.is-fading-out {
+  opacity: 0.18;
+}
+.concept-page-b2__doc.is-fading-in {
+  animation: concept-page-fade-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes concept-page-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Disabled CTA on locked entries */
+.concept-page-b2__entry-cta--disabled {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-subtle);
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+.concept-page-b2__entry-cta--disabled:hover {
+  transform: none;
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .concept-page-b2__doc,
+  .concept-page-b2__doc.is-fading-in,
+  .concept-strip__node circle { animation: none; transition: none; }
+}
+
+/* Re-edit sketch affordance */
+.concept-page-b2__threshold-edit {
+  display: inline-block;
+  margin-left: 12px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--accent-primary);
+  text-decoration: none;
+  border-bottom: 1px dashed currentColor;
+  padding-bottom: 1px;
+  cursor: pointer;
+}
+.concept-page-b2__threshold-edit:hover { color: var(--text-strong); }
+
+/* ============================================================
+   Inline threshold editor (replaces the blockquote on edit click)
+   Matches the threshold's visual rhythm: italic body, violet left rule.
+   ============================================================ */
+.concept-page-b2__threshold-editor {
+  margin-bottom: 56px;
+  padding: 0 0 0 22px;
+  border-left: 2px solid var(--accent-primary);
+  animation: concept-page-fade-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+[data-theme="dark"] .concept-page-b2__threshold-editor { border-left-color: rgba(176, 156, 224, 0.55); }
+.concept-page-b2__threshold-input {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  resize: vertical;
+  font-family: inherit;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text-strong);
+  padding: 0;
+  min-height: 96px;
+}
+.concept-page-b2__threshold-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.62;
+}
+.concept-page-b2__threshold-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+.concept-page-b2__threshold-cancel,
+.concept-page-b2__threshold-save {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.concept-page-b2__threshold-cancel {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+}
+.concept-page-b2__threshold-cancel:hover {
+  color: var(--text-strong);
+  border-color: var(--accent-border-strong);
+}
+.concept-page-b2__threshold-save {
+  background: var(--accent-primary);
+  color: var(--cream-50);
+  border: 1px solid transparent;
+}
+.concept-page-b2__threshold-save:hover {
+  background: var(--primary-fill);
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   Responsive -- the strip needs to stay legible across widths,
+   and the work column copy scales down on narrower viewports.
+   Single breakpoint at 720px keeps the spec tight; below that we
+   tighten paddings, shrink the entry title, and reflow the
+   strip overlay to sit above the strip itself rather than over
+   the constellation nodes.
+   ============================================================ */
+@media (max-width: 720px) {
+  .concept-strip {
+    padding: 0 16px;
+    margin: 12px auto 0;
+  }
+  .concept-strip__inner {
+    height: 96px;
+    border-radius: 12px;
+  }
+  /* On narrow screens, the overlay drops UNDER the constellation so
+     it never collides with nodes. The label keeps the surface chip
+     so it reads as a separate UI tag, not a label sitting on glass. */
+  .concept-strip__overlay {
+    position: absolute;
+    left: 12px; bottom: 8px; top: auto;
+    gap: 8px;
+  }
+  .concept-strip__active-name { font-size: 11px; padding: 3px 8px; }
+  .concept-page-b2 .concept-strip__overlay .eyebrow,
+  .concept-strip__overlay .eyebrow { padding: 3px 6px; }
+
+  .concept-page-b2__doc {
+    margin: 28px auto 64px;
+    padding: 0 20px;
+  }
+  .concept-page-b2__threshold {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+  .concept-page-b2__entry-title {
+    font-size: 26px;
+    line-height: 1.18;
+  }
+  .concept-page-b2__entry-purpose {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+  .concept-page-b2__entry-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 18px;
+  }
+  .concept-page-b2__nearby {
+    margin-top: 56px;
+  }
+  .concept-page-b2__nearby-item {
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    font-size: 13px;
+  }
+}
+
+/* Below 480px: strip nodes can crowd if there are many entries.
+   Drop the strip overlay font and tighten outer padding further so
+   the constellation has room. The active-name still reads. */
+@media (max-width: 480px) {
+  .concept-strip {
+    padding: 0 12px;
+  }
+  .concept-strip__inner { height: 84px; }
+  .concept-strip__active-name {
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

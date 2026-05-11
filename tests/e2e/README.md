@@ -6,7 +6,9 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-9 tests, runtime ~15s warm + ~40s cold, in source order:
+The suite spans four files:
+
+### `test_smoke.py` — 11 tests
 
 1. **`test_health_endpoint_ok`** — backend reachable, `/api/health` shape valid.
    Runs first to absorb serverless cold-start latency.
@@ -23,12 +25,35 @@ one shell command, against local dev / Vercel preview / production.
 6. **`test_active_concept_delete_confirms_then_returns_to_desk`** — deleting
    the open concept confirms via dialog and resets the workspace to the desk
    (regression gate for the active-concept delete flow).
-7. **`test_no_console_errors_on_first_paint`** — zero same-origin
+7. **`test_desk_iso_board_state_surface_and_room_labels`** — desk iso board
+   exposes truthful tile state and quiet hover/focus room labels.
+8. **`test_desk_layout_identical_when_empty_or_populated`** — empty desk
+   renders the same 9-tile iso-board geometry as a populated library
+   (regression gate against the old empty-state hide rule).
+9. **`test_no_console_errors_on_first_paint`** — zero same-origin
    `console.error` during first paint.
-8. **`test_no_failed_critical_asset_requests`** — zero same-origin
-   `requestfailed` events during first paint.
-9. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
-   at top of `<body>` produces no errors on a fresh visit.
+10. **`test_no_failed_critical_asset_requests`** — zero same-origin
+    `requestfailed` events during first paint.
+11. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
+    at top of `<body>` produces no errors on a fresh visit.
+
+### `test_drill_chamber.py` — 3 tests
+
+Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`):
+hidden on initial load, opens and hides the map when entered, and exit
+restores the map.
+
+### `test_concept_page_b2.py` — 3 tests
+
+B-2 concept page layout gate: strip + page layout renders, CTA opens the
+drill chamber, and the Route/Graph segmented toggle is absent (verifies the
+strip-as-nav port).
+
+### `test_strip_nav.py` — 6 tests
+
+Strip-as-nav behavior: click swaps the work column, keyboard navigation
+walks the strip, locked entries show a disabled CTA, no Route/Graph toggle
+or `#graph-content` section exists, and strip nodes are focusable.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`
@@ -51,7 +76,9 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 ## Running
 
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
-preferred entry point:
+preferred entry point. **Scope note:** the wrapper currently runs only
+`test_smoke.py` (11 tests). Use the raw pytest invocations below to run the
+full suite (23 tests across the four files).
 
 ```bash
 # Local — needs `bash scripts/dev.sh` in another shell (runs the
@@ -65,38 +92,56 @@ bash scripts/qa-smoke.sh live
 bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel.app
 ```
 
-Raw pytest invocations (when you need flags the wrapper doesn't pass through):
+Raw pytest invocations (when you need flags the wrapper doesn't pass through,
+or want the full four-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Local — needs `bash scripts/dev.sh` in another shell
+# Full suite (all four files, 23 tests) — needs `bash scripts/dev.sh` in another shell
+pytest tests/e2e/ -v
+
+# Smoke file only (matches what the wrapper runs)
 pytest tests/e2e/test_smoke.py -v
 
 # Against any URL via env var
-SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
+SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/ -v
 
 # Headed (browser visible — for debugging)
-pytest tests/e2e/test_smoke.py -v --headed
+pytest tests/e2e/ -v --headed
 
 # Full trace on every test (huge, debugging only)
-PWDEBUG=1 pytest tests/e2e/test_smoke.py -v
+PWDEBUG=1 pytest tests/e2e/ -v
 ```
 
 ## Output
 
-Pass:
+Pass (23 tests across the four files):
 
 ```
-tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED                              [ 11%]
-tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED                [ 22%]
-tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED               [ 33%]
-tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED   [ 44%]
-tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED          [ 55%]
-tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED [ 66%]
-tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED                [ 77%]
-tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED               [ 88%]
-tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED [100%]
+tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
+tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED
+tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED
+tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED
+tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED
+tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED
+tests/e2e/test_smoke.py::test_desk_iso_board_state_surface_and_room_labels PASSED
+tests/e2e/test_smoke.py::test_desk_layout_identical_when_empty_or_populated PASSED
+tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED
+tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED
+tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_view_hidden_on_load PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_opens_and_hides_map PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_chamber PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
+tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
+tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
+tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
+tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
+tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
+tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
 
-============================== 9 passed in 14.7s ==============================
+============================== 23 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,
