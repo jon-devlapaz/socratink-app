@@ -88,7 +88,12 @@
   font-size: var(--text-base);
   line-height: var(--rule-step);
   color: var(--text-strong);
-  padding: var(--composer-grid-offset, 8px) 14px 0 14px;
+  /* padding-top calibrated to land text baseline on the first rule line.
+     rule-step 32px puts the first rule at y=31 from textarea top.
+     Inter at 32px line-height has baseline at ~y=padding-top+25.
+     padding-top:6 -> baseline at 31, exactly on the rule. */
+  padding: 6px 14px 0 14px;
+  caret-color: var(--accent-primary);
   min-height: calc(var(--rule-step) * 3);
 }
 
