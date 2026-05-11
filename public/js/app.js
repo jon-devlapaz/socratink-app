@@ -2585,12 +2585,22 @@ const App = (() => {
     `;
 
     if (concepts.length === 0) {
-      html += '<p class="library-empty" style="margin-top:10px;">No concepts yet. Start one at <a href="javascript:void(0)" onclick="App.showIgnition()">New concept</a>.</p>';
+      html += `
+        <div class="library-empty library-empty--ignition">
+          <div class="witness-anchor" aria-hidden="true">
+            <svg viewBox="0 0 28 28" width="28" height="28">
+              <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
+            </svg>
+          </div>
+          <h3 class="library-empty-headline">Begin a reconstruction.</h3>
+          <p class="library-empty-sub">Drop a topic. The drill makes the gap inspectable.</p>
+          <button type="button" class="ig-button" onclick="App.showIgnition()">New concept</button>
+        </div>`;
     } else {
       html += `<div class="library-vault-grid">` + concepts.map(c => {
         const meta = getLibraryConceptMeta(c);
         return `
-          <div class="library-card library-card-vault" style="cursor:pointer;" onclick="App.openLibraryConcept('${c.id}')">
+          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" style="cursor:pointer;" onclick="App.openLibraryConcept('${c.id}')">
             <div class="library-card-header">
               <div>
                 <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
