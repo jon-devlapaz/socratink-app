@@ -73,14 +73,14 @@
 > ### Pass 1 — Layout integrity
 >
 > 1. Compute `document.documentElement.scrollWidth - window.innerWidth` on every view. **Fail if > 0** (horizontal overflow).
-> 2. Snapshot bounding rects of: `.main-header`, `.bottom-nav`, `#ignition-view`, `.library-view`, `.settings-view`, `.map-view`, `.hero-card`, `.map-action-bar`. **Fail if any element overlaps another fixed element** (chrome ↔ content, action-bar ↔ bottom-nav). Allow ≤2px sub-pixel touching.
+> 2. Snapshot bounding rects of: `.main-header`, `.bottom-nav`, `#ignition-view`, `.library-view`, `.settings-view`, `.map-view`, `.hero-card`, `.map-action-bar`. **Fail if any element overlaps another fixed element** (chrome ↔ content, action-bar ↔ bottom-nav). Allow ≤2px sub-pixel touching. (Note: the `.map-mode-switch` Route/Graph segmented control was removed in the strip-as-nav port; skip the related overlap and accessibility checks below.)
 > 3. Verify each view's `padding-top` ≥ chrome height (64px + safe-area-inset-top) and `padding-bottom` ≥ bottom-nav height + (action-bar height if Map view) + safe-area. Use `getBoundingClientRect` to measure both fixed strips and confirm content's first/last children are not occluded.
 > 4. Top chrome (`.main-header`) must have `position: fixed` and a non-empty `backdrop-filter` at `<900px`. **Fail otherwise.**
 >
 > ### Pass 2 — Touch targets and tap density
 >
 > 1. For every interactive element (`button`, `a`, `[role="button"]`, `[onclick]`, `[role="tab"]`, `input[type="checkbox"]`, segmented buttons), measure `getBoundingClientRect`. **Flag (warning, not fail) any element below 36×36 px**, **fail any below 28×28 px** unless it is part of an explicit segmented-control group sized as a unit.
-> 2. The peripheral segmented `.map-mode-switch` is ALLOWED to host buttons under 44×44; its individual buttons should be ≥24 px tall.
+> 2. (Removed) The `.map-mode-switch` Route/Graph segmented control no longer exists after the strip-as-nav port; skip this check.
 > 3. The primary action `.btn-start-drill` inside `.map-action-bar` MUST be ≥44×44.
 > 4. Bottom-nav items (`.bottom-nav-item`) MUST be ≥48 px min-height.
 >
@@ -91,7 +91,7 @@
 > ### Pass 4 — Accessibility (axe-core via DevTools)
 >
 > 1. Inject `axe-core` from CDN (`https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js`) and run `axe.run()` on each view. Report all violations with their nodes; treat `serious` and `critical` as fail, `moderate` and `minor` as warning.
-> 2. Verify the segmented `.map-mode-switch` has `role="group"`, both `.map-mode-btn` have `aria-pressed`, and the active state's `aria-pressed="true"` matches the `.active` class.
+> 2. (Removed) The `.map-mode-switch` Route/Graph segmented control was removed in the strip-as-nav port; skip this check.
 > 3. Verify the floating hamburger has a non-empty `aria-label` and `aria-expanded` toggles when the drawer opens.
 > 4. Check focus-visible ring renders on all interactive elements when tabbed: navigate with `Tab` and screenshot the focused element each time. **Fail if any focused element has no visible focus indicator.**
 > 5. Verify color contrast on key text against background using axe; report any below WCAG AA (4.5:1 normal, 3:1 large).
@@ -107,8 +107,8 @@
 > Run each flow and assert at every step. Capture a Walkthrough for each.
 >
 > 1. **Empty-state hero → submit gate.** Type "Photosynthesis" in Concept, leave Starting-map empty. Submit must be disabled. Type a 6-word sketch. Submit must enable. Submit (don't follow). Verify `App.runHeroAction` fires.
-> 2. **Library → Hermes draft path → Map view.** From Library, click Hermes Agent. Wait for `#concept-start-drill` to be unhidden. Verify the button text reads "Try from memory" (or "Repair Gap" if the concept state is `fractured`; "Start first entry" appears only on a fresh first-room map). Verify segmented switch shows Route active. Click Graph. Verify `body.is-drilling` is unset, `#graph-content` is no longer `hidden`, `#map-content` is hidden. Click Route. Reverse holds.
-> 3. **Try-from-memory drill.** From Map view, click the primary action ("Try from memory"). Verify `body.classList.contains('is-drilling')` becomes true. **Only on mobile (`<900px`)**, verify chrome, bottom nav, segmented switch, and action bar all set `display: none`. **On desktop (`≥900px`)**, verify the sidebar/`.main-header` REMAIN visible (this is intended) and the drill UI appears inline within `.graph-detail`. In both cases, verify `#drill-ui` is visible and chat input is focused.
+> 2. **Library → Hermes draft path → Concept view.** From Library, click Hermes Agent. Wait for `#concept-start-drill` to be unhidden. Verify the button text reads "Try from memory" (or "Repair Gap" if the concept state is `fractured`; "Start first entry" appears only on a fresh first-room map). After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
+> 3. **Try-from-memory drill.** From the concept view, click the primary action ("Try from memory"). The drill now opens in the full-screen drill chamber view (`#drill-chamber-view`, `public/js/drill-chamber.js`); verify it becomes visible and chat input is focused. The map-mode segmented switch no longer exists.
 > 4. **Cancel drill.** Click "← Back" inside drill. Verify `is-drilling` removes, all chrome restored.
 > 5. **Empty-tile click in Desk.** From Desk view (after creating a concept), click a blank tile. Verify `AudioFX.playTileClick()` fires (assert via `console.log` instrumentation OR by listening for the underlying `<audio>` start event), then verify the add-concept drawer opens.
 > 6. **Bottom-nav cycling.** Tap each nav item; verify the corresponding view becomes `.visible` and others lose `.visible` within 400ms. Verify URL or in-memory route updates.

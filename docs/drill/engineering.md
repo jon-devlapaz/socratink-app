@@ -10,7 +10,7 @@ This document defines the hard engineering rules for keeping drill behavior, gra
 A drill session is always bound to exactly one node. The highlighted graph node, the active drill target, the backend evaluation, and the persisted result must all refer to the same `node_id`.
 
 ### 2. Derived Graph State
-Cytoscape is a projection layer, not the system of record. Persist drill results into `concept.graphData` first, then derive graph state from that data.
+The rendered concept view (after the strip-as-nav port: the strip + concept page in `public/js/app.js` styled by `public/css/concept-page.css`) is a projection layer, not the system of record. Persist drill results into `concept.graphData` first, then derive view state from that data.
 
 ### 3. Patch by `node_id`, Never Position
 Always use stable node identifiers for patching. Extraction ordering is not guaranteed to be stable.
