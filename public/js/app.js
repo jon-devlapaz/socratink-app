@@ -621,37 +621,6 @@ const App = (() => {
     // Wire the source-attach toggle.
     _bindDoorSourceAttach();
 
-    // Rotating placeholder animation (concept examples).
-    const examples = ['Photosynthesis', 'Entropy', 'Transformers', 'Attention'];
-    let exampleIdx = 0;
-    const writePlaceholder = () => {
-      const next = `e.g. ${examples[exampleIdx]}`;
-      if (conceptField.placeholder !== next) conceptField.placeholder = next;
-    };
-    writePlaceholder();
-    let placeholderTimer = null;
-    const tickPlaceholder = () => {
-      if (prefersReducedMotion()) return;
-      if (ignitionView?.hidden) return;
-      if (document.activeElement === conceptField) return;
-      if (conceptField.value.length > 0) return;
-      exampleIdx = (exampleIdx + 1) % examples.length;
-      writePlaceholder();
-    };
-    const startPlaceholderTimer = () => {
-      if (placeholderTimer != null) return;
-      placeholderTimer = setInterval(tickPlaceholder, 3200);
-    };
-    const stopPlaceholderTimer = () => {
-      if (placeholderTimer == null) return;
-      clearInterval(placeholderTimer);
-      placeholderTimer = null;
-    };
-    if (!document.hidden) startPlaceholderTimer();
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stopPlaceholderTimer();
-      else startPlaceholderTimer();
-    });
   }
 
 
