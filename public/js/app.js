@@ -3589,7 +3589,12 @@ const App = (() => {
     const nodeType = resolveNodeType(knowledgeMap, drillState.node.id, drillState.node.type);
     const clusterId = resolveClusterId(knowledgeMap, drillState.node.id);
     const nodeLabel = drillState.node.fullLabel || drillState.node.label || concept.name;
-    const bypassSessionLimits = false;
+    // TODO(post-launch): re-enable session limits with friendlier copy.
+    // Doctrinally the per-entry retry cap (3) and per-session entry cap (4)
+    // are real spaced-retrieval guards. For MVP they block the founder's
+    // own iteration loop and confuse first learners with "Retrieval ceiling
+    // reached" blocks. Re-introduce as soft suggestions, not hard gates.
+    const bypassSessionLimits = true;
 
     const apiKey = localStorage.getItem('gemini_key') || undefined;
     const nodeData = resolveNodeData(knowledgeMap, drillState.node.id) || {};
@@ -3748,7 +3753,13 @@ const App = (() => {
       return;
     }
 
-    if ((nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled') && !isReDrillEligible(nodeData, nodeContext.id)) {
+    // TODO(post-launch): see paired comment ~line 3592. All four guards
+    // below (re-drill spacing, 4-entries-per-session, time limit,
+    // 3-retries-per-entry) are doctrinally sound but block iteration.
+    // Re-introduce as suggestions when we add real telemetry.
+    const bypassSessionLimits = true;
+
+    if (!bypassSessionLimits && (nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled') && !isReDrillEligible(nodeData, nodeContext.id)) {
       const blockReason = getSpacingBlockReason(nodeData, nodeContext.id);
       currentGraphController?.showBlockedMessage?.(blockReason.headline, blockReason.body);
       return;
@@ -3757,7 +3768,6 @@ const App = (() => {
     const visitedNodeIds = Array.isArray(sessionState.visitedNodeIds) ? sessionState.visitedNodeIds : [];
     const isNewSessionNode = !visitedNodeIds.includes(nodeContext.id);
     const uniqueNodeCount = getSessionNodeCount();
-    const bypassSessionLimits = false;
 
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
