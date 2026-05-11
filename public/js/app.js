@@ -1395,8 +1395,7 @@ const App = (() => {
     }
     hidePrimaryViews();
     // Pass opts through so showMapView decides skeleton-line state itself
-    // (no implicit hide-then-show via teardown ordering). showMapView
-    // already calls setMapMode('study') near the end of its body.
+    // (no implicit hide-then-show via teardown ordering).
     showMapView(concept, opts);
   }
 
