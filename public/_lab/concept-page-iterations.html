@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PROTOTYPE — Concept page iterations (cards · page · canvas)</title>
+
+  <link rel="stylesheet" href="/css/variables.css">
+
+  <style>
+    /* Throwaway prototype — concept-page (#map-view) reorganization.
+       Three variants of the "sticky map strip + work column" idiom
+       (Linear / Heptabase synthesis).
+
+       B-1 "Strip + cards"  — strip on top; the work column keeps
+                              the metacognitive cards (Threshold,
+                              Cold Attempt, Locked Silhouette) but
+                              ONLY for the active entry.
+       B-2 "Strip + page"   — strip on top; the work column reads
+                              like a single continuous document
+                              (threshold quote, active entry card,
+                              faint nearby-entries list).
+       B-3 "Strip + canvas" — strip on top; a single floating
+                              "active entry" card centered on a
+                              quiet desk surface. Maximum focus.
+
+       All three default to LIGHT mode (brand canonical) with a
+       theme toggle for dark-mode review. */
+
+    :root {
+      --proto-track: rgba(36, 32, 56, 0.06);
+    }
+
+    body {
+      margin: 0;
+      background: var(--surface-page-theme, #F7ECE1);
+      color: var(--text-strong, #242038);
+      font-family: 'Inter', 'Manrope', -apple-system, system-ui, sans-serif;
+      min-height: 100vh;
+    }
+    [data-theme="dark"] body { background: var(--surface-page-theme); color: var(--text-strong); }
+
+    /* ---------------- chrome ---------------- */
+    .proto-banner {
+      background: var(--ink-900, #050507); color: #b8a98e;
+      font-family: ui-monospace, monospace; font-size: 11px;
+      padding: 8px 16px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .proto-bar {
+      display: flex; gap: 8px; justify-content: center; align-items: center;
+      padding: 14px 16px;
+      background: rgba(247, 236, 225, 0.85);
+      border-bottom: 1px solid var(--border-subtle, rgba(36, 32, 56, 0.10));
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    [data-theme="dark"] .proto-bar {
+      background: rgba(11, 9, 24, 0.85);
+      border-bottom-color: rgba(247, 236, 225, 0.10);
+    }
+    .proto-bar button {
+      background: transparent;
+      color: var(--text-muted, rgba(36, 32, 56, 0.62));
+      border: 1px solid var(--border-subtle, rgba(36, 32, 56, 0.10));
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-family: inherit; font-size: 12px; font-weight: 500;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .proto-bar button:hover {
+      color: var(--text-strong);
+      border-color: var(--accent-primary, #9067C6);
+    }
+    .proto-bar button.is-active {
+      background: rgba(144, 103, 198, 0.14);
+      color: var(--text-strong, #242038);
+      border-color: rgba(144, 103, 198, 0.50);
+    }
+    [data-theme="dark"] .proto-bar button.is-active {
+      background: rgba(176, 156, 224, 0.16);
+      color: rgba(247, 236, 225, 0.96);
+    }
+    .proto-bar .spacer { width: 24px; }
+    .proto-caption {
+      max-width: 760px; margin: 0 auto;
+      padding: 14px 24px 4px;
+      font-size: 13px; color: var(--text-muted, rgba(36, 32, 56, 0.55));
+      text-align: center; letter-spacing: 0.02em;
+    }
+
+    .variant { display: none; }
+    .variant.is-active { display: block; }
+
+    /* ---------------- shared primitives ---------------- */
+    .eyebrow {
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-secondary, #8D86C9);
+    }
+    .h-display {
+      font-family: 'Geom', 'Outfit', -apple-system, system-ui, sans-serif;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      color: var(--text-strong);
+      margin: 0;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      background: rgba(144, 103, 198, 0.10);
+      color: var(--accent-primary, #9067C6);
+      border: 1px solid rgba(144, 103, 198, 0.20);
+    }
+    [data-theme="dark"] .pill {
+      background: rgba(176, 156, 224, 0.12);
+      color: rgba(176, 156, 224, 0.95);
+      border-color: rgba(176, 156, 224, 0.28);
+    }
+    .pill.is-quiet {
+      background: transparent;
+      color: var(--text-muted);
+      border-color: var(--border-subtle);
+    }
+
+    /* ---------------- shared header ---------------- */
+    .concept-header {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 36px 36px 0;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      align-items: end;
+    }
+    .concept-header__left { display: flex; flex-direction: column; gap: 8px; }
+    .concept-header h1 { font-size: 28px; }
+    .concept-header__tags { display: flex; gap: 8px; align-items: center; }
+    .concept-header__crystal {
+      width: 22px; height: 22px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    .concept-header__crystal polygon {
+      fill: rgba(144, 103, 198, 0.18);
+      stroke: var(--accent-primary, #9067C6);
+      stroke-width: 1.4;
+    }
+
+    /* ============================================================
+       SHARED — the map STRIP (constellation compressed to a band)
+       ============================================================ */
+    .map-strip {
+      max-width: 1100px;
+      margin: 18px auto 0;
+      padding: 0 36px;
+    }
+    .map-strip__inner {
+      position: relative;
+      height: 110px;
+      border-radius: 14px;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 50%, rgba(144, 103, 198, 0.06), transparent 70%),
+        var(--surface-card-theme, #ffffff);
+      border: 1px solid var(--border-subtle);
+      box-shadow:
+        0 1px 2px rgba(36, 32, 56, 0.04),
+        0 6px 18px rgba(144, 103, 198, 0.04);
+    }
+    [data-theme="dark"] .map-strip__inner {
+      background:
+        radial-gradient(ellipse 60% 40% at 50% 50%, rgba(176, 156, 224, 0.10), transparent 70%),
+        #0c0820;
+      border-color: rgba(141, 134, 201, 0.20);
+      box-shadow:
+        inset 0 1px 0 rgba(247, 236, 225, 0.04),
+        0 6px 18px rgba(0, 0, 0, 0.35);
+    }
+    .map-strip__svg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+    }
+    .map-strip__overlay {
+      position: absolute; left: 16px; top: 14px; z-index: 5;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .map-strip__overlay .eyebrow {
+      background: var(--surface-card-theme);
+      padding: 4px 8px;
+      border-radius: 4px;
+    }
+    [data-theme="dark"] .map-strip__overlay .eyebrow { background: rgba(7, 5, 15, 0.65); color: rgba(176, 156, 224, 0.90); }
+    .map-strip__active-name {
+      font-size: 12px;
+      color: var(--text-strong);
+      background: var(--surface-card-theme);
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    [data-theme="dark"] .map-strip__active-name { background: rgba(7, 5, 15, 0.65); color: rgba(247, 236, 225, 0.92); }
+
+    .map-strip__progress {
+      position: absolute; bottom: 14px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px;
+      z-index: 5;
+    }
+    .map-strip__progress span {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(36, 32, 56, 0.16);
+    }
+    [data-theme="dark"] .map-strip__progress span { background: rgba(247, 236, 225, 0.20); }
+    .map-strip__progress span.is-primed {
+      background: var(--accent-primary, #9067C6);
+      box-shadow: 0 0 6px rgba(144, 103, 198, 0.45);
+    }
+    .map-strip__progress span.is-locked {
+      background: transparent;
+      border: 1px dashed rgba(36, 32, 56, 0.25);
+      width: 5px; height: 5px;
+    }
+    [data-theme="dark"] .map-strip__progress span.is-locked {
+      border-color: rgba(141, 134, 201, 0.50);
+    }
+
+    /* SVG node styles for the strip */
+    .strip-edge { stroke: rgba(144, 103, 198, 0.20); stroke-width: 1.2; fill: none; }
+    .strip-edge.is-active { stroke: rgba(144, 103, 198, 0.55); stroke-width: 1.6; }
+    [data-theme="dark"] .strip-edge { stroke: rgba(215, 190, 255, 0.22); }
+    [data-theme="dark"] .strip-edge.is-active { stroke: rgba(215, 190, 255, 0.55); }
+    .strip-node circle { transition: all 200ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .strip-node--locked circle { fill: rgba(36, 32, 56, 0.18); stroke: rgba(36, 32, 56, 0.10); stroke-dasharray: 3 2; }
+    .strip-node--primed circle { fill: var(--accent-primary, #9067C6); stroke: var(--accent-primary, #9067C6); }
+    .strip-node--primed.is-active circle { stroke-width: 3; filter: drop-shadow(0 0 6px rgba(144, 103, 198, 0.55)); }
+    [data-theme="dark"] .strip-node--locked circle { fill: rgba(141, 134, 201, 0.40); stroke: rgba(141, 134, 201, 0.22); }
+    [data-theme="dark"] .strip-node--primed circle { fill: #9fd5ed; stroke: #9fd5ed; filter: drop-shadow(0 0 8px rgba(159, 213, 237, 0.55)); }
+    .strip-node text {
+      font-family: 'Inter', sans-serif;
+      font-size: 9px;
+      text-anchor: middle;
+      letter-spacing: 0.04em;
+      fill: var(--text-muted);
+    }
+    [data-theme="dark"] .strip-node text { fill: rgba(247, 236, 225, 0.62); }
+    .strip-node--primed.is-active text { fill: var(--text-strong); font-weight: 600; }
+    [data-theme="dark"] .strip-node--primed.is-active text { fill: rgba(247, 236, 225, 0.96); }
+
+    /* ============================================================
+       B-1 — STRIP + CARDS
+       Strip on top; below is the metacognitive card stack scoped
+       to the active entry only (Threshold, Cold Attempt, Locked
+       Silhouette). 3 cards, not 6.
+       ============================================================ */
+    .v-cards .work {
+      max-width: 760px;
+      margin: 36px auto 80px;
+      padding: 0 36px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .v-cards .card {
+      background: var(--surface-card-theme, #ffffff);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px 28px;
+      box-shadow: 0 1px 2px rgba(36, 32, 56, 0.04);
+    }
+    [data-theme="dark"] .v-cards .card {
+      background:
+        radial-gradient(ellipse 80% 30% at 50% 0%, rgba(144, 103, 198, 0.10), transparent 70%),
+        rgba(36, 32, 56, 0.40);
+      border-color: rgba(144, 103, 198, 0.18);
+    }
+    .v-cards .card__eyebrow { display: block; margin-bottom: 10px; }
+    .v-cards .card h3 { font-family: 'Geom', system-ui, sans-serif; font-weight: 500; font-size: 19px; margin: 0 0 12px; color: var(--text-strong); }
+    .v-cards .card p { color: var(--text-muted); line-height: 1.6; margin: 0; font-size: 14px; }
+    .v-cards .card blockquote {
+      margin: 12px 0 0;
+      padding: 12px 18px;
+      border-left: 0;
+      background: var(--surface-nested-theme, rgba(36, 32, 56, 0.04));
+      border-radius: 8px;
+      font-style: italic;
+      color: var(--text-strong);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    [data-theme="dark"] .v-cards .card blockquote { background: rgba(247, 236, 225, 0.05); }
+    .v-cards .cta-row { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+    .v-cards .cta-row .pill { color: var(--text-muted); }
+    .v-cards .btn-cta {
+      background: var(--accent-primary, #9067C6);
+      color: var(--cream-50, #F7ECE1);
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 22px;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .v-cards .btn-cta:hover {
+      background: var(--primary-fill, #7a59aa);
+      transform: translateY(-1px);
+    }
+    .v-cards .silhouette {
+      opacity: 0.55;
+    }
+    .v-cards .silhouette p { font-style: italic; }
+
+    /* ============================================================
+       B-2 — STRIP + PAGE
+       Strip on top; below reads as a single continuous document.
+       Threshold quoted at top. Active entry as a single page block
+       with H1 and CTA. Locked nearby entries as a faint quiet list.
+       ============================================================ */
+    .v-page .doc {
+      max-width: 680px;
+      margin: 48px auto 100px;
+      padding: 0 36px;
+    }
+    .v-page .doc__threshold {
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 16px;
+      line-height: 1.7;
+      padding: 0 0 0 22px;
+      border-left: 2px solid var(--accent-primary);
+      margin-bottom: 56px;
+    }
+    [data-theme="dark"] .v-page .doc__threshold { border-left-color: rgba(176, 156, 224, 0.55); }
+    .v-page .doc__entry-eyebrow { display: block; margin-bottom: 14px; }
+    .v-page .doc__entry-title { font-size: 36px; line-height: 1.15; font-weight: 600; margin: 0 0 16px; }
+    .v-page .doc__entry-purpose { color: var(--text-muted); font-size: 16px; line-height: 1.65; margin: 0 0 32px; max-width: 520px; }
+    .v-page .doc__entry-cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent-primary);
+      color: var(--cream-50);
+      padding: 12px 26px;
+      border: 0;
+      border-radius: 999px;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .v-page .doc__entry-cta:hover { background: var(--primary-fill); transform: translateY(-1px); }
+    .v-page .doc__entry-cta::after {
+      content: "→";
+      font-size: 16px;
+      transform: translateX(0);
+      transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .v-page .doc__entry-cta:hover::after { transform: translateX(4px); }
+
+    .v-page .doc__nearby {
+      margin-top: 80px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .v-page .doc__nearby-eyebrow { display: block; margin-bottom: 18px; }
+    .v-page .doc__nearby-list { display: flex; flex-direction: column; gap: 4px; }
+    .v-page .doc__nearby-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: baseline;
+      padding: 10px 0;
+      color: var(--text-muted);
+      font-size: 14px;
+      border-bottom: 1px dashed var(--border-subtle);
+      opacity: 0.62;
+    }
+    .v-page .doc__nearby-item:last-child { border-bottom: 0; }
+    .v-page .doc__nearby-num {
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      color: var(--accent-secondary);
+      letter-spacing: 0.06em;
+    }
+    .v-page .doc__nearby-status {
+      font-family: ui-monospace, monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      opacity: 0.55;
+    }
+
+    /* ============================================================
+       B-3 — STRIP + CANVAS
+       Strip on top; a single floating "active entry" card centered
+       on a quiet desk surface. No nearby entries, no threshold
+       block. Pure focus on the next move. The strip carries all
+       the orientation work.
+       ============================================================ */
+    .v-canvas .desk {
+      min-height: calc(100vh - 350px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 36px;
+    }
+    .v-canvas .postcard {
+      max-width: 520px;
+      width: 100%;
+      background: var(--surface-card-theme);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      padding: 36px 36px 32px;
+      box-shadow:
+        0 2px 4px rgba(36, 32, 56, 0.04),
+        0 14px 36px rgba(144, 103, 198, 0.08);
+      position: relative;
+      transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    [data-theme="dark"] .v-canvas .postcard {
+      background:
+        radial-gradient(ellipse 100% 50% at 50% 0%, rgba(144, 103, 198, 0.18), transparent 70%),
+        rgba(18, 12, 36, 0.92);
+      border-color: rgba(144, 103, 198, 0.30);
+      box-shadow:
+        inset 0 1px 0 rgba(247, 236, 225, 0.05),
+        0 24px 60px rgba(0, 0, 0, 0.45);
+    }
+    .v-canvas .postcard::before {
+      /* Anchor pillar — same idiom as the chamber */
+      content: "";
+      position: absolute;
+      left: 22px; top: 32px; bottom: 32px;
+      width: 1px;
+      background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(144, 103, 198, 0.42) 30%,
+        rgba(144, 103, 198, 0.42) 70%,
+        transparent
+      );
+    }
+    [data-theme="dark"] .v-canvas .postcard::before {
+      background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(176, 156, 224, 0.55) 30%,
+        rgba(176, 156, 224, 0.55) 70%,
+        transparent
+      );
+    }
+    .v-canvas .postcard__inner { padding-left: 22px; }
+    .v-canvas .postcard__eyebrow { display: block; margin-bottom: 14px; }
+    .v-canvas .postcard__title {
+      font-family: 'Geom', system-ui, sans-serif;
+      font-weight: 500;
+      font-size: 28px;
+      letter-spacing: -0.01em;
+      line-height: 1.25;
+      color: var(--text-strong);
+      margin: 0 0 18px;
+    }
+    .v-canvas .postcard__purpose {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.65;
+      margin: 0 0 28px;
+    }
+    .v-canvas .postcard__cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--accent-primary);
+      color: var(--cream-50);
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 24px;
+      font-family: inherit; font-size: 14px; font-weight: 600;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .v-canvas .postcard__cta:hover { background: var(--primary-fill); transform: translateY(-1px); }
+    .v-canvas .postcard__cta::after {
+      content: "→";
+      font-size: 16px;
+      transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .v-canvas .postcard__cta:hover::after { transform: translateX(4px); }
+    .v-canvas .postcard__foot {
+      margin-top: 24px;
+      padding-top: 18px;
+      border-top: 1px dashed var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.78;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="proto-banner">throwaway prototype — not production · public/_lab/concept-page-iterations.html</div>
+
+  <nav class="proto-bar" aria-label="Concept page variant switcher">
+    <button data-variant="cards" class="is-active">B-1 · Strip + cards</button>
+    <button data-variant="page">B-2 · Strip + page</button>
+    <button data-variant="canvas">B-3 · Strip + canvas</button>
+    <span class="spacer"></span>
+    <button id="theme-toggle" data-theme-toggle>switch to dark</button>
+  </nav>
+
+  <p class="proto-caption" id="proto-caption">
+    Strip on top; the work column keeps the metacognitive cards (Threshold, Cold Attempt, Locked Silhouette) but ONLY for the active entry. 3 cards, not 6.
+  </p>
+
+  <!-- ===== shared header rendered once per variant for clarity ===== -->
+
+  <!-- ============================================================
+       B-1 — Strip + cards
+       ============================================================ -->
+  <section class="variant is-active v-cards" data-variant="cards" aria-label="Strip + cards variant">
+    <header class="concept-header">
+      <div class="concept-header__left">
+        <div>
+          <svg class="concept-header__crystal" viewBox="0 0 28 28" aria-hidden="true">
+            <polygon points="14,2 26,14 14,26 2,14"/>
+          </svg>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-secondary);">concept</span>
+        </div>
+        <h1 class="h-display">Mitochondrial respiration</h1>
+        <div class="concept-header__tags">
+          <span class="pill is-quiet">lightweight draft</span>
+          <span class="pill">2 of 6 entries primed</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="map-strip">
+      <div class="map-strip__inner">
+        <svg class="map-strip__svg" viewBox="0 0 600 110" preserveAspectRatio="xMidYMid meet">
+          <line class="strip-edge" x1="60"  y1="55" x2="160" y2="55"/>
+          <line class="strip-edge is-active" x1="160" y1="55" x2="280" y2="55"/>
+          <line class="strip-edge" x1="280" y1="55" x2="400" y2="55"/>
+          <line class="strip-edge" x1="400" y1="55" x2="500" y2="55"/>
+          <line class="strip-edge" x1="500" y1="55" x2="560" y2="55"/>
+
+          <g class="strip-node strip-node--primed"><circle cx="60"  cy="55" r="7"/></g>
+          <g class="strip-node strip-node--primed is-active"><circle cx="160" cy="55" r="9"/><text x="160" y="80">core thesis</text></g>
+          <g class="strip-node strip-node--locked"><circle cx="280" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="400" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="500" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="560" cy="55" r="6"/></g>
+        </svg>
+        <div class="map-strip__overlay">
+          <span class="eyebrow">draft route</span>
+          <span class="map-strip__active-name">Core thesis · 2 of 6</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="work">
+      <article class="card">
+        <span class="eyebrow card__eyebrow">concept threshold</span>
+        <p>What you brought into the room. This is global; the entry below asks one smaller question.</p>
+        <blockquote>
+          The mitochondrion takes pyruvate and fatty acids and burns them with oxygen to make ATP. NADH and FADH₂ carry electrons to the electron transport chain on the inner membrane.
+        </blockquote>
+      </article>
+
+      <article class="card">
+        <span class="eyebrow card__eyebrow">first cold attempt · entry 1 of 6</span>
+        <h3>Core thesis</h3>
+        <p>The first entry asks for the governing idea, not the whole source. Write what you can reconstruct from memory.</p>
+        <div class="cta-row">
+          <span class="pill is-quiet">no study material yet</span>
+          <button class="btn-cta">Try from memory</button>
+        </div>
+      </article>
+
+      <article class="card silhouette">
+        <span class="eyebrow card__eyebrow">locked study silhouette</span>
+        <p>Connections, frameworks, and solved mechanisms stay hidden until at least one entry has a cold attempt on record.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       B-2 — Strip + page
+       ============================================================ -->
+  <section class="variant v-page" data-variant="page" aria-label="Strip + page variant">
+    <header class="concept-header">
+      <div class="concept-header__left">
+        <div>
+          <svg class="concept-header__crystal" viewBox="0 0 28 28" aria-hidden="true">
+            <polygon points="14,2 26,14 14,26 2,14"/>
+          </svg>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-secondary);">concept</span>
+        </div>
+        <h1 class="h-display">Mitochondrial respiration</h1>
+        <div class="concept-header__tags">
+          <span class="pill is-quiet">lightweight draft</span>
+          <span class="pill">2 of 6 entries primed</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="map-strip">
+      <div class="map-strip__inner">
+        <svg class="map-strip__svg" viewBox="0 0 600 110" preserveAspectRatio="xMidYMid meet">
+          <line class="strip-edge" x1="60"  y1="55" x2="160" y2="55"/>
+          <line class="strip-edge is-active" x1="160" y1="55" x2="280" y2="55"/>
+          <line class="strip-edge" x1="280" y1="55" x2="400" y2="55"/>
+          <line class="strip-edge" x1="400" y1="55" x2="500" y2="55"/>
+          <line class="strip-edge" x1="500" y1="55" x2="560" y2="55"/>
+
+          <g class="strip-node strip-node--primed"><circle cx="60"  cy="55" r="7"/></g>
+          <g class="strip-node strip-node--primed is-active"><circle cx="160" cy="55" r="9"/><text x="160" y="80">core thesis</text></g>
+          <g class="strip-node strip-node--locked"><circle cx="280" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="400" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="500" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="560" cy="55" r="6"/></g>
+        </svg>
+        <div class="map-strip__overlay">
+          <span class="eyebrow">draft route</span>
+          <span class="map-strip__active-name">Core thesis · 2 of 6</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="doc">
+      <p class="doc__threshold">
+        The mitochondrion takes pyruvate and fatty acids and burns them with oxygen to make ATP. NADH and FADH₂ carry electrons to the electron transport chain on the inner membrane. The proton gradient drives ATP synthase. I'm fuzzy on what exactly the citric acid cycle hands off vs the linking step.
+      </p>
+
+      <span class="eyebrow doc__entry-eyebrow">first cold attempt · entry 1 of 6</span>
+      <h2 class="h-display doc__entry-title">Core thesis</h2>
+      <p class="doc__entry-purpose">
+        The first entry asks for the governing idea, not the whole source. No study material yet — write what you can reconstruct from memory.
+      </p>
+      <button class="doc__entry-cta">Try from memory</button>
+
+      <section class="doc__nearby">
+        <span class="eyebrow doc__nearby-eyebrow">nearby entries · all locked until first attempt</span>
+        <div class="doc__nearby-list">
+          <div class="doc__nearby-item">
+            <span class="doc__nearby-num">02</span>
+            <span>Linking step: pyruvate → acetyl-CoA</span>
+            <span class="doc__nearby-status">locked</span>
+          </div>
+          <div class="doc__nearby-item">
+            <span class="doc__nearby-num">03</span>
+            <span>Citric acid cycle</span>
+            <span class="doc__nearby-status">locked</span>
+          </div>
+          <div class="doc__nearby-item">
+            <span class="doc__nearby-num">04</span>
+            <span>Electron transport chain</span>
+            <span class="doc__nearby-status">locked</span>
+          </div>
+          <div class="doc__nearby-item">
+            <span class="doc__nearby-num">05</span>
+            <span>Chemiosmosis &amp; ATP synthase</span>
+            <span class="doc__nearby-status">locked</span>
+          </div>
+          <div class="doc__nearby-item">
+            <span class="doc__nearby-num">06</span>
+            <span>Substrate-level vs oxidative phosphorylation</span>
+            <span class="doc__nearby-status">locked</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       B-3 — Strip + canvas
+       ============================================================ -->
+  <section class="variant v-canvas" data-variant="canvas" aria-label="Strip + canvas variant">
+    <header class="concept-header">
+      <div class="concept-header__left">
+        <div>
+          <svg class="concept-header__crystal" viewBox="0 0 28 28" aria-hidden="true">
+            <polygon points="14,2 26,14 14,26 2,14"/>
+          </svg>
+          <span style="font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-secondary);">concept</span>
+        </div>
+        <h1 class="h-display">Mitochondrial respiration</h1>
+        <div class="concept-header__tags">
+          <span class="pill is-quiet">lightweight draft</span>
+          <span class="pill">2 of 6 entries primed</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="map-strip">
+      <div class="map-strip__inner">
+        <svg class="map-strip__svg" viewBox="0 0 600 110" preserveAspectRatio="xMidYMid meet">
+          <line class="strip-edge" x1="60"  y1="55" x2="160" y2="55"/>
+          <line class="strip-edge is-active" x1="160" y1="55" x2="280" y2="55"/>
+          <line class="strip-edge" x1="280" y1="55" x2="400" y2="55"/>
+          <line class="strip-edge" x1="400" y1="55" x2="500" y2="55"/>
+          <line class="strip-edge" x1="500" y1="55" x2="560" y2="55"/>
+
+          <g class="strip-node strip-node--primed"><circle cx="60"  cy="55" r="7"/></g>
+          <g class="strip-node strip-node--primed is-active"><circle cx="160" cy="55" r="9"/><text x="160" y="80">core thesis</text></g>
+          <g class="strip-node strip-node--locked"><circle cx="280" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="400" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="500" cy="55" r="6"/></g>
+          <g class="strip-node strip-node--locked"><circle cx="560" cy="55" r="6"/></g>
+        </svg>
+        <div class="map-strip__overlay">
+          <span class="eyebrow">draft route</span>
+          <span class="map-strip__active-name">Core thesis · 2 of 6</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="desk">
+      <div class="postcard">
+        <div class="postcard__inner">
+          <span class="eyebrow postcard__eyebrow">first cold attempt · entry 1 of 6</span>
+          <h2 class="postcard__title">Core thesis</h2>
+          <p class="postcard__purpose">
+            The first entry asks for the governing idea, not the whole source. Write what you can reconstruct from memory.
+          </p>
+          <button class="postcard__cta">Try from memory</button>
+          <div class="postcard__foot">
+            Five nearby entries are locked until this one has a cold attempt on record.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    /* ---- variant switcher ---- */
+    (function() {
+      const buttons = document.querySelectorAll('.proto-bar button[data-variant]');
+      const variants = document.querySelectorAll('.variant');
+      const caption = document.getElementById('proto-caption');
+      const captions = {
+        cards:  'Strip on top; the work column keeps the metacognitive cards (Threshold, Cold Attempt, Locked Silhouette) but ONLY for the active entry. 3 cards, not 6.',
+        page:   'Strip on top; the work column reads as a single continuous document — threshold quoted, active entry as a page block with H1 and CTA, locked nearby entries as a faint list.',
+        canvas: 'Strip on top; a single floating card centered on a quiet desk surface. No nearby-entries list, no threshold block. Pure focus on the next move.',
+      };
+      function show(name) {
+        buttons.forEach(b => b.classList.toggle('is-active', b.dataset.variant === name));
+        variants.forEach(v => v.classList.toggle('is-active', v.dataset.variant === name));
+        if (caption && captions[name]) caption.textContent = captions[name];
+        const url = new URL(window.location);
+        url.searchParams.set('variant', name);
+        window.history.replaceState(null, '', url);
+      }
+      buttons.forEach(b => b.addEventListener('click', () => show(b.dataset.variant)));
+      const initial = new URL(window.location).searchParams.get('variant');
+      if (initial && captions[initial]) show(initial);
+    })();
+
+    /* ---- theme toggle ---- */
+    (function() {
+      const btn = document.getElementById('theme-toggle');
+      if (!btn) return;
+      function updateLabel() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        btn.textContent = isDark ? 'switch to light' : 'switch to dark';
+      }
+      btn.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        if (isDark) document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme', 'dark');
+        updateLabel();
+      });
+      updateLabel();
+    })();
+  </script>
+</body>
+</html>
