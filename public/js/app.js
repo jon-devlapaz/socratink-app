@@ -3649,6 +3649,11 @@ const App = (() => {
   }
 
   function cancelDrill() {
+    // Hide the chamber first, before any other state cleanup.
+    if (window.DrillChamber) {
+      window.DrillChamber.hide();
+    }
+
     const shouldShowSessionComplete = drillState.sessionCompletePending;
     drillState.sessionToken += 1;
     drillState.active = false;
@@ -3659,6 +3664,7 @@ const App = (() => {
     drillState.probeCount = 0;
     drillState.helpTurnCount = 0;
     drillState.sessionCompletePending = false;
+    chamberLastShownQuestion = '';
     if (drillUi) drillUi.style.display = 'none';
     document.body.classList.remove('is-drilling');
     activeDrillNode = null;
@@ -3670,6 +3676,12 @@ const App = (() => {
     currentGraphController?.clearActiveDrillNode?.();
     currentGraphController?.setInteractionMode?.(shouldShowSessionComplete ? 'session-complete' : 'inspect');
     persistPhaseBResumeState(null);
+
+    // Restore the concept page view (map + detail).
+    const activeConcept = getActiveConcept();
+    if (activeConcept) {
+      showMapView(activeConcept);
+    }
   }
 
   let typingIndicatorElement = null;
