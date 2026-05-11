@@ -1891,14 +1891,23 @@ const App = (() => {
     const thresholdText = (concept?.startingMapContext || meta.starting_map_context || meta.core_thesis || '').trim();
     const totalNodes = backbone.length || 1;
 
+    // A locked entry is BLOCKED only if any predecessor in the backbone has
+    // not yet been attempted. Entry 0 (Core Thesis) has no predecessors so
+    // it's never blocked -- its locked state means "no cold attempt yet"
+    // and IS the cold attempt the learner is here to do.
     const isLocked = (activeEntry.drill_status || 'locked') === 'locked';
-    const entryEyebrow = isLocked
+    const predecessorsAttempted = activeIdx === 0 || backbone
+      .slice(0, activeIdx)
+      .every((n) => (n?.drill_status || 'locked') !== 'locked');
+    const isBlocked = isLocked && !predecessorsAttempted;
+
+    const entryEyebrow = isBlocked
       ? `locked entry ${activeIdx + 1} of ${totalNodes}`
       : (activeEntry.drill_status === 'primed'
         ? `re-drill ready entry ${activeIdx + 1} of ${totalNodes}`
         : `first cold attempt entry ${activeIdx + 1} of ${totalNodes}`);
     const entryPurpose = activeEntry.purpose
-      || (isLocked
+      || (isBlocked
         ? 'Locked until you do a cold attempt on the entry above. The mechanism stays hidden until you have written what you can reconstruct from memory.'
         : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
     const ctaLabel = activeEntry.drill_status === 'primed' ? 'Re-drill from memory' : 'Try from memory';
@@ -1917,7 +1926,7 @@ const App = (() => {
         </p>
       `;
 
-    const ctaButton = isLocked
+    const ctaButton = isBlocked
       ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Cold attempt on the entry above unlocks this one">Locked</button>`
       : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntry.id || 'core-thesis')}">${ctaLabel}</button>`;
 
