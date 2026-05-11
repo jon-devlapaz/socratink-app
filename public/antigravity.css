@@ -387,8 +387,11 @@ body.antigravity-theme .library-empty a:hover {
    No dashed border, no gradient pill, no glow. Paper-system rhythm. */
 body.antigravity-theme .library-empty.library-empty--ignition {
   background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   border: 0;
   border-radius: 0;
+  box-shadow: none;
   padding: clamp(40px, 8vh, 72px) 24px;
   margin: 8px auto 0;
   max-width: 460px;
