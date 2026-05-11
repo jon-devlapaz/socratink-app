@@ -22,13 +22,19 @@ from playwright.sync_api import Page, expect
 # Helpers
 # ---------------------------------------------------------------------------
 
-_cached_guest_cookies = None
+_strip_guest_cookies: list | None = None
 
 
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
-    global _cached_guest_cookies
-    if _cached_guest_cookies:
-        page.context.add_cookies(_cached_guest_cookies)
+    """Navigate to the app shell as a guest user.
+
+    Uses a module-level cookie cache (same pattern as the existing smoke suite)
+    so only the first test in a pytest run needs to click the guest link.
+    Subsequent tests re-use the cached session cookies.
+    """
+    global _strip_guest_cookies
+    if _strip_guest_cookies:
+        page.context.add_cookies(_strip_guest_cookies)
 
     page.goto(base_url)
     if "/login" not in page.url:
@@ -44,17 +50,17 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
         )
         session = result if isinstance(result, dict) else {}
         if session.get("authenticated") or session.get("guest_mode"):
-            if not _cached_guest_cookies:
-                _cached_guest_cookies = page.context.cookies()
+            if not _strip_guest_cookies:
+                _strip_guest_cookies = page.context.cookies()
             return
-        page.goto(urljoin(base_url + "/", "login?return_to=%2F"))
+        page.goto(urljoin(base_url.rstrip("/") + "/", "login?return_to=%2F"))
 
     if "/login" in page.url:
-        expect(page.locator("#guest-continue-link")).to_be_visible()
+        expect(page.locator("#guest-continue-link")).to_be_visible(timeout=8_000)
         target_pattern = re.compile(r"^" + re.escape(base_url.rstrip("/")) + r"/?$")
         with page.expect_navigation(url=target_pattern, timeout=15_000):
             page.locator("#guest-continue-link").click()
-        _cached_guest_cookies = page.context.cookies()
+        _strip_guest_cookies = page.context.cookies()
 
 
 def _seed_concept_with_backbone(page: Page) -> None:
