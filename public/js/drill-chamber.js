@@ -142,6 +142,31 @@ function setComposerEnabled(enabled) {
   els.send.disabled = !enabled;
 }
 
+// Original placeholder, captured once so setLoading(false) can restore it.
+const _originalPlaceholder = 'Write what comes to mind. Fragments are fine.';
+
+/**
+ * Toggle a "preparing the prompt" state on the composer. Used while
+ * waiting for the AI's first turn after the chamber opens (5-10s
+ * Gemini latency). NOT a chat-typing indicator -- this is page-load
+ * state, not mid-conversation theatre.
+ *
+ * Sets the composer placeholder to a status string and disables input.
+ * Adds data-loading on the active block for any optional CSS hooks.
+ */
+function setLoading(loading) {
+  bind();
+  if (!els.composer) return;
+  if (loading) {
+    els.composer.placeholder = 'Preparing your first question';
+    els.active?.setAttribute('data-loading', 'true');
+    setComposerEnabled(false);
+  } else {
+    els.composer.placeholder = _originalPlaceholder;
+    els.active?.removeAttribute('data-loading');
+  }
+}
+
 function getComposerValue() {
   bind();
   return (els.composer.value || '').trim();
@@ -157,6 +182,7 @@ function onExit(handler) { exitHandler = handler; }
 
 window.DrillChamber = {
   show, hide, appendHistoryTurn, swapQuestion,
-  setComposerEnabled, getComposerValue, clearComposer,
+  setComposerEnabled, setLoading,
+  getComposerValue, clearComposer,
   onSend, onExit,
 };

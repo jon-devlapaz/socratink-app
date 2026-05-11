@@ -3669,8 +3669,11 @@ const App = (() => {
             chatInput.focus();
           }
         }
-        // Mirror disabled state to the chamber composer.
+        // Mirror disabled state to the chamber composer. The first AI
+        // response also tears down the "preparing your first question"
+        // loading placeholder.
         if (window.DrillChamber) {
+          window.DrillChamber.setLoading?.(false);
           window.DrillChamber.setComposerEnabled(!(completedNodeTurn || !!data.session_terminated));
         }
         if (completedNodeTurn) {
@@ -3825,7 +3828,11 @@ const App = (() => {
         entryName,
         question: nodeContext.detail || 'Explain this in your own words.',
       });
-      window.DrillChamber.setComposerEnabled(false); // wait for first AI turn to enable
+      // Show "preparing your first question" placeholder while the
+      // initial /api/drill round trip lands. The Gemini cold-start can
+      // be 5-10s; without a visible state, the disabled composer reads
+      // as broken. setLoading flips the placeholder + disables input.
+      window.DrillChamber.setLoading?.(true);
 
       window.DrillChamber.onSend(async (text) => {
         if (!text || drillState.pending) return;
@@ -3853,6 +3860,7 @@ const App = (() => {
       console.error(err);
       hideTypingIndicator();
       if (window.DrillChamber) {
+        window.DrillChamber.setLoading?.(false);
         window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
         window.DrillChamber.setComposerEnabled(false);
       } else {
