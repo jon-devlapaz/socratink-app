@@ -517,8 +517,6 @@ html[data-theme="dark"] #intro-particle-canvas {
   
   .hero-title { font-size: 30px; }
   p.desc { font-size: 16px; }
-  .drill-ui { max-width: 100%; width: 100%; height: auto; min-height: 280px; }
-  
   /* Add padding to views so content is not obscured by bottom nav */
   .library-view, .settings-view {
     padding-bottom: var(--chrome-h-bottom);
@@ -1519,9 +1517,6 @@ html[data-motion="reduced"] #intro-particle-canvas {
   border-bottom: none;
   overflow-y: auto;
 }
-.graph-detail.is-study .drill-ui-embedded {
-  display: none !important;
-}
 .graph-detail.is-repair-reps {
   padding: 24px;
 }
@@ -1531,14 +1526,8 @@ html[data-motion="reduced"] #intro-particle-canvas {
   border-bottom: none;
   overflow-y: auto;
 }
-.graph-detail.is-repair-reps .drill-ui-embedded {
-  display: none !important;
-}
 .graph-detail.is-post-drill .graph-node-detail {
   overflow-y: auto;
-}
-.graph-detail.is-post-drill .chat-input-area {
-  display: none;
 }
 .graph-node-detail {
   flex: none;
@@ -2212,47 +2201,9 @@ html[data-motion="reduced"] .graph-repair-predict-pill {
     line-height: 1.64;
   }
 
-  /* #6 — Drill back button needs a proper touch target */
-  .drill-back {
-    min-height: 44px;
-    min-width: 44px;
-    padding: 10px 14px;
-    font-size: 15px;
-    border-radius: 12px;
-    background: var(--surface-nested);
-  }
-  .drill-back:active {
-    transform: scale(0.95);
-    background: var(--accent-soft);
-  }
-
-  /* #7 — Chat bubbles need readable font size on mobile */
-  .chat-bubble {
-    font-size: 15px;
-    line-height: 1.5;
-    padding: 14px 16px;
-    max-width: 90%;
-  }
-
-  /* #8 — Hide node detail panel during active drill to maximize chat space */
+  /* #8 — Hide node detail panel during active drill to maximize graph space */
   body.is-drilling .graph-node-detail {
     display: none;
-  }
-
-  /* #3 — Keyboard-aware sticky input during drill */
-  body.is-drilling .chat-input-area {
-    position: sticky;
-    bottom: 0;
-    background: var(--surface-card);
-    padding: 12px 0;
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border);
-    margin-top: auto;
-  }
-
-  /* #10 — Safe area bottom padding on drill UI */
-  body.is-drilling .drill-ui-embedded {
-    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
