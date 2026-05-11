@@ -2074,6 +2074,20 @@ const App = (() => {
       const freshData = typeof liveConcept.graphData === 'string'
         ? JSON.parse(liveConcept.graphData)
         : liveConcept.graphData;
+      // Mutate the closed-over concept/data references in place so the
+      // strip-node click and keyboard handlers wired in renderConceptPageB2
+      // see the just-saved threshold on subsequent navigation. Without
+      // this, those handlers re-render via setActiveEntry using stale
+      // references and the edit appears to vanish until full reload.
+      concept.startingMapContext = liveConcept.startingMapContext;
+      concept.graphData = liveConcept.graphData;
+      if (data) {
+        if (!data.metadata) data.metadata = {};
+        data.metadata.starting_map_context = next;
+        if (freshData?.backbone) data.backbone = freshData.backbone;
+        if (freshData?.clusters) data.clusters = freshData.clusters;
+        if (freshData?.relationships) data.relationships = freshData.relationships;
+      }
       const backbone = Array.isArray(freshData?.backbone) ? freshData.backbone : [];
       const activeIdx = Math.max(
         0,

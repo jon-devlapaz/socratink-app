@@ -81,6 +81,7 @@ function show({ conceptName, entryName, question }) {
   hiddenPrimaryView = document.querySelector('.primary-view.visible, #map-view.visible');
   if (hiddenPrimaryView) hiddenPrimaryView.classList.remove('visible');
 
+  els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
   els.question.textContent = question || '—';
