@@ -1982,12 +1982,107 @@ const App = (() => {
     docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
-        if (typeof window.App?.editThresholdForActiveConcept === 'function') {
-          window.App.editThresholdForActiveConcept();
-        } else {
-          console.info('[concept-page] re-edit sketch requested; route not wired (v1.1)');
-        }
+        enterThresholdEditMode(docEl, concept, data);
       });
+    });
+  }
+
+  /**
+   * Replace the threshold paragraph with an inline edit textarea + Save/Cancel.
+   * On Save: persist the new text to the active concept (both the
+   * concept.startingMapContext field and graphData.metadata.starting_map_context)
+   * via saveConcepts(), then re-render the threshold + work column.
+   *
+   * Doctrine: editing the sketch is allowed at any time. The active entry
+   * stays the same; only the threshold text changes.
+   */
+  function enterThresholdEditMode(docEl, concept, data) {
+    const currentText = (concept?.startingMapContext
+      || data?.metadata?.starting_map_context
+      || data?.metadata?.core_thesis
+      || '').trim();
+    const thresholdEl = docEl.querySelector('.concept-page-b2__threshold');
+    if (!thresholdEl) return;
+
+    const editorHtml = `
+      <div class="concept-page-b2__threshold-editor">
+        <textarea
+          class="concept-page-b2__threshold-input"
+          aria-label="Edit your concept sketch"
+          rows="4"
+          maxlength="1200"
+          placeholder="Name the parts, guesses, examples, or confusions you have."
+        >${escHtml(currentText)}</textarea>
+        <div class="concept-page-b2__threshold-actions">
+          <button type="button" class="concept-page-b2__threshold-cancel">Cancel</button>
+          <button type="button" class="concept-page-b2__threshold-save">Save sketch</button>
+        </div>
+      </div>
+    `;
+    thresholdEl.insertAdjacentHTML('afterend', editorHtml);
+    thresholdEl.hidden = true;
+
+    const editorEl = thresholdEl.nextElementSibling;
+    const textarea = editorEl.querySelector('.concept-page-b2__threshold-input');
+    const cancelBtn = editorEl.querySelector('.concept-page-b2__threshold-cancel');
+    const saveBtn = editorEl.querySelector('.concept-page-b2__threshold-save');
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
+
+    const teardown = () => {
+      editorEl.remove();
+      thresholdEl.hidden = false;
+    };
+
+    cancelBtn.addEventListener('click', teardown);
+
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        teardown();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveBtn.click();
+      }
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const next = (textarea.value || '').trim().slice(0, 1200);
+      const concepts = loadConcepts();
+      const liveConcept = concepts.find((c) => c.id === concept.id);
+      if (!liveConcept) {
+        teardown();
+        return;
+      }
+      liveConcept.startingMapContext = next;
+      try {
+        const liveData = typeof liveConcept.graphData === 'string'
+          ? JSON.parse(liveConcept.graphData)
+          : (liveConcept.graphData || {});
+        if (!liveData.metadata) liveData.metadata = {};
+        liveData.metadata.starting_map_context = next;
+        liveConcept.graphData = JSON.stringify(liveData);
+      } catch (err) {
+        console.warn('[concept-page] graphData parse failed; saved startingMapContext only.', err);
+      }
+      saveConcepts(concepts);
+
+      // Re-render the work column with the fresh data so the quote updates
+      // in place. Use the same active entry id we were on.
+      const freshData = typeof liveConcept.graphData === 'string'
+        ? JSON.parse(liveConcept.graphData)
+        : liveConcept.graphData;
+      const backbone = Array.isArray(freshData?.backbone) ? freshData.backbone : [];
+      const activeIdx = Math.max(
+        0,
+        backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
+      );
+      const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
+      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData);
+      rebindActiveEntryHandlers(docEl, liveConcept, freshData);
     });
   }
 
