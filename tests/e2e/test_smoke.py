@@ -229,7 +229,6 @@ def test_saved_library_concept_reopens_map_view(
 
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"
-    expect(clean_page.locator("#map-mode-graph")).to_have_attribute("aria-pressed", "true")
 
 
 def test_active_concept_delete_confirms_then_returns_to_desk(

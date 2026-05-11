@@ -610,10 +610,9 @@ def _normalize_drill_evaluation(
         return evaluation
 
     evaluation.answer_mode = "attempt"
-    evaluation.score_eligible = True
     evaluation.help_request_reason = "none"
 
-    if not evaluation.classification:
+    if evaluation.score_eligible and not evaluation.classification:
         raise ValueError(
             "Gemini returned no classification for a scored drill evaluation turn."
         )
