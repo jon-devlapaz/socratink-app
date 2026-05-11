@@ -2507,6 +2507,10 @@ const App = (() => {
     sessionCompletePending: false,
   };
 
+  // Tracks the last AI question shown in the chamber so the next learner
+  // turn can be paired with it in history. Owned by requestDrillTurn.
+  let chamberLastShownQuestion = '';
+
   // Boot routing runs AFTER drillState is initialized because showIgnition()
   // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
   if (!toLoad) {
@@ -3592,10 +3596,48 @@ const App = (() => {
     setMapMode('graph');
     document.body.classList.add('is-drilling');
 
+    // Show the ironclad chamber view.
+    const conceptName = concept?.name || concept?.metadata?.name || 'Concept';
+    const entryName = nodeContext.fullLabel || nodeContext.id || 'Entry';
+    if (window.DrillChamber) {
+      window.DrillChamber.show({
+        conceptName,
+        entryName,
+        question: nodeContext.detail || 'Explain this in your own words.',
+      });
+      window.DrillChamber.setComposerEnabled(false); // wait for first AI turn to enable
+
+      window.DrillChamber.onSend(async (text) => {
+        if (!text || drillState.pending) return;
+        // Accumulate the completed turn into history before the next round trip.
+        // The AI side is the question we'd just been asking the learner;
+        // the learner side is what they just wrote.
+        window.DrillChamber.appendHistoryTurn('ai', chamberLastShownQuestion || '');
+        window.DrillChamber.appendHistoryTurn('learner', text);
+        window.DrillChamber.setComposerEnabled(false);
+        try {
+          await requestDrillTurn(text);
+        } catch (err) {
+          console.error(err);
+          window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
+          window.DrillChamber.setComposerEnabled(true);
+        }
+      });
+
+      window.DrillChamber.onExit(() => {
+        cancelDrill();
+      });
+    }
+
     requestDrillTurn().catch((err) => {
       console.error(err);
       hideTypingIndicator();
-      appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
+      if (window.DrillChamber) {
+        window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
+        window.DrillChamber.setComposerEnabled(false);
+      } else {
+        appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
+      }
       drillState.pending = false;
       if (chatInput) chatInput.disabled = false;
       currentGraphController?.setInteractionMode?.('inspect');
