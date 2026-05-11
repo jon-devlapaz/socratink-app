@@ -3838,6 +3838,12 @@ const App = (() => {
         entryName,
         question: nodeContext.detail || 'Explain this in your own words.',
       });
+      // Seed the last-shown question so the FIRST history pair records
+      // the actual question the learner saw (the seed prompt from the
+      // node detail). Without this, chamberLastShownQuestion is '' on
+      // the first send because appendBubble('ai',...) hasn't run yet
+      // (it fires after requestDrillTurn resolves, not before).
+      chamberLastShownQuestion = nodeContext.detail || 'Explain this in your own words.';
       // Show "preparing your first question" placeholder while the
       // initial /api/drill round trip lands. The Gemini cold-start can
       // be 5-10s; without a visible state, the disabled composer reads
