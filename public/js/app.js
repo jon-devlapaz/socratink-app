@@ -3884,7 +3884,7 @@ const App = (() => {
       if (window.DrillChamber) {
         window.DrillChamber.setLoading?.(false);
         window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
-        window.DrillChamber.setComposerEnabled(false);
+        window.DrillChamber.setComposerEnabled(true);
       } else {
         appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
       }
