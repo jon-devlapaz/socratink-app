@@ -58,9 +58,20 @@ function bind() {
   els.bound = true;
 }
 
+// Track which primary view we hid so we can restore it on exit.
+let hiddenPrimaryView = null;
+
 function show({ conceptName, entryName, question }) {
   bind();
   if (!els.view) return;
+  // Hide whichever primary view is currently visible. The app uses a
+  // `.visible` class to mark the active primary view (map / library /
+  // settings / ignition). The chamber takes over the screen, so the
+  // current primary view must drop its `.visible` class while we're
+  // open. cancelDrill() restores it via showMapView().
+  hiddenPrimaryView = document.querySelector('.primary-view.visible, #map-view.visible');
+  if (hiddenPrimaryView) hiddenPrimaryView.classList.remove('visible');
+
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
   els.question.textContent = question || '—';
@@ -68,7 +79,7 @@ function show({ conceptName, entryName, question }) {
   setComposerEnabled(true);
   resetHistory();
   els.view.hidden = false;
-  // focus after the view becomes visible
+  document.body.classList.add('chamber-open');
   requestAnimationFrame(() => els.composer.focus());
 }
 
@@ -76,6 +87,10 @@ function hide() {
   bind();
   if (!els.view) return;
   els.view.hidden = true;
+  document.body.classList.remove('chamber-open');
+  // Note: cancelDrill() restores the proper primary view via showMapView();
+  // we do not re-add `.visible` here to avoid stale-state restores.
+  hiddenPrimaryView = null;
 }
 
 function resetHistory() {
