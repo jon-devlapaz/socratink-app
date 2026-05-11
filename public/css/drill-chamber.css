@@ -4,3 +4,232 @@
    Reads from public/css/variables.css for tokens. */
 
 #drill-chamber-view[hidden] { display: none; }
+
+/* ============================================================
+   IRONCLAD chamber — ported from
+   public/_lab/drill-chamber-iterations.html (variant=ironclad).
+   Synthesized from 3 customer-feedback rounds (Maya/Jordan/Robert).
+   Companion notes: public/_lab/drill-chamber-iterations.NOTES.md
+   ============================================================ */
+
+.drill-chamber-view {
+  background: #07050f;
+  color: rgba(247, 236, 225, 0.96);
+  font-family: 'Inter', 'Manrope', -apple-system, system-ui, sans-serif;
+  min-height: 100vh;
+  position: relative;
+  display: block;
+}
+
+.drill-chamber__inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 36px 100px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Desk lamp behind the active block — single soft halo. */
+.drill-chamber-view::before {
+  content: "";
+  position: fixed;
+  top: 80px; bottom: 0;
+  left: 0; right: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse 45% 30% at 50% 55%, rgba(176, 156, 224, 0.07), transparent 70%);
+}
+
+/* Crumb */
+.drill-chamber__crumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 36px;
+  font-size: 12px;
+  color: rgba(247, 236, 225, 0.48);
+  opacity: 0.78;
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber-view:has(.drill-chamber__composer textarea:focus) .drill-chamber__crumb {
+  opacity: 0.30;
+}
+.drill-chamber__crumb a {
+  color: rgba(176, 156, 224, 0.78);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__crumb a:hover { color: rgba(247, 236, 225, 0.96); }
+.drill-chamber__sep { color: rgba(247, 236, 225, 0.18); }
+.drill-chamber__here { color: rgba(247, 236, 225, 0.92); }
+.drill-chamber__back { width: 13px; height: 13px; transform: translateY(1px); }
+
+/* History widget */
+.drill-chamber__history {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid rgba(247, 236, 225, 0.06);
+  border-radius: 10px;
+  margin-bottom: 64px;
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__history-summary {
+  font-size: 12px;
+  color: rgba(247, 236, 225, 0.55);
+  letter-spacing: 0.02em;
+}
+.drill-chamber__history-count {
+  font-family: ui-monospace, monospace;
+  color: rgba(176, 156, 224, 0.78);
+  letter-spacing: 0.06em;
+  margin-right: 8px;
+}
+.drill-chamber__history-toggle {
+  background: transparent;
+  border: 1px solid rgba(247, 236, 225, 0.10);
+  border-radius: 999px;
+  padding: 4px 12px;
+  color: rgba(247, 236, 225, 0.55);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__history-toggle:hover {
+  color: rgba(247, 236, 225, 0.92);
+  border-color: rgba(176, 156, 224, 0.40);
+}
+.drill-chamber__history-expanded {
+  display: none;
+  width: 100%;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(247, 236, 225, 0.10);
+  animation: drill-chamber-fade 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes drill-chamber-fade { from { opacity: 0; } to { opacity: 1; } }
+.drill-chamber__history.is-expanded {
+  flex-direction: column; align-items: stretch;
+}
+.drill-chamber__history.is-expanded .drill-chamber__history-expanded { display: block; }
+.drill-chamber__history-turn {
+  padding: 10px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.drill-chamber__history-turn-meta {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: rgba(176, 156, 224, 0.55);
+}
+.drill-chamber__history-turn--learner .drill-chamber__history-turn-meta {
+  color: rgba(202, 196, 206, 0.55);
+}
+.drill-chamber__history-body { color: rgba(247, 236, 225, 0.68); }
+
+/* Active block — anchor pillar on the left edge */
+.drill-chamber__active {
+  flex: 1;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: stretch;
+  max-width: 580px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  padding-left: 24px;
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__active::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 18px; bottom: 18px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(176, 156, 224, 0.42) 30%,
+    rgba(176, 156, 224, 0.42) 70%,
+    transparent
+  );
+}
+.drill-chamber__question {
+  font-family: 'Geom', 'Outfit', -apple-system, system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  color: rgba(247, 236, 225, 0.96);
+  margin: 0 0 38px;
+  /* No italics. Gravity from weight + size. */
+}
+
+.drill-chamber__composer { width: 100%; }
+.drill-chamber__composer textarea {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(247, 236, 225, 0.16);
+  outline: 0;
+  resize: none;
+  color: rgba(247, 236, 225, 0.96);
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.72;
+  padding: 12px 0;
+  min-height: 90px;
+  transition: border-bottom-color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__composer textarea:focus { border-bottom-color: rgba(176, 156, 224, 0.55); }
+.drill-chamber__composer textarea::placeholder { color: rgba(247, 236, 225, 0.30); }
+.drill-chamber__composer-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 14px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(247, 236, 225, 0.36);
+}
+.drill-chamber__hint { color: rgba(247, 236, 225, 0.36); }
+.drill-chamber__send {
+  background: transparent;
+  color: rgba(176, 156, 224, 0.85);
+  border: 1px solid rgba(176, 156, 224, 0.32);
+  border-radius: 999px;
+  padding: 8px 22px;
+  font-family: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__send:hover {
+  background: rgba(176, 156, 224, 0.10);
+  border-color: rgba(176, 156, 224, 0.60);
+  color: rgba(247, 236, 225, 0.96);
+}
+.drill-chamber__send[disabled] { opacity: 0.40; cursor: not-allowed; }
+
+/* Subtle motion on send */
+.drill-chamber__active.is-fading-out { opacity: 0.22; transition-duration: 240ms; }
+.drill-chamber__active.is-fading-in { animation: drill-chamber-active-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes drill-chamber-active-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drill-chamber__active,
+  .drill-chamber__history-expanded { animation: none; transition: none; }
+}
