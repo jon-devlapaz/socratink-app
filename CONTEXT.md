@@ -40,10 +40,10 @@ content the system supplied; a confusion artifact is evidence the user
 supplies. The artifact answers the question *"what should we work on?"*
 with the user's own friction, not the system's curation.
 
-*(Resolved 2026-05-10 during empirical-grill session on first-run
+*(Resolved 2026-05-10 during an empirical-grill session on first-run
 scaffolding. The persona's option F was framed narrowly as "a multiple-
 choice practice question you missed"; user instinct generalized it to any
-artifact of confusion. See `docs/research/2026-05-10-first-run-scaffolding.md`.)*
+artifact of confusion.)*
 
 **Audience note:** "Confusion artifact" is an *internal-team term*. User-
 facing copy should use the concrete form ("paste something that confused
