@@ -38,6 +38,9 @@ function bind() {
 
   els.send.addEventListener('click', () => {
     if (typeof sendHandler !== 'function') return;
+    if (els.send.disabled) return;        // hard guard against spam
+    els.send.disabled = true;             // visually + functionally lock immediately
+    els.composer.disabled = true;
     sendHandler(getComposerValue());
   });
   els.composer.addEventListener('keydown', (e) => {
