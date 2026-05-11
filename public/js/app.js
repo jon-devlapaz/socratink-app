@@ -3794,10 +3794,12 @@ const App = (() => {
       return;
     }
 
-    if (isNewSessionNode) markNodeVisitedThisSession(nodeContext.id);
-    sessionState.retriesByNode[nodeContext.id] = (sessionState.retriesByNode[nodeContext.id] || 0) + 1;
-    if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
-    persistSessionState();
+    if (!bypassSessionLimits) {
+      if (isNewSessionNode) markNodeVisitedThisSession(nodeContext.id);
+      sessionState.retriesByNode[nodeContext.id] = (sessionState.retriesByNode[nodeContext.id] || 0) + 1;
+      if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
+      persistSessionState();
+    }
 
     drillState.active = true;
     drillState.messages = [];
