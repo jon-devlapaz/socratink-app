@@ -8,7 +8,7 @@ one shell command, against local dev / Vercel preview / production.
 
 The suite spans four files:
 
-### `test_smoke.py` — 9 tests
+### `test_smoke.py` — 11 tests
 
 1. **`test_health_endpoint_ok`** — backend reachable, `/api/health` shape valid.
    Runs first to absorb serverless cold-start latency.
@@ -25,12 +25,17 @@ The suite spans four files:
 6. **`test_active_concept_delete_confirms_then_returns_to_desk`** — deleting
    the open concept confirms via dialog and resets the workspace to the desk
    (regression gate for the active-concept delete flow).
-7. **`test_no_console_errors_on_first_paint`** — zero same-origin
+7. **`test_desk_iso_board_state_surface_and_room_labels`** — desk iso board
+   exposes truthful tile state and quiet hover/focus room labels.
+8. **`test_desk_layout_identical_when_empty_or_populated`** — empty desk
+   renders the same 9-tile iso-board geometry as a populated library
+   (regression gate against the old empty-state hide rule).
+9. **`test_no_console_errors_on_first_paint`** — zero same-origin
    `console.error` during first paint.
-8. **`test_no_failed_critical_asset_requests`** — zero same-origin
-   `requestfailed` events during first paint.
-9. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
-   at top of `<body>` produces no errors on a fresh visit.
+10. **`test_no_failed_critical_asset_requests`** — zero same-origin
+    `requestfailed` events during first paint.
+11. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
+    at top of `<body>` produces no errors on a fresh visit.
 
 ### `test_drill_chamber.py` — 3 tests
 
@@ -103,7 +108,7 @@ PWDEBUG=1 pytest tests/e2e/test_smoke.py -v
 
 ## Output
 
-Pass (21 tests across the four files):
+Pass (23 tests across the four files):
 
 ```
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
@@ -112,6 +117,8 @@ tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED
 tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED
 tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED
 tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED
+tests/e2e/test_smoke.py::test_desk_iso_board_state_surface_and_room_labels PASSED
+tests/e2e/test_smoke.py::test_desk_layout_identical_when_empty_or_populated PASSED
 tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED
 tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED
 tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED
@@ -128,7 +135,7 @@ tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
 tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
 
-============================== 21 passed ==============================
+============================== 23 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,
