@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=30">
+  <link rel="stylesheet" href="/css/index.css?v=31">
   <link rel="stylesheet" href="css/drill-chamber.css?v=5">
 </head>
 
@@ -200,6 +200,17 @@
       <h2 class="visually-hidden" id="desk-title">Desk</h2>
 
       <div class="intro-content">
+        <header class="desk-frame">
+          <span class="desk-eyebrow">
+            <span class="desk-eyebrow-dot" aria-hidden="true"></span>
+            On the desk
+            <span class="desk-eyebrow-sep" aria-hidden="true">·</span>
+            <time id="desk-date" class="desk-eyebrow-date"></time>
+          </span>
+          <h2 class="desk-title">Reconstructions in progress.</h2>
+          <p class="desk-helper">Concepts you’ve started, in the order you laid them down.</p>
+        </header>
+
         <div class="hero-info" id="hero-info">
           <div class="hero-meta-row">
             <div class="hero-state-chip-group">
@@ -263,6 +274,21 @@
             <g id="tile-7" class="tile-group" transform="translate(210,165)" onclick="App.selectTile(7)"></g>
             <g id="tile-8" class="tile-group" transform="translate(140,205)" onclick="App.selectTile(8)"></g>
           </svg>
+        </div>
+
+        <div class="desk-legend" role="list" aria-label="Tile-state legend">
+          <span class="desk-legend-item" role="listitem" data-state="locked">
+            <span class="desk-legend-facet" aria-hidden="true"></span>locked
+          </span>
+          <span class="desk-legend-item" role="listitem" data-state="primed">
+            <span class="desk-legend-facet" aria-hidden="true"></span>primed
+          </span>
+          <span class="desk-legend-item" role="listitem" data-state="drilled">
+            <span class="desk-legend-facet" aria-hidden="true"></span>needs repair
+          </span>
+          <span class="desk-legend-item" role="listitem" data-state="solidified">
+            <span class="desk-legend-facet" aria-hidden="true"></span>solidified
+          </span>
         </div>
       </div>
 

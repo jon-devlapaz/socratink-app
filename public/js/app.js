@@ -2479,7 +2479,17 @@ const App = (() => {
     teardownMapView();
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
+    renderDeskDate();
     if (window.innerWidth < 900) closeDrawer();
+  }
+
+  function renderDeskDate() {
+    const el = document.getElementById('desk-date');
+    if (!el) return;
+    const d = new Date();
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    el.textContent = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    el.dateTime = d.toISOString().slice(0, 10);
   }
 
   function showIgnition() {
