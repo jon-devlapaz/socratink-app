@@ -478,9 +478,8 @@ const App = (() => {
   }
 
   // ── C-prime door wiring ────────────────────────────────────────────────
-  // Wires the concept input → submit-state, the source-attach toggle,
-  // and the rotating placeholder. Replaces the old two-field
-  // initHeroSingleInput (sketch field removed in C-prime).
+  // Wires the concept input → submit-state and the source-attach toggle.
+  // Replaces the old two-field initHeroSingleInput (sketch field removed in C-prime).
 
   function _doorDescribeSource(payload) {
     if (!payload) return '';
