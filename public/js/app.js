@@ -3856,7 +3856,14 @@ const App = (() => {
       window.DrillChamber.setLoading?.(true);
 
       window.DrillChamber.onSend(async (text) => {
-        if (!text || drillState.pending) return;
+        if (!text || drillState.pending) {
+          // Belt-and-suspenders with the chamber's own validation:
+          // if a turn is mid-flight (drillState.pending) the chamber
+          // already disabled its UI synchronously on click. Re-enable
+          // here so the user is never left looking at a stuck composer.
+          window.DrillChamber.setComposerEnabled(true);
+          return;
+        }
         // Accumulate the completed turn into history before the next round trip.
         // The AI side is the question we'd just been asking the learner;
         // the learner side is what they just wrote.

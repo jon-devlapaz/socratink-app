@@ -39,9 +39,15 @@ function bind() {
   els.send.addEventListener('click', () => {
     if (typeof sendHandler !== 'function') return;
     if (els.send.disabled) return;        // hard guard against spam
+    // Validate BEFORE locking the UI. Without this, an empty-composer
+    // click locks the composer and the upstream onSend handler returns
+    // early on empty text, leaving the UI permanently disabled until
+    // reload. Empty input is a no-op, no state change.
+    const text = getComposerValue();
+    if (!text) return;
     els.send.disabled = true;             // visually + functionally lock immediately
     els.composer.disabled = true;
-    sendHandler(getComposerValue());
+    sendHandler(text);
   });
   els.composer.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
