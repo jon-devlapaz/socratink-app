@@ -24,6 +24,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
   <link rel="stylesheet" href="/css/index.css?v=12">
+  <link rel="stylesheet" href="css/drill-chamber.css?v=1">
 </head>
 
 <body>
@@ -419,6 +420,41 @@
                     rows="2"></textarea>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="drill-chamber-view" class="drill-chamber-view" hidden aria-label="Drill chamber">
+      <div class="drill-chamber__inner">
+        <nav class="drill-chamber__crumb" aria-label="Drill location">
+          <a href="javascript:void(0)" id="chamber-exit" aria-label="Return to map">
+            <svg class="drill-chamber__back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            Return to map
+          </a>
+          <span class="drill-chamber__sep" aria-hidden="true">·</span>
+          <span id="chamber-concept-name">—</span>
+          <span class="drill-chamber__sep" aria-hidden="true">·</span>
+          <span class="drill-chamber__here" id="chamber-entry-name">—</span>
+        </nav>
+
+        <div class="drill-chamber__history" id="chamber-history-widget" hidden>
+          <div class="drill-chamber__history-summary">
+            <span class="drill-chamber__history-count" id="chamber-history-count">0</span>
+            earlier turns this attempt
+          </div>
+          <button class="drill-chamber__history-toggle" id="chamber-history-toggle" type="button" aria-expanded="false" aria-controls="chamber-history-expanded">show</button>
+          <div class="drill-chamber__history-expanded" id="chamber-history-expanded"></div>
+        </div>
+
+        <div class="drill-chamber__active" id="chamber-active">
+          <p class="drill-chamber__question" id="chamber-question">—</p>
+          <div class="drill-chamber__composer">
+            <textarea id="chamber-composer" placeholder="Write what comes to mind. Fragments are fine." aria-label="Your reply" rows="3"></textarea>
+            <div class="drill-chamber__composer-foot">
+              <span class="drill-chamber__hint">a sentence is enough · cmd · return to send</span>
+              <button class="drill-chamber__send" id="chamber-send" type="button">Send turn</button>
             </div>
           </div>
         </div>

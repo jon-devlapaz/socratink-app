@@ -1,0 +1,6 @@
+/* drill-chamber.css
+   Production styles for the ironclad drill chamber view.
+   Design-of-record: public/_lab/drill-chamber-iterations.html?variant=ironclad
+   Reads from public/css/variables.css for tokens. */
+
+#drill-chamber-view[hidden] { display: none; }
