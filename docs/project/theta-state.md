@@ -1,6 +1,6 @@
 # Theta State
 
-Last updated: 2026-04-11
+Last updated: 2026-05-11
 
 ## Current Evidence Posture
 
@@ -10,7 +10,7 @@ The live product should be described as a retrieval-centered learning loop, not 
 
 ## Verified Product Loop
 
-Source of truth: Sherlock code audit of `public/js/app.js`, `public/js/graph-view.js`, `public/js/store.js`, `main.py`, and `ai_service.py`.
+Source of truth: Sherlock code audit of `public/js/app.js`, `public/js/drill-chamber.js`, `public/js/store.js`, `main.py`, and `ai_service.py`. (The prior Cytoscape graph view at `public/js/graph-view.js` was removed in the strip-as-nav port; the concept view is now the strip + concept page styled by `public/css/concept-page.css`, and the live drill loop runs in the drill chamber view.)
 
 - Concept creation stores `graphData`; graph nodes begin mostly locked.
 - Learner starts with the core thesis node, which is always the first available target.

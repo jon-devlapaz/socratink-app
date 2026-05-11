@@ -72,7 +72,7 @@ Each state is a persisted record of a specific evidence event. States describe w
 - downstream unlock checks may re-evaluate
 - evidence event, not a mastery claim about the learner
 
-These states are projected from persisted knowledge-map data, not invented separately by Cytoscape.
+These states are projected from persisted knowledge-map data, not invented separately by the rendering surface (after the strip-as-nav port, that surface is the strip + concept page in `public/js/app.js` styled by `public/css/concept-page.css`).
 
 ### State Transitions
 

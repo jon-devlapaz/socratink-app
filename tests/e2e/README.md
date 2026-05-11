@@ -6,7 +6,9 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-9 tests, runtime ~15s warm + ~40s cold, in source order:
+The suite spans four files:
+
+### `test_smoke.py` — 9 tests
 
 1. **`test_health_endpoint_ok`** — backend reachable, `/api/health` shape valid.
    Runs first to absorb serverless cold-start latency.
@@ -29,6 +31,24 @@ one shell command, against local dev / Vercel preview / production.
    `requestfailed` events during first paint.
 9. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
    at top of `<body>` produces no errors on a fresh visit.
+
+### `test_drill_chamber.py` — 3 tests
+
+Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`):
+hidden on initial load, opens and hides the map when entered, and exit
+restores the map.
+
+### `test_concept_page_b2.py` — 3 tests
+
+B-2 concept page layout gate: strip + page layout renders, CTA opens the
+drill chamber, and the Route/Graph segmented toggle is absent (verifies the
+strip-as-nav port).
+
+### `test_strip_nav.py` — 6 tests
+
+Strip-as-nav behavior: click swaps the work column, keyboard navigation
+walks the strip, locked entries show a disabled CTA, no Route/Graph toggle
+or `#graph-content` section exists, and strip nodes are focusable.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`
@@ -83,20 +103,32 @@ PWDEBUG=1 pytest tests/e2e/test_smoke.py -v
 
 ## Output
 
-Pass:
+Pass (21 tests across the four files):
 
 ```
-tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED                              [ 11%]
-tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED                [ 22%]
-tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED               [ 33%]
-tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED   [ 44%]
-tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED          [ 55%]
-tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED [ 66%]
-tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED                [ 77%]
-tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED               [ 88%]
-tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED [100%]
+tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
+tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED
+tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED
+tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED
+tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED
+tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED
+tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED
+tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED
+tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_view_hidden_on_load PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_opens_and_hides_map PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_chamber PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
+tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
+tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
+tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
+tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
+tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
+tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
 
-============================== 9 passed in 14.7s ==============================
+============================== 21 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,

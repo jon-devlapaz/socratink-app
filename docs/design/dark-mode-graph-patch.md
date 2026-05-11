@@ -1,5 +1,7 @@
 # Dark-Mode Graph Patch — Integration Guide
 
+> **Historical (2026-05-11).** This patch targets the Cytoscape knowledge-graph view, which was removed in the strip-as-nav port. `public/js/graph-view.js`, `.graph-stage-wrap`, `.graph-detail`, and the `--graph-stage-*` / `--node-*` / `--edge-*` token families no longer exist in the codebase. The cytoscape script tag has also been dropped from `public/index.html`. Treat this document as a historical record of the dark-mode pattern (obsidian base + state-colored crystal palette + seam-of-light). For the current concept-view styling, see `public/css/concept-page.css` (strip + page) and `public/css/drill-chamber.css` (drill chamber view).
+
 **Target repo:** `jon-devlapaz/socratink-app`
 **Branch name (suggested):** `feat/dark-mode-graph`
 **Scope:** Upgrades the knowledge-graph dark theme (obsidian base, crystal-node palette, panel seam-of-light linking active node to right-rail). Light mode is untouched.
