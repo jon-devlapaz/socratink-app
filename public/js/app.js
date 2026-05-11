@@ -3453,6 +3453,10 @@ const App = (() => {
             chatInput.focus();
           }
         }
+        // Mirror disabled state to the chamber composer.
+        if (window.DrillChamber) {
+          window.DrillChamber.setComposerEnabled(!(completedNodeTurn || !!data.session_terminated));
+        }
         if (completedNodeTurn) {
           currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'study' : 'post-drill', activeDrillNode);
           if (completedColdAttempt) {
@@ -3699,6 +3703,15 @@ const App = (() => {
   }
 
   function appendBubble(role, text) {
+    if (role === 'ai' && window.DrillChamber) {
+      // Route AI messages through the chamber view instead of the old chat history.
+      // Note: composer enable/disable state is set by the calling context
+      // (handleVisualTransition), not here, so the completedNodeTurn path is honoured.
+      chamberLastShownQuestion = text || '';
+      window.DrillChamber.swapQuestion(text || '');
+      return;
+    }
+    // Fallback: render into the legacy embedded chat history if present.
     if (!chatHistory) return;
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
