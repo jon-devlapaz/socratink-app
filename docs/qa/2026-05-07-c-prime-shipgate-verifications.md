@@ -1,5 +1,7 @@
 # C-prime — Ship-Gate Verifications (Antigravity-runnable)
 
+> **Superseded surface (2026-05-11, strip-as-nav port).** The Cytoscape graph view (`public/js/graph-view.js`, `#graph-content`) was deleted in the strip-as-nav port. Wherever this doc says "graph view," read it as the **strip + concept page** surface (`public/js/app.js`, `public/css/concept-page.css`).
+
 **Date:** 2026-05-07
 **Branch under test:** `dev` @ `46f52d6` (or any commit at-or-after this SHA on `dev`)
 **Companion to:** `docs/qa/2026-05-07-c-prime-antigravity-qa-plan.md` (which left these two items BLOCKED)
