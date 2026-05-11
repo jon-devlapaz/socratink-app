@@ -88,7 +88,7 @@
   font-size: var(--text-base);
   line-height: var(--rule-step);
   color: var(--text-strong);
-  padding: var(--composer-grid-offset, 8px) 0 0 0;
+  padding: var(--composer-grid-offset, 8px) 14px 0 14px;
   min-height: calc(var(--rule-step) * 3);
 }
 
