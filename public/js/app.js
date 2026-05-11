@@ -1958,7 +1958,6 @@ const App = (() => {
 
     const titleEl = document.getElementById('concept-header-title');
     const tagsEl = document.getElementById('concept-header-tags');
-    const drillBtn = document.getElementById('concept-start-drill');
     if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
     if (tagsEl) {
       let tagsHtml = '';
@@ -1968,11 +1967,6 @@ const App = (() => {
       }
       if (meta.low_density) tagsHtml += `<span class="map-low-density">lightweight draft</span>`;
       tagsEl.innerHTML = tagsHtml;
-    }
-    if (drillBtn) {
-      const showDrill = concept.state === 'growing' || concept.state === 'fractured';
-      drillBtn.hidden = !showDrill;
-      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Try from memory';
     }
 
     const domMechs = rels.domain_mechanics || [];
