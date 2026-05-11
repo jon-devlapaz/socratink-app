@@ -76,7 +76,9 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 ## Running
 
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
-preferred entry point:
+preferred entry point. **Scope note:** the wrapper currently runs only
+`test_smoke.py` (11 tests). Use the raw pytest invocations below to run the
+full suite (23 tests across the four files).
 
 ```bash
 # Local — needs `bash scripts/dev.sh` in another shell (runs the
@@ -90,20 +92,24 @@ bash scripts/qa-smoke.sh live
 bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel.app
 ```
 
-Raw pytest invocations (when you need flags the wrapper doesn't pass through):
+Raw pytest invocations (when you need flags the wrapper doesn't pass through,
+or want the full four-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Local — needs `bash scripts/dev.sh` in another shell
+# Full suite (all four files, 23 tests) — needs `bash scripts/dev.sh` in another shell
+pytest tests/e2e/ -v
+
+# Smoke file only (matches what the wrapper runs)
 pytest tests/e2e/test_smoke.py -v
 
 # Against any URL via env var
-SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/test_smoke.py -v
+SOCRATINK_BASE_URL=https://app.socratink.ai pytest tests/e2e/ -v
 
 # Headed (browser visible — for debugging)
-pytest tests/e2e/test_smoke.py -v --headed
+pytest tests/e2e/ -v --headed
 
 # Full trace on every test (huge, debugging only)
-PWDEBUG=1 pytest tests/e2e/test_smoke.py -v
+PWDEBUG=1 pytest tests/e2e/ -v
 ```
 
 ## Output
