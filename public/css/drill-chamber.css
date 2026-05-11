@@ -1,0 +1,415 @@
+/* drill-chamber.css
+   Production styles for the ironclad drill chamber view.
+   Design-of-record: public/_lab/drill-chamber-iterations.html?variant=ironclad
+   Reads from public/css/variables.css for tokens.
+   Light mode is default. Dark mode lives behind [data-theme="dark"]. */
+
+#drill-chamber-view[hidden] { display: none; }
+
+/* ============================================================
+   IRONCLAD chamber
+   Synthesized from 3 customer-feedback rounds (Maya/Jordan/Robert).
+   Companion notes: public/_lab/drill-chamber-iterations.NOTES.md
+
+   Architecture: position-fixed full-viewport, takes over the screen
+   when shown. Independent of any concept-page state.
+   ============================================================ */
+
+/* ------- 1. Layout primitives (theme-agnostic) ------- */
+
+.drill-chamber-view {
+  position: fixed;
+  inset: 0;
+  z-index: 200;          /* above the app shell, below modals */
+  overflow-y: auto;
+  font-family: 'Inter', 'Manrope', -apple-system, system-ui, sans-serif;
+  display: block;
+}
+
+.drill-chamber__inner {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 36px 100px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.drill-chamber__crumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 36px;
+  font-size: 12px;
+  opacity: 0.78;
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber-view:has(.drill-chamber__composer textarea:focus) .drill-chamber__crumb {
+  opacity: 0.30;
+}
+.drill-chamber__crumb a {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__back { width: 13px; height: 13px; transform: translateY(1px); }
+
+/* History widget — collapsed by default */
+.drill-chamber__history {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 64px;
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__history-summary {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+.drill-chamber__history-count {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.06em;
+  margin-right: 8px;
+}
+.drill-chamber__history-toggle {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__history-expanded {
+  display: none;
+  width: 100%;
+  margin-top: 14px;
+  padding-top: 14px;
+  animation: drill-chamber-fade 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes drill-chamber-fade { from { opacity: 0; } to { opacity: 1; } }
+.drill-chamber__history.is-expanded {
+  flex-direction: column; align-items: stretch;
+}
+.drill-chamber__history.is-expanded .drill-chamber__history-expanded { display: block; }
+.drill-chamber__history-turn {
+  padding: 10px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.drill-chamber__history-turn-meta {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+/* Active block — anchor pillar on the left edge */
+.drill-chamber__active {
+  flex: 1;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: stretch;
+  max-width: 580px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+  padding-left: 24px;
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__active::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 18px; bottom: 18px;
+  width: 1px;
+}
+.drill-chamber__question {
+  font-family: 'Geom', 'Outfit', -apple-system, system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  margin: 0 0 38px;
+  /* No italics. Gravity from weight + size. */
+}
+
+.drill-chamber__composer { width: 100%; }
+.drill-chamber__composer textarea {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid;
+  outline: 0;
+  resize: none;
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.72;
+  padding: 12px 0;
+  min-height: 90px;
+  transition: border-bottom-color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__composer-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 14px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.drill-chamber__send {
+  /* Opt out of base.css's `button { flex: 1 }` global. Without this
+     the send pill stretches to fill the composer-foot flex row. */
+  flex: 0 0 auto;
+  width: auto;
+  background: transparent;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 8px 22px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  /* Defeat the base.css button hover transform / box-shadow so the
+     chamber's send stays a quiet ghost pill, not a brand-default CTA. */
+  box-shadow: none;
+  transition: color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.drill-chamber__send:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+.drill-chamber__send[disabled] { opacity: 0.40; cursor: not-allowed; }
+
+/* History toggle is also a button -- same flex-grow opt-out. */
+.drill-chamber__history-toggle {
+  flex: 0 0 auto;
+  width: auto;
+  box-shadow: none;
+}
+.drill-chamber__history-toggle:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Subtle motion on send */
+.drill-chamber__active.is-fading-out { opacity: 0.22; transition-duration: 240ms; }
+.drill-chamber__active.is-fading-in { animation: drill-chamber-active-in 320ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes drill-chamber-active-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drill-chamber__active,
+  .drill-chamber__history-expanded { animation: none; transition: none; }
+}
+
+/* ============================================================
+   2. LIGHT MODE (default)
+   Cream paper, ink text, one violet accent. Reading-room idiom.
+   ============================================================ */
+
+.drill-chamber-view {
+  background: var(--surface-page, #F7ECE1);
+  color: var(--text-strong, #242038);
+}
+.drill-chamber-view::before {
+  content: "";
+  position: fixed;
+  top: 0; bottom: 0; left: 0; right: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 50% 35% at 50% 55%,
+      rgba(var(--violet-600-rgb, 144, 103, 198), 0.06),
+      transparent 70%);
+}
+
+.drill-chamber__crumb {
+  color: var(--text-muted, rgba(36, 32, 56, 0.68));
+}
+.drill-chamber__crumb a {
+  color: var(--accent-primary, #9067C6);
+}
+.drill-chamber__crumb a:hover {
+  color: var(--text-strong, #242038);
+}
+.drill-chamber__sep { color: rgba(36, 32, 56, 0.24); }
+.drill-chamber__here { color: var(--text-strong, #242038); }
+
+.drill-chamber__history {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(36, 32, 56, 0.10));
+}
+.drill-chamber__history-summary { color: var(--text-muted, rgba(36, 32, 56, 0.68)); }
+.drill-chamber__history-count { color: var(--accent-primary, #9067C6); }
+.drill-chamber__history-toggle {
+  background: transparent;
+  border: 1px solid var(--border-subtle, rgba(36, 32, 56, 0.10));
+  color: var(--text-muted, rgba(36, 32, 56, 0.68));
+}
+.drill-chamber__history-toggle:hover {
+  color: var(--text-strong, #242038);
+  border-color: var(--accent-border-strong, rgba(144, 103, 198, 0.30));
+}
+.drill-chamber__history-expanded {
+  border-top: 1px dashed var(--border-subtle, rgba(36, 32, 56, 0.10));
+}
+.drill-chamber__history-turn-meta { color: var(--accent-primary, #9067C6); opacity: 0.72; }
+.drill-chamber__history-turn--learner .drill-chamber__history-turn-meta {
+  color: var(--accent-secondary, #8D86C9);
+  opacity: 0.78;
+}
+.drill-chamber__history-body { color: var(--text-muted, rgba(36, 32, 56, 0.68)); }
+
+.drill-chamber__active::before {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(var(--violet-600-rgb, 144, 103, 198), 0.42) 30%,
+    rgba(var(--violet-600-rgb, 144, 103, 198), 0.42) 70%,
+    transparent
+  );
+}
+.drill-chamber__question { color: var(--text-strong, #242038); }
+
+.drill-chamber__composer textarea {
+  color: var(--text-strong, #242038);
+  border-bottom-color: var(--border-subtle, rgba(36, 32, 56, 0.16));
+}
+.drill-chamber__composer textarea:focus {
+  border-bottom-color: var(--accent-primary, #9067C6);
+}
+.drill-chamber__composer textarea::placeholder { color: rgba(36, 32, 56, 0.36); }
+.drill-chamber__composer-foot { color: var(--text-muted, rgba(36, 32, 56, 0.55)); }
+.drill-chamber__hint { color: var(--text-muted, rgba(36, 32, 56, 0.55)); }
+.drill-chamber__send {
+  color: var(--accent-primary, #9067C6);
+  border-color: var(--accent-border-strong, rgba(144, 103, 198, 0.32));
+}
+.drill-chamber__send:hover {
+  background: var(--accent-soft, rgba(144, 103, 198, 0.10));
+  border-color: var(--accent-primary, #9067C6);
+  color: var(--text-strong, #242038);
+}
+
+/* ============================================================
+   3. DARK MODE (overrides)
+   Obsidian-tinted page, lavender accents. Matches dark-mode-graph
+   patch idiom: deep base + violet ambient halo.
+   ============================================================ */
+
+[data-theme="dark"] .drill-chamber-view {
+  background: #07050f;
+  color: rgba(247, 236, 225, 0.96);
+}
+[data-theme="dark"] .drill-chamber-view::before {
+  background:
+    radial-gradient(ellipse 45% 30% at 50% 55%, rgba(176, 156, 224, 0.08), transparent 70%);
+}
+
+[data-theme="dark"] .drill-chamber__crumb { color: rgba(247, 236, 225, 0.48); }
+[data-theme="dark"] .drill-chamber__crumb a { color: rgba(176, 156, 224, 0.78); }
+[data-theme="dark"] .drill-chamber__crumb a:hover { color: rgba(247, 236, 225, 0.96); }
+[data-theme="dark"] .drill-chamber__sep { color: rgba(247, 236, 225, 0.18); }
+[data-theme="dark"] .drill-chamber__here { color: rgba(247, 236, 225, 0.92); }
+
+[data-theme="dark"] .drill-chamber__history {
+  background: transparent;
+  border-color: rgba(247, 236, 225, 0.06);
+}
+[data-theme="dark"] .drill-chamber__history-summary { color: rgba(247, 236, 225, 0.55); }
+[data-theme="dark"] .drill-chamber__history-count { color: rgba(176, 156, 224, 0.78); }
+[data-theme="dark"] .drill-chamber__history-toggle {
+  background: transparent;
+  border-color: rgba(247, 236, 225, 0.10);
+  color: rgba(247, 236, 225, 0.55);
+}
+[data-theme="dark"] .drill-chamber__history-toggle:hover {
+  color: rgba(247, 236, 225, 0.92);
+  border-color: rgba(176, 156, 224, 0.40);
+}
+[data-theme="dark"] .drill-chamber__history-expanded {
+  border-top: 1px dashed rgba(247, 236, 225, 0.10);
+}
+[data-theme="dark"] .drill-chamber__history-turn-meta { color: rgba(176, 156, 224, 0.55); opacity: 1; }
+[data-theme="dark"] .drill-chamber__history-turn--learner .drill-chamber__history-turn-meta {
+  color: rgba(202, 196, 206, 0.55);
+}
+[data-theme="dark"] .drill-chamber__history-body { color: rgba(247, 236, 225, 0.68); }
+
+[data-theme="dark"] .drill-chamber__active::before {
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(176, 156, 224, 0.42) 30%,
+    rgba(176, 156, 224, 0.42) 70%,
+    transparent
+  );
+}
+[data-theme="dark"] .drill-chamber__question { color: rgba(247, 236, 225, 0.96); }
+
+[data-theme="dark"] .drill-chamber__composer textarea {
+  color: rgba(247, 236, 225, 0.96);
+  border-bottom-color: rgba(247, 236, 225, 0.16);
+}
+[data-theme="dark"] .drill-chamber__composer textarea:focus {
+  border-bottom-color: rgba(176, 156, 224, 0.55);
+}
+[data-theme="dark"] .drill-chamber__composer textarea::placeholder {
+  color: rgba(247, 236, 225, 0.30);
+}
+[data-theme="dark"] .drill-chamber__composer-foot { color: rgba(247, 236, 225, 0.36); }
+[data-theme="dark"] .drill-chamber__hint { color: rgba(247, 236, 225, 0.36); }
+[data-theme="dark"] .drill-chamber__send {
+  color: rgba(176, 156, 224, 0.85);
+  border-color: rgba(176, 156, 224, 0.32);
+}
+[data-theme="dark"] .drill-chamber__send:hover {
+  background: rgba(176, 156, 224, 0.10);
+  border-color: rgba(176, 156, 224, 0.60);
+  color: rgba(247, 236, 225, 0.96);
+}
+
+/* ------- First-cold-attempt creed ------- */
+
+.drill-chamber__creed {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.drill-chamber__creed li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-muted, rgba(36, 32, 56, 0.68));
+}
+.drill-chamber__creed strong {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+.drill-chamber__creed-diamond {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  background: var(--accent-primary);
+  transform: rotate(45deg);
+  border-radius: 1px;
+}
+[data-theme="dark"] .drill-chamber__creed li { color: rgba(247, 236, 225, 0.72); }
+[data-theme="dark"] .drill-chamber__creed strong { color: rgba(247, 236, 225, 0.96); }
+[data-theme="dark"] .drill-chamber__creed-diamond { background: rgba(176, 156, 224, 0.85); }

@@ -6,7 +6,6 @@ import {
   runRepairReps,
   runDrillTurn,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=13';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -34,6 +33,16 @@ import {
   TILE_IDS, tileEls
 } from './dom.js';
 
+/** Escape a value for safe insertion into HTML. Inlined from the now-deleted graph-view.js. */
+function escHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 const App = (() => {
   const THEME_STORAGE_KEY = 'learnops-theme';
   const PHASE_B_SESSION_KEY_PREFIX = 'learnops-phase-b-session';
@@ -42,7 +51,6 @@ const App = (() => {
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
   const BOARD_SLOT_COUNT = TILE_IDS.length;
   let currentGraphController = null;
-  let currentMapMode = 'study';
   let activeDrillNode = null;
   let repairRepsState = null;
   let themePreference = 'light';
@@ -193,77 +201,16 @@ const App = (() => {
     applyThemePreference(normalized);
   }
 
-  function buildKnowledgeGraphMountConfig(rawData) {
-    const graphStage = document.getElementById('graph-stage');
-    const graphNodeDetail = document.getElementById('graph-node-detail');
-    if (!graphStage || !graphNodeDetail || !rawData) return null;
-    return {
-      container: graphStage,
-      detailEl: graphNodeDetail,
-      rawData,
-      onNodeSelect: (nodeData) => startDrill(nodeData),
-      onContinue: () => cancelDrill(),
-    };
-  }
-
-  function destroyKnowledgeGraphController() {
-    if (!currentGraphController) return;
-    currentGraphController.destroy();
-    currentGraphController = null;
-  }
-
-  function mountKnowledgeGraphController(rawData) {
-    const config = buildKnowledgeGraphMountConfig(rawData);
-    if (!config) return null;
-    currentGraphController = mountKnowledgeGraph(config);
-    return currentGraphController;
-  }
-
-  function captureKnowledgeGraphViewState() {
-    if (!currentGraphController) return null;
-    return {
-      selectedElement: currentGraphController.getSelectedElement?.() || null,
-      interactionMode: currentGraphController.getInteractionMode?.() || 'inspect',
-      activeDrillNode: currentGraphController.getActiveDrillNode?.() || activeDrillNode || null,
-    };
-  }
-
-  function restoreKnowledgeGraphViewState(viewState = null) {
-    if (!currentGraphController || !viewState) return;
-    const selectedElement = viewState.selectedElement?.id ? viewState.selectedElement : null;
-    const fallbackSelection = viewState.activeDrillNode
-      ? { type: 'node', id: viewState.activeDrillNode }
-      : null;
-    const selection = selectedElement || fallbackSelection;
-
-    if (viewState.interactionMode && viewState.interactionMode !== 'inspect') {
-      const selectedNodeId = selection?.type === 'node' ? selection.id : viewState.activeDrillNode;
-      currentGraphController.setInteractionMode?.(viewState.interactionMode, selectedNodeId || null);
-      return;
-    }
-
-    if (selection) {
-      currentGraphController.selectElement?.(selection);
-    }
-  }
-
-  function remountOpenKnowledgeGraphForTheme() {
-    const mapView = document.getElementById('map-view');
-    if (!mapView?.classList.contains('visible') || !currentGraphController) return;
-
-    const concept = getActiveConcept();
-    const rawData = concept?.graphData ? normalizeGraphData(concept.graphData).graphData : null;
-    if (!rawData) return;
-
-    const viewState = captureKnowledgeGraphViewState();
-    destroyKnowledgeGraphController();
-    mountKnowledgeGraphController(rawData);
-    restoreKnowledgeGraphViewState(viewState);
-
-    if (currentMapMode === 'graph' && currentGraphController) {
-      requestAnimationFrame(() => currentGraphController?.resize());
-    }
-  }
+  // Graph controller stubs: graph-view.js and the cytoscape constellation
+  // were deleted in the strip-as-nav port (2026-05-11). These stubs keep
+  // the many call sites in startDrill, cancelDrill, and repair-reps from
+  // throwing; they will be cleaned up in a follow-up refactor pass.
+  function buildKnowledgeGraphMountConfig() { return null; }
+  function destroyKnowledgeGraphController() { currentGraphController = null; }
+  function mountKnowledgeGraphController() { return null; }
+  function captureKnowledgeGraphViewState() { return null; }
+  function restoreKnowledgeGraphViewState() {}
+  function remountOpenKnowledgeGraphForTheme() {}
 
   function setMapShellOpen(isOpen) {
     document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
@@ -1923,10 +1870,471 @@ const App = (() => {
 
   // ── 16. Map View UI ────────────────────────────────────────
 
+  // Module-level state: which backbone entry is currently shown in the
+  // work column. Set on initial mount and updated by setActiveEntry.
+  let _activeEntryId = null;
+
+  /**
+   * Build the work column HTML (threshold quote + active entry block +
+   * nearby list). Shared between initial mount and active-entry swap.
+   *
+   * @param {Object} activeEntry - The backbone entry to render as active
+   * @param {number} activeIdx - Zero-based index of activeEntry in backbone
+   * @param {Array} backbone - Full backbone array
+   * @param {Object} concept - The full concept object
+   * @param {Object} data - Parsed graphData
+   * @returns {string} HTML string for the work column interior
+   */
+  function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data) {
+    const meta = data?.metadata || {};
+    const thresholdText = (concept?.startingMapContext || meta.starting_map_context || meta.core_thesis || '').trim();
+    const totalNodes = backbone.length || 1;
+
+    // A locked entry is BLOCKED only if any predecessor in the backbone has
+    // not yet been attempted. Entry 0 (Core Thesis) has no predecessors so
+    // it's never blocked -- its locked state means "no cold attempt yet"
+    // and IS the cold attempt the learner is here to do.
+    const isLocked = (activeEntry.drill_status || 'locked') === 'locked';
+    const predecessorsAttempted = activeIdx === 0 || backbone
+      .slice(0, activeIdx)
+      .every((n) => (n?.drill_status || 'locked') !== 'locked');
+    const isBlocked = isLocked && !predecessorsAttempted;
+
+    const entryEyebrow = isBlocked
+      ? `locked entry ${activeIdx + 1} of ${totalNodes}`
+      : (activeEntry.drill_status === 'primed'
+        ? `re-drill ready entry ${activeIdx + 1} of ${totalNodes}`
+        : `first cold attempt entry ${activeIdx + 1} of ${totalNodes}`);
+    const entryPurpose = activeEntry.purpose
+      || (isBlocked
+        ? 'Locked until you do a cold attempt on the entry above. The mechanism stays hidden until you have written what you can reconstruct from memory.'
+        : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
+    const ctaLabel = activeEntry.drill_status === 'primed' ? 'Re-drill from memory' : 'Try from memory';
+
+    const thresholdHtml = thresholdText
+      ? `
+        <p class="concept-page-b2__threshold">
+          ${escHtml(thresholdText)}
+          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
+        </p>
+      `
+      : `
+        <p class="concept-page-b2__threshold concept-page-b2__threshold--empty">
+          You have not yet sketched what you think is inside this concept.
+          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
+        </p>
+      `;
+
+    const ctaButton = isBlocked
+      ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Cold attempt on the entry above unlocks this one">Locked</button>`
+      : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntry.id || 'core-thesis')}">${ctaLabel}</button>`;
+
+    const activeHtml = `
+      <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
+      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
+      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
+      ${ctaButton}
+    `;
+
+    // Nearby: every backbone entry that isn't this one
+    const nearby = backbone.filter((n) => n !== activeEntry);
+    const nearbyHtml = nearby.length
+      ? `
+        <section class="concept-page-b2__nearby">
+          <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries  all locked until first attempt</span>
+          <div class="concept-page-b2__nearby-list">
+            ${nearby.map((n) => {
+              const idx = backbone.indexOf(n);
+              const num = String(idx + 1).padStart(2, '0');
+              const status = (n.drill_status || 'locked').toUpperCase();
+              return `
+                <div class="concept-page-b2__nearby-item">
+                  <span class="concept-page-b2__nearby-num">${escHtml(num)}</span>
+                  <span>${escHtml(n.label || `entry ${idx + 1}`)}</span>
+                  <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `
+      : '';
+
+    return `${thresholdHtml}${activeHtml}${nearbyHtml}`;
+  }
+
+  /**
+   * Wire event handlers on the work column after a swap or initial mount.
+   * Handles the CTA (start drill) and the threshold re-edit affordance.
+   *
+   * @param {HTMLElement} docEl - The .concept-page-b2__doc element
+   * @param {Object} concept - The full concept object
+   * @param {Object} data - Parsed graphData
+   */
+  function rebindActiveEntryHandlers(docEl, concept, data) {
+    const ctaBtn = docEl.querySelector('.concept-page-b2__entry-cta:not([disabled])');
+    if (ctaBtn) {
+      ctaBtn.addEventListener('click', () => {
+        window.App?.startDrillFromMap?.();
+      });
+    }
+    docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        enterThresholdEditMode(docEl, concept, data);
+      });
+    });
+  }
+
+  /**
+   * Replace the threshold paragraph with an inline edit textarea + Save/Cancel.
+   * On Save: persist the new text to the active concept (both the
+   * concept.startingMapContext field and graphData.metadata.starting_map_context)
+   * via saveConcepts(), then re-render the threshold + work column.
+   *
+   * Doctrine: editing the sketch is allowed at any time. The active entry
+   * stays the same; only the threshold text changes.
+   */
+  function enterThresholdEditMode(docEl, concept, data) {
+    const currentText = (concept?.startingMapContext
+      || data?.metadata?.starting_map_context
+      || data?.metadata?.core_thesis
+      || '').trim();
+    const thresholdEl = docEl.querySelector('.concept-page-b2__threshold');
+    if (!thresholdEl) return;
+
+    const editorHtml = `
+      <div class="concept-page-b2__threshold-editor">
+        <textarea
+          class="concept-page-b2__threshold-input"
+          aria-label="Edit your concept sketch"
+          rows="4"
+          maxlength="1200"
+          placeholder="Name the parts, guesses, examples, or confusions you have."
+        >${escHtml(currentText)}</textarea>
+        <div class="concept-page-b2__threshold-actions">
+          <button type="button" class="concept-page-b2__threshold-cancel">Cancel</button>
+          <button type="button" class="concept-page-b2__threshold-save">Save sketch</button>
+        </div>
+      </div>
+    `;
+    thresholdEl.insertAdjacentHTML('afterend', editorHtml);
+    thresholdEl.hidden = true;
+
+    const editorEl = thresholdEl.nextElementSibling;
+    const textarea = editorEl.querySelector('.concept-page-b2__threshold-input');
+    const cancelBtn = editorEl.querySelector('.concept-page-b2__threshold-cancel');
+    const saveBtn = editorEl.querySelector('.concept-page-b2__threshold-save');
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    });
+
+    const teardown = () => {
+      editorEl.remove();
+      thresholdEl.hidden = false;
+    };
+
+    cancelBtn.addEventListener('click', teardown);
+
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        teardown();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        saveBtn.click();
+      }
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const next = (textarea.value || '').trim().slice(0, 1200);
+      const concepts = loadConcepts();
+      const liveConcept = concepts.find((c) => c.id === concept.id);
+      if (!liveConcept) {
+        teardown();
+        return;
+      }
+      liveConcept.startingMapContext = next;
+      try {
+        const liveData = typeof liveConcept.graphData === 'string'
+          ? JSON.parse(liveConcept.graphData)
+          : (liveConcept.graphData || {});
+        if (!liveData.metadata) liveData.metadata = {};
+        liveData.metadata.starting_map_context = next;
+        liveConcept.graphData = JSON.stringify(liveData);
+      } catch (err) {
+        console.warn('[concept-page] graphData parse failed; saved startingMapContext only.', err);
+      }
+      saveConcepts(concepts);
+
+      // Re-render the work column with the fresh data so the quote updates
+      // in place. Use the same active entry id we were on.
+      const freshData = typeof liveConcept.graphData === 'string'
+        ? JSON.parse(liveConcept.graphData)
+        : liveConcept.graphData;
+      const backbone = Array.isArray(freshData?.backbone) ? freshData.backbone : [];
+      const activeIdx = Math.max(
+        0,
+        backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
+      );
+      const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
+      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData);
+      rebindActiveEntryHandlers(docEl, liveConcept, freshData);
+    });
+  }
+
+  /**
+   * Swap the work column to show a different backbone entry without
+   * rebuilding the whole concept page. Called by strip-node clicks
+   * and keyboard arrow nav.
+   *
+   * Animates: 240ms opacity fade-out, swap, 320ms opacity + 4px
+   * translateY fade-in. Does NOT animate layout properties.
+   *
+   * @param {string} entryId - The id of the backbone entry to show
+   * @param {Object} data - Parsed graphData
+   * @param {Object} concept - The full concept object
+   */
+  function setActiveEntry(entryId, data, concept) {
+    if (!data || !entryId) return;
+    if (entryId === _activeEntryId) return;
+
+    const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+    const newEntry = backbone.find((n) => (n.id || `entry-${backbone.indexOf(n)}`) === entryId);
+    if (!newEntry) return;
+    const newIdx = backbone.indexOf(newEntry);
+
+    const mountEl = document.getElementById('map-content');
+    if (!mountEl) return;
+
+    // Update strip node active class without full rebuild
+    mountEl.querySelectorAll('.concept-strip__node').forEach((g) => {
+      const isThisOne = g.getAttribute('data-entry-id') === entryId;
+      g.classList.toggle('is-active', isThisOne);
+      // Update label: active node shows its label; others hide it
+      const text = g.querySelector('text');
+      if (isThisOne && !text) {
+        const circle = g.querySelector('circle');
+        if (circle) {
+          const cx = parseFloat(circle.getAttribute('cx'));
+          const cy = parseFloat(circle.getAttribute('cy'));
+          const labelText = backbone[newIdx]?.label || `entry ${newIdx + 1}`;
+          const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          t.setAttribute('x', cx);
+          t.setAttribute('y', cy + 25);
+          t.textContent = labelText;
+          g.appendChild(t);
+        }
+      } else if (!isThisOne && text) {
+        text.remove();
+      }
+      // Bump radius on active
+      const circle = g.querySelector('circle');
+      if (circle) {
+        circle.setAttribute('r', isThisOne ? 9 : (g.classList.contains('concept-strip__node--primed') ? 7 : 6));
+      }
+    });
+
+    // Update strip overlay label
+    const overlayName = mountEl.querySelector('.concept-strip__active-name');
+    if (overlayName) {
+      overlayName.textContent = `${newEntry.label || 'entry'} · ${newIdx + 1} of ${backbone.length}`;
+    }
+
+    // Swap the work column with a fade transition
+    const doc = mountEl.querySelector('.concept-page-b2__doc');
+    if (!doc) return;
+    doc.classList.add('is-fading-out');
+    setTimeout(() => {
+      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data);
+      rebindActiveEntryHandlers(doc, concept, data);
+      doc.classList.remove('is-fading-out');
+      void doc.offsetWidth; // force reflow so the fade-in animates
+      doc.classList.add('is-fading-in');
+      setTimeout(() => doc.classList.remove('is-fading-in'), 360);
+    }, 240);
+
+    _activeEntryId = entryId;
+  }
+
+  /**
+   * Render the B-2 "Strip + page" concept page layout into #map-content.
+   * Replaces the prior Route view card stack.
+   *
+   * @param {HTMLElement} mountEl - The #map-content element
+   * @param {Object} data - Parsed graphData (metadata, backbone, clusters, relationships)
+   * @param {Object} concept - The full concept object (for threshold text + name)
+   */
+  function renderConceptPageB2(mountEl, data, concept) {
+    if (!mountEl || !data) return;
+    const meta = data.metadata || {};
+    const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+
+    // Identify the active entry. For v1: first backbone entry that isn't
+    // 'solidified' (i.e., the next thing to attempt). Falls back to first
+    // backbone entry, then to a synthetic core-thesis stub.
+    const isActionable = (n) => {
+      const status = n?.drill_status || 'locked';
+      return status !== 'solidified';
+    };
+    const activeEntry = backbone.find(isActionable) || backbone[0] || {
+      id: 'core-thesis',
+      label: 'Core thesis',
+      purpose: 'The first entry asks for the governing idea, not the whole source.',
+      drill_status: 'locked',
+    };
+    const activeIdx = Math.max(0, backbone.indexOf(activeEntry));
+
+    // Build the strip SVG
+    const stripWidth = 600;
+    const stripHeight = 110;
+    const strokeY = stripHeight / 2;
+    const totalNodes = backbone.length || 1;
+    const padX = 60;
+    const span = stripWidth - 2 * padX;
+    const stepX = totalNodes > 1 ? span / (totalNodes - 1) : 0;
+
+    const stripNodes = backbone.map((node, i) => {
+      const x = padX + i * stepX;
+      const status = node.drill_status || 'locked';
+      const isPrimed = status === 'primed' || status === 'drilled' || status === 'solidified';
+      const isActive = i === activeIdx;
+      const cls = ['concept-strip__node', isPrimed ? 'concept-strip__node--primed' : 'concept-strip__node--locked'];
+      if (isActive) cls.push('is-active');
+      const r = isActive ? 9 : (isPrimed ? 7 : 6);
+      const entryId = node.id || `entry-${i}`;
+      const label = escHtml(node.label || `entry ${i + 1}`);
+      const ariaLabel = `${node.label || 'entry'}, ${status}${isActive ? ', current' : ''}`;
+      return `
+        <g class="${cls.join(' ')}"
+           role="button"
+           tabindex="0"
+           data-entry-id="${escHtml(entryId)}"
+           data-entry-index="${i}"
+           aria-label="${escHtml(ariaLabel)}">
+          <rect x="${x - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect>
+          <circle cx="${x}" cy="${strokeY}" r="${r}"></circle>
+          ${isActive ? `<text x="${x}" y="${strokeY + 25}">${label}</text>` : ''}
+        </g>
+      `;
+    }).join('');
+
+    // If backbone is empty, render a synthetic single node
+    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--locked is-active" role="button" tabindex="0" data-entry-id="core-thesis" data-entry-index="0" aria-label="core thesis, locked, current"><rect x="${padX - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
+
+    const stripEdges = backbone.slice(1).map((_, i) => {
+      const x1 = padX + i * stepX;
+      const x2 = padX + (i + 1) * stepX;
+      const isActiveEdge = i + 1 === activeIdx;
+      return `<line class="concept-strip__edge${isActiveEdge ? ' is-active' : ''}" x1="${x1}" y1="${strokeY}" x2="${x2}" y2="${strokeY}"></line>`;
+    }).join('');
+
+    const stripActiveLabel = activeEntry.label
+      ? `${escHtml(activeEntry.label)} · ${activeIdx + 1} of ${totalNodes}`
+      : `${activeIdx + 1} of ${totalNodes}`;
+
+    // Build the work column HTML via the shared helper
+    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data);
+
+    // Mount the whole thing
+    mountEl.classList.add('concept-page-b2');
+    mountEl.innerHTML = `
+      <div class="concept-strip">
+        <div class="concept-strip__inner">
+          <div class="concept-strip__tooltip" id="concept-strip-tooltip" hidden></div>
+          <svg class="concept-strip__svg" viewBox="0 0 ${stripWidth} ${stripHeight}" preserveAspectRatio="xMidYMid meet">
+            ${stripEdges}
+            ${stripNodesHtml}
+          </svg>
+          <div class="concept-strip__overlay">
+            <span class="eyebrow">draft route</span>
+            <span class="concept-strip__active-name">${stripActiveLabel}</span>
+          </div>
+        </div>
+      </div>
+      <div class="concept-page-b2__doc">
+        ${docHtml}
+      </div>
+    `;
+
+    // Set module-level active entry state
+    _activeEntryId = activeEntry.id || `entry-${activeIdx}`;
+
+    // Wire CTA and re-edit affordance
+    const docEl = mountEl.querySelector('.concept-page-b2__doc');
+    if (docEl) rebindActiveEntryHandlers(docEl, concept, data);
+
+    // Wire strip-node click + keyboard nav
+    const stripContainer = mountEl.querySelector('.concept-strip__inner');
+    const tooltip = mountEl.querySelector('#concept-strip-tooltip');
+    if (stripContainer) {
+      stripContainer.addEventListener('click', (e) => {
+        const node = e.target.closest('.concept-strip__node');
+        if (!node) return;
+        const id = node.getAttribute('data-entry-id');
+        if (id) setActiveEntry(id, data, concept);
+      });
+
+      stripContainer.addEventListener('keydown', (e) => {
+        const node = e.target.closest('.concept-strip__node');
+        if (e.key === 'Enter' || e.key === ' ') {
+          const id = node?.getAttribute('data-entry-id');
+          if (id) {
+            e.preventDefault();
+            setActiveEntry(id, data, concept);
+          }
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const dir = e.key === 'ArrowLeft' ? -1 : 1;
+          const currentIdx = backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId);
+          const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
+          const nextNode = backbone[nextIdx];
+          if (nextNode) {
+            const nextId = nextNode.id || `entry-${nextIdx}`;
+            setActiveEntry(nextId, data, concept);
+            // Move keyboard focus to the new active node
+            const nextG = mountEl.querySelector(`.concept-strip__node[data-entry-id="${nextId}"]`);
+            nextG?.focus();
+          }
+        }
+      });
+
+      // Hover tooltip for non-active nodes
+      if (tooltip) {
+        stripContainer.addEventListener('mouseover', (e) => {
+          const node = e.target.closest('.concept-strip__node');
+          if (!node || node.classList.contains('is-active')) {
+            tooltip.removeAttribute('data-visible');
+            tooltip.hidden = true;
+            return;
+          }
+          const idx = parseInt(node.getAttribute('data-entry-index'), 10);
+          const entry = backbone[idx];
+          if (!entry) return;
+          const circle = node.querySelector('circle');
+          if (!circle) return;
+          const containerRect = stripContainer.getBoundingClientRect();
+          const circleRect = circle.getBoundingClientRect();
+          tooltip.textContent = entry.label || `entry ${idx + 1}`;
+          tooltip.style.left = `${circleRect.left + circleRect.width / 2 - containerRect.left}px`;
+          tooltip.style.top = `${circleRect.top - containerRect.top - 8}px`;
+          tooltip.hidden = false;
+          requestAnimationFrame(() => tooltip.setAttribute('data-visible', 'true'));
+        });
+
+        stripContainer.addEventListener('mouseleave', () => {
+          tooltip.removeAttribute('data-visible');
+          setTimeout(() => { tooltip.hidden = true; }, 200);
+        });
+      }
+    }
+  }
+
   function showMapView(concept, opts = {}) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
-    const graphContent = document.getElementById('graph-content');
     const heroCard = document.querySelector('.hero-card');
     const libraryView = document.getElementById('library-view');
 
@@ -1950,14 +2358,9 @@ const App = (() => {
     }
 
     const meta = data.metadata || {};
-    const backbone = data.backbone || [];
-    const clusters = data.clusters || [];
-    const rels = data.relationships || { domain_mechanics: [], learning_prerequisites: [] };
-    const fws = data.frameworks || [];
 
     const titleEl = document.getElementById('concept-header-title');
     const tagsEl = document.getElementById('concept-header-tags');
-    const drillBtn = document.getElementById('concept-start-drill');
     if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
     if (tagsEl) {
       let tagsHtml = '';
@@ -1965,188 +2368,18 @@ const App = (() => {
       if (stateLabel && stateLabel !== 'no concepts yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
-      if (meta.low_density) tagsHtml += `<span class="map-low-density">lightweight draft</span>`;
+      if (meta.low_density) tagsHtml += `<span class="map-low-density">thin sketch</span>`;
       tagsEl.innerHTML = tagsHtml;
     }
-    if (drillBtn) {
-      const showDrill = concept.state === 'growing' || concept.state === 'fractured';
-      drillBtn.hidden = !showDrill;
-      drillBtn.textContent = concept.state === 'fractured' ? 'Repair Gap' : 'Try from memory';
-    }
 
-    const domMechs = rels.domain_mechanics || [];
-    const lrnPreqs = rels.learning_prerequisites || [];
-    const nodeStateLabel = (status) => {
-      if (status === 'solidified' || status === 'solid') return 'solidified through spaced reconstruction';
-      if (status === 'drilled') return 'worth revisiting';
-      if (status === 'primed') return 'primed for study';
-      return 'ready for first attempt';
-    };
-    const nodeStateClass = (status) => {
-      if (status === 'solidified' || status === 'solid') return 'solid';
-      if (status === 'drilled') return 'drilled';
-      if (status === 'primed') return 'primed';
-      return 'locked';
-    };
-    const hasLearnerEvidence = (status) => (
-      status === 'primed'
-      || status === 'drilled'
-      || status === 'solidified'
-      || status === 'solid'
-    );
-    const allDrillRooms = [
-      { label: 'Core thesis', drill_status: meta.drill_status },
-      ...backbone.map((item, index) => ({
-        label: `Suggested branch ${index + 1}`,
-        drill_status: item?.drill_status || null,
-      })),
-      ...clusters.flatMap((cluster) => (cluster.subnodes || []).map((subnode) => ({
-        label: subnode?.label || 'Entry',
-        drill_status: subnode?.drill_status || null,
-      }))),
-    ];
-    const attemptedCount = allDrillRooms.filter((room) => (
-      room.drill_status === 'primed'
-      || room.drill_status === 'drilled'
-      || room.drill_status === 'solidified'
-      || room.drill_status === 'solid'
-    )).length;
-    const solidifiedCount = allDrillRooms.filter((room) => (
-      room.drill_status === 'solidified'
-      || room.drill_status === 'solid'
-    )).length;
+    renderConceptPageB2(mapContent, data, concept);
 
-    let html = '';
-
-    const startingMapContext = String(concept.startingMapContext || meta.starting_map_context || '').trim();
-    const hasAnyAttemptEvidence = hasStudyEvidence(meta)
-      || backbone.some((item) => hasStudyEvidence(item))
-      || clusters.some((cluster) => hasStudyEvidence(cluster) || (cluster.subnodes || []).some((subnode) => hasStudyEvidence(subnode)));
-
-    html += `
-      <section class="map-zone map-threshold-zone">
-        <div class="map-section-title">Concept Threshold</div>
-        <div class="map-threshold-panel">
-          <p class="map-threshold-lead">This is global context. The first entry will ask one smaller question.</p>
-          <blockquote class="map-threshold-quote">${escHtml(startingMapContext || 'No threshold context was captured for this concept.')}</blockquote>
-        </div>
-      </section>
-      <section class="map-zone map-provisional-zone">
-        <div class="map-section-title">Provisional Graph</div>
-        <div class="map-provisional-panel">
-          <p class="map-provisional-copy">The route below is a hypothesis from the source and your threshold. It has not changed graph truth.</p>
-          <div class="map-provisional-legend" aria-label="Provisional graph legend">
-            <span>draft route</span>
-            <span>ready for first attempt</span>
-            <span>locked</span>
-          </div>
-          ${meta.low_density
-            ? `<p class="map-provisional-low-density">Drafted from a thin sketch. The route is intentionally sparse — your first cold attempt will fill in what the sketch left out.</p>`
-            : ''}
-        </div>
-      </section>
-      <section class="map-zone map-first-room-zone">
-        <div class="map-section-title">First Cold Attempt</div>
-        <div class="map-first-room">
-          <div>
-            <div class="map-first-room-kicker">Starting Entry</div>
-            <h3>Core thesis</h3>
-            <p>The first entry asks for the governing idea, not the whole source.</p>
-          </div>
-          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first entry</button>
-        </div>
-      </section>
-    `;
-
-    if (backbone.length > 0) {
-      html += '<div class="map-zone zone-2">';
-      html += '<div class="map-section-title">Draft Route</div>';
-      backbone.forEach((b, idx) => {
-        const hasEvidence = hasStudyEvidence(b);
-        const stateLabel = hasEvidence ? 'primed for study' : 'locked';
-        const routeLabel = hasEvidence ? (b.principle || `Backbone entry ${idx + 1}`) : `Backbone entry ${idx + 1}`;
-        html += `
-          <div class="map-backbone-item">
-            <span>${escHtml(shortOnboardingText(routeLabel, 110))}</span>
-            <span class="map-route-state">${escHtml(stateLabel)}</span>
-          </div>
-        `;
-      });
-      html += '</div>';
-    }
-
-    if (clusters.length > 0) {
-      html += '<div class="map-zone zone-3">';
-      html += '<div class="map-section-title">Nearby Entries</div>';
-      clusters.forEach((c, idx) => {
-        const isFirst = idx === 0 ? 'expanded' : '';
-        const clusterHasEvidence = hasStudyEvidence(c) || (c.subnodes || []).some((subnode) => hasStudyEvidence(subnode));
-        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby section ${idx + 1}`) : `Nearby section ${idx + 1}`;
-        html += `
-          <div class="map-cluster-card ${isFirst}" onclick="App.toggleCluster(this)">
-            <div class="map-cluster-header">
-              <span>${escHtml(clusterLabel)}</span>
-              <span class="map-cluster-icon">▾</span>
-            </div>
-            <div class="map-cluster-body" onclick="event.stopPropagation()">
-              <div class="map-cluster-desc">${clusterHasEvidence ? escHtml(c.description || '') : 'Purpose only for now. Study content stays locked until a cold attempt creates something to repair.'}</div>
-        `;
-        const subnodes = c.subnodes || [];
-        subnodes.forEach((sub, subIdx) => {
-          const subHasEvidence = hasStudyEvidence(sub);
-          const stateClass = nodeStateClass(sub.drill_status);
-          const roomLabel = subHasEvidence ? (sub.label || `Entry ${subIdx + 1}`) : `Locked entry ${subIdx + 1}`;
-          const mechanismCopy = subHasEvidence
-            ? (sub.mechanism || 'Study material available after the recorded attempt.')
-            : 'locked study silhouette. Open the entry before the mechanism appears.';
-          html += `
-             <div class="map-subnode-row">
-               <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
-               <div class="map-subnode-content">
-                 <div class="map-subnode-label">${escHtml(roomLabel)}</div>
-                 <div class="map-subnode-mech${subHasEvidence ? '' : ' is-locked'}">${escHtml(mechanismCopy)}</div>
-               </div>
-             </div>
-           `;
-        });
-        html += `</div></div>`;
-      });
-      html += '</div>';
-    }
-
-    if (hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0)) {
-      html += '<div class="map-zone zone-4">';
-      html += '<div class="map-section-title">Connection Hints</div>';
-      if (domMechs.length) html += `<div class="map-cx-item"><strong>Domain links:</strong> ${escHtml(String(domMechs.length))} proposed source relationships.</div>`;
-      if (lrnPreqs.length) html += `<div class="map-cx-item"><strong>Prerequisite links:</strong> ${escHtml(String(lrnPreqs.length))} proposed route constraints.</div>`;
-      html += '</div>';
-    }
-
-    if (!hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0 || fws.length > 0)) {
-      html += `
-        <div class="map-zone map-locked-study-zone">
-          <div class="map-section-title">Locked Study Silhouette</div>
-          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one entry has a cold attempt on record.</p>
-        </div>
-      `;
-    }
-
-    if (hasAnyAttemptEvidence && fws.length > 0) {
-      html += '<div class="map-zone zone-5">';
-      html += '<div class="map-section-title">Framework Notes</div>';
-      html += `<div class="map-fw-card">
-        <div class="map-fw-name">${escHtml(`${fws.length} source frameworks held back`)}</div>
-        <div class="map-fw-state">They stay out of the draft view so the cold attempt remains generative.</div>
-      </div>`;
-      html += '</div>';
-    }
-
-    mapContent.innerHTML = html;
-
+    // Graph view deleted (strip-as-nav port). The knowledge graph controller
+    // is retained in case other surfaces still reference it; it becomes a
+    // no-op when graph-stage is absent from the DOM.
     destroyKnowledgeGraphController();
     if (drillUi) drillUi.style.display = 'none';
     if (chatHistory) chatHistory.innerHTML = '';
-    mountKnowledgeGraphController(data);
 
     clearSettingsPanel();
     setNavActive('nav-dashboard');
@@ -2156,9 +2389,8 @@ const App = (() => {
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
     setMapShellOpen(true);
-    if (graphContent) graphContent.hidden = false;
+    if (mapContent) mapContent.hidden = false;
     if (window.innerWidth < 900) closeDrawer();
-    setMapMode('study');
     restoreStudyResume(concept, data);
     // Skeleton-line is opt-in via opts.fromLaunchPad (default off). Centralised
     // here so callers don't have to hide-then-show after the teardown that
@@ -2200,35 +2432,19 @@ const App = (() => {
     if (launchPadView) launchPadView.setAttribute('hidden', '');
   }
 
-  function setMapMode(mode = 'study') {
-    currentMapMode = mode === 'graph' ? 'graph' : 'study';
-    const studyBtn = document.getElementById('map-mode-study');
-    const graphBtn = document.getElementById('map-mode-graph');
+  // setMapMode: formerly switched between the Route and Graph views.
+  // The Graph view has been deleted (strip-as-nav port, 2026-05-11).
+  // Retained as a no-op so call sites in startDrill, restoreStudyResume,
+  // etc. continue to compile without a cascade of edits; they will be
+  // cleaned up when those flows are refactored in a follow-up.
+  function setMapMode() {
     const mapContent = document.getElementById('map-content');
-    const graphContent = document.getElementById('graph-content');
-
-    if (studyBtn) studyBtn.classList.toggle('active', currentMapMode === 'study');
-    if (graphBtn) graphBtn.classList.toggle('active', currentMapMode === 'graph');
-    if (studyBtn) studyBtn.setAttribute('aria-pressed', String(currentMapMode === 'study'));
-    if (graphBtn) graphBtn.setAttribute('aria-pressed', String(currentMapMode === 'graph'));
-    if (mapContent) mapContent.hidden = currentMapMode !== 'study';
-    if (graphContent) graphContent.hidden = currentMapMode !== 'graph';
-
-    if (currentMapMode === 'graph' && currentGraphController) {
-      requestAnimationFrame(() => currentGraphController?.resize());
-    }
+    if (mapContent) mapContent.hidden = false;
   }
 
-  function bindMapModeControls() {
-    const modeButtons = document.querySelectorAll('[data-map-mode]');
-    modeButtons.forEach((button) => {
-      if (button.dataset.boundMapMode === 'true') return;
-      button.dataset.boundMapMode = 'true';
-      button.addEventListener('click', () => {
-        setMapMode(button.dataset.mapMode);
-      });
-    });
-  }
+  // bindMapModeControls: no longer needed (toggle markup deleted).
+  // Retained as a no-op so the initialization block can stay untouched.
+  function bindMapModeControls() {}
 
   function setNavActive(id) {
     currentPrimaryNav = id;
@@ -2505,6 +2721,10 @@ const App = (() => {
     _normalizationIdx: 0,
     sessionCompletePending: false,
   };
+
+  // Tracks the last AI question shown in the chamber so the next learner
+  // turn can be paired with it in history. Owned by requestDrillTurn.
+  let chamberLastShownQuestion = '';
 
   // Boot routing runs AFTER drillState is initialized because showIgnition()
   // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
@@ -3368,7 +3588,12 @@ const App = (() => {
     const nodeType = resolveNodeType(knowledgeMap, drillState.node.id, drillState.node.type);
     const clusterId = resolveClusterId(knowledgeMap, drillState.node.id);
     const nodeLabel = drillState.node.fullLabel || drillState.node.label || concept.name;
-    const bypassSessionLimits = false;
+    // TODO(post-launch): re-enable session limits with friendlier copy.
+    // Doctrinally the per-entry retry cap (3) and per-session entry cap (4)
+    // are real spaced-retrieval guards. For MVP they block the founder's
+    // own iteration loop and confuse first learners with "Retrieval ceiling
+    // reached" blocks. Re-introduce as soft suggestions, not hard gates.
+    const bypassSessionLimits = true;
 
     const apiKey = localStorage.getItem('gemini_key') || undefined;
     const nodeData = resolveNodeData(knowledgeMap, drillState.node.id) || {};
@@ -3448,6 +3673,13 @@ const App = (() => {
             chatInput.focus();
           }
         }
+        // Mirror disabled state to the chamber composer. The first AI
+        // response also tears down the "preparing your first question"
+        // loading placeholder.
+        if (window.DrillChamber) {
+          window.DrillChamber.setLoading?.(false);
+          window.DrillChamber.setComposerEnabled(!(completedNodeTurn || !!data.session_terminated));
+        }
         if (completedNodeTurn) {
           currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'study' : 'post-drill', activeDrillNode);
           if (completedColdAttempt) {
@@ -3471,7 +3703,11 @@ const App = (() => {
         const msgIdx = drillState._normalizationIdx % normalizationMessages.length;
         drillState._normalizationIdx += 1;
         appendBubble('ai', normalizationMessages[msgIdx]);
-        appendFirstColdAttemptCreed();
+        if (window.DrillChamber && typeof window.DrillChamber.appendCreed === 'function') {
+          window.DrillChamber.appendCreed();
+        } else if (chatHistory) {
+          appendFirstColdAttemptCreed(); // legacy fallback (chat-history present)
+        }
         if (chatInput) chatInput.disabled = true;
         drillState.pending = true;
         showTypingIndicator();
@@ -3520,7 +3756,13 @@ const App = (() => {
       return;
     }
 
-    if ((nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled') && !isReDrillEligible(nodeData, nodeContext.id)) {
+    // TODO(post-launch): see paired comment ~line 3592. All four guards
+    // below (re-drill spacing, 4-entries-per-session, time limit,
+    // 3-retries-per-entry) are doctrinally sound but block iteration.
+    // Re-introduce as suggestions when we add real telemetry.
+    const bypassSessionLimits = true;
+
+    if (!bypassSessionLimits && (nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled') && !isReDrillEligible(nodeData, nodeContext.id)) {
       const blockReason = getSpacingBlockReason(nodeData, nodeContext.id);
       currentGraphController?.showBlockedMessage?.(blockReason.headline, blockReason.body);
       return;
@@ -3529,7 +3771,6 @@ const App = (() => {
     const visitedNodeIds = Array.isArray(sessionState.visitedNodeIds) ? sessionState.visitedNodeIds : [];
     const isNewSessionNode = !visitedNodeIds.includes(nodeContext.id);
     const uniqueNodeCount = getSessionNodeCount();
-    const bypassSessionLimits = false;
 
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
       currentGraphController?.showBlockedMessage?.(
@@ -3552,10 +3793,12 @@ const App = (() => {
       return;
     }
 
-    if (isNewSessionNode) markNodeVisitedThisSession(nodeContext.id);
-    sessionState.retriesByNode[nodeContext.id] = (sessionState.retriesByNode[nodeContext.id] || 0) + 1;
-    if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
-    persistSessionState();
+    if (!bypassSessionLimits) {
+      if (isNewSessionNode) markNodeVisitedThisSession(nodeContext.id);
+      sessionState.retriesByNode[nodeContext.id] = (sessionState.retriesByNode[nodeContext.id] || 0) + 1;
+      if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
+      persistSessionState();
+    }
 
     drillState.active = true;
     drillState.messages = [];
@@ -3591,10 +3834,59 @@ const App = (() => {
     setMapMode('graph');
     document.body.classList.add('is-drilling');
 
+    // Show the ironclad chamber view.
+    const conceptName = concept?.name || concept?.metadata?.name || 'Concept';
+    const entryName = nodeContext.fullLabel || nodeContext.id || 'Entry';
+    if (window.DrillChamber) {
+      window.DrillChamber.show({
+        conceptName,
+        entryName,
+        question: nodeContext.detail || 'Explain this in your own words.',
+      });
+      // Seed the last-shown question so the FIRST history pair records
+      // the actual question the learner saw (the seed prompt from the
+      // node detail). Without this, chamberLastShownQuestion is '' on
+      // the first send because appendBubble('ai',...) hasn't run yet
+      // (it fires after requestDrillTurn resolves, not before).
+      chamberLastShownQuestion = nodeContext.detail || 'Explain this in your own words.';
+      // Show "preparing your first question" placeholder while the
+      // initial /api/drill round trip lands. The Gemini cold-start can
+      // be 5-10s; without a visible state, the disabled composer reads
+      // as broken. setLoading flips the placeholder + disables input.
+      window.DrillChamber.setLoading?.(true);
+
+      window.DrillChamber.onSend(async (text) => {
+        if (!text || drillState.pending) return;
+        // Accumulate the completed turn into history before the next round trip.
+        // The AI side is the question we'd just been asking the learner;
+        // the learner side is what they just wrote.
+        window.DrillChamber.appendHistoryTurn('ai', chamberLastShownQuestion || '');
+        window.DrillChamber.appendHistoryTurn('learner', text);
+        window.DrillChamber.setComposerEnabled(false);
+        try {
+          await requestDrillTurn(text);
+        } catch (err) {
+          console.error(err);
+          window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
+          window.DrillChamber.setComposerEnabled(true);
+        }
+      });
+
+      window.DrillChamber.onExit(() => {
+        cancelDrill();
+      });
+    }
+
     requestDrillTurn().catch((err) => {
       console.error(err);
       hideTypingIndicator();
-      appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
+      if (window.DrillChamber) {
+        window.DrillChamber.setLoading?.(false);
+        window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
+        window.DrillChamber.setComposerEnabled(true);
+      } else {
+        appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
+      }
       drillState.pending = false;
       if (chatInput) chatInput.disabled = false;
       currentGraphController?.setInteractionMode?.('inspect');
@@ -3602,6 +3894,11 @@ const App = (() => {
   }
 
   function cancelDrill() {
+    // Hide the chamber first, before any other state cleanup.
+    if (window.DrillChamber) {
+      window.DrillChamber.hide();
+    }
+
     const shouldShowSessionComplete = drillState.sessionCompletePending;
     drillState.sessionToken += 1;
     drillState.active = false;
@@ -3612,6 +3909,7 @@ const App = (() => {
     drillState.probeCount = 0;
     drillState.helpTurnCount = 0;
     drillState.sessionCompletePending = false;
+    chamberLastShownQuestion = '';
     if (drillUi) drillUi.style.display = 'none';
     document.body.classList.remove('is-drilling');
     activeDrillNode = null;
@@ -3623,6 +3921,12 @@ const App = (() => {
     currentGraphController?.clearActiveDrillNode?.();
     currentGraphController?.setInteractionMode?.(shouldShowSessionComplete ? 'session-complete' : 'inspect');
     persistPhaseBResumeState(null);
+
+    // Restore the concept page view (map + detail).
+    const activeConcept = getActiveConcept();
+    if (activeConcept) {
+      showMapView(activeConcept);
+    }
   }
 
   let typingIndicatorElement = null;
@@ -3656,6 +3960,15 @@ const App = (() => {
   }
 
   function appendBubble(role, text) {
+    if (role === 'ai' && window.DrillChamber) {
+      // Route AI messages through the chamber view instead of the old chat history.
+      // Note: composer enable/disable state is set by the calling context
+      // (handleVisualTransition), not here, so the completedNodeTurn path is honoured.
+      chamberLastShownQuestion = text || '';
+      window.DrillChamber.swapQuestion(text || '');
+      return;
+    }
+    // Fallback: render into the legacy embedded chat history if present.
     if (!chatHistory) return;
     const bubble = document.createElement('div');
     bubble.className = `chat-bubble ${role}`;
