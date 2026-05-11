@@ -1924,6 +1924,180 @@ const App = (() => {
 
   // ── 16. Map View UI ────────────────────────────────────────
 
+  /**
+   * Render the B-2 "Strip + page" concept page layout into #map-content.
+   * Replaces the prior Route view card stack.
+   *
+   * @param {HTMLElement} mountEl - The #map-content element
+   * @param {Object} data - Parsed graphData (metadata, backbone, clusters, relationships)
+   * @param {Object} concept - The full concept object (for threshold text + name)
+   */
+  function renderConceptPageB2(mountEl, data, concept) {
+    if (!mountEl || !data) return;
+    const meta = data.metadata || {};
+    const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+
+    // Threshold text -- use concept.startingMapContext / meta.starting_map_context
+    // (the learner's sketch), else fall back to data.metadata.core_thesis.
+    const thresholdText = (
+      concept?.startingMapContext
+      || meta.starting_map_context
+      || concept?.threshold
+      || meta.core_thesis
+      || ''
+    ).trim();
+    const conceptName = meta.source_title || concept?.name || 'Concept';
+
+    // Identify the active entry. For v1: first backbone entry that isn't
+    // 'solidified' (i.e., the next thing to attempt). Falls back to first
+    // backbone entry, then to a synthetic core-thesis stub.
+    const isActionable = (n) => {
+      const status = n?.drill_status || 'locked';
+      return status !== 'solidified';
+    };
+    const activeEntry = backbone.find(isActionable) || backbone[0] || {
+      id: 'core-thesis',
+      label: 'Core thesis',
+      purpose: 'The first entry asks for the governing idea, not the whole source.',
+      drill_status: 'locked',
+    };
+    const activeIdx = Math.max(0, backbone.indexOf(activeEntry));
+
+    // Nearby entries: every backbone entry that isn't the active one
+    const nearby = backbone.filter((n) => n !== activeEntry);
+
+    // Build the strip SVG
+    const stripWidth = 600;
+    const stripHeight = 110;
+    const strokeY = stripHeight / 2;
+    const totalNodes = backbone.length || 1;
+    const padX = 60;
+    const span = stripWidth - 2 * padX;
+    const stepX = totalNodes > 1 ? span / (totalNodes - 1) : 0;
+
+    const stripNodes = backbone.map((node, i) => {
+      const x = padX + i * stepX;
+      const status = node.drill_status || 'locked';
+      const isPrimed = status === 'primed' || status === 'drilled' || status === 'solidified';
+      const isActive = i === activeIdx;
+      const cls = ['concept-strip__node', isPrimed ? 'concept-strip__node--primed' : 'concept-strip__node--locked'];
+      if (isActive) cls.push('is-active');
+      const r = isActive ? 9 : (isPrimed ? 7 : 6);
+      return `<g class="${cls.join(' ')}"><circle cx="${x}" cy="${strokeY}" r="${r}"></circle>${
+        isActive ? `<text x="${x}" y="${strokeY + 25}">${escHtml(node.label || 'entry')}</text>` : ''
+      }</g>`;
+    }).join('');
+
+    // If backbone is empty, render a synthetic single node
+    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--locked is-active"><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
+
+    const stripEdges = backbone.slice(1).map((_, i) => {
+      const x1 = padX + i * stepX;
+      const x2 = padX + (i + 1) * stepX;
+      const isActiveEdge = i + 1 === activeIdx;
+      return `<line class="concept-strip__edge${isActiveEdge ? ' is-active' : ''}" x1="${x1}" y1="${strokeY}" x2="${x2}" y2="${strokeY}"></line>`;
+    }).join('');
+
+    const stripActiveLabel = activeEntry.label
+      ? `${escHtml(activeEntry.label)} -- ${activeIdx + 1} of ${totalNodes}`
+      : `${activeIdx + 1} of ${totalNodes}`;
+
+    // Build the threshold quote (with re-edit affordance)
+    const thresholdHtml = thresholdText
+      ? `
+        <p class="concept-page-b2__threshold">
+          ${escHtml(thresholdText)}
+          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
+        </p>
+      `
+      : `
+        <p class="concept-page-b2__threshold concept-page-b2__threshold--empty">
+          You have not yet sketched what you think is inside this concept.
+          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
+        </p>
+      `;
+
+    // Build the active entry block
+    const entryEyebrow = `${escHtml(activeEntry.drill_status === 'primed' ? 're-drill ready -- entry' : 'first cold attempt -- entry')} ${activeIdx + 1} of ${totalNodes}`;
+    const entryPurpose = activeEntry.purpose || 'The first entry asks for the governing idea, not the whole source. No study material yet -- write what you can reconstruct from memory.';
+    const ctaLabel = activeEntry.drill_status === 'primed' ? 'Re-drill from memory' : 'Try from memory';
+
+    const activeHtml = `
+      <span class="eyebrow concept-page-b2__entry-eyebrow">${entryEyebrow}</span>
+      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
+      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
+      <button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntry.id || 'core-thesis')}">${ctaLabel}</button>
+    `;
+
+    // Build the nearby list
+    const nearbyHtml = nearby.length
+      ? `
+        <section class="concept-page-b2__nearby">
+          <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries -- all locked until first attempt</span>
+          <div class="concept-page-b2__nearby-list">
+            ${nearby.map((n) => {
+              const num = String(backbone.indexOf(n) + 1).padStart(2, '0');
+              const label = escHtml(n.label || 'entry');
+              const status = (n.drill_status || 'locked').toUpperCase();
+              return `
+                <div class="concept-page-b2__nearby-item">
+                  <span class="concept-page-b2__nearby-num">${num}</span>
+                  <span>${label}</span>
+                  <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `
+      : '';
+
+    // Mount the whole thing
+    mountEl.classList.add('concept-page-b2');
+    mountEl.innerHTML = `
+      <div class="concept-strip">
+        <div class="concept-strip__inner">
+          <svg class="concept-strip__svg" viewBox="0 0 ${stripWidth} ${stripHeight}" preserveAspectRatio="xMidYMid meet">
+            ${stripEdges}
+            ${stripNodesHtml}
+          </svg>
+          <div class="concept-strip__overlay">
+            <span class="eyebrow">draft route</span>
+            <span class="concept-strip__active-name">${stripActiveLabel}</span>
+          </div>
+        </div>
+      </div>
+      <div class="concept-page-b2__doc">
+        ${thresholdHtml}
+        ${activeHtml}
+        ${nearbyHtml}
+      </div>
+    `;
+
+    // Wire the CTA. Reuse the existing startDrillFromMap path.
+    const ctaBtn = mountEl.querySelector('.concept-page-b2__entry-cta');
+    if (ctaBtn) {
+      ctaBtn.addEventListener('click', () => {
+        window.App?.startDrillFromMap?.();
+      });
+    }
+
+    // Wire the re-edit affordance. v1: route to ignition launch pad with
+    // the existing concept selected. If that route doesn't exist yet, log
+    // a console hint and accept (placeholder for v1.1).
+    const editLinks = mountEl.querySelectorAll('[data-edit-threshold]');
+    editLinks.forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.App?.editThresholdForActiveConcept === 'function') {
+          window.App.editThresholdForActiveConcept();
+        } else {
+          console.info('[concept-page] re-edit sketch requested; route not wired (v1.1)');
+        }
+      });
+    });
+  }
+
   function showMapView(concept, opts = {}) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
@@ -1951,10 +2125,6 @@ const App = (() => {
     }
 
     const meta = data.metadata || {};
-    const backbone = data.backbone || [];
-    const clusters = data.clusters || [];
-    const rels = data.relationships || { domain_mechanics: [], learning_prerequisites: [] };
-    const fws = data.frameworks || [];
 
     const titleEl = document.getElementById('concept-header-title');
     const tagsEl = document.getElementById('concept-header-tags');
@@ -1969,174 +2139,7 @@ const App = (() => {
       tagsEl.innerHTML = tagsHtml;
     }
 
-    const domMechs = rels.domain_mechanics || [];
-    const lrnPreqs = rels.learning_prerequisites || [];
-    const nodeStateLabel = (status) => {
-      if (status === 'solidified' || status === 'solid') return 'solidified through spaced reconstruction';
-      if (status === 'drilled') return 'worth revisiting';
-      if (status === 'primed') return 'primed for study';
-      return 'ready for first attempt';
-    };
-    const nodeStateClass = (status) => {
-      if (status === 'solidified' || status === 'solid') return 'solid';
-      if (status === 'drilled') return 'drilled';
-      if (status === 'primed') return 'primed';
-      return 'locked';
-    };
-    const hasLearnerEvidence = (status) => (
-      status === 'primed'
-      || status === 'drilled'
-      || status === 'solidified'
-      || status === 'solid'
-    );
-    const allDrillRooms = [
-      { label: 'Core thesis', drill_status: meta.drill_status },
-      ...backbone.map((item, index) => ({
-        label: `Suggested branch ${index + 1}`,
-        drill_status: item?.drill_status || null,
-      })),
-      ...clusters.flatMap((cluster) => (cluster.subnodes || []).map((subnode) => ({
-        label: subnode?.label || 'Entry',
-        drill_status: subnode?.drill_status || null,
-      }))),
-    ];
-    const attemptedCount = allDrillRooms.filter((room) => (
-      room.drill_status === 'primed'
-      || room.drill_status === 'drilled'
-      || room.drill_status === 'solidified'
-      || room.drill_status === 'solid'
-    )).length;
-    const solidifiedCount = allDrillRooms.filter((room) => (
-      room.drill_status === 'solidified'
-      || room.drill_status === 'solid'
-    )).length;
-
-    let html = '';
-
-    const startingMapContext = String(concept.startingMapContext || meta.starting_map_context || '').trim();
-    const hasAnyAttemptEvidence = hasStudyEvidence(meta)
-      || backbone.some((item) => hasStudyEvidence(item))
-      || clusters.some((cluster) => hasStudyEvidence(cluster) || (cluster.subnodes || []).some((subnode) => hasStudyEvidence(subnode)));
-
-    html += `
-      <section class="map-zone map-threshold-zone">
-        <div class="map-section-title">Concept Threshold</div>
-        <div class="map-threshold-panel">
-          <p class="map-threshold-lead">This is global context. The first entry will ask one smaller question.</p>
-          <blockquote class="map-threshold-quote">${escHtml(startingMapContext || 'No threshold context was captured for this concept.')}</blockquote>
-        </div>
-      </section>
-      <section class="map-zone map-provisional-zone">
-        <div class="map-section-title">Provisional Graph</div>
-        <div class="map-provisional-panel">
-          <p class="map-provisional-copy">The route below is a hypothesis from the source and your threshold. It has not changed graph truth.</p>
-          <div class="map-provisional-legend" aria-label="Provisional graph legend">
-            <span>draft route</span>
-            <span>ready for first attempt</span>
-            <span>locked</span>
-          </div>
-          ${meta.low_density
-            ? `<p class="map-provisional-low-density">Drafted from a thin sketch. The route is intentionally sparse — your first cold attempt will fill in what the sketch left out.</p>`
-            : ''}
-        </div>
-      </section>
-      <section class="map-zone map-first-room-zone">
-        <div class="map-section-title">First Cold Attempt</div>
-        <div class="map-first-room">
-          <div>
-            <div class="map-first-room-kicker">Starting Entry</div>
-            <h3>Core thesis</h3>
-            <p>The first entry asks for the governing idea, not the whole source.</p>
-          </div>
-          <button class="btn-start-drill map-first-room-action" type="button" onclick="App.startDrillFromMap()">Start first entry</button>
-        </div>
-      </section>
-    `;
-
-    if (backbone.length > 0) {
-      html += '<div class="map-zone zone-2">';
-      html += '<div class="map-section-title">Draft Route</div>';
-      backbone.forEach((b, idx) => {
-        const hasEvidence = hasStudyEvidence(b);
-        const stateLabel = hasEvidence ? 'primed for study' : 'locked';
-        const routeLabel = hasEvidence ? (b.principle || `Backbone entry ${idx + 1}`) : `Backbone entry ${idx + 1}`;
-        html += `
-          <div class="map-backbone-item">
-            <span>${escHtml(shortOnboardingText(routeLabel, 110))}</span>
-            <span class="map-route-state">${escHtml(stateLabel)}</span>
-          </div>
-        `;
-      });
-      html += '</div>';
-    }
-
-    if (clusters.length > 0) {
-      html += '<div class="map-zone zone-3">';
-      html += '<div class="map-section-title">Nearby Entries</div>';
-      clusters.forEach((c, idx) => {
-        const isFirst = idx === 0 ? 'expanded' : '';
-        const clusterHasEvidence = hasStudyEvidence(c) || (c.subnodes || []).some((subnode) => hasStudyEvidence(subnode));
-        const clusterLabel = clusterHasEvidence ? (c.label || `Nearby section ${idx + 1}`) : `Nearby section ${idx + 1}`;
-        html += `
-          <div class="map-cluster-card ${isFirst}" onclick="App.toggleCluster(this)">
-            <div class="map-cluster-header">
-              <span>${escHtml(clusterLabel)}</span>
-              <span class="map-cluster-icon">▾</span>
-            </div>
-            <div class="map-cluster-body" onclick="event.stopPropagation()">
-              <div class="map-cluster-desc">${clusterHasEvidence ? escHtml(c.description || '') : 'Purpose only for now. Study content stays locked until a cold attempt creates something to repair.'}</div>
-        `;
-        const subnodes = c.subnodes || [];
-        subnodes.forEach((sub, subIdx) => {
-          const subHasEvidence = hasStudyEvidence(sub);
-          const stateClass = nodeStateClass(sub.drill_status);
-          const roomLabel = subHasEvidence ? (sub.label || `Entry ${subIdx + 1}`) : `Locked entry ${subIdx + 1}`;
-          const mechanismCopy = subHasEvidence
-            ? (sub.mechanism || 'Study material available after the recorded attempt.')
-            : 'locked study silhouette. Open the entry before the mechanism appears.';
-          html += `
-             <div class="map-subnode-row">
-               <div class="map-subnode-indicator" data-state="${escHtml(stateClass)}"></div>
-               <div class="map-subnode-content">
-                 <div class="map-subnode-label">${escHtml(roomLabel)}</div>
-                 <div class="map-subnode-mech${subHasEvidence ? '' : ' is-locked'}">${escHtml(mechanismCopy)}</div>
-               </div>
-             </div>
-           `;
-        });
-        html += `</div></div>`;
-      });
-      html += '</div>';
-    }
-
-    if (hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0)) {
-      html += '<div class="map-zone zone-4">';
-      html += '<div class="map-section-title">Connection Hints</div>';
-      if (domMechs.length) html += `<div class="map-cx-item"><strong>Domain links:</strong> ${escHtml(String(domMechs.length))} proposed source relationships.</div>`;
-      if (lrnPreqs.length) html += `<div class="map-cx-item"><strong>Prerequisite links:</strong> ${escHtml(String(lrnPreqs.length))} proposed route constraints.</div>`;
-      html += '</div>';
-    }
-
-    if (!hasAnyAttemptEvidence && (domMechs.length > 0 || lrnPreqs.length > 0 || fws.length > 0)) {
-      html += `
-        <div class="map-zone map-locked-study-zone">
-          <div class="map-section-title">Locked Study Silhouette</div>
-          <p class="map-locked-study-copy">Connections, frameworks, and solved mechanisms stay hidden until at least one entry has a cold attempt on record.</p>
-        </div>
-      `;
-    }
-
-    if (hasAnyAttemptEvidence && fws.length > 0) {
-      html += '<div class="map-zone zone-5">';
-      html += '<div class="map-section-title">Framework Notes</div>';
-      html += `<div class="map-fw-card">
-        <div class="map-fw-name">${escHtml(`${fws.length} source frameworks held back`)}</div>
-        <div class="map-fw-state">They stay out of the draft view so the cold attempt remains generative.</div>
-      </div>`;
-      html += '</div>';
-    }
-
-    mapContent.innerHTML = html;
+    renderConceptPageB2(mapContent, data, concept);
 
     destroyKnowledgeGraphController();
     if (drillUi) drillUi.style.display = 'none';
