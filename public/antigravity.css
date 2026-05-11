@@ -167,7 +167,7 @@ html[data-theme="dark"] body.antigravity-theme .library-kicker {
 }
 
 body.antigravity-theme .library-section-title {
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
+  font-family: Outfit, Manrope, Inter, sans-serif;
   font-size: clamp(1.5rem, 2.2vw + 0.4rem, 2rem);
   font-weight: 800;
   letter-spacing: -0.028em;
@@ -260,7 +260,7 @@ body.antigravity-theme .library-card-kicker {
 }
 
 body.antigravity-theme .library-card-name {
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
+  font-family: Outfit, Manrope, Inter, sans-serif;
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.018em;
@@ -419,7 +419,7 @@ html[data-theme="dark"] body.antigravity-theme .library-empty--ignition .witness
 
 body.antigravity-theme .library-empty-headline {
   margin: 0;
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
+  font-family: Outfit, Manrope, Inter, sans-serif;
   font-size: clamp(1.4rem, 1.4vw + 0.8rem, 1.75rem);
   font-weight: 500;
   letter-spacing: -0.022em;
@@ -541,7 +541,7 @@ body.antigravity-theme .settings-page-kicker .crystal-glyph {
 }
 
 body.antigravity-theme .settings-page-title {
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
+  font-family: Outfit, Manrope, Inter, sans-serif;
   font-size: clamp(1.6rem, 2.2vw + 0.4rem, 2.1rem);
   font-weight: 500;
   letter-spacing: -0.024em;
@@ -658,7 +658,7 @@ body.antigravity-theme .settings-display {
 }
 
 body.antigravity-theme .settings-section-heading {
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
+  font-family: Outfit, Manrope, Inter, sans-serif;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.10em;
@@ -842,7 +842,7 @@ body.antigravity-theme .desk-eyebrow-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: currentColor;
+  background: currentcolor;
 }
 
 body.antigravity-theme .desk-eyebrow-sep {
@@ -855,7 +855,7 @@ body.antigravity-theme .desk-eyebrow-date:empty::before {
 
 body.antigravity-theme .desk-title {
   margin: 4px 0 0;
-  font-family: 'Outfit', 'Manrope', 'Inter', sans-serif;
+  font-family: Outfit, Manrope, Inter, sans-serif;
   font-size: clamp(1.4rem, 1.4vw + 0.8rem, 1.75rem);
   font-weight: 400;
   font-style: italic;
@@ -896,7 +896,7 @@ body.antigravity-theme .desk-legend-item {
 body.antigravity-theme .desk-legend-facet {
   width: 10px;
   height: 10px;
-  border: 1px solid currentColor;
+  border: 1px solid currentcolor;
   transform: rotate(45deg);
   box-sizing: border-box;
 }
@@ -906,7 +906,7 @@ body.antigravity-theme .desk-legend-item[data-state="primed"]     { color: var(-
 body.antigravity-theme .desk-legend-item[data-state="drilled"]    { color: #B6741E; }
 body.antigravity-theme .desk-legend-item[data-state="solidified"] { color: var(--ag-violet); }
 body.antigravity-theme .desk-legend-item[data-state="solidified"] .desk-legend-facet {
-  background: currentColor;
+  background: currentcolor;
 }
 
 html[data-theme="dark"] body.antigravity-theme .desk-legend-item[data-state="primed"],
