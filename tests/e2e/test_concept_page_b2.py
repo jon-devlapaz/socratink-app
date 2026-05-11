@@ -1,16 +1,19 @@
 """End-to-end smoke for the B-2 concept page layout.
 
 Covers: open a concept page; strip, threshold, active entry, and
-nearby list all render; click 'Try from memory' opens the chamber;
-Route/Graph toggle is preserved.
+nearby list all render; click 'Try from memory' opens the chamber.
+
+Note: the Route/Graph toggle test was removed in the strip-as-nav port
+(2026-05-11). The toggle is gone. See test_strip_nav.py for the new
+strip-click and keyboard-nav coverage.
 
 Uses the same seed-via-localStorage + guest-auth pattern as test_smoke.py.
 The seeded concept has backbone entries so the nearby list renders.
 
 Navigation: uses the sidebar concept-item click (not the library card),
-because openLibraryConcept() immediately sets graph mode after calling
-showMapView(), which hides #map-content. The sidebar path calls showMapView()
-and stays in study mode (the B-2 layout path).
+because openLibraryConcept() immediately calls setMapMode which (as a
+no-op post-port) still works; the sidebar path calls showMapView()
+and renders the B-2 strip + page layout in #map-content.
 """
 from __future__ import annotations
 
@@ -62,6 +65,7 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
 
 def _seed_concept_with_backbone(page: Page, name: str = "Photosynthesis") -> None:
     """Seed a concept with backbone entries so the nearby list renders.
+    The first entry is primed so the CTA is enabled (for test_b2_cta_opens_chamber).
     Seeding happens BEFORE navigation so it is picked up on page load."""
     page.evaluate(
         f"""(() => {{
@@ -72,7 +76,7 @@ def _seed_concept_with_backbone(page: Page, name: str = "Photosynthesis") -> Non
                   starting_map_context: 'I think photosynthesis uses light to make sugar from CO2.',
                 }},
                 backbone: [
-                  {{ id: 'b1', label: 'Light reactions', drill_status: 'locked',
+                  {{ id: 'b1', label: 'Light reactions', drill_status: 'primed',
                      purpose: 'The first entry asks for the governing idea.' }},
                   {{ id: 'b2', label: 'Calvin cycle', drill_status: 'locked',
                      purpose: 'Carbon fixation via RuBisCO.' }},
@@ -136,13 +140,10 @@ def test_b2_cta_opens_chamber(clean_page: Page, base_url: str) -> None:
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=8_000)
 
 
-def test_b2_route_graph_toggle_preserved(clean_page: Page, base_url: str) -> None:
-    """Route/Graph toggle still works; switching to Graph shows graph-content."""
+def test_b2_no_route_graph_toggle(clean_page: Page, base_url: str) -> None:
+    """Route/Graph toggle and #graph-content are absent (strip-as-nav port)."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
     expect(clean_page.locator(".concept-strip__inner")).to_be_visible(timeout=8_000)
-    # Toggle to Graph
-    clean_page.evaluate("document.querySelector('#map-mode-graph')?.click()")
-    expect(clean_page.locator("#graph-content")).to_be_visible()
-    # Toggle back to Route
-    clean_page.evaluate("document.querySelector('#map-mode-study')?.click()")
-    expect(clean_page.locator(".concept-strip__inner")).to_be_visible()
+    expect(clean_page.locator("#map-mode-graph")).to_have_count(0)
+    expect(clean_page.locator("#map-mode-study")).to_have_count(0)
+    expect(clean_page.locator("#graph-content")).to_have_count(0)
