@@ -3704,7 +3704,11 @@ const App = (() => {
         const msgIdx = drillState._normalizationIdx % normalizationMessages.length;
         drillState._normalizationIdx += 1;
         appendBubble('ai', normalizationMessages[msgIdx]);
-        appendFirstColdAttemptCreed();
+        if (window.DrillChamber && typeof window.DrillChamber.appendCreed === 'function') {
+          window.DrillChamber.appendCreed();
+        } else if (chatHistory) {
+          appendFirstColdAttemptCreed(); // legacy fallback (chat-history present)
+        }
         if (chatInput) chatInput.disabled = true;
         drillState.pending = true;
         showTypingIndicator();

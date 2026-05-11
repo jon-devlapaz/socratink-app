@@ -177,6 +177,26 @@ function clearComposer() {
   els.composer.value = '';
 }
 
+/**
+ * Show the doctrinal first-cold-attempt creed in the chamber after
+ * generative_commitment === true. Three lines, diamond bullets,
+ * appended below the active question. Composer stays disabled --
+ * the creed is a completion beat, not a prompt for more input.
+ */
+function appendCreed() {
+  bind();
+  if (!els.view) return;
+  const creedHtml = `
+    <ul class="drill-chamber__creed">
+      <li><span class="drill-chamber__creed-diamond" aria-hidden="true"></span><span><strong>You tried first.</strong> The entry stayed quiet until your guess existed.</span></li>
+      <li><span class="drill-chamber__creed-diamond" aria-hidden="true"></span><span><strong>Study has a target now.</strong> Repair the gap this entry exposed.</span></li>
+      <li><span class="drill-chamber__creed-diamond" aria-hidden="true"></span><span><strong>Return later.</strong> Only spaced re-drill can change the record.</span></li>
+    </ul>
+  `;
+  els.question.insertAdjacentHTML('afterend', creedHtml);
+  setComposerEnabled(false);
+}
+
 function onSend(handler) { sendHandler = handler; }
 function onExit(handler) { exitHandler = handler; }
 
@@ -184,5 +204,6 @@ window.DrillChamber = {
   show, hide, appendHistoryTurn, swapQuestion,
   setComposerEnabled, setLoading,
   getComposerValue, clearComposer,
+  appendCreed,
   onSend, onExit,
 };
