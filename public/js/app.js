@@ -2369,7 +2369,7 @@ const App = (() => {
       if (stateLabel && stateLabel !== 'no concepts yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
-      if (meta.low_density) tagsHtml += `<span class="map-low-density">lightweight draft</span>`;
+      if (meta.low_density) tagsHtml += `<span class="map-low-density">thin sketch</span>`;
       tagsEl.innerHTML = tagsHtml;
     }
 

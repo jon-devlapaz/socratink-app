@@ -3,7 +3,27 @@
    Design-of-record: public/_lab/concept-page-iterations.html?variant=page
    Synthesis from Linear (single-pane work column) + Heptabase
    (constellation as orientation) + Notion (faint nearby list).
-   Founder pick. Customer-validated by Jordan/Gemini ADHD persona. */
+   Founder pick. Customer-validated. */
+
+/* ============================================================
+   Eyebrow -- the small uppercase mono label used throughout
+   the concept page (strip overlay, entry eyebrow, nearby header).
+   Without this base rule, .eyebrow inherits body text size and
+   reads as a heading, not a label.
+   ============================================================ */
+.concept-page-b2 .eyebrow,
+.concept-strip .eyebrow {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-secondary);
+  font-weight: 500;
+}
+[data-theme="dark"] .concept-page-b2 .eyebrow,
+[data-theme="dark"] .concept-strip .eyebrow {
+  color: rgba(176, 156, 224, 0.78);
+}
 
 /* ============================================================
    concept-strip -- constellation compressed to a band
@@ -334,4 +354,81 @@
 .concept-page-b2__threshold-save:hover {
   background: var(--primary-fill);
   transform: translateY(-1px);
+}
+
+/* ============================================================
+   Responsive -- the strip needs to stay legible across widths,
+   and the work column copy scales down on narrower viewports.
+   Single breakpoint at 720px keeps the spec tight; below that we
+   tighten paddings, shrink the entry title, and reflow the
+   strip overlay to sit above the strip itself rather than over
+   the constellation nodes.
+   ============================================================ */
+@media (max-width: 720px) {
+  .concept-strip {
+    padding: 0 16px;
+    margin: 12px auto 0;
+  }
+  .concept-strip__inner {
+    height: 96px;
+    border-radius: 12px;
+  }
+  /* On narrow screens, the overlay drops UNDER the constellation so
+     it never collides with nodes. The label keeps the surface chip
+     so it reads as a separate UI tag, not a label sitting on glass. */
+  .concept-strip__overlay {
+    position: absolute;
+    left: 12px; bottom: 8px; top: auto;
+    gap: 8px;
+  }
+  .concept-strip__active-name { font-size: 11px; padding: 3px 8px; }
+  .concept-page-b2 .concept-strip__overlay .eyebrow,
+  .concept-strip__overlay .eyebrow { padding: 3px 6px; }
+
+  .concept-page-b2__doc {
+    margin: 28px auto 64px;
+    padding: 0 20px;
+  }
+  .concept-page-b2__threshold {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 36px;
+  }
+  .concept-page-b2__entry-title {
+    font-size: 26px;
+    line-height: 1.18;
+  }
+  .concept-page-b2__entry-purpose {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+  .concept-page-b2__entry-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 18px;
+  }
+  .concept-page-b2__nearby {
+    margin-top: 56px;
+  }
+  .concept-page-b2__nearby-item {
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    font-size: 13px;
+  }
+}
+
+/* Below 480px: strip nodes can crowd if there are many entries.
+   Drop the strip overlay font and tighten outer padding further so
+   the constellation has room. The active-name still reads. */
+@media (max-width: 480px) {
+  .concept-strip {
+    padding: 0 12px;
+  }
+  .concept-strip__inner { height: 84px; }
+  .concept-strip__active-name {
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
