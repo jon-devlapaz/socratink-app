@@ -6,7 +6,6 @@ import {
   runRepairReps,
   runDrillTurn,
 } from './api-client.js?v=1';
-import { escHtml, mountKnowledgeGraph } from './graph-view.js?v=13';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -34,6 +33,16 @@ import {
   TILE_IDS, tileEls
 } from './dom.js';
 
+/** Escape a value for safe insertion into HTML. Inlined from the now-deleted graph-view.js. */
+function escHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 const App = (() => {
   const THEME_STORAGE_KEY = 'learnops-theme';
   const PHASE_B_SESSION_KEY_PREFIX = 'learnops-phase-b-session';
@@ -42,7 +51,6 @@ const App = (() => {
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
   const BOARD_SLOT_COUNT = TILE_IDS.length;
   let currentGraphController = null;
-  let currentMapMode = 'study';
   let activeDrillNode = null;
   let repairRepsState = null;
   let themePreference = 'light';
@@ -193,77 +201,16 @@ const App = (() => {
     applyThemePreference(normalized);
   }
 
-  function buildKnowledgeGraphMountConfig(rawData) {
-    const graphStage = document.getElementById('graph-stage');
-    const graphNodeDetail = document.getElementById('graph-node-detail');
-    if (!graphStage || !graphNodeDetail || !rawData) return null;
-    return {
-      container: graphStage,
-      detailEl: graphNodeDetail,
-      rawData,
-      onNodeSelect: (nodeData) => startDrill(nodeData),
-      onContinue: () => cancelDrill(),
-    };
-  }
-
-  function destroyKnowledgeGraphController() {
-    if (!currentGraphController) return;
-    currentGraphController.destroy();
-    currentGraphController = null;
-  }
-
-  function mountKnowledgeGraphController(rawData) {
-    const config = buildKnowledgeGraphMountConfig(rawData);
-    if (!config) return null;
-    currentGraphController = mountKnowledgeGraph(config);
-    return currentGraphController;
-  }
-
-  function captureKnowledgeGraphViewState() {
-    if (!currentGraphController) return null;
-    return {
-      selectedElement: currentGraphController.getSelectedElement?.() || null,
-      interactionMode: currentGraphController.getInteractionMode?.() || 'inspect',
-      activeDrillNode: currentGraphController.getActiveDrillNode?.() || activeDrillNode || null,
-    };
-  }
-
-  function restoreKnowledgeGraphViewState(viewState = null) {
-    if (!currentGraphController || !viewState) return;
-    const selectedElement = viewState.selectedElement?.id ? viewState.selectedElement : null;
-    const fallbackSelection = viewState.activeDrillNode
-      ? { type: 'node', id: viewState.activeDrillNode }
-      : null;
-    const selection = selectedElement || fallbackSelection;
-
-    if (viewState.interactionMode && viewState.interactionMode !== 'inspect') {
-      const selectedNodeId = selection?.type === 'node' ? selection.id : viewState.activeDrillNode;
-      currentGraphController.setInteractionMode?.(viewState.interactionMode, selectedNodeId || null);
-      return;
-    }
-
-    if (selection) {
-      currentGraphController.selectElement?.(selection);
-    }
-  }
-
-  function remountOpenKnowledgeGraphForTheme() {
-    const mapView = document.getElementById('map-view');
-    if (!mapView?.classList.contains('visible') || !currentGraphController) return;
-
-    const concept = getActiveConcept();
-    const rawData = concept?.graphData ? normalizeGraphData(concept.graphData).graphData : null;
-    if (!rawData) return;
-
-    const viewState = captureKnowledgeGraphViewState();
-    destroyKnowledgeGraphController();
-    mountKnowledgeGraphController(rawData);
-    restoreKnowledgeGraphViewState(viewState);
-
-    if (currentMapMode === 'graph' && currentGraphController) {
-      requestAnimationFrame(() => currentGraphController?.resize());
-    }
-  }
+  // Graph controller stubs: graph-view.js and the cytoscape constellation
+  // were deleted in the strip-as-nav port (2026-05-11). These stubs keep
+  // the many call sites in startDrill, cancelDrill, and repair-reps from
+  // throwing; they will be cleaned up in a follow-up refactor pass.
+  function buildKnowledgeGraphMountConfig() { return null; }
+  function destroyKnowledgeGraphController() { currentGraphController = null; }
+  function mountKnowledgeGraphController() { return null; }
+  function captureKnowledgeGraphViewState() { return null; }
+  function restoreKnowledgeGraphViewState() {}
+  function remountOpenKnowledgeGraphForTheme() {}
 
   function setMapShellOpen(isOpen) {
     document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
@@ -1924,6 +1871,191 @@ const App = (() => {
 
   // ── 16. Map View UI ────────────────────────────────────────
 
+  // Module-level state: which backbone entry is currently shown in the
+  // work column. Set on initial mount and updated by setActiveEntry.
+  let _activeEntryId = null;
+
+  /**
+   * Build the work column HTML (threshold quote + active entry block +
+   * nearby list). Shared between initial mount and active-entry swap.
+   *
+   * @param {Object} activeEntry - The backbone entry to render as active
+   * @param {number} activeIdx - Zero-based index of activeEntry in backbone
+   * @param {Array} backbone - Full backbone array
+   * @param {Object} concept - The full concept object
+   * @param {Object} data - Parsed graphData
+   * @returns {string} HTML string for the work column interior
+   */
+  function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data) {
+    const meta = data?.metadata || {};
+    const thresholdText = (concept?.startingMapContext || meta.starting_map_context || meta.core_thesis || '').trim();
+    const totalNodes = backbone.length || 1;
+
+    const isLocked = (activeEntry.drill_status || 'locked') === 'locked';
+    const entryEyebrow = isLocked
+      ? `locked entry ${activeIdx + 1} of ${totalNodes}`
+      : (activeEntry.drill_status === 'primed'
+        ? `re-drill ready entry ${activeIdx + 1} of ${totalNodes}`
+        : `first cold attempt entry ${activeIdx + 1} of ${totalNodes}`);
+    const entryPurpose = activeEntry.purpose
+      || (isLocked
+        ? 'Locked until you do a cold attempt on the entry above. The mechanism stays hidden until you have written what you can reconstruct from memory.'
+        : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
+    const ctaLabel = activeEntry.drill_status === 'primed' ? 'Re-drill from memory' : 'Try from memory';
+
+    const thresholdHtml = thresholdText
+      ? `
+        <p class="concept-page-b2__threshold">
+          ${escHtml(thresholdText)}
+          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
+        </p>
+      `
+      : `
+        <p class="concept-page-b2__threshold concept-page-b2__threshold--empty">
+          You have not yet sketched what you think is inside this concept.
+          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
+        </p>
+      `;
+
+    const ctaButton = isLocked
+      ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Cold attempt on the entry above unlocks this one">Locked</button>`
+      : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntry.id || 'core-thesis')}">${ctaLabel}</button>`;
+
+    const activeHtml = `
+      <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
+      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
+      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
+      ${ctaButton}
+    `;
+
+    // Nearby: every backbone entry that isn't this one
+    const nearby = backbone.filter((n) => n !== activeEntry);
+    const nearbyHtml = nearby.length
+      ? `
+        <section class="concept-page-b2__nearby">
+          <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries  all locked until first attempt</span>
+          <div class="concept-page-b2__nearby-list">
+            ${nearby.map((n) => {
+              const idx = backbone.indexOf(n);
+              const num = String(idx + 1).padStart(2, '0');
+              const status = (n.drill_status || 'locked').toUpperCase();
+              return `
+                <div class="concept-page-b2__nearby-item">
+                  <span class="concept-page-b2__nearby-num">${escHtml(num)}</span>
+                  <span>${escHtml(n.label || `entry ${idx + 1}`)}</span>
+                  <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      `
+      : '';
+
+    return `${thresholdHtml}${activeHtml}${nearbyHtml}`;
+  }
+
+  /**
+   * Wire event handlers on the work column after a swap or initial mount.
+   * Handles the CTA (start drill) and the threshold re-edit affordance.
+   *
+   * @param {HTMLElement} docEl - The .concept-page-b2__doc element
+   * @param {Object} concept - The full concept object
+   * @param {Object} data - Parsed graphData
+   */
+  function rebindActiveEntryHandlers(docEl, concept, data) {
+    const ctaBtn = docEl.querySelector('.concept-page-b2__entry-cta:not([disabled])');
+    if (ctaBtn) {
+      ctaBtn.addEventListener('click', () => {
+        window.App?.startDrillFromMap?.();
+      });
+    }
+    docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (typeof window.App?.editThresholdForActiveConcept === 'function') {
+          window.App.editThresholdForActiveConcept();
+        } else {
+          console.info('[concept-page] re-edit sketch requested; route not wired (v1.1)');
+        }
+      });
+    });
+  }
+
+  /**
+   * Swap the work column to show a different backbone entry without
+   * rebuilding the whole concept page. Called by strip-node clicks
+   * and keyboard arrow nav.
+   *
+   * Animates: 240ms opacity fade-out, swap, 320ms opacity + 4px
+   * translateY fade-in. Does NOT animate layout properties.
+   *
+   * @param {string} entryId - The id of the backbone entry to show
+   * @param {Object} data - Parsed graphData
+   * @param {Object} concept - The full concept object
+   */
+  function setActiveEntry(entryId, data, concept) {
+    if (!data || !entryId) return;
+    if (entryId === _activeEntryId) return;
+
+    const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+    const newEntry = backbone.find((n) => (n.id || `entry-${backbone.indexOf(n)}`) === entryId);
+    if (!newEntry) return;
+    const newIdx = backbone.indexOf(newEntry);
+
+    const mountEl = document.getElementById('map-content');
+    if (!mountEl) return;
+
+    // Update strip node active class without full rebuild
+    mountEl.querySelectorAll('.concept-strip__node').forEach((g) => {
+      const isThisOne = g.getAttribute('data-entry-id') === entryId;
+      g.classList.toggle('is-active', isThisOne);
+      // Update label: active node shows its label; others hide it
+      const text = g.querySelector('text');
+      if (isThisOne && !text) {
+        const circle = g.querySelector('circle');
+        if (circle) {
+          const cx = parseFloat(circle.getAttribute('cx'));
+          const cy = parseFloat(circle.getAttribute('cy'));
+          const labelText = backbone[newIdx]?.label || `entry ${newIdx + 1}`;
+          const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          t.setAttribute('x', cx);
+          t.setAttribute('y', cy + 25);
+          t.textContent = labelText;
+          g.appendChild(t);
+        }
+      } else if (!isThisOne && text) {
+        text.remove();
+      }
+      // Bump radius on active
+      const circle = g.querySelector('circle');
+      if (circle) {
+        circle.setAttribute('r', isThisOne ? 9 : (g.classList.contains('concept-strip__node--primed') ? 7 : 6));
+      }
+    });
+
+    // Update strip overlay label
+    const overlayName = mountEl.querySelector('.concept-strip__active-name');
+    if (overlayName) {
+      overlayName.textContent = `${newEntry.label || 'entry'} · ${newIdx + 1} of ${backbone.length}`;
+    }
+
+    // Swap the work column with a fade transition
+    const doc = mountEl.querySelector('.concept-page-b2__doc');
+    if (!doc) return;
+    doc.classList.add('is-fading-out');
+    setTimeout(() => {
+      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data);
+      rebindActiveEntryHandlers(doc, concept, data);
+      doc.classList.remove('is-fading-out');
+      void doc.offsetWidth; // force reflow so the fade-in animates
+      doc.classList.add('is-fading-in');
+      setTimeout(() => doc.classList.remove('is-fading-in'), 360);
+    }, 240);
+
+    _activeEntryId = entryId;
+  }
+
   /**
    * Render the B-2 "Strip + page" concept page layout into #map-content.
    * Replaces the prior Route view card stack.
@@ -1936,17 +2068,6 @@ const App = (() => {
     if (!mountEl || !data) return;
     const meta = data.metadata || {};
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
-
-    // Threshold text -- use concept.startingMapContext / meta.starting_map_context
-    // (the learner's sketch), else fall back to data.metadata.core_thesis.
-    const thresholdText = (
-      concept?.startingMapContext
-      || meta.starting_map_context
-      || concept?.threshold
-      || meta.core_thesis
-      || ''
-    ).trim();
-    const conceptName = meta.source_title || concept?.name || 'Concept';
 
     // Identify the active entry. For v1: first backbone entry that isn't
     // 'solidified' (i.e., the next thing to attempt). Falls back to first
@@ -1962,9 +2083,6 @@ const App = (() => {
       drill_status: 'locked',
     };
     const activeIdx = Math.max(0, backbone.indexOf(activeEntry));
-
-    // Nearby entries: every backbone entry that isn't the active one
-    const nearby = backbone.filter((n) => n !== activeEntry);
 
     // Build the strip SVG
     const stripWidth = 600;
@@ -1983,13 +2101,25 @@ const App = (() => {
       const cls = ['concept-strip__node', isPrimed ? 'concept-strip__node--primed' : 'concept-strip__node--locked'];
       if (isActive) cls.push('is-active');
       const r = isActive ? 9 : (isPrimed ? 7 : 6);
-      return `<g class="${cls.join(' ')}"><circle cx="${x}" cy="${strokeY}" r="${r}"></circle>${
-        isActive ? `<text x="${x}" y="${strokeY + 25}">${escHtml(node.label || 'entry')}</text>` : ''
-      }</g>`;
+      const entryId = node.id || `entry-${i}`;
+      const label = escHtml(node.label || `entry ${i + 1}`);
+      const ariaLabel = `${node.label || 'entry'}, ${status}${isActive ? ', current' : ''}`;
+      return `
+        <g class="${cls.join(' ')}"
+           role="button"
+           tabindex="0"
+           data-entry-id="${escHtml(entryId)}"
+           data-entry-index="${i}"
+           aria-label="${escHtml(ariaLabel)}">
+          <rect x="${x - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect>
+          <circle cx="${x}" cy="${strokeY}" r="${r}"></circle>
+          ${isActive ? `<text x="${x}" y="${strokeY + 25}">${label}</text>` : ''}
+        </g>
+      `;
     }).join('');
 
     // If backbone is empty, render a synthetic single node
-    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--locked is-active"><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
+    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--locked is-active" role="button" tabindex="0" data-entry-id="core-thesis" data-entry-index="0" aria-label="core thesis, locked, current"><rect x="${padX - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
 
     const stripEdges = backbone.slice(1).map((_, i) => {
       const x1 = padX + i * stepX;
@@ -1999,64 +2129,18 @@ const App = (() => {
     }).join('');
 
     const stripActiveLabel = activeEntry.label
-      ? `${escHtml(activeEntry.label)} -- ${activeIdx + 1} of ${totalNodes}`
+      ? `${escHtml(activeEntry.label)} · ${activeIdx + 1} of ${totalNodes}`
       : `${activeIdx + 1} of ${totalNodes}`;
 
-    // Build the threshold quote (with re-edit affordance)
-    const thresholdHtml = thresholdText
-      ? `
-        <p class="concept-page-b2__threshold">
-          ${escHtml(thresholdText)}
-          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
-        </p>
-      `
-      : `
-        <p class="concept-page-b2__threshold concept-page-b2__threshold--empty">
-          You have not yet sketched what you think is inside this concept.
-          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
-        </p>
-      `;
-
-    // Build the active entry block
-    const entryEyebrow = `${escHtml(activeEntry.drill_status === 'primed' ? 're-drill ready -- entry' : 'first cold attempt -- entry')} ${activeIdx + 1} of ${totalNodes}`;
-    const entryPurpose = activeEntry.purpose || 'The first entry asks for the governing idea, not the whole source. No study material yet -- write what you can reconstruct from memory.';
-    const ctaLabel = activeEntry.drill_status === 'primed' ? 'Re-drill from memory' : 'Try from memory';
-
-    const activeHtml = `
-      <span class="eyebrow concept-page-b2__entry-eyebrow">${entryEyebrow}</span>
-      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
-      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
-      <button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntry.id || 'core-thesis')}">${ctaLabel}</button>
-    `;
-
-    // Build the nearby list
-    const nearbyHtml = nearby.length
-      ? `
-        <section class="concept-page-b2__nearby">
-          <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries -- all locked until first attempt</span>
-          <div class="concept-page-b2__nearby-list">
-            ${nearby.map((n) => {
-              const num = String(backbone.indexOf(n) + 1).padStart(2, '0');
-              const label = escHtml(n.label || 'entry');
-              const status = (n.drill_status || 'locked').toUpperCase();
-              return `
-                <div class="concept-page-b2__nearby-item">
-                  <span class="concept-page-b2__nearby-num">${num}</span>
-                  <span>${label}</span>
-                  <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </section>
-      `
-      : '';
+    // Build the work column HTML via the shared helper
+    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
     mountEl.innerHTML = `
       <div class="concept-strip">
         <div class="concept-strip__inner">
+          <div class="concept-strip__tooltip" id="concept-strip-tooltip" hidden></div>
           <svg class="concept-strip__svg" viewBox="0 0 ${stripWidth} ${stripHeight}" preserveAspectRatio="xMidYMid meet">
             ${stripEdges}
             ${stripNodesHtml}
@@ -2068,40 +2152,86 @@ const App = (() => {
         </div>
       </div>
       <div class="concept-page-b2__doc">
-        ${thresholdHtml}
-        ${activeHtml}
-        ${nearbyHtml}
+        ${docHtml}
       </div>
     `;
 
-    // Wire the CTA. Reuse the existing startDrillFromMap path.
-    const ctaBtn = mountEl.querySelector('.concept-page-b2__entry-cta');
-    if (ctaBtn) {
-      ctaBtn.addEventListener('click', () => {
-        window.App?.startDrillFromMap?.();
-      });
-    }
+    // Set module-level active entry state
+    _activeEntryId = activeEntry.id || `entry-${activeIdx}`;
 
-    // Wire the re-edit affordance. v1: route to ignition launch pad with
-    // the existing concept selected. If that route doesn't exist yet, log
-    // a console hint and accept (placeholder for v1.1).
-    const editLinks = mountEl.querySelectorAll('[data-edit-threshold]');
-    editLinks.forEach((link) => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (typeof window.App?.editThresholdForActiveConcept === 'function') {
-          window.App.editThresholdForActiveConcept();
-        } else {
-          console.info('[concept-page] re-edit sketch requested; route not wired (v1.1)');
+    // Wire CTA and re-edit affordance
+    const docEl = mountEl.querySelector('.concept-page-b2__doc');
+    if (docEl) rebindActiveEntryHandlers(docEl, concept, data);
+
+    // Wire strip-node click + keyboard nav
+    const stripContainer = mountEl.querySelector('.concept-strip__inner');
+    const tooltip = mountEl.querySelector('#concept-strip-tooltip');
+    if (stripContainer) {
+      stripContainer.addEventListener('click', (e) => {
+        const node = e.target.closest('.concept-strip__node');
+        if (!node) return;
+        const id = node.getAttribute('data-entry-id');
+        if (id) setActiveEntry(id, data, concept);
+      });
+
+      stripContainer.addEventListener('keydown', (e) => {
+        const node = e.target.closest('.concept-strip__node');
+        if (e.key === 'Enter' || e.key === ' ') {
+          const id = node?.getAttribute('data-entry-id');
+          if (id) {
+            e.preventDefault();
+            setActiveEntry(id, data, concept);
+          }
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          const dir = e.key === 'ArrowLeft' ? -1 : 1;
+          const currentIdx = backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId);
+          const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
+          const nextNode = backbone[nextIdx];
+          if (nextNode) {
+            const nextId = nextNode.id || `entry-${nextIdx}`;
+            setActiveEntry(nextId, data, concept);
+            // Move keyboard focus to the new active node
+            const nextG = mountEl.querySelector(`.concept-strip__node[data-entry-id="${nextId}"]`);
+            nextG?.focus();
+          }
         }
       });
-    });
+
+      // Hover tooltip for non-active nodes
+      if (tooltip) {
+        stripContainer.addEventListener('mouseover', (e) => {
+          const node = e.target.closest('.concept-strip__node');
+          if (!node || node.classList.contains('is-active')) {
+            tooltip.removeAttribute('data-visible');
+            tooltip.hidden = true;
+            return;
+          }
+          const idx = parseInt(node.getAttribute('data-entry-index'), 10);
+          const entry = backbone[idx];
+          if (!entry) return;
+          const circle = node.querySelector('circle');
+          if (!circle) return;
+          const containerRect = stripContainer.getBoundingClientRect();
+          const circleRect = circle.getBoundingClientRect();
+          tooltip.textContent = entry.label || `entry ${idx + 1}`;
+          tooltip.style.left = `${circleRect.left + circleRect.width / 2 - containerRect.left}px`;
+          tooltip.style.top = `${circleRect.top - containerRect.top - 8}px`;
+          tooltip.hidden = false;
+          requestAnimationFrame(() => tooltip.setAttribute('data-visible', 'true'));
+        });
+
+        stripContainer.addEventListener('mouseleave', () => {
+          tooltip.removeAttribute('data-visible');
+          setTimeout(() => { tooltip.hidden = true; }, 200);
+        });
+      }
+    }
   }
 
   function showMapView(concept, opts = {}) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
-    const graphContent = document.getElementById('graph-content');
     const heroCard = document.querySelector('.hero-card');
     const libraryView = document.getElementById('library-view');
 
@@ -2141,10 +2271,12 @@ const App = (() => {
 
     renderConceptPageB2(mapContent, data, concept);
 
+    // Graph view deleted (strip-as-nav port). The knowledge graph controller
+    // is retained in case other surfaces still reference it; it becomes a
+    // no-op when graph-stage is absent from the DOM.
     destroyKnowledgeGraphController();
     if (drillUi) drillUi.style.display = 'none';
     if (chatHistory) chatHistory.innerHTML = '';
-    mountKnowledgeGraphController(data);
 
     clearSettingsPanel();
     setNavActive('nav-dashboard');
@@ -2154,9 +2286,8 @@ const App = (() => {
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
     setMapShellOpen(true);
-    if (graphContent) graphContent.hidden = false;
+    if (mapContent) mapContent.hidden = false;
     if (window.innerWidth < 900) closeDrawer();
-    setMapMode('study');
     restoreStudyResume(concept, data);
     // Skeleton-line is opt-in via opts.fromLaunchPad (default off). Centralised
     // here so callers don't have to hide-then-show after the teardown that
@@ -2198,35 +2329,19 @@ const App = (() => {
     if (launchPadView) launchPadView.setAttribute('hidden', '');
   }
 
-  function setMapMode(mode = 'study') {
-    currentMapMode = mode === 'graph' ? 'graph' : 'study';
-    const studyBtn = document.getElementById('map-mode-study');
-    const graphBtn = document.getElementById('map-mode-graph');
+  // setMapMode: formerly switched between the Route and Graph views.
+  // The Graph view has been deleted (strip-as-nav port, 2026-05-11).
+  // Retained as a no-op so call sites in startDrill, restoreStudyResume,
+  // etc. continue to compile without a cascade of edits; they will be
+  // cleaned up when those flows are refactored in a follow-up.
+  function setMapMode() {
     const mapContent = document.getElementById('map-content');
-    const graphContent = document.getElementById('graph-content');
-
-    if (studyBtn) studyBtn.classList.toggle('active', currentMapMode === 'study');
-    if (graphBtn) graphBtn.classList.toggle('active', currentMapMode === 'graph');
-    if (studyBtn) studyBtn.setAttribute('aria-pressed', String(currentMapMode === 'study'));
-    if (graphBtn) graphBtn.setAttribute('aria-pressed', String(currentMapMode === 'graph'));
-    if (mapContent) mapContent.hidden = currentMapMode !== 'study';
-    if (graphContent) graphContent.hidden = currentMapMode !== 'graph';
-
-    if (currentMapMode === 'graph' && currentGraphController) {
-      requestAnimationFrame(() => currentGraphController?.resize());
-    }
+    if (mapContent) mapContent.hidden = false;
   }
 
-  function bindMapModeControls() {
-    const modeButtons = document.querySelectorAll('[data-map-mode]');
-    modeButtons.forEach((button) => {
-      if (button.dataset.boundMapMode === 'true') return;
-      button.dataset.boundMapMode = 'true';
-      button.addEventListener('click', () => {
-        setMapMode(button.dataset.mapMode);
-      });
-    });
-  }
+  // bindMapModeControls: no longer needed (toggle markup deleted).
+  // Retained as a no-op so the initialization block can stay untouched.
+  function bindMapModeControls() {}
 
   function setNavActive(id) {
     currentPrimaryNav = id;
