@@ -32,6 +32,7 @@ Boil the ocean.
 - For non-trivial work, convert the request into verifiable goals (typically via targeted tests).
 - MVP doctrine applies: separate true blockers from nice-to-have polish.
 - Preserve product truth: never fake mastery, graph progress, or learner knowledge.
+- `UBIQUITOUS_LANGUAGE.md` is the glossary authority; use its terms verbatim in code and docs, and do not invent synonyms.
 - State assumptions before acting when the task is ambiguous. If multiple reasonable interpretations exist, present them instead of silently choosing.
 - Push back when a simpler approach satisfies the goal or when the requested path risks product truth, deployment safety, or unnecessary scope expansion.
 
