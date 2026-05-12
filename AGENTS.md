@@ -63,25 +63,33 @@ Once a candidate file or symbol is in hand, switch to the code-review graph for 
 - `get_impact_radius` and `get_affected_flows` for blast-radius analysis
 - `query_graph` / `semantic_search_nodes` for callers, callees, imports, and tests
 
-### Layer 3 — Context7 (external API documentation gate)
-Local layers cover code that lives in this repo. They do not know what a third-party SDK or platform does today. Before editing code that depends on an external surface, fetch current docs with Context7 instead of relying on model memory.
+### Layer 3 — Context7 (external API documentation, biased liberal)
+Local layers cover code that lives in this repo. They do not know what a third-party SDK, platform, framework, or CLI does today. Reach for Context7 liberally — **prefer fetching current docs over relying on model memory whenever the answer hinges on a third-party surface**. Use it even when you think you know the answer; training data lags behind real APIs by months, and silent staleness is the failure mode.
 
-Use Context7 for:
-- Supabase auth/session/OAuth behavior
-- Vercel/serverless routing, build, and environment behavior
-- Gemini/OpenAI/Anthropic or other AI SDK/API behavior
-- Playwright APIs, browser automation, traces, and smoke-test behavior
-- Browser APIs used by `public/*.js`
-- Any unfamiliar external package or service
+Trigger Context7 for any of:
+- **Research questions** about a library/framework/SDK/CLI/platform, even without a pending edit ("how does Supabase RLS work?", "what's the FastAPI lifespan API?", "Playwright trace viewer options").
+- **Code generation** that imports or calls a third-party surface — including writing new code from scratch, not just edits to existing code.
+- **Edits** that touch a third-party surface, especially version-sensitive ones.
+- **Setup / configuration / migration** questions for any installed library or hosted platform.
+- **Debugging** that suspects library-specific behavior (auth flow, response shape, error semantics, deprecation).
 
-Do not use Context7 for Socratink product doctrine, graph truth, drill behavior, source ownership, architecture decisions, or verification policy. Local binding docs (`AGENTS.md`, `docs/product/evidence-weighted-map.md`, `docs/product/spec.md`, the rest of the canonical doc set) remain authoritative on what Socratink should build.
+Concrete surfaces in this repo that should route through Context7:
+- **Python**: `fastapi`, `starlette`, `pydantic`, `uvicorn`, `google-genai` (Gemini), `supabase` (supabase-py), `pyjwt`, `cryptography`, `beautifulsoup4`, `youtube-transcript-api`, `aiofiles`, `urllib3`, `charset-normalizer`.
+- **Platform**: Vercel (routing, serverless function limits, build, env vars, `vercel.json`), Supabase (auth, RLS, storage, OAuth providers).
+- **AI APIs**: Gemini, OpenAI, Anthropic — model IDs, tool use, structured output, prompt caching, streaming.
+- **Test / browser**: Playwright APIs, traces, fixtures, the browser DOM/Web APIs called from `public/*.js`.
+- **CLI tools** the agent invokes directly (e.g., `vercel`, `playwright`, `supabase`, `gh`) when behavior matters.
 
-Before version-sensitive edits:
-1. Inspect the local dependency/config version (`requirements.txt`, `requirements-dev.txt`, `package.json`, `vercel.json`) where version matters.
-2. Ask Context7 for docs matching the library/platform and version when possible.
-3. If Context7 docs do not obviously match the installed version, state the uncertainty before editing.
+How to query well:
+1. Start with `resolve-library-id` unless the user gave an exact `/org/project` ID. Pick by exact name match, description fit, snippet count, source reputation, benchmark score. Try alternate names if results look off ("next.js" not "nextjs"; "supabase-py" not just "supabase").
+2. Inspect the installed version first (`requirements.txt`, `requirements-dev.txt`, `package.json`, `vercel.json`) and prefer a version-pinned library ID where available.
+3. Pass the user's full question to `query-docs`, not a single keyword.
+4. If Context7 docs do not obviously match the installed version, state the uncertainty before editing or generating code.
 
-Context7 answers external API questions. It does not decide what Socratink should build. Do not send secrets, private source, customer data, or internal implementation details to it.
+Out of scope for Context7:
+- Socratink product doctrine, graph truth, drill behavior, source ownership, architecture decisions, verification policy. Local binding docs (`AGENTS.md`, `docs/product/evidence-weighted-map.md`, `docs/product/spec.md`, the rest of the canonical doc set) remain authoritative on what Socratink should build.
+- Refactoring local code, writing scripts from scratch with no third-party dependency, debugging business logic, code review, general programming concepts.
+- Never send secrets, private source, customer data, or internal implementation details to Context7.
 
 ### Handoff rule
 Discover with Claude Context → confirm structure with the graph → fetch external API docs with Context7 when the edit touches a third-party surface → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Skipping the Context7 step on a third-party-SDK edit is how stale-API breakage ships. Reading source files top-to-bottom without these layers is the worst of all worlds: high context cost, no structural guarantee, no current-API guarantee.
@@ -266,6 +274,25 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
 - Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `docs/codex/onboarding.md`.
 - For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — read `docs/project/crg-architecture-snapshot-2026-05-04.md` first. It's a CRG-derived briefing that gives you the shape of the codebase in ~3 minutes so you don't have to grep your way to it. Re-generated after major refactors; the underlying graph itself is always live (auto-updated on every `Edit|Write|Bash` via `.claude/settings.json` `PostToolUse` hook), so the snapshot is the periodic crystallisation, not a cache.
+
+## Project-local agent skills (skills.sh marketplace)
+
+Three community skills are installed project-local under `.agents/skills/`, symlinked into `.claude/skills/` for Claude Code discovery. Install is local-machine state (`.agents/` is gitignored, no lockfile carried) — re-install on a new machine via the commands below if ever needed.
+
+| Skill | Source | When to invoke | Trust signals |
+|---|---|---|---|
+| `playwright-cli` | [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) — **official Microsoft** | Authoring or debugging Playwright tests, smoke flows (`scripts/qa-smoke.sh`, `tests/e2e/`), persona automation, trace inspection, browser context configuration. Pairs with the `playwright` MCP for live browser work. | 33.1K installs; Socket 0 alerts; **Snyk flagged High Risk** — accepted given Microsoft as publisher, but glance at `SKILL.md` before relying on it for novel patterns. |
+| `gemini-interactions-api` | [google-gemini/gemini-skills](https://github.com/google-gemini/gemini-skills) — **official Google** | Writing or refactoring code that calls `google-genai` (drill evaluation in `ai_service.py`, extraction pipeline, any new Gemini API surface). Covers text/multi-turn/multimodal/streaming/function calling/structured output, and migration from the legacy `generateContent` API. | 3.3K installs; Socket 0 alerts; Snyk Medium. |
+| `fastapi` | [fastapi/fastapi](https://github.com/fastapi/fastapi) — **official maintainers** | Designing or refactoring FastAPI routes and Pydantic models — keeps endpoint and schema patterns aligned with current FastAPI features rather than memory of older idioms. Use proactively when touching `main.py`, `routes/`, or any `pydantic` model. | 2.4K installs; Socket 0 alerts; Snyk Low. |
+
+These skills are **complementary to Context7, not a replacement**: skills carry curated patterns and conventions; Context7 fetches the current public API reference. For an unfamiliar feature in any of these surfaces, invoke the skill first for conventions, then Context7 for the version-pinned API shape if needed.
+
+### Install / remove
+- `npx skills add <owner/repo> -s <skill> -y` from this repo root — installs project-local.
+- `npx skills list` — see what's installed.
+- `npx skills remove <name>` — uninstall if a skill stops paying off.
+
+Each project-local skill consumes session-start token budget. Treat installs as deliberate; remove ones that aren't firing usefully during quarterly `session-retro` curation.
 
 ## Multi-agent and worktree safety
 - Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs that specialty.
