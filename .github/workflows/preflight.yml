@@ -1,0 +1,54 @@
+name: preflight
+
+# Lightweight CI gate: type-check + unit/integration tests.
+#
+# Complements (does not replace) the local pre-deploy gate at
+# scripts/preflight-deploy.sh, which also runs `vercel build` against
+# real Vercel credentials. That gate stays local-only because it needs
+# secrets and the full deploy toolchain.
+#
+# E2E Playwright tests (tests/e2e) are intentionally excluded: they
+# need browsers + a running uvicorn server, and live behind the
+# qa-smoke launchd trigger. They will be added in a follow-up if/when
+# we want PR-time browser smoke.
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Mypy (mypy.ini scope)
+        run: mypy .
+
+      - name: Generate per-run Fernet key
+        # Throwaway key scoped to this CI run; production sets SESSION_COOKIE_KEY
+        # via Vercel env. Echoed to $GITHUB_ENV so subsequent steps see it.
+        run: |
+          echo "SESSION_COOKIE_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> $GITHUB_ENV
+
+      - name: Pytest
+        env:
+          GEMINI_API_KEY: dummy-for-tests
+          AUTH_ENABLED: 'false'
+        run: pytest -q --ignore=tests/e2e

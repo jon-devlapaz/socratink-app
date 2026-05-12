@@ -41,6 +41,9 @@ echo "[doctor] dependency install (no-op if already satisfied)..."
 .venv/bin/pip install -r requirements.txt -q
 .venv/bin/pip install -r requirements-dev.txt -q
 
+echo "[doctor] mypy baseline (mypy.ini scope)..."
+.venv/bin/mypy . >/dev/null
+
 echo "[doctor] auth/env preflight..."
 .venv/bin/python scripts/check-local-auth.py --port "$PORT"
 

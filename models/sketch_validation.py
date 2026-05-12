@@ -111,8 +111,6 @@ def is_substantive_sketch(text: str) -> bool:
     See the module docstring for the principle this enforces and why the
     heuristic is deliberately simple.
     """
-    if text is None:
-        return False
     normalized = _normalize(text)
     if not normalized:
         return False

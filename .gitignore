@@ -13,6 +13,9 @@
 .claude/skills/*
 !.claude/skills/git-order/
 !.claude/skills/git-order/SKILL.md
+
+# skills.sh marketplace installs — local-machine state, not tracked.
+.agents/
 .kiro/
 .playwright-cli/
 .firecrawl/
@@ -27,6 +30,8 @@ __pycache__/
 .venv*/
 .venv/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Node (anywhere in the tree — keep node_modules out of git/Vercel uploads)
 node_modules/
