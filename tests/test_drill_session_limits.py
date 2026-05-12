@@ -133,5 +133,152 @@ class DrillSessionLimitTests(unittest.TestCase):
         self.assertEqual(result["nodes_drilled"], 4)
 
 
+class DrillBypassAndDegradedResponseTests(unittest.TestCase):
+    """Regression suite for the production 502 cluster on /api/drill.
+
+    Two distinct fragilities both surfaced as `502 Drill evaluation failed`:
+
+    1. **Missing session_start_iso when bypass_session_limits=True.**
+       Frontend MVP hardcodes bypass=True; the timestamp init was previously
+       gated on the bypass flag, so turn-phase calls hit a ValueError in
+       drill_chat. Fixed in two layers (frontend always inits the timestamp;
+       backend treats session_start_iso as optional when bypass=True).
+
+    2. **Gemini returns score_eligible=True with classification=None.**
+       Earlier no-mistakes review flagged the unconditional raise as a
+       potential availability hit. _normalize_drill_evaluation now demotes the
+       turn to unscored (score_eligible=False) instead of bubbling a 502.
+    """
+
+    def test_bypass_mode_allows_null_session_start_iso(self):
+        """bypass_session_limits=True must not require session_start_iso.
+
+        This is the load-bearing fix for the live prod 502. With bypass on,
+        session-duration math is moot and the timestamp is decorative.
+        """
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=drill_response(),
+            ),
+        ):
+            result = ai_service.drill_chat(
+                knowledge_map=sample_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "The thermostat compares room temperature to the setpoint.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="re_drill",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=True,
+            )
+
+        self.assertEqual(result["routing"], "PROBE")
+        self.assertFalse(result["session_terminated"])
+        self.assertIsNone(result["termination_reason"])
+
+    def test_non_bypass_still_requires_session_start_iso(self):
+        """Existing contract preserved: without bypass, turn phase REQUIRES
+        session_start_iso. Regression-protects the original guard so a future
+        commit can't quietly delete it."""
+        with self.assertRaises(ValueError) as ctx:
+            ai_service.drill_chat(
+                knowledge_map=sample_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "The thermostat compares room temperature to the setpoint.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="re_drill",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=False,
+            )
+
+        self.assertIn("session_start_iso is required", str(ctx.exception))
+
+    def test_score_eligible_true_with_null_classification_demotes_instead_of_raising(self):
+        """No-mistakes-flagged path: Gemini-the-model occasionally returns
+        score_eligible=True but classification=None. The normalizer used to
+        bubble a ValueError (→ 502); now it demotes the turn to unscored and
+        keeps the drill alive. Routing falls back to PROBE/NEXT based on
+        probe_count."""
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=FakeResponse(
+                    ai_service.DrillEvaluation(
+                        agent_response="Keep going — what comes after the comparison?",
+                        generative_commitment=True,
+                        answer_mode="attempt",
+                        score_eligible=True,
+                        help_request_reason="none",
+                        classification=None,
+                        gap_description=None,
+                        routing="PROBE",
+                        response_tier=2,
+                        response_band="link",
+                        tier_reason="Partial structure named.",
+                    )
+                ),
+            ),
+        ):
+            result = ai_service.drill_chat(
+                knowledge_map=sample_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "The thermostat checks the room and the setpoint.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="re_drill",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=True,
+            )
+
+        # Demoted to unscored; classification stays None; routing is a real value.
+        self.assertFalse(result["score_eligible"])
+        self.assertIsNone(result["classification"])
+        self.assertIn(result["routing"], ("PROBE", "SCAFFOLD", "NEXT"))
+        # The drill stays alive — no 502.
+        self.assertEqual(result["answer_mode"], "attempt")
+
+
 if __name__ == "__main__":
     unittest.main()

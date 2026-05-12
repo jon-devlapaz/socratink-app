@@ -613,9 +613,9 @@ def _normalize_drill_evaluation(
     evaluation.help_request_reason = "none"
 
     if evaluation.score_eligible and not evaluation.classification:
-        raise ValueError(
-            "Gemini returned no classification for a scored drill evaluation turn."
-        )
+        # Graceful fallback: if Gemini missed the classification but marked it eligible,
+        # we treat it as unscored rather than crashing the whole drill.
+        evaluation.score_eligible = False
 
     if evaluation.classification == "solid":
         evaluation.routing = "NEXT"
@@ -901,8 +901,8 @@ def drill_chat(
         raise ValueError(f"Unknown node_id: {node_id}")
     if session_phase == "init" and messages:
         raise ValueError("messages must be empty during init phase.")
-    if session_phase == "turn" and not session_start_iso:
-        raise ValueError("session_start_iso is required during turn phase.")
+    if session_phase == "turn" and not session_start_iso and not bypass_session_limits:
+        raise ValueError("session_start_iso is required during turn phase when session limits are enabled.")
 
     latest_learner_message = next(
         (

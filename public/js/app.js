@@ -3826,12 +3826,17 @@ const App = (() => {
       return;
     }
 
+    // sessionState.startedAt MUST be initialised before any /api/drill turn call,
+    // independent of bypass mode. Backend's contract for session_phase="turn" is
+    // that session_start_iso is non-null. Bypass mode only disables the *enforcement*
+    // of session limits (node cap, time cap, retry cap), not the timestamp wiring.
+    if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
+
     if (!bypassSessionLimits) {
       if (isNewSessionNode) markNodeVisitedThisSession(nodeContext.id);
       sessionState.retriesByNode[nodeContext.id] = (sessionState.retriesByNode[nodeContext.id] || 0) + 1;
-      if (!sessionState.startedAt) sessionState.startedAt = new Date().toISOString();
-      persistSessionState();
     }
+    persistSessionState();
 
     drillState.active = true;
     drillState.messages = [];
