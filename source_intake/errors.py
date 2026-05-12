@@ -27,7 +27,7 @@ class BlockedSource(SourceIntakeError):
     defense); other reasons surface specific user messages.
     """
 
-    def __init__(self, message: str, *, reason: str):
+    def __init__(self, message: str, *, reason: str) -> None:
         super().__init__(message)
         # one of: "private_address" | "blocked_port" | "blocked_video" | "blocked_scheme"
         self.reason = reason
@@ -41,7 +41,7 @@ class FetchFailed(SourceIntakeError):
     (oracle defense — attacker cannot distinguish DNS from connect from 5xx).
     """
 
-    def __init__(self, message: str, *, cause: str):
+    def __init__(self, message: str, *, cause: str) -> None:
         super().__init__(message)
         # one of: "dns" | "connect" | "timeout" | "http_4xx" | "http_5xx"
         self.cause = cause

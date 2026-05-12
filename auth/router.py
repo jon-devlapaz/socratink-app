@@ -793,7 +793,7 @@ def load_current_session_state(request: Request) -> AuthSessionState:
 
 
 @auth_router.get("/api/me")
-def get_current_user(request: Request):
+def get_current_user(request: Request) -> Response:
     state = load_current_session_state(request)
     payload = state.to_public_dict()
     # Expose dev-mode to the frontend so guest sessions can pass through
@@ -813,7 +813,7 @@ def get_current_user(request: Request):
 
 
 @auth_router.get("/login")
-def login(request: Request, return_to: str | None = None):
+def login(request: Request, return_to: str | None = None) -> Response:
     current = load_current_session_state(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated and not current.guest_mode:
@@ -826,7 +826,7 @@ def login(request: Request, return_to: str | None = None):
 
 
 @auth_router.get("/auth/guest")
-def auth_guest(request: Request, return_to: str | None = None):
+def auth_guest(request: Request, return_to: str | None = None) -> Response:
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     try:
@@ -870,7 +870,7 @@ def auth_guest(request: Request, return_to: str | None = None):
 
 
 @auth_router.get("/auth/google")
-def auth_google(request: Request, return_to: str | None = None):
+def auth_google(request: Request, return_to: str | None = None) -> Response:
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
     try:
@@ -898,7 +898,7 @@ def auth_callback(
     code: str | None = None,
     error: str | None = None,
     error_description: str | None = None,
-):
+) -> Response:
     service = _get_auth_service(request)
     verified = service.verify_oauth_state(
         signed_cookie=request.cookies.get(service.oauth_state_cookie_name),
@@ -977,7 +977,7 @@ def auth_callback(
 
 
 @auth_router.post("/api/auth/logout")
-def logout(request: Request):
+def logout(request: Request) -> Response:
     service = _get_auth_service(request)
     service.logout(request.cookies.get(service.cookie_name))
     response = JSONResponse({"ok": True, "auth_enabled": service.enabled})
