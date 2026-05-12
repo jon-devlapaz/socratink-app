@@ -350,3 +350,11 @@ Each project-local skill consumes session-start token budget. Treat installs as 
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
 - The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
 - Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
+
+## Audit log 2026-05-12
+
+- Claims checked: 12
+- Verified: 12
+- Stale: 0
+- Indeterminate: 0
+- Stale claims with line refs: none found in the audited set.
