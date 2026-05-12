@@ -47,6 +47,7 @@ The agent's ability to find and ingest the right code chunk.
 find . -type f \( -name '*.py' -o -name '*.js' -o -name '*.ts' \) \
   -not -path '*/node_modules/*' -not -path '*/.venv/*' \
   -not -path '*/.code-review-graph/*' -not -path '*/.vercel/*' \
+  -not -path '*/.claude/*' -not -path '*/.agents/*' \
   -exec wc -l {} + | awk '$1 > 800 {print}'
 ```
 
