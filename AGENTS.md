@@ -166,6 +166,10 @@ bash scripts/kill-800x.sh
 # Agent docs / bootstrap minimum verification
 bash scripts/doctor.sh
 
+# Type-check baseline (honors mypy.ini exclude list; also run by
+# scripts/doctor.sh and by the GitHub Actions preflight workflow).
+mypy .
+
 # Full Python test suite
 pytest
 
@@ -252,7 +256,9 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
-- There is no repository lint configuration checked in (no ruff/flake8/mypy config at repo root). Do not invent lint commands.
+- Type-check baseline lives in `mypy.ini` at the repo root (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`, etc.). The canonical invocation is `mypy .`, which honors the `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees). The same command is run by `scripts/doctor.sh` and by CI.
+- No ruff/flake8 config is checked in. Do not invent lint commands beyond `mypy .`.
+- CI gate: `.github/workflows/preflight.yml` runs `mypy .` + `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key for the run; production sets the real key via Vercel env. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`

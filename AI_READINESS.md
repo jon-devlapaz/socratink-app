@@ -121,7 +121,7 @@ mypy --strict path/to/changed/  # should exit 0
 | --- | --- | --- | --- |
 | Dynamically typed with `**kwargs: Any` patterns; no `pyproject.toml`/`mypy.ini`. | < 40% annotated returns OR mypy never runs cleanly. | 40–80% annotated returns; mypy installed; runs cleanly on most modules. | ≥ 80% annotated returns; mypy strict config exists and CI/pre-deploy enforces zero new errors. |
 
-**socratink-app baseline:** 232 annotated returns; mypy installed but **no config file** — currently scoring **1–2**. Adding a `mypy.ini` or `pyproject.toml` with `[tool.mypy]` would move this to 2 immediately.
+**socratink-app baseline:** 232 annotated returns; `mypy.ini` now checked in at the repo root (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) and `mypy .` runs cleanly under `scripts/doctor.sh` and the preflight CI workflow — currently scoring **2**. `disallow_untyped_defs` is still lenient, so reaching **3** requires both raising annotated-return ratio ≥ 80% and tightening per-module overrides.
 
 ---
 
@@ -165,7 +165,7 @@ ls scripts/preflight-deploy.sh scripts/doctor.sh scripts/verify-deploy.sh
 | --- | --- | --- | --- |
 | No automated check before merge or deploy. | Manual scripts exist but rely on developer remembering to run them. | Pre-commit hook OR local pre-deploy script that runs tests + typecheck + lint and blocks on failure. | CI on push/PR + diff-coverage threshold + typecheck + lint, mirrored locally by a single script. |
 
-**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; no `.github/workflows/`. Currently **2**; adding a GitHub Action that re-runs the preflight on PR would move this to **3**.
+**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` now runs `mypy .` + `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`, mirrored locally by `scripts/doctor.sh`. Diff-coverage is still local-only via `scripts/check-coverage.sh`. Currently **3** for the type-check + non-e2e-test gate; raising diff-coverage to CI would lock in level **3** across the board.
 
 ---
 
@@ -226,7 +226,7 @@ ls docs/adr/ 2>/dev/null
 | --- | --- | --- | --- |
 | Root README only. | Root README + a handful of stale folder READMEs. | Root + ≥3 directory READMEs covering main bounded contexts; ADRs exist. | Every top-level source directory has a README that states purpose, public surface, and known footguns; ADRs cover non-obvious decisions. |
 
-**socratink-app baseline:** `docs/adr/` exists with 4 ADRs; `tests/e2e/README.md`, `docs/founder/README.md`, `docs/adr/README.md`. Source dirs (`auth/`, `llm/`, `source_intake/`, `models/`, `admin/`) lack READMEs — currently **2**, achievable **3** with 1 day of work.
+**socratink-app baseline:** `docs/adr/` exists with 4 ADRs; `tests/e2e/README.md`, `docs/founder/README.md`, `docs/adr/README.md` plus per-directory READMEs for `auth/`, `llm/`, `source_intake/`, `models/`, `admin/`, and `app_prompts/` are now checked in. Currently **3**; keep new top-level source directories under the same convention to hold the score.
 
 ---
 
@@ -288,7 +288,7 @@ cat .gitignore | grep -E '^(node_modules|dist|build|\.venv|__pycache__|\.pytest_
 | --- | --- | --- | --- |
 | `node_modules/`, `dist/`, build artifacts committed. | Some cache directories committed (`.pytest_cache`, `.mypy_cache`); large generated files in tree. | Clean tree; `.gitignore` covers the standard set. | E1 level-2 plus an `.aiignore` / retrieval-tool exclusion list keeps the indexer focused on source. |
 
-**socratink-app baseline:** `node_modules/` (monocart only) and `.vercel/` committed; `.pytest_cache`, `.mypy_cache`, `.ruff_cache` committed. Currently **1**; raising `.gitignore` discipline → **2–3**.
+**socratink-app baseline:** `node_modules/` (monocart only) and `.vercel/` still committed; `.mypy_cache/` and `.ruff_cache/` are now in `.gitignore` alongside `.agents/` (local agent runtime context). Currently **2**; clearing the remaining `node_modules/` and `.vercel/` committed paths and adding an `.aiignore` for retrieval tooling would reach **3**.
 
 ---
 
