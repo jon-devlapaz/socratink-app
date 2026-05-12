@@ -163,9 +163,14 @@ def main() -> int:
     if known:
         unknown = [v for v in requested if v not in known]
         if unknown:
+            location = (
+                local_path.relative_to(ROOT)
+                if local_path is not None
+                else args.surface
+            )
             print(
                 f"snap.py: variant(s) {unknown} not found in "
-                f"{local_path.relative_to(ROOT)} (page has: {sorted(known)})",
+                f"{location} (page has: {sorted(known)})",
                 file=sys.stderr,
             )
             return 4
