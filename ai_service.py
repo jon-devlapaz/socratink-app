@@ -260,10 +260,14 @@ def _resolve_target_cluster_id(knowledge_map: dict, target_node_id: str) -> str 
         if not isinstance(cluster, dict):
             continue
         cluster_id = cluster.get("id")
-        if cluster_id == target_node_id:
+        if isinstance(cluster_id, str) and cluster_id == target_node_id:
             return cluster_id
         for subnode in cluster.get("subnodes", []):
-            if isinstance(subnode, dict) and subnode.get("id") == target_node_id:
+            if (
+                isinstance(cluster_id, str)
+                and isinstance(subnode, dict)
+                and subnode.get("id") == target_node_id
+            ):
                 return cluster_id
 
     return None
@@ -1066,4 +1070,3 @@ def drill_chat(
         "termination_reason": termination_reason,
     })
     return result
-

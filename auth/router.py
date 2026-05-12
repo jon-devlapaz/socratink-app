@@ -715,7 +715,10 @@ def _build_login_redirect(
 
 
 def _get_auth_service(request: Request) -> SupabaseAuthService:
-    service = getattr(request.app.state, "auth_service", None)
+    service = cast(
+        SupabaseAuthService | None,
+        getattr(request.app.state, "auth_service", None),
+    )
     if service is None:
         raise HTTPException(status_code=500, detail="Auth service is not configured.")
     return service

@@ -23,12 +23,15 @@ import socket
 import threading
 import time
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, Generic, Optional, TypeVar
 from urllib import request as urlrequest
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
+
+K = TypeVar("K")
+V = TypeVar("V")
 
 # --- Status sentinels for LCClient.last_status ------------------------------
 # These values are read by the route handler to emit the correct telemetry
@@ -78,7 +81,7 @@ class LCSearchResult:
 # --- TTL+LRU cache (tiny manual implementation, no external deps) -----------
 
 
-class _TtlLruCache:
+class _TtlLruCache(Generic[K, V]):
     """In-process cache with both a max-size LRU bound and per-entry TTL.
 
     Manual implementation to avoid pulling cachetools or functools.lru_cache
@@ -88,11 +91,11 @@ class _TtlLruCache:
     def __init__(self, max_size: int, ttl_seconds: float):
         self._max_size = max_size
         self._ttl = ttl_seconds
-        self._data: dict = {}  # key -> (timestamp, value)
-        self._order: list = []  # LRU order, oldest first
+        self._data: dict[K, tuple[float, V]] = {}
+        self._order: list[K] = []  # LRU order, oldest first
         self._lock = threading.Lock()
 
-    def get(self, key):
+    def get(self, key: K) -> V | None:
         with self._lock:
             entry = self._data.get(key)
             if entry is None:
@@ -109,7 +112,7 @@ class _TtlLruCache:
             self._order.append(key)
             return value
 
-    def set(self, key, value):
+    def set(self, key: K, value: V) -> None:
         with self._lock:
             self._data[key] = (time.monotonic(), value)
             if key in self._order:
@@ -137,7 +140,10 @@ class LCClient:
     """
 
     # Single shared cache across instances (LC results are public, not user-scoped).
-    _cache = _TtlLruCache(max_size=LC_CACHE_SIZE, ttl_seconds=LC_CACHE_TTL_SECONDS)
+    _cache = _TtlLruCache[str, LCSearchResult](
+        max_size=LC_CACHE_SIZE,
+        ttl_seconds=LC_CACHE_TTL_SECONDS,
+    )
 
     def __init__(
         self,
