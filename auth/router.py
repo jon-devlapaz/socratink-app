@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import logging
+from typing import Literal, cast
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Request
@@ -10,7 +11,7 @@ from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Re
 
 from runtime_env import dev_autoguest_enabled
 
-from .service import AuthConfigurationError, AuthSessionState
+from .service import AuthConfigurationError, AuthSessionState, SupabaseAuthService
 
 auth_router = APIRouter()
 _login_css = Path(__file__).resolve().parent.parent / "public" / "css" / "login.css"
@@ -713,7 +714,7 @@ def _build_login_redirect(
     return f"/login?{urlencode(query)}"
 
 
-def _get_auth_service(request: Request):
+def _get_auth_service(request: Request) -> SupabaseAuthService:
     service = getattr(request.app.state, "auth_service", None)
     if service is None:
         raise HTTPException(status_code=500, detail="Auth service is not configured.")
@@ -733,7 +734,7 @@ def _apply_session_cookie(
         sealed_session,
         secure=service.resolve_cookie_secure(_base_url(request)),
         httponly=True,
-        samesite=service.cookie_samesite,
+        samesite=cast(Literal["lax", "strict", "none"], service.cookie_samesite),
         max_age=service.cookie_max_age,
         path="/",
     )
