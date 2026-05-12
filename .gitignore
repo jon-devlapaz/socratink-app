@@ -13,6 +13,9 @@
 .claude/skills/*
 !.claude/skills/git-order/
 !.claude/skills/git-order/SKILL.md
+
+# skills.sh marketplace installs — local-machine state, not tracked.
+.agents/
 .kiro/
 .playwright-cli/
 .firecrawl/
