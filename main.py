@@ -401,9 +401,6 @@ class RepairRepsRequest(BaseModel):
 def _resolve_node_mechanism(
     knowledge_map: dict, node_id: str, fallback: str = ""
 ) -> str:
-    if not isinstance(knowledge_map, dict):
-        return fallback
-
     metadata = knowledge_map.get("metadata") or {}
     if node_id == "core-thesis":
         return str(metadata.get("core_thesis") or metadata.get("thesis") or fallback)
