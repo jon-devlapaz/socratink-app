@@ -69,6 +69,22 @@ The frontend leg (`scripts/generate-frontend-coverage.js`) requires Node (run
 `npm install` once to fetch `monocart-coverage-reports`). The Python leg adds
 `pytest-cov` and `diff-cover` from `requirements-dev.txt`.
 
+### Type-check and PR preflight
+
+A repo-level mypy baseline lives in `mypy.ini` (Python 3.13, `warn_unreachable`,
+`strict_optional`, `check_untyped_defs`, `warn_return_any`). Run it from the
+repo root:
+
+```bash
+mypy .   # honors mypy.ini exclude list (.venv/, tests/e2e/, public/, scripts/, …)
+```
+
+`.github/workflows/preflight.yml` runs `mypy .` + `pytest -q --ignore=tests/e2e`
+on every `pull_request` and on pushes to `main`/`dev`. It is the public
+PR-time signal contributors will see and is intentionally narrower than the
+local `scripts/preflight-deploy.sh`, which additionally runs `vercel build`
+against real Vercel credentials and stays local-only.
+
 ## Dependency Updates & Deployment
 
 This repo keeps dependency management intentionally simple:
