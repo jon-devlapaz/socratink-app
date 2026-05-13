@@ -10,7 +10,7 @@
 
 ## Post-shipping revisions (persona QA, 2026-05-09)
 
-After Wave 1 landed on `dev`, a customer-persona walkthrough using `docs/codex/customer-persona-prompt-template.md` flagged four elements as "branded or conversational vocabulary" that didn't earn their keep. The persona converged on the most-subtractive option for each. All four changes shipped:
+After Wave 1 landed on `dev`, a customer-persona walkthrough using `agents/_templates/customer-persona-prompt.md` flagged four elements as "branded or conversational vocabulary" that didn't earn their keep. The persona converged on the most-subtractive option for each. All four changes shipped:
 
 1. **Removed `IGNITION · 1 OF 2` eyebrow** — read as product-launch jargon, not reading-room language. Sidebar nav already labels the destination "New concept"; orientation is sufficient.
 2. **Removed Screen 1 helper line** "This is global context. The first room will ask one smaller question." — mixed retired vocabulary ("room") with narrator-explaining-app pattern. Screen 2 helper retained (it's instructional, persona-approved).

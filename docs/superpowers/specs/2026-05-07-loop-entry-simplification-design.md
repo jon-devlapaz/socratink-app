@@ -281,7 +281,7 @@ The simplification ships when **all** of these hold:
 Decisions made during the brainstorm session, in order:
 
 1. Friction diagnosis (Claude → user): two fields too many, copy overwrought, frame slightly wrong.
-2. Customer-persona pressure-test via Gemini using the template at `docs/codex/customer-persona-prompt-template.md`. Persona converged on D + B + B + B with the final note: *"reject the urge to explain the app's philosophy to me before I've even used it."*
+2. Customer-persona pressure-test via Gemini using the template at `agents/_templates/customer-persona-prompt.md`. Persona converged on D + B + B + B with the final note: *"reject the urge to explain the app's philosophy to me before I've even used it."*
 3. User decision: bias toward Gemini feedback, defer the conversational ignition spec, keep source attach on the screen, agree with cutting fat.
 4. Open decision parked: home/desk view replacement vocabulary (§6.1).
 

@@ -57,7 +57,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | --- | --- | --- | --- | --- |
 | [product/starting-map-flow-artifact.md](../product/starting-map-flow-artifact.md) | artifact | no | Storyboard for the starting-map concept-entry flow. Informs `evidence-weighted-map.md` §11 and future canonical/implementation work. Not itself an implementation contract. | Operational rules live in [evidence-weighted-map.md](../product/evidence-weighted-map.md). |
 | [design/handoffs/2026-05-01-new-concept-modal-redesign.md](../design/handoffs/2026-05-01-new-concept-modal-redesign.md) | artifact | no | Design storyboard for the new concept modal. | — |
-| [codex/landing-page-brief.md](../codex/landing-page-brief.md) | artifact | no | Strategic brief for the Socratink landing page. | — |
+| [product/landing-page-brief.md](../product/landing-page-brief.md) | artifact | no | Strategic brief for the Socratink landing page. | — |
 
 ## Release Gates & Evidence
 
@@ -86,13 +86,14 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [/agents/founder/WORKFLOWS/03-prototyping.md](../../agents/founder/WORKFLOWS/03-prototyping.md) | workflow | yes | Founder prototyping workflow: choose logic/state vs UI/copy prototype shape, keep it throwaway, and capture only the answer durably. | — |
 | [/agents/founder/WORKFLOWS/04-deploy-verification.md](../../agents/founder/WORKFLOWS/04-deploy-verification.md) | workflow | yes | Founder deploy-verification workflow: wait for the intended production deployment, run smoke only after success, and report deploy status distinctly from smoke status. | — |
 | [/agents/founder/trusted-remotes.json](../../agents/founder/trusted-remotes.json) | workflow | yes | Trusted remote URL pattern config for the founder git publication workflow. | — |
-| [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions; routes agents into `agents/`. | — |
-| [codex/agent-quality.md](../codex/agent-quality.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails; recognizes `agents/` as shared workflow canon. | — |
+| [/agents/ONBOARDING.md](../../agents/ONBOARDING.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions. | — |
+| [/agents/QUALITY.md](../../agents/QUALITY.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails. | — |
 | [/agents/WORKFLOWS/README.md](../../agents/WORKFLOWS/README.md) | workflow | yes | Shared hot-fix, Build-Measure-Learn, decision-log, and Glenna review workflows. | — |
 | [/agents/WORKFLOWS/drill-build-measure-learn.md](../../agents/WORKFLOWS/drill-build-measure-learn.md) | workflow | yes | Drill log → Socratink Brain evaluation → fix cycle. | — |
-| [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |
-| [codex/decision-log.md](../codex/decision-log.md) | workflow | yes | Append-only architectural/product decision log. Empty template at time of writing. | — |
-| [codex/agent-review-log.md](../codex/agent-review-log.md) | workflow | yes | Append-only Glenna review log. | — |
+| [/agents/_logs/decision-log.md](../../agents/_logs/decision-log.md) | workflow | yes | Append-only architectural and product decision log. | — |
+| [/agents/_logs/agent-review-log.md](../../agents/_logs/agent-review-log.md) | workflow | yes | Append-only Glenna review log. | — |
+| [/agents/_templates/customer-persona-prompt.md](../../agents/_templates/customer-persona-prompt.md) | workflow | yes | Reusable customer-persona prompt template used by `scripts/persona.sh` and persona-driven copy or UX evaluations. | — |
+| [archive/project/2026-05-09-settings-toggle-handoff.md](../archive/project/2026-05-09-settings-toggle-handoff.md) | historical | no | Point-in-time Codex handoff for a settings toggle fix. Preserved only as historical context. | — |
 | [project/code-review-graph-sop.md](code-review-graph-sop.md) | workflow | yes | Standard operating procedure for using the Code-Review Graph. | — |
 | [archive/project/crg-hooks-handoff.md](../archive/project/crg-hooks-handoff.md) | historical | no | Historical implementation handoff for CRG hook hardening. The live truth is the current hooks plus `project/code-review-graph-sop.md`. | [project/code-review-graph-sop.md](code-review-graph-sop.md) |
 | [/agents/founder/CODE-REVIEW-GRAPH-FAQ.md](../../agents/founder/CODE-REVIEW-GRAPH-FAQ.md) | workflow | no | Founder-facing CRG FAQ. Plain-language guidance that complements the technical SOP without redefining policy. | — |

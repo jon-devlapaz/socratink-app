@@ -7,7 +7,7 @@
 - Evidence count: `1`
 - Affected workflow surface: `bootstrap | publication | verification | artifact-placement | workflow-card | migration | coordination`
 - Recommended promotion target: `none yet`
-- Related canonical files: `agents/README.md`, `docs/codex/onboarding.md`
+- Related canonical files: `agents/README.md`, `agents/ONBOARDING.md`
 
 ## Observation
 

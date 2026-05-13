@@ -72,4 +72,4 @@ When specialists disagree, the socratinker must produce a short decision record:
 Invoke `glenna` after a complex task or when the workflow felt inefficient. Glenna reviews should:
 - Evaluate role adherence and handoff quality.
 - Identify repo constraint violations.
-- Append a durable entry to `docs/codex/agent-review-log.md`.
+- Append a durable entry to `agents/_logs/agent-review-log.md`.

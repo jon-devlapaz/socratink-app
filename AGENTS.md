@@ -252,7 +252,7 @@ scripts/snap.py --list                                    # what _lab surfaces e
 
 # Pipe a customer-persona prompt through Gemini, filtered and auto-logged
 # to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
-# template live at docs/codex/customer-persona-prompt-template.md.
+# template lives at agents/_templates/customer-persona-prompt.md.
 scripts/persona.sh <prompt-file>
 cat prompt.txt | scripts/persona.sh
 scripts/persona.sh --template      # print template path
@@ -284,10 +284,10 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 - Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
 
 ## Agent bootstrap discovery
-- Canonical session bootstrap: `docs/codex/onboarding.md`.
-- Deterministic agent quality rules live in `docs/codex/agent-quality.md`.
+- Canonical session bootstrap: `agents/ONBOARDING.md`.
+- Deterministic agent quality rules live in `agents/QUALITY.md`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
-- Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `docs/codex/onboarding.md`.
+- Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `agents/ONBOARDING.md`.
 - For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow in `docs/project/code-review-graph-sop.md` rather than relying on stale point-in-time snapshots.
 
 ## Project-local agent skills (skills.sh marketplace)

@@ -51,7 +51,7 @@ If the learning belongs in a founder workflow card, promote it there rather than
 ## What Still Lives Outside This Folder
 
 - Root entrypoints: `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`.
-- Bootstrap and agent quality docs: `docs/codex/onboarding.md` and `docs/codex/agent-quality.md`.
+- Bootstrap and agent quality docs: `agents/ONBOARDING.md` and `agents/QUALITY.md`.
 - Executable enforcement: `scripts/agent-push.py`, `scripts/git-hooks/pre-push`, and `scripts/doctor.sh`.
 - Runtime state: `.agents/runtime/`.
 

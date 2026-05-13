@@ -2,7 +2,7 @@
 
 This is the non-binding learning ledger for founder and agent workflow usage.
 
-It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `agents/README.md`, workflow cards, `agents/MIGRATION.md`, `docs/codex/onboarding.md`, `docs/codex/agent-quality.md`, and other registered canonical files.
+It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `agents/README.md`, workflow cards, `agents/MIGRATION.md`, `agents/ONBOARDING.md`, `agents/QUALITY.md`, and other registered canonical files.
 
 ## Read Rule
 
@@ -40,7 +40,7 @@ Mark an entry `candidate` and recommend a promotion target when either condition
 - the same pattern appears in 3 real tasks
 - the same pattern appears in 2 real tasks and affects publication safety, verification integrity, bootstrap correctness, or canon/source-of-truth boundaries
 
-Promotion targets must be explicit: a workflow card under `agents/founder/WORKFLOWS/`, `agents/README.md`, `agents/founder/README.md`, `agents/MIGRATION.md`, `docs/codex/onboarding.md`, `docs/codex/agent-quality.md`, or another registered canonical file.
+Promotion targets must be explicit: a workflow card under `agents/founder/WORKFLOWS/`, `agents/README.md`, `agents/founder/README.md`, `agents/MIGRATION.md`, `agents/ONBOARDING.md`, `agents/QUALITY.md`, or another registered canonical file.
 
 After promotion, update the ledger entry to `promoted`, link the destination, and keep the evidence count. If the decision is not to promote, mark it `rejected` with the reason.
 
@@ -65,7 +65,7 @@ Use [agents/_templates/learning-entry.md](./_templates/learning-entry.md) for ne
 - Evidence count: `1`
 - Affected workflow surface: `coordination`
 - Recommended promotion target: `none yet`
-- Related canonical files: `agents/README.md`, `docs/codex/agent-quality.md`
+- Related canonical files: `agents/README.md`, `agents/QUALITY.md`
 
 ## Observation
 

@@ -25,8 +25,12 @@ For any non-terminal entry (`adapter-only` or `preserved-pending-review`), recor
 | `AGENTS.md` | `preserved-pending-review` | cross-agent root entrypoint and still-binding repo doctrine surface; owner: founder canon migration, reviewed_at: 2026-05-13, exit: either shrink to a true entrypoint or explicitly retain as the intentional binding root alongside `agents/` |
 | `CLAUDE.md` | `adapter-only` | Claude compatibility pointer into canon |
 | `GEMINI.md` | `adapter-only` | Gemini compatibility pointer into canon |
-| `docs/codex/onboarding.md` | `preserved-pending-review` | currently binding bootstrap surface; must point into canon |
-| `docs/codex/agent-quality.md` | `preserved-pending-review` | currently binding quality/source-of-truth surface; must reflect canon |
+| `docs/codex/onboarding.md` | `promoted` | shared bootstrap doctrine moved to `agents/ONBOARDING.md`; old Codex namespace no longer authoritative |
+| `docs/codex/agent-quality.md` | `promoted` | shared quality doctrine moved to `agents/QUALITY.md`; old Codex namespace no longer authoritative |
+| `docs/codex/decision-log.md` | `promoted` | append-only decision record moved to `agents/_logs/decision-log.md` |
+| `docs/codex/agent-review-log.md` | `promoted` | append-only agent review record moved to `agents/_logs/agent-review-log.md` |
+| `docs/codex/customer-persona-prompt-template.md` | `promoted` | reusable agent template moved to `agents/_templates/customer-persona-prompt.md` |
+| `docs/codex/socratink-brain-workflow-architecture.md` | `deprecated` | deleted deprecated stub; authority remains `.socratink-brain/CLAUDE.md` |
 | `.claude/` | `tool-specific` | runtime skills/settings surface |
 | `.claude/friction-log.md` | `preserved-pending-review` | raw sediment log; curate repeated workflow patterns into `agents/LEARNINGS.md`, but do not treat the source log as canon |
 | `.claude/settings.json` | `tool-specific` | Claude runtime hook/config surface; do not migrate into `agents/` |
