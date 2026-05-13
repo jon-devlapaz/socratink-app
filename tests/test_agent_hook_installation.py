@@ -35,3 +35,15 @@ def test_bootstrap_docs_acknowledge_agents_canon() -> None:
     quality = (REPO_ROOT / "docs" / "codex" / "agent-quality.md").read_text(encoding="utf-8")
     assert "agents/" in onboarding
     assert "agents/" in quality
+
+
+def test_bootstrap_script_wires_repo_hook_path() -> None:
+    text = (REPO_ROOT / "scripts" / "bootstrap-python.sh").read_text(encoding="utf-8")
+    assert "core.hooksPath" in text
+    assert "scripts/git-hooks" in text
+
+
+def test_doctor_checks_hook_installation() -> None:
+    text = (REPO_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+    assert "core.hooksPath" in text or "git config --local --default '' core.hooksPath" in text
+    assert "scripts/git-hooks" in text

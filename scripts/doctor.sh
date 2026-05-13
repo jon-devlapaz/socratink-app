@@ -29,6 +29,18 @@ for required_file in "${required_files[@]}"; do
   fi
 done
 
+echo "[doctor] git hook path..."
+hook_path="$(git config --local --default '' core.hooksPath)"
+if [ "$hook_path" != "scripts/git-hooks" ]; then
+  echo "[doctor] FAIL: core.hooksPath is '$hook_path' (expected scripts/git-hooks)" >&2
+  exit 1
+fi
+
+if [ ! -x "scripts/git-hooks/pre-push" ]; then
+  echo "[doctor] FAIL: scripts/git-hooks/pre-push missing or not executable" >&2
+  exit 1
+fi
+
 if [ ! -x ".venv/bin/python" ]; then
   echo "[doctor] FAIL: missing .venv. Run: bash scripts/bootstrap-python.sh" >&2
   exit 1
