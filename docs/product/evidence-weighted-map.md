@@ -8,7 +8,7 @@ For supporting context, read:
 - [/DESIGN.md](../../DESIGN.md) — canonical UX doctrine
 - [progressive-disclosure.md](progressive-disclosure.md) — implementation-facing state and routing spec
 - [starting-map-flow-artifact.md](starting-map-flow-artifact.md) — concept-entry storyboard that operationalizes this doctrine
-- [../drill/engineering.md](../drill/engineering.md) — drill/graph invariants
+- [../drill/README.md](../drill/README.md) — drill-doc rebuild note and current truth routing
 
 ---
 

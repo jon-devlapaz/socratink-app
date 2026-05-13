@@ -37,7 +37,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 ## Use These Docs
 - [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md): binding doctrine for what the graph may/must not claim
 - [docs/product/spec.md](../product/spec.md): binding product contract
-- [docs/drill/engineering.md](../drill/engineering.md): graph/drill invariants
+- [docs/drill/README.md](../drill/README.md): drill-doc rebuild note and current truth routing
 - [docs/project/doc-map.md](doc-map.md): registry of all docs with status and binding flags
 - [docs/project/mvp-happy-path.md](mvp-happy-path.md): current manual release gate
 - [docs/project/operations.md](operations.md): merge and stabilization criteria

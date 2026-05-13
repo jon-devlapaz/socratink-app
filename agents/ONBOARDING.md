@@ -14,7 +14,7 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 6. [agents/QUALITY.md](./QUALITY.md)
 7. [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md) — binding graph-truth doctrine
 8. [docs/product/spec.md](../product/spec.md)
-9. [docs/drill/engineering.md](../drill/engineering.md) if the task touches drill, graph, routing, or persistence
+9. [docs/drill/README.md](../docs/drill/README.md) if the task touches drill, graph, routing, or persistence
 10. [docs/project/doc-map.md](../project/doc-map.md) to locate any other binding doc
 11. `logs/drill-runs.jsonl` if current loop evidence matters
 
@@ -52,7 +52,7 @@ Before doing substantive work:
 8. Read docs/product/spec.md.
 9. Scan docs/project/doc-map.md to locate any other binding doc the task touches.
 10. If current runtime evidence matters, inspect `logs/drill-runs.jsonl`.
-11. If the task touches drill/graph behavior, read docs/drill/engineering.md.
+11. If the task touches drill/graph behavior, read docs/drill/README.md.
 12. Decide which agents are actually needed. Prefer a small party.
 13. Make a plan when the task is large, risky, or ambiguous.
 14. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.

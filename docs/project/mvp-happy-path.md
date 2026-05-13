@@ -10,7 +10,7 @@ Use this document when:
 Read first:
 - [project/state.md](state.md)
 - [product/spec.md](../product/spec.md)
-- [drill/engineering.md](../drill/engineering.md)
+- [drill/README.md](../drill/README.md)
 - `logs/drill-runs.jsonl`
 
 ## Release Gate

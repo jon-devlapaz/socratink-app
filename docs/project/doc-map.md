@@ -42,8 +42,9 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | --- | --- | --- | --- | --- |
 | [product/progressive-disclosure.md](../product/progressive-disclosure.md) | implementation | yes | Four-state model implementation spec: state transitions, persisted fields, phase tracking, drill contract, routing, progression layers, session guardrails, target happy path. | — |
 | [product/post-drill-ux-spec.md](../product/post-drill-ux-spec.md) | implementation | yes | Post-phase panel copy, result-state visuals, sensory treatment, transcript policy, tier/band trajectory display. | — |
-| [drill/engineering.md](../drill/engineering.md) | implementation | yes | Hard engineering invariants for drill/graph state coherence; pre-change checklist. | — |
-| [drill/evaluation.md](../drill/evaluation.md) | evidence | yes | Manual eval set, answer modes, obvious-break checklist, evidence capture for the thermostat loop. | — |
+| [drill/README.md](../drill/README.md) | workflow | yes | Temporary rebuild note for retired drill docs; routes readers to the current binding drill truth surfaces while greenfield doctrine is rebuilt. | — |
+| [archive/drill/engineering.md](../archive/drill/engineering.md) | historical | no | Retired drill/graph invariants doc. Preserved only for historical context during the drill-doc rebuild. | [drill/README.md](../drill/README.md) |
+| [archive/drill/evaluation.md](../archive/drill/evaluation.md) | historical | no | Retired manual drill evaluation set. Preserved only for historical context during the drill-doc rebuild. | [drill/README.md](../drill/README.md) |
 | [product/repair-reps.md](../product/repair-reps.md) | implementation | yes | Unified implementation spec for Repair Reps (focused layout, card-stack visuals, self-rating evidence schema). | — |
 | [project/auth-rollout.md](auth-rollout.md) | implementation | yes | Auth rollout phases, release gates, test plan, deferred work. | — |
 | [design/handoffs/2026-05-02-extraction-evals-and-rubric.md](../design/handoffs/2026-05-02-extraction-evals-and-rubric.md) | implementation | yes | Evaluation rubric and rubrics for extraction quality. | — |
