@@ -111,20 +111,13 @@ def _emit_ai_call(*, stage: str, model: str, latency_ms: float,
     )
 
 
-PROTECTED_HTML_PATHS = frozenset({"/", "/index.html", "/admin/todo"})
+PROTECTED_HTML_PATHS = frozenset({"/", "/index.html"})
 PROTECTED_API_PATHS = frozenset(
     {
         "/api/drill",
         "/api/extract",
         "/api/extract-url",
         "/api/repair-reps",
-        "/api/admin/todo",
-        "/api/admin/todo/mtime",
-        "/api/admin/todo/toggle",
-        "/api/admin/todo/move",
-        "/api/admin/todo/edit",
-        "/api/admin/todo/issue",
-        "/api/admin/feedback",
     }
 )
 
@@ -857,11 +850,6 @@ def repair_reps(req: RepairRepsRequest):
 
 
 app.include_router(auth_router)
-
-# Admin Surface (dev-only). Must be included BEFORE the StaticFiles mount,
-# or the catch-all "/" mount with html=True would shadow /admin/todo.
-from admin import register_admin_router  # noqa: E402
-register_admin_router(app)
 
 # Serve the frontend locally. On Vercel, static files are served by the CDN.
 _public_dir = Path(__file__).parent / "public"

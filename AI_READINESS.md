@@ -55,7 +55,7 @@ find . -type f \( -name '*.py' -o -name '*.js' -o -name '*.ts' \) \
 | --- | --- | --- | --- |
 | Files use bespoke templating or string-built code blocks that tree-sitter cannot parse. | 5+ files > 800 LOC OR any source file > 2000 LOC. | 1–4 files > 800 LOC, none > 2000 LOC. | All source files ≤ 800 LOC; tree-sitter parses without ERROR nodes on any file. |
 
-**socratink-app baseline:** `public/js/app.js` (4,430), `admin/static.py` (1,172), `ai_service.py` (1,069), `auth/router.py` (996), `main.py` (872) — currently scoring **1**.
+**socratink-app baseline:** `public/js/app.js` (4,430), `ai_service.py` (1,069), `auth/router.py` (996), `main.py` (872) — currently scoring **1**.
 
 ---
 
@@ -226,7 +226,7 @@ ls docs/adr/ 2>/dev/null
 | --- | --- | --- | --- |
 | Root README only. | Root README + a handful of stale folder READMEs. | Root + ≥3 directory READMEs covering main bounded contexts; ADRs exist. | Every top-level source directory has a README that states purpose, public surface, and known footguns; ADRs cover non-obvious decisions. |
 
-**socratink-app baseline:** `docs/adr/` exists with 4 ADRs; `tests/e2e/README.md`, `docs/founder/README.md`, `docs/adr/README.md` plus per-directory READMEs for `auth/`, `llm/`, `source_intake/`, `models/`, `admin/`, and `app_prompts/` are now checked in. Currently **3**; keep new top-level source directories under the same convention to hold the score.
+**socratink-app baseline:** `docs/adr/` exists with 4 ADRs; `tests/e2e/README.md`, `docs/founder/README.md`, `docs/adr/README.md` plus per-directory READMEs for `auth/`, `llm/`, `source_intake/`, `models/`, and `app_prompts/` are now checked in. Currently **3**; keep new top-level source directories under the same convention to hold the score.
 
 ---
 
