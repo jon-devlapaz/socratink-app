@@ -21,10 +21,10 @@ If any answer is unclear, inspect `docs/project/doc-map.md` before changing code
 - Current product/deploy state: `docs/project/state.md`.
 - Graph truth and mastery claims: `docs/product/evidence-weighted-map.md`.
 - Cold attempt, study, and re-drill contract: `docs/product/spec.md`.
-- Agent bootstrap: `docs/codex/onboarding.md`.
+- Agent bootstrap: `docs/codex/onboarding.md`, which routes agents into the shared `agents/` canon.
 - External API/SDK/platform behavior: Context7 (see `AGENTS.md` "Layer 3 — Context7"). Treat as external evidence, not Socratink doctrine; local binding docs win on conflicts about Socratink behavior.
 
-Do not create parallel source-of-truth files unless the user explicitly asks for a migration and the old path is removed or reduced to a redirect.
+Do not create parallel source-of-truth files accidentally. The intentional migration promotes shared workflow truth into `agents/` while old bootstrap and tool-specific surfaces are reduced to adapters, redirects, or runtime/config surfaces.
 
 ## Product Truth Rules
 

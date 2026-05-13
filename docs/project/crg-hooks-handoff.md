@@ -33,7 +33,7 @@ After implementing, verify that:
 1. Making a commit updates the graph.
 2. Checking out a new branch triggers a graph build.
 3. The visualizer HTML updates seamlessly.
-4. If `code-review-graph` is uninstalled or not in the PATH, the git hooks fail gracefully without breaking standard Git operations.
+4. If `code-review-graph` is uninstalled or not in the PATH, the CRG hook commands fail gracefully without breaking standard Git operations. Repo-wide publication gates such as `pre-push` may still block intentionally for workflow enforcement.
 
 ---
 **Execution:** Please execute this plan directly. Prioritize the Git hooks as they provide the widest safety net for team synchronization.

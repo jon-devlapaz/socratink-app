@@ -2,6 +2,14 @@
 
 This file provides guidance to all coding agents and automation working in this repository.
 
+## Shared Agent Canon
+
+The canonical shared workflow truth for repo agents now lives in `agents/`.
+
+- Use `agents/README.md` for the boundary contract.
+- Use `agents/founder/WORKFLOWS/` for founder workflow cards.
+- Treat tool-specific directories (`.claude/`, `.codex/`, `.gemini/`) as runtime/config surfaces unless a migration ledger entry says otherwise.
+
 ### Boil the ocean
 
 The marginal cost of completeness is

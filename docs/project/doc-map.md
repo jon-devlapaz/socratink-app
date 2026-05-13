@@ -75,8 +75,12 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 
 | Doc | Status | Binding | Purpose | Superseded By |
 | --- | --- | --- | --- | --- |
-| [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions. | — |
-| [codex/agent-quality.md](../codex/agent-quality.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails. | — |
+| [/agents/README.md](../../agents/README.md) | workflow | yes | Canonical boundary for shared model-agnostic agent workflow truth. | — |
+| [/agents/MIGRATION.md](../../agents/MIGRATION.md) | workflow | yes | Migration ledger for promoting tool-specific agent surfaces into the shared canon. | — |
+| [/agents/_templates/workflow-card.md](../../agents/_templates/workflow-card.md) | workflow | yes | Fixed schema for future workflow cards. | — |
+| [/agents/founder/WORKFLOWS/01-git-integration.md](../../agents/founder/WORKFLOWS/01-git-integration.md) | workflow | yes | Founder git publication workflow: push routing, confirmation boundaries, and v1 enforcement scope. | — |
+| [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions; routes agents into `agents/`. | — |
+| [codex/agent-quality.md](../codex/agent-quality.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails; recognizes `agents/` as shared workflow canon. | — |
 | [codex/workflows.md](../codex/workflows.md) | workflow | yes | Hot-fix, Build-Measure-Learn, decision-log, and Glenna review workflows. | — |
 | [codex/drill-build-measure-learn.md](../codex/drill-build-measure-learn.md) | workflow | yes | Drill log → Socratink Brain evaluation → fix cycle. | — |
 | [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |

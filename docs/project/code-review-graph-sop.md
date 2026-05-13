@@ -41,9 +41,11 @@ completes.
 
 Repo-versioned at `scripts/git-hooks/` and wired in via `git config --local
 core.hooksPath scripts/git-hooks` (set automatically by
-`scripts/bootstrap-python.sh`). All hooks are best-effort and silent: each
-guards on `command -v code-review-graph` and exits 0 if the CLI isn't
-installed, so they never break standard git operations.
+`scripts/bootstrap-python.sh`). The CRG-specific `post-*` hooks are best-effort
+and silent: each guards on `command -v code-review-graph` and exits 0 if the CLI
+isn't installed, so CRG refresh never breaks standard git operations. The repo
+`pre-push` hook is separate workflow enforcement and may block publication
+intentionally.
 
 | Event | Hook | What runs (backgrounded) |
 |---|---|---|
