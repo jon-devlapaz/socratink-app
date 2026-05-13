@@ -183,6 +183,10 @@ This workflow should route agent behavior for:
 - PR opening
 - confirmation boundaries for persistent state changes
 
+**Important v1 scope limit**
+
+For v1, only the **push publication path** is deterministically enforced in code. Commit shaping, branch deletion, and PR opening remain workflow-card guidance and confirmation policy, not hook-backed enforcement. The first real enforcement seam is intentionally narrow.
+
 ### 9.2 Action tiers
 
 - **`safe`**
@@ -192,6 +196,7 @@ This workflow should route agent behavior for:
   - branch delete
   - open PR
   - push `origin/dev`
+  - push `origin/feat/*`
   - push `no-mistakes/dev`
 - **`hard-confirm`**
   - push `origin/main`
@@ -217,6 +222,7 @@ Normal push publication to `origin/dev` remains `confirm` unless another hard-co
 Default route recommendations:
 
 - **Recommend `origin/dev`** for ordinary, narrow, straightforward `dev` changes where CodeRabbit on `origin` is sufficient.
+- **Recommend `origin/feat/*`** for normal feature-branch publication intended for PR-based review/merge flow.
 - **Recommend `no-mistakes/dev`** for larger, higher-blast-radius, higher-risk, or messier changes that benefit from the additional brake.
 
 Rules:
@@ -252,7 +258,7 @@ Responsibilities:
 
 1. inspect repo state and intended target
 2. compute risk triggers deterministically
-3. recommend `origin/dev` or `no-mistakes/dev`
+3. recommend `origin/dev`, `origin/feat/*`, or `no-mistakes/dev`
 4. print the recommendation, triggered rules, and required ack token
 5. exit non-zero on the first run
 6. accept a second run with `--ack ...`
@@ -337,6 +343,7 @@ Any of the following should force at least `confirm`:
 - branch delete
 - PR open
 - any push to `origin/dev`
+- any push to `origin/feat/*`
 - any push to `no-mistakes/dev`
 
 ### 11.3 `no-mistakes` recommendation triggers
@@ -379,6 +386,8 @@ Operational evidence should live under a neutral runtime path:
 ```text
 .agents/runtime/push-decisions.jsonl
 ```
+
+The wrapper should create `.agents/runtime/` and the log file on demand. They are runtime evidence surfaces, not tracked repo artifacts.
 
 Each entry should include:
 
@@ -445,6 +454,7 @@ This design slice is done when all of the following exist and agree with each ot
 - hook-install verification in bootstrap/doctor
 - runtime log path `.agents/runtime/push-decisions.jsonl`
 - `docs/project/code-review-graph-sop.md` updated so hook behavior is no longer described as universally best-effort and non-blocking
+- `docs/project/crg-hooks-handoff.md` updated so hook behavior is no longer described as universally graceful/non-blocking
 
 And the enforcement contract is true in practice:
 
@@ -452,6 +462,7 @@ And the enforcement contract is true in practice:
 - the wrapper recomputes intent before executing a push
 - agent push recommendations are deterministic
 - founder override is possible only through explicit typed acknowledgment
+- non-push git actions are documented as workflow-card policy unless/until a later enforcement seam is added
 
 ## 17. Open questions for implementation planning
 
