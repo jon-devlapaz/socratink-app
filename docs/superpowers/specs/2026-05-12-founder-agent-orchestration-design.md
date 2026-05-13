@@ -48,9 +48,20 @@ Three architectural invariants follow:
 
 ### 5.1 Canonical order
 
+**End-state authority order**
+
 1. **`agents/`** — canonical shared workflow truth
 2. **Root adapter files** — `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`
 3. **Tool-specific directories** — `.claude/`, `.codex/`, `.gemini/` as runtime/config/wrapper surfaces
+
+**Transitional rule**
+
+Until migration is complete, the current bootstrap surfaces remain binding:
+
+- `docs/codex/onboarding.md`
+- `docs/codex/agent-quality.md`
+
+This spec does **not** authorize a parallel canon that leaves those files untouched. The migration is only complete when those files are updated to point to the new canon or reduced to redirect-style adapter content, and when `docs/project/doc-map.md` is updated to reflect the new authority layout.
 
 ### 5.2 What belongs in `agents/`
 
@@ -82,6 +93,12 @@ Workflow cards should route to existing repo-owned scripts, docs, hooks, and che
 - explicit instructions to load the relevant canon before acting
 
 They should remain short enough to avoid context bloat, but strong enough that a tool which auto-loads only the root file still sees the core constraints.
+
+The adapter contract also requires migration hygiene:
+
+- shared doctrine must be extracted into `agents/`
+- the old bootstrap docs must be updated or reduced to redirects/adapters
+- no tool-specific root should silently retain stronger authority than the canon
 
 ## 6. Initial file layout
 
@@ -179,8 +196,19 @@ This workflow should route agent behavior for:
 - **`hard-confirm`**
   - push `origin/main`
   - force-push
-  - merge to a protected branch
+  - push or merge to a publish-protected branch other than normal `dev` publication
   - prod-affecting deploy path
+
+### 9.2.1 Local branch protection vs publish protection
+
+This repo already uses local git hooks that treat both `dev` and `main` as merge-protected for specific safety reasons. That does **not** mean ordinary publication to `origin/dev` should automatically escalate to `hard-confirm`.
+
+To avoid ambiguity, this design distinguishes:
+
+- **merge-protected local branches** — branches that existing local hooks may guard for merge/rebase safety (`dev`, `main`)
+- **publish-protected branches** — branches whose publication path should escalate to `hard-confirm` (`main`, force-push targets, prod-coupled routes, and any future explicitly protected publication target)
+
+Normal push publication to `origin/dev` remains `confirm` unless another hard-confirm trigger fires.
 
 ### 9.3 Route policy
 
@@ -211,7 +239,14 @@ The enforcement seam is:
 
 ### 10.2 `agent-push.py` contract
 
-`scripts/agent-push.py` is the only allowed push path for agents.
+`scripts/agent-push.py` is the supported push path for normal repo use in this workflow.
+
+Implications:
+
+- agents must use it
+- humans should normally use it too
+- the hook design will block raw pushes unless the wrapper prepared authorization
+- any human bypass outside the wrapper is an intentional policy bypass, not a first-class path
 
 Responsibilities:
 
@@ -243,6 +278,8 @@ It should reject the push unless the wrapper created a valid one-shot authorizat
 
 This should be treated as tamper-evident friction, not cryptographic security. The real goal is to prevent accidental or shortcut agent pushes, not to defend against a malicious local user.
 
+Because git hooks cannot reliably identify “agent” versus “human,” this contract applies to normal human pushes too. The supported path is the wrapper. Any human raw-push bypass is an explicit break-glass move and should be documented as such in the workflow card.
+
 ### 10.4 Hook installation
 
 The enforcement is not real unless the hook is installed.
@@ -258,7 +295,13 @@ Fresh clones, worktrees, and alternate local checkouts must not silently skip th
 
 The wrapper must not trust local aliases like `origin` or `no-mistakes` by name alone.
 
-It should allowlist expected remotes by URL and reject arbitrary refspecs by default.
+It should allowlist expected remotes by URL pattern and reject arbitrary refspecs by default.
+
+The allowlist strategy must not hardcode Jon-machine absolute paths into tracked code. It should support:
+
+- tracked patterns for expected public remotes
+- tracked patterns or roles for known special remotes such as `no-mistakes`
+- optional ignored local overrides for machine-specific path differences
 
 ### 10.6 Intent binding
 
@@ -283,7 +326,7 @@ Any of the following should force `hard-confirm`:
 
 - destination is `main`
 - operation is force-push
-- operation targets a protected branch
+- operation targets a publish-protected branch other than ordinary `dev` publication
 - action is coupled to a prod-affecting deploy path
 
 ### 11.2 Confirm triggers
@@ -309,13 +352,23 @@ The initial `no-mistakes` recommendation should fire when one or more of the fol
 Initial path-sensitive triggers for recommendation:
 
 - `main.py`
+- `api/index.py`
 - `ai_service.py`
 - `auth/`
 - `vercel.json`
+- `.github/workflows/`
+- `requirements.txt`
+- `requirements-dev.txt`
 - `AGENTS.md`
 - `CLAUDE.md`
 - `GEMINI.md`
 - `agents/`
+- `docs/codex/onboarding.md`
+- `docs/codex/agent-quality.md`
+- `scripts/bootstrap-python.sh`
+- `scripts/doctor.sh`
+- `scripts/check-coverage.sh`
+- `scripts/git-hooks/`
 
 The exact file-count / LOC thresholds should be finalized in the implementation plan, not improvised during coding.
 
@@ -352,6 +405,7 @@ This design assumes:
 
 - local enforcement prevents casual bypass by agents
 - remote enforcement protects against local mistakes that still get through
+- workflow enforcement docs that currently describe hooks as best-effort must be updated so they do not contradict the blocking `pre-push` contract
 
 ## 14. Founder interaction model
 
@@ -383,10 +437,14 @@ This design slice is done when all of the following exist and agree with each ot
 - `agents/_templates/workflow-card.md`
 - `agents/founder/WORKFLOWS/01-git-integration.md`
 - root adapter files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`) updated to point into the canon
+- `docs/codex/onboarding.md` updated to point into the canon or reduced to redirect-style adapter content
+- `docs/codex/agent-quality.md` updated to reflect the new bootstrap/source-of-truth model
+- `docs/project/doc-map.md` updated to register the new canon layout and changed authority model
 - `scripts/agent-push.py`
 - `scripts/git-hooks/pre-push`
 - hook-install verification in bootstrap/doctor
 - runtime log path `.agents/runtime/push-decisions.jsonl`
+- `docs/project/code-review-graph-sop.md` updated so hook behavior is no longer described as universally best-effort and non-blocking
 
 And the enforcement contract is true in practice:
 
@@ -398,7 +456,8 @@ And the enforcement contract is true in practice:
 ## 17. Open questions for implementation planning
 
 - exact file-count and diff-size thresholds for `no-mistakes` recommendation
-- exact allowlist format for trusted remotes
+- exact allowlist format for trusted remotes and local override shape
 - exact nonce/authorization artifact format shared between wrapper and hook
 - whether adapter files should import canon directly or inline a minimal bootstrap plus path references
 - whether doctor should fail hard or warn on missing hook installation in non-agent contexts
+- exact documented break-glass human bypass policy
