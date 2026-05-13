@@ -8,6 +8,7 @@ The canonical shared workflow truth for repo agents now lives in `agents/`.
 
 - Use `agents/README.md` for the boundary contract.
 - Use `agents/founder/WORKFLOWS/` for founder workflow cards.
+- Use `agents/LEARNINGS.md` only as the non-binding learning ledger for recurring founder/agent workflow friction; promote repeated patterns into canon before treating them as policy.
 - Treat tool-specific directories (`.claude/`, `.codex/`, `.gemini/`) as runtime/config surfaces unless a migration ledger entry says otherwise.
 
 ### Boil the ocean

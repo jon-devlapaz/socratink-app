@@ -22,6 +22,7 @@ If any answer is unclear, inspect `docs/project/doc-map.md` before changing code
 - Graph truth and mastery claims: `docs/product/evidence-weighted-map.md`.
 - Cold attempt, study, and re-drill contract: `docs/product/spec.md`.
 - Agent bootstrap: `docs/codex/onboarding.md`, which routes agents into the shared `agents/` canon.
+- Non-binding founder/agent workflow learnings: `agents/LEARNINGS.md`. Read only for matching workflow tasks or recurring friction; do not treat ledger entries as policy until promoted.
 - External API/SDK/platform behavior: Context7 (see `AGENTS.md` "Layer 3 — Context7"). Treat as external evidence, not Socratink doctrine; local binding docs win on conflicts about Socratink behavior.
 
 Do not create parallel source-of-truth files accidentally. The intentional migration promotes shared workflow truth into `agents/` while old bootstrap and tool-specific surfaces are reduced to adapters, redirects, or runtime/config surfaces.
@@ -42,6 +43,7 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 - Delete obsolete paths when simplifying. If compatibility is needed, keep a tiny redirect file.
 - Do not commit generated local artifacts (`pyproject.toml`, `uv.lock`, `.vercel/`, caches, logs).
 - Do not claim "no verification needed" for doc-only changes that alter agent instructions, deploy instructions, dependency instructions, product doctrine, or required file paths. At minimum, run `bash scripts/doctor.sh`.
+- Capture reusable workflow friction in `agents/LEARNINGS.md` instead of scattering notes through adapters. Promote a pattern only after recurrence: 3 real sightings, or 2 sightings when it affects publication safety, verification integrity, bootstrap correctness, or canon boundaries.
 
 ## Verification Matrix
 

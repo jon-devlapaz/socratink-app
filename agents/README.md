@@ -7,6 +7,7 @@ Canonical shared workflow truth for repo agents.
 - workflow cards
 - templates
 - migration ledgers
+- non-binding workflow learnings that may later be promoted
 - founder orchestration doctrine
 - prompt batteries
 - shared decision rubrics
@@ -22,9 +23,21 @@ Canonical shared workflow truth for repo agents.
 
 `agents/` is the shared canon. `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are entrypoint adapters into this canon. Tool-specific directories like `.claude/`, `.codex/`, and `.gemini/` are runtime/config/wrapper surfaces, not canonical doctrine.
 
+`agents/LEARNINGS.md` is a special case: it lives in the canon tree so agents can find it, but its entries are non-binding until promoted into a canonical workflow, README, migration ledger, bootstrap doc, or other registered binding file.
+
 ## Migration rule
 
 Migrate selectively. Promote only stable, high-signal, cross-model content. Preserve high-value tool-local content until its signal is captured or intentionally deprecated.
+
+## Learning loop
+
+Use `agents/LEARNINGS.md` to capture reusable observations from real founder/agent workflow usage.
+
+- Read it only when a task touches agent workflow design, bootstrap, publication safety, artifact placement, verification discipline, workflow-card creation, or recurring workflow friction.
+- Write to it only when real usage exposes reusable workflow evidence. Do not log one-off task details, speculative ideas, or policy that already belongs directly in canon.
+- Promote from it only through reviewed edits to the canonical destination.
+
+The compounding rule is simple: repeated patterns become promotion candidates after 3 real sightings, or after 2 sightings when the pattern affects publication safety, verification integrity, bootstrap correctness, or canon boundaries. The ledger never mutates canon by itself.
 
 ## Git publication config
 
