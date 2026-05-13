@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -289,6 +290,47 @@ class SupabaseAuthService:
         client = self._make_supabase_client()
         response = client.auth.sign_in_anonymously()
         return self._state_from_response(response)
+
+    def build_local_e2e_guest_session(self) -> AuthSessionState:
+        """Build a local browser-test guest session without calling Supabase."""
+        import jwt
+        from auth.session_seal import seal_session_tokens
+
+        self._require_enabled()
+        assert self.jwt_secret and self.session_cookie_key and self.supabase_url
+
+        now = int(time.time())
+        expires_at = now + 60 * 60
+        user = AuthUser(id="local_e2e_guest", email=None)
+        access_token = jwt.encode(
+            {
+                "aud": "authenticated",
+                "iss": f"{self.supabase_url.rstrip('/')}/auth/v1",
+                "sub": user.id,
+                "role": "authenticated",
+                "iat": now,
+                "exp": expires_at,
+                "is_anonymous": True,
+                "user_metadata": {"full_name": "Local E2E Guest"},
+            },
+            self.jwt_secret,
+            algorithm="HS256",
+        )
+        sealed = seal_session_tokens(
+            {
+                "access_token": access_token,
+                "refresh_token": "local-e2e-refresh-token",
+                "expires_at": expires_at,
+            },
+            key=self.session_cookie_key,
+        )
+        return AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=user,
+            guest_mode=True,
+            sealed_session=sealed,
+        )
 
     def load_session(self, sealed_session: str | None) -> AuthSessionState:
         if not self.enabled:

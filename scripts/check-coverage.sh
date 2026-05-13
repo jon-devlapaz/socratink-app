@@ -16,7 +16,7 @@ echo "Clearing old V8 coverage data..."
 rm -rf .qa-runs/v8-coverage .qa-runs/coverage-reports
 
 echo "Generating backend and raw V8 coverage..."
-./scripts/test-cov.sh --quiet
+SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}" ./scripts/test-cov.sh --quiet
 
 echo "Generating frontend coverage report..."
 node scripts/generate-frontend-coverage.js

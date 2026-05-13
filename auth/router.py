@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import logging
+import os
 from typing import Literal, cast
 from urllib.parse import urlencode
 
@@ -768,6 +769,20 @@ def _clear_oauth_state_cookie(response: Response, request: Request) -> None:
     response.delete_cookie(service.oauth_state_cookie_name, path="/")
 
 
+def _local_e2e_guest_bootstrap_enabled(request: Request) -> bool:
+    if os.getenv("SOCRATINK_E2E_LOCAL_GUEST", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return False
+    if not dev_autoguest_enabled():
+        return False
+    client_host = request.client.host if request.client else ""
+    return client_host in {"127.0.0.1", "::1", "testclient"}
+
+
 def load_current_session_state(request: Request) -> AuthSessionState:
     service = _get_auth_service(request)
     sealed_session = request.cookies.get(service.cookie_name)
@@ -864,6 +879,41 @@ def auth_guest(request: Request, return_to: str | None = None) -> Response:
             ),
             status_code=302,
         )
+    _apply_session_cookie(response, request, auth_state.sealed_session)
+    response.delete_cookie(GUEST_COOKIE_NAME, path="/")
+    return response
+
+
+@auth_router.get("/auth/e2e/guest")
+def auth_e2e_guest(request: Request, return_to: str | None = None) -> Response:
+    if not _local_e2e_guest_bootstrap_enabled(request):
+        raise HTTPException(status_code=404, detail="Not found")
+
+    service = _get_auth_service(request)
+    sanitized_return_to = sanitize_return_to_path(return_to)
+    try:
+        auth_state = service.build_local_e2e_guest_session()
+    except AuthConfigurationError as err:
+        logger.warning("Local e2e guest bootstrap failed (config): %s", err)
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="guest_unavailable",
+            ),
+            status_code=302,
+        )
+
+    if not auth_state.sealed_session:
+        logger.warning("Local e2e guest bootstrap did not return a sealed session")
+        return RedirectResponse(
+            url=_build_login_redirect(
+                return_to=sanitized_return_to,
+                auth_error="authentication_failed",
+            ),
+            status_code=302,
+        )
+
+    response = RedirectResponse(url=sanitized_return_to, status_code=302)
     _apply_session_cookie(response, request, auth_state.sealed_session)
     response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response

@@ -15,6 +15,7 @@ UVICORN_BIN=".venv/bin/uvicorn"
 # first protected GET. Hard-gated in main.py against Vercel/CI runtime env
 # markers, so this stays inert in any non-local environment.
 export SOCRATINK_DEV_AUTOGUEST="${SOCRATINK_DEV_AUTOGUEST:-1}"
+export SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}"
 
 "$PYTHON_BIN" scripts/check-local-auth.py --port "${PORT:-8000}"
 exec "$UVICORN_BIN" main:app --reload --host "${HOST:-127.0.0.1}" --port "${PORT:-8000}"

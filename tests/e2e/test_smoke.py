@@ -40,6 +40,7 @@ to absorb any serverless cold-start latency before the browser tests run.
 from __future__ import annotations
 
 import time
+import os
 import re
 from urllib.parse import urljoin
 
@@ -95,6 +96,13 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     global _cached_guest_cookies
     if _cached_guest_cookies:
         page.context.add_cookies(_cached_guest_cookies)
+
+    if os.getenv("SOCRATINK_E2E_LOCAL_GUEST"):
+        page.goto(urljoin(base_url + "/", "auth/e2e/guest?return_to=%2F"))
+        session = _fetch_browser_session(page)
+        if session.get("authenticated") or session.get("guest_mode"):
+            _cached_guest_cookies = page.context.cookies()
+            return
 
     page.goto(base_url)
     if "/login" not in page.url:

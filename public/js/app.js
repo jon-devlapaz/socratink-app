@@ -2213,13 +2213,26 @@ const App = (() => {
       const x = padX + i * stepX;
       const status = node.drill_status || 'locked';
       const isPrimed = status === 'primed' || status === 'drilled' || status === 'solidified';
+      const predecessorsAttempted = i === 0 || backbone
+        .slice(0, i)
+        .every((n) => (n?.drill_status || 'locked') !== 'locked');
+      const isReady = status === 'locked' && predecessorsAttempted;
+      const isBlocked = status === 'locked' && !predecessorsAttempted;
       const isActive = i === activeIdx;
-      const cls = ['concept-strip__node', isPrimed ? 'concept-strip__node--primed' : 'concept-strip__node--locked'];
+      const cls = [
+        'concept-strip__node',
+        isPrimed
+          ? 'concept-strip__node--primed'
+          : (isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked'),
+      ];
       if (isActive) cls.push('is-active');
-      const r = isActive ? 9 : (isPrimed ? 7 : 6);
+      const r = isActive ? 9 : (isPrimed ? 7 : (isReady ? 7 : 6));
       const entryId = node.id || `entry-${i}`;
       const label = escHtml(node.label || `entry ${i + 1}`);
-      const ariaLabel = `${node.label || 'entry'}, ${status}${isActive ? ', current' : ''}`;
+      const learnerState = isPrimed
+        ? status
+        : (isReady ? 'ready for first attempt' : 'locked');
+      const ariaLabel = `${node.label || 'entry'}, ${learnerState}${isActive ? ', current' : ''}`;
       return `
         <g class="${cls.join(' ')}"
            role="button"
@@ -2235,7 +2248,7 @@ const App = (() => {
     }).join('');
 
     // If backbone is empty, render a synthetic single node
-    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--locked is-active" role="button" tabindex="0" data-entry-id="core-thesis" data-entry-index="0" aria-label="core thesis, locked, current"><rect x="${padX - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
+    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--ready is-active" role="button" tabindex="0" data-entry-id="core-thesis" data-entry-index="0" aria-label="core thesis, ready for first attempt, current"><rect x="${padX - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
 
     const stripEdges = backbone.slice(1).map((_, i) => {
       const x1 = padX + i * stepX;
