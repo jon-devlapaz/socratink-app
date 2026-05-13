@@ -1,0 +1,9 @@
+{
+  "origin": [
+    "^https://github\\.com/[^/]+/socratink-app\\.git$",
+    "^git@github\\.com:[^/]+/socratink-app\\.git$"
+  ],
+  "no-mistakes": [
+    "(^|/|\\\\)\\.no-mistakes([/\\\\])repos([/\\\\])[^/\\\\]+\\.git$"
+  ]
+}

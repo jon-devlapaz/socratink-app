@@ -42,7 +42,7 @@ If evidence is missing, say so explicitly instead of writing confident prose aro
 
 For hosted drill-conversation capture, `/api/drill` emits structured `socratink_event` runtime log events in addition to local JSONL. Summary capture is on by default. Full learner/assistant transcript capture requires setting `SOCRATINK_CAPTURE_DRILL_TRANSCRIPTS=true` in Vercel, then exporting logs with `scripts/eval-pull` before running Socratink Brain `evaluate-logs`.
 
-Use the Build-Measure-Learn drill workflow in [docs/codex/drill-build-measure-learn.md](../codex/drill-build-measure-learn.md) when turning a drill run into evaluated logs and a proposed fix.
+Use the Build-Measure-Learn drill workflow in [agents/WORKFLOWS/drill-build-measure-learn.md](../../agents/WORKFLOWS/drill-build-measure-learn.md) when turning a drill run into evaluated logs and a proposed fix.
 
 ## 4. Near-Term Engineering Priorities
 - keep drill state, panel state, and graph state aligned

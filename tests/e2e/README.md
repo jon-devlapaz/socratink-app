@@ -78,7 +78,12 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
 `test_smoke.py` (11 tests). Use the raw pytest invocations below to run the
-full suite (23 tests across the four files).
+full suite (24 tests across the four files).
+
+Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
+`SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default
+for loopback dev servers so repeated browser tests do not create real Supabase
+anonymous users or trip the anonymous sign-in rate limit.
 
 ```bash
 # Local — needs `bash scripts/dev.sh` in another shell (runs the
@@ -96,7 +101,7 @@ Raw pytest invocations (when you need flags the wrapper doesn't pass through,
 or want the full four-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all four files, 23 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all four files, 24 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)

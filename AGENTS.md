@@ -2,6 +2,16 @@
 
 This file provides guidance to all coding agents and automation working in this repository.
 
+## Shared Agent Canon
+
+The canonical shared workflow truth for repo agents now lives in `agents/`.
+
+- Use `agents/README.md` for the boundary contract.
+- Use `agents/founder/WORKFLOWS/` for founder workflow cards.
+- Use `agents/LEARNINGS.md` only as the non-binding learning ledger for recurring founder/agent workflow friction; promote repeated patterns into canon before treating them as policy.
+- Treat tool-specific directories (`.claude/`, `.codex/`, `.gemini/`) as runtime/config surfaces unless a migration ledger entry says otherwise.
+- Treat `.agents/` as local substrate only: `.agents/skills/` is external install-state, `.agents/runtime/` is ignored runtime evidence, and neither is canonical doctrine.
+
 ### Boil the ocean
 
 The marginal cost of completeness is
@@ -119,7 +129,7 @@ When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`)
 - **Frontend bundle topology inflates risk scores.** `get_impact_radius` on any file imported into `public/js/app.js` reports HIGH risk and 50+ affected files. That is a topology artifact, not a real blast radius. Trust the callers/callees list, distrust the headline risk score for client JS.
 - **Symbol-shaped queries beat prose for semantic search.** "AudioFX bindUnlock" finds nodes; "threshold sound autoplay unlock" returns 0. When `semantic_search_nodes` falls back to keyword mode, prose queries silently fail.
 - **JS parser under-reports more than Python.** `query_graph file_summary` on `public/js/audio.js` lists 4 of its functions and misses the `play*` helpers. The floor-not-ceiling rule is sharper for JS files than for Python.
-- **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it surfaces unrelated admin Python flows. Skip it; go straight to `query_graph importers_of <file>`.
+- **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it can surface unrelated Python flows. Skip it; go straight to `query_graph importers_of <file>`.
 
 ## Common development commands
 ### Environment setup
@@ -153,6 +163,9 @@ SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 #      sessions through the concept-create dialog. Without dev_mode the
 #      dialog shows "Guest mode uses sample maps. Sign in to extract your
 #      own content into a draft map." and blocks the LLM extract path.
+# scripts/dev.sh also sets SOCRATINK_E2E_LOCAL_GUEST=1 by default. Local
+# browser tests use /auth/e2e/guest to mint a loopback-only guest cookie
+# without creating real Supabase anonymous users or burning auth rate limits.
 # Restart the server after toggling — uvicorn --reload reloads code, not env.
 SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 
@@ -209,7 +222,7 @@ python scripts/run_tasting_fixture.py
 ```
 - Threshold is on the diff, not the project total. Brand-new code without coverage fails; existing legacy gaps are not scored.
 - Pure-deletion diffs, doc-only diffs, and config-only diffs are correctly no-ops — diff-cover only scores added/modified executable lines.
-- Backend scope is `admin api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
+- Backend scope is `api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
 - If the script crashes outside of a coverage failure (missing V8 data, missing `coverage.xml`), inspect `.qa-runs/v8-coverage/*.json` and `.qa-runs/coverage-reports/cobertura-coverage.xml` before reaching for `--no-verify`-style escapes. The gate is the brake; do not bypass it silently.
 
 ### Deploy verification
@@ -227,8 +240,8 @@ bash scripts/verify-deploy.sh HEAD
 
 ### Variant prototyping (UI register / copy decisions)
 For UI surfaces where the right answer is "what should this look/read like" rather
-than "what should this do," follow the `prototype` skill at
-`.claude/skills/prototype/SKILL.md`: build several variants on a single
+than "what should this do," follow `agents/founder/WORKFLOWS/03-prototyping.md`:
+build several variants on a single
 `?v=A|B|C|D` route under `public/_lab/<surface>-variants.html`, then capture and
 review them. Two scripts compress the loop:
 
@@ -242,15 +255,15 @@ scripts/snap.py --list                                    # what _lab surfaces e
 
 # Pipe a customer-persona prompt through Gemini, filtered and auto-logged
 # to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
-# template live at docs/codex/customer-persona-prompt-template.md.
+# template lives at agents/_templates/customer-persona-prompt.md.
 scripts/persona.sh <prompt-file>
 cat prompt.txt | scripts/persona.sh
 scripts/persona.sh --template      # print template path
 ```
 
 Capture the verdict in a sibling `<surface>-variants.NOTES.md` next to the
-prototype HTML so the answer survives the lab being deleted (the prototype
-skill's "delete or absorb when done" rule). When a variant choice is
+prototype HTML so the answer survives the lab being deleted (the shared
+prototype workflow's "delete or absorb when done" rule). When a variant choice is
 load-bearing for the domain — i.e., the meaning of a surface or term
 changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 
@@ -258,7 +271,7 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
 - Type-check baseline lives in `mypy.ini` at the repo root (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`, etc.). The canonical invocation is `mypy .`, which honors the `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees). The same command is run by `scripts/doctor.sh` and by CI.
 - No ruff/flake8 config is checked in. Do not invent lint commands beyond `mypy .`.
-- CI gate: `.github/workflows/preflight.yml` runs `mypy .` + `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key for the run; production sets the real key via Vercel env. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
+- CI gate: `.github/workflows/preflight.yml` runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), then `bash scripts/doctor.sh`, then `.venv/bin/pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so `doctor.sh` exercises the bootstrap/auth path without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`
@@ -274,17 +287,15 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 - Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
 
 ## Agent bootstrap discovery
-- Canonical session bootstrap: `docs/codex/onboarding.md`.
-- Legacy compatibility path: `docs/codex/session-bootstrap.md` redirects agents to onboarding.
-- If an agent instruction references `docs/codex/session-bootstrap.md`, treat that as `docs/codex/onboarding.md`.
-- Deterministic agent quality rules live in `docs/codex/agent-quality.md`.
+- Canonical session bootstrap: `agents/ONBOARDING.md`.
+- Deterministic agent quality rules live in `agents/QUALITY.md`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
-- Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `docs/codex/onboarding.md`.
-- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — read `docs/project/crg-architecture-snapshot-2026-05-04.md` first. It's a CRG-derived briefing that gives you the shape of the codebase in ~3 minutes so you don't have to grep your way to it. Re-generated after major refactors; the underlying graph itself is always live (auto-updated on every `Edit|Write|Bash` via `.claude/settings.json` `PostToolUse` hook), so the snapshot is the periodic crystallisation, not a cache.
+- Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `agents/ONBOARDING.md`.
+- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow in `docs/project/code-review-graph-sop.md` rather than relying on stale point-in-time snapshots.
 
 ## Project-local agent skills (skills.sh marketplace)
 
-Three community skills are installed project-local under `.agents/skills/`, symlinked into `.claude/skills/` for Claude Code discovery. Install is local-machine state (`.agents/` is gitignored, no lockfile carried) — re-install on a new machine via the commands below if ever needed.
+Three community skills are installed project-local under `.agents/skills/`, symlinked into `.claude/skills/` for Claude Code discovery. Install is local-machine state only (`.agents/` is gitignored, no lockfile carried) — re-install on a new machine via the commands below if ever needed. Do not treat `.agents/skills/` as repo canon.
 
 | Skill | Source | When to invoke | Trust signals |
 |---|---|---|---|
@@ -338,4 +349,12 @@ Each project-local skill consumes session-start token budget. Treat installs as 
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; do not allow-list failures unless they are proven third-party.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
 - The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
-- Before declaring an implementation task complete on production code — Python under the backend scope (`admin/`, `api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
+- Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
+
+## Audit log 2026-05-12
+
+- Claims checked: 12
+- Verified: 12
+- Stale: 0
+- Indeterminate: 0
+- Stale claims with line refs: none found in the audited set.

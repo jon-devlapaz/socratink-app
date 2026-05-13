@@ -1,7 +1,7 @@
 # ADR-0004 — Library shows only the user's own reconstructed work
 
 **Status:** Accepted (2026-05-09)
-**Driver:** Customer-persona test on the library landing surface (round 2, dark mode, full surface) — see `docs/codex/customer-persona-prompt-template.md` for the methodology.
+**Driver:** Customer-persona test on the library landing surface (round 2, dark mode, full surface) — see `agents/_templates/customer-persona-prompt.md` for the methodology.
 
 ## Context
 
@@ -46,5 +46,5 @@ A first-run user with no source of their own currently has no built-in sandbox c
 
 - `CONTEXT.md` — "Library" glossary entry (resolved 2026-05-09).
 - `public/_lab/library-empty-variants.NOTES.md` — round-2 persona test results (full surface, dark mode).
-- `docs/codex/customer-persona-prompt-template.md` — persona methodology and reusable template.
+- `agents/_templates/customer-persona-prompt.md` — persona methodology and reusable template.
 - `.claude/friction-log.md` (2026-05-09) — relevant prior frictions on partial-surface persona tests.

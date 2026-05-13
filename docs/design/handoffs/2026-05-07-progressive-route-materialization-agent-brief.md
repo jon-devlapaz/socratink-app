@@ -2,7 +2,7 @@
 
 Date: 2026-05-07
 Status: implementation-facing handoff
-Primary spec: `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`
+Primary spec: `docs/archive/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`
 
 ## Why this brief exists
 
@@ -112,7 +112,7 @@ The accepted flow is C-prime: launch pad, not graph.
 
 ## Implementation notes for future agents
 
-- Treat `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md` as the implementation contract.
+- Treat `docs/archive/superpowers/specs/2026-05-07-progressive-route-materialization-design.md` as the implementation contract.
 - Keep `/api/extract` response shape aligned with current frontend expectations: `{ provisional_map }` for source-less generation and `{ knowledge_map }` for extraction.
 - Do not write code that assumes the server persists concepts. The current persistence model is browser storage.
 - If the source panel is reused on the door, extract the existing `concept-create.js::beginEditSource` behavior into a shared module and smoke-test the existing modal afterward.

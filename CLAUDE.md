@@ -1,5 +1,5 @@
 # CLAUDE.md
 
-Canonical agent instructions now live in [AGENTS.md](AGENTS.md).
+Canonical shared workflow truth for this repo lives in `AGENTS.md` and `agents/`.
 
-Claude-specific sessions should read `AGENTS.md` first, then follow the bootstrap order documented there. This file exists only as a compatibility pointer so all agents use the same repository guidance.
+Claude sessions should read `AGENTS.md` first, then load the relevant canon in `agents/`. This file exists as a compatibility adapter and should not become a competing doctrine surface.

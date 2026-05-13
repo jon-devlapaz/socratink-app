@@ -1,5 +1,7 @@
 # Product
 
+> Strategic product brief. This file defines who socratink is for, what promise it makes, and what category mistakes it refuses. It is not the UX doctrine. For learner flow, state claims, copy rules, and sensory behavior, read [DESIGN.md](./DESIGN.md).
+
 ## Register
 
 product
@@ -16,13 +18,23 @@ socratink is an evidence-weighted map for learning by reconstruction. It turns m
 
 Success means the learner can trust the map because it never rewards mere exposure. The graph shows what socratink has evidence for, not what the learner knows.
 
+## Product Promise
+
+The promise is small, specific, and load-bearing:
+
+- help the learner see what they can actually reconstruct
+- reduce prep friction without faking understanding
+- make the graph trustworthy by tying visible progress to recorded evidence
+
+If a feature makes socratink feel bigger, noisier, more diagnostic, or more congratulatory without increasing truthful reconstruction evidence, it is probably off-strategy.
+
 ## Brand Personality
 
 Calm, precise, Socratic.
 
 The product should feel like a quiet reading room with a rigorous tutor present. It should be patient without being soft, exact without being clinical, and honest about uncertainty. socratink is lowercase in product copy.
 
-## Anti-references
+## Strategic Non-Goals
 
 - Quiz apps that score cold attempts or frame struggle as failure.
 - Course dashboards that imply completion from reading.
@@ -32,15 +44,11 @@ The product should feel like a quiet reading room with a rigorous tutor present.
 - Clinical white SaaS, neon dark dashboards, stock education imagery, emoji-led encouragement, and hype copy.
 - Graphs that look like content browsers, progress bars, or mastery charts.
 
-## Design Principles
+## Boundary
 
-1. Generation before recognition. Do not reveal the answer, mechanism, or solved diagram before the learner creates an attempt.
-2. The graph tells the truth. It records evidence from learner-generated attempts and spaced reconstruction, not exposure, reading, confidence, or topology.
-3. One active cognitive target. Each screen should foreground the current room, phase, and next move while lowering the visual weight of everything else.
-4. Repair is specific, not flattering. Feedback should name the hinge between the learner's attempt and the mechanism without praise that sounds like proof.
-5. Spacing is a valid choice. Interleaving and breaks are part of the learning loop, not consolation states or rewards.
-6. Silent surface — every visible element earns its keep. The default is a screen that says nothing it has not earned the right to say. Eyebrows, helper lines, emphasis treatments, decorative icons, branded vocabulary, and progress indicators are guilty until proven load-bearing. The earned elements are usually one title + one input + one commit button + any footnote that names a system constraint the system actually enforces. Adjacent-surface vocabulary clashes — the same word with two different referents on a single screen — are a real bug class, not a stylistic concern; scan for them before locking any copy pair. (See DESIGN.md §10 and §12 for the longer treatment.)
+`PRODUCT.md` is intentionally orthogonal to `DESIGN.md`.
 
-## Accessibility & Inclusion
+- `PRODUCT.md` owns users, purpose, promise, brand posture, and strategic non-goals.
+- `DESIGN.md` owns learner flow, state semantics, copy rules, visual grammar, motion, and refusal mechanics at the interface level.
 
-The interface should be usable with keyboard navigation, visible focus states, sufficient contrast, and reduced-motion preferences respected. Motion must communicate state, not decoration. Copy should avoid ability labels, shame, or hidden diagnostic claims. Learners who lack vocabulary should receive micro-generation scaffolds that preserve the cold-attempt demand.
+If a statement starts to specify what a screen shows, when a state mutates, how copy should sound on a particular surface, or how the interface should feel in motion, it belongs in `DESIGN.md`, not here.

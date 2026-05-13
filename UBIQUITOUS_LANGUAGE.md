@@ -85,3 +85,33 @@
 - "Cleared" can work as visual shorthand, but it must not imply knowledge. Prefer **`solidified`** in product copy unless a local UI spec explicitly frames "cleared" as display shorthand.
 - "Actualized" and "hibernating" are legacy concept-shell terms. The live learning-state language is **`locked`**, **`primed`**, **`drilled`**, and **`solidified`**.
 - "Diagnostic" implies Socratink knows the learner's mind. Prefer **Routing hint** or **Starting-map anchor**.
+
+## Drift report 2026-05-12
+
+- Evidence-weighted map — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Draft map — 2 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Provisional map — 1 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Cold attempt — 1 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Targeted study — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Spaced re-drill — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Graph truth — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- `locked` — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- `primed` — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- `drilled` — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- `solidified` — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Traversal unlock — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Mastery-gated progression — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Recorded evidence — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Current model — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Routing hint — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Reconstruction evidence — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Gap — 2 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Grounding context — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Imported source — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Launch attempt — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Launch pad — 1 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Pending shell — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Smallest actionable route — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Source-less generation — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Starting sketch — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
+- Threshold composer — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.

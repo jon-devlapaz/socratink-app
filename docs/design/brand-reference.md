@@ -13,7 +13,7 @@ This system is derived from the following materials:
 | Source | Where | What it covers |
 |---|---|---|
 | Codebase | GitHub `jon-devlapaz/socratink-app` | Marketing site (`App.jsx`, `index.css`), in-app styles (`public/css/*.css`), brand mark (`public/favicon.png`) |
-| UX framework | `docs/product/ux-framework.md` (same repo) | The product thesis, three-phase loop, node-state model, feedback calibration rules, voice |
+| UX doctrine | `/DESIGN.md` (same repo) | The product thesis, three-phase loop, node-state model, feedback calibration rules, voice |
 | Uploads | `uploads/` (consumed into `assets/`) | `favicon.png` (primary mark), `socraTink.png` (palette reference), `tink_full_mobile.png` (isometric graph/board screenshot) |
 | Brand notes | Provided by operator | Palette (cream-50, ink-900, violet-600, lavender-500, mauve-200), type pairing, motif (crystal polygon), voice posture ("premium-contemplative, reading room not dashboard") |
 

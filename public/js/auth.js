@@ -67,12 +67,6 @@ export async function logout() {
   return response.json();
 }
 
-// Admin Surface gate: server-side check at /admin/todo is the canonical
-// authority. This client-side comparison only decides whether to RENDER
-// the link; a wrong email here just hides a button (and the server would
-// 404 anyway).
-const ADMIN_EMAIL = 'jonathan10620@gmail.com';
-
 function applyAuthUi(session) {
   const controls = document.getElementById('auth-controls');
   const loginLink = document.getElementById('auth-login-link');
@@ -84,26 +78,6 @@ function applyAuthUi(session) {
   loginLink.href = buildLoginHref();
   loginLink.textContent = 'Save & Sync';
   logoutBtn.textContent = 'Log Out';
-
-  const isAdmin =
-    isIdentifiedUserSession(session) &&
-    session.user?.email?.toLowerCase() === ADMIN_EMAIL;
-
-  let adminLink = document.getElementById('auth-admin-todo-link');
-  if (isAdmin) {
-    if (!adminLink) {
-      adminLink = document.createElement('a');
-      adminLink.id = 'auth-admin-todo-link';
-      adminLink.className = 'auth-link auth-link-secondary';
-      adminLink.href = '/admin/todo';
-      adminLink.title = 'Open Tink TODO admin dashboard';
-      adminLink.textContent = 'Tink TODO';
-      loginLink.parentNode.insertBefore(adminLink, loginLink);
-    }
-    adminLink.hidden = false;
-  } else if (adminLink) {
-    adminLink.remove();
-  }
 
   if (isGuestSession(session)) {
     status.hidden = false;

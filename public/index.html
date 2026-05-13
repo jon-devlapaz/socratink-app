@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=32">
+  <link rel="stylesheet" href="/css/index.css?v=33">
   <link rel="stylesheet" href="css/drill-chamber.css?v=5">
 </head>
 
@@ -307,6 +307,9 @@
         <h1 class="ig-title" id="ignition-title" tabindex="-1">
           What do you want to explain?
         </h1>
+        <p class="ig-first-use" id="ignition-first-use">
+          Name the concept first. socratink will ask for your starting map before study content appears.
+        </p>
 
         <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
           <p class="ignition-cap-gate__message">
@@ -459,7 +462,7 @@
   <div id="tooltip-root" aria-hidden="true"></div>
 
   <script src="js/drill-chamber.js?v=6"></script>
-  <script type="module" src="js/app.js?v=98"></script>
+  <script type="module" src="js/app.js?v=99"></script>
   <script src="js/intro-particles.js?v=8"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=5"></script>
@@ -494,8 +497,15 @@
   <!-- Vercel Speed Insights -->
   <script>
     window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+    (() => {
+      const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+      if (localHosts.has(window.location.hostname)) return;
+      const script = document.createElement('script');
+      script.defer = true;
+      script.src = '/_vercel/speed-insights/script.js';
+      document.head.appendChild(script);
+    })();
   </script>
-  <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
 
 </html>

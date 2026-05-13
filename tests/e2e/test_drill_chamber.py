@@ -27,6 +27,7 @@ Run
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 import pytest
@@ -40,6 +41,22 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     """Navigate to base_url and land in the app shell as a guest session."""
     import re
     from urllib.parse import urljoin
+
+    if os.getenv("SOCRATINK_E2E_LOCAL_GUEST"):
+        page.goto(urljoin(base_url + "/", "auth/e2e/guest?return_to=%2F"))
+        payload = page.evaluate(
+            """async () => {
+                const r = await fetch('/api/me', {
+                  credentials: 'same-origin',
+                  headers: { Accept: 'application/json' },
+                });
+                if (!r.ok) return {};
+                return r.json();
+            }"""
+        )
+        session = payload if isinstance(payload, dict) else {}
+        if session.get("authenticated") or session.get("guest_mode"):
+            return
 
     page.goto(base_url)
     if "/login" not in page.url:
@@ -69,8 +86,6 @@ def _seed_concept_with_graph(page: Page, concept_id: str = "drill-test-concept")
     page.evaluate(
         f"""(() => {{
             const now = new Date().toISOString();
-            localStorage.setItem('socratink:firstSeenAt:v1:guest', now);
-            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
             const graphData = JSON.stringify({{
                 metadata: {{
                     core_thesis: 'Seeded thesis for drill chamber smoke.',

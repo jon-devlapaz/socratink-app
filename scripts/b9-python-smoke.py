@@ -1,7 +1,7 @@
 """B9 Python smoke for source-optional /api/extract.
 
-Spec ref: docs/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
-Plan ref: docs/superpowers/plans/2026-05-03-conversational-concept-creation-backend.md (Task 19)
+Spec ref: docs/archive/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
+Plan ref: docs/archive/superpowers/plans/2026-05-03-conversational-concept-creation-backend.md (Task 19)
 
 Runs the three smoke scenarios from Plan A's Task 19 against the real
 FastAPI handler with the real LLM client (real Gemini calls!), bypassing

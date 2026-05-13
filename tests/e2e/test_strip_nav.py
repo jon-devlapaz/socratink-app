@@ -12,6 +12,7 @@ click and keyboard nav tests can exercise more than one entry.
 from __future__ import annotations
 
 import re
+import os
 from urllib.parse import urljoin
 
 import pytest
@@ -35,6 +36,23 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     global _strip_guest_cookies
     if _strip_guest_cookies:
         page.context.add_cookies(_strip_guest_cookies)
+
+    if os.getenv("SOCRATINK_E2E_LOCAL_GUEST"):
+        page.goto(urljoin(base_url.rstrip("/") + "/", "auth/e2e/guest?return_to=%2F"))
+        result = page.evaluate(
+            """async () => {
+                const r = await fetch('/api/me', {
+                  credentials: 'same-origin',
+                  headers: { Accept: 'application/json' },
+                });
+                if (!r.ok) return {};
+                return r.json();
+            }"""
+        )
+        session = result if isinstance(result, dict) else {}
+        if session.get("authenticated") or session.get("guest_mode"):
+            _strip_guest_cookies = page.context.cookies()
+            return
 
     page.goto(base_url)
     if "/login" not in page.url:
@@ -144,8 +162,16 @@ def test_strip_keyboard_nav(page: Page, base_url: str) -> None:
     assert new_title != initial_title, "ArrowRight did not advance the active entry"
 
 
+def test_first_actionable_entry_shows_try_from_memory(page: Page, base_url: str) -> None:
+    """The first unattempted actionable entry is ready, not blocked locked."""
+    _open_seeded_concept(page, base_url)
+    cta = page.locator(".concept-page-b2__entry-cta")
+    expect(cta).not_to_have_attribute("disabled", "")
+    expect(cta).to_have_text("Try from memory")
+
+
 def test_locked_entry_shows_disabled_cta(page: Page, base_url: str) -> None:
-    """Clicking a locked strip node shows a disabled 'Locked' CTA, not 'Try from memory'."""
+    """Clicking a blocked locked strip node shows a disabled 'Locked' CTA."""
     _open_seeded_concept(page, base_url)
     locked_nodes = page.locator(".concept-strip__node--locked")
     if locked_nodes.count() == 0:
@@ -154,6 +180,7 @@ def test_locked_entry_shows_disabled_cta(page: Page, base_url: str) -> None:
     page.wait_for_timeout(700)
     cta = page.locator(".concept-page-b2__entry-cta")
     expect(cta).to_have_attribute("disabled", "")
+    expect(cta).to_have_text("Locked")
 
 
 def test_no_route_graph_toggle(page: Page, base_url: str) -> None:

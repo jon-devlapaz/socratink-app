@@ -1,8 +1,8 @@
 #!/usr/bin/env -S .venv/bin/python
 """snap.py — sweep `?v=` variants of a prototype page and screenshot each.
 
-Used by the `_lab/` variant-prototype workflow (see prototype skill at
-.claude/skills/prototype/SKILL.md). Compresses the
+Used by the `_lab/` variant-prototype workflow (see
+agents/founder/WORKFLOWS/03-prototyping.md). Compresses the
 hand-loop of "navigate → screenshot → repeat" into one command.
 
 Usage:

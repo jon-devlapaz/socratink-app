@@ -6,7 +6,7 @@
 >
 > **When to read it**: Before changing node state derivation, routing semantics, unlock logic, graph rendering, drill-to-graph persistence, or phase transitions. Before implementing any part of the three-phase loop.
 >
-> **What it is NOT**: It is not the UX philosophy (read `ux-framework.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the engineering invariants (read `../drill/engineering.md`).
+> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the binding drill contract (read `../drill/contract.md`).
 >
 > **Key implementation constraints an agent must follow**:
 > - Four states: `locked → primed → drilled → solidified`. No other transitions are valid.
@@ -27,12 +27,12 @@ For the binding graph-truth doctrine, read:
 
 For enduring UX principles, read:
 
-- [ux-framework.md](ux-framework.md)
+- [/DESIGN.md](../../DESIGN.md)
 - [post-drill-ux-spec.md](post-drill-ux-spec.md)
 
-For hard engineering rules, read:
+For the current drill contract, read:
 
-- [engineering.md](../drill/engineering.md)
+- [contract.md](../drill/contract.md)
 
 ## Product Model
 
@@ -128,7 +128,7 @@ The frontend uses `drill_phase` to determine which UI mode to present in the sid
 
 ## Three-Phase Node Loop
 
-Every node moves through three phases. This section describes the implementation behavior. For the product rationale, read [ux-framework.md](ux-framework.md).
+Every node moves through three phases. This section describes the implementation behavior. For the product rationale, read [/DESIGN.md](../../DESIGN.md).
 
 ### Phase 1: Cold Attempt
 
@@ -184,7 +184,7 @@ Backend behavior:
 - the drill prompt demands multi-step causal reconstruction
 - the prompt angle should vary across re-drill attempts on the same node (self-explanation, summarization, teaching, problem-posing) to prevent linguistic mimicry
 - scoring, classification, and routing operate normally
-- on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in `ux-framework.md`
+- on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in `/DESIGN.md`
 
 Persistence on `routing === "NEXT"`:
 
@@ -399,6 +399,6 @@ This document should not become:
 
 Keep those in:
 
-- [ux-framework.md](ux-framework.md)
-- [evaluation.md](../drill/evaluation.md)
+- [/DESIGN.md](../../DESIGN.md)
+- [mvp-happy-path.md](../project/mvp-happy-path.md)
 - [mvp-happy-path.md](../project/mvp-happy-path.md)

@@ -18,6 +18,7 @@ and renders the B-2 strip + page layout in #map-content.
 from __future__ import annotations
 
 import re
+import os
 from urllib.parse import urljoin
 
 import pytest
@@ -35,6 +36,23 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     global _cached_guest_cookies
     if _cached_guest_cookies:
         page.context.add_cookies(_cached_guest_cookies)
+
+    if os.getenv("SOCRATINK_E2E_LOCAL_GUEST"):
+        page.goto(urljoin(base_url + "/", "auth/e2e/guest?return_to=%2F"))
+        result = page.evaluate(
+            """async () => {
+                const r = await fetch('/api/me', {
+                  credentials: 'same-origin',
+                  headers: { Accept: 'application/json' },
+                });
+                if (!r.ok) return {};
+                return r.json();
+            }"""
+        )
+        session = result if isinstance(result, dict) else {}
+        if session.get("authenticated") or session.get("guest_mode"):
+            _cached_guest_cookies = page.context.cookies()
+            return
 
     page.goto(base_url)
     if "/login" not in page.url:

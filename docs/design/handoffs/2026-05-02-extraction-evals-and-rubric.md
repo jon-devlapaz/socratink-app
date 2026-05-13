@@ -26,7 +26,7 @@ The first execution sweep of the LLM seam (PR #76, merged 2026-05-01) shipped `e
 
 This handoff is the work order to build the eval layer that turns "extraction passes parsing" into "extraction is empirically golden against a rubric the founder can defend."
 
-The original foundation-design spec (`docs/superpowers/specs/2026-05-01-foundation-design.md` §5.6) explicitly deferred this work to a follow-up sweep. This is that sweep.
+The original foundation-design spec (`docs/archive/superpowers/specs/2026-05-01-foundation-design.md` §5.6) explicitly deferred this work to a follow-up sweep. This is that sweep.
 
 ---
 
@@ -76,7 +76,7 @@ The goals are deliberately ambitious. The brainstorm should sharpen them into a 
   - The QUALITY GATE for frameworks (3 tests: decision, abstraction, mechanism)
 - **The typed contract:** `models/provisional_map.py` — structural baseline you build on top of
 - **The LLM seam:** `llm/` package — the eval harness should use `LLMClient` like production code does (no patching private names)
-- **Foundation spec §5.6:** `docs/superpowers/specs/2026-05-01-foundation-design.md` — the original (deliberately under-specified) section on golden fixtures
+- **Foundation spec §5.6:** `docs/archive/superpowers/specs/2026-05-01-foundation-design.md` — the original (deliberately under-specified) section on golden fixtures
 - **PRODUCT.md** — describes the user as arriving with *"source material, a concept name, notes, transcripts, articles, or a rough starting model"* — this is the input variety the eval set must cover
 - **DESIGN.md §5** (state model) — describes which graph mutations are allowed when. Extraction does NOT mutate graph truth, but the OUTPUT shape feeds every later state transition.
 - **UBIQUITOUS_LANGUAGE.md** — every term used in the rubric must come from this glossary (or be added to it)
@@ -209,8 +209,8 @@ The agent picking this up MUST raise these with the founder before writing a spe
 
 The brainstorm phase shapes the spec; the spec drives the plan; the plan drives the deliverables. Likely shape:
 
-- **Spec doc:** `docs/superpowers/specs/<date>-extraction-evals-design.md`
-- **Plan doc:** `docs/superpowers/plans/<date>-extraction-evals.md`
+- **Spec doc:** `docs/archive/superpowers/specs/<date>-extraction-evals-design.md`
+- **Plan doc:** `docs/archive/superpowers/plans/<date>-extraction-evals.md`
 - **New package(s):** likely `tools/extract_eval/` with submodules for rubric / scoring / fixtures
 - **Test fixtures:** `tests/fixtures/extraction_eval/<slug>.json` (input + recorded response + expected rubric)
 - **Pytest test:** `tests/test_extraction_rubric.py`
@@ -249,7 +249,7 @@ The workstream is "golden" when:
    - This handoff (you're here)
    - `docs/adr/0001-provisional-map-typed-contract.md`
    - `app_prompts/extract-system-v1.txt` (the prompt itself)
-   - `docs/superpowers/specs/2026-05-01-foundation-design.md` §5.6 (the original deferral)
+   - `docs/archive/superpowers/specs/2026-05-01-foundation-design.md` §5.6 (the original deferral)
    - `models/provisional_map.py` (the structural baseline)
 2. **Invoke `superpowers:brainstorming`** — establish design intent with the founder. Do NOT skip this. Walk through the 10 open questions above. Decide what's in v1 vs. later.
 3. After brainstorming approves a spec, **invoke `superpowers:writing-plans`** — produce a TDD-style step-by-step plan.
