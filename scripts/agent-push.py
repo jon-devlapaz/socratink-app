@@ -217,6 +217,13 @@ def route_to_remote_refspec(route: str) -> tuple[str, str]:
     return remote, refspec
 
 
+def publication_risk_class(intent: PublicationIntent) -> str:
+    _remote, refspec = route_to_remote_refspec(intent.chosen_route)
+    if refspec == "main":
+        return "hard-confirm"
+    return intent.recommendation.risk_class
+
+
 def _trusted_remote(remote: str, url: str) -> bool:
     patterns = _trusted_remote_patterns().get(remote, [])
     return any(re.search(pattern, url) for pattern in patterns)
@@ -275,7 +282,7 @@ def build_payload(state: PushState, intent: PublicationIntent) -> AuthorizationP
         remote_url=remote_url,
         refspec=refspec,
         diff_fingerprint=diff_fingerprint(state),
-        risk_class=intent.recommendation.risk_class,
+        risk_class=publication_risk_class(intent),
         nonce=secrets.token_urlsafe(16),
         issued_at_epoch=int(time.time()),
     )
@@ -337,7 +344,7 @@ def _print_first_run(payload: AuthorizationPayload, intent: PublicationIntent) -
     print(f"Recommended route: {intent.recommendation.route}")
     print(f"Chosen route: {payload.route}")
     print(f"Override: {str(intent.override).lower()}")
-    print(f"Risk class: {intent.recommendation.risk_class}")
+    print(f"Risk class: {payload.risk_class}")
     print(f"Triggered rules: {', '.join(intent.recommendation.triggers)}")
     print("No push executed. Re-run with this ack token to publish:")
     print(f"python3 scripts/agent-push.py --target {payload.route} --ack {token}")

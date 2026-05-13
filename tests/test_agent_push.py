@@ -92,6 +92,45 @@ def test_explicit_target_records_override_against_recommendation(tmp_path):
     assert intent.override is True
 
 
+def test_explicit_origin_main_payload_escalates_to_hard_confirm(tmp_path):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["public/js/app.js"],
+        remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+    )
+
+    intent = mod.resolve_publication_intent(state, explicit_target="origin/main")
+    payload = mod.build_payload(state, intent)
+
+    assert intent.recommendation.route == "origin/dev"
+    assert intent.chosen_route == "origin/main"
+    assert intent.override is True
+    assert payload.risk_class == "hard-confirm"
+
+
+def test_explicit_non_main_payload_targets_remain_confirm(tmp_path):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["public/js/app.js"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/tmp/.no-mistakes/repos/review-gate.git",
+        },
+    )
+
+    for target in ("origin/dev", "origin/feat/demo-flow", "no-mistakes/dev"):
+        intent = mod.resolve_publication_intent(state, explicit_target=target)
+        payload = mod.build_payload(state, intent)
+        assert payload.route == target
+        assert payload.risk_class == "confirm"
+
+
 def test_decision_log_preserves_recommended_and_chosen_routes(tmp_path, monkeypatch):
     mod = _load_module()
     monkeypatch.setattr(mod, "RUNTIME_DIR", tmp_path)
