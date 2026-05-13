@@ -82,6 +82,8 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [/agents/_templates/workflow-card.md](../../agents/_templates/workflow-card.md) | workflow | yes | Fixed schema for future workflow cards. | — |
 | [/agents/founder/README.md](../../agents/founder/README.md) | workflow | no | Founder-facing orientation map for `agents/founder/`; summarizes canonical surfaces without redefining policy. | — |
 | [/agents/founder/WORKFLOWS/01-git-integration.md](../../agents/founder/WORKFLOWS/01-git-integration.md) | workflow | yes | Founder git publication workflow: push routing, confirmation boundaries, and v1 enforcement scope. | — |
+| [/agents/founder/WORKFLOWS/02-git-homeostasis.md](../../agents/founder/WORKFLOWS/02-git-homeostasis.md) | workflow | yes | Founder branch-homeostasis workflow: survey, classify, salvage, archive, and converge back to the intended `main + dev` shape. | — |
+| [/agents/founder/WORKFLOWS/03-prototyping.md](../../agents/founder/WORKFLOWS/03-prototyping.md) | workflow | yes | Founder prototyping workflow: choose logic/state vs UI/copy prototype shape, keep it throwaway, and capture only the answer durably. | — |
 | [/agents/founder/trusted-remotes.json](../../agents/founder/trusted-remotes.json) | workflow | yes | Trusted remote URL pattern config for the founder git publication workflow. | — |
 | [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions; routes agents into `agents/`. | — |
 | [codex/agent-quality.md](../codex/agent-quality.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails; recognizes `agents/` as shared workflow canon. | — |

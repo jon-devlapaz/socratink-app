@@ -7,6 +7,8 @@ It is not meant to replace the detailed workflow card or the root agent instruct
 ## What Each File Does
 
 - `WORKFLOWS/01-git-integration.md` is the source for the founder git workflow. It explains when publication should go to `origin/dev`, `origin/feat/*`, or `no-mistakes/dev`, and when a push needs stronger confirmation.
+- `WORKFLOWS/02-git-homeostasis.md` is the source for restoring branch homeostasis. It explains how to survey branch state, classify stale branches, salvage valuable work, and converge back to the intended `main + dev` shape without silent data loss.
+- `WORKFLOWS/03-prototyping.md` is the source for founder prototype workflow. It explains when to use a logic/state harness versus a UI/copy variant sweep, how to keep prototypes throwaway, and where to capture the verdict when the question is answered.
 - `../LEARNINGS.md` is the non-binding ledger for recurring founder/agent workflow observations. Read it when founder workflow friction, publication safety, verification discipline, artifact placement, or workflow promotion is part of the task.
 - `trusted-remotes.json` is the tracked allowlist for remotes that the push wrapper may trust. It prevents agents from treating a remote name like `origin` as safe without checking the URL.
 - `README.md` is this overview. It summarizes the folder for humans; it should not redefine policy.
@@ -15,7 +17,8 @@ It is not meant to replace the detailed workflow card or the root agent instruct
 
 - Canonical: files under `agents/`, especially workflow cards and tracked config. These are the shared rules.
 - Runtime: `.agents/runtime/`, which is ignored by git. This holds push authorizations, decision logs, and optional local trusted-remote extensions.
-- Tool-specific: `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/`, `.codex/`, and similar entrypoints. They should point into the shared canon instead of becoming separate rulebooks.
+- Entrypoints: `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`. They should point into the shared canon instead of becoming separate rulebooks.
+- Tool-specific runtime or wrappers: `.claude/`, `.codex/`, `.gemini/`, and similar local surfaces.
 
 ## Enforced Vs. Guidance
 

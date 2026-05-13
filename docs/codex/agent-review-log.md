@@ -15,12 +15,12 @@ Rules:
 - keep reviews recommendation-only
 - name the owner agent for each recommended improvement
 - tag findings with `high`, `medium`, or `low` severity
-- use the strict markdown schema defined in `.agents/codex/glenna.toml` and the template asset
+- use the strict markdown schema defined in `agents/_templates/agent-review-entry.md`
 - keep section headings in the same order for every entry so reviews remain comparable
 
 Template reference:
 
-- [.agents/skills/glenna-review/assets/review-template.md](../../.agents/skills/glenna-review/assets/review-template.md)
+- [agents/_templates/agent-review-entry.md](../../agents/_templates/agent-review-entry.md)
 
 ---
 
@@ -52,7 +52,7 @@ Template reference:
 - `docs/project/state.md`
 - `docs/codex/session-bootstrap.md`
 - `docs/codex/agent-review-log.md`
-- `.agents/skills/glenna-review/assets/review-template.md`
+- `agents/_templates/agent-review-entry.md`
 
 ## What Went Well
 

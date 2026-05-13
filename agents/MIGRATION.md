@@ -10,15 +10,43 @@ Use this ledger to track migration from tool-specific surfaces into `agents/`.
 - `preserved-pending-review`
 - `deprecated`
 
+## Entry hygiene
+
+For any non-terminal entry (`adapter-only` or `preserved-pending-review`), record in the notes:
+
+- current owner of the migration decision
+- last review date
+- exit condition that would move the surface to `promoted`, `tool-specific`, or `deprecated`
+
 ## Initial entries
 
 | Surface | Status | Notes |
 | --- | --- | --- |
-| `AGENTS.md` | `adapter-only` | repo root entrypoint; retains must-not-miss bootstrap rules |
+| `AGENTS.md` | `preserved-pending-review` | cross-agent root entrypoint and still-binding repo doctrine surface; owner: founder canon migration, reviewed_at: 2026-05-13, exit: either shrink to a true entrypoint or explicitly retain as the intentional binding root alongside `agents/` |
 | `CLAUDE.md` | `adapter-only` | Claude compatibility pointer into canon |
 | `GEMINI.md` | `adapter-only` | Gemini compatibility pointer into canon |
 | `docs/codex/onboarding.md` | `preserved-pending-review` | currently binding bootstrap surface; must point into canon |
 | `docs/codex/agent-quality.md` | `preserved-pending-review` | currently binding quality/source-of-truth surface; must reflect canon |
 | `.claude/` | `tool-specific` | runtime skills/settings surface |
+| `.claude/friction-log.md` | `preserved-pending-review` | raw sediment log; curate repeated workflow patterns into `agents/LEARNINGS.md`, but do not treat the source log as canon |
+| `.claude/settings.json` | `tool-specific` | Claude runtime hook/config surface; do not migrate into `agents/` |
+| `.claude/settings.local.json` | `tool-specific` | local Claude runtime/config surface; do not migrate |
+| `.claude/settings.example.json` | `tool-specific` | Claude setup example, not shared workflow doctrine |
+| `.claude/skills/git-order/SKILL.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/02-git-homeostasis.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
+| `.claude/skills/prototype/SKILL.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/03-prototyping.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
+| `.claude/skills/prototype/LOGIC.md` | `deprecated` | logic branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
+| `.claude/skills/prototype/UI.md` | `deprecated` | UI branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
+| `.claude/skills/verify-deploy.md` | `preserved-pending-review` | possible future workflow-card promotion if deploy verification becomes a repeated cross-model founder workflow |
+| `.claude/skills/use-context7.md` | `tool-specific` | mostly redundant with current `AGENTS.md` Layer 3 policy; keep as a Claude wrapper |
+| `.claude/skills/review/SKILL.md` | `tool-specific` | Claude-packaged review wrapper, not shared canon |
+| `.claude/skills/debug-issue.md` | `tool-specific` | tool wrapper for graph-based debugging, not shared canon |
+| `.claude/skills/explore-codebase.md` | `tool-specific` | tool wrapper for graph-based exploration, not shared canon |
+| `.claude/skills/refactor-safely.md` | `tool-specific` | tool wrapper for graph-assisted refactoring, not shared canon |
+| `.claude/skills/review-changes.md` | `tool-specific` | tool wrapper for graph-based review, not shared canon |
+| `.claude/skills/socratink-design/SKILL.md` | `tool-specific` | wrapper over already-canonical design docs, not a new canon surface |
+| `.claude/skills/empirical-grill/SKILL.md` | `tool-specific` | slash-command-heavy Claude workflow; not ready for cross-model canon |
 | `.codex/` | `tool-specific` | runtime/config/memory surface |
 | `.gemini/` | `tool-specific` | runtime/config/auth surface |
+| `.agents/skills/fastapi/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
+| `.agents/skills/gemini-interactions-api/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
+| `.agents/skills/playwright-cli/` | `tool-specific` | external project-local installed skill; keep out of shared canon |

@@ -29,6 +29,16 @@ Canonical shared workflow truth for repo agents.
 
 Migrate selectively. Promote only stable, high-signal, cross-model content. Preserve high-value tool-local content until its signal is captured or intentionally deprecated.
 
+## Adapter budget
+
+Adapters are allowed to contain only:
+
+- minimal tool-specific activation or compatibility wording
+- a pointer into the relevant shared canon file
+- must-not-miss bootstrap lines when the tool would otherwise fail to load the canon
+
+Adapters must not become a second doctrine surface. If a wrapper still contains the full decision logic, stop rules, verification sequence, or long-form workflow steps, it is no longer acting as an adapter.
+
 ## Learning loop
 
 Use `agents/LEARNINGS.md` to capture reusable observations from real founder/agent workflow usage.

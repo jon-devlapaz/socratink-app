@@ -12,12 +12,12 @@ Rules:
 
 - append new entries to the bottom of the file
 - do not overwrite prior entries
-- use the strict markdown schema defined in `.agents/skills/glenna-review/assets/decision-template.md`
+- use the strict markdown schema defined in `agents/_templates/decision-log-entry.md`
 - keep section headings in the same order for every entry so records remain comparable
 - only record decisions that change constraints, architecture, or product direction — not routine implementation choices
 
 Template reference:
 
-- [.agents/skills/glenna-review/assets/decision-template.md](../../.agents/skills/glenna-review/assets/decision-template.md)
+- [agents/_templates/decision-log-entry.md](../../agents/_templates/decision-log-entry.md)
 
 ---

@@ -236,8 +236,8 @@ bash scripts/verify-deploy.sh HEAD
 
 ### Variant prototyping (UI register / copy decisions)
 For UI surfaces where the right answer is "what should this look/read like" rather
-than "what should this do," follow the `prototype` skill at
-`.claude/skills/prototype/SKILL.md`: build several variants on a single
+than "what should this do," follow `agents/founder/WORKFLOWS/03-prototyping.md`:
+build several variants on a single
 `?v=A|B|C|D` route under `public/_lab/<surface>-variants.html`, then capture and
 review them. Two scripts compress the loop:
 
@@ -258,8 +258,8 @@ scripts/persona.sh --template      # print template path
 ```
 
 Capture the verdict in a sibling `<surface>-variants.NOTES.md` next to the
-prototype HTML so the answer survives the lab being deleted (the prototype
-skill's "delete or absorb when done" rule). When a variant choice is
+prototype HTML so the answer survives the lab being deleted (the shared
+prototype workflow's "delete or absorb when done" rule). When a variant choice is
 load-bearing for the domain — i.e., the meaning of a surface or term
 changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 

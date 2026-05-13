@@ -119,7 +119,7 @@ Automated now:
 
 - Vercel log export into raw Socratink Brain artifacts: `scripts/eval-pull`.
 - Raw-log extraction from Vercel JSON runtime logs: `scripts/export_socratink_brain_vercel_logs.py`.
-- Deterministic Socratink Brain structure validation: `.agents/skills/socratink-brain/scripts/validate_wiki.py`.
+- Deterministic Socratink Brain structure validation: use the validator shipped with the active Socratink Brain checkout or installed skill. This repo does not carry that install-state path directly.
 
 Agent-mediated by design:
 

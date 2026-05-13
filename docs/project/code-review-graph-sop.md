@@ -1,7 +1,7 @@
 # code-review-graph SOP
 
-How to use the knowledge graph in this repo. For agents, the rules also live in
-`CLAUDE.md` and `.claude/skills/`. This is the human-readable companion.
+How to use the knowledge graph in this repo. For agents, the canonical rules live
+in `AGENTS.md` and the shared `agents/` canon. This file is the human-readable companion.
 
 ## What the graph is
 
@@ -84,10 +84,11 @@ Three rules. Apply them every time you (or the agent) reach for the graph.
 **Floor caveat:** the graph under-reports CALLS counts in some cases. For "only
 call site" claims, hand-grep with `rg "<symbol>"` before asserting.
 
-## Skills (slash-invokable workflows)
+## Skills (tool wrappers)
 
-Project skills under `.claude/skills/` codify the standard graph workflows.
-Invoke by name or by saying what you want.
+Tool-specific skills under `.claude/skills/` may wrap these graph workflows, but
+the shared doctrine lives in `AGENTS.md` and `agents/`. Invoke the workflow by
+intent; the tool wrapper is packaging, not the source of truth.
 
 | Skill | Trigger | What it does |
 |---|---|---|
