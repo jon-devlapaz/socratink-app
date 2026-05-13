@@ -15,7 +15,6 @@ import {
   logout,
   redirectToLogin,
 } from './auth.js?v=3';
-import { maybeShowFirstRunWelcome } from './welcome.js?v=8';
 import { prefersReducedMotion } from './motion.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
@@ -2746,11 +2745,6 @@ const App = (() => {
   if (pendingResumeState && !resumeConcept) {
     persistPhaseBResumeState(null);
   }
-
-  void maybeShowFirstRunWelcome({
-    getSession: () => fetchAuthSession(),
-    shouldShow: () => loadConcepts().length === 0,
-  });
 
   sessionState = loadPhaseBSessionState(getActiveId());
 

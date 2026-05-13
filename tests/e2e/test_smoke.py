@@ -162,6 +162,17 @@ def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> No
     expect(clean_page.locator(".sidebar-brand-mark").first).to_be_attached()
 
 
+def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str) -> None:
+    """First-run orientation should not block the empty desk with a modal."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    expect(clean_page.locator(".first-run-welcome")).to_have_count(0)
+    clean_page.locator("#nav-ignition").click()
+    expect(clean_page.locator("#ignition-first-use")).to_have_text(
+        "Name the concept first. socratink will ask for your starting map before study content appears."
+    )
+
+
 def test_guest_session_is_labeled_as_guest(
     clean_page: Page, base_url: str
 ) -> None:
@@ -182,10 +193,6 @@ def _seed_one_concept(page: Page, name: str = "Test Concept") -> None:
     the cold-attempt + extraction flow."""
     page.evaluate(
         f"""(() => {{
-            localStorage.setItem(
-                'socratink:firstSeenAt:v1:guest',
-                new Date().toISOString()
-            );
             const graphData = JSON.stringify({{
                 metadata: {{ core_thesis: 'Seeded thesis for smoke fixture.' }},
                 clusters: [],
@@ -362,13 +369,6 @@ def test_desk_iso_board_state_surface_and_room_labels(
             localStorage.setItem('learnops_active', concepts[0]?.id || '');
         }})()"""
 
-    clean_page.add_init_script(
-        """(() => {
-            const now = new Date().toISOString();
-            localStorage.setItem('socratink:firstSeenAt:v1:guest', now);
-            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
-        })()"""
-    )
     _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.evaluate(seed_board_concepts(9))
     clean_page.reload()
@@ -501,13 +501,6 @@ def test_desk_layout_identical_when_empty_or_populated(
             }}
         }})()"""
 
-    clean_page.add_init_script(
-        """(() => {
-            const now = new Date().toISOString();
-            localStorage.setItem('socratink:firstSeenAt:v1:guest', now);
-            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
-        })()"""
-    )
     _enter_app_shell_as_guest(clean_page, base_url)
     samples = {}
     for count in [0, 1, 5, 9]:

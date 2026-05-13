@@ -86,8 +86,6 @@ def _seed_concept_with_graph(page: Page, concept_id: str = "drill-test-concept")
     page.evaluate(
         f"""(() => {{
             const now = new Date().toISOString();
-            localStorage.setItem('socratink:firstSeenAt:v1:guest', now);
-            localStorage.setItem('socratink:firstSeenAt:v1:browser', now);
             const graphData = JSON.stringify({{
                 metadata: {{
                     core_thesis: 'Seeded thesis for drill chamber smoke.',
