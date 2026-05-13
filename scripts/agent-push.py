@@ -19,9 +19,18 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 RUNTIME_DIR = REPO_ROOT / ".agents" / "runtime"
 AUTH_PATH = RUNTIME_DIR / "push-auth.json"
 LOG_PATH = RUNTIME_DIR / "push-decisions.jsonl"
+TRUSTED_REMOTE_CONFIG_PATH = REPO_ROOT / "agents" / "founder" / "trusted-remotes.json"
+LOCAL_TRUSTED_REMOTE_CONFIG_PATH = RUNTIME_DIR / "trusted-remotes.local.json"
 
-PUBLIC_REMOTE_PATTERNS = [r"^https://github\.com/jon-devlapaz/socratink-app\.git$"]
-NO_MISTAKES_PATTERNS = [r"(^|/|\\)\.no-mistakes([/\\])repos([/\\])[0-9a-f]+\.git$"]
+DEFAULT_TRUSTED_REMOTE_PATTERNS = {
+    "origin": [
+        r"^https://github\.com/[^/]+/socratink-app\.git$",
+        r"^git@github\.com:[^/]+/socratink-app\.git$",
+    ],
+    "no-mistakes": [
+        r"(^|/|\\)\.no-mistakes([/\\])repos([/\\])[^/\\]+\.git$",
+    ],
+}
 
 HIGH_RISK_PREFIXES = (
     "main.py",
@@ -59,6 +68,16 @@ class RouteRecommendation:
     route: str
     risk_class: str
     triggers: list[str]
+
+
+@dataclass(frozen=True)
+class PublicationIntent:
+    recommendation: RouteRecommendation
+    chosen_route: str
+
+    @property
+    def override(self) -> bool:
+        return self.chosen_route != self.recommendation.route
 
 
 class AuthorizationPayload(BaseModel):
@@ -103,13 +122,32 @@ def _remote_urls() -> dict[str, str]:
 
 def _changed_paths() -> list[str]:
     paths: set[str] = set()
+    branch = _run_git(["symbolic-ref", "--short", "HEAD"], check=False)
     for command in (
+        *_publication_diff_commands(branch),
         ["diff", "--name-only", "--cached"],
         ["diff", "--name-only", "HEAD"],
         ["ls-files", "--others", "--exclude-standard"],
     ):
         paths.update(_split_lines(_run_git(command, check=False)))
     return sorted(paths)
+
+
+def _publication_diff_commands(branch: str) -> list[list[str]]:
+    if not branch:
+        return []
+    if branch == "dev":
+        return [["diff", "--name-only", "origin/dev...HEAD"]]
+    if branch.startswith("feat/"):
+        return [
+            ["diff", "--name-only", f"origin/{branch}...HEAD"],
+            ["diff", "--name-only", "dev...HEAD"],
+            ["diff", "--name-only", "origin/dev...HEAD"],
+        ]
+    return [
+        ["diff", "--name-only", "@{upstream}...HEAD"],
+        ["diff", "--name-only", "origin/dev...HEAD"],
+    ]
 
 
 def collect_state() -> PushState:
@@ -126,8 +164,6 @@ def collect_state() -> PushState:
 
 
 def recommend_route(state: PushState, explicit_target: str | None) -> RouteRecommendation:
-    if explicit_target:
-        return _recommend_explicit_route(explicit_target)
     if state.branch.startswith("feat/"):
         return RouteRecommendation(
             route=f"origin/{state.branch}",
@@ -148,17 +184,25 @@ def recommend_route(state: PushState, explicit_target: str | None) -> RouteRecom
     )
 
 
-def _recommend_explicit_route(target: str) -> RouteRecommendation:
-    if target in {"origin/main", "main"}:
-        return RouteRecommendation(route="origin/main", risk_class="hard-confirm", triggers=["main"])
+def resolve_publication_intent(state: PushState, explicit_target: str | None) -> PublicationIntent:
+    recommendation = recommend_route(state, explicit_target=None)
+    chosen_route = normalize_target(explicit_target) if explicit_target else recommendation.route
+    return PublicationIntent(recommendation=recommendation, chosen_route=chosen_route)
+
+
+def normalize_target(target: str | None) -> str:
+    if target is None:
+        raise ValueError("missing publication target")
     if target in {"origin/dev", "dev"}:
-        return RouteRecommendation(route="origin/dev", risk_class="confirm", triggers=["explicit_target"])
+        return "origin/dev"
+    if target in {"origin/main", "main"}:
+        return "origin/main"
     if target in {"no-mistakes/dev", "no-mistakes"}:
-        return RouteRecommendation(route="no-mistakes/dev", risk_class="confirm", triggers=["explicit_target"])
+        return "no-mistakes/dev"
     if target.startswith("origin/feat/"):
-        return RouteRecommendation(route=target, risk_class="confirm", triggers=["explicit_feature_target"])
+        return target
     if target.startswith("feat/"):
-        return RouteRecommendation(route=f"origin/{target}", risk_class="confirm", triggers=["explicit_feature_target"])
+        return f"origin/{target}"
     raise ValueError(f"unsupported push target: {target}")
 
 
@@ -174,8 +218,37 @@ def route_to_remote_refspec(route: str) -> tuple[str, str]:
 
 
 def _trusted_remote(remote: str, url: str) -> bool:
-    patterns = NO_MISTAKES_PATTERNS if remote == "no-mistakes" else PUBLIC_REMOTE_PATTERNS
+    patterns = _trusted_remote_patterns().get(remote, [])
     return any(re.search(pattern, url) for pattern in patterns)
+
+
+def _trusted_remote_patterns() -> dict[str, list[str]]:
+    patterns = _load_pattern_file(TRUSTED_REMOTE_CONFIG_PATH) or DEFAULT_TRUSTED_REMOTE_PATTERNS
+    local_patterns = _load_pattern_file(LOCAL_TRUSTED_REMOTE_CONFIG_PATH)
+    if local_patterns:
+        patterns = {key: list(value) for key, value in patterns.items()}
+        for remote, remote_patterns in local_patterns.items():
+            patterns.setdefault(remote, []).extend(remote_patterns)
+    return patterns
+
+
+def _load_pattern_file(path: Path) -> dict[str, list[str]] | None:
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    patterns: dict[str, list[str]] = {}
+    for remote, remote_patterns in data.items():
+        if not isinstance(remote, str) or not isinstance(remote_patterns, list):
+            raise ValueError(f"{path} must map remote names to pattern lists")
+        patterns[remote] = []
+        for pattern in remote_patterns:
+            if not isinstance(pattern, str):
+                raise ValueError(f"{path} contains a non-string pattern for {remote}")
+            re.compile(pattern)
+            patterns[remote].append(pattern)
+    return patterns
 
 
 def diff_fingerprint(state: PushState) -> str:
@@ -187,8 +260,8 @@ def diff_fingerprint(state: PushState) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def build_payload(state: PushState, recommendation: RouteRecommendation) -> AuthorizationPayload:
-    remote, refspec = route_to_remote_refspec(recommendation.route)
+def build_payload(state: PushState, intent: PublicationIntent) -> AuthorizationPayload:
+    remote, refspec = route_to_remote_refspec(intent.chosen_route)
     remote_url = state.remote_urls.get(remote)
     if not remote_url:
         raise ValueError(f"remote {remote!r} is not configured")
@@ -198,11 +271,11 @@ def build_payload(state: PushState, recommendation: RouteRecommendation) -> Auth
         branch=state.branch,
         head_sha=state.head_sha,
         dirty=state.dirty,
-        route=recommendation.route,
+        route=intent.chosen_route,
         remote_url=remote_url,
         refspec=refspec,
         diff_fingerprint=diff_fingerprint(state),
-        risk_class=recommendation.risk_class,
+        risk_class=intent.recommendation.risk_class,
         nonce=secrets.token_urlsafe(16),
         issued_at_epoch=int(time.time()),
     )
@@ -240,7 +313,7 @@ def write_authorization(payload: AuthorizationPayload) -> None:
     AUTH_PATH.write_text(payload.model_dump_json(indent=2), encoding="utf-8")
 
 
-def append_decision_log(payload: AuthorizationPayload, triggers: list[str], *, override: bool) -> None:
+def append_decision_log(payload: AuthorizationPayload, intent: PublicationIntent) -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     entry = {
         "timestamp": int(time.time()),
@@ -249,23 +322,25 @@ def append_decision_log(payload: AuthorizationPayload, triggers: list[str], *, o
         "target_refspec": payload.refspec,
         "remote_url": payload.remote_url,
         "head_sha": payload.head_sha,
-        "recommended_route": payload.route,
+        "recommended_route": intent.recommendation.route,
         "chosen_route": payload.route,
-        "override": override,
-        "triggered_rules": triggers,
+        "override": intent.override,
+        "triggered_rules": intent.recommendation.triggers,
         "ack_mode": "typed-token",
     }
     with LOG_PATH.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
 
-def _print_first_run(payload: AuthorizationPayload, recommendation: RouteRecommendation) -> None:
+def _print_first_run(payload: AuthorizationPayload, intent: PublicationIntent) -> None:
     token = encode_ack(payload)
-    print(f"Recommended route: {recommendation.route}")
-    print(f"Risk class: {recommendation.risk_class}")
-    print(f"Triggered rules: {', '.join(recommendation.triggers)}")
+    print(f"Recommended route: {intent.recommendation.route}")
+    print(f"Chosen route: {payload.route}")
+    print(f"Override: {str(intent.override).lower()}")
+    print(f"Risk class: {intent.recommendation.risk_class}")
+    print(f"Triggered rules: {', '.join(intent.recommendation.triggers)}")
     print("No push executed. Re-run with this ack token to publish:")
-    print(f"python3 scripts/agent-push.py --target {recommendation.route} --ack {token}")
+    print(f"python3 scripts/agent-push.py --target {payload.route} --ack {token}")
 
 
 def _push(payload: AuthorizationPayload) -> int:
@@ -284,14 +359,14 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         state = collect_state()
-        recommendation = recommend_route(state, explicit_target=args.target)
-        payload = build_payload(state, recommendation)
+        intent = resolve_publication_intent(state, explicit_target=args.target)
+        payload = build_payload(state, intent)
     except Exception as exc:
         print(f"[agent-push] ERROR: {exc}", file=sys.stderr)
         return 2
 
     if not args.ack:
-        _print_first_run(payload, recommendation)
+        _print_first_run(payload, intent)
         return 1
 
     try:
@@ -305,7 +380,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     write_authorization(payload)
-    append_decision_log(payload, recommendation.triggers, override=payload.route != recommendation.route)
+    append_decision_log(payload, intent)
     return _push(payload)
 
 

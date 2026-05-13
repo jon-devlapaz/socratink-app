@@ -25,3 +25,7 @@ Canonical shared workflow truth for repo agents.
 ## Migration rule
 
 Migrate selectively. Promote only stable, high-signal, cross-model content. Preserve high-value tool-local content until its signal is captured or intentionally deprecated.
+
+## Git publication config
+
+Trusted remote URL patterns for the founder git workflow live in `agents/founder/trusted-remotes.json`. Machine-local additions belong in the ignored `.agents/runtime/trusted-remotes.local.json` file.

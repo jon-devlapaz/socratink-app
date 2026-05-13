@@ -14,6 +14,8 @@ Route publication safely while keeping the founder in the loop for meaningful pe
 - working tree state
 - destination remote/refspec
 - touched files
+- unpublished publication diff against the relevant remote/base
+- trusted remote patterns in `agents/founder/trusted-remotes.json`
 - whether the path is `dev`, `feat/*`, `main`, or `no-mistakes`
 
 ## Risk Classification
@@ -52,4 +54,5 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 ## Artifact Destination
 
 - runtime evidence: `.agents/runtime/push-decisions.jsonl`
+- trusted remote config: `agents/founder/trusted-remotes.json`
 - shared workflow truth: this file
