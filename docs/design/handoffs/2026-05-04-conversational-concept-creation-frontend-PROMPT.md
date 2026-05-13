@@ -35,7 +35,7 @@ Both skills MUST load before any code change. Missing skill load = release-block
 
   1. docs/design/handoffs/2026-05-04-conversational-concept-creation-frontend.md
      (your work order — read END TO END before anything else)
-  2. docs/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
+  2. docs/archive/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
      (the design spec — §2 four-line invariant + principles 1-7 are non-negotiable)
   3. PRODUCT.md
      (calm/precise/Socratic personality + anti-references list)
@@ -67,7 +67,7 @@ This surface is multi-component (chat state machine + summary card + chip edit +
 source panel + JS port of is_substantive_sketch + frontend telemetry). Write a
 plan first; do NOT improvise. Use the writing-plans skill:
 
-  Save plan to: docs/superpowers/plans/2026-05-XX-conversational-concept-creation-frontend.md
+  Save plan to: docs/archive/superpowers/plans/2026-05-XX-conversational-concept-creation-frontend.md
   Mirror Plan A's batched structure (one batch per coherent surface, TDD per
   task, commit at end of each batch).
 

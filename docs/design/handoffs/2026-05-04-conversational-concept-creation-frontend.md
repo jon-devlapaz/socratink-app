@@ -17,7 +17,7 @@
 IMPECCABLE_PREFLIGHT: context=pass product=pass shape=pass image_gate=skipped:spec-locked mutation=open
 ```
 
-Shape is `pass` because the design spec at `docs/superpowers/specs/2026-05-02-conversational-concept-creation-design.md` (commits `43a3bf2` + `f584918`) is the locked, user-approved shape brief. Image gate is `skipped:spec-locked` because the `.superpowers/brainstorm/49698-1777699155/content/locked-design.html` mockup already shows the canonical surface — no new image probes needed unless a sub-component diverges from it.
+Shape is `pass` because the design spec at `docs/archive/superpowers/specs/2026-05-02-conversational-concept-creation-design.md` (commits `43a3bf2` + `f584918`) is the locked, user-approved shape brief. Image gate is `skipped:spec-locked` because the `.superpowers/brainstorm/49698-1777699155/content/locked-design.html` mockup already shows the canonical surface — no new image probes needed unless a sub-component diverges from it.
 
 ## What this handoff is
 
@@ -32,7 +32,7 @@ This is Plan B of three:
 
 Read these in this order **before** designing or coding:
 
-1. `docs/superpowers/specs/2026-05-02-conversational-concept-creation-design.md` — the spec. The four-line invariant (§2 callout) and principles 1-7 are non-negotiable.
+1. `docs/archive/superpowers/specs/2026-05-02-conversational-concept-creation-design.md` — the spec. The four-line invariant (§2 callout) and principles 1-7 are non-negotiable.
 2. `PRODUCT.md` — calm/precise/Socratic brand personality, anti-references list (no quiz-app vibe, no generic AI tutor branding, no diagnostic dashboard, no gamified surface).
 3. `DESIGN.md` — §3 Screen 1 (Concept Threshold spec — currently still says "form-style", but the spec supersedes; Plan C will reconcile DESIGN.md), §10 Copy voice (UPPERCASE eyebrows only, lowercase `socratink`, no exclamation marks, no consolation copy), §12 Sensory grammar (cream paper, ink text, **one violet accent at rest**, violet-tinted shadows, no left-stripe accents).
 4. `UBIQUITOUS_LANGUAGE.md` Content Intake section — **Threshold chat**, **Starting sketch**, **Source-less generation**, **Grounding context**, plus existing terms.
@@ -332,7 +332,7 @@ PR description: paste the acceptance criteria + visual smoke screenshots + the J
 4. Open `.superpowers/brainstorm/49698-1777699155/content/locked-design.html` in a browser to see the canonical visual reference.
 5. Open `public/js/app.js` and `public/css/components.css` side by side. Read `buildContentInputUI` (around line 684) end-to-end so you understand what you're replacing.
 6. Set up the worktree.
-7. Decide: do you write a Plan B (formal implementation plan via `superpowers:writing-plans`), or implement directly because the surface is well-bounded? **Recommendation: write the plan first.** This is multi-component (chat state machine + summary card + chip edit + source panel + parity port + telemetry) — a plan keeps the rhythm. Save to `docs/superpowers/plans/2026-05-XX-conversational-concept-creation-frontend.md`.
+7. Decide: do you write a Plan B (formal implementation plan via `superpowers:writing-plans`), or implement directly because the surface is well-bounded? **Recommendation: write the plan first.** This is multi-component (chat state machine + summary card + chip edit + source panel + parity port + telemetry) — a plan keeps the rhythm. Save to `docs/archive/superpowers/plans/2026-05-XX-conversational-concept-creation-frontend.md`.
 8. After plan + user approval, dispatch via `superpowers:subagent-driven-development` with batched tasks (mirror the rhythm Plan A used: one batch per coherent surface, code-quality review per batch, final cross-cutting review before merge).
 
 ## What "better than codex could ever do" looks like

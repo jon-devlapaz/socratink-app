@@ -4,8 +4,8 @@
 
 **Date:** 2026-05-07
 **Branch under test:** `dev` (16 commits ahead of `origin/dev`)
-**Spec:** `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`
-**Plan that produced this code:** `docs/superpowers/plans/2026-05-07-progressive-route-materialization.md`
+**Spec:** `docs/archive/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`
+**Plan that produced this code:** `docs/archive/superpowers/plans/2026-05-07-progressive-route-materialization.md`
 
 This plan is written for a browser-capable agent (e.g. Antigravity, Playwright, claude-in-chrome). Every test case has a deterministic setup, exact steps, and a verification you can mechanically check. The agent's job is to execute every test ruthlessly and fill in the **Breakfix Report** at the end.
 

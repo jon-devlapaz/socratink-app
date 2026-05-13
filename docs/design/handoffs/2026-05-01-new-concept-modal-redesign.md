@@ -176,7 +176,7 @@ The current state — a violet link with no preview — neither helps the new le
 
 ## Out of scope
 
-- Backend changes — Stage 0 input contract is set (see `docs/superpowers/specs/2026-05-01-foundation-design.md` §5.7).
+- Backend changes — Stage 0 input contract is set (see `docs/archive/superpowers/specs/2026-05-01-foundation-design.md` §5.7).
 - The fresh-view "What do you want to understand?" form — different surface, addressed earlier.
 - The drill / repair / re-drill UI — different surfaces.
 - The graph / room rendering itself — different surfaces.
