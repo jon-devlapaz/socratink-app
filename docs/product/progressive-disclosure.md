@@ -6,7 +6,7 @@
 >
 > **When to read it**: Before changing node state derivation, routing semantics, unlock logic, graph rendering, drill-to-graph persistence, or phase transitions. Before implementing any part of the three-phase loop.
 >
-> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the drill-doc rebuild note and current truth routing (read `../drill/README.md`).
+> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the binding drill contract (read `../drill/contract.md`).
 >
 > **Key implementation constraints an agent must follow**:
 > - Four states: `locked → primed → drilled → solidified`. No other transitions are valid.
@@ -30,9 +30,9 @@ For enduring UX principles, read:
 - [/DESIGN.md](../../DESIGN.md)
 - [post-drill-ux-spec.md](post-drill-ux-spec.md)
 
-For current drill truth routing, read:
+For the current drill contract, read:
 
-- [README.md](../drill/README.md)
+- [contract.md](../drill/contract.md)
 
 ## Product Model
 

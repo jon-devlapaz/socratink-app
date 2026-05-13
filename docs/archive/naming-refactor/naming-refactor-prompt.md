@@ -171,7 +171,7 @@ The learner-visible label and the internal token can diverge. The token `locked`
 - **`data-*` attribute values** that JS reads as state (e.g., `data-state="growing"`, `data-map-mode="study"`). These are state-machine identifiers.
 - **Database column names, API endpoint paths, JSON response keys, prompt schema keys.**
 - **The data-layer state tokens themselves** as strings: `locked`, `primed`, `drilled`, `solidified`, `fractured`, `growing` — wherever they appear as code identifiers (the *display labels* for these states, however, are in-scope).
-- **Admin tooling and devops surfaces.** Specifically: anything under `admin/`, `scripts/`, `api/admin*`, internal Python tooling, log strings, telemetry tags, internal devtool CLI output. The audit is **learner-facing only**. (A prior run found `Field Journal` already exists in `admin/static.py:539` — this is admin tooling, not learner UI; ignore.)
+- **Internal tooling and devops surfaces.** Specifically: anything under `scripts/`, internal Python tooling, log strings, telemetry tags, internal devtool CLI output. The audit is **learner-facing only**.
 - **`docs/` content** (this prompt lives in `docs/codex/`; treat all of `docs/` as out-of-scope unless the user explicitly asks for a docs sweep).
 
 If a rename of in-scope copy would benefit from a class/id rename or token-string rename for legibility, **add it to the ledger as a separate row tagged `[deferred — out of scope]`**. The user will decide whether to schedule a follow-up domain refactor.
@@ -311,7 +311,7 @@ Before completing **Phase 2** (after row-by-row approval), verify:
 - The new vernacular respects all seven anti-reference categories.
 - No exclamation marks, no emoji, no hype, no diagnostic framing, no dashboard framing, no content-browser framing, no AI-knows-your-mind framing.
 - "challenge" (in cold-attempt context) and "correction" (in diagnostic-framing context) are absent from learner copy.
-- Admin tooling and devops surfaces were not touched.
+- Internal tooling and devops surfaces were not touched.
 
 ---
 

@@ -13,10 +13,10 @@ Re-generate by re-running the MCP tools listed in §"How to refresh this doc" at
 socratink-app is a **115-file FastAPI + vanilla-JS codebase** with **1455 nodes / 10166 edges** in the graph. Three structural facts dominate:
 
 1. **The frontend is in two giant JS files.** `public/js/app.js` (**4126 lines**) and `public/js/graph-view.js` (**2767 lines**, with a 1441-line `mountKnowledgeGraph` function inside) hold most of the visible surface. Any UI work touches one of them.
-2. **The Python backend is more modular than the frontend.** `ai_service.py` (1044 lines) is the AI hub; `auth/router.py` (979) + `main.py` (843) + `auth/service.py` (431) form the request-handling spine. Smaller modules cluster cleanly under `auth/`, `source_intake/`, `learning_commons/`, `llm/`, `models/`, `admin/`.
+2. **The Python backend is more modular than the frontend.** `ai_service.py` (1044 lines) is the AI hub; `auth/router.py` (979) + `main.py` (843) + `auth/service.py` (431) form the request-handling spine. Smaller modules cluster cleanly under `auth/`, `source_intake/`, `learning_commons/`, `llm/`, and `models/`.
 3. **Test density is high** — 414 test nodes (28% of all nodes). 1826 `TESTED_BY` edges. The "high coupling" CRG warnings between `tests` and various source communities are **not smells** — they're tests doing their job.
 
-Most-depended-on symbols (caller count): `auth/service.py::AuthSessionState` (32), `admin/todo_parser.py::parse_tink_todo` (25), `source_intake/parse.py::extract_html` (17), `auth/service.py::AuthUser` (17). Touching these without `get_impact_radius_tool` first is how silent regressions ship.
+Most-depended-on symbols (caller count): `auth/service.py::AuthSessionState` (32), `source_intake/parse.py::extract_html` (17), `auth/service.py::AuthUser` (17). Touching these without `get_impact_radius_tool` first is how silent regressions ship.
 
 ---
 
@@ -49,7 +49,6 @@ Communities are detected from directory structure + edge density. Sorted by **co
 | `tests-returns` | 625 | 0.181 | py | every test in `tests/` |
 | `socratink-app-lcstandard` | 13 | 0.169 | py | `learning_commons/` — LC HTTP + cache + 4-gate enrichment |
 | `models-id` | 33 | 0.154 | py | `models/` — incl. `sketch_validation` parity contract |
-| `admin-admin` | 39 | 0.137 | py | `admin/` — admin router + todo parser + static |
 | `llm-error` | 26 | 0.102 | py | `llm/` — Gemini adapter + retry/error normalization |
 | `socratink-app-repair` | 29 | 0.088 | py | `ai_service.py` — extraction + drill + repair-reps |
 | `scripts-load` | 25 | 0.061 | py | `scripts/` — bootstrap + verify-deploy + viz |
@@ -67,9 +66,8 @@ Sorted by # of nodes that call this symbol. These are the structural hubs; an `g
 | Inbound | Symbol | Why it matters |
 |---:|---|---|
 | 32 | `auth/service.py::AuthSessionState` | Session state passed through every authed request |
-| 25 | `admin/todo_parser.py::parse_tink_todo` | Tink TODO parsing surface — used by admin views and CLI |
 | 17 | `source_intake/parse.py::extract_html` | HTML→text path for `/api/extract-url` |
-| 17 | `auth/service.py::AuthUser` | User object across auth/ and admin/ boundaries |
+| 17 | `auth/service.py::AuthUser` | User object across auth boundaries |
 | 14 | `source_intake/parse.py::extract_plain` | Plain-text extract path |
 | 13 | `source_intake/fetch.py::_validate_outbound_target` | Outbound URL allowlist gate (security boundary) |
 | 11 | `learning_commons.py::should_enrich_with_lc` | 4-gate LC enrichment threshold |
@@ -88,7 +86,6 @@ Top 15 by line count. Ordered descending. Files >400 lines and functions >300 li
 | 4126 | File | `public/js/app.js` |
 | 2767 | File | `public/js/graph-view.js` |
 | 1441 | Function | `mountKnowledgeGraph` (`public/js/graph-view.js:1326`) |
-| 1173 | File | `admin/static.py` |
 | 1044 | File | `ai_service.py` |
 | 979 | File | `auth/router.py` |
 | 843 | File | `main.py` |
@@ -99,7 +96,6 @@ Top 15 by line count. Ordered descending. Files >400 lines and functions >300 li
 | 431 | File | `auth/service.py` |
 | 413 | File | `scripts/run_tasting_fixture.py` |
 | 387 | Function | `startAddConcept` (in `app.js`) |
-| 380 | File | `admin/router.py` |
 
 **Highest-leverage refactor target:** `public/js/app.js` at 4126 lines. The Plan B conversational concept creation work (in flight per `docs/design/handoffs/2026-05-04-conversational-concept-creation-frontend.md`) replaces a chunk of this file's surface; expect it to shrink meaningfully. After that lands, re-run this snapshot.
 
@@ -116,13 +112,11 @@ Top 15 by line count. Ordered descending. Files >400 lines and functions >300 li
 | `tests-returns` | `auth-auth` | 109 | tests exercising auth — correct |
 | `tests-returns` | `source-intake-pinned` | 105 | tests exercising source intake — correct |
 | `tests-returns` | `llm-error` | 57 | tests for the LLM error normalization layer |
-| `tests-returns` | `admin-admin` | 37 | admin route tests |
 | `tests-returns` | `models-id` | 30 | model-layer tests (sketch validation, etc.) |
 | `tests-returns` | `socratink-app-lcstandard` | 30 | learning-commons tests |
 | `tests-returns` | `socratink-app-repair` | 7 | **only 7 tests calling `ai_service.py` — possible coverage gap** |
 | `tests-returns` | `socratink-app-request` | 6 | **only 6 tests calling `main.py` — possible coverage gap** |
 | `socratink-app-request` | `socratink-app-repair` | 5 | `main.py` calling `ai_service.py` — the AI dispatch path |
-| `admin-admin` | `auth-auth` | 3 | admin router using auth — expected |
 
 **Two coverage gaps worth investigating:**
 
@@ -137,7 +131,6 @@ Top 15 by line count. Ordered descending. Files >400 lines and functions >300 li
 High coupling (109 edges) between 'auth-auth' and 'tests-returns'
 High coupling (105 edges) between 'source-intake-pinned' and 'tests-returns'
 High coupling (57 edges) between 'llm-error' and 'tests-returns'
-High coupling (37 edges) between 'admin-admin' and 'tests-returns'
 High coupling (30 edges) between 'models-id' and 'tests-returns'
 High coupling (30 edges) between 'socratink-app-lcstandard' and 'tests-returns'
 ```

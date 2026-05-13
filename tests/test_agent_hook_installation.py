@@ -31,8 +31,8 @@ def test_root_adapters_point_to_agents_canon() -> None:
 
 
 def test_bootstrap_docs_acknowledge_agents_canon() -> None:
-    onboarding = (REPO_ROOT / "docs" / "codex" / "onboarding.md").read_text(encoding="utf-8")
-    quality = (REPO_ROOT / "docs" / "codex" / "agent-quality.md").read_text(encoding="utf-8")
+    onboarding = (REPO_ROOT / "agents" / "ONBOARDING.md").read_text(encoding="utf-8")
+    quality = (REPO_ROOT / "agents" / "QUALITY.md").read_text(encoding="utf-8")
     assert "agents/" in onboarding
     assert "agents/" in quality
 

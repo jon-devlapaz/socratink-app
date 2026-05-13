@@ -8,6 +8,7 @@ Do not use archived drill docs as the source of truth for new implementation dec
 
 Until fresh drill docs are rebuilt, use these surfaces in order:
 
+- [contract.md](contract.md) — current binding drill contract: phases, states, valid mutations, and active drift caveat
 - [../product/evidence-weighted-map.md](../product/evidence-weighted-map.md) — binding doctrine for what the graph may and may not claim
 - [../product/spec.md](../product/spec.md) — binding product contract for the three-phase loop and four-state model
 - [../product/progressive-disclosure.md](../product/progressive-disclosure.md) — current implementation-facing routing and state spec

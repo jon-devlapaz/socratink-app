@@ -33,7 +33,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [product/evidence-weighted-map.md](../product/evidence-weighted-map.md) | canonical | yes | Defines the evidence-weighted map doctrine, true game loop, starting-map-as-anchor, map-maturity language, and graph-claim rules. Overrides other docs on graph-truth claims. | — |
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
 | [archive/product/ux-framework.md](../archive/product/ux-framework.md) | historical | no | Former metacognitive UX philosophy doc. Archived after consolidation into `/DESIGN.md`; keep only for historical reference. | [/DESIGN.md](../../DESIGN.md) |
-| [/PRODUCT.md](../../PRODUCT.md) | deprecated | no | Brand personality, anti-references, product purpose, design principles. | [/DESIGN.md](../../DESIGN.md) |
+| [/PRODUCT.md](../../PRODUCT.md) | canonical | yes | Strategic product brief: users, product purpose, promise, brand posture, and strategic non-goals. Explicitly not the UX doctrine. | — |
 | [project/theta-state.md](theta-state.md) | canonical | yes | Evidence posture and confidence ratings for product-science claims; phase grounding; product language rules. | — |
 
 ## Implementation-Facing Specs
@@ -42,9 +42,10 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | --- | --- | --- | --- | --- |
 | [product/progressive-disclosure.md](../product/progressive-disclosure.md) | implementation | yes | Four-state model implementation spec: state transitions, persisted fields, phase tracking, drill contract, routing, progression layers, session guardrails, target happy path. | — |
 | [product/post-drill-ux-spec.md](../product/post-drill-ux-spec.md) | implementation | yes | Post-phase panel copy, result-state visuals, sensory treatment, transcript policy, tier/band trajectory display. | — |
-| [drill/README.md](../drill/README.md) | workflow | yes | Temporary rebuild note for retired drill docs; routes readers to the current binding drill truth surfaces while greenfield doctrine is rebuilt. | — |
-| [archive/drill/engineering.md](../archive/drill/engineering.md) | historical | no | Retired drill/graph invariants doc. Preserved only for historical context during the drill-doc rebuild. | [drill/README.md](../drill/README.md) |
-| [archive/drill/evaluation.md](../archive/drill/evaluation.md) | historical | no | Retired manual drill evaluation set. Preserved only for historical context during the drill-doc rebuild. | [drill/README.md](../drill/README.md) |
+| [drill/contract.md](../drill/contract.md) | implementation | yes | Current binding drill contract: three-phase loop, state meanings, valid mutations, and known live drift caveat. | — |
+| [drill/README.md](../drill/README.md) | workflow | yes | Temporary rebuild note for the retired drill docs; routes readers to the current drill contract and supporting binding surfaces while the broader drill canon is rebuilt. | — |
+| [archive/drill/engineering.md](../archive/drill/engineering.md) | historical | no | Retired drill/graph invariants doc. Preserved only for historical context during the drill-doc rebuild. | [drill/contract.md](../drill/contract.md) |
+| [archive/drill/evaluation.md](../archive/drill/evaluation.md) | historical | no | Retired manual drill evaluation set. Preserved only for historical context during the drill-doc rebuild. | [drill/contract.md](../drill/contract.md) |
 | [product/repair-reps.md](../product/repair-reps.md) | implementation | yes | Unified implementation spec for Repair Reps (focused layout, card-stack visuals, self-rating evidence schema). | — |
 | [project/auth-rollout.md](auth-rollout.md) | implementation | yes | Auth rollout phases, release gates, test plan, deferred work. | — |
 | [design/handoffs/2026-05-02-extraction-evals-and-rubric.md](../design/handoffs/2026-05-02-extraction-evals-and-rubric.md) | implementation | yes | Evaluation rubric and rubrics for extraction quality. | — |
