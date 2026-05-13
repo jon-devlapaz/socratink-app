@@ -5,7 +5,7 @@ This document is the canonical doctrine for what the Socratink graph is and what
 For supporting context, read:
 
 - [spec.md](spec.md) — binding product contract (three-phase loop, four-state model)
-- [ux-framework.md](ux-framework.md) — UX philosophy
+- [/DESIGN.md](../../DESIGN.md) — canonical UX doctrine
 - [progressive-disclosure.md](progressive-disclosure.md) — implementation-facing state and routing spec
 - [starting-map-flow-artifact.md](starting-map-flow-artifact.md) — concept-entry storyboard that operationalizes this doctrine
 - [../drill/engineering.md](../drill/engineering.md) — drill/graph invariants

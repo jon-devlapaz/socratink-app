@@ -165,8 +165,8 @@ Template reference:
 ---
 
 > **Path correction note — 2026-04-11:**
-> Historical entries in this log reference `docs/codex/session-bootstrap.md` (legacy alias) and `.codex/agents/glenna.toml` (moved).
-> Canonical paths after refactor: `docs/codex/onboarding.md` and `.agents/codex/glenna.toml`; `docs/codex/session-bootstrap.md` redirects older instructions to onboarding.
+> Historical entries in this log reference `docs/codex/session-bootstrap.md` (removed legacy alias) and `.codex/agents/glenna.toml` (moved).
+> Canonical paths after refactor: `docs/codex/onboarding.md` and `.agents/codex/glenna.toml`.
 > Prior entries are preserved as-is per append-only policy.
 
 ---

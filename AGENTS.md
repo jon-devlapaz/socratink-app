@@ -285,12 +285,10 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 
 ## Agent bootstrap discovery
 - Canonical session bootstrap: `docs/codex/onboarding.md`.
-- Legacy compatibility path: `docs/codex/session-bootstrap.md` redirects agents to onboarding.
-- If an agent instruction references `docs/codex/session-bootstrap.md`, treat that as `docs/codex/onboarding.md`.
 - Deterministic agent quality rules live in `docs/codex/agent-quality.md`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
 - Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `docs/codex/onboarding.md`.
-- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — read `docs/project/crg-architecture-snapshot-2026-05-04.md` first. It's a CRG-derived briefing that gives you the shape of the codebase in ~3 minutes so you don't have to grep your way to it. Re-generated after major refactors; the underlying graph itself is always live (auto-updated on every `Edit|Write|Bash` via `.claude/settings.json` `PostToolUse` hook), so the snapshot is the periodic crystallisation, not a cache.
+- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow in `docs/project/code-review-graph-sop.md` rather than relying on stale point-in-time snapshots.
 
 ## Project-local agent skills (skills.sh marketplace)
 

@@ -1,6 +1,6 @@
-# socratink — Codex Workflows
+# socratink — Shared Agent Workflows
 
-This document defines repeatable workflows for specific agentic tasks.
+This document defines repeatable shared workflows for specific agentic tasks.
 
 ---
 

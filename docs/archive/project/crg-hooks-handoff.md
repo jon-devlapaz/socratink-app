@@ -1,8 +1,8 @@
 # Handoff: Code Review Graph Hook Hardening
 
-**Context:** The `code-review-graph` (CRG) is currently integrated via `.claude/settings.example.json` (Claude Code hooks), which updates the graph when the agent edits files. However, it relies on manual rebuilds when humans pull code, switch branches, or rebase. 
+**Context:** The `code-review-graph` (CRG) is currently integrated via `.claude/settings.example.json` (Claude Code hooks), which updates the graph when the agent edits files. Git hooks cover branch/worktree/history transitions so the graph stays fresh when humans pull code, switch branches, or rebase.
 
-**Objective:** Implement native Git hooks and enhance the Claude hooks so the Code Review Graph and its HTML visualization stay 100% synchronized automatically, regardless of whether a human or an agent makes the change.
+**Objective:** Implement native Git hooks and enhance the Claude hooks so the Code Review Graph database stays synchronized automatically, regardless of whether a human or an agent makes the change. Visualization and wiki outputs are optional convenience surfaces, not part of the core freshness contract.
 
 Please implement the following robust hook architecture:
 
@@ -24,15 +24,15 @@ Ensure developers actually use these hooks.
     This ensures all developers share the same Git hook behaviors without manual symlinking.
 
 ## 3. Enhanced Claude Settings (`.claude/settings.example.json`)
-The current `.claude/settings.example.json` covers `Edit|Write|Bash`. 
-*   **Missing Tools:** Add `Replace` and `ApplyPatch` to the `PostToolUse` matcher so the graph updates when the agent uses those specific file-editing tools.
-*   **Visualizer Auto-Sync:** Add a background execution of `python3 scripts/build_code_graph_viz.py` to the `EnterWorktree` hook (and possibly the `SessionStart` hook) so the `docs/code-graph.html` constellation visualization is regenerated automatically alongside the graph rebuild.
+The current `.claude/settings.example.json` should cover all file-mutation tools used by the agent.
+*   **Missing Tools:** Include `Replace` and `ApplyPatch` in the `PostToolUse` matcher so the graph updates when the agent uses those specific file-editing tools.
+*   **No duplicate worktree build:** Do not run a separate `EnterWorktree` Claude build if the git `post-checkout` hook already owns that rebuild path. Keep one authoritative rebuild trigger per transition.
 
 ## 4. Verification
 After implementing, verify that:
 1. Making a commit updates the graph.
 2. Checking out a new branch triggers a graph build.
-3. The visualizer HTML updates seamlessly.
+3. If the visualizer is still desired, it can be generated manually without affecting graph freshness.
 4. If `code-review-graph` is uninstalled or not in the PATH, the CRG hook commands fail gracefully without breaking standard Git operations. Repo-wide publication gates such as `pre-push` may still block intentionally for workflow enforcement.
 
 ---

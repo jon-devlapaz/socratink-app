@@ -2,7 +2,7 @@
 
 A founder-facing guide to using the code-review-graph (CRG) on socratink-app.
 Plain-language. For the agent-facing technical runbook (hooks, tool reference,
-troubleshooting), see [`docs/code-review-graph-sop.md`](../code-review-graph-sop.md).
+troubleshooting), see [`docs/project/code-review-graph-sop.md`](../../docs/project/code-review-graph-sop.md).
 
 ---
 
@@ -182,8 +182,8 @@ Check three things:
 ### Q: I work in worktrees a lot. Does the graph travel with them?
 
 Each worktree gets its own `.code-review-graph/graph.db`. The
-`EnterWorktree → build` hook builds a fresh graph automatically when you spin
-up a new one. First build takes ~10s for this repo size. After that,
+`post-checkout` git hook builds a fresh graph automatically when you spin
+up a new one or switch branches. First build takes ~10s for this repo size. After that,
 incremental updates are sub-second.
 
 ### Q: It feels like overkill for a 50-file repo. Should I bother?

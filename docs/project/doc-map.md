@@ -32,7 +32,7 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [/CONTEXT.md](../../CONTEXT.md) | canonical | yes | Domain glossary for terms whose meaning shapes a specific surface (e.g. Library). Canonical for the surface-level terms it defines; complements `/UBIQUITOUS_LANGUAGE.md` (which governs cross-cutting graph/loop vocabulary). If code or copy disagrees with this file, the code or copy is wrong. | — |
 | [product/evidence-weighted-map.md](../product/evidence-weighted-map.md) | canonical | yes | Defines the evidence-weighted map doctrine, true game loop, starting-map-as-anchor, map-maturity language, and graph-claim rules. Overrides other docs on graph-truth claims. | — |
 | [product/spec.md](../product/spec.md) | canonical | yes | Binding product contract: three-phase loop, four-state model, panel modes, traversal, guardrails, evaluation checklist. | — |
-| [product/ux-framework.md](../product/ux-framework.md) | deprecated | no | Metacognitive UX philosophy, reward/sensory rules, attribution management, session guardrails, ethical engagement boundary. | [/DESIGN.md](../../DESIGN.md) |
+| [archive/product/ux-framework.md](../archive/product/ux-framework.md) | historical | no | Former metacognitive UX philosophy doc. Archived after consolidation into `/DESIGN.md`; keep only for historical reference. | [/DESIGN.md](../../DESIGN.md) |
 | [/PRODUCT.md](../../PRODUCT.md) | deprecated | no | Brand personality, anti-references, product purpose, design principles. | [/DESIGN.md](../../DESIGN.md) |
 | [project/theta-state.md](theta-state.md) | canonical | yes | Evidence posture and confidence ratings for product-science claims; phase grounding; product language rules. | — |
 
@@ -88,26 +88,26 @@ On all other topics (three-phase loop, four-state model implementation, routing,
 | [/agents/founder/trusted-remotes.json](../../agents/founder/trusted-remotes.json) | workflow | yes | Trusted remote URL pattern config for the founder git publication workflow. | — |
 | [codex/onboarding.md](../codex/onboarding.md) | workflow | yes | Canonical bootstrap for new Socratink coding sessions; routes agents into `agents/`. | — |
 | [codex/agent-quality.md](../codex/agent-quality.md) | workflow | yes | Deterministic agent behavior, source-of-truth rules, and product-truth guardrails; recognizes `agents/` as shared workflow canon. | — |
-| [codex/workflows.md](../codex/workflows.md) | workflow | yes | Hot-fix, Build-Measure-Learn, decision-log, and Glenna review workflows. | — |
-| [codex/drill-build-measure-learn.md](../codex/drill-build-measure-learn.md) | workflow | yes | Drill log → Socratink Brain evaluation → fix cycle. | — |
+| [/agents/WORKFLOWS/README.md](../../agents/WORKFLOWS/README.md) | workflow | yes | Shared hot-fix, Build-Measure-Learn, decision-log, and Glenna review workflows. | — |
+| [/agents/WORKFLOWS/drill-build-measure-learn.md](../../agents/WORKFLOWS/drill-build-measure-learn.md) | workflow | yes | Drill log → Socratink Brain evaluation → fix cycle. | — |
 | [codex/socratink-brain-workflow-architecture.md](../codex/socratink-brain-workflow-architecture.md) | deprecated | no | Stub pointing to authoritative `.socratink-brain/CLAUDE.md`. | `.socratink-brain/CLAUDE.md` |
 | [codex/decision-log.md](../codex/decision-log.md) | workflow | yes | Append-only architectural/product decision log. Empty template at time of writing. | — |
 | [codex/agent-review-log.md](../codex/agent-review-log.md) | workflow | yes | Append-only Glenna review log. | — |
 | [project/code-review-graph-sop.md](code-review-graph-sop.md) | workflow | yes | Standard operating procedure for using the Code-Review Graph. | — |
-| [project/crg-hooks-handoff.md](crg-hooks-handoff.md) | workflow | yes | Git hook integration for the CRG. | — |
+| [archive/project/crg-hooks-handoff.md](../archive/project/crg-hooks-handoff.md) | historical | no | Historical implementation handoff for CRG hook hardening. The live truth is the current hooks plus `project/code-review-graph-sop.md`. | [project/code-review-graph-sop.md](code-review-graph-sop.md) |
+| [/agents/founder/CODE-REVIEW-GRAPH-FAQ.md](../../agents/founder/CODE-REVIEW-GRAPH-FAQ.md) | workflow | no | Founder-facing CRG FAQ. Plain-language guidance that complements the technical SOP without redefining policy. | — |
 
 ## Reference Fixtures
 
 | Path | Status | Binding | Purpose |
 | --- | --- | --- | --- |
 | `docs/reference/example-extraction-output.json` | reference | no | Sample extraction output for prompts and testing. Not a contract. |
-| [reference/extraction-catalog.md](../reference/extraction-catalog.md) | reference | no | Inventory of backend, prompt, and frontend files involved in the extraction phase. Developer orientation aid; not a contract. |
-| [project/crg-architecture-snapshot-2026-05-04.md](crg-architecture-snapshot-2026-05-04.md) | reference | no | Architectural orientation for the Socratink codebase. |
+| [archive/reference/extraction-catalog.md](../archive/reference/extraction-catalog.md) | historical | no | Historical extraction-phase inventory. Convenience only; not part of active bootstrap or binding contracts. |
+| [archive/project/crg-architecture-snapshot-2026-05-04.md](../archive/project/crg-architecture-snapshot-2026-05-04.md) | historical | no | Stale point-in-time CRG architecture snapshot. Preserved only as historical context, not active orientation. |
 
 ## Historical / Deprecated Notes
 
-- **`docs/codex/session-bootstrap.md`** — deprecated alias. All bootstrap reads should resolve to `docs/codex/onboarding.md`. Do not add new content here.
-- **`docs/product/ux-framework.md`** — deprecated. Consolidated into `/DESIGN.md` as the canonical UX doctrine.
+- **`docs/product/ux-framework.md`** — archived. Consolidated into `/DESIGN.md` as the canonical UX doctrine.
 - **`docs/archive/naming-refactor/`** — historical project phase documentation.
 - No other docs are currently deprecated. Items flagged as stale during the evidence-weighted-map pivot are updated in place (see `evidence-weighted-map.md` for the binding doctrine and surgical edits to the canonical docs in this registry).
 

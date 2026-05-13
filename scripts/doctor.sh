@@ -14,7 +14,6 @@ required_files=(
   "AGENTS.md"
   "docs/project/state.md"
   "docs/codex/onboarding.md"
-  "docs/codex/session-bootstrap.md"
   "docs/codex/agent-quality.md"
   "docs/product/evidence-weighted-map.md"
   "docs/product/spec.md"

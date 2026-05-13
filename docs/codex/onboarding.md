@@ -3,8 +3,7 @@
 This is the minimum bootstrap for new Socratink coding sessions.
 
 Canonical path: `docs/codex/onboarding.md`.
-Legacy alias: `docs/codex/session-bootstrap.md` exists only to redirect older instructions here.
-Shared workflow canon: `agents/README.md` and `agents/founder/WORKFLOWS/`.
+Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/founder/WORKFLOWS/`.
 
 ## Read Order
 1. [AGENTS.md](../../AGENTS.md)
@@ -90,7 +89,7 @@ Before doing substantive work:
 11. Use the theta-research skill when the task touches learning science
 12. Decide which agents are actually needed
 13. Make a plan when the task is large or ambiguous
-14. Use docs/codex/workflows.md for narrow regressions
+14. Use agents/WORKFLOWS/README.md for shared hot-fix and drill workflows
 15. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
 
 The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with a four-state model (locked → primed → drilled → solidified). Only spaced reconstruction records `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
