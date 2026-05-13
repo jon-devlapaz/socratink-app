@@ -3,22 +3,12 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit|Bash",
+        "matcher": "Edit|Write|Replace|ApplyPatch|NotebookEdit|Bash",
         "hooks": [
           {
             "type": "command",
             "command": "code-review-graph update --skip-flows",
             "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "EnterWorktree",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "code-review-graph build && python3 scripts/build_code_graph_viz.py >/dev/null 2>&1 &",
-            "timeout": 60
           }
         ]
       }

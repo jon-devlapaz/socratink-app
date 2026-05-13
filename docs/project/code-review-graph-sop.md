@@ -3,6 +3,13 @@
 How to use the knowledge graph in this repo. For agents, the canonical rules live
 in `AGENTS.md` and the shared `agents/` canon. This file is the human-readable companion.
 
+## Boundary
+
+`.code-review-graph/` is local derived substrate, not repo canon. The only
+load-bearing artifact there is the graph database used by the CLI/MCP tooling.
+Generated wiki pages and visualization HTML are optional convenience outputs,
+not maintained documentation surfaces and not part of the normal agent workflow.
+
 ## What the graph is
 
 [`code-review-graph`](https://github.com/tirth8205/code-review-graph) (MIT) parses this repo with
@@ -29,13 +36,11 @@ should not need to run anything by hand.
 | Event | Hook | What runs |
 |---|---|---|
 | SessionStart | every new session | `code-review-graph status` (header + last-update) |
-| PostToolUse: `Edit\|Write\|NotebookEdit\|Bash` | after every file mutation | `code-review-graph update --skip-flows` (incremental) |
-| PostToolUse: `EnterWorktree` | when a fresh worktree is created | `code-review-graph build && python3 scripts/build_code_graph_viz.py` (full graph + viz HTML, synchronous build, 60s timeout) |
+| PostToolUse: `Edit\|Write\|Replace\|ApplyPatch\|NotebookEdit\|Bash` | after every file mutation | `code-review-graph update --skip-flows` (incremental) |
 
-`EnterWorktree → build` runs synchronously to avoid racing with the incremental
-`update` that PostToolUse fires on the first edit in a worktree. The viz
-regen is chained backgrounded so the worktree is usable as soon as the build
-completes.
+Agent-side freshness is intentionally limited to incremental updates after file
+mutation. Full rebuilds for worktree entry, branch changes, and history rewrites
+come from git hooks so Claude does not race the same build path.
 
 ### Layer 2 — Git hooks (human + agent git ops)
 
@@ -55,10 +60,7 @@ intentionally.
 | `git checkout <branch>` / `git worktree add` | `post-checkout` (flag=1) | `code-review-graph build &` |
 
 All git-hook commands are detached and redirect output to `/dev/null` so they
-never block git or spam the terminal. The `EnterWorktree` Claude hook and
-`post-checkout` git hook both fire on `git worktree add`; both are idempotent
-under SQLite WAL — worst case the second run briefly contends for the write
-lock and re-parses unchanged files.
+never block git or spam the terminal.
 
 ### When to run something by hand anyway
 
@@ -120,7 +122,7 @@ Before using `Grep` / `Glob` / `Read`, ask: does the graph already cover this?
 Fall back to `Grep`/`Glob`/`Read` only when the graph genuinely doesn't cover what
 you need. The floor caveat is the canonical exception.
 
-## Visualization
+## Optional visualization
 
 Constellation viz of the graph:
 
@@ -130,8 +132,10 @@ open docs/code-graph.html
 ```
 
 The script reads `.code-review-graph/graph.db` directly and emits a single
-self-contained HTML (D3 force layout, communities color-coded). Re-run any time
-the graph rebuilds.
+self-contained HTML (D3 force layout, communities color-coded). This is a
+manual convenience surface, not part of the freshness contract. Do not assume
+`docs/code-graph.html` exists on every machine or is current unless you
+generated it explicitly.
 
 ## Troubleshooting
 
@@ -172,8 +176,8 @@ gitignored.
 
 ### Fresh worktree
 
-`EnterWorktree → build` should fire automatically. If it didn't (timeout, hook
-not picked up):
+`post-checkout` should fire automatically on branch changes and fresh worktree
+entry. If it didn't:
 
 ```bash
 cd <worktree-path>
@@ -205,9 +209,6 @@ Grouped by use case. Token cost rises roughly top-to-bottom in each group.
 **Refactor:**
 - `refactor_tool` (modes: suggest, dead_code, rename) — preview only
 - `apply_refactor_tool` — apply a previewed rename
-
-**Wiki / docs:**
-- `generate_wiki_tool` / `get_wiki_page_tool` — auto-generated community docs in `.code-review-graph/wiki/`
 
 **Build:**
 - `build_or_update_graph_tool` / `run_postprocess_tool`
