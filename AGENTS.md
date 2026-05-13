@@ -129,7 +129,7 @@ When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`)
 - **Frontend bundle topology inflates risk scores.** `get_impact_radius` on any file imported into `public/js/app.js` reports HIGH risk and 50+ affected files. That is a topology artifact, not a real blast radius. Trust the callers/callees list, distrust the headline risk score for client JS.
 - **Symbol-shaped queries beat prose for semantic search.** "AudioFX bindUnlock" finds nodes; "threshold sound autoplay unlock" returns 0. When `semantic_search_nodes` falls back to keyword mode, prose queries silently fail.
 - **JS parser under-reports more than Python.** `query_graph file_summary` on `public/js/audio.js` lists 4 of its functions and misses the `play*` helpers. The floor-not-ceiling rule is sharper for JS files than for Python.
-- **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it surfaces unrelated admin Python flows. Skip it; go straight to `query_graph importers_of <file>`.
+- **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it can surface unrelated Python flows. Skip it; go straight to `query_graph importers_of <file>`.
 
 ## Common development commands
 ### Environment setup
@@ -163,6 +163,9 @@ SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 #      sessions through the concept-create dialog. Without dev_mode the
 #      dialog shows "Guest mode uses sample maps. Sign in to extract your
 #      own content into a draft map." and blocks the LLM extract path.
+# scripts/dev.sh also sets SOCRATINK_E2E_LOCAL_GUEST=1 by default. Local
+# browser tests use /auth/e2e/guest to mint a loopback-only guest cookie
+# without creating real Supabase anonymous users or burning auth rate limits.
 # Restart the server after toggling — uvicorn --reload reloads code, not env.
 SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 
@@ -219,7 +222,7 @@ python scripts/run_tasting_fixture.py
 ```
 - Threshold is on the diff, not the project total. Brand-new code without coverage fails; existing legacy gaps are not scored.
 - Pure-deletion diffs, doc-only diffs, and config-only diffs are correctly no-ops — diff-cover only scores added/modified executable lines.
-- Backend scope is `admin api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
+- Backend scope is `api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
 - If the script crashes outside of a coverage failure (missing V8 data, missing `coverage.xml`), inspect `.qa-runs/v8-coverage/*.json` and `.qa-runs/coverage-reports/cobertura-coverage.xml` before reaching for `--no-verify`-style escapes. The gate is the brake; do not bypass it silently.
 
 ### Deploy verification
@@ -268,7 +271,7 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
 - Type-check baseline lives in `mypy.ini` at the repo root (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`, etc.). The canonical invocation is `mypy .`, which honors the `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees). The same command is run by `scripts/doctor.sh` and by CI.
 - No ruff/flake8 config is checked in. Do not invent lint commands beyond `mypy .`.
-- CI gate: `.github/workflows/preflight.yml` runs `mypy .` + `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key for the run; production sets the real key via Vercel env. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
+- CI gate: `.github/workflows/preflight.yml` runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), then `bash scripts/doctor.sh`, then `.venv/bin/pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so `doctor.sh` exercises the bootstrap/auth path without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`
@@ -346,4 +349,4 @@ Each project-local skill consumes session-start token budget. Treat installs as 
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; do not allow-list failures unless they are proven third-party.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
 - The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
-- Before declaring an implementation task complete on production code — Python under the backend scope (`admin/`, `api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
+- Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
