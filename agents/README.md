@@ -19,6 +19,14 @@ Canonical shared workflow truth for repo agents.
 - caches
 - tool-specific hooks/settings syntax
 
+## Local substrate boundary
+
+`.agents/` is not part of the shared canon.
+
+- `.agents/skills/` is external project-local install-state only.
+- `.agents/runtime/` is ignored runtime evidence only.
+- nothing in `.agents/` should be required as binding doctrine for a fresh checkout.
+
 ## Authority rule
 
 `agents/` is the shared canon. `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are entrypoint adapters into this canon. Tool-specific directories like `.claude/`, `.codex/`, and `.gemini/` are runtime/config/wrapper surfaces, not canonical doctrine.

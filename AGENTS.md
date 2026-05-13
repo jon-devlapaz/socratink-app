@@ -10,6 +10,7 @@ The canonical shared workflow truth for repo agents now lives in `agents/`.
 - Use `agents/founder/WORKFLOWS/` for founder workflow cards.
 - Use `agents/LEARNINGS.md` only as the non-binding learning ledger for recurring founder/agent workflow friction; promote repeated patterns into canon before treating them as policy.
 - Treat tool-specific directories (`.claude/`, `.codex/`, `.gemini/`) as runtime/config surfaces unless a migration ledger entry says otherwise.
+- Treat `.agents/` as local substrate only: `.agents/skills/` is external install-state, `.agents/runtime/` is ignored runtime evidence, and neither is canonical doctrine.
 
 ### Boil the ocean
 
@@ -293,7 +294,7 @@ changes — also update `CONTEXT.md` and write an ADR in `docs/adr/`.
 
 ## Project-local agent skills (skills.sh marketplace)
 
-Three community skills are installed project-local under `.agents/skills/`, symlinked into `.claude/skills/` for Claude Code discovery. Install is local-machine state (`.agents/` is gitignored, no lockfile carried) — re-install on a new machine via the commands below if ever needed.
+Three community skills are installed project-local under `.agents/skills/`, symlinked into `.claude/skills/` for Claude Code discovery. Install is local-machine state only (`.agents/` is gitignored, no lockfile carried) — re-install on a new machine via the commands below if ever needed. Do not treat `.agents/skills/` as repo canon.
 
 | Skill | Source | When to invoke | Trust signals |
 |---|---|---|---|
