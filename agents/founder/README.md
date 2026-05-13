@@ -9,6 +9,7 @@ It is not meant to replace the detailed workflow card or the root agent instruct
 - `WORKFLOWS/01-git-integration.md` is the source for the founder git workflow. It explains when publication should go to `origin/dev`, `origin/feat/*`, or `no-mistakes/dev`, and when a push needs stronger confirmation.
 - `WORKFLOWS/02-git-homeostasis.md` is the source for restoring branch homeostasis. It explains how to survey branch state, classify stale branches, salvage valuable work, and converge back to the intended `main + dev` shape without silent data loss.
 - `WORKFLOWS/03-prototyping.md` is the source for founder prototype workflow. It explains when to use a logic/state harness versus a UI/copy variant sweep, how to keep prototypes throwaway, and where to capture the verdict when the question is answered.
+- `WORKFLOWS/04-deploy-verification.md` is the source for deploy verification. It explains how to wait for the intended production deployment, run the smoke against the live site, and report deploy status separately from smoke status.
 - `../LEARNINGS.md` is the non-binding ledger for recurring founder/agent workflow observations. Read it when founder workflow friction, publication safety, verification discipline, artifact placement, or workflow promotion is part of the task.
 - `trusted-remotes.json` is the tracked allowlist for remotes that the push wrapper may trust. It prevents agents from treating a remote name like `origin` as safe without checking the URL.
 - `README.md` is this overview. It summarizes the folder for humans; it should not redefine policy.

@@ -36,7 +36,7 @@ For any non-terminal entry (`adapter-only` or `preserved-pending-review`), recor
 | `.claude/skills/prototype/SKILL.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/03-prototyping.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
 | `.claude/skills/prototype/LOGIC.md` | `deprecated` | logic branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
 | `.claude/skills/prototype/UI.md` | `deprecated` | UI branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
-| `.claude/skills/verify-deploy.md` | `preserved-pending-review` | possible future workflow-card promotion if deploy verification becomes a repeated cross-model founder workflow |
+| `.claude/skills/verify-deploy.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/04-deploy-verification.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
 | `.claude/skills/use-context7.md` | `tool-specific` | mostly redundant with current `AGENTS.md` Layer 3 policy; keep as a Claude wrapper |
 | `.claude/skills/review/SKILL.md` | `tool-specific` | Claude-packaged review wrapper, not shared canon |
 | `.claude/skills/debug-issue.md` | `tool-specific` | tool wrapper for graph-based debugging, not shared canon |
