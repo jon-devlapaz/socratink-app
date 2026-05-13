@@ -50,8 +50,31 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 
 | Pattern key | Status | Count | Last seen | Recommended promotion target | Entry |
 | --- | --- | ---: | --- | --- | --- |
-| _No entries yet_ | n/a | 0 | n/a | n/a | n/a |
+| `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [LYYYY-2026-05-13-subagent-delegation-too-soft](#lyyyy-2026-05-13-subagent-delegation-too-soft) |
 
 ## Entries
 
 Use [agents/_templates/learning-entry.md](./_templates/learning-entry.md) for new entries.
+
+# LYYYY-2026-05-13-subagent-delegation-too-soft
+
+- Status: `observed`
+- Pattern key: `subagent-delegation-too-soft`
+- First seen: `2026-05-13`
+- Last seen: `2026-05-13`
+- Evidence count: `1`
+- Affected workflow surface: `coordination`
+- Recommended promotion target: `none yet`
+- Related canonical files: `agents/README.md`, `docs/codex/agent-quality.md`
+
+## Observation
+
+Small, judgment-heavy repo-doc cleanups can stall when delegated to a subagent with too much latitude and no hard edit contract. The failure mode is not bad reasoning; it is an inspect-only loop where the subagent identifies the right issue but never crosses into editing.
+
+## Evidence
+
+- `2026-05-13`: a `GPT-5.5` high-reasoning worker was asked to perform a lean CRG docs cleanup. It returned `NO_CHANGES` after correctly concluding that the docs overstated visualization auto-sync and that `docs/project/code-review-graph-sop.md` and `docs/project/crg-hooks-handoff.md` should be simplified. The cleanup then had to be executed locally with a narrower edit contract.
+
+## Promotion Notes
+
+Still non-binding because this is one observed failure mode, not yet a repeated pattern. If it recurs, promote a rule into the canonical workflow docs: keep small canon-boundary cleanups local by default, or give subagents an explicit patch contract with exact files and exact claims to change.
