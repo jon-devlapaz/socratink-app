@@ -260,7 +260,7 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`
-  - serverless function excludes tests, docs, logs, local env files, caches, and agent/tooling artifacts
+  - serverless function excludes everything else (tests, docs, scripts, db, agents, node_modules, dotfiles, and root-level config/docs like `*.md`, `*.yaml`, `*.json`, `*.ini`); see `vercel.json` for the canonical glob
 
 ### Stylesheet cache-bust discipline
 - Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `index.css` `@imports` `tokens.css`, `styles.css`, `antigravity.css`, `paper.css` (each with their own `?v=M` cache-bust pins).
