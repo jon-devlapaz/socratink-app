@@ -517,6 +517,41 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               else localStorage.setItem('learnops_active', previousActiveConcept);
             }
 
+            const conceptPage = await import('/js/concept-page-view.js');
+            const conceptBackbone = [
+              { id: 'core', label: '<Core>', drill_status: 'drilled', purpose: 'First purpose' },
+              { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
+              { id: 'entry-3', label: 'Third', drill_status: 'locked' },
+            ];
+            const conceptPageHtml = conceptPage.renderActiveEntryHtml(
+              conceptBackbone[2],
+              2,
+              conceptBackbone,
+              { startingMapContext: '<threshold & sketch>' },
+              { metadata: { core_thesis: 'fallback thesis' } }
+            );
+            assert(conceptPageHtml.includes('&lt;threshold &amp; sketch&gt;'), 'concept page threshold escapes');
+            assert(conceptPageHtml.includes('locked entry 3 of 3'), 'concept page blocked eyebrow');
+            assert(conceptPageHtml.includes('aria-disabled="true"'), 'concept page blocked cta');
+            assert(conceptPageHtml.includes('Second &amp; unsafe'), 'concept page nearby escapes');
+            const conceptPagePrimedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'primed', label: 'Primed', drill_status: 'primed' },
+              0,
+              [{ id: 'primed', label: 'Primed', drill_status: 'primed' }],
+              {},
+              { metadata: {} }
+            );
+            assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
+            assert(conceptPagePrimedHtml.includes('Re-drill from memory'), 'concept page primed cta');
+
+            const launchPadEvents = [];
+            sessionStorage.removeItem('socratink:pendingShell');
+            const launchPadResult = await window.App.runLaunchPadAction({
+              preventDefault() { launchPadEvents.push('prevented'); },
+            });
+            assert(launchPadResult === false, 'launch pad wrapper returns false without shell');
+            same(launchPadEvents, ['prevented'], 'launch pad wrapper prevents submit default');
+
             return true;
         }"""
     )

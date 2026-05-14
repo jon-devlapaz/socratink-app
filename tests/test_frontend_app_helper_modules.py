@@ -515,3 +515,59 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_concept_page_view_renders_active_entry_html_contract() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { renderActiveEntryHtml } from './public/js/concept-page-view.js';
+
+        const backbone = [
+          { id: 'core', label: '<Core>', drill_status: 'drilled', purpose: 'First purpose' },
+          { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
+          { id: 'entry-3', label: 'Third', drill_status: 'locked' },
+        ];
+
+        const blockedHtml = renderActiveEntryHtml(
+          backbone[2],
+          2,
+          backbone,
+          { startingMapContext: '<threshold & sketch>' },
+          { metadata: { core_thesis: 'fallback thesis' } }
+        );
+        assert.ok(blockedHtml.includes('&lt;threshold &amp; sketch&gt;'));
+        assert.ok(blockedHtml.includes('locked entry 3 of 3'));
+        assert.ok(blockedHtml.includes('aria-disabled="true"'));
+        assert.ok(blockedHtml.includes('>Locked</button>'));
+        assert.ok(blockedHtml.includes('&lt;Core&gt;'));
+        assert.ok(blockedHtml.includes('Second &amp; unsafe'));
+        assert.ok(blockedHtml.includes('LOCKED'));
+
+        const readyHtml = renderActiveEntryHtml(
+          backbone[1],
+          1,
+          backbone,
+          { startingMapContext: '' },
+          { metadata: { starting_map_context: 'metadata sketch' } }
+        );
+        assert.ok(readyHtml.includes('metadata sketch'));
+        assert.ok(readyHtml.includes('first cold attempt entry 2 of 3'));
+        assert.ok(readyHtml.includes('data-active-entry-id="entry-2"'));
+        assert.ok(readyHtml.includes('Try from memory'));
+
+        const primedHtml = renderActiveEntryHtml(
+          { id: 'primed', label: 'Primed', drill_status: 'primed' },
+          0,
+          [{ id: 'primed', label: 'Primed', drill_status: 'primed' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
+        assert.ok(primedHtml.includes('add sketch'));
+        assert.ok(primedHtml.includes('re-drill ready entry 1 of 1'));
+        assert.ok(primedHtml.includes('Re-drill from memory'));
+        """
+    )
+    assert result.returncode == 0, result.stderr
