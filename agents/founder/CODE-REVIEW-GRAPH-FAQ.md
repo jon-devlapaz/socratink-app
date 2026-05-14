@@ -174,8 +174,9 @@ force a full rebuild.
 Check three things:
 
 1. `cat .mcp.json` — is the `code-review-graph` server registered?
-2. `cat .claude/settings.json` — are the hooks present? (Compare to
-   `.claude/settings.example.json` for the team baseline.)
+2. `cat .claude/settings.json` — are the SessionStart + PostToolUse hooks
+   present? (See `docs/project/code-review-graph-sop.md` §"Layer 1 — Claude
+   hooks" for the expected wiring.)
 3. Open a fresh session and ask: *"Run `code-review-graph status`."*
    If it errors, the server isn't running. Restart Claude Code.
 
