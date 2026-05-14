@@ -14,27 +14,11 @@ The canonical shared workflow truth for repo agents now lives in `agents/`.
 
 ### Boil the ocean
 
-The marginal cost of completeness is
-near zero with AI. Do the whole thing.
-Do it right. Do it with tests. Do it
-with documentation. Do it so well that
-Jon is genuinely impressed, not
-politely satisfied, actually impressed.
-Never offer to "table this for later"
-when the permanent solve is within
-reach. Never leave a dangling thread
-when tying it off takes five more
-minutes. Never present a workaround
-when the real fix exists. The standard
-isn't "good enough" it's "holy shit,
-that's done." Search before building.
-Test before shipping. Ship the
-complete thing. When Jon asks for
-something, the answer is the finished
-product, not a plan to build it. Time
-is not an excuse. Fatigue is not an
-excuse. Complexity is not an excuse.
-Boil the ocean.
+The marginal cost of completeness is near zero with AI. Do the whole thing. Do it right. Do it with tests. Do it with documentation. Do it so well that Jon is genuinely impressed, not politely satisfied, actually impressed.
+
+Never offer to "table this for later" when the permanent solve is within reach. Never leave a dangling thread when tying it off takes five more minutes. Never present a workaround when the real fix exists. The standard isn't "good enough" — it's "holy shit, that's done."
+
+Search before building. Test before shipping. Ship the complete thing. When Jon asks for something, the answer is the finished product, not a plan to build it. Time is not an excuse. Fatigue is not an excuse. Complexity is not an excuse. Boil the ocean.
 
 ## First principles for this repo
 - Keep changes surgical and scope-locked. Do not broaden features or refactor unrelated areas.
@@ -322,25 +306,8 @@ Each project-local skill consumes session-start token budget. Treat installs as 
 - When specialists disagree, record the disputed point, evidence, decision owner, chosen path, and resulting state/doc updates.
 
 ## Big-picture architecture
-- Runtime surface is a single FastAPI app (`main.py`) deployed as a Vercel Python serverless entrypoint via `api/index.py`.
-- Env loading is centralized in `runtime_env.py` (`load_app_env`); precedence is `process env > .env.local > .env`, and `.env.local` is skipped on Vercel/CI or when `SOCRATINK_DISABLE_DOTENV_LOCAL` is set. Auth startup depends on this ordering.
-- `main.py` wires:
-  - CORS middleware
-  - sensitive static-file blocking middleware
-  - auth/session gate middleware for protected HTML + selected API routes
-  - app endpoints (`/api/extract`, `/api/extract-url`, `/api/drill`, `/api/repair-reps`, `/api/health`)
-  - static frontend mount from `public/` for local serving
-- AI behavior is centralized in `ai_service.py`:
-  - Gemini client/retry/error normalization
-  - extraction pipeline producing knowledge maps
-  - drill evaluation/routing logic with session caps
-  - repair-reps generation with strict structured output validation
-  - prompt assets loaded from `app_prompts/`
-- Auth is encapsulated under `auth/`:
-  - `router.py` exposes login, guest, Google OAuth start/callback, `/api/me`, and logout routes
-  - `service.py` implements `SupabaseAuthService` with sealed-cookie session handling, token verification/refresh, and OAuth state validation
-  - `supabase_client.py` creates per-request stateless Supabase clients (session persistence disabled), which is important for Vercel safety
-- Frontend is vanilla JS/HTML/CSS in `public/`; backend and frontend are tightly coupled through the above `/api/*` routes and auth redirects.
+
+For a current architecture overview, use the Code Review Graph tools described in §Code exploration (`get_architecture_overview_tool`, `list_graph_stats_tool`, `query_graph_tool`) and the founder FAQ at `agents/founder/CODE-REVIEW-GRAPH-FAQ.md`. Static file-path maps go stale fast; the graph is rebuilt on every change.
 
 ## QA expectations that matter in this repo
 - Browser smoke (`tests/e2e/test_smoke.py`) is the load-bearing hosted verification signal.
