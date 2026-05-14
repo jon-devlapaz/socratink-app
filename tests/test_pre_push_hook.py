@@ -10,7 +10,7 @@ HOOK = REPO_ROOT / "scripts" / "git-hooks" / "pre-push"
 
 def test_pre_push_rejects_without_authorization(tmp_path):
     result = subprocess.run(
-        ["/bin/zsh", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
+        ["/bin/bash", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
         cwd=tmp_path,
         text=True,
         capture_output=True,
@@ -37,7 +37,7 @@ def test_pre_push_accepts_matching_authorization(tmp_path):
     }), encoding="utf-8")
     env = os.environ | {"SOCRATINK_PUSH_AUTH_PATH": str(auth), "SOCRATINK_PUSH_SKIP_GIT_HEAD": "1"}
     result = subprocess.run(
-        ["/bin/zsh", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
+        ["/bin/bash", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
         cwd=tmp_path,
         input="refs/heads/dev abc1234 refs/heads/dev 0000000\n",
         text=True,
@@ -65,7 +65,7 @@ def test_pre_push_rejects_mismatched_destination_ref(tmp_path):
     }), encoding="utf-8")
     env = os.environ | {"SOCRATINK_PUSH_AUTH_PATH": str(auth), "SOCRATINK_PUSH_SKIP_GIT_HEAD": "1"}
     result = subprocess.run(
-        ["/bin/zsh", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
+        ["/bin/bash", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
         cwd=tmp_path,
         input="refs/heads/dev abc1234 refs/heads/main 0000000\n",
         text=True,
