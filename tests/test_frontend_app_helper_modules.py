@@ -523,8 +523,11 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         """
         import assert from 'node:assert/strict';
         import {
+          findConceptEntryById,
+          getConceptEntryId,
           renderActiveEntryHtml,
           renderConceptStripHtml,
+          selectInitialConceptEntry,
         } from './public/js/concept-page-view.js';
 
         const backbone = [
@@ -532,6 +535,35 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
           { id: 'entry-3', label: 'Third', drill_status: 'locked' },
         ];
+
+        assert.equal(getConceptEntryId(backbone[0], 0), 'core');
+        assert.equal(getConceptEntryId({ label: 'No id' }, 2), 'entry-2');
+
+        const initial = selectInitialConceptEntry([
+          { id: 'done', label: 'Done', drill_status: 'solidified' },
+          { label: 'Next cold entry', drill_status: 'locked' },
+        ]);
+        assert.equal(initial.entry.label, 'Next cold entry');
+        assert.equal(initial.index, 1);
+        assert.equal(initial.id, 'entry-1');
+
+        const allSolidified = selectInitialConceptEntry([
+          { id: 'solid', label: 'Solid', drill_status: 'solidified' },
+        ]);
+        assert.equal(allSolidified.entry.label, 'Solid');
+        assert.equal(allSolidified.index, 0);
+        assert.equal(allSolidified.id, 'solid');
+
+        const emptyInitial = selectInitialConceptEntry([]);
+        assert.equal(emptyInitial.entry.id, 'core-thesis');
+        assert.equal(emptyInitial.index, 0);
+        assert.equal(emptyInitial.id, 'core-thesis');
+
+        const fallbackMatch = findConceptEntryById([{ label: 'No id' }], 'entry-0');
+        assert.equal(fallbackMatch.entry.label, 'No id');
+        assert.equal(fallbackMatch.index, 0);
+        assert.equal(fallbackMatch.id, 'entry-0');
+        assert.equal(findConceptEntryById(backbone, 'missing'), null);
 
         const blockedHtml = renderActiveEntryHtml(
           backbone[2],

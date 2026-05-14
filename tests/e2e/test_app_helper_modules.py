@@ -523,6 +523,30 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
               { id: 'entry-3', label: 'Third', drill_status: 'locked' },
             ];
+            assert(conceptPage.getConceptEntryId(conceptBackbone[0], 0) === 'core', 'concept entry id uses explicit id');
+            assert(conceptPage.getConceptEntryId({ label: 'No id' }, 2) === 'entry-2', 'concept entry id falls back to index');
+            const initialEntry = conceptPage.selectInitialConceptEntry([
+              { id: 'done', label: 'Done', drill_status: 'solidified' },
+              { label: 'Next cold entry', drill_status: 'locked' },
+            ]);
+            assert(initialEntry.entry.label === 'Next cold entry', 'initial entry selects first non-solidified node');
+            assert(initialEntry.index === 1, 'initial entry reports selected index');
+            assert(initialEntry.id === 'entry-1', 'initial entry reports fallback id');
+            const allSolidifiedEntry = conceptPage.selectInitialConceptEntry([
+              { id: 'solid', label: 'Solid', drill_status: 'solidified' },
+            ]);
+            assert(allSolidifiedEntry.entry.label === 'Solid', 'initial entry falls back to first node');
+            assert(allSolidifiedEntry.index === 0, 'initial fallback reports first index');
+            assert(allSolidifiedEntry.id === 'solid', 'initial fallback reports first id');
+            const emptyInitialEntry = conceptPage.selectInitialConceptEntry([]);
+            assert(emptyInitialEntry.entry.id === 'core-thesis', 'initial entry falls back to synthetic core thesis');
+            assert(emptyInitialEntry.index === 0, 'synthetic initial entry reports zero index');
+            assert(emptyInitialEntry.id === 'core-thesis', 'synthetic initial entry reports core thesis id');
+            const fallbackEntryMatch = conceptPage.findConceptEntryById([{ label: 'No id' }], 'entry-0');
+            assert(fallbackEntryMatch.entry.label === 'No id', 'find entry supports fallback id');
+            assert(fallbackEntryMatch.index === 0, 'find entry reports fallback index');
+            assert(fallbackEntryMatch.id === 'entry-0', 'find entry reports fallback id');
+            assert(conceptPage.findConceptEntryById(conceptBackbone, 'missing') === null, 'find entry returns null for missing id');
             const conceptPageHtml = conceptPage.renderActiveEntryHtml(
               conceptBackbone[2],
               2,

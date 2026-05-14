@@ -1,5 +1,40 @@
 import { escHtml } from './html.js';
 
+const FALLBACK_ACTIVE_ENTRY = {
+  id: 'core-thesis',
+  label: 'Core thesis',
+  purpose: 'The first entry asks for the governing idea, not the whole source.',
+  drill_status: 'locked',
+};
+
+export function getConceptEntryId(entry, index) {
+  return entry?.id || `entry-${index}`;
+}
+
+export function findConceptEntryById(backbone, entryId) {
+  const index = backbone.findIndex((entry, i) => getConceptEntryId(entry, i) === entryId);
+  if (index < 0) return null;
+  return {
+    entry: backbone[index],
+    index,
+    id: getConceptEntryId(backbone[index], index),
+  };
+}
+
+export function selectInitialConceptEntry(backbone) {
+  const actionableIndex = backbone.findIndex((entry) => {
+    const status = entry?.drill_status || 'locked';
+    return status !== 'solidified';
+  });
+  const index = Math.max(0, actionableIndex >= 0 ? actionableIndex : (backbone.length ? 0 : -1));
+  const entry = backbone[index] || FALLBACK_ACTIVE_ENTRY;
+  return {
+    entry,
+    index,
+    id: getConceptEntryId(entry, index),
+  };
+}
+
 export function renderConceptStripHtml(backbone, activeEntry, activeIdx) {
   const stripWidth = 600;
   const stripHeight = 110;

@@ -19,8 +19,11 @@ import {
   getHeroStateLabel,
 } from './app-hero.js';
 import {
+  findConceptEntryById,
+  getConceptEntryId,
   renderActiveEntryHtml,
   renderConceptStripHtml,
+  selectInitialConceptEntry,
 } from './concept-page-view.js';
 import {
   getDefaultPhaseBSessionState,
@@ -1594,9 +1597,10 @@ const App = (() => {
     if (entryId === _activeEntryId) return;
 
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
-    const newEntry = backbone.find((n) => (n.id || `entry-${backbone.indexOf(n)}`) === entryId);
-    if (!newEntry) return;
-    const newIdx = backbone.indexOf(newEntry);
+    const activeMatch = findConceptEntryById(backbone, entryId);
+    if (!activeMatch) return;
+    const newEntry = activeMatch.entry;
+    const newIdx = activeMatch.index;
 
     const mountEl = document.getElementById('map-content');
     if (!mountEl) return;
@@ -1663,20 +1667,11 @@ const App = (() => {
     if (!mountEl || !data) return;
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
 
-    // Identify the active entry. For v1: first backbone entry that isn't
-    // 'solidified' (i.e., the next thing to attempt). Falls back to first
-    // backbone entry, then to a synthetic core-thesis stub.
-    const isActionable = (n) => {
-      const status = n?.drill_status || 'locked';
-      return status !== 'solidified';
-    };
-    const activeEntry = backbone.find(isActionable) || backbone[0] || {
-      id: 'core-thesis',
-      label: 'Core thesis',
-      purpose: 'The first entry asks for the governing idea, not the whole source.',
-      drill_status: 'locked',
-    };
-    const activeIdx = Math.max(0, backbone.indexOf(activeEntry));
+    const {
+      entry: activeEntry,
+      index: activeIdx,
+      id: activeEntryId,
+    } = selectInitialConceptEntry(backbone);
 
     // Build the work column HTML via the shared helper
     const stripHtml = renderConceptStripHtml(backbone, activeEntry, activeIdx);
@@ -1692,7 +1687,7 @@ const App = (() => {
     `;
 
     // Set module-level active entry state
-    _activeEntryId = activeEntry.id || `entry-${activeIdx}`;
+    _activeEntryId = activeEntryId;
 
     // Wire CTA and re-edit affordance
     const docEl = mountEl.querySelector('.concept-page-b2__doc');
@@ -1720,11 +1715,12 @@ const App = (() => {
         } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
           e.preventDefault();
           const dir = e.key === 'ArrowLeft' ? -1 : 1;
-          const currentIdx = backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId);
+          const currentMatch = findConceptEntryById(backbone, _activeEntryId);
+          const currentIdx = currentMatch ? currentMatch.index : -1;
           const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
           const nextNode = backbone[nextIdx];
           if (nextNode) {
-            const nextId = nextNode.id || `entry-${nextIdx}`;
+            const nextId = getConceptEntryId(nextNode, nextIdx);
             setActiveEntry(nextId, data, concept);
             // Move keyboard focus to the new active node
             const nextG = mountEl.querySelector(`.concept-strip__node[data-entry-id="${nextId}"]`);
