@@ -50,7 +50,7 @@ import { Bus } from './bus.js';
   }
 
   // Maps the concept-shell state (legacy + live mix) onto the live five-state
-  // board vocabulary defined in DESIGN.md §5 and UBIQUITOUS_LANGUAGE.md.
+  // board vocabulary defined in docs/design/socratink-ux.md §5 and UBIQUITOUS_LANGUAGE.md.
   // 'actualized' is sanctioned legacy for 'solidified'. 'hibernating' is a
   // legacy alias-to-avoid (UBIQUITOUS_LANGUAGE.md:80) with no live equivalent
   // — defaulting to 'locked' avoids overclaiming readiness on the board.

@@ -184,7 +184,7 @@ Backend behavior:
 - the drill prompt demands multi-step causal reconstruction
 - the prompt angle should vary across re-drill attempts on the same node (self-explanation, summarization, teaching, problem-posing) to prevent linguistic mimicry
 - scoring, classification, and routing operate normally
-- on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in `/DESIGN.md`
+- on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in [`docs/design/socratink-ux.md`](../design/socratink-ux.md) §6
 
 Persistence on `routing === "NEXT"`:
 

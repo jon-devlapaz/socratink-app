@@ -201,7 +201,7 @@ done
 
 **Measure:**
 ```bash
-ls UBIQUITOUS_LANGUAGE.md CONTEXT.md docs/glossary.md 2>/dev/null
+ls UBIQUITOUS_LANGUAGE.md docs/glossary.md 2>/dev/null
 # Spot-check 5 terms from the glossary against ripgrep matches.
 ```
 
@@ -209,7 +209,7 @@ ls UBIQUITOUS_LANGUAGE.md CONTEXT.md docs/glossary.md 2>/dev/null
 | --- | --- | --- | --- |
 | No glossary; terms drift module-by-module. | Glossary exists but is out of date. | Glossary current; most key terms used consistently. | Glossary current and *referenced from AGENTS.md*; CI lint or doc check catches drift. |
 
-**socratink-app baseline:** `UBIQUITOUS_LANGUAGE.md` (87 LOC) + `CONTEXT.md` (59 LOC) — likely **2** pending freshness check.
+**socratink-app baseline:** `UBIQUITOUS_LANGUAGE.md` (120 LOC) — pointed-to from `DESIGN.md` §2 — likely **2** pending freshness check.
 
 ---
 

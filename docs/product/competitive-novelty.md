@@ -127,7 +127,7 @@ classifiable evidence event," which is what makes node-state assignment
 defensible. Whoever ships this with the best eval wins.
 
 **Implication**: **Invest** in rubric quality and offline eval. The
-extraction-evals/rubric work in `docs/design/handoffs/2026-05-02-extraction-evals-and-rubric.md`
+extraction-evals/rubric work in `docs/archive/2026-05-design-md-refactor/handoffs/2026-05-02-extraction-evals-and-rubric.md`
 is the right axis. Underinvesting here turns proof events into noisy labels
 and silently weakens every downstream claim the graph makes.
 
