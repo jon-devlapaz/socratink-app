@@ -50,8 +50,8 @@ export function SOURCE_INPUT_HTML(showClipboard) {
         <p class="overlay-dropfeedback overlay-file-feedback"></p>
       </div>
       <div class="overlay-footer">
-        <button class="overlay-cancel">Cancel</button>
-        <button class="overlay-extract" disabled>Extract</button>
+        <button type="button" class="overlay-cancel">Cancel</button>
+        <button type="button" class="overlay-extract" disabled>Extract</button>
       </div>
     `;
 }
@@ -176,7 +176,7 @@ export function buildContentInputUI(container, { onSubmit, onCancel, showClipboa
     onCancel();
   });
 
-  submitBtn.addEventListener('mousedown', e => {
+  submitBtn.addEventListener('click', e => {
     e.preventDefault();
     doSubmit();
   });

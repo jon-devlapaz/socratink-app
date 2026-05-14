@@ -98,7 +98,6 @@ def test_app_timer_preserves_countdown_contract() -> None:
           initialSeconds: 10,
           onComplete() {
             completions.push(timer.getTimeLeft());
-            timer.stop();
           },
           setIntervalRef(callback, delay) {
             intervalCallback = callback;
@@ -279,7 +278,8 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         const cardHtml = buildLibraryHtml([
           { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
         ]);
-        assert.ok(cardHtml.includes('onclick="App.openLibraryConcept(\\'c-1\\')"'));
+        assert.ok(cardHtml.includes('data-concept-id="c-1"'));
+        assert.ok(cardHtml.includes('onclick="App.openLibraryConcept(this.dataset.conceptId)"'));
         assert.ok(cardHtml.includes('&lt;Unsafe&gt;'));
         assert.ok(cardHtml.includes('2 sections'));
         assert.ok(cardHtml.includes('3 entries'));
@@ -536,7 +536,8 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
 
         const html = conceptListItemHtml({ id: 'c1', name: '<Unsafe>', state: 'growing' });
         assert.ok(html.includes('&lt;Unsafe&gt;'));
-        assert.ok(html.includes('App.deleteConcept(\\'c1\\',this)'));
+        assert.ok(html.includes('data-concept-id="c1"'));
+        assert.ok(html.includes('App.deleteConcept(this.dataset.conceptId,this)'));
 
         class FakeElement {
           constructor() {

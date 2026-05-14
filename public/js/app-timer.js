@@ -25,13 +25,20 @@ export function createCountdownTimer({
   }
 
   function start(seconds = timeLeft) {
-    timeLeft = seconds;
+    timeLeft = Math.max(0, Number(seconds) || 0);
     stop();
     updateDisplay();
+    if (timeLeft === 0) {
+      if (typeof onComplete === 'function') onComplete();
+      return;
+    }
     timerInterval = setIntervalRef(() => {
-      timeLeft--;
+      timeLeft = Math.max(0, timeLeft - 1);
       updateDisplay();
-      if (timeLeft <= 0) onComplete();
+      if (timeLeft === 0) {
+        stop();
+        if (typeof onComplete === 'function') onComplete();
+      }
     }, 1000);
   }
 

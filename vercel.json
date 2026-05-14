@@ -4,7 +4,7 @@
   "functions": {
     "api/index.py": {
       "includeFiles": "{public/**,app_prompts/**}",
-      "excludeFiles": "{tests/**,docs/**,tmp/**,scripts/**,db/**,.*/**,agents/**,node_modules/**,package*.json,*.ini,*.md,*.yaml,*.json}"
+      "excludeFiles": "{tests/**,docs/**,logs/**,tmp/**,scripts/**,db/**,.*/**,.env*,agents/**,node_modules/**,package*.json,*.ini,*.md,*.yaml,*.json}"
     }
   },
   "rewrites": [

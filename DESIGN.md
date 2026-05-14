@@ -129,7 +129,7 @@ This section also governs LLM-generated content. Drill prompts, system prompts, 
 
 **Adjacent-surface vocabulary clash check.** Before locking copy that sits inside a frame with other copy (button + footnote, eyebrow + title), scan content words for shared roots. If `attempt`, `commit`, `save`, `record`, `solidify`, `room`, `entry`, `sketch` appears in two adjacent strings with different referents, that's a bug, not a stylistic concern.
 
-**Allowed state copy:** *draft path · suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction.* **Forbidden:** *you know this · mastered · completed · advanced · diagnostic · evaluate · beginner/intermediate/advanced · we found your misconceptions.*
+**Allowed state copy:** *suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction.* **Forbidden:** *you know this · mastered · completed · advanced · diagnostic · evaluate · beginner/intermediate/advanced · we found your misconceptions.*
 
 Full tone-by-surface table in [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md) §10.
 

@@ -84,7 +84,7 @@ The shape of the path is a direct response to three failure modes. Designing aga
 
 The graph's vocabulary is small on purpose. Only these phrases appear as graph-state copy:
 
-- **Allowed:** *draft path · suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction.*
+- **Allowed:** *suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction.*
 - **Forbidden:** *you know this · mastered (from graph generation) · completed (from reading) · advanced (from fluent prose).*
 
 ### State change rules — none of these may be violated
@@ -92,7 +92,7 @@ The graph's vocabulary is small on purpose. Only these phrases appear as graph-s
 | Moment | What the learner sees | Allowed mutation |
 |---|---|---|
 | Threshold submitted | starting map captured | **none** |
-| Provisional graph generated | draft path | **none** |
+| Provisional graph generated | suggested first | **none** |
 | Local cold attempt — substantive | unscored attempt acknowledged | `locked → primed` |
 | Local cold attempt — non-substantive | request for a micro-generation | **none** |
 | Study completed | repair artifact | stays `primed`; re-drill timer set |

@@ -53,7 +53,7 @@ export function buildLibraryHtml(concepts) {
     html += `<div class="library-vault-grid">` + concepts.map(c => {
       const meta = getLibraryConceptMeta(c);
       return `
-          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" style="cursor:pointer;" onclick="App.openLibraryConcept('${c.id}')">
+          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" data-concept-id="${escHtml(String(c?.id ?? ''))}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
             <div class="library-card-header">
               <div>
                 <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>

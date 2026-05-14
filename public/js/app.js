@@ -28,6 +28,7 @@ import {
 } from './concept-page-view.js';
 import {
   getDefaultPhaseBSessionState,
+  getPhaseBSessionStorageKey,
   loadPhaseBResumeState as loadStoredPhaseBResumeState,
   loadPhaseBSessionState as loadStoredPhaseBSessionState,
   persistPhaseBResumeState as persistStoredPhaseBResumeState,

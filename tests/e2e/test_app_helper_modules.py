@@ -71,7 +71,6 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               initialSeconds: 10,
               onComplete() {
                 completions.push(timer.getTimeLeft());
-                timer.stop();
               },
               setIntervalRef(callback, delay) {
                 intervalCallback = callback;
@@ -328,7 +327,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             const libraryHtml = library.buildLibraryHtml([
               { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
             ]);
-            assert(libraryHtml.includes('App.openLibraryConcept(\\'c-1\\')'), 'library card onclick');
+            assert(libraryHtml.includes('data-concept-id="c-1"'), 'library card id data attr');
+            assert(libraryHtml.includes('App.openLibraryConcept(this.dataset.conceptId)'), 'library card onclick');
             assert(libraryHtml.includes('&lt;Unsafe&gt;'), 'library escaped name');
             assert(libraryHtml.includes('2 sections'), 'library section count');
             assert(libraryHtml.includes('3 entries'), 'library entry count');
@@ -551,7 +551,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(!shellSettingsButton.dataset.engaged, 'shell settings engagement cleared');
             const shellItemHtml = shell.conceptListItemHtml({ id: 'c-shell', name: '<Unsafe>', state: 'growing' });
             assert(shellItemHtml.includes('&lt;Unsafe&gt;'), 'shell concept html escapes');
-            assert(shellItemHtml.includes('App.deleteConcept(\\'c-shell\\',this)'), 'shell delete bridge');
+            assert(shellItemHtml.includes('data-concept-id="c-shell"'), 'shell concept id data attr');
+            assert(shellItemHtml.includes('App.deleteConcept(this.dataset.conceptId,this)'), 'shell delete bridge');
             const shellConceptList = document.createElement('div');
             const shellOpened = [];
             shell.renderConceptList({

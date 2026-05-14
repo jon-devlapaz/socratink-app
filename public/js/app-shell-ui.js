@@ -29,10 +29,12 @@ export function clearSettingsPanel({ documentRef = document } = {}) {
 }
 
 export function conceptListItemHtml(concept) {
+  const safeState = escHtml(String(concept?.state ?? ''));
+  const safeId = escHtml(String(concept?.id ?? ''));
   return `
-        <div class="concept-dot" data-state="${concept.state}"></div>
+        <div class="concept-dot" data-state="${safeState}"></div>
         <span class="concept-item-name">${escHtml(concept.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${concept.id}',this)" aria-label="Delete concept ${escHtml(concept.name)}" title="Delete concept">
+        <button class="concept-delete" data-concept-id="${safeId}" onclick="App.deleteConcept(this.dataset.conceptId,this)" aria-label="Delete concept ${escHtml(concept.name)}" title="Delete concept">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
