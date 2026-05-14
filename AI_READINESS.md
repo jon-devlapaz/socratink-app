@@ -55,7 +55,7 @@ find . -type f \( -name '*.py' -o -name '*.js' -o -name '*.ts' \) \
 | --- | --- | --- | --- |
 | Files use bespoke templating or string-built code blocks that tree-sitter cannot parse. | 5+ files > 800 LOC OR any source file > 2000 LOC. | 1–4 files > 800 LOC, none > 2000 LOC. | All source files ≤ 800 LOC; tree-sitter parses without ERROR nodes on any file. |
 
-**socratink-app baseline:** `public/js/app.js` (4,430), `ai_service.py` (1,069), `auth/router.py` (996), `main.py` (872) — currently scoring **1**.
+**socratink-app baseline:** `public/js/app.js` (3,542), `ai_service.py` (1,069), `auth/router.py` (996), `main.py` (872) — scoring **1**.
 
 ---
 
