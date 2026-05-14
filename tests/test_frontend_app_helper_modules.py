@@ -79,6 +79,66 @@ def test_hero_helpers_preserve_state_labels_and_actions() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_app_timer_preserves_countdown_contract() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { createCountdownTimer, formatTimerSeconds } from './public/js/app-timer.js';
+
+        assert.equal(formatTimerSeconds(24 * 60 * 60), '24:00:00');
+        assert.equal(formatTimerSeconds(3661), '01:01:01');
+        assert.equal(formatTimerSeconds(3), '00:00:03');
+
+        let intervalCallback = null;
+        const cleared = [];
+        const completions = [];
+        const timerDisplay = { textContent: '' };
+        const timer = createCountdownTimer({
+          timerDisplay,
+          initialSeconds: 10,
+          onComplete() {
+            completions.push(timer.getTimeLeft());
+            timer.stop();
+          },
+          setIntervalRef(callback, delay) {
+            intervalCallback = callback;
+            assert.equal(delay, 1000);
+            return 'interval-1';
+          },
+          clearIntervalRef(intervalId) {
+            cleared.push(intervalId);
+          },
+        });
+
+        assert.equal(timer.getTimeLeft(), 10);
+        timer.start(2);
+        assert.equal(timerDisplay.textContent, '00:00:02');
+        assert.deepEqual(cleared, [null]);
+        assert.equal(timer.getTimeLeft(), 2);
+
+        intervalCallback();
+        assert.equal(timerDisplay.textContent, '00:00:01');
+        assert.equal(timer.getTimeLeft(), 1);
+        assert.deepEqual(completions, []);
+
+        intervalCallback();
+        assert.equal(timerDisplay.textContent, '00:00:00');
+        assert.deepEqual(completions, [0]);
+        assert.deepEqual(cleared, [null, 'interval-1']);
+
+        timer.fastForward();
+        assert.equal(timer.getTimeLeft(), 3);
+        timer.updateDisplay();
+        assert.equal(timerDisplay.textContent, '00:00:03');
+
+        timer.fastForward(7);
+        assert.equal(timer.getTimeLeft(), 7);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_phase_b_session_helpers_preserve_storage_contract() -> None:
     result = run_node_module(
         """

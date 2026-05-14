@@ -18,6 +18,7 @@ import {
   getHeroGuidance,
   getHeroStateLabel,
 } from './app-hero.js';
+import { createCountdownTimer } from './app-timer.js';
 import {
   findConceptEntryById,
   getConceptEntryId,
@@ -1231,9 +1232,8 @@ const App = (() => {
         remaining = Math.max(0, 24 * 60 * 60 - elapsed);
       }
       if (remaining === 0) { completeConsolidation(); return; }
-      timeLeft = remaining;
       showControls(false, false, false, true, true);
-      startTimer();
+      startTimer(remaining);
     }
   }
 
@@ -1411,32 +1411,20 @@ const App = (() => {
   }
 
   // ── 15. Timer ──────────────────────────────────────────────
-  let timerInterval = null;
-  let timeLeft = 24 * 60 * 60;
+  const consolidationTimer = createCountdownTimer({
+    timerDisplay,
+    onComplete: completeConsolidation,
+  });
 
-  function startTimer() {
-    stopTimer();
-    updateTimerDisplay();
-    timerInterval = setInterval(() => {
-      timeLeft--;
-      updateTimerDisplay();
-      if (timeLeft <= 0) completeConsolidation();
-    }, 1000);
-  }
-  function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
-  function updateTimerDisplay() {
-    const h = Math.floor(timeLeft / 3600).toString().padStart(2, '0');
-    const m = Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0');
-    const s = (timeLeft % 60).toString().padStart(2, '0');
-    timerDisplay.textContent = `${h}:${m}:${s}`;
-  }
+  function startTimer(seconds) { consolidationTimer.start(seconds); }
+  function stopTimer() { consolidationTimer.stop(); }
   function completeConsolidation() {
     stopTimer();
     updateActiveConcept({ timerStart: null });
     setState('actualized');
     playAnim('actualize', getActiveTileIdx());
   }
-  function fastForward() { timeLeft = 3; }
+  function fastForward() { consolidationTimer.fastForward(); }
 
   // ── 16. Map View UI ────────────────────────────────────────
 

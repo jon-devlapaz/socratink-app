@@ -59,6 +59,73 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(html.escHtml(`<&>"'`) === '&lt;&amp;&gt;&quot;&#39;', 'html escaping');
             assert(html.escHtml(null) === '', 'null escaping');
 
+            const timerModule = await import('/js/app-timer.js');
+            assert(timerModule.formatTimerSeconds(24 * 60 * 60) === '24:00:00', 'timer 24h formatting');
+            assert(timerModule.formatTimerSeconds(3661) === '01:01:01', 'timer hour minute second formatting');
+            let intervalCallback = null;
+            const clearedIntervals = [];
+            const timerDisplay = { textContent: '' };
+            const completions = [];
+            const timer = timerModule.createCountdownTimer({
+              timerDisplay,
+              initialSeconds: 10,
+              onComplete() {
+                completions.push(timer.getTimeLeft());
+                timer.stop();
+              },
+              setIntervalRef(callback, delay) {
+                intervalCallback = callback;
+                assert(delay === 1000, 'timer interval delay');
+                return 'browser-interval';
+              },
+              clearIntervalRef(intervalId) {
+                clearedIntervals.push(intervalId);
+              },
+            });
+            assert(timer.getTimeLeft() === 10, 'timer initial seconds');
+            timer.start(2);
+            assert(timerDisplay.textContent === '00:00:02', 'timer writes initial display on start');
+            assert(clearedIntervals.length === 1 && clearedIntervals[0] === null, 'timer clears before start');
+            intervalCallback();
+            assert(timerDisplay.textContent === '00:00:01', 'timer decrements display');
+            intervalCallback();
+            assert(timerDisplay.textContent === '00:00:00', 'timer writes zero display');
+            same(completions, [0], 'timer completion at zero');
+            same(clearedIntervals, [null, 'browser-interval'], 'timer stop clears active interval');
+            timer.fastForward();
+            assert(timer.getTimeLeft() === 3, 'timer default fast-forward');
+            timer.updateDisplay();
+            assert(timerDisplay.textContent === '00:00:03', 'timer displays fast-forwarded value');
+            timer.fastForward(7);
+            assert(timer.getTimeLeft() === 7, 'timer custom fast-forward');
+            const previousConceptsForTimer = localStorage.getItem('learnops_concepts');
+            const previousActiveForTimer = localStorage.getItem('learnops_active');
+            const timerFixture = {
+              id: 'timer-fixture',
+              name: 'Timer fixture',
+              state: 'hibernating',
+              timerStart: Date.now(),
+              createdAt: Date.now(),
+              graphData: JSON.stringify({
+                metadata: { core_thesis: 'Timer fixture thesis.' },
+                backbone: [],
+                clusters: [],
+              }),
+            };
+            localStorage.setItem('learnops_concepts', JSON.stringify([timerFixture]));
+            localStorage.setItem('learnops_active', 'timer-fixture');
+            window.App.selectConcept('timer-fixture');
+            assert(document.getElementById('timer-display').style.display === 'block', 'app timer display visible for hibernating concept');
+            assert(document.getElementById('timer-display').textContent === '24:00:00', 'app timer starts from remaining hibernation seconds');
+            window.App.fastForward();
+            timerFixture.state = 'growing';
+            localStorage.setItem('learnops_concepts', JSON.stringify([timerFixture]));
+            window.App.selectConcept('timer-fixture');
+            if (previousConceptsForTimer === null) localStorage.removeItem('learnops_concepts');
+            else localStorage.setItem('learnops_concepts', previousConceptsForTimer);
+            if (previousActiveForTimer === null) localStorage.removeItem('learnops_active');
+            else localStorage.setItem('learnops_active', previousActiveForTimer);
+
             const hero = await import('/js/app-hero.js');
             for (const [state, label] of [
               ['instantiated', 'source captured'],
