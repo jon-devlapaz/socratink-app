@@ -3,16 +3,11 @@
 # repo-tracked files inside (e.g. shared commands under .claude/commands/).
 !.claude/
 .claude/*
-!.claude/settings.example.json
 !.claude/commands/
 .claude/commands/*
 !.claude/commands/pipette.md
 !.claude/commands/pipette-weekly.md
 !.claude/commands/pipette-lite.md
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/git-order/
-!.claude/skills/git-order/SKILL.md
 
 # skills.sh marketplace installs — local-machine state, not tracked.
 .agents/
