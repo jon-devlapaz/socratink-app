@@ -522,7 +522,10 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
-        import { renderActiveEntryHtml } from './public/js/concept-page-view.js';
+        import {
+          renderActiveEntryHtml,
+          renderConceptStripHtml,
+        } from './public/js/concept-page-view.js';
 
         const backbone = [
           { id: 'core', label: '<Core>', drill_status: 'drilled', purpose: 'First purpose' },
@@ -568,6 +571,25 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(primedHtml.includes('add sketch'));
         assert.ok(primedHtml.includes('re-drill ready entry 1 of 1'));
         assert.ok(primedHtml.includes('Re-drill from memory'));
+
+        const stripHtml = renderConceptStripHtml(backbone, backbone[1], 1);
+        assert.ok(stripHtml.includes('class="concept-strip"'));
+        assert.ok(stripHtml.includes('viewBox="0 0 600 110"'));
+        assert.ok(stripHtml.includes('concept-strip__edge is-active'));
+        assert.ok(stripHtml.includes('data-entry-id="core"'));
+        assert.ok(stripHtml.includes('data-entry-id="entry-2"'));
+        assert.ok(stripHtml.includes('data-entry-index="2"'));
+        assert.ok(stripHtml.includes('concept-strip__node--primed'));
+        assert.ok(stripHtml.includes('concept-strip__node--ready is-active'));
+        assert.ok(stripHtml.includes('concept-strip__node--locked'));
+        assert.ok(stripHtml.includes('r="9"'));
+        assert.ok(stripHtml.includes('Second &amp; unsafe · 2 of 3'));
+        assert.ok(stripHtml.includes('aria-label="Second &amp; unsafe, ready for first attempt, current"'));
+
+        const emptyStripHtml = renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
+        assert.ok(emptyStripHtml.includes('data-entry-id="core-thesis"'));
+        assert.ok(emptyStripHtml.includes('core thesis, ready for first attempt, current'));
+        assert.ok(emptyStripHtml.includes('<text x="60" y="80">core thesis</text>'));
         """
     )
     assert result.returncode == 0, result.stderr

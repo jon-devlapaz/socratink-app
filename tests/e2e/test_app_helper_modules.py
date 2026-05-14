@@ -543,6 +543,17 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
             assert(conceptPagePrimedHtml.includes('Re-drill from memory'), 'concept page primed cta');
+            const conceptStripHtml = conceptPage.renderConceptStripHtml(conceptBackbone, conceptBackbone[1], 1);
+            assert(conceptStripHtml.includes('class="concept-strip"'), 'concept strip wrapper');
+            assert(conceptStripHtml.includes('concept-strip__edge is-active'), 'concept strip active edge');
+            assert(conceptStripHtml.includes('concept-strip__node--primed'), 'concept strip primed node');
+            assert(conceptStripHtml.includes('concept-strip__node--ready is-active'), 'concept strip ready active node');
+            assert(conceptStripHtml.includes('concept-strip__node--locked'), 'concept strip locked node');
+            assert(conceptStripHtml.includes('Second &amp; unsafe · 2 of 3'), 'concept strip active label escapes');
+            assert(conceptStripHtml.includes('aria-label="Second &amp; unsafe, ready for first attempt, current"'), 'concept strip aria escapes');
+            const emptyConceptStripHtml = conceptPage.renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
+            assert(emptyConceptStripHtml.includes('data-entry-id="core-thesis"'), 'concept strip empty synthetic node');
+            assert(emptyConceptStripHtml.includes('<text x="60" y="80">core thesis</text>'), 'concept strip empty label');
 
             const launchPadEvents = [];
             sessionStorage.removeItem('socratink:pendingShell');
