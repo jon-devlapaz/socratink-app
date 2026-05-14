@@ -4,6 +4,13 @@ import {
   playAnim,
   renderGrid as renderDeskGrid,
 } from './board-grid.js';
+import {
+  clearSettingsPanel as clearShellSettingsPanel,
+  closeDrawer as closeShellDrawer,
+  openDrawer as openShellDrawer,
+  renderConceptList as renderShellConceptList,
+  toggleDrawer as toggleShellDrawer,
+} from './app-shell-ui.js';
 import { escHtml } from './html.js';
 import {
   describeDoorSource,
@@ -92,12 +99,14 @@ const App = (() => {
     }
   }
 
+  /* c8 ignore start -- pre-existing bypassSessionLimits=true makes this helper unreachable in app flow. */
   function hasDrillSessionTimeLimitElapsed(startedAt) {
     if (!drillSessionTimeLimitSeconds || !startedAt) return false;
     const startedAtMs = Date.parse(startedAt);
     if (Number.isNaN(startedAtMs)) return false;
     return Date.now() - startedAtMs > drillSessionTimeLimitSeconds * 1000;
   }
+  /* c8 ignore stop */
 
   function loadPhaseBSessionState(conceptId = getActiveId()) {
     return loadStoredPhaseBSessionState({ conceptId });
@@ -449,57 +458,33 @@ const App = (() => {
 
   // ── 10. Drawer ─────────────────────────────────────────────
   function openDrawer() {
-    drawer.dataset.open = 'true';
-    document.body.dataset.drawerOpen = 'true';
-    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'true');
+    openShellDrawer({ drawer, drawerToggle });
   }
   function closeDrawer() {
-    drawer.dataset.open = 'false';
-    document.body.dataset.drawerOpen = 'false';
-    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
+    closeShellDrawer({ drawer, drawerToggle });
   }
   function toggleDrawer() {
-    AudioFX.playDrawerToggle();
-    drawer.dataset.open === 'true' ? closeDrawer() : openDrawer();
+    toggleShellDrawer({ drawer, drawerToggle, audio: AudioFX });
   }
 
   if (window.innerWidth >= 900) openDrawer();
 
   function clearSettingsPanel() {
-    const host = document.getElementById('sidebar-settings-host');
-    const settingsPanel = host?.querySelector('.settings-panel');
-    if (!settingsPanel) return;
-    const settingsBtn = document.getElementById('nav-settings');
-    if (settingsBtn) delete settingsBtn.dataset.engaged;
-    host.innerHTML = '';
+    clearShellSettingsPanel();
   }
 
   // ── 11. Concept list render ────────────────────────────────
   function renderConceptList(concepts = loadConcepts()) {
-
-    const activeId = getActiveId();
-    conceptListEl.innerHTML = '';
-
-    concepts.forEach((c, i) => {
-      const item = document.createElement('div');
-      item.className = 'concept-item' + (c.id === activeId ? ' active' : '');
-      item.innerHTML = `
-        <div class="concept-dot" data-state="${c.state}"></div>
-        <span class="concept-item-name">${escHtml(c.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" aria-label="Delete concept ${escHtml(c.name)}" title="Delete concept">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>`;
-      item.addEventListener('click', e => {
-        if (e.target instanceof Element && e.target.closest('.concept-delete')) return;
+    renderShellConceptList({
+      concepts,
+      activeId: getActiveId(),
+      conceptListEl,
+      onOpenConcept(c) {
         showDashboard();
         selectConcept(c.id);
         if (c.graphData) showMapView(c);
         closeDrawer();
-      });
-      conceptListEl.appendChild(item);
+      },
     });
   }
 

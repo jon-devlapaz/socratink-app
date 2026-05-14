@@ -448,6 +448,75 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             window.App.toggleTheme();
             assert(document.documentElement.dataset.theme === 'dark', 'app toggle theme');
 
+            const shell = await import('/js/app-shell-ui.js');
+            const shellDrawer = document.createElement('aside');
+            const shellToggle = document.createElement('button');
+            const shellSounds = [];
+            shell.openDrawer({ drawer: shellDrawer, drawerToggle: shellToggle, documentRef: document });
+            assert(shellDrawer.dataset.open === 'true', 'shell open drawer');
+            assert(document.body.dataset.drawerOpen === 'true', 'shell body drawer open');
+            assert(shellToggle.getAttribute('aria-expanded') === 'true', 'shell toggle open');
+            shell.closeDrawer({ drawer: shellDrawer, drawerToggle: shellToggle, documentRef: document });
+            assert(shellDrawer.dataset.open === 'false', 'shell close drawer');
+            assert(document.body.dataset.drawerOpen === 'false', 'shell body drawer closed');
+            shell.toggleDrawer({
+              drawer: shellDrawer,
+              drawerToggle: shellToggle,
+              documentRef: document,
+              audio: { playDrawerToggle() { shellSounds.push('tap'); } },
+            });
+            same(shellSounds, ['tap'], 'shell drawer sound');
+            assert(shellDrawer.dataset.open === 'true', 'shell toggle opens');
+            const shellHost = document.getElementById('sidebar-settings-host') || document.createElement('div');
+            if (!shellHost.parentNode) {
+              shellHost.id = 'sidebar-settings-host';
+              document.body.append(shellHost);
+            }
+            shellHost.innerHTML = '<div class="settings-panel"></div>';
+            const shellSettingsButton = document.getElementById('nav-settings') || document.createElement('button');
+            if (!shellSettingsButton.parentNode) {
+              shellSettingsButton.id = 'nav-settings';
+              document.body.append(shellSettingsButton);
+            }
+            shellSettingsButton.dataset.engaged = 'true';
+            shell.clearSettingsPanel({ documentRef: document });
+            assert(shellHost.innerHTML === '', 'shell settings cleared');
+            assert(!shellSettingsButton.dataset.engaged, 'shell settings engagement cleared');
+            const shellItemHtml = shell.conceptListItemHtml({ id: 'c-shell', name: '<Unsafe>', state: 'growing' });
+            assert(shellItemHtml.includes('&lt;Unsafe&gt;'), 'shell concept html escapes');
+            assert(shellItemHtml.includes('App.deleteConcept(\\'c-shell\\',this)'), 'shell delete bridge');
+            const shellConceptList = document.createElement('div');
+            const shellOpened = [];
+            shell.renderConceptList({
+              concepts: [
+                { id: 'c1', name: 'First', state: 'growing', graphData: true },
+                { id: 'c2', name: 'Second', state: 'hibernating' },
+              ],
+              activeId: 'c2',
+              conceptListEl: shellConceptList,
+              documentRef: document,
+              onOpenConcept(concept) { shellOpened.push(concept.id); },
+            });
+            assert(shellConceptList.children.length === 2, 'shell concept list count');
+            assert(shellConceptList.children[1].classList.contains('active'), 'shell active concept');
+            shellConceptList.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            same(shellOpened, ['c1'], 'shell concept click');
+            shellConceptList.querySelector('.concept-delete').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            same(shellOpened, ['c1'], 'shell delete click ignored');
+
+            // Coverage for app.js wrapper line changed in this branch.
+            try { window.App.toggleDrawer(); } catch (e) { throw new Error('toggleDrawer error: ' + e); }
+            const previousActiveConcept = localStorage.getItem('learnops_active');
+            try {
+              localStorage.removeItem('learnops_active');
+              window.App.extract();
+            } catch (e) {
+              throw new Error('extract without active concept error: ' + e.message + ' \\n' + e.stack);
+            } finally {
+              if (previousActiveConcept === null) localStorage.removeItem('learnops_active');
+              else localStorage.setItem('learnops_active', previousActiveConcept);
+            }
+
             return true;
         }"""
     )

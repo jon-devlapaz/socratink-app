@@ -423,3 +423,95 @@ def test_theme_preference_helpers_preserve_storage_dom_and_toggle_contracts() ->
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          clearSettingsPanel,
+          closeDrawer,
+          conceptListItemHtml,
+          openDrawer,
+          renderConceptList,
+          toggleDrawer,
+        } from './public/js/app-shell-ui.js';
+
+        const drawer = { dataset: {} };
+        const drawerToggle = {
+          attrs: {},
+          setAttribute(name, value) { this.attrs[name] = value; },
+        };
+        const documentRef = {
+          body: { dataset: {} },
+        };
+        openDrawer({ drawer, drawerToggle, documentRef });
+        assert.equal(drawer.dataset.open, 'true');
+        assert.equal(documentRef.body.dataset.drawerOpen, 'true');
+        assert.equal(drawerToggle.attrs['aria-expanded'], 'true');
+        closeDrawer({ drawer, drawerToggle, documentRef });
+        assert.equal(drawer.dataset.open, 'false');
+        assert.equal(documentRef.body.dataset.drawerOpen, 'false');
+        assert.equal(drawerToggle.attrs['aria-expanded'], 'false');
+        const sounds = [];
+        toggleDrawer({ drawer, drawerToggle, documentRef, audio: { playDrawerToggle() { sounds.push('tap'); } } });
+        assert.deepEqual(sounds, ['tap']);
+        assert.equal(drawer.dataset.open, 'true');
+
+        const settingsHost = { innerHTML: '', querySelector() { return {}; } };
+        const settingsBtn = { dataset: { engaged: 'true' } };
+        clearSettingsPanel({
+          documentRef: {
+            getElementById(id) {
+              if (id === 'sidebar-settings-host') return settingsHost;
+              if (id === 'nav-settings') return settingsBtn;
+              return null;
+            },
+          },
+        });
+        assert.equal(settingsHost.innerHTML, '');
+        assert.equal('engaged' in settingsBtn.dataset, false);
+
+        const html = conceptListItemHtml({ id: 'c1', name: '<Unsafe>', state: 'growing' });
+        assert.ok(html.includes('&lt;Unsafe&gt;'));
+        assert.ok(html.includes('App.deleteConcept(\\'c1\\',this)'));
+
+        class FakeElement {
+          constructor() {
+            this.className = '';
+            this.innerHTML = '';
+            this.listeners = {};
+            this.children = [];
+          }
+          addEventListener(name, fn) { this.listeners[name] = fn; }
+          appendChild(child) { this.children.push(child); }
+          closest() { return null; }
+        }
+        const conceptListEl = new FakeElement();
+        const clicked = [];
+        renderConceptList({
+          concepts: [
+            { id: 'c1', name: 'First', state: 'growing', graphData: true },
+            { id: 'c2', name: 'Second', state: 'hibernating' },
+          ],
+          activeId: 'c2',
+          conceptListEl,
+          documentRef: { createElement() { return new FakeElement(); } },
+          elementCtor: FakeElement,
+          onOpenConcept(concept) { clicked.push(concept.id); },
+        });
+        assert.equal(conceptListEl.innerHTML, '');
+        assert.equal(conceptListEl.children.length, 2);
+        assert.equal(conceptListEl.children[0].className, 'concept-item');
+        assert.equal(conceptListEl.children[1].className, 'concept-item active');
+        conceptListEl.children[0].listeners.click({ target: new FakeElement() });
+        assert.deepEqual(clicked, ['c1']);
+        const deleteTarget = new FakeElement();
+        deleteTarget.closest = (selector) => selector === '.concept-delete' ? {} : null;
+        conceptListEl.children[1].listeners.click({ target: deleteTarget });
+        assert.deepEqual(clicked, ['c1']);
+        """
+    )
+    assert result.returncode == 0, result.stderr
