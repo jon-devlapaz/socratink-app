@@ -18,6 +18,12 @@ def validate_knowledge_map(knowledge_map: dict) -> None:
         raise ValueError("knowledge_map.backbone must be a list.")
     if not isinstance(knowledge_map.get("clusters"), list):
         raise ValueError("knowledge_map.clusters must be a list.")
+    relationships = knowledge_map.get("relationships")
+    if relationships is not None and not isinstance(relationships, dict):
+        raise ValueError("knowledge_map.relationships must be an object.")
+    frameworks = knowledge_map.get("frameworks")
+    if frameworks is not None and not isinstance(frameworks, list):
+        raise ValueError("knowledge_map.frameworks must be a list.")
 
 
 def knowledge_map_has_node(knowledge_map: dict, node_id: str) -> bool:

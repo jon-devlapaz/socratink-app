@@ -63,6 +63,14 @@ def sample_map() -> dict:
         ({"metadata": None, "backbone": [], "clusters": []}, "knowledge_map.metadata"),
         ({"metadata": {}, "backbone": None, "clusters": []}, "knowledge_map.backbone"),
         ({"metadata": {}, "backbone": [], "clusters": None}, "knowledge_map.clusters"),
+        (
+            {"metadata": {}, "backbone": [], "clusters": [], "relationships": []},
+            "knowledge_map.relationships",
+        ),
+        (
+            {"metadata": {}, "backbone": [], "clusters": [], "frameworks": {}},
+            "knowledge_map.frameworks",
+        ),
     ],
 )
 def test_validate_knowledge_map_rejects_malformed_wire_shape(
@@ -74,6 +82,18 @@ def test_validate_knowledge_map_rejects_malformed_wire_shape(
 
 def test_validate_knowledge_map_accepts_minimal_wire_shape() -> None:
     validate_knowledge_map({"metadata": {}, "backbone": [], "clusters": []})
+
+
+def test_validate_knowledge_map_accepts_empty_optional_sections() -> None:
+    validate_knowledge_map(
+        {
+            "metadata": {},
+            "backbone": [],
+            "clusters": [],
+            "relationships": {},
+            "frameworks": [],
+        }
+    )
 
 
 @pytest.mark.parametrize(
