@@ -24,6 +24,7 @@ Import from `models` directly.
 | `IdKind`, `parse_id(s)` | Identifier kind tag + parser that returns the right ID class given a raw string. |
 | `CORE_THESIS` | The reserved identifier for the map's core thesis node. Used by drill routing. |
 | `is_substantive_sketch(text)` | Pure-function gate: does this sketch carry enough learner signal to seed source-less map generation? |
+| `infer_help_request_reason(text)` / `has_substantive_attempt(text)` | Cold-attempt intent classifiers: help request vs genuine generative commitment. |
 | `RepairRep`, `RepairRepsEvaluation`, `RepairRepsResult` | Repair Reps response contracts; graph-neutral typed micro-practice, not graph-truth mutation. |
 | `parse_repair_reps_response(response)` | Strict parser for provider responses; rejects extra routing/scoring fields before returning the loose Gemini-compatible schema. |
 | `validate_repair_reps_result(evaluation, expected_count=...)` | Post-parse validation for exact count, non-empty ids/prompts/bridges/cues, and duplicate ids. |
@@ -34,6 +35,7 @@ Import from `models` directly.
 | :--- | :--- |
 | `provisional_map.py` | Pydantic models for the full map structure. |
 | `identifiers.py` | ID types, `IdKind`, `parse_id`, `CORE_THESIS`. |
+| `drill_attempts.py` | Pure cold-attempt intent classifiers used before drill scoring/routing normalization. |
 | `sketch_validation.py` | `is_substantive_sketch` heuristic (stopwords, min substantive tokens). |
 | `knowledge_map_context.py` | Wire-shape validators and target-local context pruning used by drill and Repair Reps routes. |
 | `repair_reps.py` | Repair Reps response models, strict parsing, and result validation. |

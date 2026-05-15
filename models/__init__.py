@@ -6,6 +6,11 @@ from .identifiers import (
     parse_id,
     CORE_THESIS,
 )
+from .drill_attempts import (
+    HelpRequestReason,
+    has_substantive_attempt,
+    infer_help_request_reason,
+)
 from .provisional_map import (
     BackboneItem,
     Cluster,
@@ -35,6 +40,9 @@ __all__ = [
     "DomainMechanic",
     "Framework",
     "IdKind",
+    "HelpRequestReason",
+    "has_substantive_attempt",
+    "infer_help_request_reason",
     "is_substantive_sketch",
     "LearningPrereq",
     "Metadata",
