@@ -24,7 +24,7 @@ Import from `models` directly.
 | `IdKind`, `parse_id(s)` | Identifier kind tag + parser that returns the right ID class given a raw string. |
 | `CORE_THESIS` | The reserved identifier for the map's core thesis node. Used by drill routing. |
 | `is_substantive_sketch(text)` | Pure-function gate: does this sketch carry enough learner signal to seed source-less map generation? |
-| `infer_help_request_reason(text)` / `has_substantive_attempt(text)` | Cold-attempt intent classifiers: help request vs genuine generative commitment. |
+| `HelpRequestReason`, `infer_help_request_reason(text)` / `has_substantive_attempt(text)` | Cold-attempt intent classifiers (help request vs genuine generative commitment) plus the Literal tag they return. |
 | `RepairRep`, `RepairRepsEvaluation`, `RepairRepsResult` | Repair Reps response contracts; graph-neutral typed micro-practice, not graph-truth mutation. |
 | `parse_repair_reps_response(response)` | Strict parser for provider responses; rejects extra routing/scoring fields before returning the loose Gemini-compatible schema. |
 | `validate_repair_reps_result(evaluation, expected_count=...)` | Post-parse validation for exact count, non-empty ids/prompts/bridges/cues, and duplicate ids. |
