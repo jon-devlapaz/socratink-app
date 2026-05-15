@@ -163,8 +163,13 @@ bash scripts/kill-800x.sh
 # Agent docs / bootstrap minimum verification
 bash scripts/doctor.sh
 
-# Type-check baseline (honors mypy.ini exclude list; also run by
-# scripts/doctor.sh and by the GitHub Actions preflight workflow).
+# Type-check baseline. PRIMARY gate is pyrefly; mypy stays on as a
+# cross-check. Both are run by scripts/doctor.sh and by the GitHub
+# Actions preflight workflow. Run BOTH locally before pushing.
+#
+# pyrefly takes no positional arg — it honors project-includes in
+# pyrefly.toml. Passing `.` would silently override that scope.
+.venv/bin/pyrefly check
 mypy .
 
 # Full Python test suite
@@ -254,8 +259,11 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
 
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
-- Type-check baseline lives in `mypy.ini` at the repo root (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`, etc.). The canonical invocation is `mypy .`, which honors the `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees). The same command is run by `scripts/doctor.sh` and by CI.
-- No ruff/flake8 config is checked in. Do not invent lint commands beyond `mypy .`.
+- Type-check baseline is two-tool: **pyrefly is the primary gate**, **mypy is the cross-check**. Both must be green. They run side-by-side in `scripts/doctor.sh` and in CI; agents/humans must run both before pushing.
+  - **pyrefly** (Python 3.13, `preset = "legacy"`, `check-unannotated-defs = true`) — config in `pyrefly.toml`. Canonical invocation: `.venv/bin/pyrefly check` (no positional arg — `pyrefly check .` would override `project-includes` and pick up `tests/` and `api/`, both of which we intentionally exclude to mirror mypy's `[mypy-tests.*]` / `[mypy-api.*]` posture). Version is pinned in `scripts/doctor.sh` (`PYREFLY_VERSION`) — keep it there, not in `requirements-dev.txt`, so the gate auto-bootstraps the exact version.
+  - **mypy** (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) — config in `mypy.ini`. Canonical invocation: `mypy .`. Honors `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees) plus per-module `ignore_errors` for `tests.*` and `api.*`.
+  - **Scope must stay aligned** between the two configs. If you change one exclude list, change the other. `pyrefly.toml` uses positive `project-includes` (`main.py`, `ai_service.py`, `learning_commons.py`, `runtime_env.py`, `auth`, `llm`, `source_intake`, `models`) — add new top-level modules there if you create them, otherwise pyrefly silently skips them.
+- No ruff/flake8 config is checked in. Do not invent lint commands beyond `pyrefly check` and `mypy .`.
 - CI gate: `.github/workflows/preflight.yml` runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), then `bash scripts/doctor.sh`, then `.venv/bin/pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so `doctor.sh` exercises the bootstrap/auth path without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
