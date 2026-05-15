@@ -97,6 +97,18 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(timerDisplay.textContent === '00:00:03', 'timer displays fast-forwarded value');
             timer.fastForward(7);
             assert(timer.getTimeLeft() === 7, 'timer custom fast-forward');
+            const zeroCompletions = [];
+            const zeroTimer = timerModule.createCountdownTimer({
+              timerDisplay: { textContent: '' },
+              onComplete() {
+                zeroCompletions.push('complete');
+              },
+              setIntervalRef() {
+                throw new Error('zero-second timer should not schedule an interval');
+              },
+            });
+            zeroTimer.start(0);
+            same(zeroCompletions, ['complete'], 'timer completes immediately at zero');
             const previousConceptsForTimer = localStorage.getItem('learnops_concepts');
             const previousActiveForTimer = localStorage.getItem('learnops_active');
             const timerFixture = {
@@ -376,7 +388,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             sourceMount.querySelector('.paste-clipboard-btn').click();
             await new Promise((resolve) => setTimeout(resolve, 0));
             assert(sourceMount.querySelector('.overlay-textarea').value === 'clipboard text', 'clipboard paste');
-            sourceMount.querySelector('.overlay-extract').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+            sourceMount.querySelector('.overlay-extract').click();
             same(sourceSubmits.pop(), { text: 'clipboard text', type: 'text', filename: null, url: null }, 'paste submit');
             Object.defineProperty(navigator, 'clipboard', {
               configurable: true,
@@ -414,7 +426,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             sourceMount.querySelector('.overlay-dropzone').dispatchEvent(goodDrop);
             const uploadFeedback = () => sourceMount.querySelector('[data-panel="upload"] .overlay-dropfeedback');
             assert(uploadFeedback().textContent.includes('ok.txt'), 'upload feedback');
-            sourceMount.querySelector('.overlay-extract').dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+            sourceMount.querySelector('.overlay-extract').click();
             same(sourceSubmits.pop(), { text: 'uploaded text', type: 'file', filename: 'ok.txt', url: null }, 'file submit');
             const badDrop = new Event('drop', { bubbles: true, cancelable: true });
             Object.defineProperty(badDrop, 'dataTransfer', { value: { files: [new File(['bad'], 'bad.txt')] } });

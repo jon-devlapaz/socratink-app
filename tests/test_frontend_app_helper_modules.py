@@ -132,6 +132,19 @@ def test_app_timer_preserves_countdown_contract() -> None:
 
         timer.fastForward(7);
         assert.equal(timer.getTimeLeft(), 7);
+
+        const zeroCompletions = [];
+        const zeroTimer = createCountdownTimer({
+          timerDisplay: { textContent: '' },
+          onComplete() {
+            zeroCompletions.push('complete');
+          },
+          setIntervalRef() {
+            throw new Error('zero-second timer should not schedule an interval');
+          },
+        });
+        zeroTimer.start(0);
+        assert.deepEqual(zeroCompletions, ['complete']);
         """
     )
     assert result.returncode == 0, result.stderr
