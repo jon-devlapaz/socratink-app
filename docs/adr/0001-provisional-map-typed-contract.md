@@ -21,12 +21,12 @@ The model enforces structural integrity at parse time:
 
 The route maps any `ValueError` raised by these validators to HTTP 422 — the structural shape is wrong, retrying won't help.
 
-`extra="forbid"` is intentionally **not** set. Pydantic emits `additionalProperties: false` in the JSON Schema when `extra="forbid"` is configured, and Gemini's `response_schema` parameter rejects schemas containing it. Field-level correctness is governed by the prompt + the closure validators above. See `_parse_repair_reps_response` in `ai_service.py` for the same precedent.
+`extra="forbid"` is intentionally **not** set. Pydantic emits `additionalProperties: false` in the JSON Schema when `extra="forbid"` is configured, and Gemini's `response_schema` parameter rejects schemas containing it. Field-level correctness is governed by the prompt + the closure validators above. See `parse_repair_reps_response` in `models/repair_reps.py` for the same precedent.
 
 ## Alternatives
 
 - **Keep the `dict` shape and add a separate validator function.** Considered and rejected: validation would be a separate step downstream code could forget to invoke. Pydantic at the boundary is enforcement-by-construction.
-- **Strict `extra="forbid"` with a parallel "loose" schema for Gemini export.** Considered and rejected for v1 — adds a dual-class dance (the same one `_parse_repair_reps_response` already does for repair-reps). Worth revisiting if Gemini starts producing extra fields that we want loud rejection on.
+- **Strict `extra="forbid"` with a parallel "loose" schema for Gemini export.** Considered and rejected for v1 — adds a dual-class dance (the same one `parse_repair_reps_response` / `_StrictRepairRepsEvaluation` in `models/repair_reps.py` already does for repair-reps). Worth revisiting if Gemini starts producing extra fields that we want loud rejection on.
 - **Quality-floor knobs** (≥ N nodes, ≥ M clusters per backbone) on the model. Considered and rejected: that is the prompt's job. If the prompt produces thin maps, fix the prompt; the schema is for *structural* integrity, not content quality.
 
 ## Consequences

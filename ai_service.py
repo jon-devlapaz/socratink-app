@@ -1,10 +1,9 @@
 import json
 import os
-import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, TypedDict, TYPE_CHECKING, cast
+from typing import Callable, Literal, Optional, TypedDict, TYPE_CHECKING, cast
 
 from llm.types import StructuredLLMResult
 
@@ -14,12 +13,29 @@ if TYPE_CHECKING:
 from google import genai
 from google.genai.errors import APIError
 from google.genai import types
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from llm import (
     LLMClient,
     StructuredLLMRequest,
     build_llm_client,
+)
+from models.drill_attempts import (
+    has_substantive_attempt as _has_substantive_attempt,
+    infer_help_request_reason as _infer_help_request_reason,
+)
+from models.knowledge_map_context import (
+    knowledge_map_has_node as _knowledge_map_has_node,
+    prune_context as _prune_context,
+    resolve_target_cluster_id as _resolve_target_cluster_id,
+    validate_knowledge_map as _validate_knowledge_map,
+)
+from models.repair_reps import (
+    RepairRep,
+    RepairRepsEvaluation,
+    RepairRepsResult,
+    parse_repair_reps_response as _parse_repair_reps_response,
+    validate_repair_reps_result as _validate_repair_reps_result,
 )
 from models import ProvisionalMap
 
@@ -123,46 +139,6 @@ class DrillEvaluation(BaseModel):
     )
 
 
-class RepairRep(BaseModel):
-    id: str = Field(
-        description="Stable identifier for this rep within the generated set"
-    )
-    kind: Literal["missing_bridge", "next_step", "cause_effect"] = Field(
-        description="The causal micro-practice shape."
-    )
-    prompt: str = Field(
-        description="Typed causal prompt shown before the answer bridge is revealed."
-    )
-    target_bridge: str = Field(
-        description="Short model bridge revealed only after the learner types."
-    )
-    feedback_cue: str = Field(
-        description="Short comparison cue after the bridge is revealed."
-    )
-
-
-class RepairRepsEvaluation(BaseModel):
-    reps: list[RepairRep] = Field(
-        description="Exactly three typed causal repair reps.",
-        min_length=3,
-        max_length=3,
-    )
-
-
-class _StrictRepairRep(RepairRep):
-    model_config = ConfigDict(extra="forbid")
-
-
-class _StrictRepairRepsEvaluation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reps: list[_StrictRepairRep] = Field(
-        description="Exactly three typed causal repair reps.",
-        min_length=3,
-        max_length=3,
-    )
-
-
 class DrillTurnResult(TypedDict):
     agent_response: str
     generative_commitment: bool | None
@@ -184,12 +160,6 @@ class DrillTurnResult(TypedDict):
     ux_reward_emitted: bool
     session_terminated: bool
     termination_reason: str | None
-
-
-class RepairRepsResult(TypedDict):
-    node_id: str
-    prompt_version: str
-    reps: list[dict[str, str]]
 
 
 class MissingAPIKeyError(ValueError):
@@ -221,143 +191,6 @@ def _parse_iso_timestamp(iso_string: str) -> datetime:
         raise ValueError(f"Invalid timestamp: {iso_string}") from exc
 
 
-def _validate_knowledge_map(knowledge_map: dict) -> None:
-    if not isinstance(knowledge_map, dict):
-        raise ValueError("knowledge_map must be an object.")
-    if not isinstance(knowledge_map.get("metadata"), dict):
-        raise ValueError("knowledge_map.metadata must be an object.")
-    if not isinstance(knowledge_map.get("backbone"), list):
-        raise ValueError("knowledge_map.backbone must be a list.")
-    if not isinstance(knowledge_map.get("clusters"), list):
-        raise ValueError("knowledge_map.clusters must be a list.")
-
-
-def _knowledge_map_has_node(knowledge_map: dict, node_id: str) -> bool:
-    if node_id == "core-thesis":
-        return True
-
-    for backbone_item in knowledge_map.get("backbone", []):
-        if isinstance(backbone_item, dict) and backbone_item.get("id") == node_id:
-            return True
-
-    for cluster in knowledge_map.get("clusters", []):
-        if not isinstance(cluster, dict):
-            continue
-        if cluster.get("id") == node_id:
-            return True
-        for subnode in cluster.get("subnodes", []):
-            if isinstance(subnode, dict) and subnode.get("id") == node_id:
-                return True
-
-    return False
-
-
-def _resolve_target_cluster_id(knowledge_map: dict, target_node_id: str) -> str | None:
-    if target_node_id.startswith("c") and "_s" not in target_node_id:
-        return target_node_id
-
-    for cluster in knowledge_map.get("clusters", []):
-        if not isinstance(cluster, dict):
-            continue
-        cluster_id = cluster.get("id")
-        if isinstance(cluster_id, str) and cluster_id == target_node_id:
-            return cluster_id
-        for subnode in cluster.get("subnodes", []):
-            if (
-                isinstance(cluster_id, str)
-                and isinstance(subnode, dict)
-                and subnode.get("id") == target_node_id
-            ):
-                return cluster_id
-
-    return None
-
-
-def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
-    metadata = knowledge_map.get("metadata") or {}
-    pruned: dict[str, Any] = {
-        "metadata": {
-            "thesis": metadata.get("core_thesis"),
-            "governing_assumptions": metadata.get("governing_assumptions") or [],
-            "starting_map_context": metadata.get("starting_map_context"),
-        }
-    }
-    relationships = knowledge_map.get("relationships") or {}
-    frameworks = knowledge_map.get("frameworks") or []
-
-    if target_node_id == "core-thesis" or target_node_id.startswith("b"):
-        target_backbone = next(
-            (
-                item
-                for item in knowledge_map.get("backbone", [])
-                if isinstance(item, dict)
-                and (
-                    target_node_id == "core-thesis" or item.get("id") == target_node_id
-                )
-            ),
-            None,
-        )
-        if target_backbone is None and knowledge_map.get("backbone"):
-            target_backbone = knowledge_map["backbone"][0]
-
-        dependent_cluster_ids = (
-            set(target_backbone.get("dependent_clusters") or [])
-            if isinstance(target_backbone, dict)
-            else set()
-        )
-        cluster_shells = [
-            {
-                "id": cluster.get("id"),
-                "label": cluster.get("label"),
-                "description": cluster.get("description"),
-            }
-            for cluster in knowledge_map.get("clusters", [])
-            if isinstance(cluster, dict) and cluster.get("id") in dependent_cluster_ids
-        ]
-
-        pruned["backbone"] = [target_backbone] if target_backbone else []
-        pruned["clusters"] = cluster_shells
-        pruned["relationships"] = relationships
-        pruned["frameworks"] = frameworks
-        return pruned
-
-    target_cluster_id = _resolve_target_cluster_id(knowledge_map, target_node_id)
-    target_cluster = next(
-        (
-            cluster
-            for cluster in knowledge_map.get("clusters", [])
-            if isinstance(cluster, dict) and cluster.get("id") == target_cluster_id
-        ),
-        None,
-    )
-
-    pruned["clusters"] = [target_cluster] if target_cluster else []
-    pruned["backbone"] = [
-        item
-        for item in knowledge_map.get("backbone", [])
-        if isinstance(item, dict)
-        and target_cluster_id in (item.get("dependent_clusters") or [])
-    ]
-    pruned["relationships"] = {
-        "learning_prerequisites": [
-            rel
-            for rel in relationships.get("learning_prerequisites", [])
-            if isinstance(rel, dict)
-            and (
-                rel.get("from") == target_cluster_id
-                or rel.get("to") == target_cluster_id
-            )
-        ]
-    }
-    pruned["frameworks"] = [
-        framework
-        for framework in frameworks
-        if isinstance(framework, dict)
-        and target_cluster_id in (framework.get("source_clusters") or [])
-    ]
-    return pruned
-
-
 def _call_gemini_with_retry(
     client, *, model, contents, config, max_retries=MAX_RETRIES
 ):
@@ -385,116 +218,6 @@ def _call_gemini_with_retry(
             ) from err
         except Exception as err:
             raise ValueError(f"Unexpected error: {str(err)}") from err
-
-
-def _infer_help_request_reason(message: str) -> Literal["explicit_unknown", "explicit_explain_request", "affective_confusion"] | None:
-    normalized = " ".join((message or "").strip().lower().split())
-    if not normalized:
-        return None
-
-    explicit_unknown_markers = (
-        "i don't know",
-        "i dont know",
-        "idk",
-        "no idea",
-        "not sure",
-        "i'm not sure",
-        "im not sure",
-        "unsure",
-    )
-    explain_request_markers = (
-        "please explain",
-        "can you explain",
-        "could you explain",
-        "explain that",
-        "explain this",
-        "break that down",
-        "break this down",
-        "walk me through",
-        "help me understand",
-        "what does that mean",
-    )
-    affective_confusion_markers = (
-        "this is confusing",
-        "i'm confused",
-        "im confused",
-        "confusing",
-        "lost here",
-    )
-
-    if any(marker in normalized for marker in explicit_unknown_markers):
-        return "explicit_unknown"
-    if any(marker in normalized for marker in explain_request_markers):
-        return "explicit_explain_request"
-    if any(marker in normalized for marker in affective_confusion_markers):
-        return "affective_confusion"
-    return None
-
-
-def _has_substantive_attempt(message: str) -> bool:
-    normalized = " ".join((message or "").strip().lower().split())
-    if not normalized:
-        return False
-
-    if "?" in normalized and not any(
-        marker in normalized
-        for marker in (
-            "i think",
-            "i guess",
-            "maybe",
-            "but",
-            "it is",
-            "it's",
-            "they are",
-            "this is",
-        )
-    ):
-        return False
-
-    if re.search(
-        r"\b("
-        r"because|if|when|then|by|so that|causes?|leads? to|creates?|"
-        r"means?|happens?|opens?|closes?|flows?|travels?|moves?|rushes?|"
-        r"depolariz|repolariz"
-        r")\b",
-        normalized,
-    ):
-        return True
-
-    words = re.findall(r"[a-z']+", normalized)
-    if len(words) < 6:
-        return False
-
-    filler_words = {
-        "i",
-        "im",
-        "i'm",
-        "not",
-        "sure",
-        "don't",
-        "dont",
-        "know",
-        "can",
-        "you",
-        "please",
-        "explain",
-        "this",
-        "that",
-        "it",
-        "me",
-        "help",
-        "understand",
-        "maybe",
-        "think",
-        "kind",
-        "of",
-        "sort",
-        "just",
-    }
-    content_words = [word for word in words if word not in filler_words]
-    return len(content_words) >= 4 and any(
-        word.endswith(("s", "ed", "ing")) for word in content_words
-    )
 
 
 def _normalize_response_quality(evaluation: DrillEvaluation) -> None:
@@ -764,56 +487,6 @@ def generate_smallest_provisional_map(
     pm: ProvisionalMap = result.parsed  # type: ignore[assignment]
     _validate_smallest_route(pm)
     return pm
-
-
-def _validate_repair_reps_result(
-    evaluation: RepairRepsEvaluation, *, expected_count: int
-) -> None:
-    if len(evaluation.reps) != expected_count:
-        raise ValueError(
-            f"Repair reps response must include exactly {expected_count} reps."
-        )
-
-    seen_ids: set[str] = set()
-    for index, rep in enumerate(evaluation.reps, start=1):
-        rep_id = rep.id.strip()
-        if not rep_id:
-            raise ValueError(f"Repair rep {index} is missing an id.")
-        if rep_id in seen_ids:
-            raise ValueError(f"Repair rep id is duplicated: {rep_id}")
-        seen_ids.add(rep_id)
-
-        if not rep.prompt.strip():
-            raise ValueError(f"Repair rep {index} is missing a prompt.")
-        if not rep.target_bridge.strip():
-            raise ValueError(f"Repair rep {index} is missing a target bridge.")
-        if not rep.feedback_cue.strip():
-            raise ValueError(f"Repair rep {index} is missing a feedback cue.")
-
-
-def _parse_repair_reps_response(response) -> RepairRepsEvaluation:
-    raw_text = getattr(response, "text", None)
-    if raw_text:
-        try:
-            strict = _StrictRepairRepsEvaluation.model_validate_json(raw_text)
-        except Exception as err:
-            raise ValueError(
-                "Gemini returned an invalid structured repair reps response."
-            ) from err
-        return RepairRepsEvaluation.model_validate(strict.model_dump())
-
-    evaluation = getattr(response, "parsed", None)
-    if isinstance(evaluation, RepairRepsEvaluation):
-        return evaluation
-    if isinstance(evaluation, dict):
-        try:
-            strict = _StrictRepairRepsEvaluation.model_validate(evaluation)
-        except Exception as err:
-            raise ValueError(
-                "Gemini returned an invalid structured repair reps response."
-            ) from err
-        return RepairRepsEvaluation.model_validate(strict.model_dump())
-    raise ValueError("Gemini returned an invalid structured repair reps response.")
 
 
 def generate_repair_reps(

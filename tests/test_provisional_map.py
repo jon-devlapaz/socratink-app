@@ -131,7 +131,7 @@ def test_provisional_map_tolerates_unknown_field_for_gemini_compat():
     """Unknown fields must NOT raise — Gemini rejects extra='forbid' schemas
     (additionalProperties: false in JSON Schema). Field-level correctness is
     governed by the prompt + closure validators, not by extra='forbid'.
-    See ai_service.py:_parse_repair_reps_response for precedent.
+    See models/repair_reps.py:parse_repair_reps_response for precedent.
     """
     permissive = {**VALID_MAP, "unexpected_top_level": "ignored"}
     m = ProvisionalMap.model_validate(permissive)

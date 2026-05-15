@@ -17,7 +17,7 @@ What is NOT enforced here:
 
 Models do NOT use ``extra="forbid"`` because Gemini's response_schema
 parameter rejects the resulting JSON Schema (additionalProperties: false).
-See ``ai_service.py:_parse_repair_reps_response`` for the same precedent.
+See ``models/repair_reps.py:parse_repair_reps_response`` for the same precedent.
 """
 from __future__ import annotations
 
