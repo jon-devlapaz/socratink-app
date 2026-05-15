@@ -28,6 +28,10 @@ Import from `models` directly.
 | `RepairRep`, `RepairRepsEvaluation`, `RepairRepsResult` | Repair Reps response contracts; graph-neutral typed micro-practice, not graph-truth mutation. |
 | `parse_repair_reps_response(response)` | Strict parser for provider responses; rejects extra routing/scoring fields before returning the loose Gemini-compatible schema. |
 | `validate_repair_reps_result(evaluation, expected_count=...)` | Post-parse validation for exact count, non-empty ids/prompts/bridges/cues, and duplicate ids. |
+| `validate_knowledge_map(knowledge_map)` | Wire-shape check on the dict form: requires `metadata`/`backbone`/`clusters`, and validates optional `relationships` (object) and `frameworks` (list) containers when present. |
+| `knowledge_map_has_node(knowledge_map, node_id)` | Membership test across `core-thesis`, backbone, clusters, and subnodes. |
+| `resolve_target_cluster_id(knowledge_map, target_node_id)` | Resolves a node id to its enclosing cluster id (or the id itself for cluster targets); returns `None` if absent. |
+| `prune_context(knowledge_map, target_node_id)` | Returns a target-local view of the map for prompt context (backbone vs cluster/subnode targets handled distinctly). |
 
 ## Files
 
