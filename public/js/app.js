@@ -1,6 +1,54 @@
 import { Bus } from './bus.js';
 import { generateKnowledgeMap } from './ai_service.js';
 import {
+  playAnim,
+  renderGrid as renderDeskGrid,
+} from './board-grid.js';
+import {
+  clearSettingsPanel as clearShellSettingsPanel,
+  closeDrawer as closeShellDrawer,
+  openDrawer as openShellDrawer,
+  renderConceptList as renderShellConceptList,
+  toggleDrawer as toggleShellDrawer,
+} from './app-shell-ui.js';
+import { escHtml } from './html.js';
+import {
+  describeDoorSource,
+  getHeroActionConfig,
+  getHeroGuidance,
+  getHeroStateLabel,
+} from './app-hero.js';
+import { createCountdownTimer } from './app-timer.js';
+import {
+  findConceptEntryById,
+  getConceptEntryId,
+  renderActiveEntryHtml,
+  renderConceptStripHtml,
+  selectInitialConceptEntry,
+} from './concept-page-view.js';
+import {
+  getDefaultPhaseBSessionState,
+  getPhaseBSessionStorageKey,
+  loadPhaseBResumeState as loadStoredPhaseBResumeState,
+  loadPhaseBSessionState as loadStoredPhaseBSessionState,
+  persistPhaseBResumeState as persistStoredPhaseBResumeState,
+  persistPhaseBSessionState as persistStoredPhaseBSessionState,
+} from './phase-b-session.js';
+import { buildLibraryHtml } from './library-view.js';
+import {
+  buildContentInputUI,
+  hasStudyEvidence,
+  isBlockedVideoUrl,
+  shortOnboardingText,
+} from './source-input-ui.js';
+import { renderSettingsView as renderSettingsContent } from './settings-view.js';
+import {
+  applyThemePreference as applyStoredThemePreference,
+  getStoredThemePreference as getStoredThemePreferenceFromStorage,
+  getToggledTheme,
+  normalizeThemePreference,
+} from './theme-preference.js';
+import {
   getHealth,
   extractUrl,
   runRepairReps,
@@ -32,20 +80,7 @@ import {
   TILE_IDS, tileEls
 } from './dom.js';
 
-/** Escape a value for safe insertion into HTML. Inlined from the now-deleted graph-view.js. */
-function escHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-}
-
 const App = (() => {
-  const THEME_STORAGE_KEY = 'learnops-theme';
-  const PHASE_B_SESSION_KEY_PREFIX = 'learnops-phase-b-session';
-  const PHASE_B_RESUME_KEY = 'learnops-phase-b-resume';
   const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
   const BOARD_SLOT_COUNT = TILE_IDS.length;
@@ -73,121 +108,47 @@ const App = (() => {
     }
   }
 
+  /* c8 ignore start -- pre-existing bypassSessionLimits=true makes this helper unreachable in app flow. */
   function hasDrillSessionTimeLimitElapsed(startedAt) {
     if (!drillSessionTimeLimitSeconds || !startedAt) return false;
     const startedAtMs = Date.parse(startedAt);
     if (Number.isNaN(startedAtMs)) return false;
     return Date.now() - startedAtMs > drillSessionTimeLimitSeconds * 1000;
   }
-
-  function getPhaseBSessionStorageKey(conceptId = getActiveId()) {
-    return conceptId ? `${PHASE_B_SESSION_KEY_PREFIX}:${conceptId}` : PHASE_B_SESSION_KEY_PREFIX;
-  }
-
-  function getDefaultPhaseBSessionState() {
-    return {
-      startedAt: null,
-      nodesDrilled: 0,
-      visitedNodeIds: [],
-      retriesByNode: {},
-      events: [],
-    };
-  }
+  /* c8 ignore stop */
 
   function loadPhaseBSessionState(conceptId = getActiveId()) {
-    try {
-      const raw = sessionStorage.getItem(getPhaseBSessionStorageKey(conceptId));
-      if (!raw) return getDefaultPhaseBSessionState();
-      const parsed = JSON.parse(raw);
-      const visitedNodeIds = Array.isArray(parsed?.visitedNodeIds)
-        ? parsed.visitedNodeIds.filter((id) => typeof id === 'string' && id)
-        : [];
-      return {
-        startedAt: parsed?.startedAt || null,
-        nodesDrilled: visitedNodeIds.length || (Number.isFinite(Number(parsed?.nodesDrilled)) ? Number(parsed.nodesDrilled) : 0),
-        visitedNodeIds,
-        retriesByNode: parsed?.retriesByNode && typeof parsed.retriesByNode === 'object' ? parsed.retriesByNode : {},
-        events: Array.isArray(parsed?.events) ? parsed.events : [],
-      };
-    } catch (err) {
-      console.warn('Phase B session state unavailable.', err);
-      return getDefaultPhaseBSessionState();
-    }
+    return loadStoredPhaseBSessionState({ conceptId });
   }
 
   function persistPhaseBSessionState(sessionState, conceptId = getActiveId()) {
-    try {
-      sessionStorage.setItem(getPhaseBSessionStorageKey(conceptId), JSON.stringify(sessionState));
-    } catch (err) {
-      console.warn('Unable to persist Phase B session state.', err);
-    }
+    persistStoredPhaseBSessionState(sessionState, { conceptId });
   }
 
   function loadPhaseBResumeState() {
-    try {
-      const raw = sessionStorage.getItem(PHASE_B_RESUME_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (!parsed?.conceptId || !parsed?.nodeId || parsed?.mode !== 'study') return null;
-      return parsed;
-    } catch (err) {
-      console.warn('Phase B resume state unavailable.', err);
-      return null;
-    }
+    return loadStoredPhaseBResumeState();
   }
 
   function persistPhaseBResumeState(nextState = null) {
-    try {
-      if (!nextState) {
-        sessionStorage.removeItem(PHASE_B_RESUME_KEY);
-        return;
-      }
-      sessionStorage.setItem(PHASE_B_RESUME_KEY, JSON.stringify(nextState));
-    } catch (err) {
-      console.warn('Unable to persist Phase B resume state.', err);
-    }
+    persistStoredPhaseBResumeState(nextState);
   }
 
   const themeToggleEl = document.getElementById('theme-toggle');
 
   function getStoredThemePreference() {
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      return stored === 'dark' ? 'dark' : 'light';
-    } catch (err) {
-      console.warn('Theme preference unavailable.', err);
-      return 'light';
-    }
-  }
-
-  function updateThemeToggleUi(resolvedTheme) {
-    if (!themeToggleEl) return;
-    const isDark = resolvedTheme === 'dark';
-    const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
-    themeToggleEl.dataset.theme = resolvedTheme;
-    themeToggleEl.setAttribute('aria-pressed', String(isDark));
-    themeToggleEl.setAttribute('aria-label', label);
-    themeToggleEl.setAttribute('title', label);
+    return getStoredThemePreferenceFromStorage();
   }
 
   function applyThemePreference(nextPreference, { persist = true } = {}) {
-    themePreference = nextPreference === 'dark' ? 'dark' : 'light';
-    const resolvedTheme = themePreference;
-    document.body.classList.toggle('night', resolvedTheme === 'dark');
-    document.body.dataset.theme = resolvedTheme;
-    document.documentElement.dataset.theme = resolvedTheme;
-    updateThemeToggleUi(resolvedTheme);
-    remountOpenKnowledgeGraphForTheme();
-    if (!persist) return;
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, themePreference);
-    } catch (err) {
-      console.warn('Theme preference could not be saved.', err);
-    }
+    themePreference = applyStoredThemePreference(nextPreference, {
+      persist,
+      themeToggleEl,
+      onRemount: remountOpenKnowledgeGraphForTheme,
+    });
   }
 
   function toggleTheme() {
-    applyThemePreference(themePreference === 'dark' ? 'light' : 'dark');
+    applyThemePreference(getToggledTheme(themePreference));
   }
 
   // Single entry point for callers that know which theme they want
@@ -196,8 +157,7 @@ const App = (() => {
   // alias. Both this and toggleTheme write to localStorage["learnops-theme"]
   // and update the corner toggle UI.
   function setTheme(nextPreference) {
-    const normalized = nextPreference === 'dark' ? 'dark' : 'light';
-    applyThemePreference(normalized);
+    applyThemePreference(normalizeThemePreference(nextPreference));
   }
 
   // Graph controller stubs: graph-view.js and the cytoscape constellation
@@ -213,67 +173,6 @@ const App = (() => {
 
   function setMapShellOpen(isOpen) {
     document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
-  }
-
-  function getHeroStateLabel(state) {
-    switch (state) {
-      case 'instantiated': return 'source captured';
-      case 'growing': return 'concept';
-      case 'fractured': return 'worth revisiting';
-      case 'hibernating': return 'spacing';
-      case 'actualized': return 'spaced evidence';
-      default: return 'no concepts yet';
-    }
-  }
-
-  function getHeroGuidance(concept) {
-    if (!concept) return 'Pick a tile to enter, or start a new concept.';
-    switch (concept.state) {
-      case 'instantiated':
-        return concept.graphData
-          ? 'Open the concept. It is a hypothesis, not evidence yet.'
-          : 'Map this source into a concept. The map is not learner evidence.';
-      case 'growing':
-        return concept.graphData
-          ? 'Open the concept. Start with one cold attempt before study appears.'
-          : 'Continue by mapping this source into a concept.';
-      case 'fractured':
-        return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
-      case 'hibernating':
-        return 'This entry is spacing. Work elsewhere or return when re-drill is eligible.';
-      case 'actualized':
-        return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
-      default:
-        return 'Pick a tile to enter, or start a new concept.';
-    }
-  }
-
-  function getHeroActionConfig(concept) {
-    if (!concept) {
-      return { label: 'Begin', action: 'add', disabled: false };
-    }
-    switch (concept.state) {
-      case 'instantiated':
-        return concept.graphData
-          ? { label: 'Open Draft Path', action: 'open-map', disabled: false }
-          : { label: 'Draft Map', action: 'extract', disabled: false };
-      case 'growing':
-        return concept.graphData
-          ? { label: 'Open Draft Path', action: 'open-map', disabled: false }
-          : { label: 'Draft Map', action: 'extract', disabled: false };
-      case 'fractured':
-        return { label: 'Repair Gap', action: 'drill', disabled: false };
-      case 'hibernating':
-        return concept.graphData
-          ? { label: 'Open Evidence Map', action: 'open-map', disabled: false }
-          : { label: 'Return Later', action: 'wait', disabled: true };
-      case 'actualized':
-        return concept.graphData
-          ? { label: 'Open Evidence Map', action: 'open-map', disabled: false }
-          : { label: 'Open Desk', action: 'wait', disabled: true };
-      default:
-        return { label: 'Begin', action: 'add', disabled: false };
-    }
   }
 
   function renderHero(concept) {
@@ -427,14 +326,6 @@ const App = (() => {
   // Wires the concept input → submit-state and the source-attach toggle.
   // Replaces the old two-field initHeroSingleInput (sketch field removed in C-prime).
 
-  function _doorDescribeSource(payload) {
-    if (!payload) return '';
-    if (payload.type === 'text') return `${(payload.text || '').length} chars pasted`;
-    if (payload.type === 'url') return payload.url || 'URL';
-    if (payload.type === 'file') return `${payload.filename || 'file'} · ${(payload.text || '').length} chars`;
-    return payload.type;
-  }
-
   // Single source of truth for "is the door ready to submit?".
   // Used by _doorUpdateSubmitState (input handler) AND by
   // renderIgnitionGate (cap-state computation) so the button-disabled
@@ -503,7 +394,7 @@ const App = (() => {
               // affordance pattern persona-validated in Paper Wave 1).
               btn.textContent = 'remove';
               const v = document.getElementById('hero-source-value');
-              if (v) v.textContent = _doorDescribeSource(payload);
+              if (v) v.textContent = describeDoorSource(payload);
               _doorUpdateSubmitState();
             },
             onCancel() {
@@ -569,362 +460,44 @@ const App = (() => {
   }
 
 
-  // ── 7. Animation helpers ───────────────────────────────────
-  const ANIM_CLASSES = {
-    emerge: 'anim-emerge', crack: 'anim-crack', cocoon: 'anim-cocoon',
-    actualize: 'anim-actualize', repair: 'anim-repair',
-  };
-
-  function playAnim(name, tileIdx) {
-    const cls = ANIM_CLASSES[name];
-    if (!cls) return;
-    const el = document.getElementById('concept-marker-anim-' + tileIdx);
-    if (!el) return;
-    function done() {
-      el.classList.remove(cls);
-      el.removeEventListener('animationend', done);
-      el.removeEventListener('animationcancel', done);
-    }
-    Object.values(ANIM_CLASSES).forEach(c => el.classList.remove(c));
-    el.addEventListener('animationend', done);
-    el.addEventListener('animationcancel', done);
-    el.classList.add(cls);
-  }
-
   // ── 8. Grid rendering ──────────────────────────────────────
-  // Desk tiles are inventory/navigation. The pin marks that a concept
-  // has earned a place here; it does not encode graph-truth evidence.
-  const TILE_PLATFORM = `
-    <polygon class="tile-left"  points="0,40 70,80 70,90 0,50"/>
-    <polygon class="tile-right" points="140,40 70,80 70,90 140,50"/>
-    <polygon class="tile-top"   points="70,0 140,40 70,80 0,40"/>
-    <polygon class="tile-highlight" points="70,0 140,40 70,80 0,40"/>
-    <polygon class="tile-hit"   points="70,0 140,40 70,80 0,40"/>`;
-
-  const EMPTY_TILE = `
-    <polygon class="tile-left"      points="0,40 70,80 70,90 0,50"/>
-    <polygon class="tile-right"     points="140,40 70,80 70,90 140,50"/>
-    <polygon class="tile-top-empty" points="70,0 140,40 70,80 0,40"/>
-    <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>
-    <polygon class="tile-hit"       points="70,0 140,40 70,80 0,40"/>`;
-
-  function conceptPinSVG(idx, state) {
-    return `
-    <g class="concept-marker-anim" id="concept-marker-anim-${idx}">
-      <g class="concept-pin" id="concept-pin-${idx}" data-state="${state}" style="pointer-events:none;">
-        <ellipse class="concept-pin-shadow" cx="70" cy="43" rx="17" ry="3.5"/>
-        <line class="concept-pin-line" x1="70" y1="-15" x2="70" y2="38"/>
-        <circle class="concept-pin-head" cx="70" cy="-15" r="8.5"/>
-        <circle class="concept-pin-core" cx="70" cy="-15" r="3.1"/>
-      </g>
-    </g>`;
-  }
-
   function renderGrid(concepts = loadConcepts()) {
-
-    const activeId = getActiveId();
-
-    tileEls.forEach((tileEl, idx) => {
-      const concept = concepts[idx] || null;
-      const isSelected = concept && concept.id === activeId;
-      const isEmpty = !concept;
-
-      tileEl.setAttribute('class', 'tile-group' +
-        (isEmpty ? ' empty' : '') +
-        (isSelected ? ' selected' : ''));
-
-      // Button semantics for keyboard + assistive-tech parity with the
-      // SVG <g onclick> handler. tabindex is set here (not in the
-      // floating-room-label experiment) so it survives every render.
-      tileEl.setAttribute('role', 'button');
-      tileEl.setAttribute('tabindex', '0');
-      tileEl.setAttribute(
-        'aria-label',
-        isEmpty ? 'New concept' : `Open ${concept.name}`
-      );
-
-      if (isEmpty) {
-        tileEl.innerHTML = EMPTY_TILE;
-      } else {
-        tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state);
-      }
-    });
-
-    // Listened to by iso-board-state-surface.js to re-derive
-    // board-state attrs / re-inject crystal pin without a MutationObserver.
-    Bus.emit('grid:rendered');
+    renderDeskGrid({ concepts, tileEls, activeId: getActiveId(), bus: Bus });
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
   function openDrawer() {
-    drawer.dataset.open = 'true';
-    document.body.dataset.drawerOpen = 'true';
-    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'true');
+    openShellDrawer({ drawer, drawerToggle });
   }
   function closeDrawer() {
-    drawer.dataset.open = 'false';
-    document.body.dataset.drawerOpen = 'false';
-    if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
+    closeShellDrawer({ drawer, drawerToggle });
   }
   function toggleDrawer() {
-    AudioFX.playDrawerToggle();
-    drawer.dataset.open === 'true' ? closeDrawer() : openDrawer();
+    toggleShellDrawer({ drawer, drawerToggle, audio: AudioFX });
   }
 
   if (window.innerWidth >= 900) openDrawer();
 
   function clearSettingsPanel() {
-    const host = document.getElementById('sidebar-settings-host');
-    const settingsPanel = host?.querySelector('.settings-panel');
-    if (!settingsPanel) return;
-    const settingsBtn = document.getElementById('nav-settings');
-    if (settingsBtn) delete settingsBtn.dataset.engaged;
-    host.innerHTML = '';
+    clearShellSettingsPanel();
   }
 
   // ── 11. Concept list render ────────────────────────────────
   function renderConceptList(concepts = loadConcepts()) {
-
-    const activeId = getActiveId();
-    conceptListEl.innerHTML = '';
-
-    concepts.forEach((c, i) => {
-      const item = document.createElement('div');
-      item.className = 'concept-item' + (c.id === activeId ? ' active' : '');
-      item.innerHTML = `
-        <div class="concept-dot" data-state="${c.state}"></div>
-        <span class="concept-item-name">${escHtml(c.name)}</span>
-        <button class="concept-delete" onclick="App.deleteConcept('${c.id}',this)" aria-label="Delete concept ${escHtml(c.name)}" title="Delete concept">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>`;
-      item.addEventListener('click', e => {
-        if (e.target instanceof Element && e.target.closest('.concept-delete')) return;
+    renderShellConceptList({
+      concepts,
+      activeId: getActiveId(),
+      conceptListEl,
+      onOpenConcept(c) {
         showDashboard();
         selectConcept(c.id);
         if (c.graphData) showMapView(c);
         closeDrawer();
-      });
-      conceptListEl.appendChild(item);
+      },
     });
-  }
-
-  function isBlockedVideoUrl(value) {
-    try {
-      const parsed = new URL(value);
-      const host = parsed.hostname.toLowerCase();
-      return host === 'youtu.be'
-        || host === 'youtube.com'
-        || host.endsWith('.youtube.com')
-        || host === 'youtube-nocookie.com'
-        || host.endsWith('.youtube-nocookie.com');
-    } catch {
-      return false;
-    }
-  }
-
-  function shortOnboardingText(value, maxLength = 180) {
-    const text = String(value || '').replace(/\s+/g, ' ').trim();
-    if (text.length <= maxLength) return text;
-    return `${text.slice(0, maxLength - 3).trimEnd()}...`;
-  }
-
-  function hasStudyEvidence(node = {}) {
-    return node.drill_status === 'primed'
-      || node.drill_status === 'drilled'
-      || node.drill_status === 'solidified'
-      || node.drill_status === 'solid'
-      || Boolean(node.gap_type);
   }
 
   // ── 12. CRUD ───────────────────────────────────────────────
-  function buildContentInputUI(container, { onSubmit, onCancel, showClipboard }) {
-    let uploadedText = '';
-    let uploadedFilename = '';
-    let fetchedUrlText = '';
-    let fetchedUrlTitle = '';
-    let fetchedUrl = '';
-    let activeTab = 'paste';
-
-    container.innerHTML = `
-      <div class="overlay-tabs creation-source-tabs">
-        <button class="overlay-tab active" data-tab="paste">Paste</button>
-        <button class="overlay-tab" data-tab="url">URL</button>
-        <button class="overlay-tab" data-tab="upload">Upload</button>
-      </div>
-      <div class="overlay-panel" data-panel="paste">
-        <textarea class="overlay-textarea" placeholder="Paste source material here."></textarea>
-        ${showClipboard ? '<div class="paste-actions"><button class="paste-clipboard-btn" type="button">Paste from clipboard</button></div>' : ''}
-      </div>
-      <div class="overlay-panel" data-panel="url" style="display:none">
-        <input class="overlay-url-input" type="url" placeholder="https://example.com/article">
-        <p class="overlay-dropfeedback overlay-url-feedback"></p>
-      </div>
-      <div class="overlay-panel" data-panel="upload" style="display:none">
-        <div class="overlay-dropzone">
-          Drop a file or click to browse<br>
-          <span style="font-size:11px;opacity:0.65">.txt &nbsp; .md &nbsp; .pdf &nbsp; up to 2MB</span>
-        </div>
-        <input type="file" accept=".txt,.md,.pdf" style="display:none">
-        <p class="overlay-dropfeedback overlay-file-feedback"></p>
-      </div>
-      <div class="overlay-footer">
-        <button class="overlay-cancel">Cancel</button>
-        <button class="overlay-extract" disabled>Extract</button>
-      </div>
-    `;
-
-    const tabs = container.querySelectorAll('.overlay-tab');
-    const panels = container.querySelectorAll('.overlay-panel');
-    const textarea = container.querySelector('.overlay-textarea');
-    const dropzone = container.querySelector('.overlay-dropzone');
-    const fileInput = container.querySelector('input[type="file"]');
-    const feedback = container.querySelector('.overlay-file-feedback');
-    const urlInput = container.querySelector('.overlay-url-input');
-    const urlFeedback = container.querySelector('.overlay-url-feedback');
-    const pasteClipBtn = container.querySelector('.paste-clipboard-btn');
-    const cancelBtn = container.querySelector('.overlay-cancel');
-    const submitBtn = container.querySelector('.overlay-extract');
-
-    function hasContent() {
-      if (activeTab === 'paste') return textarea.value.trim().length > 0;
-      if (activeTab === 'url') {
-        const rawUrl = urlInput.value.trim();
-        return rawUrl.length > 0 && !isBlockedVideoUrl(rawUrl);
-      }
-      return uploadedText.length > 0;
-    }
-    function checkSubmitEnabled() {
-      const blockedVideoUrl = activeTab === 'url' && isBlockedVideoUrl(urlInput.value.trim());
-      submitBtn.disabled = !(hasContent() && !blockedVideoUrl);
-      if (urlFeedback) {
-        const rawUrl = urlInput.value.trim();
-        urlFeedback.className = 'overlay-dropfeedback overlay-url-feedback';
-        if (rawUrl && isBlockedVideoUrl(rawUrl)) {
-          urlFeedback.classList.add('error');
-          urlFeedback.textContent = 'Video links are not supported in this build. Paste notes or transcript text instead.';
-        } else {
-          urlFeedback.textContent = '';
-        }
-      }
-    }
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        activeTab = tab.dataset.tab;
-        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === activeTab));
-        panels.forEach(p => { p.style.display = p.dataset.panel === activeTab ? '' : 'none'; });
-        checkSubmitEnabled();
-      });
-    });
-
-    if (showClipboard && pasteClipBtn) {
-      pasteClipBtn.addEventListener('click', () => {
-        navigator.clipboard.readText().then(text => {
-          textarea.value = text;
-          textarea.focus();
-          checkSubmitEnabled();
-        }).catch(() => {
-          textarea.focus();
-          document.execCommand('paste');
-        });
-      });
-    }
-
-    textarea.addEventListener('input', checkSubmitEnabled);
-    if (urlInput) {
-      urlInput.addEventListener('input', () => {
-        fetchedUrlText = '';
-        fetchedUrlTitle = '';
-        fetchedUrl = '';
-        checkSubmitEnabled();
-      });
-      urlInput.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && !submitBtn.disabled) { e.preventDefault(); doSubmit(); }
-      });
-    }
-
-    dropzone.addEventListener('click', () => fileInput.click());
-    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-    dropzone.addEventListener('drop', e => {
-      e.preventDefault();
-      dropzone.classList.remove('dragover');
-      if (e.dataTransfer.files[0]) processUpload(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener('change', () => {
-      if (fileInput.files[0]) processUpload(fileInput.files[0]);
-    });
-
-    function processUpload(file) {
-      uploadedText = '';
-      uploadedFilename = '';
-      feedback.className = 'overlay-dropfeedback';
-      feedback.textContent = '';
-      submitBtn.disabled = true;
-      _readFile(file,
-        (text, filename) => {
-          uploadedText = text; uploadedFilename = filename;
-          feedback.className = 'overlay-dropfeedback ok';
-          feedback.textContent = `${filename} · ${text.length.toLocaleString()} chars`;
-          checkSubmitEnabled();
-        },
-        (errMsg, fallbackText, filename) => {
-          feedback.className = 'overlay-dropfeedback error';
-          feedback.textContent = errMsg;
-          uploadedText = '';
-          uploadedFilename = '';
-          checkSubmitEnabled();
-        }
-      );
-    }
-
-    cancelBtn.addEventListener('click', () => {
-      onCancel();
-    });
-
-    submitBtn.addEventListener('mousedown', e => {
-      e.preventDefault();
-      doSubmit();
-    });
-
-    function doSubmit() {
-      let text, type, filename, url;
-      if (activeTab === 'paste') {
-        text = textarea.value.trim();
-        type = 'text';
-        filename = null;
-        url = null;
-      } else if (activeTab === 'url') {
-        url = urlInput.value.trim();
-        text = fetchedUrlText || url;
-        type = 'url';
-        filename = fetchedUrlTitle || null;
-      } else {
-        text = uploadedText;
-        type = 'file';
-        filename = uploadedFilename;
-        url = null;
-      }
-      onSubmit({
-        text,
-        type,
-        filename,
-        url,
-      });
-    }
-
-    textarea.focus();
-    checkSubmitEnabled();
-    return {
-      destroy() {
-        container.innerHTML = '';
-      }
-    };
-  }
-
   // Contract invariant — extraction success path must validate payload shape
   // BEFORE any state mutation. Prevents BLOCKER UX-todo #4 silent-discard
   // where an empty/malformed jsonPayload created a concept anyway. Used by
@@ -1660,9 +1233,8 @@ const App = (() => {
         remaining = Math.max(0, 24 * 60 * 60 - elapsed);
       }
       if (remaining === 0) { completeConsolidation(); return; }
-      timeLeft = remaining;
       showControls(false, false, false, true, true);
-      startTimer();
+      startTimer(remaining);
     }
   }
 
@@ -1770,6 +1342,7 @@ const App = (() => {
 
     buildContentInputUI(overlay, {
       showClipboard: false,
+      readFile: _readFile,
       onSubmit: ({ text, type, filename }) => {
         if (!text) return;
         contentStore.set(conceptId, text);
@@ -1839,127 +1412,26 @@ const App = (() => {
   }
 
   // ── 15. Timer ──────────────────────────────────────────────
-  let timerInterval = null;
-  let timeLeft = 24 * 60 * 60;
+  const consolidationTimer = createCountdownTimer({
+    timerDisplay,
+    onComplete: completeConsolidation,
+  });
 
-  function startTimer() {
-    stopTimer();
-    updateTimerDisplay();
-    timerInterval = setInterval(() => {
-      timeLeft--;
-      updateTimerDisplay();
-      if (timeLeft <= 0) completeConsolidation();
-    }, 1000);
-  }
-  function stopTimer() { clearInterval(timerInterval); timerInterval = null; }
-  function updateTimerDisplay() {
-    const h = Math.floor(timeLeft / 3600).toString().padStart(2, '0');
-    const m = Math.floor((timeLeft % 3600) / 60).toString().padStart(2, '0');
-    const s = (timeLeft % 60).toString().padStart(2, '0');
-    timerDisplay.textContent = `${h}:${m}:${s}`;
-  }
+  function startTimer(seconds) { consolidationTimer.start(seconds); }
+  function stopTimer() { consolidationTimer.stop(); }
   function completeConsolidation() {
     stopTimer();
     updateActiveConcept({ timerStart: null });
     setState('actualized');
     playAnim('actualize', getActiveTileIdx());
   }
-  function fastForward() { timeLeft = 3; }
+  function fastForward() { consolidationTimer.fastForward(); }
 
   // ── 16. Map View UI ────────────────────────────────────────
 
   // Module-level state: which backbone entry is currently shown in the
   // work column. Set on initial mount and updated by setActiveEntry.
   let _activeEntryId = null;
-
-  /**
-   * Build the work column HTML (threshold quote + active entry block +
-   * nearby list). Shared between initial mount and active-entry swap.
-   *
-   * @param {Object} activeEntry - The backbone entry to render as active
-   * @param {number} activeIdx - Zero-based index of activeEntry in backbone
-   * @param {Array} backbone - Full backbone array
-   * @param {Object} concept - The full concept object
-   * @param {Object} data - Parsed graphData
-   * @returns {string} HTML string for the work column interior
-   */
-  function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data) {
-    const meta = data?.metadata || {};
-    const thresholdText = (concept?.startingMapContext || meta.starting_map_context || meta.core_thesis || '').trim();
-    const totalNodes = backbone.length || 1;
-
-    // A locked entry is BLOCKED only if any predecessor in the backbone has
-    // not yet been attempted. Entry 0 (Core Thesis) has no predecessors so
-    // it's never blocked -- its locked state means "no cold attempt yet"
-    // and IS the cold attempt the learner is here to do.
-    const isLocked = (activeEntry.drill_status || 'locked') === 'locked';
-    const predecessorsAttempted = activeIdx === 0 || backbone
-      .slice(0, activeIdx)
-      .every((n) => (n?.drill_status || 'locked') !== 'locked');
-    const isBlocked = isLocked && !predecessorsAttempted;
-
-    const entryEyebrow = isBlocked
-      ? `locked entry ${activeIdx + 1} of ${totalNodes}`
-      : (activeEntry.drill_status === 'primed'
-        ? `re-drill ready entry ${activeIdx + 1} of ${totalNodes}`
-        : `first cold attempt entry ${activeIdx + 1} of ${totalNodes}`);
-    const entryPurpose = activeEntry.purpose
-      || (isBlocked
-        ? 'Locked until you do a cold attempt on the entry above. The mechanism stays hidden until you have written what you can reconstruct from memory.'
-        : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
-    const ctaLabel = activeEntry.drill_status === 'primed' ? 'Re-drill from memory' : 'Try from memory';
-
-    const thresholdHtml = thresholdText
-      ? `
-        <p class="concept-page-b2__threshold">
-          ${escHtml(thresholdText)}
-          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
-        </p>
-      `
-      : `
-        <p class="concept-page-b2__threshold concept-page-b2__threshold--empty">
-          You have not yet sketched what you think is inside this concept.
-          <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
-        </p>
-      `;
-
-    const ctaButton = isBlocked
-      ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Cold attempt on the entry above unlocks this one">Locked</button>`
-      : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntry.id || 'core-thesis')}">${ctaLabel}</button>`;
-
-    const activeHtml = `
-      <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
-      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
-      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
-      ${ctaButton}
-    `;
-
-    // Nearby: every backbone entry that isn't this one
-    const nearby = backbone.filter((n) => n !== activeEntry);
-    const nearbyHtml = nearby.length
-      ? `
-        <section class="concept-page-b2__nearby">
-          <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries  all locked until first attempt</span>
-          <div class="concept-page-b2__nearby-list">
-            ${nearby.map((n) => {
-              const idx = backbone.indexOf(n);
-              const num = String(idx + 1).padStart(2, '0');
-              const status = (n.drill_status || 'locked').toUpperCase();
-              return `
-                <div class="concept-page-b2__nearby-item">
-                  <span class="concept-page-b2__nearby-num">${escHtml(num)}</span>
-                  <span>${escHtml(n.label || `entry ${idx + 1}`)}</span>
-                  <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </section>
-      `
-      : '';
-
-    return `${thresholdHtml}${activeHtml}${nearbyHtml}`;
-  }
 
   /**
    * Wire event handlers on the work column after a swap or initial mount.
@@ -2114,9 +1586,10 @@ const App = (() => {
     if (entryId === _activeEntryId) return;
 
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
-    const newEntry = backbone.find((n) => (n.id || `entry-${backbone.indexOf(n)}`) === entryId);
-    if (!newEntry) return;
-    const newIdx = backbone.indexOf(newEntry);
+    const activeMatch = findConceptEntryById(backbone, entryId);
+    if (!activeMatch) return;
+    const newEntry = activeMatch.entry;
+    const newIdx = activeMatch.index;
 
     const mountEl = document.getElementById('map-content');
     if (!mountEl) return;
@@ -2181,111 +1654,29 @@ const App = (() => {
    */
   function renderConceptPageB2(mountEl, data, concept) {
     if (!mountEl || !data) return;
-    const meta = data.metadata || {};
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
 
-    // Identify the active entry. For v1: first backbone entry that isn't
-    // 'solidified' (i.e., the next thing to attempt). Falls back to first
-    // backbone entry, then to a synthetic core-thesis stub.
-    const isActionable = (n) => {
-      const status = n?.drill_status || 'locked';
-      return status !== 'solidified';
-    };
-    const activeEntry = backbone.find(isActionable) || backbone[0] || {
-      id: 'core-thesis',
-      label: 'Core thesis',
-      purpose: 'The first entry asks for the governing idea, not the whole source.',
-      drill_status: 'locked',
-    };
-    const activeIdx = Math.max(0, backbone.indexOf(activeEntry));
-
-    // Build the strip SVG
-    const stripWidth = 600;
-    const stripHeight = 110;
-    const strokeY = stripHeight / 2;
-    const totalNodes = backbone.length || 1;
-    const padX = 60;
-    const span = stripWidth - 2 * padX;
-    const stepX = totalNodes > 1 ? span / (totalNodes - 1) : 0;
-
-    const stripNodes = backbone.map((node, i) => {
-      const x = padX + i * stepX;
-      const status = node.drill_status || 'locked';
-      const isPrimed = status === 'primed' || status === 'drilled' || status === 'solidified';
-      const predecessorsAttempted = i === 0 || backbone
-        .slice(0, i)
-        .every((n) => (n?.drill_status || 'locked') !== 'locked');
-      const isReady = status === 'locked' && predecessorsAttempted;
-      const isBlocked = status === 'locked' && !predecessorsAttempted;
-      const isActive = i === activeIdx;
-      const cls = [
-        'concept-strip__node',
-        isPrimed
-          ? 'concept-strip__node--primed'
-          : (isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked'),
-      ];
-      if (isActive) cls.push('is-active');
-      const r = isActive ? 9 : (isPrimed ? 7 : (isReady ? 7 : 6));
-      const entryId = node.id || `entry-${i}`;
-      const label = escHtml(node.label || `entry ${i + 1}`);
-      const learnerState = isPrimed
-        ? status
-        : (isReady ? 'ready for first attempt' : 'locked');
-      const ariaLabel = `${node.label || 'entry'}, ${learnerState}${isActive ? ', current' : ''}`;
-      return `
-        <g class="${cls.join(' ')}"
-           role="button"
-           tabindex="0"
-           data-entry-id="${escHtml(entryId)}"
-           data-entry-index="${i}"
-           aria-label="${escHtml(ariaLabel)}">
-          <rect x="${x - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect>
-          <circle cx="${x}" cy="${strokeY}" r="${r}"></circle>
-          ${isActive ? `<text x="${x}" y="${strokeY + 25}">${label}</text>` : ''}
-        </g>
-      `;
-    }).join('');
-
-    // If backbone is empty, render a synthetic single node
-    const stripNodesHtml = backbone.length > 0 ? stripNodes : `<g class="concept-strip__node concept-strip__node--ready is-active" role="button" tabindex="0" data-entry-id="core-thesis" data-entry-index="0" aria-label="core thesis, ready for first attempt, current"><rect x="${padX - 14}" y="${strokeY - 14}" width="28" height="28" fill="transparent" pointer-events="all"></rect><circle cx="${padX}" cy="${strokeY}" r="9"></circle><text x="${padX}" y="${strokeY + 25}">core thesis</text></g>`;
-
-    const stripEdges = backbone.slice(1).map((_, i) => {
-      const x1 = padX + i * stepX;
-      const x2 = padX + (i + 1) * stepX;
-      const isActiveEdge = i + 1 === activeIdx;
-      return `<line class="concept-strip__edge${isActiveEdge ? ' is-active' : ''}" x1="${x1}" y1="${strokeY}" x2="${x2}" y2="${strokeY}"></line>`;
-    }).join('');
-
-    const stripActiveLabel = activeEntry.label
-      ? `${escHtml(activeEntry.label)} · ${activeIdx + 1} of ${totalNodes}`
-      : `${activeIdx + 1} of ${totalNodes}`;
+    const {
+      entry: activeEntry,
+      index: activeIdx,
+      id: activeEntryId,
+    } = selectInitialConceptEntry(backbone);
 
     // Build the work column HTML via the shared helper
+    const stripHtml = renderConceptStripHtml(backbone, activeEntry, activeIdx);
     const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
     mountEl.innerHTML = `
-      <div class="concept-strip">
-        <div class="concept-strip__inner">
-          <div class="concept-strip__tooltip" id="concept-strip-tooltip" hidden></div>
-          <svg class="concept-strip__svg" viewBox="0 0 ${stripWidth} ${stripHeight}" preserveAspectRatio="xMidYMid meet">
-            ${stripEdges}
-            ${stripNodesHtml}
-          </svg>
-          <div class="concept-strip__overlay">
-            <span class="eyebrow">draft route</span>
-            <span class="concept-strip__active-name">${stripActiveLabel}</span>
-          </div>
-        </div>
-      </div>
+      ${stripHtml}
       <div class="concept-page-b2__doc">
         ${docHtml}
       </div>
     `;
 
     // Set module-level active entry state
-    _activeEntryId = activeEntry.id || `entry-${activeIdx}`;
+    _activeEntryId = activeEntryId;
 
     // Wire CTA and re-edit affordance
     const docEl = mountEl.querySelector('.concept-page-b2__doc');
@@ -2313,11 +1704,12 @@ const App = (() => {
         } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
           e.preventDefault();
           const dir = e.key === 'ArrowLeft' ? -1 : 1;
-          const currentIdx = backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId);
+          const currentMatch = findConceptEntryById(backbone, _activeEntryId);
+          const currentIdx = currentMatch ? currentMatch.index : -1;
           const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
           const nextNode = backbone[nextIdx];
           if (nextNode) {
-            const nextId = nextNode.id || `entry-${nextIdx}`;
+            const nextId = getConceptEntryId(nextNode, nextIdx);
             setActiveEntry(nextId, data, concept);
             // Move keyboard focus to the new active node
             const nextG = mountEl.querySelector(`.concept-strip__node[data-entry-id="${nextId}"]`);
@@ -2560,34 +1952,6 @@ const App = (() => {
     });
   }
 
-  function getLibraryConceptMeta(concept) {
-    let graph = null;
-    try {
-      graph = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData) : concept.graphData;
-    } catch {
-      graph = null;
-    }
-
-    const metadata = graph?.metadata || {};
-    const clusters = Array.isArray(graph?.clusters) ? graph.clusters : [];
-    const subnodeCount = clusters.reduce((total, cluster) => total + ((cluster.subnodes || []).length), 0);
-    const thesis = metadata.core_thesis || concept.contentPreview || 'No summary available yet.';
-    const sourceLabel = concept.contentFilename
-      ? `Source: ${concept.contentFilename}`
-      : concept.contentType
-        ? `Source: ${concept.contentType.toUpperCase()}`
-        : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Draft map');
-
-    return {
-      thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
-      architecture: metadata.architecture_type ? metadata.architecture_type.replace(/_/g, ' ') : null,
-      difficulty: metadata.difficulty || null,
-      clusterCount: clusters.length,
-      subnodeCount,
-      sourceLabel,
-    };
-  }
-
   function showLibrary() {
     setNavActive('nav-library');
     const libraryView = document.getElementById('library-view');
@@ -2598,52 +1962,7 @@ const App = (() => {
     hidePrimaryViews();
     const concepts = loadConcepts().filter(c => c.graphData);
 
-    let html = `
-      <div class="library-kicker">Library</div>
-
-      <div class="library-section">
-        <h2 class="library-section-title">Your Library</h2>
-        <p class="library-section-copy">Your library shows what you've reconstructed, not what you've saved.</p>
-    `;
-
-    if (concepts.length === 0) {
-      html += `
-        <div class="library-empty library-empty--ignition">
-          <div class="witness-anchor" aria-hidden="true">
-            <svg viewBox="0 0 28 28" width="28" height="28">
-              <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
-            </svg>
-          </div>
-          <h3 class="library-empty-headline">Begin a reconstruction.</h3>
-          <p class="library-empty-sub">Drop a topic. The drill makes the gap inspectable.</p>
-          <button type="button" class="ig-button" onclick="App.showIgnition()">New concept</button>
-        </div>`;
-    } else {
-      html += `<div class="library-vault-grid">` + concepts.map(c => {
-        const meta = getLibraryConceptMeta(c);
-        return `
-          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" style="cursor:pointer;" onclick="App.openLibraryConcept('${c.id}')">
-            <div class="library-card-header">
-              <div>
-                <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
-                <span class="library-card-name">${escHtml(c.name)}</span>
-              </div>
-              <span class="library-card-state">${escHtml(c.state)}</span>
-            </div>
-            <p class="library-card-summary">${escHtml(meta.thesis)}</p>
-            <div class="library-card-meta">
-              ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
-              ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
-              <span class="library-card-pill">${escHtml(`${meta.clusterCount} ${meta.clusterCount === 1 ? 'section' : 'sections'}`)}</span>
-              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} ${meta.subnodeCount === 1 ? 'entry' : 'entries'}`)}</span>
-            </div>
-            <div class="library-card-cta">Open concept</div>
-          </div>`;
-      }).join('') + `</div>`;
-    }
-
-    html += `</div>`;
-    content.innerHTML = html;
+    content.innerHTML = buildLibraryHtml(concepts);
 
     libraryView.classList.add('visible');
     if (window.innerWidth < 900) closeDrawer();
@@ -4095,229 +3414,16 @@ const App = (() => {
   }
 
   async function renderSettingsView() {
-    const settingsContent = document.getElementById('settings-content');
-    if (!settingsContent) return;
-
-    settingsContent.innerHTML = `
-      <div class="settings-shell">
-        <header class="settings-page-header">
-          <span class="settings-page-kicker">
-            <span class="crystal-glyph" aria-hidden="true"></span> Settings
-          </span>
-          <h2 class="settings-page-title">Your reading room</h2>
-          <p class="settings-page-copy">Quiet preferences for how socratink looks and sounds. Saved to this browser.</p>
-        </header>
-
-        <div class="settings-identity-row" id="settings-identity-row">
-          <div class="settings-avatar" id="settings-avatar"></div>
-          <div class="settings-identity-text">
-            <span class="settings-identity-email" id="settings-identity-email">…</span>
-            <span class="settings-identity-meta" id="settings-identity-meta"></span>
-          </div>
-          <span id="settings-identity-action-host"></span>
-        </div>
-
-        <section class="settings-display">
-          <h3 class="settings-section-heading">Display</h3>
-
-          <div class="settings-row">
-            <div>
-              <div class="settings-row-label">Theme</div>
-              <div class="settings-row-meta">Cream paper or obsidian sky</div>
-            </div>
-            <div class="settings-pill-group" role="radiogroup" aria-label="Theme">
-              <button type="button" class="settings-pill" role="radio" data-theme-value="light" aria-checked="false">Light</button>
-              <button type="button" class="settings-pill" role="radio" data-theme-value="dark" aria-checked="false">Dark</button>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div>
-              <div class="settings-row-label">Reduced motion</div>
-              <div class="settings-row-meta">Calm transitions, no settle bloom</div>
-            </div>
-            <button type="button" class="settings-toggle" id="settings-motion-toggle"
-                    role="switch" aria-checked="false" aria-label="Reduced motion"></button>
-          </div>
-        </section>
-
-        <section class="settings-display">
-          <h3 class="settings-section-heading">Sound</h3>
-
-          <div class="settings-row">
-            <div>
-              <div class="settings-row-label">Threshold sounds</div>
-              <div class="settings-row-meta">Soft cues at focus and submit</div>
-            </div>
-            <button type="button" class="settings-toggle" id="settings-sound-toggle"
-                    role="switch" aria-checked="false" aria-label="Threshold sounds"></button>
-          </div>
-        </section>
-      </div>
-    `;
-
-    wireSettingsIdentity(settingsContent);
-    wireSettingsTheme(settingsContent);
-    wireSettingsMotion(settingsContent);
-    wireSettingsSounds(settingsContent);
-  }
-
-  async function wireSettingsIdentity(root) {
-    const row = root.querySelector('#settings-identity-row');
-    const avatar = root.querySelector('#settings-avatar');
-    const emailEl = root.querySelector('#settings-identity-email');
-    const metaEl = root.querySelector('#settings-identity-meta');
-    const actionHost = root.querySelector('#settings-identity-action-host');
-    if (!row || !avatar || !emailEl || !metaEl || !actionHost) return;
-
-    let session;
-    try {
-      session = await fetchAuthSession();
-    } catch (err) {
-      console.warn('Settings identity: /api/me unavailable', err);
-      row.hidden = true;
-      return;
-    }
-
-    if (session && session.auth_enabled === false) {
-      row.hidden = true;
-      return;
-    }
-
-    if (isGuestSession(session)) {
-      avatar.classList.add('is-guest');
-      emailEl.textContent = 'Guest';
-      metaEl.textContent = 'Not signed in';
-      const link = document.createElement('a');
-      link.className = 'settings-identity-action';
-      link.href = buildLoginHref();
-      link.textContent = 'Sign in';
-      actionHost.replaceChildren(link);
-      return;
-    }
-
-    if (isIdentifiedUserSession(session)) {
-      const email = session.user?.email || '…';
-      emailEl.textContent = email;
-      metaEl.textContent = 'Signed in';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'settings-identity-action';
-      btn.textContent = 'Log out';
-      btn.addEventListener('click', async () => {
-        btn.disabled = true;
-        try {
-          await logout();
-          // Use the canonical redirect helper for consistency with
-          // the rest of the codebase (preserves return-to handling).
-          redirectToLogin('/');
-        } catch (err) {
-          console.warn('Logout failed', err);
-          btn.disabled = false;
-        }
-      });
-      actionHost.replaceChildren(btn);
-      return;
-    }
-
-    // Unknown session shape: omit the row rather than render placeholders.
-    row.hidden = true;
-  }
-  // Module-lifetime flag: ensures the corner-toggle sync listener is
-  // attached once. Without this, every renderSettingsView() call would
-  // stack another listener that closes over a stale pills NodeList.
-  let _settingsCornerSyncBound = false;
-
-  function wireSettingsTheme(root) {
-    const pills = root.querySelectorAll('.settings-pill[data-theme-value]');
-    if (!pills.length) return;
-
-    const syncPills = () => {
-      const current = getStoredThemePreference();
-      pills.forEach(p => {
-        p.setAttribute('aria-checked', String(p.dataset.themeValue === current));
-      });
-    };
-
-    pills.forEach(pill => {
-      pill.addEventListener('click', () => {
-        const next = pill.dataset.themeValue === 'dark' ? 'dark' : 'light';
-        // setTheme is the public alias over applyThemePreference; using
-        // it here keeps Settings consistent with anything else that
-        // wants to change theme intent-first ("set to X") rather than
-        // toggle-first ("flip from current").
-        setTheme(next);
-        syncPills();
-      });
-    });
-
-    syncPills();
-
-    // Corner toggle → re-sync the live pills. Bound once for module
-    // lifetime; the live querySelectorAll inside the handler always
-    // reflects the most-recently-rendered Settings view, so closures
-    // never go stale even though the listener never re-attaches.
-    if (!_settingsCornerSyncBound) {
-      const corner = document.getElementById('theme-toggle');
-      if (corner) {
-        corner.addEventListener('click', () => {
-          setTimeout(() => {
-            const livePills = document.querySelectorAll('.settings-pill[data-theme-value]');
-            if (!livePills.length) return;
-            const current = getStoredThemePreference();
-            livePills.forEach(p => {
-              p.setAttribute('aria-checked', String(p.dataset.themeValue === current));
-            });
-          }, 0);
-        });
-        _settingsCornerSyncBound = true;
-      }
-    }
-  }
-  function wireSettingsMotion(root) {
-    const toggle = root.querySelector('#settings-motion-toggle');
-    if (!toggle) return;
-
-    const readStored = () => {
-      try {
-        return localStorage.getItem('socratink.motion') === 'reduced';
-      } catch {
-        return false;
-      }
-    };
-
-    const apply = (isReduced) => {
-      if (isReduced) {
-        document.documentElement.dataset.motion = 'reduced';
-        try { localStorage.setItem('socratink.motion', 'reduced'); } catch {}
-      } else {
-        delete document.documentElement.dataset.motion;
-        try { localStorage.setItem('socratink.motion', 'system'); } catch {}
-      }
-      toggle.setAttribute('aria-checked', String(isReduced));
-    };
-
-    apply(readStored());
-
-    toggle.addEventListener('click', () => {
-      const next = toggle.getAttribute('aria-checked') !== 'true';
-      apply(next);
-    });
-  }
-  function wireSettingsSounds(root) {
-    const toggle = root.querySelector('#settings-sound-toggle');
-    if (!toggle) return;
-
-    toggle.setAttribute('aria-checked', String(Boolean(AudioFX.enabled)));
-
-    toggle.addEventListener('click', () => {
-      const next = toggle.getAttribute('aria-checked') !== 'true';
-      AudioFX.setEnabled(next);
-      toggle.setAttribute('aria-checked', String(next));
-      if (next) {
-        // Confirmation cue, matching the original checkbox behavior.
-        AudioFX.playFocusTap();
-      }
+    return renderSettingsContent({
+      fetchAuthSession,
+      isGuestSession,
+      isIdentifiedUserSession,
+      buildLoginHref,
+      logout,
+      redirectToLogin,
+      getStoredThemePreference,
+      setTheme,
+      AudioFX,
     });
   }
 

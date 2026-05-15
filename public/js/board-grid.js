@@ -1,0 +1,80 @@
+export const ANIM_CLASSES = {
+  emerge: 'anim-emerge', crack: 'anim-crack', cocoon: 'anim-cocoon',
+  actualize: 'anim-actualize', repair: 'anim-repair',
+};
+
+export function playAnim(name, tileIdx, { documentRef = document } = {}) {
+  const cls = ANIM_CLASSES[name];
+  if (!cls) return;
+  const el = documentRef.getElementById('concept-marker-anim-' + tileIdx);
+  if (!el) return;
+  function done() {
+    el.classList.remove(cls);
+    el.removeEventListener('animationend', done);
+    el.removeEventListener('animationcancel', done);
+  }
+  Object.values(ANIM_CLASSES).forEach(c => el.classList.remove(c));
+  el.addEventListener('animationend', done);
+  el.addEventListener('animationcancel', done);
+  el.classList.add(cls);
+}
+
+// Desk tiles are inventory/navigation. The pin marks that a concept
+// has earned a place here; it does not encode graph-truth evidence.
+export const TILE_PLATFORM = `
+    <polygon class="tile-left"  points="0,40 70,80 70,90 0,50"/>
+    <polygon class="tile-right" points="140,40 70,80 70,90 140,50"/>
+    <polygon class="tile-top"   points="70,0 140,40 70,80 0,40"/>
+    <polygon class="tile-highlight" points="70,0 140,40 70,80 0,40"/>
+    <polygon class="tile-hit"   points="70,0 140,40 70,80 0,40"/>`;
+
+export const EMPTY_TILE = `
+    <polygon class="tile-left"      points="0,40 70,80 70,90 0,50"/>
+    <polygon class="tile-right"     points="140,40 70,80 70,90 140,50"/>
+    <polygon class="tile-top-empty" points="70,0 140,40 70,80 0,40"/>
+    <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>
+    <polygon class="tile-hit"       points="70,0 140,40 70,80 0,40"/>`;
+
+export function conceptPinSVG(idx, state) {
+  return `
+    <g class="concept-marker-anim" id="concept-marker-anim-${idx}">
+      <g class="concept-pin" id="concept-pin-${idx}" data-state="${state}" style="pointer-events:none;">
+        <ellipse class="concept-pin-shadow" cx="70" cy="43" rx="17" ry="3.5"/>
+        <line class="concept-pin-line" x1="70" y1="-15" x2="70" y2="38"/>
+        <circle class="concept-pin-head" cx="70" cy="-15" r="8.5"/>
+        <circle class="concept-pin-core" cx="70" cy="-15" r="3.1"/>
+      </g>
+    </g>`;
+}
+
+export function renderGrid({ concepts, tileEls, activeId, bus }) {
+  tileEls.forEach((tileEl, idx) => {
+    const concept = concepts[idx] || null;
+    const isSelected = concept && concept.id === activeId;
+    const isEmpty = !concept;
+
+    tileEl.setAttribute('class', 'tile-group' +
+      (isEmpty ? ' empty' : '') +
+      (isSelected ? ' selected' : ''));
+
+    // Button semantics for keyboard + assistive-tech parity with the
+    // SVG <g onclick> handler. tabindex is set here (not in the
+    // floating-room-label experiment) so it survives every render.
+    tileEl.setAttribute('role', 'button');
+    tileEl.setAttribute('tabindex', '0');
+    tileEl.setAttribute(
+      'aria-label',
+      isEmpty ? 'New concept' : `Open ${concept.name}`
+    );
+
+    if (isEmpty) {
+      tileEl.innerHTML = EMPTY_TILE;
+    } else {
+      tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state);
+    }
+  });
+
+  // Listened to by iso-board-state-surface.js to re-derive
+  // board-state attrs / re-inject crystal pin without a MutationObserver.
+  bus.emit('grid:rendered');
+}

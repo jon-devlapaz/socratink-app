@@ -199,7 +199,7 @@ class _PinnedHTTPConnection(HTTPConnection):
 
 
 class _PinnedHTTPSConnectionPool(HTTPSConnectionPool):
-    ConnectionCls = _PinnedHTTPSConnection
+    ConnectionCls: type[_PinnedHTTPSConnection] = _PinnedHTTPSConnection  # pyrefly: ignore[bad-assignment]
 
     def __init__(self, host, port, dest_ip, timeout):
         super().__init__(host=host, port=port, timeout=timeout, retries=False)
@@ -213,7 +213,7 @@ class _PinnedHTTPSConnectionPool(HTTPSConnectionPool):
 
 
 class _PinnedHTTPConnectionPool(HTTPConnectionPool):
-    ConnectionCls = _PinnedHTTPConnection
+    ConnectionCls: type[_PinnedHTTPConnection] = _PinnedHTTPConnection  # pyrefly: ignore[bad-assignment]
 
     def __init__(self, host, port, dest_ip, timeout):
         super().__init__(host=host, port=port, timeout=timeout, retries=False)

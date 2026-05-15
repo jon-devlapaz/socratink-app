@@ -504,7 +504,7 @@
      keeps the saturated violet (it reads as ink ON paper); dark mode pulls
      toward grey-violet so the same accent role reads as "marked-up paper at
      night." Contrast values verified ≥4.5:1 AA Normal on graphite-800 card
-     and on cream button text. See DESIGN.md §12 silent-surface block. */
+     and on cream button text. See docs/design/socratink-ux.md §12 silent-surface block. */
   --accent-primary:     #a09aac;     /* accent text on graphite card — 5.3:1 */
   --primary-fill:       #5e576c;     /* button enabled bg — cream text 6.95:1 */
   --primary-fill-hover: #6f6680;     /* hover lift, still passes AA */

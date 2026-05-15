@@ -67,7 +67,7 @@ def verify_access_token(
     kid = header.get("kid")
 
     try:
-        if kid and supabase_url and alg in _ASYMMETRIC_ALGS:
+        if kid and supabase_url and isinstance(alg, str) and alg in _ASYMMETRIC_ALGS:
             jwks_url = (
                 f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
             )

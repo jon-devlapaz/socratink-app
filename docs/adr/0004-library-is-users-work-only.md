@@ -24,7 +24,7 @@ When asked where the seeding mechanism should live if not in Library, the person
 
 Library shows **only the user's own reconstructed work**. Pre-prepared sample concepts are removed entirely from the codebase. There is no `BUILT_IN_LIBRARY_CONCEPTS`, no `importLibraryConcept`, no `loadLibraryConcept`, no `hermes_agent.json`, and no Reference Concepts section.
 
-The `Library` term in `CONTEXT.md` is now constrained: *"the visible record of what this user can reconstruct from memory under spacing."* Anything that dilutes that signal — pre-loaded sample paths, "saved articles" patterns, side-by-side curated cards — does not belong on this surface.
+The `Library` term in `UBIQUITOUS_LANGUAGE.md` is now constrained: *"the visible record of what this user can reconstruct from memory under spacing."* Anything that dilutes that signal — pre-loaded sample paths, "saved articles" patterns, side-by-side curated cards — does not belong on this surface.
 
 A first-run user with no source of their own currently has no built-in sandbox concept. This is intentional: the friction of bringing real learning material is the filter the product wants. A "paste sample text" affordance on Ignition (the persona's option E) is a candidate for a follow-up but is **not** part of this decision — that's a new entry-point question, separate from the question of what Library is.
 
@@ -44,7 +44,7 @@ A first-run user with no source of their own currently has no built-in sandbox c
 
 ## References
 
-- `CONTEXT.md` — "Library" glossary entry (resolved 2026-05-09).
+- `UBIQUITOUS_LANGUAGE.md` — "Library" glossary entry (resolved 2026-05-09; migrated from the former `CONTEXT.md`).
 - `public/_lab/library-empty-variants.NOTES.md` — round-2 persona test results (full surface, dark mode).
 - `agents/_templates/customer-persona-prompt.md` — persona methodology and reusable template.
 - `.claude/friction-log.md` (2026-05-09) — relevant prior frictions on partial-surface persona tests.

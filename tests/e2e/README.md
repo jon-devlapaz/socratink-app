@@ -6,7 +6,7 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-The suite spans four files:
+The suite spans five files:
 
 ### `test_smoke.py` — 11 tests
 
@@ -55,6 +55,16 @@ Strip-as-nav behavior: click swaps the work column, keyboard navigation
 walks the strip, locked entries show a disabled CTA, no Route/Graph toggle
 or `#graph-content` section exists, and strip nodes are focusable.
 
+### `test_app_helper_modules.py` — 1 test
+
+Helper-module browser-contract guard: imports the in-app JS modules
+(`html.js`, `app-timer.js`, `app-hero.js`, `phase-b-session.js`,
+`settings-view.js`, `library-view.js`, `source-input-ui.js`,
+`board-grid.js`, `theme-preference.js`, `app-shell-ui.js`,
+`concept-page-view.js`) from the live page and exercises their pure
+helpers against the real browser DOM/storage so renames or signature
+drift fail the suite.
+
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`
   fixture). Tests 4–6 use a guest Supabase session, so they exercise some
@@ -78,7 +88,7 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
 `test_smoke.py` (11 tests). Use the raw pytest invocations below to run the
-full suite (24 tests across the four files).
+full suite (24 tests across the five files).
 
 Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
 `SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default
@@ -98,10 +108,10 @@ bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel
 ```
 
 Raw pytest invocations (when you need flags the wrapper doesn't pass through,
-or want the full four-file suite the wrapper doesn't yet cover):
+or want the full five-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all four files, 24 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all five files, 24 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)
@@ -119,7 +129,7 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 ## Output
 
-Pass (23 tests across the four files):
+Pass (24 tests across the five files):
 
 ```
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
@@ -145,8 +155,9 @@ tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
 tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
 tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
+tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
 
-============================== 23 passed ==============================
+============================== 24 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,

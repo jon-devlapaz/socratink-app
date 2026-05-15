@@ -28,10 +28,9 @@ should not need to run anything by hand.
 
 ### Layer 1 — Claude hooks (agent edits)
 
-> `.claude/settings.json` is gitignored (per-developer). The team baseline is
-> committed at [`.claude/settings.example.json`](../.claude/settings.example.json) —
-> copy it on first checkout and add any personal hooks (linters, formatters, etc.)
-> on top.
+> `.claude/settings.json` is gitignored (per-developer). Wire the
+> SessionStart + PostToolUse hooks below into your local copy and add any
+> personal hooks (linters, formatters, etc.) on top.
 
 | Event | Hook | What runs |
 |---|---|---|

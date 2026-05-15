@@ -52,6 +52,19 @@ echo "[doctor] dependency install (no-op if already satisfied)..."
 .venv/bin/pip install -r requirements.txt -q
 .venv/bin/pip install -r requirements-dev.txt -q
 
+echo "[doctor] pyrefly baseline (pyrefly.toml scope)..."
+# Version pinned here (not requirements-dev.txt) so the gate is
+# self-bootstrapping: any agent or CI run that lands here gets the exact
+# version the gate was authored against, with no drift risk.
+PYREFLY_VERSION="1.0.0"
+if ! .venv/bin/pyrefly --version 2>/dev/null | grep -q "^pyrefly $PYREFLY_VERSION$"; then
+  echo "[doctor] installing pyrefly==$PYREFLY_VERSION..."
+  .venv/bin/pip install "pyrefly==$PYREFLY_VERSION" -q
+fi
+# `pyrefly check` (no positional arg) honors project-includes in pyrefly.toml.
+# Passing `.` would override that scope — don't.
+.venv/bin/pyrefly check >/dev/null
+
 echo "[doctor] mypy baseline (mypy.ini scope)..."
 .venv/bin/mypy . >/dev/null
 

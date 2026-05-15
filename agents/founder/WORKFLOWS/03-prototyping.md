@@ -73,4 +73,4 @@ If the question is ambiguous, stop and classify it explicitly before building.
 
 - shared workflow truth: this file
 - UI prototype artifacts: `public/_lab/<surface>-variants.html` plus sibling `<surface>-variants.NOTES.md`
-- durable follow-up when load-bearing: `docs/project/doc-map.md`, `CONTEXT.md`, or an ADR if the decision changes domain meaning
+- durable follow-up when load-bearing: `UBIQUITOUS_LANGUAGE.md` for term-meaning changes, `DESIGN.md` §4 for design principles, an ADR for architectural decisions

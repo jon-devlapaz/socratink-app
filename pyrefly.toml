@@ -1,0 +1,46 @@
+# socratink-app — pyrefly baseline.
+#
+# Mirrors mypy.ini scope so both checkers agree on what counts as production
+# code. mypy stays on as a cross-check during transition.
+#
+# Lives at the repo root (NOT in pyproject.toml) because
+# scripts/preflight-deploy.sh generates and removes pyproject.toml during
+# the Vercel build — see mypy.ini for the same reason.
+#
+# Exclude semantics:
+# - Mypy's `[mypy-tests.*] ignore_errors = True` and `[mypy-api.*]` are
+#   modeled here as outright excludes. Pyrefly doesn't need test/generated
+#   files to type-check the rest of the codebase, and silencing all error
+#   codes per-subdir is uglier than just skipping the trees.
+
+project-includes = [
+    "main.py",
+    "ai_service.py",
+    "learning_commons.py",
+    "runtime_env.py",
+    "auth",
+    "llm",
+    "source_intake",
+    "models",
+]
+project-excludes = [
+    "**/.venv/",
+    "**/node_modules/",
+    "**/.code-review-graph/",
+    "**/.worktrees/",
+    "**/.vercel/",
+    "**/public/",
+    "**/scripts/",
+    "**/__pycache__/",
+]
+python-version = "3.13.0"
+# The "legacy" preset approximates mypy 1.x defaults — keep us close to the
+# mypy baseline so we don't ship two different strictness floors.
+preset = "legacy"
+# Third-party SDKs (google-genai, supabase, etc.) ship without complete
+# stubs. Match mypy's ignore_missing_imports = True.
+ignore-missing-imports = ["*"]
+# Pyrefly's stronger inference is the whole reason we're adopting it.
+# Keep it on so unannotated defs still get checked through.
+check-unannotated-defs = true
+infer-return-types = "never"

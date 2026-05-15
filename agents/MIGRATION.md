@@ -9,6 +9,7 @@ Use this ledger to track migration from tool-specific surfaces into `agents/`.
 - `tool-specific`
 - `preserved-pending-review`
 - `deprecated`
+- `removed` (file deleted from the tree; row retained for historical ledger continuity)
 
 ## Entry hygiene
 
@@ -35,8 +36,8 @@ For any non-terminal entry (`adapter-only` or `preserved-pending-review`), recor
 | `.claude/friction-log.md` | `preserved-pending-review` | raw sediment log; curate repeated workflow patterns into `agents/LEARNINGS.md`, but do not treat the source log as canon |
 | `.claude/settings.json` | `tool-specific` | Claude runtime hook/config surface; do not migrate into `agents/` |
 | `.claude/settings.local.json` | `tool-specific` | local Claude runtime/config surface; do not migrate |
-| `.claude/settings.example.json` | `tool-specific` | Claude setup example, not shared workflow doctrine |
-| `.claude/skills/git-order/SKILL.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/02-git-homeostasis.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
+| `.claude/settings.example.json` | `removed` | was `tool-specific` (Claude setup example); file deleted 2026-05-14, expected hook wiring now described in `docs/project/code-review-graph-sop.md` §"Layer 1 — Claude hooks" |
+| `.claude/skills/git-order/SKILL.md` | `removed` | was `adapter-only` pointing at `agents/founder/WORKFLOWS/02-git-homeostasis.md`; wrapper deleted 2026-05-14 once canon was the only reader (exit condition fired) |
 | `.claude/skills/prototype/SKILL.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/03-prototyping.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
 | `.claude/skills/prototype/LOGIC.md` | `deprecated` | logic branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
 | `.claude/skills/prototype/UI.md` | `deprecated` | UI branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |

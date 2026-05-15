@@ -447,7 +447,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-weight: 700;
 }
 
-/* DESIGN.md §12 prescribes "soft violet ring" for focus. Default browser
+/* docs/design/socratink-ux.md §12 prescribes "soft violet ring" for focus. Default browser
    outline is suppressed on these tiles; previously focus relied on the
    active-state inset shadow alone (~22% violet inset 1px), which fails the
    WCAG 3:1 non-text-contrast bar against graphite. Promote to outer 2px at
@@ -472,7 +472,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 }
 
 /* Hide the divider + "Concepts" eyebrow when the user has no concepts.
-   Per DESIGN.md §12 silent-surface: every visible element must justify
+   Per docs/design/socratink-ux.md §12 silent-surface: every visible element must justify
    its presence. An eyebrow with nothing below promises content that
    isn't there. The :has(:empty) pair re-shows them once renderConceptList
    populates #concept-list. */
