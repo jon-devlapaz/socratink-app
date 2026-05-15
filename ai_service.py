@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional, TypedDict, TYPE_CHECKING, cast
+from typing import Callable, Literal, Optional, TypedDict, TYPE_CHECKING, cast
 
 from llm.types import StructuredLLMResult
 
@@ -20,6 +20,12 @@ from llm import (
     LLMClient,
     StructuredLLMRequest,
     build_llm_client,
+)
+from models.knowledge_map_context import (
+    knowledge_map_has_node as _knowledge_map_has_node,
+    prune_context as _prune_context,
+    resolve_target_cluster_id as _resolve_target_cluster_id,
+    validate_knowledge_map as _validate_knowledge_map,
 )
 from models import ProvisionalMap
 
@@ -219,143 +225,6 @@ def _parse_iso_timestamp(iso_string: str) -> datetime:
         return datetime.fromisoformat(sanitized)
     except ValueError as exc:
         raise ValueError(f"Invalid timestamp: {iso_string}") from exc
-
-
-def _validate_knowledge_map(knowledge_map: dict) -> None:
-    if not isinstance(knowledge_map, dict):
-        raise ValueError("knowledge_map must be an object.")
-    if not isinstance(knowledge_map.get("metadata"), dict):
-        raise ValueError("knowledge_map.metadata must be an object.")
-    if not isinstance(knowledge_map.get("backbone"), list):
-        raise ValueError("knowledge_map.backbone must be a list.")
-    if not isinstance(knowledge_map.get("clusters"), list):
-        raise ValueError("knowledge_map.clusters must be a list.")
-
-
-def _knowledge_map_has_node(knowledge_map: dict, node_id: str) -> bool:
-    if node_id == "core-thesis":
-        return True
-
-    for backbone_item in knowledge_map.get("backbone", []):
-        if isinstance(backbone_item, dict) and backbone_item.get("id") == node_id:
-            return True
-
-    for cluster in knowledge_map.get("clusters", []):
-        if not isinstance(cluster, dict):
-            continue
-        if cluster.get("id") == node_id:
-            return True
-        for subnode in cluster.get("subnodes", []):
-            if isinstance(subnode, dict) and subnode.get("id") == node_id:
-                return True
-
-    return False
-
-
-def _resolve_target_cluster_id(knowledge_map: dict, target_node_id: str) -> str | None:
-    if target_node_id.startswith("c") and "_s" not in target_node_id:
-        return target_node_id
-
-    for cluster in knowledge_map.get("clusters", []):
-        if not isinstance(cluster, dict):
-            continue
-        cluster_id = cluster.get("id")
-        if isinstance(cluster_id, str) and cluster_id == target_node_id:
-            return cluster_id
-        for subnode in cluster.get("subnodes", []):
-            if (
-                isinstance(cluster_id, str)
-                and isinstance(subnode, dict)
-                and subnode.get("id") == target_node_id
-            ):
-                return cluster_id
-
-    return None
-
-
-def _prune_context(knowledge_map: dict, target_node_id: str) -> dict:
-    metadata = knowledge_map.get("metadata") or {}
-    pruned: dict[str, Any] = {
-        "metadata": {
-            "thesis": metadata.get("core_thesis"),
-            "governing_assumptions": metadata.get("governing_assumptions") or [],
-            "starting_map_context": metadata.get("starting_map_context"),
-        }
-    }
-    relationships = knowledge_map.get("relationships") or {}
-    frameworks = knowledge_map.get("frameworks") or []
-
-    if target_node_id == "core-thesis" or target_node_id.startswith("b"):
-        target_backbone = next(
-            (
-                item
-                for item in knowledge_map.get("backbone", [])
-                if isinstance(item, dict)
-                and (
-                    target_node_id == "core-thesis" or item.get("id") == target_node_id
-                )
-            ),
-            None,
-        )
-        if target_backbone is None and knowledge_map.get("backbone"):
-            target_backbone = knowledge_map["backbone"][0]
-
-        dependent_cluster_ids = (
-            set(target_backbone.get("dependent_clusters") or [])
-            if isinstance(target_backbone, dict)
-            else set()
-        )
-        cluster_shells = [
-            {
-                "id": cluster.get("id"),
-                "label": cluster.get("label"),
-                "description": cluster.get("description"),
-            }
-            for cluster in knowledge_map.get("clusters", [])
-            if isinstance(cluster, dict) and cluster.get("id") in dependent_cluster_ids
-        ]
-
-        pruned["backbone"] = [target_backbone] if target_backbone else []
-        pruned["clusters"] = cluster_shells
-        pruned["relationships"] = relationships
-        pruned["frameworks"] = frameworks
-        return pruned
-
-    target_cluster_id = _resolve_target_cluster_id(knowledge_map, target_node_id)
-    target_cluster = next(
-        (
-            cluster
-            for cluster in knowledge_map.get("clusters", [])
-            if isinstance(cluster, dict) and cluster.get("id") == target_cluster_id
-        ),
-        None,
-    )
-
-    pruned["clusters"] = [target_cluster] if target_cluster else []
-    pruned["backbone"] = [
-        item
-        for item in knowledge_map.get("backbone", [])
-        if isinstance(item, dict)
-        and target_cluster_id in (item.get("dependent_clusters") or [])
-    ]
-    pruned["relationships"] = {
-        "learning_prerequisites": [
-            rel
-            for rel in relationships.get("learning_prerequisites", [])
-            if isinstance(rel, dict)
-            and (
-                rel.get("from") == target_cluster_id
-                or rel.get("to") == target_cluster_id
-            )
-        ]
-    }
-    pruned["frameworks"] = [
-        framework
-        for framework in frameworks
-        if isinstance(framework, dict)
-        and target_cluster_id in (framework.get("source_clusters") or [])
-    ]
-    return pruned
 
 
 def _call_gemini_with_retry(
