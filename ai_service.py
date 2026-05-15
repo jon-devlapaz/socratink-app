@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 from google import genai
 from google.genai.errors import APIError
 from google.genai import types
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 from llm import (
     LLMClient,
@@ -26,6 +26,13 @@ from models.knowledge_map_context import (
     prune_context as _prune_context,
     resolve_target_cluster_id as _resolve_target_cluster_id,
     validate_knowledge_map as _validate_knowledge_map,
+)
+from models.repair_reps import (
+    RepairRep,
+    RepairRepsEvaluation,
+    RepairRepsResult,
+    parse_repair_reps_response as _parse_repair_reps_response,
+    validate_repair_reps_result as _validate_repair_reps_result,
 )
 from models import ProvisionalMap
 
@@ -129,46 +136,6 @@ class DrillEvaluation(BaseModel):
     )
 
 
-class RepairRep(BaseModel):
-    id: str = Field(
-        description="Stable identifier for this rep within the generated set"
-    )
-    kind: Literal["missing_bridge", "next_step", "cause_effect"] = Field(
-        description="The causal micro-practice shape."
-    )
-    prompt: str = Field(
-        description="Typed causal prompt shown before the answer bridge is revealed."
-    )
-    target_bridge: str = Field(
-        description="Short model bridge revealed only after the learner types."
-    )
-    feedback_cue: str = Field(
-        description="Short comparison cue after the bridge is revealed."
-    )
-
-
-class RepairRepsEvaluation(BaseModel):
-    reps: list[RepairRep] = Field(
-        description="Exactly three typed causal repair reps.",
-        min_length=3,
-        max_length=3,
-    )
-
-
-class _StrictRepairRep(RepairRep):
-    model_config = ConfigDict(extra="forbid")
-
-
-class _StrictRepairRepsEvaluation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    reps: list[_StrictRepairRep] = Field(
-        description="Exactly three typed causal repair reps.",
-        min_length=3,
-        max_length=3,
-    )
-
-
 class DrillTurnResult(TypedDict):
     agent_response: str
     generative_commitment: bool | None
@@ -190,12 +157,6 @@ class DrillTurnResult(TypedDict):
     ux_reward_emitted: bool
     session_terminated: bool
     termination_reason: str | None
-
-
-class RepairRepsResult(TypedDict):
-    node_id: str
-    prompt_version: str
-    reps: list[dict[str, str]]
 
 
 class MissingAPIKeyError(ValueError):
@@ -633,56 +594,6 @@ def generate_smallest_provisional_map(
     pm: ProvisionalMap = result.parsed  # type: ignore[assignment]
     _validate_smallest_route(pm)
     return pm
-
-
-def _validate_repair_reps_result(
-    evaluation: RepairRepsEvaluation, *, expected_count: int
-) -> None:
-    if len(evaluation.reps) != expected_count:
-        raise ValueError(
-            f"Repair reps response must include exactly {expected_count} reps."
-        )
-
-    seen_ids: set[str] = set()
-    for index, rep in enumerate(evaluation.reps, start=1):
-        rep_id = rep.id.strip()
-        if not rep_id:
-            raise ValueError(f"Repair rep {index} is missing an id.")
-        if rep_id in seen_ids:
-            raise ValueError(f"Repair rep id is duplicated: {rep_id}")
-        seen_ids.add(rep_id)
-
-        if not rep.prompt.strip():
-            raise ValueError(f"Repair rep {index} is missing a prompt.")
-        if not rep.target_bridge.strip():
-            raise ValueError(f"Repair rep {index} is missing a target bridge.")
-        if not rep.feedback_cue.strip():
-            raise ValueError(f"Repair rep {index} is missing a feedback cue.")
-
-
-def _parse_repair_reps_response(response) -> RepairRepsEvaluation:
-    raw_text = getattr(response, "text", None)
-    if raw_text:
-        try:
-            strict = _StrictRepairRepsEvaluation.model_validate_json(raw_text)
-        except Exception as err:
-            raise ValueError(
-                "Gemini returned an invalid structured repair reps response."
-            ) from err
-        return RepairRepsEvaluation.model_validate(strict.model_dump())
-
-    evaluation = getattr(response, "parsed", None)
-    if isinstance(evaluation, RepairRepsEvaluation):
-        return evaluation
-    if isinstance(evaluation, dict):
-        try:
-            strict = _StrictRepairRepsEvaluation.model_validate(evaluation)
-        except Exception as err:
-            raise ValueError(
-                "Gemini returned an invalid structured repair reps response."
-            ) from err
-        return RepairRepsEvaluation.model_validate(strict.model_dump())
-    raise ValueError("Gemini returned an invalid structured repair reps response.")
 
 
 def generate_repair_reps(
