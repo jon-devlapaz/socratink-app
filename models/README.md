@@ -32,6 +32,7 @@ Import from `models` directly.
 | `provisional_map.py` | Pydantic models for the full map structure. |
 | `identifiers.py` | ID types, `IdKind`, `parse_id`, `CORE_THESIS`. |
 | `sketch_validation.py` | `is_substantive_sketch` heuristic (stopwords, min substantive tokens). |
+| `knowledge_map_context.py` | Wire-shape validators and target-local context pruning used by drill and Repair Reps routes. |
 
 ## Footguns
 
