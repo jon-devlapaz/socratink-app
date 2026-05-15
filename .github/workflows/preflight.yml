@@ -41,8 +41,10 @@ jobs:
       - name: Generate per-run Fernet key
         # Throwaway key scoped to this CI run; production sets SESSION_COOKIE_KEY
         # via Vercel env. Echoed to $GITHUB_ENV so subsequent steps see it.
+        # Uses stdlib only — Fernet.generate_key() is just 32 random bytes,
+        # urlsafe-b64 encoded — so this runs before bootstrap installs deps.
         run: |
-          echo "SESSION_COOKIE_KEY=$(python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())')" >> $GITHUB_ENV
+          echo "SESSION_COOKIE_KEY=$(python -c 'import os, base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" >> $GITHUB_ENV
 
       - name: Bootstrap repo Python + hooks
         run: |
