@@ -121,7 +121,7 @@ mypy --strict path/to/changed/  # should exit 0
 | --- | --- | --- | --- |
 | Dynamically typed with `**kwargs: Any` patterns; no `pyproject.toml`/`mypy.ini`. | < 40% annotated returns OR mypy never runs cleanly. | 40–80% annotated returns; mypy installed; runs cleanly on most modules. | ≥ 80% annotated returns; mypy strict config exists and CI/pre-deploy enforces zero new errors. |
 
-**socratink-app baseline:** 232 annotated returns; `mypy.ini` now checked in at the repo root (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) and `mypy .` runs cleanly under `scripts/doctor.sh` and the preflight CI workflow — currently scoring **2**. `disallow_untyped_defs` is still lenient, so reaching **3** requires both raising annotated-return ratio ≥ 80% and tightening per-module overrides.
+**socratink-app baseline:** 232 annotated returns; **pyrefly is the primary type-check gate** (config in `pyrefly.toml`, `preset = "legacy"`, `check-unannotated-defs = true`, version pinned in `scripts/doctor.sh`) with mypy retained as a cross-check (`mypy.ini` at the repo root: Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`). Both checkers run cleanly under `scripts/doctor.sh` and the preflight CI workflow. Pyrefly's `check-unannotated-defs = true` means unannotated defs are now inferred and checked through, partially substituting for mypy's `disallow_untyped_defs` — currently scoring **2**, on the cusp of **3** pending annotated-return ratio ≥ 80% and tightened per-module overrides.
 
 ---
 
@@ -165,7 +165,7 @@ ls scripts/preflight-deploy.sh scripts/doctor.sh scripts/verify-deploy.sh
 | --- | --- | --- | --- |
 | No automated check before merge or deploy. | Manual scripts exist but rely on developer remembering to run them. | Pre-commit hook OR local pre-deploy script that runs tests + typecheck + lint and blocks on failure. | CI on push/PR + diff-coverage threshold + typecheck + lint, mirrored locally by a single script. |
 
-**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` now runs `mypy .` + `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`, mirrored locally by `scripts/doctor.sh`. Diff-coverage is still local-only via `scripts/check-coverage.sh`. Currently **3** for the type-check + non-e2e-test gate; raising diff-coverage to CI would lock in level **3** across the board.
+**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` invokes `bash scripts/doctor.sh` (which runs **both `pyrefly check` and `mypy .`** as parallel type-check gates) plus `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`, all mirrored locally by `scripts/doctor.sh`. Diff-coverage is still local-only via `scripts/check-coverage.sh`. Currently **3** for the type-check + non-e2e-test gate; raising diff-coverage to CI would lock in level **3** across the board.
 
 ---
 
