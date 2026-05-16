@@ -1,6 +1,43 @@
 import { escHtml } from './html.js';
 
-export function getLibraryConceptMeta(concept) {
+const EMPTY_RECONSTRUCTION_COPY = 'No learner reconstruction recorded yet.';
+
+const ATTEMPT_CLASSIFICATION_RANK = {
+  strong: 4,
+  solid: 4,
+  partial: 3,
+  deep: 3,
+  thin: 2,
+  shallow: 2,
+  wrong_direction: 1,
+  misconception: 1,
+};
+
+function rankAttempt(attempt) {
+  return ATTEMPT_CLASSIFICATION_RANK[attempt?.classification] || 0;
+}
+
+export function getBestLearnerAttempt(training) {
+  const records = training?.node_records && typeof training.node_records === 'object'
+    ? training.node_records
+    : {};
+
+  const attempts = Object.values(records)
+    .flatMap((record) => Array.isArray(record?.attempts) ? record.attempts : [])
+    .filter((attempt) => typeof attempt?.user_text === 'string' && attempt.user_text.trim() !== '');
+
+  if (!attempts.length) return null;
+
+  return [...attempts].sort((a, b) => {
+    const rankDelta = rankAttempt(b) - rankAttempt(a);
+    if (rankDelta !== 0) return rankDelta;
+    const bMs = Date.parse(b?.at || '');
+    const aMs = Date.parse(a?.at || '');
+    return (Number.isFinite(bMs) ? bMs : 0) - (Number.isFinite(aMs) ? aMs : 0);
+  })[0];
+}
+
+export function getLibraryConceptMeta(concept, training = null) {
   let graph = null;
   try {
     graph = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData) : concept.graphData;
@@ -11,7 +48,8 @@ export function getLibraryConceptMeta(concept) {
   const metadata = graph?.metadata || {};
   const clusters = Array.isArray(graph?.clusters) ? graph.clusters : [];
   const subnodeCount = clusters.reduce((total, cluster) => total + ((cluster.subnodes || []).length), 0);
-  const thesis = metadata.core_thesis || concept.contentPreview || 'No summary available yet.';
+  const bestAttempt = getBestLearnerAttempt(training);
+  const thesis = bestAttempt?.user_text || EMPTY_RECONSTRUCTION_COPY;
   const sourceLabel = concept.contentFilename
     ? `Source: ${concept.contentFilename}`
     : concept.contentType
@@ -20,6 +58,7 @@ export function getLibraryConceptMeta(concept) {
 
   return {
     thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
+    summarySource: bestAttempt ? 'learner_attempt' : 'none',
     architecture: metadata.architecture_type ? metadata.architecture_type.replace(/_/g, ' ') : null,
     difficulty: metadata.difficulty || null,
     clusterCount: clusters.length,
@@ -28,13 +67,18 @@ export function getLibraryConceptMeta(concept) {
   };
 }
 
-export function buildLibraryHtml(concepts) {
+export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {}) {
+  const showLocalQaSeed = options?.showLocalQaSeed === true;
   let html = `
       <div class="library-kicker">Library</div>
 
       <div class="library-section">
         <h2 class="library-section-title">Your Library</h2>
         <p class="library-section-copy">Your library shows what you've reconstructed, not what you've saved.</p>
+        ${showLocalQaSeed ? `
+          <button type="button" class="ig-button" data-local-qa-seed onclick="App.seedLocalQaConcept()">Seed QA concept</button>
+          <button type="button" class="ig-button" data-local-repair-qa-seed onclick="App.seedLocalRepairQaConcept()">Seed repair QA</button>
+        ` : ''}
     `;
 
   if (concepts.length === 0) {
@@ -51,9 +95,10 @@ export function buildLibraryHtml(concepts) {
         </div>`;
   } else {
     html += `<div class="library-vault-grid">` + concepts.map(c => {
-      const meta = getLibraryConceptMeta(c);
+      const conceptId = String(c?.id ?? '');
+      const meta = getLibraryConceptMeta(c, trainingByConceptId[conceptId] || null);
       return `
-          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" data-concept-id="${escHtml(String(c?.id ?? ''))}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
+          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
             <div class="library-card-header">
               <div>
                 <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>

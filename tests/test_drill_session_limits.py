@@ -279,6 +279,48 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
         # The drill stays alive — no 502.
         self.assertEqual(result["answer_mode"], "attempt")
 
+    def test_cold_attempt_preserves_classification_after_generative_commitment(self):
+        """Cold attempts still need grader evidence once the learner commits.
+
+        The first attempt should route the UI into study, but the classification
+        must flow back so the training event can record honest gap state.
+        """
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=drill_response(routing="NEXT", classification="shallow"),
+            ),
+        ):
+            result = ai_service.drill_chat(
+                knowledge_map=sample_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "The thermostat compares room temperature to the setpoint.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="cold_attempt",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=True,
+            )
+
+        self.assertTrue(result["generative_commitment"])
+        self.assertTrue(result["score_eligible"])
+        self.assertEqual(result["classification"], "shallow")
+        self.assertEqual(result["routing"], "NEXT")
+
 
 if __name__ == "__main__":
     unittest.main()

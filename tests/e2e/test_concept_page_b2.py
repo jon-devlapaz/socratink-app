@@ -1,7 +1,7 @@
 """End-to-end smoke for the B-2 concept page layout.
 
 Covers: open a concept page; strip, threshold, active entry, and
-nearby list all render; click 'Try from memory' opens the chamber.
+nearby list all render; click 'Write what you remember' opens the inline attempt.
 
 Note: the Route/Graph toggle test was removed in the strip-as-nav port
 (2026-05-11). The toggle is gone. See test_strip_nav.py for the new
@@ -150,12 +150,14 @@ def test_b2_layout_renders(clean_page: Page, base_url: str) -> None:
     expect(clean_page.locator(".concept-page-b2__nearby-list")).to_be_visible()
 
 
-def test_b2_cta_opens_chamber(clean_page: Page, base_url: str) -> None:
-    """Clicking 'Try from memory' opens the drill chamber."""
+def test_b2_cta_opens_inline_attempt(clean_page: Page, base_url: str) -> None:
+    """Clicking 'Write what you remember' opens the inline memory attempt."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
     expect(clean_page.locator(".concept-page-b2__entry-cta")).to_be_visible(timeout=8_000)
     clean_page.locator(".concept-page-b2__entry-cta").click()
-    expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=8_000)
+    expect(clean_page.locator(".concept-page-b2__attempt")).to_be_visible(timeout=8_000)
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+    expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
 
 
 def test_b2_no_route_graph_toggle(clean_page: Page, base_url: str) -> None:

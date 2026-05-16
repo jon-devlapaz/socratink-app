@@ -156,6 +156,7 @@ def test_strip_keyboard_nav(page: Page, base_url: str) -> None:
     initial_title = page.locator(".concept-page-b2__entry-title").text_content()
     # Focus the first node and press ArrowRight
     nodes.first.focus()
+    page.keyboard.press(" ")
     page.keyboard.press("ArrowRight")
     page.wait_for_timeout(700)
     new_title = page.locator(".concept-page-b2__entry-title").text_content()
@@ -167,7 +168,7 @@ def test_first_actionable_entry_shows_try_from_memory(page: Page, base_url: str)
     _open_seeded_concept(page, base_url)
     cta = page.locator(".concept-page-b2__entry-cta")
     expect(cta).not_to_have_attribute("disabled", "")
-    expect(cta).to_have_text("Try from memory")
+    expect(cta).to_have_text("Write what you remember")
 
 
 def test_locked_entry_shows_disabled_cta(page: Page, base_url: str) -> None:

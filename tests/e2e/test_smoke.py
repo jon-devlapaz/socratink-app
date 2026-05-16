@@ -39,6 +39,7 @@ to absorb any serverless cold-start latency before the browser tests run.
 
 from __future__ import annotations
 
+import json
 import time
 import os
 import re
@@ -210,6 +211,359 @@ def _seed_one_concept(page: Page, name: str = "Test Concept") -> None:
     )
 
 
+def _seed_training_truth_concept(page: Page) -> None:
+    """Seed one concept plus node-training evidence for Library truth checks."""
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    core_thesis: 'AI GENERATED CORE THESIS SHOULD NOT APPEAR',
+                    architecture_type: 'cause_effect',
+                    difficulty: 'medium',
+                    source_title: 'QA fixture source',
+                    starting_map_context: 'Learner rough sketch baseline.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [{
+                    id: 'qa-node',
+                    label: 'Target node',
+                    purpose: 'Use this entry to name the target mechanism from memory before reading the study note.',
+                    study_note: 'The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair.',
+                    drill_status: null,
+                }],
+                clusters: [
+                    {
+                        id: 'cluster-1',
+                        subnodes: [{
+                            id: 'qa-node',
+                            label: 'Target node',
+                            purpose: 'Use this entry to name the target mechanism from memory before reading the study note.',
+                            study_note: 'The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair.',
+                            drill_status: null,
+                        }],
+                    },
+                ],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-training-card',
+                name: 'Training Truth QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+                contentType: null,
+                sourceUrl: null,
+                startingMapContext: 'Learner rough sketch baseline.',
+                graphData,
+            }]));
+            localStorage.setItem('socratink:training:v1:qa-training-card', JSON.stringify({
+                concept_id: 'qa-training-card',
+                schema_version: 1,
+                source_mode: 'source_less',
+                grounding: 'learner_sketch',
+                source_ref: null,
+                sketch: {
+                    text: 'Learner rough sketch baseline.',
+                    at: '2026-05-15T09:00:00.000Z',
+                },
+                node_records: {
+                    'qa-node': {
+                        attempts: [{
+                            id: 'attempt-1',
+                            kind: 'cold',
+                            at: '2026-05-15T10:00:00.000Z',
+                            user_text: 'Learner-owned reconstruction visible in Library.',
+                            classification: 'strong',
+                            gaps: [],
+                            grader_version: 'qa',
+                        }],
+                        repairs: [],
+                    },
+                },
+            }));
+        })()"""
+    )
+
+
+def test_library_card_uses_training_evidence_not_ai_summary(
+    page: Page, base_url: str
+) -> None:
+    """Library summaries must be learner evidence, not generated source text."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_training_truth_concept(page)
+
+    page.locator("#nav-library").click()
+    card = page.locator(".library-card-vault", has_text="Training Truth QA")
+    expect(card).to_be_visible()
+    expect(card.locator(".library-card-summary")).to_have_text(
+        "Learner-owned reconstruction visible in Library."
+    )
+    expect(card).not_to_contain_text("AI GENERATED CORE THESIS SHOULD NOT APPEAR")
+    expect(card).not_to_contain_text("SOURCE PREVIEW SHOULD NOT APPEAR")
+
+
+def test_localhost_library_qa_seed_creates_training_truth_concept(
+    page: Page, base_url: str
+) -> None:
+    """Localhost QA can seed a concept with learner-owned training evidence."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+
+    page.locator("#nav-library").click()
+    page.locator("[data-local-qa-seed]").click()
+
+    card = page.locator(".library-card-vault", has_text="Training Truth QA")
+    expect(card).to_be_visible()
+    expect(card.locator(".library-card-summary")).to_have_text(
+        "Learner-owned reconstruction visible in Library."
+    )
+    expect(card).not_to_contain_text("AI GENERATED CORE THESIS SHOULD NOT APPEAR")
+    expect(card).not_to_contain_text("SOURCE PREVIEW SHOULD NOT APPEAR")
+
+    training = page.evaluate(
+        """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
+    )
+    assert training["source_mode"] == "source_less"
+    assert training["grounding"] == "learner_sketch"
+    assert training["node_records"]["qa-node"]["attempts"][0]["classification"] == "strong"
+
+    card.click()
+    expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "study required entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reveal study note"
+    )
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "Learner-owned reconstruction visible in Library."
+    )
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "No repair hinge recorded for this reconstruction."
+    )
+    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
+        "The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair."
+    )
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "review pending entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reconstruct from memory"
+    )
+    revealed_training = page.evaluate(
+        """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
+    )
+    assert (
+        revealed_training["node_records"]["qa-node"]["study_revealed_at"]
+        is not None
+    )
+    page.locator("[data-edit-threshold]").click()
+    page.locator(".concept-page-b2__threshold-input").fill("Updated learner sketch.")
+    page.locator(".concept-page-b2__threshold-save").click()
+    expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
+        "Updated learner sketch."
+    )
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "review pending entry 1 of 1"
+    )
+
+
+def test_localhost_concept_repair_appends_learner_gap_work(
+    page: Page, base_url: str
+) -> None:
+    """A studied thin attempt can append repair text without faking mastery."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+
+    page.locator("#nav-library").click()
+    page.locator("[data-local-repair-qa-seed]").click()
+    page.locator(".library-card-vault", has_text="Repair Truth QA").click()
+    expect(page.locator("#concept-header-title")).to_contain_text("Repair QA source")
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "study required entry 1 of 1"
+    )
+
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "repair the gap entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__repair")).to_contain_text(
+        "voltage-gated sodium channels"
+    )
+    expect(page.locator(".concept-page-b2__repair")).to_contain_text(
+        "Name that threshold opens the channel"
+    )
+
+    page.locator(".concept-page-b2__repair-save").click()
+    expect(page.locator("[data-repair-error]")).to_be_visible()
+    expect(page.locator("[data-repair-error]")).to_have_text(
+        "Write the missing link before saving."
+    )
+    page.evaluate(
+        """(() => {
+            window.__qaOriginalSetItem = Storage.prototype.setItem;
+            Storage.prototype.setItem = function () { throw new Error('forced repair storage failure'); };
+        })()"""
+    )
+    page.locator(".concept-page-b2__repair-input").fill(
+        "This save should fail before persistence."
+    )
+    page.locator(".concept-page-b2__repair-save").click()
+    expect(page.locator("[data-repair-error]")).to_have_text(
+        "Repair could not be saved. Try again."
+    )
+    page.evaluate(
+        """(() => {
+            Storage.prototype.setItem = window.__qaOriginalSetItem;
+            delete window.__qaOriginalSetItem;
+        })()"""
+    )
+    page.locator(".concept-page-b2__repair-input").fill(
+        "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
+    )
+    page.locator(".concept-page-b2__repair-save").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "ready to reconstruct again entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Write it again"
+    )
+    expect(page.locator(".concept-page-b2__repair")).to_have_count(0)
+    repaired_training = page.evaluate(
+        """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
+    )
+    assert repaired_training["node_records"]["repair-node"]["repairs"][0]["text"] == (
+        "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
+    )
+    assert (
+        repaired_training["node_records"]["repair-node"]["attempts"][0]["classification"]
+        == "thin"
+    )
+
+
+def test_localhost_concept_page_cold_attempt_appends_training_evidence(
+    page: Page, base_url: str
+) -> None:
+    """Concept-page memory attempt submits to the grader and stores verbatim text."""
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        if len(drill_calls) == 1:
+            route.fulfill(
+                status=500,
+                content_type="application/json",
+                body=json.dumps({"detail": "forced inline attempt failure"}),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Your first attempt gives the study note a target.",
+                    "generative_commitment": True,
+                    "answer_mode": "attempt",
+                    "score_eligible": True,
+                    "help_request_reason": "none",
+                    "classification": "shallow",
+                    "gap_description": "Names sodium flow but misses that voltage threshold opens the gate.",
+                    "routing": "NEXT",
+                    "response_tier": 2,
+                    "response_band": "link",
+                    "tier_reason": "The answer misses the channel-opening mechanism.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 1,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-inline-attempt",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    source_title: 'Cold Attempt QA source',
+                    starting_map_context: 'Learner only remembers sodium flow.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [{
+                    id: 'cold-node',
+                    label: 'Sodium threshold',
+                    purpose: 'Explain what starts the sodium flow.',
+                    study_note: 'Voltage threshold opens sodium channels before the gradient drives flow.',
+                    drill_status: null,
+                }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-cold-attempt-concept',
+                name: 'Cold Attempt Truth QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+                contentType: null,
+                startingMapContext: 'Learner only remembers sodium flow.',
+                graphData,
+            }]));
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Cold Attempt Truth QA").click()
+    expect(page.locator("#concept-header-title")).to_contain_text(
+        "Cold Attempt QA source"
+    )
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
+    expect(page.locator(".concept-page-b2__study-note")).to_have_count(0)
+    page.locator(".concept-page-b2__attempt-save").click()
+    expect(page.locator("[data-attempt-error]")).to_have_text(
+        "Put down the part you can explain, even if it is incomplete."
+    )
+
+    learner_text = "  Sodium flows in because there is more outside.  "
+    page.locator(".concept-page-b2__attempt-input").fill(learner_text)
+    page.locator(".concept-page-b2__attempt-save").click()
+    expect(page.locator("[data-attempt-error]")).to_have_text(
+        "The system could not record this yet. Try again."
+    )
+    page.locator(".concept-page-b2__attempt-save").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "study required entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reveal study note"
+    )
+
+    assert len(drill_calls) == 2
+    assert drill_calls[1]["concept_id"] == "qa-cold-attempt-concept"
+    assert drill_calls[1]["node_id"] == "cold-node"
+    assert drill_calls[1]["messages"][-1]["content"] == learner_text
+    stored = page.evaluate(
+        """() => JSON.parse(localStorage.getItem('socratink:training:v1:qa-cold-attempt-concept'))"""
+    )
+    attempt = stored["node_records"]["cold-node"]["attempts"][0]
+    assert attempt["kind"] == "cold"
+    assert attempt["user_text"] == learner_text
+    assert attempt["classification"] == "thin"
+    assert attempt["gaps"][0]["description"] == (
+        "Names sodium flow but misses that voltage threshold opens the gate."
+    )
+
+
 def test_drawer_toggle_remains_visible_in_concept_view(
     clean_page: Page, base_url: str
 ) -> None:
@@ -237,6 +591,8 @@ def test_saved_library_concept_reopens_map_view(
     clean_page.locator(".library-card-vault", has_text="Test Concept").click()
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+    expect(clean_page.locator("#nav-dashboard")).not_to_have_class(re.compile(r"\bactive\b"))
+    expect(clean_page.locator(".concept-item.active")).to_have_count(1)
 
     clean_page.locator("#nav-library").click()
     your_library = clean_page.locator("#library-content .library-section", has_text="Your Library")
@@ -244,6 +600,12 @@ def test_saved_library_concept_reopens_map_view(
 
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+    expect(clean_page.locator("#nav-dashboard")).not_to_have_class(re.compile(r"\bactive\b"))
+    expect(clean_page.locator(".concept-item.active")).to_have_count(1)
+
+    clean_page.locator("#nav-dashboard").click()
+    expect(clean_page.locator("#nav-dashboard")).to_have_class(re.compile(r"\bactive\b"))
+    expect(clean_page.locator(".concept-item.active")).to_have_count(0)
 
 
 def test_active_concept_delete_confirms_then_returns_to_desk(

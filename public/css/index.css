@@ -19,6 +19,6 @@
 
 @layer components, legacy, paper;
 
-@import url('../styles.css?v=95')      layer(components);
+@import url('../styles.css?v=99')      layer(components);
 @import url('../antigravity.css?v=27') layer(legacy);
 @import url('paper.css?v=10')          layer(paper);

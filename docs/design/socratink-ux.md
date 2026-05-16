@@ -127,6 +127,11 @@ If a learner repeatedly lands on `drilled` on a gating node, the product can dea
 
 AI is the scaffold, not the generator. The learner must be the primary generator of the target mechanism.
 
+- **Boundary for the current MRP loop**: AI is used after learner
+  reconstruction as a sparse grader / hinge extractor. The repair artifact
+  renders the learner's exact words, the extracted hinge, and scoped study
+  material; it must not become a tutor-chat transcript or present AI polish as
+  evidence of learning.
 - **Scaffold, never lecture**: During the cold attempt, ask an open question and listen. Do not pre-explain.
 - **Zero-schema detection**: If absolute zero schema is detected (no relevant vocabulary), pivot to Load Reduction Instruction: provide basic pieces, ask for a micro-generation.
 - **Sparse feedback**: AI responses during drill should be brief, pointed, and gap-identifying. If the AI talks more than the learner during a turn, the passive trap has been triggered.
