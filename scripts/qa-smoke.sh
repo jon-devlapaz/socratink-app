@@ -46,6 +46,12 @@ TARGET="${TARGET:-${SOCRATINK_BASE_URL:-http://localhost:8000}}"
 
 export SOCRATINK_BASE_URL="$TARGET"
 
+case "$TARGET" in
+  http://localhost:*|http://localhost|http://127.0.0.1:*|http://127.0.0.1)
+    export SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}"
+    ;;
+esac
+
 echo "[qa-smoke] target: $SOCRATINK_BASE_URL"
 
 # 2. Verify deps. Install if missing (idempotent).

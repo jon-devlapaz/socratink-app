@@ -37,6 +37,10 @@ _SKIP_DIR_PARTS = {
     ".pytest_cache",
     "test-results",
     "logs",
+    ".agents",
+    ".claude",
+    ".codex",
+    ".gemini",
     ".worktrees",
     ".vercel",
 }
@@ -47,6 +51,12 @@ def _iter_repo_python_files():
         if any(part in _SKIP_DIR_PARTS for part in py_path.parts):
             continue
         yield py_path
+
+
+def test_repo_python_scan_ignores_local_agent_runtime_dirs():
+    """Agent-local runtime directories may contain nested repo checkouts."""
+    scanned = {path.relative_to(REPO_ROOT).as_posix() for path in _iter_repo_python_files()}
+    assert not any(path.startswith((".agents/", ".claude/", ".codex/", ".gemini/")) for path in scanned)
 
 
 def test_gemini_sdk_only_imported_in_adapter():
