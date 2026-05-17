@@ -8,6 +8,20 @@ const FALLBACK_ACTIVE_ENTRY = {
   drill_status: 'locked',
 };
 
+function legacyTrainingForEntry(entry) {
+  const status = String(entry?.drill_status || '').toLowerCase();
+  if (status === 'solidified' || status === 'solid') {
+    return { state: 'solidified', next_action: null, attempted: true };
+  }
+  if (status === 'drilled') {
+    return { state: 'needs repair', next_action: 'spaced_attempt', attempted: true };
+  }
+  if (status === 'primed') {
+    return { state: 'primed', next_action: 'spaced_attempt', attempted: true };
+  }
+  return null;
+}
+
 export function getConceptEntryId(entry, index) {
   return entry?.id || `entry-${index}`;
 }
@@ -32,12 +46,15 @@ function entryTraining(backbone, index, training, options = {}) {
   const entry = backbone[index] || null;
   const id = getConceptEntryId(entry, index);
   const record = trainingRecordsFor(training)[id] || null;
+  const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
+  const legacy = attempts.length ? null : legacyTrainingForEntry(entry);
   const derived = deriveNodeTraining(record, options);
   return {
     ...derived,
+    ...legacy,
     id,
     record,
-    attempted: Boolean(derived.last_attempt_at),
+    attempted: Boolean(derived.last_attempt_at) || Boolean(legacy?.attempted),
   };
 }
 
@@ -175,6 +192,7 @@ function studyNoteForEntry(activeEntry, concept, data) {
     || activeEntry?.mechanism
     || activeEntry?.detail
     || activeEntry?.purpose
+    || activeEntry?.principle
     || meta.core_thesis
     || meta.thesis
     || concept?.contentPreview

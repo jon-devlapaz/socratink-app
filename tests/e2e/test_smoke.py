@@ -564,6 +564,103 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
 
 
+def test_localhost_concept_page_corrupt_training_storage_keeps_attempt_retryable(
+    page: Page, base_url: str
+) -> None:
+    """Corrupt local training storage should not strand the attempt button disabled."""
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Recorded.",
+                    "generative_commitment": True,
+                    "answer_mode": "attempt",
+                    "score_eligible": True,
+                    "help_request_reason": "none",
+                    "classification": "solid",
+                    "gap_description": None,
+                    "routing": "NEXT",
+                    "response_tier": 3,
+                    "response_band": "mechanism",
+                    "tier_reason": "The answer names the mechanism.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 1,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-inline-attempt",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    source_title: 'Corrupt Storage QA source',
+                    starting_map_context: 'Learner rough sketch.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [{
+                    id: 'corrupt-node',
+                    label: 'Corrupt storage target',
+                    purpose: 'Explain the mechanism.',
+                    study_note: 'The target mechanism opens before downstream flow.',
+                    drill_status: null,
+                }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-corrupt-training-concept',
+                name: 'Corrupt Training QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+                contentType: null,
+                startingMapContext: 'Learner rough sketch.',
+                graphData,
+            }]));
+            localStorage.setItem('socratink:training:v1:qa-corrupt-training-concept', '{');
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Corrupt Training QA").click()
+    page.locator(".concept-page-b2__entry-cta").click()
+    page.locator(".concept-page-b2__attempt-input").fill(
+        "The mechanism opens first, then the downstream flow follows."
+    )
+    save_button = page.locator(".concept-page-b2__attempt-save")
+    save_button.click()
+    expect(page.locator("[data-attempt-error]")).to_have_text(
+        "The system could not record this yet. Try again."
+    )
+    expect(save_button).to_be_enabled()
+    assert drill_calls == []
+
+    page.evaluate(
+        """localStorage.removeItem('socratink:training:v1:qa-corrupt-training-concept')"""
+    )
+    save_button.click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "study required entry 1 of 1"
+    )
+    assert len(drill_calls) == 1
+
+
 def test_drawer_toggle_remains_visible_in_concept_view(
     clean_page: Page, base_url: str
 ) -> None:

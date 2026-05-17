@@ -683,11 +683,20 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.equal(getConceptEntryId(backbone[0], 0), 'core');
         assert.equal(getConceptEntryId({ label: 'No id' }, 2), 'entry-2');
 
-        const legacyStatusIgnored = selectInitialConceptEntry([
+        const legacyStatusCompat = selectInitialConceptEntry([
           { id: 'legacy-primed', label: 'Legacy primed', drill_status: 'solidified' },
           { id: 'next', label: 'Next', drill_status: 'locked' },
         ]);
-        assert.equal(legacyStatusIgnored.id, 'legacy-primed');
+        assert.equal(legacyStatusCompat.id, 'next');
+
+        const legacyDrilledHtml = renderActiveEntryHtml(
+          { id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' },
+          0,
+          [{ id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'));
 
         const initial = selectInitialConceptEntry([
           { id: 'done', label: 'Done', drill_status: 'solidified' },
@@ -830,6 +839,35 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(studiedHtml.includes('concept-page-b2__study-note'));
         assert.ok(studiedHtml.includes('Study note for this entry.'));
         assert.ok(studiedHtml.includes('Reconstruct from memory'));
+
+        const principleHtml = renderActiveEntryHtml(
+          { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
+          0,
+          [{ id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' }],
+          { startingMapContext: 'Learner sketch.', contentPreview: 'Global source preview should not appear.' },
+          { metadata: { core_thesis: 'Global core thesis should not appear.' } },
+          {
+            node_records: {
+              principle: {
+                attempts: [{
+                  id: 'pr1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A strong first attempt.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          },
+          { now: '2026-05-15T11:00:00.000Z' }
+        );
+        assert.ok(principleHtml.includes('Entry-specific generated principle.'));
+        assert.ok(!principleHtml.includes('Global core thesis should not appear.'));
+        assert.ok(!principleHtml.includes('Global source preview should not appear.'));
 
         const studiedAttemptHtml = renderActiveEntryHtml(
           { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },

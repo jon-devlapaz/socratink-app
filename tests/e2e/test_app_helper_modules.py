@@ -950,11 +950,19 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             };
             assert(conceptPage.getConceptEntryId(conceptBackbone[0], 0) === 'core', 'concept entry id uses explicit id');
             assert(conceptPage.getConceptEntryId({ label: 'No id' }, 2) === 'entry-2', 'concept entry id falls back to index');
-            const legacyStatusIgnoredEntry = conceptPage.selectInitialConceptEntry([
+            const legacyStatusCompatEntry = conceptPage.selectInitialConceptEntry([
               { id: 'legacy-primed', label: 'Legacy primed', drill_status: 'solidified' },
               { id: 'next', label: 'Next', drill_status: 'locked' },
             ]);
-            assert(legacyStatusIgnoredEntry.id === 'legacy-primed', 'concept page ignores legacy drill_status without training records');
+            assert(legacyStatusCompatEntry.id === 'next', 'concept page honors legacy solidified status when no training record exists');
+            const legacyDrilledHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' },
+              0,
+              [{ id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' }],
+              {},
+              { metadata: {} },
+            );
+            assert(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'), 'concept page honors legacy drilled status when no training record exists');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
               { label: 'Next cold entry', drill_status: 'locked' },
@@ -1070,6 +1078,34 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageStudiedHtml.includes('concept-page-b2__study-note'), 'concept page studied note renders');
             assert(conceptPageStudiedHtml.includes('Study note for this entry.'), 'concept page studied note uses entry purpose');
             assert(conceptPageStudiedHtml.includes('Reconstruct from memory'), 'concept page studied re-drill cta');
+            const conceptPagePrincipleHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
+              0,
+              [{ id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' }],
+              { startingMapContext: 'Learner sketch.', contentPreview: 'Global source preview should not appear.' },
+              { metadata: { core_thesis: 'Global core thesis should not appear.' } },
+              {
+                node_records: {
+                  principle: {
+                    attempts: [{
+                      id: 'pr1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'A strong first attempt.',
+                      classification: 'strong',
+                      gaps: [],
+                      grader_version: 'qa',
+                    }],
+                    study_revealed_at: '2026-05-15T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+              { now: '2026-05-15T11:00:00.000Z' },
+            );
+            assert(conceptPagePrincipleHtml.includes('Entry-specific generated principle.'), 'concept page study note uses entry principle before global fallback');
+            assert(!conceptPagePrincipleHtml.includes('Global core thesis should not appear.'), 'concept page principle avoids global core thesis fallback');
+            assert(!conceptPagePrincipleHtml.includes('Global source preview should not appear.'), 'concept page principle avoids source preview fallback');
             const conceptPageRepairHtml = conceptPage.renderActiveEntryHtml(
               { id: 'repair', label: 'Repair', study_note: 'Study the channel gate.' },
               0,

@@ -1816,18 +1816,18 @@ const App = (() => {
     const match = findConceptEntryById(backbone, entryId);
     const entry = match?.entry || {};
     const nodeLabel = entry.label || concept.name || 'Concept entry';
-    const loadedTraining = await trainingStore.loadTraining(concept.id);
-    const record = loadedTraining?.node_records?.[entryId] || {};
-    const attempts = Array.isArray(record.attempts) ? record.attempts : [];
-    const drillMode = attempts.length === 0 ? 'cold_attempt' : 're_drill';
     const at = new Date().toISOString();
 
     try {
+      const loadedTraining = await trainingStore.loadTraining(concept.id);
+      const record = loadedTraining?.node_records?.[entryId] || {};
+      const attempts = Array.isArray(record.attempts) ? record.attempts : [];
+      const drillMode = attempts.length === 0 ? 'cold_attempt' : 're_drill';
       const result = await runDrillTurn({
         concept_id: concept.id,
         node_id: entryId,
         node_label: nodeLabel,
-        node_mechanism: entry.purpose || entry.detail || entry.mechanism || '',
+        node_mechanism: entry.purpose || entry.detail || entry.mechanism || entry.principle || '',
         drill_session_id: `inline-${concept.id}-${entryId}-${Date.now()}`,
         client_turn_index: attempts.length + 1,
         knowledge_map: graphData,
