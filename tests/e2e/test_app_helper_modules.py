@@ -840,8 +840,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'partial')],
                 study_revealed_at: '2026-05-15T10:01:00.000Z',
               }).next_action,
-              'repair',
-              'partial after study needs repair',
+              'review',
+              'partial after study stays in review',
             );
             same(
               trainingDerive.deriveNodeTraining({
@@ -849,8 +849,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 study_revealed_at: '2026-05-15T10:01:00.000Z',
                 repairs: [{ id: 'r1', at: '2026-05-15T10:02:00.000Z', text: 'repair' }],
               }).next_action,
-              'spaced_attempt',
-              'needs-repair node can move to spaced attempt after repair',
+              'repair',
+              'repair text stays inert to state derivation',
             );
             const reviewState = trainingDerive.deriveNodeTraining({
               attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'strong')],
@@ -1026,6 +1026,27 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'), 'legacy primed spacing unlock renders ready state');
             assert(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing unlock shows reattempt cta');
+            const legacyDrilledWaitingHtml = conceptPage.renderActiveEntryHtml(
+              {
+                id: 'legacy-drilled-waiting',
+                label: 'Legacy drilled waiting',
+                drill_status: 'drilled',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              },
+              0,
+              [{
+                id: 'legacy-drilled-waiting',
+                label: 'Legacy drilled waiting',
+                drill_status: 'drilled',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              }],
+              {},
+              { metadata: {} },
+              null,
+              { now: '2026-05-15T20:00:00.000Z' },
+            );
+            assert(legacyDrilledWaitingHtml.includes('review pending entry 1 of 1'), 'legacy drilled spacing lock renders review state');
+            assert(!legacyDrilledWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy drilled spacing lock suppresses reattempt cta');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
               { label: 'Next cold entry', drill_status: 'locked' },

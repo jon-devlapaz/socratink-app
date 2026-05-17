@@ -22,7 +22,11 @@ function legacyTrainingForEntry(entry, options = {}) {
     return { state: 'solidified', next_action: null, attempted: true };
   }
   if (status === 'drilled') {
-    return { state: 'needs repair', next_action: 'spaced_attempt', attempted: true };
+    return {
+      state: 'needs repair',
+      next_action: waitingForLegacySpacing ? 'review' : 'spaced_attempt',
+      attempted: true,
+    };
   }
   if (status === 'primed') {
     return {
@@ -184,9 +188,9 @@ function activeEntryEyebrow({ isBlocked, attempted, state, nextAction, activeIdx
   if (nextAction === 'repair') return `repair the gap ${suffix}`;
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return `ready to reconstruct again ${suffix}`;
   if (state === 'solidified') return `solidified ${suffix}`;
-  if (state === 'needs repair') return `repair needed ${suffix}`;
   if (nextAction === 'spaced_attempt') return `spaced reconstruction ready ${suffix}`;
   if (nextAction === 'review') return `review pending ${suffix}`;
+  if (state === 'needs repair') return `repair needed ${suffix}`;
   return `re-drill ready ${suffix}`;
 }
 

@@ -4,10 +4,6 @@ function attemptsFor(record) {
   return Array.isArray(record?.attempts) ? record.attempts : [];
 }
 
-function repairsFor(record) {
-  return Array.isArray(record?.repairs) ? record.repairs : [];
-}
-
 function parseTime(value) {
   const ms = Date.parse(value || '');
   return Number.isFinite(ms) ? ms : null;
@@ -70,14 +66,14 @@ function deriveNextAction({ state, latestAttempt, record, now }) {
   if (!record?.study_revealed_at) return 'study';
 
   if (state === 'needs repair') {
-    return repairsFor(record).length > 0 ? 'spaced_attempt' : 'repair';
+    return 'repair';
   }
 
   if (state === 'primed') {
     if (latestAttempt.classification === 'strong') {
       return spacingOkAt(latestAttempt, now) ? 'spaced_attempt' : 'review';
     }
-    return repairsFor(record).length > 0 ? 'spaced_attempt' : 'repair';
+    return 'review';
   }
 
   return null;

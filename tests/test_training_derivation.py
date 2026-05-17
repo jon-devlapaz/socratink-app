@@ -84,7 +84,7 @@ def test_node_training_derivation_preserves_generation_before_recognition() -> N
           { now: '2026-05-15T12:20:00.000Z' }
         );
         assert.equal(afterRepair.state, 'needs repair');
-        assert.equal(afterRepair.next_action, 'spaced_attempt');
+        assert.equal(afterRepair.next_action, 'repair');
         """
     )
     assert result.returncode == 0, result.stderr
@@ -193,7 +193,7 @@ def test_node_training_derivation_preserves_single_lapse_grace() -> None:
           repairs: [],
         }, { now: '2026-05-16T06:05:00.000Z' });
         assert.equal(singleLapse.state, 'primed');
-        assert.equal(singleLapse.next_action, 'repair');
+        assert.equal(singleLapse.next_action, 'review');
 
         const twoLapses = deriveNodeTraining({
           attempts: [strongCold, firstLapse, secondLapse],

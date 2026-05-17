@@ -1084,9 +1084,9 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(repairedHtml.includes('ready to reconstruct again entry 1 of 1'));
-        assert.ok(repairedHtml.includes('Write it again'));
-        assert.ok(!repairedHtml.includes('concept-page-b2__repair'));
+        assert.ok(repairedHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(!repairedHtml.includes('Write it again'));
+        assert.ok(repairedHtml.includes('concept-page-b2__repair'));
 
         const stripHtml = renderConceptStripHtml(backbone, backbone[1], 1, training);
         assert.ok(stripHtml.includes('class="concept-strip"'));
