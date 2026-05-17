@@ -275,7 +275,8 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         assert.deepEqual(
           getLibraryConceptMeta({ name: 'Concept', state: 'growing', graphData: graph }),
           {
-            thesis: 'This is the central claim.',
+            thesis: 'No learner reconstruction recorded yet.',
+            summarySource: 'none',
             architecture: 'cause effect',
             difficulty: 'medium',
             clusterCount: 2,
@@ -290,18 +291,60 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           }).sourceLabel,
           'Source: PDF'
         );
-        assert.ok(getLibraryConceptMeta({ graphData: '{' }).thesis.includes('No summary'));
+        assert.ok(getLibraryConceptMeta({ graphData: '{' }).thesis.includes('No learner reconstruction'));
+
+        const training = {
+          node_records: {
+            n1: {
+              attempts: [
+                {
+                  id: 'a1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'The vague first answer.',
+                  classification: 'thin',
+                },
+                {
+                  id: 'a2',
+                  at: '2026-05-15T11:00:00.000Z',
+                  user_text: 'The learner reconstructed the causal mechanism.',
+                  classification: 'strong',
+                },
+              ],
+            },
+          },
+        };
+        assert.deepEqual(
+          getLibraryConceptMeta({ name: 'Concept', state: 'growing', graphData: graph }, training),
+          {
+            thesis: 'The learner reconstructed the causal mechanism.',
+            summarySource: 'learner_attempt',
+            architecture: 'cause effect',
+            difficulty: 'medium',
+            clusterCount: 2,
+            subnodeCount: 3,
+            sourceLabel: 'Map: Source Title',
+          }
+        );
 
         const emptyHtml = buildLibraryHtml([]);
         assert.ok(emptyHtml.includes('Begin a reconstruction.'));
         assert.ok(emptyHtml.includes('App.showIgnition()'));
+        assert.ok(!emptyHtml.includes('App.seedLocalQaConcept()'));
+
+        const localQaEmptyHtml = buildLibraryHtml([], {}, { showLocalQaSeed: true });
+        assert.ok(localQaEmptyHtml.includes('data-local-qa-seed'));
+        assert.ok(localQaEmptyHtml.includes('App.seedLocalQaConcept()'));
+        assert.ok(localQaEmptyHtml.includes('data-local-repair-qa-seed'));
+        assert.ok(localQaEmptyHtml.includes('App.seedLocalRepairQaConcept()'));
 
         const cardHtml = buildLibraryHtml([
           { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
-        ]);
+        ], { 'c-1': training });
         assert.ok(cardHtml.includes('data-concept-id="c-1"'));
         assert.ok(cardHtml.includes('onclick="App.openLibraryConcept(this.dataset.conceptId)"'));
         assert.ok(cardHtml.includes('&lt;Unsafe&gt;'));
+        assert.ok(cardHtml.includes('The learner reconstructed the causal mechanism.'));
+        assert.ok(!cardHtml.includes('This is the central claim.'));
         assert.ok(cardHtml.includes('2 sections'));
         assert.ok(cardHtml.includes('3 entries'));
         """
@@ -566,6 +609,7 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
             this.innerHTML = '';
             this.listeners = {};
             this.children = [];
+            this.dataset = {};
           }
           addEventListener(name, fn) { this.listeners[name] = fn; }
           appendChild(child) { this.children.push(child); }
@@ -587,7 +631,9 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.equal(conceptListEl.innerHTML, '');
         assert.equal(conceptListEl.children.length, 2);
         assert.equal(conceptListEl.children[0].className, 'concept-item');
+        assert.equal(conceptListEl.children[0].dataset.conceptId, 'c1');
         assert.equal(conceptListEl.children[1].className, 'concept-item active');
+        assert.equal(conceptListEl.children[1].dataset.conceptId, 'c2');
         conceptListEl.children[0].listeners.click({ target: new FakeElement() });
         assert.deepEqual(clicked, ['c1']);
         const deleteTarget = new FakeElement();
@@ -617,14 +663,116 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
           { id: 'entry-3', label: 'Third', drill_status: 'locked' },
         ];
+        const training = {
+          node_records: {
+            core: {
+              attempts: [{
+                id: 'a1',
+                kind: 'cold',
+                at: '2026-05-15T10:00:00.000Z',
+                user_text: 'Learner explained the core mechanism.',
+                classification: 'strong',
+                gaps: [],
+                grader_version: 'qa',
+              }],
+              repairs: [],
+            },
+          },
+        };
 
         assert.equal(getConceptEntryId(backbone[0], 0), 'core');
         assert.equal(getConceptEntryId({ label: 'No id' }, 2), 'entry-2');
 
+        const legacyStatusCompat = selectInitialConceptEntry([
+          { id: 'legacy-primed', label: 'Legacy primed', drill_status: 'solidified' },
+          { id: 'next', label: 'Next', drill_status: 'locked' },
+        ]);
+        assert.equal(legacyStatusCompat.id, 'next');
+
+        const legacyDrilledHtml = renderActiveEntryHtml(
+          { id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' },
+          0,
+          [{ id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'));
+
+        const legacyStudyHtml = renderActiveEntryHtml(
+          { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+          0,
+          [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(legacyStudyHtml.includes('study required entry 1 of 1'));
+        assert.ok(legacyStudyHtml.includes('data-active-entry-action="study"'));
+        const legacyStudyRevealedHtml = renderActiveEntryHtml(
+          { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+          0,
+          [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+          {},
+          { metadata: {} },
+          { node_records: { 'legacy-study': { attempts: [], repairs: [], study_revealed_at: '2026-05-15T10:05:00.000Z' } } }
+        );
+        assert.ok(legacyStudyRevealedHtml.includes('Legacy study note.'));
+        assert.ok(!legacyStudyRevealedHtml.includes('concept-page-b2__evidence'));
+        const legacyPrimedWaitingHtml = renderActiveEntryHtml(
+          {
+            id: 'legacy-waiting',
+            label: 'Legacy waiting',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          },
+          0,
+          [{
+            id: 'legacy-waiting',
+            label: 'Legacy waiting',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          }],
+          {},
+          { metadata: {} },
+          null,
+          { now: '2026-05-15T20:00:00.000Z' }
+        );
+        assert.ok(legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'));
+        assert.ok(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'));
+        const legacyPrimedReadyHtml = renderActiveEntryHtml(
+          {
+            id: 'legacy-ready',
+            label: 'Legacy ready',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          },
+          0,
+          [{
+            id: 'legacy-ready',
+            label: 'Legacy ready',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          }],
+          {},
+          { metadata: {} },
+          null,
+          { now: '2026-05-16T05:00:00.000Z' }
+        );
+        assert.ok(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'));
+        assert.ok(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'));
+
         const initial = selectInitialConceptEntry([
           { id: 'done', label: 'Done', drill_status: 'solidified' },
           { label: 'Next cold entry', drill_status: 'locked' },
-        ]);
+        ], {
+          node_records: {
+            done: {
+              attempts: [
+                { id: 's1', at: '2026-05-14T10:00:00.000Z', user_text: 'first strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                { id: 's2', at: '2026-05-15T10:00:00.000Z', user_text: 'second strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+              ],
+            },
+          },
+        });
         assert.equal(initial.entry.label, 'Next cold entry');
         assert.equal(initial.index, 1);
         assert.equal(initial.id, 'entry-1');
@@ -635,6 +783,39 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.equal(allSolidified.entry.label, 'Solid');
         assert.equal(allSolidified.index, 0);
         assert.equal(allSolidified.id, 'solid');
+        const solidifiedHtml = renderActiveEntryHtml(
+          { id: 'solid', label: 'Solid', drill_status: 'solidified' },
+          0,
+          [{ id: 'solid', label: 'Solid', drill_status: 'solidified' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(solidifiedHtml.includes('solidified entry 1 of 1'));
+        assert.ok(!solidifiedHtml.includes('concept-page-b2__entry-cta'));
+        const legacySolidWithPartialTrainingHtml = renderActiveEntryHtml(
+          { id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' },
+          0,
+          [{ id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              'legacy-solid': {
+                attempts: [{
+                  id: 'legacy-redrill',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Strong legacy re-drill.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+              },
+            },
+          }
+        );
+        assert.ok(legacySolidWithPartialTrainingHtml.includes('solidified entry 1 of 1'));
+        assert.ok(!legacySolidWithPartialTrainingHtml.includes('study required entry 1 of 1'));
+        assert.ok(!legacySolidWithPartialTrainingHtml.includes('concept-page-b2__entry-cta'));
 
         const emptyInitial = selectInitialConceptEntry([]);
         assert.equal(emptyInitial.entry.id, 'core-thesis');
@@ -652,7 +833,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           2,
           backbone,
           { startingMapContext: '<threshold & sketch>' },
-          { metadata: { core_thesis: 'fallback thesis' } }
+          { metadata: { core_thesis: 'fallback thesis' } },
+          training
         );
         assert.ok(blockedHtml.includes('&lt;threshold &amp; sketch&gt;'));
         assert.ok(blockedHtml.includes('locked entry 3 of 3'));
@@ -660,33 +842,291 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(blockedHtml.includes('>Locked</button>'));
         assert.ok(blockedHtml.includes('&lt;Core&gt;'));
         assert.ok(blockedHtml.includes('Second &amp; unsafe'));
-        assert.ok(blockedHtml.includes('LOCKED'));
+        assert.ok(blockedHtml.includes('READY TO RECONSTRUCT'));
 
         const readyHtml = renderActiveEntryHtml(
           backbone[1],
           1,
           backbone,
           { startingMapContext: '' },
-          { metadata: { starting_map_context: 'metadata sketch' } }
+          { metadata: { starting_map_context: 'metadata sketch' } },
+          training
         );
         assert.ok(readyHtml.includes('metadata sketch'));
-        assert.ok(readyHtml.includes('first cold attempt entry 2 of 3'));
+        assert.ok(readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('data-active-entry-id="entry-2"'));
-        assert.ok(readyHtml.includes('Try from memory'));
+        assert.ok(readyHtml.includes('Write what you remember'));
+
+        const readyAttemptHtml = renderActiveEntryHtml(
+          backbone[1],
+          1,
+          backbone,
+          { startingMapContext: '' },
+          { metadata: { starting_map_context: 'metadata sketch' } },
+          training,
+          { attemptEntryId: 'entry-2' }
+        );
+        assert.ok(readyAttemptHtml.includes('concept-page-b2__attempt'));
+        assert.ok(readyAttemptHtml.includes('data-attempt-entry-id="entry-2"'));
+        assert.ok(readyAttemptHtml.includes('Write what you can reconstruct'));
+        assert.ok(readyAttemptHtml.includes('Save what I wrote'));
+        assert.ok(!readyAttemptHtml.includes('concept-page-b2__entry-cta'));
 
         const primedHtml = renderActiveEntryHtml(
           { id: 'primed', label: 'Primed', drill_status: 'primed' },
           0,
           [{ id: 'primed', label: 'Primed', drill_status: 'primed' }],
           {},
-          { metadata: {} }
+          { metadata: {} },
+          {
+            node_records: {
+              primed: {
+                attempts: [{
+                  id: 'p1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A strong first attempt.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+                repairs: [],
+              },
+            },
+          }
         );
         assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
         assert.ok(primedHtml.includes('add sketch'));
-        assert.ok(primedHtml.includes('re-drill ready entry 1 of 1'));
-        assert.ok(primedHtml.includes('Re-drill from memory'));
+        assert.ok(primedHtml.includes('study required entry 1 of 1'));
+        assert.ok(primedHtml.includes('data-active-entry-action="study"'));
+        assert.ok(primedHtml.includes('Reveal study note'));
 
-        const stripHtml = renderConceptStripHtml(backbone, backbone[1], 1);
+        const legacyRedrillWithTrainingHtml = renderActiveEntryHtml(
+          {
+            id: 'legacy-redrill-training',
+            label: 'Legacy re-drill with training',
+            drill_status: 'drilled',
+            last_drilled: '2026-05-15T10:05:00.000Z',
+          },
+          0,
+          [{
+            id: 'legacy-redrill-training',
+            label: 'Legacy re-drill with training',
+            drill_status: 'drilled',
+            last_drilled: '2026-05-15T10:05:00.000Z',
+          }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              'legacy-redrill-training': {
+                attempts: [{
+                  id: 'legacy-r1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A thin migrated attempt.',
+                  classification: 'thin',
+                  gaps: [{ type: 'mechanism', description: 'Missing causal link.' }],
+                  grader_version: 'qa',
+                }],
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(legacyRedrillWithTrainingHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(legacyRedrillWithTrainingHtml.includes('A thin migrated attempt.'));
+        assert.ok(!legacyRedrillWithTrainingHtml.includes('study required entry 1 of 1'));
+
+        const studiedHtml = renderActiveEntryHtml(
+          { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
+          0,
+          [{ id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              studied: {
+                attempts: [{
+                  id: 'st1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A strong first attempt.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          },
+          { now: '2026-05-15T11:00:00.000Z' }
+        );
+        assert.ok(studiedHtml.includes('review pending entry 1 of 1'));
+        assert.ok(studiedHtml.includes('concept-page-b2__evidence'));
+        assert.ok(studiedHtml.includes('learner reconstruction'));
+        assert.ok(studiedHtml.includes('A strong first attempt.'));
+        assert.ok(studiedHtml.includes('No repair hinge recorded for this reconstruction.'));
+        assert.ok(studiedHtml.includes('concept-page-b2__study-note'));
+        assert.ok(studiedHtml.includes('Study note for this entry.'));
+        assert.ok(!studiedHtml.includes('concept-page-b2__entry-cta'));
+
+        const principleHtml = renderActiveEntryHtml(
+          { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
+          0,
+          [{ id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' }],
+          { startingMapContext: 'Learner sketch.', contentPreview: 'Global source preview should not appear.' },
+          { metadata: { core_thesis: 'Global core thesis should not appear.' } },
+          {
+            node_records: {
+              principle: {
+                attempts: [{
+                  id: 'pr1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A strong first attempt.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          },
+          { now: '2026-05-15T11:00:00.000Z' }
+        );
+        assert.ok(principleHtml.includes('Entry-specific generated principle.'));
+        assert.ok(!principleHtml.includes('Global core thesis should not appear.'));
+        assert.ok(!principleHtml.includes('Global source preview should not appear.'));
+
+        const studiedAttemptHtml = renderActiveEntryHtml(
+          { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
+          0,
+          [{ id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              studied: {
+                attempts: [{
+                  id: 'st1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A strong first attempt.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          },
+          { now: '2026-05-15T11:00:00.000Z', attemptEntryId: 'studied' }
+        );
+        assert.ok(!studiedAttemptHtml.includes('concept-page-b2__attempt'));
+        assert.ok(studiedAttemptHtml.includes('concept-page-b2__study-note'));
+
+        const repairHtml = renderActiveEntryHtml(
+          { id: 'repair', label: 'Repair', study_note: 'Study the channel gate.' },
+          0,
+          [{ id: 'repair', label: 'Repair', study_note: 'Study the channel gate.' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              repair: {
+                attempts: [{
+                  id: 'rp1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Sodium just rushes in.',
+                  classification: 'thin',
+                  gaps: [{
+                    mechanism: 'channel gate',
+                    correction: 'Name that voltage-gated sodium channels open at threshold.',
+                  }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(repairHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(repairHtml.includes('concept-page-b2__evidence'));
+        assert.ok(repairHtml.includes('Sodium just rushes in.'));
+        assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
+        assert.ok(repairHtml.includes('concept-page-b2__repair'));
+        assert.ok(repairHtml.includes('channel gate'));
+        assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
+        assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
+        assert.ok(repairHtml.includes('Write the missing link'));
+        assert.ok(repairHtml.includes('Save repair'));
+        const fallbackRepairHtml = renderActiveEntryHtml(
+          { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
+          1,
+          [{ id: 'done', label: 'Done', drill_status: 'solidified' }, { label: 'Fallback repair', study_note: 'Study the unnamed entry.' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              'entry-1': {
+                attempts: [{
+                  id: 'fr1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Incomplete fallback answer.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'fallback link', correction: 'Name the fallback mechanism.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(fallbackRepairHtml.includes('data-repair-entry-id="entry-1"'));
+        assert.ok(!fallbackRepairHtml.includes('data-repair-entry-id="core-thesis"'));
+
+        const repairedHtml = renderActiveEntryHtml(
+          { id: 'repair', label: 'Repair' },
+          0,
+          [{ id: 'repair', label: 'Repair' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              repair: {
+                attempts: [{
+                  id: 'rp1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Sodium just rushes in.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'channel gate', correction: 'Name the gate.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [{
+                  id: 'rr1',
+                  at: '2026-05-15T10:10:00.000Z',
+                  text: 'Voltage-gated channels open at threshold.',
+                }],
+              },
+            },
+          }
+        );
+        assert.ok(repairedHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(!repairedHtml.includes('Write it again'));
+        assert.ok(repairedHtml.includes('concept-page-b2__repair'));
+        assert.ok(repairedHtml.includes('Try from memory again'));
+
+        const stripHtml = renderConceptStripHtml(backbone, backbone[1], 1, training);
         assert.ok(stripHtml.includes('class="concept-strip"'));
         assert.ok(stripHtml.includes('viewBox="0 0 600 110"'));
         assert.ok(stripHtml.includes('concept-strip__edge is-active'));
@@ -698,11 +1138,11 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(stripHtml.includes('concept-strip__node--locked'));
         assert.ok(stripHtml.includes('r="9"'));
         assert.ok(stripHtml.includes('Second &amp; unsafe · 2 of 3'));
-        assert.ok(stripHtml.includes('aria-label="Second &amp; unsafe, ready for first attempt, current"'));
+        assert.ok(stripHtml.includes('aria-label="Second &amp; unsafe, ready to reconstruct, current"'));
 
         const emptyStripHtml = renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
         assert.ok(emptyStripHtml.includes('data-entry-id="core-thesis"'));
-        assert.ok(emptyStripHtml.includes('core thesis, ready for first attempt, current'));
+        assert.ok(emptyStripHtml.includes('core thesis, ready to reconstruct, current'));
         assert.ok(emptyStripHtml.includes('<text x="60" y="80">core thesis</text>'));
         """
     )

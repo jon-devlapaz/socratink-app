@@ -64,7 +64,7 @@ The **crystal polygon** is the one distinctive brand illustration. It is the pro
 - Never stylized in a new way. Never recolored.
 
 ### The isometric board
-The in-app surface is an **isometric grid of tiles**. Tiles use the `--tile-top / left / right` tokens; each tile carries a crystal polygon whose state is one of: `locked`, `primed`, `drilled`, `solidified`. Never draw the graph flat; never use a node-and-edge force-directed diagram. The board is always isometric, always cream.
+The in-app surface is an **isometric grid of tiles**. Tiles use the `--tile-top / left / right` tokens; each tile carries a crystal polygon whose live training state is `primed`, `needs repair`, or `solidified`; no-evidence/null state renders quietly. Never draw the graph flat; never use a node-and-edge force-directed diagram. The board is always isometric, always cream.
 
 ### Motion
 - Standard easing `cubic-bezier(0.2, 0.8, 0.2, 1)`. Spring `cubic-bezier(0.34, 1.56, 0.64, 1)` **only** on solidified-state celebration.
@@ -101,25 +101,25 @@ The product's onboarding into any concept follows a fixed seven-screen arc. Desi
 
 1. **Generation fatigue.** Threshold and first cold attempt must not ask the same question. Threshold is **global**; cold attempt is **local**.
 2. **Zero-signal frustration.** Low-vocabulary learners get an **analogical** generation, never a blind guess. Never label anyone zero-knowledge.
-3. **Interleaving whiplash.** Going from repair → another cold attempt always passes through the **Interleaving Bridge** (Screen 6).
+3. **Interleaving whiplash.** Target flow routes repair → another cold attempt through the **Interleaving Bridge** (Screen 6). Current POC may expose inline repair retry, but that retry must not claim mastery, spacing, or interleaving credit.
 
 **The seven screens, in order:**
 
 1. **Concept Threshold** — capture the learner's *global* starting map (parts, guesses, examples, confusions) *before* showing content. No graph mutation. Copy makes clear: “This is global context. The first room will ask one smaller question.”
 2. **Provisional Graph** — a draft route presented as a hypothesis, never as a knowledge claim. Legend is limited to: *draft route · ready for first attempt · locked*. No mutation.
-3. **First Cold Attempt (local)** — narrower than the threshold; quotes or paraphrases the threshold input, then asks **one** causal mechanism question inside the first node. Substantive → `locked → primed`. Non-substantive → no mutation; ask for a micro-generation. **Analogical fallback** for low-signal learners: familiar source analogy, learner predicts a causal relation *inside the analogy*, node stays `locked` until substantive.
+3. **First Cold Attempt (local)** — narrower than the threshold; quotes or paraphrases the threshold input, then asks **one** causal mechanism question inside the first node. Recordable learner evidence derives `primed` or `needs repair`. Non-substantive input writes no attempt; ask for a micro-generation. **Analogical fallback** for low-signal learners: familiar source analogy, learner predicts a causal relation *inside the analogy*, and no training evidence is recorded until substantive.
 4. **Locked Study Silhouette** — node title + one-line purpose + locked state + first-attempt CTA. **No explanation, no definitions, no solved diagram.** The absence of content is intentional.
-5. **Study Repair Artifact** — scoped to the attempted node. Five parts: learner’s exact words → the hinge (one correction) → causal spine → one clarifying diagram → 1–2 connection cues. Never claim mastery here. CTA: **Choose next room** (routes to the bridge, not another cold attempt).
+5. **Study Repair Artifact** — scoped to the attempted node. Five parts: learner’s exact words → the hinge (one correction) → causal spine → one clarifying diagram → 1–2 connection cues. Never claim mastery here. Target CTA: **Choose next room**. Current POC can also show inline repair retry after saved repair text, without mastery or spacing credit.
 6. **Interleaving Bridge** — explains *why* the learner is leaving the repaired node (“the repair is fresh”), offers **2–3 nearby rooms** each with a one-line purpose (not a mechanism reveal), plus a non-punitive **“Take a short break instead”**. Never framed as reward or completion. Node stays `primed`.
 7. **Repair History** — accumulates from attempts / feedback / repair reps / re-drills only. Never from reading.
 
 **State-change rules (do not violate):**
 
-- Only a **substantive, local cold attempt** may move `locked → primed`.
-- Study stays `primed`; it sets the re-drill timer but never claims mastery.
+- Only a **recordable, local cold attempt** may create training evidence.
+- Study stays evidence-neutral; it records reveal/repair context but never claims mastery.
 - The interleaving bridge mutates nothing — it is a routing choice.
-- `primed / drilled → solidified` happens **only** on a solid spaced re-drill.
-- A non-solid spaced re-drill moves `primed → drilled`. Never red, never punitive.
+- `solidified` derives **only** from spaced strong reconstruction evidence.
+- Non-solid evidence can derive `needs repair`. Never red, never punitive.
 
 **Graph-claim vocabulary:**
 
@@ -128,7 +128,7 @@ The product's onboarding into any concept follows a fixed seven-screen arc. Desi
 
 **Forbidden on threshold / graph / attempt screens:** the words *diagnostic, evaluate, beginner/intermediate/advanced, misconceptions*; learner-visible schema labels; curriculum claims; cross-concept mastery summaries. Schema inference is internal only — the learner never sees their own schema tier.
 
-**Happy-path MVP cut (for prioritization):** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **local first cold attempt derived from threshold input** · **analogical cold-attempt fallback** · locked study silhouette · attempt-scoped repair artifact · **interleaving bridge with 2–3 next-room options + break** before another cold attempt · existing spacing + mutation rules unchanged.
+**Happy-path MVP cut (for prioritization):** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **local first cold attempt derived from threshold input** · **analogical cold-attempt fallback** · locked study silhouette · attempt-scoped repair artifact · **interleaving bridge with 2–3 next-room options + break** before another cold attempt · browser-local training evidence with derived state, plus the shipped 18-hour spacing interval.
 
 ## Copy voice
 
@@ -138,13 +138,13 @@ Calm, precise, Socratic. Reading room, not dashboard.
 - **Lowercase `socratink`**, always — even sentence-initial.
 - **No jargon hype.** Never "revolutionary," "AI-powered," "10×," "unlock," "crush your goals," "supercharge."
 - **No exclamation marks.** Ever.
-- **Honor struggle.** A `drilled` (non-solid re-drill) state is described as "Worth revisiting." Never punitive, never consoling.
+- **Honor struggle.** A `needs repair` state is described as "Worth revisiting." Never punitive, never consoling.
 - **Strategy over ability.** Errors describe the missing link ("The causal connection between step 2 and step 3 needs a different angle"), never the learner ("You got it wrong").
 - **No streaks, no XP, no badges, no leaderboards.** The reward is the crystal state change itself.
 - **Admit the product's honest state.** Lines like "Still testing. Still learning." are load-bearing brand.
 - **Imperative + verb-led marketing copy.** "Bring your material. Build a map. Record evidence."
 
-Casing: lowercase for product name and state tokens (`primed`, `drilled`, `solidified`); Title Case for section headings; UPPERCASE with `--tracking-kicker` only on eyebrow labels.
+Casing: lowercase for product name and state tokens (`primed`, `needs repair`, `solidified`); Title Case for section headings; UPPERCASE with `--tracking-kicker` only on eyebrow labels.
 
 ## What to avoid
 
@@ -175,7 +175,7 @@ When given a socratink task:
 2. Link `colors_and_type.css` first. Reach for tokens — never invent hex values inline.
 3. For any component more complex than a button, find its cousin in `ui_kits/` and crib the shape.
 4. Write copy last — after the layout is right — and cold-read it against the **Copy voice** rules above. If a sentence would feel at home on a SaaS landing page from 2018, rewrite it.
-5. For state messaging (primed / drilled / solidified / locked), pull the exact tone from `README.md` → *Tone by surface*. For any concept-facing surface, re-read `README.md` → *The metacognitive happy path* before designing — every state-change claim must be earned by the rule table there.
+5. For state messaging (`primed` / `needs repair` / `solidified` / no-evidence), pull the exact tone from `README.md` → *Tone by surface*. For any concept-facing surface, re-read `README.md` → *The metacognitive happy path* before designing — every state-change claim must be earned by the rule table there.
 6. Before shipping: grep your output for `!`, emoji, the literal strings "AI-powered", "revolutionary", "unlock", "supercharge". Remove.
 
 ## Deliverables checklist

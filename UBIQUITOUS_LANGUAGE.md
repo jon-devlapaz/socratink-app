@@ -16,10 +16,11 @@
 
 | Term | Definition | Aliases to avoid |
 | --- | --- | --- |
-| **Graph truth** | The persisted node-state record of evidence Socratink has seen. | What the learner knows |
-| **`locked`** | No substantive attempt is on record for the node. | Not known, failed |
-| **`primed`** | A substantive cold attempt is on record and study is unlocked. | Learned, partially mastered |
-| **`drilled`** | A spaced reconstruction was attempted and was not solid. | Failed, bad, weak learner |
+| **Graph truth** | The derived projection of training evidence Socratink has seen. The provisional graph stays a hypothesis; learner evidence lives in the training store. | What the learner knows |
+| **Training record** | Browser-local evidence record keyed as `socratink:training:v1:<conceptId>`; contains learner sketch, attempts, study reveal timestamps, and repair text. | Graph summary, mastery record |
+| **`null` training state** | No learner reconstruction attempt is on record for the node. Usually rendered silently or as "ready to reconstruct", not as a badge. | Locked knowledge, failed |
+| **`primed`** | Learner reconstruction evidence is on record; study, repair, review, or spaced-attempt routing is derived from the latest attempt. | Learned, partially mastered |
+| **`needs repair`** | Current evidence contains named gaps that need repair before the next reconstruction can honestly advance. | Failed, bad, weak learner |
 | **`solidified`** | At least one solid spaced reconstruction is on record. | Mastered forever, actualized, cleared as knowledge |
 | **Traversal unlock** | Permission to move through the map based on engagement evidence. | Mastery unlock |
 | **Mastery-gated progression** | Progression that requires `solidified` evidence. | Basic branch opening |
@@ -55,9 +56,9 @@
 ## Relationships
 
 - A **Draft map** can become a **Provisional map** without mutating **Graph truth**.
-- A **Cold attempt** can move a node from **`locked`** to **`primed`** only when substantive.
-- **Targeted study** and **Repair Reps** may help the learner, but neither mutates **Graph truth**.
-- A **Spaced re-drill** is the only event that can move **`primed`** or **`drilled`** to **`solidified`**.
+- A **Cold attempt** can create a **Training record** attempt; the derived state becomes **`primed`** or **`needs repair`** depending on the recorded classification and prior evidence.
+- **Targeted study** and **Repair Reps** may help the learner, but neither directly produces **`solidified`** evidence.
+- A spaced strong reconstruction is required before a node can derive **`solidified`**.
 - A **Traversal unlock** can happen before **`solidified`** when the product is creating interleaving, but **Mastery-gated progression** requires **`solidified`**.
 - An **Imported source** is the input to the **Draft map** extraction pipeline.
 - An **Imported source** that is `is_remote_source=True` is treated as untrusted in extraction prompt assembly (per OWASP LLM01).
@@ -86,10 +87,15 @@
 
 - "Mastery" is overloaded between product shorthand and evidence claims. Prefer **`solidified`** or "solid spaced reconstruction on record" when referring to a node.
 - "Cleared" can work as visual shorthand, but it must not imply knowledge. Prefer **`solidified`** in product copy unless a local UI spec explicitly frames "cleared" as display shorthand.
-- "Actualized" and "hibernating" are legacy concept-shell terms. The live learning-state language is **`locked`**, **`primed`**, **`drilled`**, and **`solidified`**.
+- "Actualized", "hibernating", `locked`, and `drilled` are legacy concept-shell or prior drill terms. The live training-state language is **`null`**, **`primed`**, **`needs repair`**, and **`solidified`**.
 - "Diagnostic" implies Socratink knows the learner's mind. Prefer **Routing hint** or **Starting-map anchor**.
 
-## Drift report 2026-05-12
+## Historical drift report 2026-05-12
+
+This snapshot predates the 2026-05-15 training-record implementation and is kept
+only as historical evidence. Do not treat these match counts as current code
+truth; the live training-state vocabulary now appears in the JavaScript training
+store and derivation modules.
 
 - Evidence-weighted map — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
 - Draft map — 2 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.

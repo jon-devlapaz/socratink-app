@@ -26,9 +26,9 @@
 > - `/` Ignition view (empty-state hero with Concept + Starting-map composer)
 > - Bottom nav: Ignition / Desk / Library / Settings (mobile only, `<900px`)
 > - Top chrome: floating hamburger button only (fixed, translucent blur scrim on mobile)
-> - Library has a seed "Hermes Agent" draft path — clicking it opens the Map view (`#map-view`) with a draft Route + Graph
-> - Map view chrome (mobile): segmented "Route / Graph" switch (peripheral, ~30 px tall) + sticky bottom action bar with "Try from memory" CTA (or "Start first entry" on a fresh first-room map)
-> - Drilling activates `body.is-drilling`. **Mobile only (`<900px`)**: chrome, bottom nav, segmented switch, and action bar are all hidden — full-screen takeover. **Desktop (`≥900px`)**: drilling is inline in the right column of `.graph-layout` (`#drill-ui` inside `#graph-detail`); the sidebar/drawer and `.main-header` STAY VISIBLE by design — do NOT flag this as a bug on desktop.
+> - On localhost only, Library exposes QA seed buttons (`Seed QA concept`, `Seed repair QA`) for creating a real concept fixture before opening the concept view
+> - Concept view chrome (mobile): strip + concept-page B-2 layout with primary action text derived from training state, usually "Write what you remember" for a fresh first entry
+> - Legacy map drilling activates `body.is-drilling`. The concept-page reconstruction path is inline and does not hide chrome; verify it with the dedicated inline reconstruction flow below.
 >
 > **Tooling fallbacks.** If your Browser Sub-Agent cannot natively resize the viewport or inject CDN scripts, use these escape hatches BEFORE skipping a pass:
 >
@@ -64,7 +64,7 @@
 > | Viewport | 320×568, 375×667, 414×896, 768×1024 (tablet portrait, sanity), 1280×800 (desktop, regression) |
 > | Theme | Light (`html[data-theme="light"]`, default), Dark (`html[data-theme="dark"]`) |
 > | Motion | Default, Reduced (`html[data-motion="reduced"]`) |
-> | View | Ignition (empty-state), Library (Hermes seed), Map view (after click), Settings, Desk (after creating a concept) |
+> | View | Ignition (empty-state), Library (with localhost QA seed or a created concept), concept view, Settings, Desk (after creating a concept) |
 >
 > **For each (viewport × theme × motion) cell, run the 8 inspection passes below.**
 >
@@ -107,9 +107,9 @@
 > Run each flow and assert at every step. Capture a Walkthrough for each.
 >
 > 1. **Empty-state hero → submit gate.** Type "Photosynthesis" in Concept, leave Starting-map empty. Submit must be disabled. Type a 6-word sketch. Submit must enable. Submit (don't follow). Verify `App.runHeroAction` fires.
-> 2. **Library → Hermes draft path → Concept view.** From Library, click Hermes Agent. Wait for `#concept-start-drill` to be unhidden. Verify the button text reads "Try from memory" (or "Repair Gap" if the concept state is `fractured`; "Start first entry" appears only on a fresh first-room map). After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
-> 3. **Try-from-memory drill.** From the concept view, click the primary action ("Try from memory"). The drill now opens in the full-screen drill chamber view (`#drill-chamber-view`, `public/js/drill-chamber.js`); verify it becomes visible and chat input is focused. The map-mode segmented switch no longer exists.
-> 4. **Cancel drill.** Click "← Back" inside drill. Verify `is-drilling` removes, all chrome restored.
+> 2. **Library → concept view.** From Library, open a concept. Verify the primary button text reflects the derived training state: "Write what you remember", "Reveal study note", "Try from memory again", or a disabled "Locked" for blocked successors. After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
+> 3. **Inline reconstruction.** From the concept view, click the first-reconstruction primary action ("Write what you remember"). Verify the inline reconstruction textarea appears, focuses, and saves through "Save what I wrote". The map-mode segmented switch no longer exists.
+> 4. **Inline validation.** Click "Save what I wrote" with an empty reconstruction. Verify the inline error appears, focus stays in the textarea, and chrome remains visible.
 > 5. **Empty-tile click in Desk.** From Desk view (after creating a concept), click a blank tile. Verify `AudioFX.playTileClick()` fires (assert via `console.log` instrumentation OR by listening for the underlying `<audio>` start event), then verify the add-concept drawer opens.
 > 6. **Bottom-nav cycling.** Tap each nav item; verify the corresponding view becomes `.visible` and others lose `.visible` within 400ms. Verify URL or in-memory route updates.
 > 7. **Drawer toggle.** Tap hamburger; verify `body[data-drawer-open="true"]` and `aria-expanded="true"`. Tap again; verify cleanup.
@@ -119,7 +119,7 @@
 > For each (viewport × theme × motion × view) cell, take a full-page screenshot. Run a vision pass with these prompts and report findings:
 >
 > 1. *"Is there any visible color seam, hard edge, or banding between the top floating chrome and the page background? Describe the gradient transition. The intended look is a soft translucent blur with no hard edge."*
-> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended primary action on the Map view is 'Try from memory' (or 'Start first entry' on a fresh first-room map) in a sticky bottom bar."*
+> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended first-reconstruction action is 'Write what you remember'."*
 > 3. *"Describe the segmented control labeled 'Route / Graph' (if present). Is its visual weight peripheral (subtle, ≤30px tall, content-width) or primary (heavy, full-width, deep saturation)? Intended: peripheral."*
 > 4. *"Are any controls or text clipped, cut off, or overlapped by other UI? List positions."*
 > 5. *"Does the bottom nav have any element overlapping it? Describe the gap between the bottom nav and the closest non-nav element above."*

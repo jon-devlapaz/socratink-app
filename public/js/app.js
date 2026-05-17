@@ -25,7 +25,7 @@ import {
   renderActiveEntryHtml,
   renderConceptStripHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js';
+} from './concept-page-view.js?v=6';
 import {
   getDefaultPhaseBSessionState,
   getPhaseBSessionStorageKey,
@@ -35,6 +35,7 @@ import {
   persistPhaseBSessionState as persistStoredPhaseBSessionState,
 } from './phase-b-session.js';
 import { buildLibraryHtml } from './library-view.js';
+import { createTrainingStore, TRAINING_SCHEMA_VERSION } from './training-store.js';
 import {
   buildContentInputUI,
   hasStudyEvidence,
@@ -84,6 +85,11 @@ const App = (() => {
   const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
   const BOARD_SLOT_COUNT = TILE_IDS.length;
+  const LOCAL_QA_CONCEPT_ID = 'local-qa-training-concept';
+  const LOCAL_QA_NODE_ID = 'qa-node';
+  const LOCAL_REPAIR_QA_CONCEPT_ID = 'qa-repair-concept';
+  const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
+  const trainingStore = createTrainingStore();
   let currentGraphController = null;
   let activeDrillNode = null;
   let repairRepsState = null;
@@ -98,6 +104,257 @@ const App = (() => {
     drillSessionTimeLimitSeconds = Number.isFinite(limitSeconds) && limitSeconds > 0
       ? limitSeconds
       : null;
+  }
+
+  async function initializeConceptTraining({ conceptId, provenance, sketchText, sketchAt }) {
+    await trainingStore.setProvenance(conceptId, provenance);
+    if (sketchText) {
+      await trainingStore.setSketch(conceptId, {
+        text: sketchText,
+        at: sketchAt,
+      });
+    }
+  }
+
+  function mapDrillClassificationForTraining(classification) {
+    if (classification === 'solid' || classification === 'strong') return 'strong';
+    if (classification === 'deep' || classification === 'partial') return 'partial';
+    if (classification === 'shallow' || classification === 'thin') return 'thin';
+    if (classification === 'misconception' || classification === 'wrong_direction') return 'wrong_direction';
+    /* c8 ignore next -- defensive guard for malformed drill API classifications */
+    return null;
+  }
+
+  function buildTrainingGapsFromDrillResult(result) {
+    if (!result?.gap_description) return [];
+    return [{
+      classification: result.classification || null,
+      description: result.gap_description,
+    }];
+  }
+
+  function isRecordableDrillAttempt(result) {
+    return result?.answer_mode === 'attempt' && result?.score_eligible === true;
+  }
+
+  async function appendTrainingAttemptFromDrillTurn({
+    conceptId,
+    nodeId,
+    userText,
+    result,
+    at,
+  }) {
+    if (!isRecordableDrillAttempt(result)) return null;
+    const classification = mapDrillClassificationForTraining(result?.classification);
+    if (!classification || typeof userText !== 'string' || userText.trim() === '') return null;
+    return trainingStore.appendAttempt(conceptId, nodeId, {
+      id: `attempt-${at}-${Math.random().toString(36).slice(2, 10)}`,
+      at,
+      user_text: userText,
+      classification,
+      gaps: buildTrainingGapsFromDrillResult(result),
+      grader_version: result?.prompt_version || result?.grader_version || 'drill-system-v1',
+    });
+  }
+
+  function inlineAttemptNudgeFromDrillResult(result) {
+    const isScaffold = result?.routing === 'SCAFFOLD' || result?.answer_mode === 'help_request';
+    if (!isScaffold) return null;
+    return (
+      result?.agent_response?.trim?.()
+      || result?.gap_description?.trim?.()
+      || 'Make one concrete guess before study appears.'
+    );
+  }
+
+  function isLocalDevHost() {
+    return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+  }
+
+  function buildLocalQaConcept(nowMs) {
+    const graphData = {
+      metadata: {
+        core_thesis: 'AI GENERATED CORE THESIS SHOULD NOT APPEAR',
+        architecture_type: 'cause_effect',
+        difficulty: 'medium',
+        source_title: 'QA fixture source',
+        starting_map_context: 'Learner rough sketch baseline.',
+        map_maturity: 'provisional',
+      },
+      backbone: [{ id: LOCAL_QA_NODE_ID, label: 'Target node', drill_status: null }],
+      clusters: [
+        {
+          id: 'cluster-1',
+          title: 'QA target',
+          subnodes: [{ id: LOCAL_QA_NODE_ID, label: 'Target node', drill_status: null }],
+        },
+      ],
+    };
+    graphData.backbone[0].purpose = 'Use this entry to name the target mechanism from memory before reading the study note.';
+    graphData.backbone[0].study_note = 'The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair.';
+    graphData.clusters[0].subnodes[0].purpose = graphData.backbone[0].purpose;
+    graphData.clusters[0].subnodes[0].study_note = graphData.backbone[0].study_note;
+
+    return {
+      id: LOCAL_QA_CONCEPT_ID,
+      name: 'Training Truth QA',
+      createdAt: nowMs,
+      state: 'growing',
+      timerStart: null,
+      contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+      contentType: null,
+      contentFilename: null,
+      sourceUrl: null,
+      startingMapContext: 'Learner rough sketch baseline.',
+      graphData: JSON.stringify(graphData),
+    };
+  }
+
+  function buildLocalRepairQaConcept(nowMs) {
+    const studyNote = 'Voltage-gated sodium channels open when membrane voltage reaches threshold; the concentration gradient drives flow after the gate opens.';
+    const purpose = 'Name what opens the channel before reading the study note.';
+    const graphData = {
+      metadata: {
+        source_title: 'Repair QA source',
+        starting_map_context: 'Learner thinks sodium just rushes in.',
+        map_maturity: 'provisional',
+      },
+      backbone: [{
+        id: LOCAL_REPAIR_QA_NODE_ID,
+        label: 'Sodium channel gate',
+        purpose,
+        study_note: studyNote,
+        drill_status: null,
+      }],
+      clusters: [{
+        id: 'cluster-1',
+        subnodes: [{
+          id: LOCAL_REPAIR_QA_NODE_ID,
+          label: 'Sodium channel gate',
+          purpose,
+          study_note: studyNote,
+          drill_status: null,
+        }],
+      }],
+    };
+
+    return {
+      id: LOCAL_REPAIR_QA_CONCEPT_ID,
+      name: 'Repair Truth QA',
+      createdAt: nowMs,
+      state: 'growing',
+      timerStart: null,
+      contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+      contentType: null,
+      contentFilename: null,
+      sourceUrl: null,
+      startingMapContext: 'Learner thinks sodium just rushes in.',
+      graphData: JSON.stringify(graphData),
+    };
+  }
+
+  function upsertLocalQaConcept(concepts, concept) {
+    const existingIndex = concepts.findIndex((item) => item.id === concept.id);
+    /* c8 ignore start -- avoids destructive local QA seeding when the board is full */
+    if (existingIndex === -1 && concepts.length >= BOARD_SLOT_COUNT) {
+      console.warn('Local QA concept seed skipped: board is at capacity.');
+      return null;
+    }
+    /* c8 ignore stop */
+    return existingIndex === -1
+      ? [concept, ...concepts]
+      : concepts.map((item, index) => index === existingIndex ? concept : item);
+  }
+
+  async function seedLocalQaConcept() {
+    /* c8 ignore next -- localhost-only guard; exercised positively by e2e */
+    if (!isLocalDevHost()) return;
+
+    const concepts = loadConcepts();
+    const now = new Date();
+    const concept = buildLocalQaConcept(now.getTime());
+    const nextConcepts = upsertLocalQaConcept(concepts, concept);
+    if (!nextConcepts) return;
+
+    saveConcepts(nextConcepts);
+    setActiveId(LOCAL_QA_CONCEPT_ID);
+    await trainingStore.saveTraining({
+      concept_id: LOCAL_QA_CONCEPT_ID,
+      schema_version: TRAINING_SCHEMA_VERSION,
+      source_mode: 'source_less',
+      grounding: 'learner_sketch',
+      source_ref: null,
+      sketch: {
+        text: 'Learner rough sketch baseline.',
+        at: now.toISOString(),
+      },
+      node_records: {
+        [LOCAL_QA_NODE_ID]: {
+          attempts: [{
+            id: 'local-qa-attempt-1',
+            kind: 'cold',
+            at: now.toISOString(),
+            user_text: 'Learner-owned reconstruction visible in Library.',
+            classification: 'strong',
+            gaps: [],
+            grader_version: 'local-qa',
+          }],
+          repairs: [],
+        },
+      },
+    });
+
+    renderGrid(nextConcepts);
+    renderConceptList(nextConcepts);
+    renderIgnitionGate();
+    showLibrary();
+  }
+
+  async function seedLocalRepairQaConcept() {
+    /* c8 ignore next -- localhost-only guard; exercised positively by e2e */
+    if (!isLocalDevHost()) return;
+
+    const concepts = loadConcepts();
+    const now = new Date();
+    const concept = buildLocalRepairQaConcept(now.getTime());
+    const nextConcepts = upsertLocalQaConcept(concepts, concept);
+    if (!nextConcepts) return;
+
+    saveConcepts(nextConcepts);
+    setActiveId(LOCAL_REPAIR_QA_CONCEPT_ID);
+    await trainingStore.saveTraining({
+      concept_id: LOCAL_REPAIR_QA_CONCEPT_ID,
+      schema_version: TRAINING_SCHEMA_VERSION,
+      source_mode: 'source_less',
+      grounding: 'learner_sketch',
+      source_ref: null,
+      sketch: {
+        text: 'Learner thinks sodium just rushes in.',
+        at: now.toISOString(),
+      },
+      node_records: {
+        [LOCAL_REPAIR_QA_NODE_ID]: {
+          attempts: [{
+            id: 'local-repair-attempt-1',
+            kind: 'cold',
+            at: now.toISOString(),
+            user_text: 'Sodium rushes in because there is more sodium outside.',
+            classification: 'thin',
+            gaps: [{
+              mechanism: 'voltage-gated sodium channels',
+              correction: 'Name that threshold opens the channel; the gradient only drives flow after the gate opens.',
+            }],
+            grader_version: 'local-qa',
+          }],
+          repairs: [],
+        },
+      },
+    });
+
+    renderGrid(nextConcepts);
+    renderConceptList(nextConcepts);
+    renderIgnitionGate();
+    showLibrary();
   }
 
   async function refreshRuntimeConfig() {
@@ -465,6 +722,18 @@ const App = (() => {
     renderDeskGrid({ concepts, tileEls, activeId: getActiveId(), bus: Bus });
   }
 
+  function getSidebarActiveConceptId() {
+    return currentPrimaryNav === null ? getActiveId() : null;
+  }
+
+  function syncConceptListActiveState() {
+    const sidebarActiveId = getSidebarActiveConceptId();
+    document.querySelectorAll('#concept-list .concept-item').forEach((item) => {
+      const conceptId = item.dataset.conceptId || item.querySelector('.concept-delete')?.dataset.conceptId;
+      item.classList.toggle('active', conceptId === sidebarActiveId);
+    });
+  }
+
   // ── 10. Drawer ─────────────────────────────────────────────
   function openDrawer() {
     openShellDrawer({ drawer, drawerToggle });
@@ -486,7 +755,7 @@ const App = (() => {
   function renderConceptList(concepts = loadConcepts()) {
     renderShellConceptList({
       concepts,
-      activeId: getActiveId(),
+      activeId: getSidebarActiveConceptId(),
       conceptListEl,
       onOpenConcept(c) {
         showDashboard();
@@ -843,9 +1112,25 @@ const App = (() => {
       startingMapContext,
       graphData: JSON.stringify(jsonPayload)
     };
+    /* c8 ignore start -- source-attached creation requires the live extraction path; the store contract is covered directly. */
     contentStore.set(id, sourceText);
     concepts.push(concept);
     saveConcepts(concepts);
+    void initializeConceptTraining({
+      conceptId: id,
+      provenance: {
+        source_mode: 'source_attached',
+        grounding: 'source',
+        source_ref: {
+          type: sourceType,
+          url: source?.url || null,
+          filename: sourceFilename,
+        },
+      },
+      sketchText: startingMapContext,
+      sketchAt: new Date(concept.createdAt).toISOString(),
+    }).catch((err) => console.warn('Training initialization failed.', err));
+    /* c8 ignore stop */
     renderGrid(concepts);
     renderConceptList(concepts);
     renderIgnitionGate();
@@ -911,6 +1196,16 @@ const App = (() => {
     // No source text — contentStore is not written for source-less concepts.
     concepts.push(concept);
     saveConcepts(concepts);
+    void initializeConceptTraining({
+      conceptId: id,
+      provenance: {
+        source_mode: 'source_less',
+        grounding: startingMapContext ? 'learner_sketch' : 'ungrounded',
+        source_ref: null,
+      },
+      sketchText: startingMapContext,
+      sketchAt: new Date(concept.createdAt).toISOString(),
+    }).catch((err) => console.warn('Training initialization failed.', err));
     // Post-save side effects (render, composer-clear, active-concept set) are
     // wrapped in try/catch so a render hiccup doesn't propagate as a
     // persistence failure. The concept is already on disk; treating a render
@@ -1097,6 +1392,10 @@ const App = (() => {
       const concepts = loadConcepts().filter(c => c.id !== id);
       saveConcepts(concepts);
       clearRepairRepsStateForConcept(id);
+      void trainingStore.deleteTraining(id).catch((err) => {
+        /* c8 ignore next -- defensive localStorage deletion failure branch */
+        console.warn('Unable to clear deleted concept training evidence.', err);
+      });
 
       try {
         sessionStorage.removeItem(getPhaseBSessionStorageKey(id));
@@ -1441,19 +1740,239 @@ const App = (() => {
    * @param {Object} concept - The full concept object
    * @param {Object} data - Parsed graphData
    */
-  function rebindActiveEntryHandlers(docEl, concept, data) {
+  function rebindActiveEntryHandlers(docEl, concept, data, training = null) {
     const ctaBtn = docEl.querySelector('.concept-page-b2__entry-cta:not([disabled])');
     if (ctaBtn) {
       ctaBtn.addEventListener('click', () => {
-        window.App?.startDrillFromMap?.();
+        if (ctaBtn.dataset.activeEntryAction === 'study') {
+          void revealStudyForEntry(ctaBtn.dataset.activeEntryId, concept, data);
+          return;
+        }
+        showInlineAttemptForEntry(ctaBtn.dataset.activeEntryId, concept, data, training);
+      });
+    }
+    const attemptBtn = docEl.querySelector('.concept-page-b2__attempt-save');
+    if (attemptBtn) {
+      attemptBtn.addEventListener('click', () => {
+        void submitInlineAttemptForEntry(attemptBtn, concept, data);
+      });
+    }
+    const repairBtn = docEl.querySelector('.concept-page-b2__repair-save');
+    if (repairBtn) {
+      repairBtn.addEventListener('click', () => {
+        void saveRepairForEntry(repairBtn, concept, data);
       });
     }
     docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
-        enterThresholdEditMode(docEl, concept, data);
+        enterThresholdEditMode(docEl, concept, data, training);
       });
     });
+  }
+
+  function renderActiveEntryWorkColumn(entryId, concept, data, training = null, options = {}) {
+    const docEl = document.querySelector('.concept-page-b2__doc');
+    const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
+    const fallbackMatch = entryId === 'core-thesis' && !backbone.length
+      ? selectInitialConceptEntry(backbone, training)
+      : null;
+    const match = findConceptEntryById(backbone, entryId) || fallbackMatch;
+    if (!docEl || !match) return;
+    const renderBackbone = backbone.length ? backbone : [match.entry];
+    docEl.innerHTML = renderActiveEntryHtml(
+      match.entry,
+      match.index,
+      renderBackbone,
+      concept,
+      data,
+      training,
+      options,
+    );
+    rebindActiveEntryHandlers(docEl, concept, data, training);
+  }
+
+  function showInlineAttemptForEntry(entryId, concept, data, training = null) {
+    if (!entryId || !concept?.id) return;
+    renderActiveEntryWorkColumn(entryId, concept, data, training, { attemptEntryId: entryId });
+    requestAnimationFrame(() => {
+      document.querySelector('.concept-page-b2__attempt-input')?.focus?.();
+    });
+  }
+
+  async function revealStudyForEntry(entryId, concept, data) {
+    if (!entryId || !concept?.id) return;
+    const graphData = parseConceptGraphData(concept) || data || {};
+    const backbone = Array.isArray(graphData.backbone) ? graphData.backbone : [];
+    const entry = findConceptEntryById(backbone, entryId)?.entry || null;
+    try {
+      const loadedTraining = await trainingStore.loadTraining(concept.id);
+      const attempts = loadedTraining?.node_records?.[entryId]?.attempts;
+      if (
+        entry?.drill_status === 'primed'
+        && entry?.drill_phase === 'study'
+        && !(Array.isArray(attempts) && attempts.length)
+      ) {
+        const training = {
+          ...(loadedTraining || {}),
+          concept_id: concept.id,
+          schema_version: TRAINING_SCHEMA_VERSION,
+          node_records: {
+            ...(loadedTraining?.node_records || {}),
+            [entryId]: {
+              ...(loadedTraining?.node_records?.[entryId] || {}),
+              attempts: [],
+              repairs: [],
+              study_revealed_at: new Date().toISOString(),
+            },
+          },
+        };
+        await trainingStore.saveTraining(training);
+        renderActiveEntryWorkColumn(entryId, concept, graphData, training);
+        return;
+      }
+      const training = await trainingStore.setStudyRevealed(
+        concept.id,
+        entryId,
+        new Date().toISOString(),
+      );
+      const mountEl = document.getElementById('map-content');
+      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training, { activeEntryId: entryId });
+    } catch (err) {
+      /* c8 ignore next -- defensive storage/invariant failure branch */
+      console.warn('Study reveal failed.', err);
+    }
+  }
+
+  async function submitInlineAttemptForEntry(button, concept, data) {
+    const panel = button?.closest?.('.concept-page-b2__attempt');
+    const entryId = button?.dataset?.attemptEntryId || panel?.dataset?.attemptEntryId || null;
+    const input = panel?.querySelector?.('.concept-page-b2__attempt-input');
+    const errorEl = panel?.querySelector?.('[data-attempt-error]');
+    const userText = input?.value || '';
+    if (!entryId || !concept?.id) return;
+    if (userText.trim() === '') {
+      if (errorEl) {
+        errorEl.textContent = 'Put down the part you can explain, even if it is incomplete.';
+        errorEl.hidden = false;
+      }
+      input?.focus?.();
+      return;
+    }
+    if (errorEl) errorEl.hidden = true;
+    button.disabled = true;
+
+    const graphData = parseConceptGraphData(concept) || data || {};
+    const backbone = Array.isArray(graphData.backbone) ? graphData.backbone : [];
+    const match = findConceptEntryById(backbone, entryId);
+    const entry = match?.entry || {};
+    const nodeLabel = entry.label || concept.name || 'Concept entry';
+    const at = new Date().toISOString();
+
+    try {
+      const loadedTraining = await trainingStore.loadTraining(concept.id);
+      const record = loadedTraining?.node_records?.[entryId] || {};
+      const attempts = Array.isArray(record.attempts) ? record.attempts : [];
+      const legacyStatus = String(entry?.drill_status || '').toLowerCase();
+      const legacyAttemptCount = (
+        legacyStatus === 'primed'
+        || legacyStatus === 'drilled'
+        || legacyStatus === 'solidified'
+        || legacyStatus === 'solid'
+      ) ? 1 : 0;
+      const logicalAttemptCount = attempts.length || legacyAttemptCount;
+      const drillMode = logicalAttemptCount === 0 ? 'cold_attempt' : 're_drill';
+      const result = await runDrillTurn({
+        concept_id: concept.id,
+        node_id: entryId,
+        node_label: nodeLabel,
+        node_mechanism: entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || '',
+        drill_session_id: `inline-${concept.id}-${entryId}-${Date.now()}`,
+        client_turn_index: logicalAttemptCount + 1,
+        knowledge_map: graphData,
+        messages: [{ role: 'user', content: userText }],
+        session_phase: 'turn',
+        drill_mode: drillMode,
+        re_drill_count: Math.max(0, logicalAttemptCount - 1),
+        probe_count: 0,
+        nodes_drilled: 1,
+        attempt_turn_count: logicalAttemptCount,
+        help_turn_count: 0,
+        session_start_iso: at,
+        bypass_session_limits: true,
+        api_key: localStorage.getItem('gemini_key') || undefined,
+      });
+      if (getActiveId() !== concept.id) return;
+      const training = await appendTrainingAttemptFromDrillTurn({
+        conceptId: concept.id,
+        nodeId: entryId,
+        userText,
+        result,
+        at,
+      });
+      if (!training) {
+        const nudge = inlineAttemptNudgeFromDrillResult(result);
+        if (nudge) {
+          button.disabled = false;
+          if (errorEl) {
+            errorEl.textContent = nudge;
+            errorEl.hidden = false;
+          }
+          input?.focus?.();
+          return;
+        }
+        throw new Error('attempt-not-recorded');
+      }
+      if (getActiveId() !== concept.id) return;
+      const legacyGraphPatchedConcept = drillMode === 're_drill'
+        ? patchActiveConceptDrillOutcome({ ...result, node_id: result?.node_id || entryId }, drillMode)
+        : null;
+      const renderConcept = legacyGraphPatchedConcept || concept;
+      const renderGraphData = legacyGraphPatchedConcept
+        ? parseConceptGraphData(legacyGraphPatchedConcept) || graphData
+        : graphData;
+      const mountEl = document.getElementById('map-content');
+      if (mountEl) renderConceptPageB2(mountEl, renderGraphData, renderConcept, training, { activeEntryId: entryId });
+    } catch (err) {
+      console.warn('Memory attempt failed.', err);
+      button.disabled = false;
+      if (errorEl) {
+        errorEl.textContent = 'The system could not record this yet. Try again.';
+        errorEl.hidden = false;
+      }
+    }
+  }
+
+  async function saveRepairForEntry(button, concept, data) {
+    const panel = button?.closest?.('.concept-page-b2__repair');
+    const entryId = button?.dataset?.repairEntryId || panel?.dataset?.repairEntryId || null;
+    const input = panel?.querySelector?.('.concept-page-b2__repair-input');
+    const errorEl = panel?.querySelector?.('[data-repair-error]');
+    const text = (input?.value || '').trim().slice(0, 1200);
+    if (!entryId || !concept?.id) return;
+    if (!text) {
+      if (errorEl) errorEl.hidden = false;
+      input?.focus?.();
+      return;
+    }
+    if (errorEl) errorEl.hidden = true;
+
+    try {
+      const training = await trainingStore.appendRepair(concept.id, entryId, {
+        id: `repair-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        at: new Date().toISOString(),
+        text,
+      });
+      const mountEl = document.getElementById('map-content');
+      if (mountEl) renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
+    } catch (err) {
+      /* c8 ignore next -- defensive storage/invariant failure branch */
+      console.warn('Repair save failed.', err);
+      if (errorEl) {
+        errorEl.textContent = 'Repair could not be saved. Try again.';
+        errorEl.hidden = false;
+      }
+    }
   }
 
   /**
@@ -1465,7 +1984,7 @@ const App = (() => {
    * Doctrine: editing the sketch is allowed at any time. The active entry
    * stays the same; only the threshold text changes.
    */
-  function enterThresholdEditMode(docEl, concept, data) {
+  function enterThresholdEditMode(docEl, concept, data, training = null) {
     const currentText = (concept?.startingMapContext
       || data?.metadata?.starting_map_context
       || data?.metadata?.core_thesis
@@ -1518,7 +2037,7 @@ const App = (() => {
       }
     });
 
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       const next = (textarea.value || '').trim().slice(0, 1200);
       const concepts = loadConcepts();
       const liveConcept = concepts.find((c) => c.id === concept.id);
@@ -1535,9 +2054,19 @@ const App = (() => {
         liveData.metadata.starting_map_context = next;
         liveConcept.graphData = JSON.stringify(liveData);
       } catch (err) {
+        /* c8 ignore next -- defensive malformed graphData fallback */
         console.warn('[concept-page] graphData parse failed; saved startingMapContext only.', err);
       }
       saveConcepts(concepts);
+      try {
+        await trainingStore.setSketch(concept.id, {
+          text: next,
+          at: new Date().toISOString(),
+        });
+      } catch (err) {
+        /* c8 ignore next -- defensive localStorage failure path */
+        console.warn('[concept-page] training sketch update failed.', err);
+      }
 
       // Re-render the work column with the fresh data so the quote updates
       // in place. Use the same active entry id we were on.
@@ -1564,8 +2093,8 @@ const App = (() => {
         backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
       );
       const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
-      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData);
-      rebindActiveEntryHandlers(docEl, liveConcept, freshData);
+      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training);
+      rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
     });
   }
 
@@ -1581,7 +2110,7 @@ const App = (() => {
    * @param {Object} data - Parsed graphData
    * @param {Object} concept - The full concept object
    */
-  function setActiveEntry(entryId, data, concept) {
+  function setActiveEntry(entryId, data, concept, training = null) {
     if (!data || !entryId) return;
     if (entryId === _activeEntryId) return;
 
@@ -1633,8 +2162,8 @@ const App = (() => {
     if (!doc) return;
     doc.classList.add('is-fading-out');
     setTimeout(() => {
-      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data);
-      rebindActiveEntryHandlers(doc, concept, data);
+      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training);
+      rebindActiveEntryHandlers(doc, concept, data, training);
       doc.classList.remove('is-fading-out');
       void doc.offsetWidth; // force reflow so the fade-in animates
       doc.classList.add('is-fading-in');
@@ -1652,19 +2181,24 @@ const App = (() => {
    * @param {Object} data - Parsed graphData (metadata, backbone, clusters, relationships)
    * @param {Object} concept - The full concept object (for threshold text + name)
    */
-  function renderConceptPageB2(mountEl, data, concept) {
+  function renderConceptPageB2(mountEl, data, concept, training = null, options = {}) {
     if (!mountEl || !data) return;
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+    const preferredEntryId = options?.activeEntryId || null;
+    const preferredEntry = preferredEntryId === 'core-thesis' && !backbone.length
+      ? selectInitialConceptEntry(backbone, training)
+      : findConceptEntryById(backbone, preferredEntryId);
 
     const {
       entry: activeEntry,
       index: activeIdx,
       id: activeEntryId,
-    } = selectInitialConceptEntry(backbone);
+    } = preferredEntry || selectInitialConceptEntry(backbone, training);
+    const renderBackbone = backbone.length ? backbone : [activeEntry];
 
     // Build the work column HTML via the shared helper
-    const stripHtml = renderConceptStripHtml(backbone, activeEntry, activeIdx);
-    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data);
+    const stripHtml = renderConceptStripHtml(backbone, activeEntry, activeIdx, training);
+    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
@@ -1680,7 +2214,7 @@ const App = (() => {
 
     // Wire CTA and re-edit affordance
     const docEl = mountEl.querySelector('.concept-page-b2__doc');
-    if (docEl) rebindActiveEntryHandlers(docEl, concept, data);
+    if (docEl) rebindActiveEntryHandlers(docEl, concept, data, training);
 
     // Wire strip-node click + keyboard nav
     const stripContainer = mountEl.querySelector('.concept-strip__inner');
@@ -1690,7 +2224,7 @@ const App = (() => {
         const node = e.target.closest('.concept-strip__node');
         if (!node) return;
         const id = node.getAttribute('data-entry-id');
-        if (id) setActiveEntry(id, data, concept);
+        if (id) setActiveEntry(id, data, concept, training);
       });
 
       stripContainer.addEventListener('keydown', (e) => {
@@ -1699,7 +2233,7 @@ const App = (() => {
           const id = node?.getAttribute('data-entry-id');
           if (id) {
             e.preventDefault();
-            setActiveEntry(id, data, concept);
+            setActiveEntry(id, data, concept, training);
           }
         } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
           e.preventDefault();
@@ -1710,7 +2244,7 @@ const App = (() => {
           const nextNode = backbone[nextIdx];
           if (nextNode) {
             const nextId = getConceptEntryId(nextNode, nextIdx);
-            setActiveEntry(nextId, data, concept);
+            setActiveEntry(nextId, data, concept, training);
             // Move keyboard focus to the new active node
             const nextG = mountEl.querySelector(`.concept-strip__node[data-entry-id="${nextId}"]`);
             nextG?.focus();
@@ -1790,6 +2324,17 @@ const App = (() => {
     }
 
     renderConceptPageB2(mapContent, data, concept);
+    // Keep first paint synchronous; training evidence re-renders when available.
+    void trainingStore.loadTraining(concept.id)
+      .then((training) => {
+        if (!training) return;
+        if (getActiveId() !== concept.id || document.body.dataset.mapOpen !== 'true') return;
+        renderConceptPageB2(mapContent, data, concept, training);
+      })
+      .catch((err) => {
+        /* c8 ignore next -- defensive localStorage failure branch */
+        console.warn('Training records unavailable for concept page render.', err);
+      });
 
     // Graph view deleted (strip-as-nav port). The knowledge graph controller
     // is retained in case other surfaces still reference it; it becomes a
@@ -1799,7 +2344,7 @@ const App = (() => {
     if (chatHistory) chatHistory.innerHTML = '';
 
     clearSettingsPanel();
-    setNavActive('nav-dashboard');
+    setNavActive(null);
     const settingsView = document.getElementById('settings-view');
     if (libraryView) libraryView.classList.remove('visible');
     if (settingsView) settingsView.classList.remove('visible');
@@ -1873,6 +2418,7 @@ const App = (() => {
       const bnEl = document.getElementById(bnId);
       if (bnEl) bnEl.classList.toggle('active', navId === currentPrimaryNav);
     });
+    syncConceptListActiveState();
   }
 
   function showDashboard() {
@@ -1931,6 +2477,7 @@ const App = (() => {
     // disable first, the activeElement === field check below always
     // fails and the keyboard user gets stranded with focus on body.
     if (atCap && document.activeElement === field && capCta) {
+      /* c8 ignore next -- browser focus handoff is covered by manual QA */
       capCta.focus();
     }
 
@@ -1961,11 +2508,37 @@ const App = (() => {
     teardownMapView();
     hidePrimaryViews();
     const concepts = loadConcepts().filter(c => c.graphData);
+    const libraryOptions = { showLocalQaSeed: isLocalDevHost() };
 
-    content.innerHTML = buildLibraryHtml(concepts);
+    content.innerHTML = buildLibraryHtml(concepts, {}, libraryOptions);
 
     libraryView.classList.add('visible');
     if (window.innerWidth < 900) closeDrawer();
+
+    if (!concepts.length) return;
+
+    // Keep Library open immediately; learner evidence fills in asynchronously.
+    Promise.all(concepts.map(async (concept) => {
+      const conceptId = String(concept.id);
+      try {
+        return [conceptId, await trainingStore.loadTraining(concept.id)];
+      } catch (err) {
+        /* c8 ignore next -- defensive corrupt localStorage branch */
+        console.warn('Training record unavailable for library concept.', conceptId, err);
+        return [conceptId, null];
+      }
+    }))
+      .then((entries) => {
+        const trainingByConceptId = Object.fromEntries(entries.filter(([, training]) => training));
+        const currentContent = document.getElementById('library-content');
+        const currentLibraryView = document.getElementById('library-view');
+        if (!currentContent || !currentLibraryView?.classList.contains('visible')) return;
+        currentContent.innerHTML = buildLibraryHtml(concepts, trainingByConceptId, libraryOptions);
+      })
+      .catch((err) => {
+        /* c8 ignore next -- defensive localStorage failure branch */
+        console.warn('Training records unavailable for library render.', err);
+      });
   }
 
   function hideLibrary() {
@@ -2449,7 +3022,7 @@ const App = (() => {
 
     return {
       kind: 'start-cold-attempt',
-      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Try from memory',
+      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Write what you remember',
     };
   }
 
@@ -2993,13 +3566,30 @@ const App = (() => {
       hideTypingIndicator();
 
       if (sessionToken !== drillState.sessionToken || !drillState.node) {
+        /* c8 ignore next -- stale async drill responses are timing-dependent */
         return;
+      }
+
+      const completedColdAttempt = drillMode === 'cold_attempt' && data.generative_commitment === true;
+      const completedReDrill = data.routing === 'NEXT'
+        || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
+      const completedNodeTurn = completedColdAttempt || completedReDrill;
+
+      if (completedNodeTurn && userText) {
+        const training = await appendTrainingAttemptFromDrillTurn({
+          conceptId: concept.id,
+          nodeId: drillState.node.id,
+          userText,
+          result: data,
+          at: turnStartedAt,
+        });
+        if (!training) throw new Error('attempt-not-recorded');
       }
 
       const graphMutationConcept = patchActiveConceptDrillOutcome(data, drillMode);
       const graphMutated = Boolean(graphMutationConcept);
 
-      const handleVisualTransition = () => {
+      const handleVisualTransition = async () => {
         if (graphMutated) {
           const freshGraphData = parseConceptGraphData(graphMutationConcept);
           currentGraphController?.syncFromKnowledgeMap?.(freshGraphData, activeDrillNode);
@@ -3017,10 +3607,6 @@ const App = (() => {
         drillState.pending = false;
         drillState.sessionCompletePending = data.routing === 'SESSION_COMPLETE' || Boolean(data.session_terminated);
 
-        const completedColdAttempt = drillMode === 'cold_attempt' && data.generative_commitment === true;
-        const completedReDrill = data.routing === 'NEXT'
-          || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
-        const completedNodeTurn = completedColdAttempt || completedReDrill;
         if (completedColdAttempt) {
           persistPhaseBResumeState({ conceptId: concept.id, nodeId: drillState.node.id, mode: 'study' });
         } else if (completedReDrill) {
@@ -3045,6 +3631,7 @@ const App = (() => {
             currentGraphController?.flashPrimed?.(activeDrillNode);
           }
           if (drillMode === 're_drill' && data.classification === 'solid') {
+            /* c8 ignore next -- optional graph animation; state mutation is covered */
             currentGraphController?.flashSolidification?.(activeDrillNode);
           }
         } else {
@@ -3064,18 +3651,22 @@ const App = (() => {
         appendBubble('ai', normalizationMessages[msgIdx]);
         if (window.DrillChamber && typeof window.DrillChamber.appendCreed === 'function') {
           window.DrillChamber.appendCreed();
-        } else if (chatHistory) {
-          appendFirstColdAttemptCreed(); // legacy fallback (chat-history present)
+        } else {
+          /* c8 ignore next -- legacy fallback when DrillChamber is unavailable */
+          if (chatHistory) appendFirstColdAttemptCreed();
         }
         if (chatInput) chatInput.disabled = true;
         drillState.pending = true;
         showTypingIndicator();
         setTimeout(() => {
           hideTypingIndicator();
-          handleVisualTransition();
+          handleVisualTransition().catch((err) => {
+            /* c8 ignore next -- defensive transition failure branch */
+            console.warn('Drill visual transition failed.', err);
+          });
         }, 2200);
       } else {
-        handleVisualTransition();
+        await handleVisualTransition();
       }
     } catch (err) {
       hideTypingIndicator();
@@ -3489,7 +4080,7 @@ const App = (() => {
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,
-    showLibrary, hideLibrary, openLibraryConcept, showDashboard, showIgnition, showSettings,
+    showLibrary, hideLibrary, openLibraryConcept, seedLocalQaConcept, seedLocalRepairQaConcept, showDashboard, showIgnition, showSettings,
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
@@ -3522,11 +4113,11 @@ const App = (() => {
 // for the inventory of readers. Any new global on `window` MUST be
 // justified the same way and added to this comment block.
 //
-// window.App — read by 18 inline onclick="App.foo()" handlers in
-// public/index.html (bottom-nav, drawer, hero CTAs, drill controls,
-// theme toggle, tile selection). HTML→JS bridge. Phase 2 keeps this
-// intentional; a future micro-phase could rewrite the inline handlers
-// as addEventListener wiring and drop the global.
+// window.App — read by inline onclick="App.foo()" handlers in
+// public/index.html plus generated Library actions such as local QA
+// seed buttons. HTML→JS bridge. Phase 2 keeps this intentional; a
+// future micro-phase could rewrite the inline/generated handlers as
+// addEventListener wiring and drop the global.
 //
 // window.SocratinkApp — read by 17 call sites in graph-view.js as
 // optional-chained intents (e.g. window.SocratinkApp?.startRepairReps,

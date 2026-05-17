@@ -298,23 +298,35 @@ def _normalize_drill_evaluation(
 
     if drill_mode == "cold_attempt":
         evaluation.answer_mode = "attempt" if substantive_attempt else "help_request"
-        evaluation.score_eligible = False
-        evaluation.classification = None
-        evaluation.response_tier = None
-        evaluation.response_band = None
-        evaluation.tier_reason = None
         if not substantive_attempt:
+            evaluation.score_eligible = False
+            evaluation.classification = None
+            evaluation.response_tier = None
+            evaluation.response_band = None
+            evaluation.tier_reason = None
             evaluation.routing = "SCAFFOLD"
             evaluation.help_request_reason = (
-                evaluation.help_request_reason or "explicit_unknown"
+                (
+                    evaluation.help_request_reason
+                    if evaluation.help_request_reason != "none"
+                    else None
+                )
+                or inferred_help_request_reason
+                or "explicit_unknown"
             )
             if not evaluation.gap_description:
                 evaluation.gap_description = (
                     "Learner produced zero schema; nudge to guess."
                 )
         else:
+            evaluation.score_eligible = has_classification
             evaluation.routing = "NEXT"
             evaluation.help_request_reason = "none"
+            if evaluation.classification == "solid":
+                evaluation.gap_description = None
+            elif not evaluation.gap_description:
+                evaluation.gap_description = "The learner has some correct pieces, but the causal mechanism is still incomplete."
+            _normalize_response_quality(evaluation)
         return evaluation
 
     if (
@@ -633,7 +645,7 @@ def drill_chat(
     )
 
     if drill_mode == "cold_attempt":
-        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question, do not reveal the mechanism. If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. Enforce minimum generative commitment. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess. Return null for classification/tier."
+        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question on init; do not reveal the mechanism. On turn, evaluate the learner's first genuine generative attempt against the rubric and populate classification, score_eligible, response_tier, response_band, and tier_reason. If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess with classification/tier null."
     else:
         system_prompt_extras += f"\nMODE: RE-DRILL (Attempt {re_drill_count + 1}). Demand multi-step causal reconstruction. Vary prompt angle (e.g. self-explanation, summarization, teaching, problem-posing). Apply concrete rubric: Does response contain (a) initiating condition, (b) causal transition, and (c) resulting state? Err toward false negatives."
         if re_drill_count >= 2:

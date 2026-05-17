@@ -51,6 +51,8 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 | Pattern key | Status | Count | Last seen | Recommended promotion target | Entry |
 | --- | --- | ---: | --- | --- | --- |
 | `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [LYYYY-2026-05-13-subagent-delegation-too-soft](#lyyyy-2026-05-13-subagent-delegation-too-soft) |
+| `explore-compress-merge` | `promoted` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
+| `verification-gates-not-self-contained` | `observed` | 1 | 2026-05-17 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
 
 ## Entries
 
@@ -78,3 +80,51 @@ Small, judgment-heavy repo-doc cleanups can stall when delegated to a subagent w
 ## Promotion Notes
 
 Still non-binding because this is one observed failure mode, not yet a repeated pattern. If it recurs, promote a rule into the canonical workflow docs: keep small canon-boundary cleanups local by default, or give subagents an explicit patch contract with exact files and exact claims to change.
+
+# L0002-2026-05-15-explore-compress-merge
+
+- Status: `promoted`
+- Pattern key: `explore-compress-merge`
+- First seen: `2026-05-15`
+- Last seen: `2026-05-15`
+- Evidence count: `1`
+- Affected workflow surface: `founder session design`
+- Recommended promotion target: `agents/founder/WORKFLOWS/05-explore-compress.md` (already written)
+- Related canonical files: `agents/founder/WORKFLOWS/03-prototyping.md`
+
+## Observation
+
+When a grilling or design session hits a question that can only be answered by prototyping, diverging into free exploration and then using a rewind+summarize to compress the result back into the primary thread preserves context quality on both ends: the exploration is unconstrained, and the primary session isn't drowned in churn.
+
+The key mechanism is treating the conversation's rewind+summarize as a compression primitive — not a rollback. The artifact is retained; only the iteration noise is dropped.
+
+## Evidence
+
+- `2026-05-15`: founder ran `/grill-with-docs` on a UI design question, hit an unanswerable fork, diverged into `/prototype`, iterated freely, then used `/rewind` + "summarize" to compress learnings back into the grilling session. Described as "smooth" with explicit intent to repeat.
+
+## Promotion Notes
+
+Promoted immediately into `agents/founder/WORKFLOWS/05-explore-compress.md` on first sighting because the pattern was deliberate, low-risk, and the founder explicitly wanted it captured as a reusable workflow card. Revisit the card if a second sighting shows the workflow needs tighter stop rules.
+
+# L0003-2026-05-17-verification-gates-not-self-contained
+
+- Status: `observed`
+- Pattern key: `verification-gates-not-self-contained`
+- First seen: `2026-05-17`
+- Last seen: `2026-05-17`
+- Evidence count: `1`
+- Affected workflow surface: `verification discipline`
+- Recommended promotion target: `agents/QUALITY.md`
+- Related canonical files: `scripts/qa-smoke.sh`, `scripts/check-coverage.sh`, `agents/QUALITY.md`
+
+## Observation
+
+A command documented as a local verification gate must carry its own local-only setup defaults. If a passing gate depends on environment set by another wrapper, agents can report false confidence or waste time debugging auth symptoms that are really harness setup drift.
+
+## Evidence
+
+- `2026-05-17`: `./scripts/check-coverage.sh` passed because it set `SOCRATINK_E2E_LOCAL_GUEST=1`, but `bash scripts/qa-smoke.sh local` initially failed four guest-bootstrap tests by redirecting to `/login?auth_error=authentication_failed`. The fix was to make `qa-smoke.sh` enable the local E2E guest path for loopback targets only.
+
+## Promotion Notes
+
+Keep observed for now. Promote to `agents/QUALITY.md` if another local verification command is found to require implicit wrapper env.

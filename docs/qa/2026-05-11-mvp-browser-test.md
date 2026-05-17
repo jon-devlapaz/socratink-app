@@ -91,7 +91,7 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 36. Tab into the strip (focus the first node). Verify a violet focus halo appears around the focused circle.
 37. Press `→`. Verify the active node advances by one and focus moves with it.
 38. Press `←`. Verify the active node moves back.
-39. Press `Enter` on the active node. Verify the drill chamber opens (Phase 3).
+39. Press `Enter` on the active node. Verify that entry stays selected and its active-entry block is shown.
 
 ### 2.4 Threshold quote
 
@@ -105,76 +105,43 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 2.5 Active entry block
 
-47. Verify the eyebrow above the H2 reads either "FIRST COLD ATTEMPT · ENTRY 1 OF N" or "RE-DRILL READY ENTRY N OF M" or "LOCKED ENTRY N OF M" depending on state.
+47. Verify the eyebrow above the H2 reads one of the current derived-state phrases, such as "first reconstruction entry 1 of N", "study required entry N of M", "repair the gap entry N of M", "ready to reconstruct again entry N of M", "spaced reconstruction ready entry N of M", or "locked entry N of M".
 48. Verify the H2 (concept entry title) is large (~36px on desktop, ~26px on mobile).
 49. Verify a one-paragraph purpose sits below the H2.
 50. Verify the CTA button text:
-    - Locked entry 0 → "Try from memory" (entry 0 is NEVER blocked)
+    - Ready first entry → "Write what you remember" (entry 0 is NEVER blocked)
     - Locked entry N>0 with locked predecessor → "Locked" (disabled, with `disabled` attribute)
-    - Primed entry → "Re-drill from memory"
-51. Verify the "Try from memory" CTA has an arrow `→` that translates 4px right on hover.
+    - Primed entry before study reveal → "Reveal study note"
+    - Repair-ready entry → "Try from memory again" or "Write it again" after a repair record exists
+51. Verify the CTA hover treatment does not shift surrounding layout.
 
 ### 2.6 Nearby entries list
 
-52. Verify a faint list at the bottom (0.62 opacity) with the eyebrow "NEARBY ENTRIES · ALL LOCKED UNTIL FIRST ATTEMPT".
+52. Verify a faint list at the bottom (0.62 opacity) with the eyebrow "nearby entries  all locked until first reconstruction".
 53. Verify each row: monospace `01`–`0N` numbers + entry title + uppercase status pill on the right.
 
-## Phase 3 — Drill chamber (the focused dialogue)
+## Phase 3 — Inline reconstruction
 
-### 3.1 Entering the chamber
+### 3.1 Entering the reconstruction panel
 
-54. From the concept page, click "Try from memory" on entry 0.
-55. Verify the chamber opens full-screen, taking over the viewport. Map view should be hidden (not visible below the chamber).
-56. Verify the body has classes `chamber-open` AND `is-drilling`.
-57. Verify a crumb appears at top: `← Return to map · {concept name} · {entry name}`.
-58. Verify the active question appears in the center: large Geom display type, weight 500, NOT italics.
-59. Verify a thin 1px violet anchor pillar runs vertically on the LEFT edge of the active block.
-60. Verify the composer placeholder reads "Preparing your first question" while the AI's first turn loads.
-61. Verify the composer is disabled during the wait (greyed out).
-62. Wait 5-15 seconds for the first AI question to land. Verify the placeholder reverts to "Write what comes to mind. Fragments are fine." and the composer enables.
-63. Verify the question text is the AI's actual Socratic question (not the entry's seed text anymore).
+54. From the concept page, click "Write what you remember" on entry 0.
+55. Verify an inline `.concept-page-b2__attempt` panel appears in the active entry block; the concept page stays visible.
+56. Verify the textarea is focused, has `aria-label="Write what you can reconstruct"`, and uses the placeholder "Put the part you can explain in your own words."
+57. Verify the body does NOT enter `chamber-open` or `is-drilling` for this inline reconstruction path.
 
-### 3.2 Sending a turn
+### 3.2 Saving an attempt
 
-64. Type a substantive 2-3 sentence reply about the concept.
-65. Verify the "Send turn" ghost pill button (top-right of foot row) is enabled and has its content-width (NOT stretched across the row).
-66. Verify the foot hint reads `a sentence is enough · cmd · return to send`.
-67. Press `Cmd+Return` (or click "Send turn"). Verify the AI's question fades out, composer empties, and the next AI turn fades in (~240ms out, ~320ms in).
-68. Click "show" on the history widget at top. Verify it expands to show prior turns.
-69. **CRITICAL:** verify the FIRST history pair shows (AI seed question, learner reply 1) — NOT (empty, learner reply 1). This is the B-1 fix from pre-merge.
-70. Send a second reply. Verify history grows to 4 turns and pairs correctly.
-
-### 3.3 First-cold-attempt creed
-
-71. After your FIRST substantive reply (where the system flags `generative_commitment === true`), verify the doctrinal creed appears below the question. Three lines with diamond bullets:
-    - "You tried first. The entry stayed quiet until your guess existed."
-    - "Study has a target now. Repair the gap this entry exposed."
-    - "Return later. Only spaced re-drill can change the record."
-72. Verify the creed is additive (does not replace the question) and the composer stays disabled (the creed is a completion beat, not a prompt).
-
-### 3.4 Click-spam prevention
-
-73. Open DevTools Network tab. Filter to `/api/drill`.
-74. Type a short reply. Click "Send turn" rapidly 5 times.
-75. **CRITICAL:** verify only ONE `/api/drill` POST appears in the network log. The B-3 fix should hard-disable the button on click.
-
-### 3.5 Error path
-
-76. In DevTools Network tab, set "Block request URL pattern" to `/api/drill`.
-77. Type a reply and click Send.
-78. After ~10 seconds, verify the question slot shows an error message like "The drill service failed to respond. Try again when ready."
-79. **CRITICAL:** verify the composer is RE-ENABLED so you can edit and retry. This is the K-27 fix.
-80. Unblock the URL. Send again. Verify it works.
-
-### 3.6 Exit
-
-81. Click `← Return to map`. Verify the chamber closes and the concept page is restored exactly as it was.
+58. Click "Save what I wrote" while the textarea is empty. Verify the inline error appears and focus returns to the textarea.
+59. Type a substantive 2-3 sentence reconstruction and click "Save what I wrote".
+60. Verify exactly one `/api/drill` POST is sent for the save.
+61. Verify the active entry re-renders from training state: weak attempts expose "Reveal study note" or a repair panel after study; strong attempts can show review/spaced reconstruction readiness.
+62. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
 
 ## Phase 4 — Doctrine + copy audit
 
 ### 4.1 Copy sweep
 
-82. Across all surfaces visited (Desk, ignition, launch pad, concept page, chamber), grep the page text for:
+82. Across all surfaces visited (Desk, ignition, launch pad, concept page, inline reconstruction), grep the page text for:
     - "great job", "excellent", "amazing", "awesome", "nice work" — should be ZERO
     - "score", "quiz", "test", "assessment" — should be ZERO (in user-facing copy; backend code may use these words)
     - "mastered", "complete", "finished", "level up" — should be ZERO
@@ -184,7 +151,7 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 4.2 No "AI is typing" theatre
 
-84. During any AI turn round-trip in the chamber, verify there is NO "..." typing indicator, NO "AI is responding" text, NO loading spinner that fakes intimacy. The only acceptable signal is the "Preparing your first question" placeholder during initial cold-start.
+84. During any inline reconstruction save round-trip, verify there is NO "..." typing indicator, NO "AI is responding" text, NO loading spinner that fakes intimacy.
 
 ## Phase 5 — Theme + responsive
 
@@ -197,7 +164,7 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
     - Violet accent should shift to lavender
     - Strip primed nodes should become cyan (not violet)
 87. Verify the theme persists across navigation (no flash of unstyled content).
-88. Switch theme MID-DRILL (chamber open). Verify the chamber re-renders correctly without losing state.
+88. Switch theme with the inline reconstruction panel open. Verify the panel re-renders correctly without losing typed state.
 
 ### 5.2 Responsive
 
@@ -209,18 +176,18 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
     - Strip is shorter (~84px)
     - Active-name label truncates with ellipsis if long
     - CTA goes full-width
-    - Chamber composer remains usable
+    - Inline reconstruction composer remains usable
     - Touch targets on strip nodes are at least 28×28 (the SVG `<rect>` overlay)
 
 ## Phase 6 — Edge cases & stress
 
 ### 6.1 Browser back
 
-91. Inside the chamber, press the browser BACK button. Note: predicted behavior is "exits app" (URL routing isn't wired for the chamber state). Document actual.
+91. With the inline reconstruction panel open, press the browser BACK button. Document whether the app exits, stays on the concept page, or loses unsaved text.
 
-### 6.2 Refresh inside chamber
+### 6.2 Refresh inside reconstruction
 
-92. Inside the chamber, hard-refresh (`Cmd+Shift+R`). Note where you land. Predicted: concept page (chamber is ephemeral state).
+92. With the inline reconstruction panel open, hard-refresh (`Cmd+Shift+R`). Note where you land and whether saved training evidence remains available.
 
 ### 6.3 Rapid concept hop
 
@@ -228,11 +195,11 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 6.4 Idle session
 
-94. (Optional, time-permitting) Leave the chamber idle for 15+ minutes. Try to send a turn. Note any auth-expiry or session-loss behavior.
+94. (Optional, time-permitting) Leave the inline reconstruction panel idle for 15+ minutes. Try to save an attempt. Note any auth-expiry or session-loss behavior.
 
 ### 6.5 Long input
 
-95. In the chamber composer, paste 3000+ characters of text. Press send. Note whether:
+95. In the inline reconstruction textarea, paste 3000+ characters of text. Press "Save what I wrote". Note whether:
     - There's a character limit warning
     - The backend accepts the payload
     - The AI response handles the long input
@@ -255,7 +222,7 @@ Produce a markdown report with this structure:
 |--|--|--|--|--|
 | 1 Landing + concept creation | 18 | ?? | ?? | |
 | 2 Concept page B-2 layout | 35 | ?? | ?? | |
-| 3 Drill chamber | 28 | ?? | ?? | |
+| 3 Inline reconstruction | 9 | ?? | ?? | |
 | 4 Doctrine + copy audit | 3 | ?? | ?? | |
 | 5 Theme + responsive | 6 | ?? | ?? | |
 | 6 Edge cases & stress | 5 | ?? | ?? | |

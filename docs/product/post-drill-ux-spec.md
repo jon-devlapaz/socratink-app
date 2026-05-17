@@ -1,8 +1,8 @@
 # socratink — Post-Drill UX Spec
 
-> Binding under [evidence-weighted-map.md](evidence-weighted-map.md). This spec uses UI shorthand ("Solidified", "Needs revisit", "cleared") for learner-facing panel copy. Those labels are display artifacts — they describe what Socratink has recorded, not claims about the learner's mind. When agent-reading this doc, translate:
+> Binding under [evidence-weighted-map.md](evidence-weighted-map.md). This spec uses UI shorthand ("Solidified", "Needs repair", "cleared") for learner-facing panel copy. Those labels are display artifacts — they describe what Socratink has recorded, not claims about the learner's mind. When agent-reading this doc, translate:
 > - "Solidified" headline = Socratink recorded a solid spaced reconstruction for this node.
-> - "Needs revisit" = Socratink recorded a non-solid spaced reconstruction for this node.
+> - "Needs repair" = Socratink recorded learner reconstruction evidence with named gaps to repair.
 > - "Cleared" (if used in copy) = visual shorthand for `solidified` state; not a knowledge claim.
 
 ## Agent Summary
@@ -11,12 +11,12 @@
 >
 > **When to read it**: Before changing post-phase panel copy, result-state visuals, transcript policy, attribution framing on non-solid results, sensory celebration behavior, or session-ending UX.
 >
-> **What it is NOT**: It is not the routing/state implementation spec (read `progressive-disclosure.md`), the binding drill contract (read `../drill/contract.md`), or the full UX doctrine (read `/DESIGN.md`).
+> **What it is NOT**: It is not the routing/state implementation spec (read `progressive-disclosure.md`), the binding drill data-model canon (read `../superpowers/specs/2026-05-15-drill-data-model-design.md`), or the full UX doctrine (read `/DESIGN.md`).
 >
 > **Key constraints an agent must follow**:
-> - Five canonical result states: Primed, Solidified, Unresolved Exit, In-Progress, Session Complete. Each must look and feel distinct.
-> - Cold attempts show NO score, NO classification, NO tier/band. Normalization message required.
-> - Solidified gets the strongest sensory celebration, calibrated to cognitive load. Drilled gets NO celebration.
+> - Five canonical result states: Primed, Needs Repair, Solidified, In-Progress, Session Complete. Each must look and feel distinct.
+> - Cold attempts show NO score, NO tier/band, and no ability label. Private classification may produce learner-facing gap repair, but not a grade.
+> - Solidified gets the strongest sensory celebration, calibrated to cognitive load. Needs Repair gets NO celebration.
 > - All non-solid copy uses wise feedback (strategy-focused, never ability-focused). No raw classifier labels in any learner-facing surface.
 > - Side panel has six modes. Modes must be pure — no content bleed.
 
@@ -26,39 +26,40 @@
 
 Post-phase UX must distinguish between three evidence events:
 
-- cold attempt evidence recorded (Phase 1 → `primed`)
+- cold attempt evidence recorded (Phase 1 → `primed` or `needs repair`)
 - solid spaced reconstruction evidence recorded (Phase 3 → `solidified`)
-- non-solid spaced reconstruction evidence recorded (Phase 3 → `drilled`)
+- gap evidence recorded (Phase 1 or Phase 3 → `needs repair`)
 
 These three events produce different records and must look and feel different. If the UI blurs them, the graph stops telling the truth about what is on record.
 
 ## Canonical Result States
 
-### 1. Primed (Cold Attempt Complete)
+### 1. Primed (Learner Reconstruction Recorded)
 
 Use when:
 
-- Phase 1 cold attempt completes
-- Node transitions from `locked` to `primed`
+- a learner reconstruction attempt is recorded
+- the derived state is `primed`
 
 What it means:
 
 - the learner entered the room
 - the prediction error has been generated
-- the study view is now unlocked
+- study, review, repair, or spaced reconstruction routing is now derived from the training record
 - no mastery has been assessed or claimed
 
 Required visual treatment:
 
-- node appears `primed` (warm, open, distinct from locked)
-- side panel transitions to targeted study view automatically (after 2-3 second transition beat)
+- node appears `primed` (warm, open, distinct from no-evidence and needs-repair states)
+- concept page offers an explicit `Reveal study note` action; study material is not recorded as revealed until the learner takes it
+- future side-panel treatment may add the 2-3 second transition beat after that explicit reveal
 - the result framing emphasizes exploration, not evaluation
 - no score, no tier/band, no performance metrics are shown
 - a social normalization message should appear, rotated from variants
 
 Required copy:
 
-- headline: none — transition directly to study view
+- headline: `Reveal study note` CTA before study material appears
 - normalization message (one of): "Your guess just primed your brain. Now let's see what's really going on." / "Most learners get this wrong the first time. That's by design." / "This is how your brain prepares to learn." / "That attempt just activated your semantic networks. The study material will land harder now."
 
 Sensory treatment:
@@ -104,30 +105,29 @@ Sensory treatment:
 - haptic pulse timed to the moment of generation commit (if haptics enabled)
 - moderate, not excessive — the inverted-U rule applies
 
-### 3. Unresolved Exit (Non-Solid Spaced Reconstruction Recorded)
+### 3. Needs Repair (Gap Evidence Recorded)
 
 Use when:
 
-- Phase 3 spaced re-drill completes
-- `routing === "NEXT"`
-- `classification !== "solid"`
+- a recordable reconstruction attempt produces named gaps
+- derived state is `needs repair`
 
 What it means:
 
-- the re-drill was genuine (spacing was valid)
-- the room is still unresolved
+- the attempt was genuine enough to create repair evidence
+- the room is unresolved
 - node should remain return-worthy, not shameful
 
 Required visual treatment:
 
-- node appears `drilled`
+- node appears `needs repair`
 - side panel must explicitly say the room is not yet cleared
 - panel should include one concise diagnosis framed as strategy data, not ability verdict
 - result state remains visible until `Continue`
 
 Required copy:
 
-- headline: `Needs revisit`
+- headline: `Needs repair`
 - body: strategy-focused, not ability-focused. Use wise feedback without epistemic certainty about the learner's future: "This concept is designed to be challenging. The connection between [specific gap] needs a different angle next time."
 - include one specific next-step suggestion
 
@@ -191,10 +191,10 @@ Required copy:
 
 The learner-facing graph should keep these meanings stable:
 
-### `locked`
+### No Training Evidence
 
-- unavailable
-- low-information
+- no learner reconstruction attempt is on record
+- available only when predecessor evidence permits it; otherwise low-information and unavailable
 
 ### `primed`
 
@@ -202,11 +202,11 @@ The learner-facing graph should keep these meanings stable:
 - study view available
 - warm, open visual state
 
-### `drilled`
+### `needs repair`
 
-- attempted but not solid
+- attempted with named gaps to repair
 - unresolved stack pressure
-- worth revisiting
+- return-worthy
 
 ### `solidified`
 
@@ -231,9 +231,9 @@ The panel must not silently mix these modes.
 ### Inspect
 
 - orientation only
-- if `locked`: show label and prerequisite info
+- if no training evidence exists: show ready/locked copy based on predecessor availability
 - if `primed`: show "Ready for re-drill" status and study view access
-- if `drilled`: show revisit metadata and "Re-drill" affordance (if spacing met)
+- if `needs repair`: show repair metadata and the next honest repair/reconstruction affordance
 - if `solidified`: show cleared status and trajectory data
 
 ### Cold-Attempt-Active (Phase 1)
@@ -261,7 +261,7 @@ The panel must not silently mix these modes.
 
 ### Post-Re-Drill
 
-- result headline visible (Solidified or Needs Revisit)
+- result headline visible (Solidified or Needs Repair)
 - chat input hidden
 - result remains sticky until `Continue`
 - trajectory contrast visible (if tier/band data available)
@@ -296,7 +296,7 @@ Do not expose raw backend terms like:
 
 Prefer translated labels framed as strategy guidance:
 
-- `Needs revisit`
+- `Needs repair`
 - `The causal link needs a different angle`
 - `Needs a fuller mechanism`
 - `One step needs correction`
@@ -332,9 +332,9 @@ It should not:
 
 Do not ship:
 
-- a cold-attempt result screen that shows a score or classification
-- a resolved-session screen that looks identical for `solidified` and `drilled`
-- a `drilled` node that reads like completion
+- a cold-attempt result screen that shows a score, tier, ability label, or raw classifier
+- a resolved-session screen that looks identical for `solidified` and `needs repair`
+- a `needs repair` node that reads like completion or learner failure
 - a `primed` node that reads like failure
 - a graph click that silently erases the result state before `Continue`
 - a post-re-drill panel dominated by transcript rather than outcome
@@ -345,11 +345,11 @@ Do not ship:
 
 ## Current Decision Record
 
-As of 2026-04-05:
+As of 2026-05-17:
 
-- four-state model: `locked` → `primed` → `drilled` → `solidified`
-- cold attempts are explicitly unscored
-- spaced re-drill is the only phase that can produce `solidified`
+- derived training-state model: `null | primed | needs repair | solidified`
+- cold attempts are learner-facing unscored; private classification can drive honest repair/study routing
+- spaced strong reconstruction evidence is required to produce `solidified`
 - post-re-drill results stay sticky until `Continue`
 - unresolved exits use strategy-focused wise feedback, never ability verdicts
 - social normalization messages appear after every cold attempt

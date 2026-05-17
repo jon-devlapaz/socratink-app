@@ -54,6 +54,16 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               const e = JSON.stringify(expected);
               if (a !== e) throw new Error(`${message}: ${a} !== ${e}`);
             };
+            const rejects = async (fn, pattern, message) => {
+              let rejected = false;
+              try {
+                await fn();
+              } catch (err) {
+                rejected = true;
+                assert(pattern.test(String(err?.message || err)), message);
+              }
+              assert(rejected, `${message}: did not reject`);
+            };
 
             const html = await import('/js/html.js');
             assert(html.escHtml(`<&>"'`) === '&lt;&amp;&gt;&quot;&#39;', 'html escaping');
@@ -323,7 +333,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               ],
             };
             same(library.getLibraryConceptMeta({ name: 'Concept', state: 'growing', graphData: graph }), {
-              thesis: 'This is the central claim.',
+              thesis: 'No learner reconstruction recorded yet.',
+              summarySource: 'none',
               architecture: 'cause effect',
               difficulty: 'medium',
               clusterCount: 2,
@@ -334,19 +345,234 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               contentFilename: 'notes.md',
               graphData: JSON.stringify({ metadata: { core_thesis: 'From file' }, clusters: [] }),
             }).sourceLabel === 'Source: notes.md', 'library filename source');
-            assert(library.getLibraryConceptMeta({ graphData: '{' }).thesis.includes('No summary'), 'library malformed fallback');
+            const training = {
+              node_records: {
+                n1: {
+                  attempts: [
+                    {
+                      id: 'a1',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Thin first reconstruction.',
+                      classification: 'thin',
+                    },
+                    {
+                      id: 'a2',
+                      at: '2026-05-15T11:00:00.000Z',
+                      user_text: 'Learner-owned reconstruction.',
+                      classification: 'strong',
+                    },
+                  ],
+                },
+              },
+            };
+            assert(library.getLibraryConceptMeta({ graphData: '{' }).thesis.includes('No learner reconstruction'), 'library malformed fallback');
+            assert(library.getLibraryConceptMeta({ graphData: graph }, training).thesis === 'Learner-owned reconstruction.', 'library learner evidence');
             assert(library.buildLibraryHtml([]).includes('Begin a reconstruction.'), 'library empty state');
             const libraryHtml = library.buildLibraryHtml([
               { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
-            ]);
+            ], { 'c-1': training });
             assert(libraryHtml.includes('data-concept-id="c-1"'), 'library card id data attr');
             assert(libraryHtml.includes('App.openLibraryConcept(this.dataset.conceptId)'), 'library card onclick');
             assert(libraryHtml.includes('&lt;Unsafe&gt;'), 'library escaped name');
+            assert(libraryHtml.includes('Learner-owned reconstruction.'), 'library card learner evidence');
+            assert(!libraryHtml.includes('This is the central claim.'), 'library card no AI thesis fallback');
             assert(libraryHtml.includes('2 sections'), 'library section count');
             assert(libraryHtml.includes('3 entries'), 'library entry count');
             window.App.showLibrary();
             assert(document.getElementById('library-view').classList.contains('visible'), 'library view visible');
             assert(document.getElementById('library-content').textContent.includes('Begin a reconstruction.'), 'library app path');
+
+            const trainingStoreModule = await import('/js/training-store.js');
+            assert(trainingStoreModule.TRAINING_SCHEMA_VERSION === 1, 'training schema version');
+            const writes = new Map();
+            const memoryStorage = {
+              getItem(key) { return writes.has(key) ? writes.get(key) : null; },
+              setItem(key, value) { writes.set(key, value); },
+              removeItem(key) { writes.delete(key); },
+            };
+            const trainingStore = trainingStoreModule.createTrainingStore({ storage: memoryStorage });
+            assert(await trainingStore.loadTraining('concept-training') === null, 'training initially empty');
+            await trainingStore.saveTraining({ concept_id: 'saved-training', node_records: null });
+            assert(JSON.parse(writes.get('socratink:training:v1:saved-training')).schema_version === 1, 'training save normalizes schema');
+            await rejects(() => trainingStore.saveTraining({}), /concept-id-required/, 'training save requires concept id');
+            await trainingStore.deleteTraining('saved-training');
+            assert(await trainingStore.loadTraining('saved-training') === null, 'training delete clears concept evidence');
+            await trainingStore.setProvenance('concept-training', {
+              source_mode: 'source_less',
+              grounding: 'learner_sketch',
+              source_ref: null,
+            });
+            await trainingStore.setSketch('concept-training', {
+              text: '  rough learner sketch  ',
+              at: '2026-05-15T09:00:00.000Z',
+            });
+            await rejects(() => trainingStore.setSketch('concept-training', { text: 1, at: 'x' }), /sketch-text-required/, 'training rejects bad sketch text');
+            await rejects(() => trainingStore.setSketch('concept-training', { text: 'x' }), /sketch-at-required/, 'training rejects missing sketch at');
+            await rejects(() => trainingStore.setProvenance('concept-training', { source_mode: 'bad', grounding: 'source' }), /source-mode-invalid/, 'training rejects bad source mode');
+            await rejects(() => trainingStore.setProvenance('concept-training', { source_mode: 'source_less', grounding: 'bad' }), /grounding-invalid/, 'training rejects bad grounding');
+            await rejects(() => trainingStore.setProvenance('concept-training', { source_mode: 'source_less', grounding: 'source', source_ref: 'bad' }), /source-ref-invalid/, 'training rejects bad source ref');
+            await rejects(() => trainingStore.appendAttempt('concept-training', '', {
+              id: 'attempt-bad-node',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            }), /node-id-required/, 'training rejects missing node');
+            await rejects(() => trainingStore.appendAttempt('concept-training', 'n1', {
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            }), /attempt-id-required/, 'training rejects missing attempt id');
+            await rejects(() => trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-missing-at',
+              user_text: 'attempt',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            }), /attempt-at-required/, 'training rejects missing attempt at');
+            await rejects(() => trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-empty',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: '   ',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            }), /user-text-required/, 'training rejects empty attempt');
+            await rejects(() => trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-bad-classification',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt',
+              classification: 'solid',
+              gaps: [],
+              grader_version: 'qa',
+            }), /classification-invalid/, 'training rejects bad classification');
+            await rejects(() => trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-missing-grader',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt',
+              classification: 'thin',
+              gaps: [],
+            }), /grader-version-required/, 'training rejects missing grader');
+            await rejects(() => trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-missing-gaps',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt',
+              classification: 'thin',
+              grader_version: 'qa',
+            }), /gaps-required/, 'training rejects missing gaps');
+            await trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-1',
+              kind: 'spaced',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: '  first learner answer  ',
+              classification: 'thin',
+              gaps: [{ mechanism: 'cause', correction: 'name cause' }],
+              grader_version: 'qa',
+            });
+            await trainingStore.appendAttempt('concept-training', 'n1', {
+              id: 'attempt-2',
+              kind: 'cold',
+              at: '2026-05-16T10:00:00.000Z',
+              user_text: 'second learner answer',
+              classification: 'strong',
+              gaps: [],
+              grader_version: 'qa',
+            });
+            await rejects(() => trainingStore.setStudyRevealed('concept-training-2', 'n1', '2026-05-15T10:05:00.000Z'), /attempt-required/, 'training study requires attempt');
+            await rejects(() => trainingStore.setStudyRevealed('concept-training', 'n1', ''), /study-at-required/, 'training study requires time');
+            await trainingStore.setStudyRevealed('concept-training', 'n1', '2026-05-15T10:05:00.000Z');
+            await rejects(() => trainingStore.appendRepair('concept-training-2', 'n1', {
+              id: 'repair-before-study',
+              at: '2026-05-15T10:10:00.000Z',
+              text: 'repair',
+            }), /study-required/, 'training repair requires study');
+            await rejects(() => trainingStore.appendRepair('concept-training', 'n1', {
+              at: '2026-05-15T10:10:00.000Z',
+              text: 'repair',
+            }), /repair-id-required/, 'training rejects missing repair id');
+            await rejects(() => trainingStore.appendRepair('concept-training', 'n1', {
+              id: 'repair-missing-at',
+              text: 'repair',
+            }), /repair-at-required/, 'training rejects missing repair at');
+            await rejects(() => trainingStore.appendRepair('concept-training', 'n1', {
+              id: 'repair-empty',
+              at: '2026-05-15T10:10:00.000Z',
+              text: '  ',
+            }), /repair-text-required/, 'training rejects empty repair');
+            await trainingStore.appendRepair('concept-training', 'n1', {
+              id: 'repair-1',
+              at: '2026-05-15T10:10:00.000Z',
+              text: 'repair text',
+            });
+            const storedTraining = await trainingStore.loadTraining('concept-training');
+            assert(storedTraining.node_records.n1.attempts[0].kind === 'cold', 'training derives first attempt kind');
+            assert(storedTraining.node_records.n1.attempts[1].kind === 'spaced', 'training derives spaced attempt kind');
+            assert(storedTraining.node_records.n1.attempts[0].user_text === '  first learner answer  ', 'training preserves verbatim text');
+            assert(storedTraining.node_records.n1.repairs[0].text === 'repair text', 'training appends repair');
+            await trainingStore.saveTraining({
+              concept_id: 'corrupt-node-record',
+              node_records: { n1: { attempts: null, repairs: null } },
+            });
+            await trainingStore.appendAttempt('corrupt-node-record', 'n1', {
+              id: 'attempt-corrupt-record',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt after corrupt record',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            });
+            const normalizedCorruptRecord = await trainingStore.loadTraining('corrupt-node-record');
+            assert(Array.isArray(normalizedCorruptRecord.node_records.n1.attempts), 'training normalizes corrupt attempts array');
+            assert(Array.isArray(normalizedCorruptRecord.node_records.n1.repairs), 'training normalizes corrupt repairs array');
+            memoryStorage.setItem('socratink:training:v1:malformed-shape', JSON.stringify({ node_records: null }));
+            assert((await trainingStore.loadTraining('malformed-shape')).node_records, 'training load normalizes node records');
+            memoryStorage.setItem('socratink:training:v1:null-shape', 'null');
+            assert(await trainingStore.loadTraining('null-shape') === null, 'training ignores null record');
+            memoryStorage.setItem('socratink:training:v1:null-node-records-on-mutate', JSON.stringify({
+              concept_id: 'null-node-records-on-mutate',
+              node_records: null,
+            }));
+            await trainingStore.appendAttempt('null-node-records-on-mutate', 'n1', {
+              id: 'attempt-null-records',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt after null node records',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            });
+            assert((await trainingStore.loadTraining('null-node-records-on-mutate')).node_records.n1, 'training recreates null node records on mutate');
+            const noStorageStore = trainingStoreModule.createTrainingStore({ storage: null });
+            assert(await noStorageStore.loadTraining('missing') === null, 'training no storage load');
+            await noStorageStore.saveTraining({ concept_id: 'missing' });
+            assert(await noStorageStore.appendAttempt('missing', 'n1', {
+              id: 'attempt-no-storage',
+              at: '2026-05-15T10:00:00.000Z',
+              user_text: 'attempt',
+              classification: 'thin',
+              gaps: [],
+              grader_version: 'qa',
+            }) === null, 'training no storage mutation');
+
+            localStorage.setItem('learnops_concepts', '[]');
+            localStorage.removeItem('learnops_active');
+            window.App.persistCreatedConceptFromLaunchPad(
+              {
+                metadata: {},
+                backbone: [{ id: 'lp-node', label: 'Launch-pad node' }],
+                clusters: [],
+              },
+              { name: 'Launch Pad Provenance' },
+              'rough learner threshold'
+            );
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            const savedLaunchPadConcept = JSON.parse(localStorage.getItem('learnops_concepts'))[0];
+            const savedLaunchPadTraining = JSON.parse(localStorage.getItem(`socratink:training:v1:${savedLaunchPadConcept.id}`));
+            assert(savedLaunchPadTraining.source_mode === 'source_less', 'launch pad writes source-less provenance');
+            assert(savedLaunchPadTraining.grounding === 'learner_sketch', 'launch pad writes learner sketch grounding');
+            assert(savedLaunchPadTraining.sketch.text === 'rough learner threshold', 'launch pad writes sketch text');
 
             const sourceInput = await import('/js/source-input-ui.js');
             assert(sourceInput.isBlockedVideoUrl('https://youtu.be/abc'), 'blocked short youtube url');
@@ -598,17 +824,242 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             }
 
             const conceptPage = await import('/js/concept-page-view.js');
+            const trainingDerive = await import('/js/training-derive.js');
+            const attempt = (id, at, classification) => ({
+              id,
+              kind: id === 'a1' ? 'cold' : 'spaced',
+              at,
+              user_text: `${classification} explanation`,
+              classification,
+              gaps: classification === 'strong' ? [] : [{ description: 'missing link' }],
+              grader_version: 'qa',
+            });
+            same(trainingDerive.deriveNodeTraining(null).next_action, 'cold_attempt', 'training derive cold action');
+            same(
+              trainingDerive.deriveNodeTraining({
+                attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'partial')],
+                study_revealed_at: '2026-05-15T10:01:00.000Z',
+              }).next_action,
+              'repair',
+              'partial after study moves to repair work',
+            );
+            same(
+              trainingDerive.deriveNodeTraining({
+                attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'thin')],
+                study_revealed_at: '2026-05-15T10:01:00.000Z',
+                repairs: [{ id: 'r1', at: '2026-05-15T10:02:00.000Z', text: 'repair' }],
+              }).next_action,
+              'repair',
+              'repair text stays inert to state derivation',
+            );
+            const reviewState = trainingDerive.deriveNodeTraining({
+              attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'strong')],
+              study_revealed_at: '2026-05-15T10:01:00.000Z',
+            }, { now: '2026-05-15T11:00:00.000Z' });
+            same(reviewState.next_action, 'review', 'strong attempt before spacing reviews');
+            assert(reviewState.solidify_unlocks_at === '2026-05-16T04:00:00.000Z', 'solidify unlock time derived');
+            same(
+              trainingDerive.deriveNodeTraining({
+                attempts: [attempt('a1', 'bad-time', 'strong')],
+                study_revealed_at: '2026-05-15T10:01:00.000Z',
+              }, { now: 'bad-now' }).next_action,
+              'review',
+              'invalid spacing timestamps remain review',
+            );
+            same(
+              trainingDerive.deriveNodeTraining({
+                attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'strong')],
+                study_revealed_at: '2026-05-15T10:01:00.000Z',
+              }, { now: '2026-05-16T05:00:00.000Z' }).next_action,
+              'spaced_attempt',
+              'spacing interval unlocks spaced attempt',
+            );
+            same(
+              trainingDerive.deriveNodeTraining({
+                attempts: [
+                  attempt('a1', '2026-05-15T10:00:00.000Z', 'strong'),
+                  attempt('a2', '2026-05-16T05:00:00.000Z', 'strong'),
+                ],
+                study_revealed_at: '2026-05-15T10:01:00.000Z',
+              }).state,
+              'solidified',
+              'two spaced strong attempts solidify',
+            );
+            same(
+              trainingDerive.deriveConceptStatus({
+                node_records: {
+                  p: { attempts: [attempt('p1', '2026-05-15T10:00:00.000Z', 'partial')] },
+                  n: { attempts: [attempt('n1', '2026-05-15T10:00:00.000Z', 'wrong_direction')] },
+                  s: {
+                    attempts: [
+                      attempt('s1', '2026-05-15T10:00:00.000Z', 'strong'),
+                      attempt('s2', '2026-05-16T05:00:00.000Z', 'strong'),
+                    ],
+                  },
+                },
+              }, ['u', 'p', 'n', 's']).badge,
+              'needs repair',
+              'concept status prioritizes repair',
+            );
+            same(
+              trainingDerive.deriveConceptStatus({
+                node_records: {
+                  p: { attempts: [attempt('p1', '2026-05-15T10:00:00.000Z', 'partial')] },
+                },
+              }, ['p']).badge,
+              'primed',
+              'concept status reports primed when no repair remains',
+            );
+            same(
+              trainingDerive.deriveConceptStatus({
+                node_records: {
+                  s: {
+                    attempts: [
+                      attempt('s1', '2026-05-15T10:00:00.000Z', 'strong'),
+                      attempt('s2', '2026-05-16T05:00:00.000Z', 'strong'),
+                    ],
+                  },
+                },
+              }, ['s']).badge,
+              'solidified',
+              'concept status reports solidified when all tested nodes solidify',
+            );
+            same(
+              trainingDerive.deriveConceptStatus(null, 'not-array').composition.total,
+              0,
+              'concept status tolerates non-array node ids',
+            );
             const conceptBackbone = [
               { id: 'core', label: '<Core>', drill_status: 'drilled', purpose: 'First purpose' },
               { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
               { id: 'entry-3', label: 'Third', drill_status: 'locked' },
             ];
+            const conceptTraining = {
+              node_records: {
+                core: {
+                  attempts: [{
+                    id: 'a1',
+                    kind: 'cold',
+                    at: '2026-05-15T10:00:00.000Z',
+                    user_text: 'Learner explained the core mechanism.',
+                    classification: 'strong',
+                    gaps: [],
+                    grader_version: 'qa',
+                  }],
+                  repairs: [],
+                },
+              },
+            };
             assert(conceptPage.getConceptEntryId(conceptBackbone[0], 0) === 'core', 'concept entry id uses explicit id');
             assert(conceptPage.getConceptEntryId({ label: 'No id' }, 2) === 'entry-2', 'concept entry id falls back to index');
+            const legacyStatusCompatEntry = conceptPage.selectInitialConceptEntry([
+              { id: 'legacy-primed', label: 'Legacy primed', drill_status: 'solidified' },
+              { id: 'next', label: 'Next', drill_status: 'locked' },
+            ]);
+            assert(legacyStatusCompatEntry.id === 'next', 'concept page honors legacy solidified status when no training record exists');
+            const legacyDrilledHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' },
+              0,
+              [{ id: 'legacy-drilled', label: 'Legacy drilled', drill_status: 'drilled' }],
+              {},
+              { metadata: {} },
+            );
+            assert(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'), 'concept page honors legacy drilled status when no training record exists');
+            const legacyStudyHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+              0,
+              [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+              {},
+              { metadata: {} },
+            );
+            assert(legacyStudyHtml.includes('study required entry 1 of 1'), 'legacy primed study stays in study phase');
+            assert(legacyStudyHtml.includes('data-active-entry-action="study"'), 'legacy primed study reveals study before redrill');
+            const legacyStudyRevealedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+              0,
+              [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+              {},
+              { metadata: {} },
+              { node_records: { 'legacy-study': { attempts: [], repairs: [], study_revealed_at: '2026-05-15T10:05:00.000Z' } } },
+            );
+            assert(legacyStudyRevealedHtml.includes('Legacy study note.'), 'legacy study reveal shows note without fabricating an attempt');
+            assert(!legacyStudyRevealedHtml.includes('concept-page-b2__evidence'), 'legacy study reveal does not invent learner evidence');
+            const legacyPrimedWaitingHtml = conceptPage.renderActiveEntryHtml(
+              {
+                id: 'legacy-waiting',
+                label: 'Legacy waiting',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              },
+              0,
+              [{
+                id: 'legacy-waiting',
+                label: 'Legacy waiting',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              }],
+              {},
+              { metadata: {} },
+              null,
+              { now: '2026-05-15T20:00:00.000Z' },
+            );
+            assert(legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'), 'legacy primed spacing lock renders review state');
+            assert(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing lock suppresses reattempt cta');
+            const legacyPrimedReadyHtml = conceptPage.renderActiveEntryHtml(
+              {
+                id: 'legacy-ready',
+                label: 'Legacy ready',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              },
+              0,
+              [{
+                id: 'legacy-ready',
+                label: 'Legacy ready',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              }],
+              {},
+              { metadata: {} },
+              null,
+              { now: '2026-05-16T05:00:00.000Z' },
+            );
+            assert(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'), 'legacy primed spacing unlock renders ready state');
+            assert(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing unlock shows reattempt cta');
+            const legacyDrilledWaitingHtml = conceptPage.renderActiveEntryHtml(
+              {
+                id: 'legacy-drilled-waiting',
+                label: 'Legacy drilled waiting',
+                drill_status: 'drilled',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              },
+              0,
+              [{
+                id: 'legacy-drilled-waiting',
+                label: 'Legacy drilled waiting',
+                drill_status: 'drilled',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              }],
+              {},
+              { metadata: {} },
+              null,
+              { now: '2026-05-15T20:00:00.000Z' },
+            );
+            assert(legacyDrilledWaitingHtml.includes('review pending entry 1 of 1'), 'legacy drilled spacing lock renders review state');
+            assert(!legacyDrilledWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy drilled spacing lock suppresses reattempt cta');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
               { label: 'Next cold entry', drill_status: 'locked' },
-            ]);
+            ], {
+              node_records: {
+                done: {
+                  attempts: [
+                    { id: 's1', at: '2026-05-14T10:00:00.000Z', user_text: 'first strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                    { id: 's2', at: '2026-05-15T10:00:00.000Z', user_text: 'second strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                  ],
+                },
+              },
+            });
             assert(initialEntry.entry.label === 'Next cold entry', 'initial entry selects first non-solidified node');
             assert(initialEntry.index === 1, 'initial entry reports selected index');
             assert(initialEntry.id === 'entry-1', 'initial entry reports fallback id');
@@ -618,6 +1069,39 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(allSolidifiedEntry.entry.label === 'Solid', 'initial entry falls back to first node');
             assert(allSolidifiedEntry.index === 0, 'initial fallback reports first index');
             assert(allSolidifiedEntry.id === 'solid', 'initial fallback reports first id');
+            const solidifiedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'solid', label: 'Solid', drill_status: 'solidified' },
+              0,
+              [{ id: 'solid', label: 'Solid', drill_status: 'solidified' }],
+              {},
+              { metadata: {} },
+            );
+            assert(solidifiedHtml.includes('solidified entry 1 of 1'), 'solidified entry reports final state');
+            assert(!solidifiedHtml.includes('concept-page-b2__entry-cta'), 'solidified entry suppresses reconstruction cta');
+            const legacySolidWithPartialTrainingHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' },
+              0,
+              [{ id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  'legacy-solid': {
+                    attempts: [{
+                      id: 'legacy-redrill',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Strong legacy re-drill.',
+                      classification: 'strong',
+                      gaps: [],
+                      grader_version: 'qa',
+                    }],
+                  },
+                },
+              },
+            );
+            assert(legacySolidWithPartialTrainingHtml.includes('solidified entry 1 of 1'), 'legacy terminal graph state survives partial training');
+            assert(!legacySolidWithPartialTrainingHtml.includes('study required entry 1 of 1'), 'legacy terminal graph state does not reopen study');
+            assert(!legacySolidWithPartialTrainingHtml.includes('concept-page-b2__entry-cta'), 'legacy terminal graph state suppresses cta');
             const emptyInitialEntry = conceptPage.selectInitialConceptEntry([]);
             assert(emptyInitialEntry.entry.id === 'core-thesis', 'initial entry falls back to synthetic core thesis');
             assert(emptyInitialEntry.index === 0, 'synthetic initial entry reports zero index');
@@ -632,29 +1116,232 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               2,
               conceptBackbone,
               { startingMapContext: '<threshold & sketch>' },
-              { metadata: { core_thesis: 'fallback thesis' } }
+              { metadata: { core_thesis: 'fallback thesis' } },
+              conceptTraining
             );
             assert(conceptPageHtml.includes('&lt;threshold &amp; sketch&gt;'), 'concept page threshold escapes');
             assert(conceptPageHtml.includes('locked entry 3 of 3'), 'concept page blocked eyebrow');
             assert(conceptPageHtml.includes('aria-disabled="true"'), 'concept page blocked cta');
             assert(conceptPageHtml.includes('Second &amp; unsafe'), 'concept page nearby escapes');
+            assert(conceptPageHtml.includes('READY TO RECONSTRUCT'), 'concept page derives nearby readiness from training');
+            const conceptPageAttemptHtml = conceptPage.renderActiveEntryHtml(
+              conceptBackbone[1],
+              1,
+              conceptBackbone,
+              {},
+              { metadata: { starting_map_context: 'metadata sketch' } },
+              conceptTraining,
+              { attemptEntryId: 'entry-2' },
+            );
+            assert(conceptPageAttemptHtml.includes('concept-page-b2__attempt'), 'concept page inline attempt form');
+            assert(conceptPageAttemptHtml.includes('data-attempt-entry-id="entry-2"'), 'concept page inline attempt target');
+            assert(conceptPageAttemptHtml.includes('Save what I wrote'), 'concept page inline attempt save');
             const conceptPagePrimedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'primed', label: 'Primed', drill_status: 'primed' },
               0,
               [{ id: 'primed', label: 'Primed', drill_status: 'primed' }],
               {},
-              { metadata: {} }
+              { metadata: {} },
+              {
+                node_records: {
+                  primed: {
+                    attempts: [{
+                      id: 'p1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'A strong first attempt.',
+                      classification: 'strong',
+                      gaps: [],
+                      grader_version: 'qa',
+                    }],
+                    repairs: [],
+                  },
+                },
+              }
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
-            assert(conceptPagePrimedHtml.includes('Re-drill from memory'), 'concept page primed cta');
-            const conceptStripHtml = conceptPage.renderConceptStripHtml(conceptBackbone, conceptBackbone[1], 1);
+            assert(conceptPagePrimedHtml.includes('study required entry 1 of 1'), 'concept page primed study-required eyebrow');
+            assert(conceptPagePrimedHtml.includes('data-active-entry-action="study"'), 'concept page primed study action');
+            assert(conceptPagePrimedHtml.includes('Reveal study note'), 'concept page primed study cta');
+            const conceptPageStudiedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
+              0,
+              [{ id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  studied: {
+                    attempts: [{
+                      id: 'st1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'A strong first attempt.',
+                      classification: 'strong',
+                      gaps: [],
+                      grader_version: 'qa',
+                    }],
+                    study_revealed_at: '2026-05-15T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+              { now: '2026-05-15T11:00:00.000Z' },
+            );
+            assert(conceptPageStudiedHtml.includes('review pending entry 1 of 1'), 'concept page studied review eyebrow');
+            assert(conceptPageStudiedHtml.includes('concept-page-b2__evidence'), 'concept page studied evidence artifact renders');
+            assert(conceptPageStudiedHtml.includes('learner reconstruction'), 'concept page studied evidence label');
+            assert(conceptPageStudiedHtml.includes('A strong first attempt.'), 'concept page studied preserves learner words');
+            assert(conceptPageStudiedHtml.includes('concept-page-b2__study-note'), 'concept page studied note renders');
+            assert(conceptPageStudiedHtml.includes('Study note for this entry.'), 'concept page studied note uses entry purpose');
+            assert(!conceptPageStudiedHtml.includes('concept-page-b2__entry-cta'), 'concept page studied review has no cta');
+            const conceptPagePrincipleHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
+              0,
+              [{ id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' }],
+              { startingMapContext: 'Learner sketch.', contentPreview: 'Global source preview should not appear.' },
+              { metadata: { core_thesis: 'Global core thesis should not appear.' } },
+              {
+                node_records: {
+                  principle: {
+                    attempts: [{
+                      id: 'pr1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'A strong first attempt.',
+                      classification: 'strong',
+                      gaps: [],
+                      grader_version: 'qa',
+                    }],
+                    study_revealed_at: '2026-05-15T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+              { now: '2026-05-15T11:00:00.000Z' },
+            );
+            assert(conceptPagePrincipleHtml.includes('Entry-specific generated principle.'), 'concept page study note uses entry principle before global fallback');
+            assert(!conceptPagePrincipleHtml.includes('Global core thesis should not appear.'), 'concept page principle avoids global core thesis fallback');
+            assert(!conceptPagePrincipleHtml.includes('Global source preview should not appear.'), 'concept page principle avoids source preview fallback');
+            const conceptPageRepairHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'repair', label: 'Repair', study_note: 'Study the channel gate.' },
+              0,
+              [{ id: 'repair', label: 'Repair', study_note: 'Study the channel gate.' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  repair: {
+                    attempts: [{
+                      id: 'rp1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Sodium just rushes in.',
+                      classification: 'thin',
+                      gaps: [{
+                        mechanism: 'channel gate',
+                        correction: 'Name that voltage-gated sodium channels open at threshold.',
+                      }],
+                      grader_version: 'qa',
+                    }],
+                    study_revealed_at: '2026-05-15T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+            );
+            assert(conceptPageRepairHtml.includes('repair the gap entry 1 of 1'), 'concept page repair eyebrow');
+            assert(conceptPageRepairHtml.includes('concept-page-b2__evidence'), 'concept page repair evidence artifact renders');
+            assert(conceptPageRepairHtml.includes('Sodium just rushes in.'), 'concept page repair preserves learner words');
+            assert(conceptPageRepairHtml.includes('Name that voltage-gated sodium channels open at threshold.'), 'concept page repair surfaces hinge');
+            assert(conceptPageRepairHtml.includes('concept-page-b2__repair'), 'concept page repair panel');
+            assert(conceptPageRepairHtml.includes('data-repair-entry-id="repair"'), 'concept page repair save target');
+            assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
+            const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
+              { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
+              1,
+              [{ id: 'done', label: 'Done', drill_status: 'solidified' }, { label: 'Fallback repair', study_note: 'Study the unnamed entry.' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  'entry-1': {
+                    attempts: [{
+                      id: 'fr1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Incomplete fallback answer.',
+                      classification: 'thin',
+                      gaps: [{ mechanism: 'fallback link', correction: 'Name the fallback mechanism.' }],
+                      grader_version: 'qa',
+                    }],
+                    study_revealed_at: '2026-05-15T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+            );
+            assert(conceptPageFallbackRepairHtml.includes('data-repair-entry-id="entry-1"'), 'concept page fallback repair save target');
+            assert(!conceptPageFallbackRepairHtml.includes('data-repair-entry-id="core-thesis"'), 'concept page fallback repair avoids core thesis target');
+            const conceptPageReviewHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'review', label: 'Review' },
+              0,
+              [{ id: 'review', label: 'Review' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  review: {
+                    attempts: [attempt('rv1', '2026-05-15T10:00:00.000Z', 'strong')],
+                    study_revealed_at: '2026-05-15T10:01:00.000Z',
+                  },
+                },
+              },
+              { now: '2026-05-15T11:00:00.000Z' },
+            );
+            assert(conceptPageReviewHtml.includes('review pending entry 1 of 1'), 'concept page review pending eyebrow');
+            assert(!conceptPageReviewHtml.includes('concept-page-b2__entry-cta'), 'concept page review has no cta');
+            const conceptPageSpacedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'spaced', label: 'Spaced' },
+              0,
+              [{ id: 'spaced', label: 'Spaced' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  spaced: {
+                    attempts: [attempt('sp1', '2026-05-15T10:00:00.000Z', 'strong')],
+                    study_revealed_at: '2026-05-15T10:01:00.000Z',
+                  },
+                },
+              },
+              { now: '2026-05-16T05:00:00.000Z' },
+            );
+            assert(conceptPageSpacedHtml.includes('spaced reconstruction ready entry 1 of 1'), 'concept page spaced eyebrow');
+            const conceptPageDefensiveHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'defensive', label: 'Defensive' },
+              0,
+              [{ id: 'defensive', label: 'Defensive' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  defensive: {
+                    attempts: [attempt('df1', '2026-05-15T10:00:00.000Z', 'unknown')],
+                    study_revealed_at: '2026-05-15T10:01:00.000Z',
+                  },
+                },
+              },
+            );
+            assert(conceptPageDefensiveHtml.includes('re-drill ready entry 1 of 1'), 'concept page has defensive attempted fallback');
+            const conceptStripHtml = conceptPage.renderConceptStripHtml(conceptBackbone, conceptBackbone[1], 1, conceptTraining);
             assert(conceptStripHtml.includes('class="concept-strip"'), 'concept strip wrapper');
             assert(conceptStripHtml.includes('concept-strip__edge is-active'), 'concept strip active edge');
             assert(conceptStripHtml.includes('concept-strip__node--primed'), 'concept strip primed node');
             assert(conceptStripHtml.includes('concept-strip__node--ready is-active'), 'concept strip ready active node');
             assert(conceptStripHtml.includes('concept-strip__node--locked'), 'concept strip locked node');
             assert(conceptStripHtml.includes('Second &amp; unsafe · 2 of 3'), 'concept strip active label escapes');
-            assert(conceptStripHtml.includes('aria-label="Second &amp; unsafe, ready for first attempt, current"'), 'concept strip aria escapes');
+            assert(conceptStripHtml.includes('aria-label="Second &amp; unsafe, ready to reconstruct, current"'), 'concept strip aria escapes');
             const emptyConceptStripHtml = conceptPage.renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
             assert(emptyConceptStripHtml.includes('data-entry-id="core-thesis"'), 'concept strip empty synthetic node');
             assert(emptyConceptStripHtml.includes('<text x="60" y="80">core thesis</text>'), 'concept strip empty label');

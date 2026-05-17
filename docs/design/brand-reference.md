@@ -25,7 +25,7 @@ Assume the reader of this file does **not** have access to the above. If that as
 
 socratink is (today) a single product surface with two faces:
 
-1. **The app** (`app.socratink.ai`) — a vanilla JS/FastAPI product surface. A sidebar of concepts, an isometric **grid board** of tiles, and concept-shell visuals project recorded evidence while node drill status remains the graph-truth layer: `locked → primed → drilled → solidified`. A drill chat panel drives the three-phase loop: **cold attempt → targeted study → spaced re-drill**.
+1. **The app** (`app.socratink.ai`) — a vanilla JS/FastAPI product surface. A sidebar of concepts, an isometric **grid board** of tiles, and concept-shell visuals project recorded evidence while training records derive graph truth as `null | primed | needs repair | solidified`. The loop remains **cold attempt → targeted study → spaced re-drill**.
 
 2. **The marketing site** (`socratink.ai`) — a React landing page introducing the thesis, the loop, and the FAQ. Quiet type, cream page, violet accent. See `ui_kits/website/`.
 
@@ -38,7 +38,7 @@ The graph behaves like a **dungeon map**. Every node is a **room**. The cold att
 ### What the visual language has to carry
 
 - The graph must look **trustable**. A state change has to feel earned, not decorative.
-- Struggle must be honored, not hidden. Colors for `drilled` (non-solid re-drill) are warm and return-worthy — never red, never punitive.
+- Struggle must be honored, not hidden. Colors for `needs repair` evidence are warm and return-worthy — never red, never punitive.
 - Feedback is **calibrated to cognitive load** — a clean solidification gets a crisp crystallization; a scaffolded barely-solid retrieval gets a subdued, stabilizing effect. Both are true; the aesthetic mirrors the work.
 - No streak fog, no gamification hype, no hollow badges. The reward layer is the state change itself.
 
@@ -87,7 +87,7 @@ Enter concept
 
 **2. Provisional Graph.** *No state mutation.* A draft route is rendered from the starting map. Copy is explicit that the graph is a **hypothesis**, not a knowledge claim. Legend is limited to: draft route · ready for first attempt · locked. Primary action: **Start first attempt.**
 
-**3. First Cold Attempt — local mechanism question.** *Still unscored.* The prompt is **narrower** than the threshold, and should **quote or paraphrase the learner's threshold input** before asking a single causal question inside the first node. Example: *"You said LLMs are built from lots of text and training. Narrow that into one causal guess: what do you think the training is trying to predict at each step?"* On submit — substantive: `locked → primed`, `drill_phase = study`. Non-substantive: no mutation; ask for a micro-generation.
+**3. First Cold Attempt — local mechanism question.** *Still learner-facing unscored.* The prompt is **narrower** than the threshold, and should **quote or paraphrase the learner's threshold input** before asking a single causal question inside the first node. Example: *"You said LLMs are built from lots of text and training. Narrow that into one causal guess: what do you think the training is trying to predict at each step?"* On submit, recordable learner evidence derives `primed` or `needs repair`. Non-substantive input writes no attempt; ask for a micro-generation.
 
    **Analogical fallback — when signal is too thin.** Pivot to an analogy-led generation *instead of* a blind guess. Rules: (a) give a familiar source analogy, never the target mechanism as the answer; (b) ask the learner to predict a causal relationship *inside the analogy*; (c) the node stays `locked` until a substantive micro-generation lands; (d) the learner is never labeled zero-knowledge.
 
@@ -105,12 +105,12 @@ Enter concept
 |---|---|---|---|
 | Threshold submitted | starting map captured | routing signal, source dependence, causal depth | **none** |
 | Provisional graph generated | draft path | first-node priority, prompt emphasis | **none** |
-| Local cold attempt submitted | unscored node attempt | substantive vs non-attempt | `locked → primed` **only if substantive** |
-| Study completed | repair artifact | study timestamp, next interleave target | stays `primed`; re-drill timer set |
+| Local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
+| Study revealed | repair artifact | `study_revealed_at`; no mastery signal | stays `primed`; current re-drill readiness derives from attempt timing, not study completion |
 | Interleaving bridge shown | small next-choice set (2–3 rooms + break) | route preference | **none** |
 | Repair rep completed | practice history | self-rating, bridge quality | **none** |
-| Spaced re-drill solid | proof through reconstruction | solid classification | `primed / drilled → solidified` |
-| Spaced re-drill non-solid | needs revisit | gap metadata | `primed → drilled` |
+| Spaced re-drill strong | proof through reconstruction | strong classification after spacing | derives `solidified` |
+| Spaced re-drill non-solid | needs repair | gap metadata | derives `needs repair` when warranted |
 
 ### Copy guardrails for the happy path
 
@@ -143,7 +143,7 @@ Routing signals, source-dependence scores, causal-depth estimates, schema profil
 
 ### MVP cut (for design prioritization)
 
-**Build first:** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **first cold attempt is local and derived from the threshold input** · **analogical cold-attempt fallback** for low-signal learners · locked study silhouette before attempt · attempt-scoped repair artifact after cold attempt · **interleaving bridge with 2–3 next-room choices plus a “take a short break” option** before another cold attempt · existing spacing and graph-mutation rules unchanged.
+**Build first:** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **first cold attempt is local and derived from the threshold input** · **analogical cold-attempt fallback** for low-signal learners · locked study silhouette before attempt · attempt-scoped repair artifact after cold attempt · **interleaving bridge with 2–3 next-room choices plus a "take a short break" option** before another cold attempt · browser-local training evidence with derived state, plus the shipped 18-hour spacing interval.
 
 **Defer:** learner-visible schema profiles · long-term curriculum claims · cross-concept mastery summaries · rich notebook features · URL ingestion (until SSRF hardening + manual fallback ships).
 
@@ -190,14 +190,14 @@ The product has **no human teacher** to manage attributions in real time. The in
 | How it works | Imperative, low-volume | "Bring your material. Build a map. Record evidence." |
 | Drill prompt (AI) | Sparse, gap-identifying | "Explain why node B matters in the system." |
 | `primed` state copy | Quiet acknowledgment | "You've stepped inside. The real challenge is ahead." |
-| `drilled` state copy | Honored, not punitive | "Worth revisiting. The next gain is here." |
+| `needs repair` state copy | Honored, not punitive | "Worth revisiting. The next gain is here." |
 | `solidified` state copy | Earned, brief | "Solidified. Spaced reconstruction recorded." |
 | Session cap / break | Warm, scientific, transparent | "Evidence recorded. Let spacing do its work while you're away." |
 | Error / non-solid | Strategy, never ability | "The causal link between step 2 and step 3 needs a different angle." |
 
 ### Casing
 
-- Lowercase for `socratink`, the CTA verb `tink it`, and node states (`primed`, `drilled`, `solidified`, `locked`).
+- Lowercase for `socratink`, the CTA verb `tink it`, and node states (`primed`, `needs repair`, `solidified`).
 - Title Case for major section headings ("How It Works", "Why It Feels Different").
 - UPPERCASE **only** for the `kicker` eyebrow (`FAQ`, `NOT ANOTHER AI SUMMARY APP.`), with wide tracking.
 

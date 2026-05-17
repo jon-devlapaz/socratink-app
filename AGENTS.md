@@ -290,6 +290,15 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
 
 Three community skills are installed project-local under `.agents/skills/`, symlinked into `.claude/skills/` for Claude Code discovery. Install is local-machine state only (`.agents/` is gitignored, no lockfile carried) — re-install on a new machine via the commands below if ever needed. Do not treat `.agents/skills/` as repo canon.
 
+The repository also tracks `agents/superpowers` as a Git submodule pointing at
+the upstream Superpowers skill source. It is reference material, not runtime
+canon and not a replacement for this repo's `agents/` workflow docs. In a fresh
+checkout, initialize it only when you need to inspect that upstream source:
+
+```bash
+git submodule update --init -- agents/superpowers
+```
+
 | Skill | Source | When to invoke | Trust signals |
 |---|---|---|---|
 | `playwright-cli` | [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) — **official Microsoft** | Authoring or debugging Playwright tests, smoke flows (`scripts/qa-smoke.sh`, `tests/e2e/`), persona automation, trace inspection, browser context configuration. Pairs with the `playwright` MCP for live browser work. | 33.1K installs; Socket 0 alerts; **Snyk flagged High Risk** — accepted given Microsoft as publisher, but glance at `SKILL.md` before relying on it for novel patterns. |

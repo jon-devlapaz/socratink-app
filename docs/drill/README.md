@@ -6,12 +6,13 @@ Do not use archived drill docs as the source of truth for new implementation dec
 
 ## Current Binding Truth
 
-Until fresh drill docs are rebuilt, use these surfaces in order:
+Use these surfaces in order:
 
-- [contract.md](contract.md) — current binding drill contract: phases, states, valid mutations, and active drift caveat
+- [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md) — current binding drill data-model canon: training evidence store, derived states, and rendering contract
+- [contract.md](contract.md) — compatibility redirect and short runtime summary
 - [../product/evidence-weighted-map.md](../product/evidence-weighted-map.md) — binding doctrine for what the graph may and may not claim
-- [../product/spec.md](../product/spec.md) — binding product contract for the three-phase loop and four-state model
-- [../product/progressive-disclosure.md](../product/progressive-disclosure.md) — current implementation-facing routing and state spec
+- [../product/spec.md](../product/spec.md) — binding product contract for the three-phase loop and derived training state model
+- [../product/progressive-disclosure.md](../product/progressive-disclosure.md) — current implementation-facing routing and state spec, under the data-model canon above
 - [../product/post-drill-ux-spec.md](../product/post-drill-ux-spec.md) — current learner-facing post-phase UX contract
 - [../project/state.md](../project/state.md) — current release posture and active risks
 - [../project/mvp-happy-path.md](../project/mvp-happy-path.md) — current manual release gate

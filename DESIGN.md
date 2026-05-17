@@ -33,8 +33,8 @@ Quick reference (full list in UBIQUITOUS_LANGUAGE.md):
 | **Cold attempt** | Unscored first generation on a local node before content appears | Quiz, test, assessment |
 | **Targeted study** | Attempt-scoped corrective study unlocked by a substantive cold attempt | Proof, completion |
 | **Spaced re-drill** | Later reconstruction after spacing; only event that can record `solidified` | Review, retry |
-| **`primed`** | Substantive cold attempt on record; study unlocked | Learned, partially mastered |
-| **`drilled`** | Non-solid spaced reconstruction on record; return-worthy, never red | Failed, weak |
+| **`primed`** | Learner reconstruction evidence on record; next action is derived from training evidence | Learned, partially mastered |
+| **`needs repair`** | Current learner evidence has named gaps to repair | Failed, weak |
 | **`solidified`** | Solid spaced reconstruction on record (evidence, not mastery) | Mastered, cleared |
 
 ---
@@ -45,11 +45,11 @@ Quick reference (full list in UBIQUITOUS_LANGUAGE.md):
 Door (concept name [+ optional Imported source])
   → if source: extraction pipeline → Provisional map
   → if no source: Launch pad → Launch attempt → Source-less generation → Smallest actionable route
-→ Cold attempt (local) → mutates locked→primed only on substantive answer
-→ Targeted study → no graph mutation; sets re-drill timer
+→ Cold attempt (local) → writes learner attempt into `socratink:training:v1:<conceptId>`
+→ Targeted study → records study reveal; no solidification
 → Repair Reps (optional) → no graph mutation
 → Interleaving Bridge → routing only, no mutation
-→ Spaced re-drill → solid: primed/drilled→solidified  |  non-solid: primed→drilled
+→ Spaced re-drill → derives `solidified` only from spaced strong reconstruction; gaps derive `needs repair`
 ```
 
 Architectural seams:
@@ -73,8 +73,8 @@ Internal-only signals (routing hints, source-dependence scores, causal-depth) **
 | Library is users' work only | The trust signal of Library is the user's own reconstructed work; samples dilute it | Add `BUILT_IN_LIBRARY_CONCEPTS`, "Saved articles", side-by-side curated cards | ADR-0004 |
 | Threshold is global; cold attempt is local | Different scope, different prompt, different surface — protects against generation fatigue | Re-ask the threshold question at the first cold attempt | manifesto |
 | No content before the cold attempt | The Locked Study Silhouette's absence of content is intentional — peeking defeats the cold attempt | Show definitions, solved diagrams, or examples on the locked node | manifesto |
-| Interleaving Bridge is mandatory after repair | A fresh repair re-drilled immediately tests short-term echo, not reconstruction | Route from Study Repair Artifact straight into another cold attempt | manifesto |
-| No second durable graph-truth store | The graph IS the record of evidence; a parallel store invites learner-visible mastery claims that didn't earn themselves | Mirror node state into a second persisted store; cache "completion" anywhere durable | memory |
+| Interleaving Bridge is the target after repair | A fresh repair re-drilled immediately tests short-term echo, not reconstruction; current POC still exposes an inline repair retry so the learner can close a `needs repair` loop | Present repair retry as mastery, spacing, or interleaving credit | manifesto |
+| Training evidence is separate from the provisional graph | The graph proposes structure; `socratink:training:v1:<conceptId>` records learner evidence and derives state so Library cannot confuse AI summaries with reconstruction | Write learner evidence into `graphData.metadata.core_thesis` or persist mastery/completion as mutable graph fields | memory |
 | Concepts seed without a source | "Add X to concepts" is a valid first move; raw text flows through the same extraction pipeline | Require a citation up-front; refuse source-less generation | memory |
 | Silent surface default | Every visible element earns its keep; additive bias produces debt | Ship eyebrows, helper lines, decorative arrows "because it looks empty" | memory |
 | Adjacent-surface vocabulary clash is a bug class | Same word + different referents in one frame = immediate UX confusion | Place "Commit attempt" button above a "cold attempt" footnote | memory |
@@ -114,7 +114,7 @@ This section also governs LLM-generated content. Drill prompts, system prompts, 
 **Hard rules:**
 
 - Second person, singular. Lowercase `socratink`, always.
-- Lowercase state tokens: `primed`, `drilled`, `solidified`, `locked`.
+- Lowercase state tokens: `primed`, `needs repair`, `solidified`; render no badge for null/untested training state.
 - Plain complete sentences. Verbs over adjectives.
 - No exclamation marks. No emoji. Ever.
 - No hype jargon — *revolutionary, AI-powered, supercharge, 10×, unlock, crush, game-changing*. ("Unlock" is forbidden as user-facing hype; **Traversal unlock** remains valid as internal vocabulary.)
@@ -129,7 +129,7 @@ This section also governs LLM-generated content. Drill prompts, system prompts, 
 
 **Adjacent-surface vocabulary clash check.** Before locking copy that sits inside a frame with other copy (button + footnote, eyebrow + title), scan content words for shared roots. If `attempt`, `commit`, `save`, `record`, `solidify`, `room`, `entry`, `sketch` appears in two adjacent strings with different referents, that's a bug, not a stylistic concern.
 
-**Allowed state copy:** *suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction.* **Forbidden:** *you know this · mastered · completed · advanced · diagnostic · evaluate · beginner/intermediate/advanced · we found your misconceptions.*
+**Allowed state copy:** *suggested first · ready to reconstruct · primed for study · needs repair · solidified through spaced reconstruction.* **Forbidden:** *you know this · mastered · completed · advanced · diagnostic · evaluate · beginner/intermediate/advanced · we found your misconceptions.*
 
 Full tone-by-surface table in [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md) §10.
 

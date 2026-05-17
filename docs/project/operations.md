@@ -56,4 +56,4 @@ Use the Build-Measure-Learn drill workflow in [agents/WORKFLOWS/drill-build-meas
 | Date | Decision | Why it matters | Consequence |
 |---|---|---|---|
 | 2026-04-08 | Ship the narrow truthful loop first | The MVP needs a believable working loop before broader science or polish layers | Thermostat is the release gate; gaps are logged in the KB |
-| 2026-04-05 | Three-phase node loop is the MVP architecture | It preserves generation, correction, and delayed verification | UI and persistence work must respect `locked -> primed -> drilled -> solidified` |
+| 2026-04-05 | Three-phase node loop is the MVP architecture | It preserves generation, correction, and delayed verification | UI and persistence work must respect derived training states: `null \| primed \| needs repair \| solidified` |

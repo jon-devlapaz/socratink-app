@@ -55,6 +55,7 @@ export function renderConceptList({
   concepts.forEach((concept) => {
     const item = documentRef.createElement('div');
     item.className = 'concept-item' + (concept.id === activeId ? ' active' : '');
+    item.dataset.conceptId = String(concept?.id ?? '');
     item.innerHTML = conceptListItemHtml(concept);
     item.addEventListener('click', e => {
       if (elementCtor && e.target instanceof elementCtor && e.target.closest('.concept-delete')) return;

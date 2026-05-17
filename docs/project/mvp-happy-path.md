@@ -10,7 +10,7 @@ Use this document when:
 Read first:
 - [project/state.md](state.md)
 - [product/spec.md](../product/spec.md)
-- [drill/contract.md](../drill/contract.md)
+- [drill data-model canon](../superpowers/specs/2026-05-15-drill-data-model-design.md)
 - `logs/drill-runs.jsonl`
 
 ## Release Gate
@@ -23,8 +23,8 @@ For this branch, a workable MVP means a freshly created concept with a clear cau
 4. Backbone study unlocks the cluster
 5. Cluster exposes child drill rooms
 6. Child cold attempt resolves cleanly
-7. Original node can later re-drill after spacing/interleaving
-8. Graph truthfully ends in `drilled` or `solidified`
+7. Original node can later re-drill after the shipped spacing timer
+8. Training evidence truthfully derives `needs repair` or `solidified`
 
 ## Manual Test
 
@@ -67,8 +67,8 @@ Start Core Thesis and give a real answer.
 
 Expected:
 - exactly one active drill target
-- cold attempt is unscored
-- successful completion moves Core Thesis to `primed`
+- cold attempt is learner-facing unscored
+- recordable attempt creates training evidence and derives `primed` or `needs repair`
 - Targeted Study opens
 
 ### 5. Return From Core Thesis Study
@@ -85,7 +85,7 @@ Expected:
 Start the reachable backbone room and complete the cold attempt and study.
 
 Expected:
-- backbone becomes `primed`
+- backbone records learner reconstruction evidence
 - cluster opens after backbone study
 - cluster itself is inspect-only in MVP
 
@@ -109,13 +109,15 @@ Expected:
 
 ### 9. Re-Drill Readiness
 
-Return to an earlier room only after spacing and interleaving requirements are met.
+Return to an earlier room only after the current spacing timer is met. Treat
+interleaved work as a product-science observation for now; it is not enforced by
+the shipped derivation.
 
 Expected:
 - premature re-drill is blocked with truthful copy
 - eligible re-drill becomes available later
-- a strong re-drill can end in `solidified`
-- a non-solid re-drill ends in `drilled`
+- spaced strong reconstruction can derive `solidified`
+- non-solid evidence can derive `needs repair`
 
 ## Go / No-Go Criteria
 
@@ -123,14 +125,14 @@ Ship if all are true:
 - no graph crash
 - no CTA offers an impossible action
 - no stale drill panel remains mounted after returning to map
-- no cold attempt leaks a score or classification
+- no cold attempt leaks a score, tier, ability label, or raw classifier
 - graph and side panel agree on node truth
 - cluster unlock and child-room selection work
 
 Do not ship if any occur:
 - wrong node patched
 - graph remains stale after a successful transition
-- node jumps from `locked` straight to `drilled` or `solidified`
+- node derives `solidified` without spaced strong reconstruction evidence
 - re-drill is offered before spacing truth is satisfied
 - cluster opens but child rooms cannot be selected
 

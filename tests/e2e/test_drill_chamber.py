@@ -5,15 +5,8 @@ What this covers
 - Chamber view exists in the DOM and is hidden by default after load
 - Starting a drill opens the chamber and hides the map
 - Exiting the chamber (via the exit link) restores the map
-
-Known limitation
-----------------
-These tests target localhost:8000 which serves the main-branch code at the
-time of writing. The drill-chamber-view markup and DrillChamber JS module
-are only present on the feat/drill-chamber-port branch. Until that branch
-is deployed or merged, the chamber-specific assertions will fail against the
-live server. The tests are committed now so they run green once the branch
-lands in production.
+- Completed cold attempts persist training evidence and update Library copy
+- Unrecordable drill results leave graph state unchanged
 
 Run
 ---
@@ -220,3 +213,210 @@ def test_drill_chamber_exit_restores_map(
     expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
     # Map view must be restored.
     expect(clean_page.locator("#map-view")).to_be_visible()
+
+
+def test_completed_cold_attempt_updates_training_library_card(
+    page: Page, base_url: str
+) -> None:
+    """A completed drill turn must become learner-owned Library evidence."""
+    drill_calls: list[dict[str, Any]] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        if payload.get("session_phase") == "init":
+            body = {
+                "agent_response": "What causes the thermostat to turn heat on?",
+                "generative_commitment": None,
+                "answer_mode": None,
+                "score_eligible": False,
+                "help_request_reason": None,
+                "classification": None,
+                "gap_description": None,
+                "routing": None,
+                "response_tier": None,
+                "response_band": None,
+                "tier_reason": None,
+                "node_id": payload["node_id"],
+                "probe_count": 0,
+                "nodes_drilled": 0,
+                "attempt_turn_count": 0,
+                "help_turn_count": 0,
+                "graph_mutated": False,
+                "ux_reward_emitted": False,
+                "session_terminated": False,
+                "termination_reason": None,
+            }
+        else:
+            body = {
+                "agent_response": "You made the first mark. Study can target the missing causal step.",
+                "generative_commitment": True,
+                "answer_mode": "attempt",
+                "score_eligible": True,
+                "help_request_reason": "none",
+                "classification": "shallow",
+                "gap_description": "The response names comparison but misses the resulting heater state.",
+                "routing": "NEXT",
+                "response_tier": 2,
+                "response_band": "link",
+                "tier_reason": "The answer names comparison but not the full causal transition.",
+                "node_id": payload["node_id"],
+                "probe_count": 0,
+                "nodes_drilled": 1,
+                "attempt_turn_count": 1,
+                "help_turn_count": 0,
+                "graph_mutated": True,
+                "ux_reward_emitted": True,
+                "session_terminated": False,
+                "termination_reason": None,
+            }
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(body),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_concept_with_graph(page, "drill-training-concept")
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Chamber Test Concept").click()
+    expect(page.locator("#concept-header-title")).to_contain_text(
+        "Chamber Test Concept"
+    )
+    page.evaluate(
+        """(() => {
+            App.startDrill({
+                id: 'entry-a',
+                label: 'Entry A',
+                fullLabel: 'Entry A',
+                detail: 'Describe what Entry A means in your own words.',
+            });
+        })()"""
+    )
+
+    expect(page.locator("#chamber-composer")).to_be_enabled(timeout=8_000)
+    learner_text = "The thermostat compares the room temperature to the setpoint."
+    page.locator("#chamber-composer").fill(learner_text)
+    page.locator("#chamber-send").click()
+
+    expect(page.locator("#chamber-composer")).to_be_disabled(timeout=8_000)
+    page.wait_for_function(
+        """() => Boolean(localStorage.getItem('socratink:training:v1:drill-training-concept'))""",
+        timeout=8_000,
+    )
+    page.wait_for_timeout(2_300)
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "Study can target the missing causal step."
+    )
+    assert len(drill_calls) == 2
+    page.locator("#chamber-exit").click()
+    page.locator("#nav-library").click()
+
+    card = page.locator(".library-card-vault", has_text="Chamber Test Concept")
+    expect(card.locator(".library-card-summary")).to_have_text(learner_text)
+    stored = page.evaluate(
+        """() => JSON.parse(localStorage.getItem('socratink:training:v1:drill-training-concept'))"""
+    )
+    assert stored["node_records"]["entry-a"]["attempts"][0]["classification"] == "thin"
+    assert stored["node_records"]["entry-a"]["attempts"][0]["user_text"] == learner_text
+
+
+def test_completed_cold_attempt_without_recordable_classification_does_not_mutate_graph(
+    page: Page, base_url: str
+) -> None:
+    """A chamber turn cannot enter study unless the attempt is recordable."""
+    drill_calls: list[dict[str, Any]] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        if payload.get("session_phase") == "init":
+            body = {
+                "agent_response": "What causes the thermostat to turn heat on?",
+                "generative_commitment": None,
+                "answer_mode": None,
+                "score_eligible": False,
+                "help_request_reason": None,
+                "classification": None,
+                "gap_description": None,
+                "routing": None,
+                "response_tier": None,
+                "response_band": None,
+                "tier_reason": None,
+                "node_id": payload["node_id"],
+                "probe_count": 0,
+                "nodes_drilled": 0,
+                "attempt_turn_count": 0,
+                "help_turn_count": 0,
+                "graph_mutated": False,
+                "ux_reward_emitted": False,
+                "session_terminated": False,
+                "termination_reason": None,
+            }
+        else:
+            body = {
+                "agent_response": "You made the first mark.",
+                "generative_commitment": True,
+                "answer_mode": "attempt",
+                "score_eligible": True,
+                "help_request_reason": "none",
+                "classification": None,
+                "gap_description": None,
+                "routing": "NEXT",
+                "response_tier": 2,
+                "response_band": "link",
+                "tier_reason": "Malformed fixture omits the recordable classification.",
+                "node_id": payload["node_id"],
+                "probe_count": 0,
+                "nodes_drilled": 1,
+                "attempt_turn_count": 1,
+                "help_turn_count": 0,
+                "graph_mutated": True,
+                "ux_reward_emitted": True,
+                "session_terminated": False,
+                "termination_reason": None,
+            }
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_concept_with_graph(page, "drill-unrecordable-concept")
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Chamber Test Concept").click()
+    page.evaluate(
+        """(() => {
+            App.startDrill({
+                id: 'entry-a',
+                label: 'Entry A',
+                fullLabel: 'Entry A',
+                detail: 'Describe what Entry A means in your own words.',
+            });
+        })()"""
+    )
+
+    expect(page.locator("#chamber-composer")).to_be_enabled(timeout=8_000)
+    page.locator("#chamber-composer").fill("The thermostat compares room temperature to the setpoint.")
+    page.locator("#chamber-send").click()
+
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "The drill service failed to respond. Try again when ready.",
+        timeout=8_000,
+    )
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    assert len(drill_calls) == 2
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:drill-unrecordable-concept')"""
+        )
+        is None
+    )
+    graph = page.evaluate(
+        """() => JSON.parse(JSON.parse(localStorage.getItem('learnops_concepts'))[0].graphData)"""
+    )
+    assert graph["backbone"][0].get("drill_status") is None
+    assert graph["backbone"][0].get("drill_phase") is None

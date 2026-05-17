@@ -8,7 +8,9 @@ one shell command, against local dev / Vercel preview / production.
 
 The suite spans five files:
 
-### `test_smoke.py` — 11 tests
+### `test_smoke.py` — 25 tests
+
+Key checks include:
 
 1. **`test_health_endpoint_ok`** — backend reachable, `/api/health` shape valid.
    Runs first to absorb serverless cold-start latency.
@@ -36,24 +38,31 @@ The suite spans five files:
     `requestfailed` events during first paint.
 11. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
     at top of `<body>` produces no errors on a fresh visit.
+12. Additional smoke tests cover the inline concept-page reconstruction flow,
+    study reveal persistence, repair QA seeding, Library reconstruction copy,
+    active-entry preservation after sketch edits, training-store hydration, and
+    local guest bootstrap behavior.
 
-### `test_drill_chamber.py` — 3 tests
+### `test_drill_chamber.py` — 5 tests
 
-Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`):
-hidden on initial load, opens and hides the map when entered, and exit
-restores the map.
+Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`) and
+training-evidence persistence: hidden on initial load, opens and hides the map
+when entered, exit restores the map, completed cold attempts update Library
+training copy, and unrecordable drill results do not mutate graph state.
 
 ### `test_concept_page_b2.py` — 3 tests
 
-B-2 concept page layout gate: strip + page layout renders, CTA opens the
-drill chamber, and the Route/Graph segmented toggle is absent (verifies the
-strip-as-nav port).
+B-2 concept page layout gate: strip + page layout renders, the reconstruction
+CTA opens the inline attempt panel while the full-screen drill chamber stays
+hidden, and the Route/Graph segmented toggle is absent (verifies the strip-as-nav
+port).
 
-### `test_strip_nav.py` — 6 tests
+### `test_strip_nav.py` — 7 tests
 
 Strip-as-nav behavior: click swaps the work column, keyboard navigation
-walks the strip, locked entries show a disabled CTA, no Route/Graph toggle
-or `#graph-content` section exists, and strip nodes are focusable.
+walks the strip, the first actionable entry exposes "Write what you remember",
+locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
+section exists, and strip nodes are focusable.
 
 ### `test_app_helper_modules.py` — 1 test
 
@@ -61,7 +70,7 @@ Helper-module browser-contract guard: imports the in-app JS modules
 (`html.js`, `app-timer.js`, `app-hero.js`, `phase-b-session.js`,
 `settings-view.js`, `library-view.js`, `source-input-ui.js`,
 `board-grid.js`, `theme-preference.js`, `app-shell-ui.js`,
-`concept-page-view.js`) from the live page and exercises their pure
+`training-store.js`, `training-derive.js`, `concept-page-view.js`) from the live page and exercises their pure
 helpers against the real browser DOM/storage so renames or signature
 drift fail the suite.
 
@@ -87,13 +96,14 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
-`test_smoke.py` (11 tests). Use the raw pytest invocations below to run the
-full suite (24 tests across the five files).
+`test_smoke.py` (25 tests). Use the raw pytest invocations below to run the
+full suite (41 tests across the five files).
 
 Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
-`SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default
-for loopback dev servers so repeated browser tests do not create real Supabase
-anonymous users or trip the anonymous sign-in rate limit.
+`SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default,
+and `scripts/qa-smoke.sh` also sets it automatically for loopback targets, so
+repeated browser tests do not create real Supabase anonymous users or trip the
+anonymous sign-in rate limit.
 
 ```bash
 # Local — needs `bash scripts/dev.sh` in another shell (runs the
@@ -111,7 +121,7 @@ Raw pytest invocations (when you need flags the wrapper doesn't pass through,
 or want the full five-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all five files, 24 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all five files, 41 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)
@@ -129,7 +139,7 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 ## Output
 
-Pass (24 tests across the five files):
+Abbreviated pass shape (41 tests across the five files):
 
 ```
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
@@ -147,17 +157,18 @@ tests/e2e/test_drill_chamber.py::test_drill_chamber_view_hidden_on_load PASSED
 tests/e2e/test_drill_chamber.py::test_drill_chamber_opens_and_hides_map PASSED
 tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
-tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_chamber PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_inline_attempt PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
 tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
+tests/e2e/test_strip_nav.py::test_first_actionable_entry_shows_try_from_memory PASSED
 tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
 tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
 tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
 tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
 
-============================== 24 passed ==============================
+============================== 41 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,
