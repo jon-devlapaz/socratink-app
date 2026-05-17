@@ -717,6 +717,48 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(legacyStudyRevealedHtml.includes('Legacy study note.'));
         assert.ok(!legacyStudyRevealedHtml.includes('concept-page-b2__evidence'));
+        const legacyPrimedWaitingHtml = renderActiveEntryHtml(
+          {
+            id: 'legacy-waiting',
+            label: 'Legacy waiting',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          },
+          0,
+          [{
+            id: 'legacy-waiting',
+            label: 'Legacy waiting',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          }],
+          {},
+          { metadata: {} },
+          null,
+          { now: '2026-05-15T20:00:00.000Z' }
+        );
+        assert.ok(legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'));
+        assert.ok(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'));
+        const legacyPrimedReadyHtml = renderActiveEntryHtml(
+          {
+            id: 'legacy-ready',
+            label: 'Legacy ready',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          },
+          0,
+          [{
+            id: 'legacy-ready',
+            label: 'Legacy ready',
+            drill_status: 'primed',
+            re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+          }],
+          {},
+          { metadata: {} },
+          null,
+          { now: '2026-05-16T05:00:00.000Z' }
+        );
+        assert.ok(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'));
+        assert.ok(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'));
 
         const initial = selectInitialConceptEntry([
           { id: 'done', label: 'Done', drill_status: 'solidified' },

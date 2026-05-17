@@ -36,17 +36,28 @@ function spacingOkAt(attempt, now) {
 function deriveState(attempts) {
   let state = null;
   let priorAttempt = null;
+  let failureStreak = 0;
 
   attempts.forEach((attempt) => {
     if (attempt?.classification === 'strong') {
       state = priorAttempt?.classification === 'strong' && spacingOk(priorAttempt, attempt)
         ? 'solidified'
         : 'primed';
+      failureStreak = 0;
     } else if (attempt?.classification === 'partial') {
       state = 'primed';
+      // Preserve failureStreak so alternating weak/partial attempts cannot
+      // park a node in primed forever.
     } else if (attempt?.classification === 'thin' || attempt?.classification === 'wrong_direction') {
-      state = 'needs repair';
+      state = failureStreak >= 1 || state === null
+        ? 'needs repair'
+        : 'primed';
+      failureStreak += 1;
+    } else {
+      priorAttempt = attempt;
+      return;
     }
+
     priorAttempt = attempt;
   });
 

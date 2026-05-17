@@ -984,6 +984,48 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(legacyStudyRevealedHtml.includes('Legacy study note.'), 'legacy study reveal shows note without fabricating an attempt');
             assert(!legacyStudyRevealedHtml.includes('concept-page-b2__evidence'), 'legacy study reveal does not invent learner evidence');
+            const legacyPrimedWaitingHtml = conceptPage.renderActiveEntryHtml(
+              {
+                id: 'legacy-waiting',
+                label: 'Legacy waiting',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              },
+              0,
+              [{
+                id: 'legacy-waiting',
+                label: 'Legacy waiting',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              }],
+              {},
+              { metadata: {} },
+              null,
+              { now: '2026-05-15T20:00:00.000Z' },
+            );
+            assert(legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'), 'legacy primed spacing lock renders review state');
+            assert(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing lock suppresses reattempt cta');
+            const legacyPrimedReadyHtml = conceptPage.renderActiveEntryHtml(
+              {
+                id: 'legacy-ready',
+                label: 'Legacy ready',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              },
+              0,
+              [{
+                id: 'legacy-ready',
+                label: 'Legacy ready',
+                drill_status: 'primed',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+              }],
+              {},
+              { metadata: {} },
+              null,
+              { now: '2026-05-16T05:00:00.000Z' },
+            );
+            assert(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'), 'legacy primed spacing unlock renders ready state');
+            assert(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing unlock shows reattempt cta');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
               { label: 'Next cold entry', drill_status: 'locked' },

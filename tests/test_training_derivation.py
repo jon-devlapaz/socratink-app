@@ -158,6 +158,56 @@ def test_node_training_derivation_requires_spaced_strong_evidence_to_solidify() 
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_node_training_derivation_preserves_single_lapse_grace() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { deriveNodeTraining } from './public/js/training-derive.js';
+
+        const strongCold = {
+          id: 'a1',
+          at: '2026-05-15T10:00:00.000Z',
+          user_text: 'Strong first pass.',
+          classification: 'strong',
+          gaps: [],
+          grader_version: 'test',
+        };
+        const firstLapse = {
+          id: 'a2',
+          at: '2026-05-16T06:00:00.000Z',
+          user_text: 'Weak spaced pass.',
+          classification: 'thin',
+          gaps: [{ mechanism: 'cause', correction: 'Name the missing cause.' }],
+          grader_version: 'test',
+        };
+        const secondLapse = {
+          ...firstLapse,
+          id: 'a3',
+          at: '2026-05-17T06:00:00.000Z',
+          user_text: 'Still weak.',
+        };
+
+        const singleLapse = deriveNodeTraining({
+          attempts: [strongCold, firstLapse],
+          study_revealed_at: '2026-05-15T10:05:00.000Z',
+          repairs: [],
+        }, { now: '2026-05-16T06:05:00.000Z' });
+        assert.equal(singleLapse.state, 'primed');
+        assert.equal(singleLapse.next_action, 'repair');
+
+        const twoLapses = deriveNodeTraining({
+          attempts: [strongCold, firstLapse, secondLapse],
+          study_revealed_at: '2026-05-15T10:05:00.000Z',
+          repairs: [],
+        }, { now: '2026-05-17T06:05:00.000Z' });
+        assert.equal(twoLapses.state, 'needs repair');
+        assert.equal(twoLapses.next_action, 'repair');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_concept_status_uses_weakest_link_without_stored_state() -> None:
     result = run_node_module(
         """

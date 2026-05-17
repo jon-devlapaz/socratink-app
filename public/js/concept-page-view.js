@@ -8,9 +8,16 @@ const FALLBACK_ACTIVE_ENTRY = {
   drill_status: 'locked',
 };
 
-function legacyTrainingForEntry(entry) {
+function legacyTrainingForEntry(entry, options = {}) {
   const status = String(entry?.drill_status || '').toLowerCase();
   const phase = String(entry?.drill_phase || '').toLowerCase();
+  const legacyEligibleMs = Date.parse(entry?.re_drill_eligible_after || '');
+  const nowMs = Date.parse(options?.now || new Date().toISOString());
+  const waitingForLegacySpacing = (
+    Number.isFinite(legacyEligibleMs)
+    && Number.isFinite(nowMs)
+    && legacyEligibleMs > nowMs
+  );
   if (status === 'solidified' || status === 'solid') {
     return { state: 'solidified', next_action: null, attempted: true };
   }
@@ -20,7 +27,7 @@ function legacyTrainingForEntry(entry) {
   if (status === 'primed') {
     return {
       state: 'primed',
-      next_action: phase === 'study' ? 'study' : 'spaced_attempt',
+      next_action: phase === 'study' ? 'study' : (waitingForLegacySpacing ? 'review' : 'spaced_attempt'),
       attempted: true,
       legacy_study_required: phase === 'study',
     };
@@ -53,7 +60,7 @@ function entryTraining(backbone, index, training, options = {}) {
   const id = getConceptEntryId(entry, index);
   const record = trainingRecordsFor(training)[id] || null;
   const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
-  const legacyEntry = legacyTrainingForEntry(entry);
+  const legacyEntry = legacyTrainingForEntry(entry, options);
   const baseLegacy = legacyEntry?.state === 'solidified' || !attempts.length ? legacyEntry : null;
   const legacy = baseLegacy?.legacy_study_required && record?.study_revealed_at
     ? { ...baseLegacy, next_action: 'spaced_attempt' }
