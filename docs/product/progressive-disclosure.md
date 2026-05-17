@@ -13,7 +13,7 @@
 > - `solidified` can only result from spaced strong reconstruction evidence.
 > - Study reveal and repair text are recorded in the training store but do not themselves solidify a node.
 > - Cold attempts stay learner-facing unscored: do not show scores, tiers, or ability labels. Private classification may drive repair/study routing.
-> - Session guardrails: configurable duration cap disabled by default in the current MVP, 4-node cap, 3-retrieval-per-node ceiling.
+> - Session guardrails: duration, node-count, and per-node retrieval caps remain backend/doctrinal guardrails, but the current frontend MVP bypasses enforcement while inline reconstruction is validated.
 > - Backward compatibility: existing nodes without new fields must default gracefully.
 
 ---
@@ -334,7 +334,7 @@ If a learner repairs a `needs repair` node and later gets spaced strong evidence
 
 This visible conversion is part of the product payoff.
 
-Per-node retrieval ceiling: three successful retrievals of the same node in one session is the maximum. Beyond three, the system should halt drilling on that node and schedule it for a later session.
+Per-node retrieval ceiling: three successful retrievals of the same node in one session remains the intended backend/doctrinal maximum. The current frontend MVP bypasses this enforcement and should reintroduce it as a soft save-point once inline reconstruction behavior is settled.
 
 ## Visual Intent
 
@@ -367,9 +367,9 @@ Show next-horizon nodes (3-5 adjacent available items) rather than the entire re
 
 ## Session Guardrails
 
-- Hard wall-clock session cap: disabled by default in the current MVP; configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`.
-- Node cap: 4 nodes per session.
-- Per-node retrieval ceiling: 3 successful retrievals per node per session.
+- Hard wall-clock session cap: backend-configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`, but bypassed by the current frontend MVP.
+- Node cap: 4 nodes per session remains the intended guardrail, currently bypassed by the frontend.
+- Per-node retrieval ceiling: 3 successful retrievals per node per session remains the intended guardrail, currently bypassed by the frontend.
 - Session ending should feel like a save point, not a punishment.
 - End at a point of engagement, not exhaustion.
 

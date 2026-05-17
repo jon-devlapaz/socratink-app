@@ -131,9 +131,9 @@ The panel must be mode-pure with no content bleed.
 ---
 
 ## 6. Guardrails & Constraints
-- **Duration Cap**: Disabled by default in the current MVP; configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`.
-- **Node Cap**: 4 nodes per session.
-- **Retrieval Ceiling**: Max 3 successful retrievals per node per session.
+- **Duration Cap**: Backend-configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`, but bypassed by the current frontend MVP.
+- **Node Cap**: 4 nodes per session remains the intended guardrail, currently bypassed by the frontend.
+- **Retrieval Ceiling**: Max 3 successful retrievals per node per session remains the intended guardrail, currently bypassed by the frontend.
 - **AI Sparse Contract**: The AI must talk less than the learner. Sparse, gap-identifying feedback only.
 - **Moat Constraint**: AI must never pre-answer the target or inflate mastery.
 

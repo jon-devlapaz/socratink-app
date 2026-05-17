@@ -27,7 +27,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - Cold attempts are learner-facing unscored; private classification may drive repair/study routing.
 - `solidified` can only result from spaced strong reconstruction evidence. Study and Repair Reps must not produce `solidified`.
 - Clusters are containers in MVP, not primary drill targets.
-- The wall-clock drill duration cap is disabled by default in the current MVP and remains configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`; node and retrieval-count guardrails remain active.
+- Drill-session caps remain backend/doctrinal guardrails, but the current frontend MVP bypasses duration, node-count, and per-node retrieval enforcement while inline reconstruction is validated.
 
 ## Current Priorities
 - keep graph state and persisted state aligned

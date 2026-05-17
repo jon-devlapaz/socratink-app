@@ -4111,11 +4111,11 @@ const App = (() => {
 // for the inventory of readers. Any new global on `window` MUST be
 // justified the same way and added to this comment block.
 //
-// window.App — read by 18 inline onclick="App.foo()" handlers in
-// public/index.html (bottom-nav, drawer, hero CTAs, drill controls,
-// theme toggle, tile selection). HTML→JS bridge. Phase 2 keeps this
-// intentional; a future micro-phase could rewrite the inline handlers
-// as addEventListener wiring and drop the global.
+// window.App — read by inline onclick="App.foo()" handlers in
+// public/index.html plus generated Library actions such as local QA
+// seed buttons. HTML→JS bridge. Phase 2 keeps this intentional; a
+// future micro-phase could rewrite the inline/generated handlers as
+// addEventListener wiring and drop the global.
 //
 // window.SocratinkApp — read by 17 call sites in graph-view.js as
 // optional-chained intents (e.g. window.SocratinkApp?.startRepairReps,
