@@ -307,6 +307,46 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     expect(card).not_to_contain_text("SOURCE PREVIEW SHOULD NOT APPEAR")
 
 
+def test_library_training_render_survives_one_corrupt_record(
+    page: Page, base_url: str
+) -> None:
+    """One bad training record must not hide valid learner evidence elsewhere."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_training_truth_concept(page)
+    page.evaluate(
+        """(() => {
+            const concepts = JSON.parse(localStorage.getItem('learnops_concepts'));
+            concepts.push({
+                id: 'qa-corrupt-library-training',
+                name: 'Corrupt Training QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                graphData: JSON.stringify({
+                    metadata: { source_title: 'Corrupt source' },
+                    backbone: [],
+                    clusters: [],
+                }),
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+            localStorage.setItem(
+                'socratink:training:v1:qa-corrupt-library-training',
+                '{'
+            );
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    valid_card = page.locator(".library-card-vault", has_text="Training Truth QA")
+    corrupt_card = page.locator(".library-card-vault", has_text="Corrupt Training QA")
+    expect(valid_card.locator(".library-card-summary")).to_have_text(
+        "Learner-owned reconstruction visible in Library."
+    )
+    expect(corrupt_card.locator(".library-card-summary")).to_have_text(
+        "No learner reconstruction recorded yet."
+    )
+
+
 def test_localhost_library_qa_seed_creates_training_truth_concept(
     page: Page, base_url: str
 ) -> None:
@@ -1140,6 +1180,100 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
     assert (
         page.evaluate(
             """localStorage.getItem('socratink:training:v1:qa-inline-scaffold-concept')"""
+        )
+        is None
+    )
+
+
+def test_localhost_inline_non_score_eligible_attempt_is_not_evidence(
+    page: Page, base_url: str
+) -> None:
+    """A classified but non-score-eligible drill turn must not become evidence."""
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "This turn is not eligible to score.",
+                    "generative_commitment": False,
+                    "answer_mode": "attempt",
+                    "score_eligible": False,
+                    "help_request_reason": "none",
+                    "classification": "shallow",
+                    "gap_description": "Classifier returned feedback for a non-recordable turn.",
+                    "routing": "NEXT",
+                    "response_tier": 2,
+                    "response_band": "link",
+                    "tier_reason": "Non-score eligible turn should remain non-evidence.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 0,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-inline-unscored-attempt",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    source_title: 'Unscored Attempt QA source',
+                    starting_map_context: 'Learner rough sketch.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [{
+                    id: 'unscored-node',
+                    label: 'Unscored target',
+                    purpose: 'Explain the mechanism.',
+                    study_note: 'The target mechanism opens before downstream flow.',
+                    drill_status: null,
+                }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-inline-unscored-concept',
+                name: 'Inline Unscored QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+                contentType: null,
+                startingMapContext: 'Learner rough sketch.',
+                graphData,
+            }]));
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Inline Unscored QA").click()
+    page.locator(".concept-page-b2__entry-cta").click()
+    page.locator(".concept-page-b2__attempt-input").fill(
+        "The mechanism opens first."
+    )
+    save_button = page.locator(".concept-page-b2__attempt-save")
+    save_button.click()
+
+    expect(page.locator("[data-attempt-error]")).to_have_text(
+        "The system could not record this yet. Try again."
+    )
+    expect(save_button).to_be_enabled()
+    assert len(drill_calls) == 1
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:qa-inline-unscored-concept')"""
         )
         is None
     )

@@ -133,6 +133,10 @@ const App = (() => {
     }];
   }
 
+  function isRecordableDrillAttempt(result) {
+    return result?.answer_mode === 'attempt' && result?.score_eligible === true;
+  }
+
   async function appendTrainingAttemptFromDrillTurn({
     conceptId,
     nodeId,
@@ -140,6 +144,7 @@ const App = (() => {
     result,
     at,
   }) {
+    if (!isRecordableDrillAttempt(result)) return null;
     const classification = mapDrillClassificationForTraining(result?.classification);
     if (!classification || typeof userText !== 'string' || userText.trim() === '') return null;
     return trainingStore.appendAttempt(conceptId, nodeId, {
@@ -2493,10 +2498,16 @@ const App = (() => {
 
     if (!concepts.length) return;
 
-    Promise.all(concepts.map(async (concept) => [
-      String(concept.id),
-      await trainingStore.loadTraining(concept.id),
-    ]))
+    Promise.all(concepts.map(async (concept) => {
+      const conceptId = String(concept.id);
+      try {
+        return [conceptId, await trainingStore.loadTraining(concept.id)];
+      } catch (err) {
+        /* c8 ignore next -- defensive corrupt localStorage branch */
+        console.warn('Training record unavailable for library concept.', conceptId, err);
+        return [conceptId, null];
+      }
+    }))
       .then((entries) => {
         const trainingByConceptId = Object.fromEntries(entries.filter(([, training]) => training));
         const currentContent = document.getElementById('library-content');
@@ -3620,8 +3631,9 @@ const App = (() => {
         appendBubble('ai', normalizationMessages[msgIdx]);
         if (window.DrillChamber && typeof window.DrillChamber.appendCreed === 'function') {
           window.DrillChamber.appendCreed();
-        } else if (chatHistory) {
-          appendFirstColdAttemptCreed(); // legacy fallback (chat-history present)
+        } else {
+          /* c8 ignore next -- legacy fallback when DrillChamber is unavailable */
+          if (chatHistory) appendFirstColdAttemptCreed();
         }
         if (chatInput) chatInput.disabled = true;
         drillState.pending = true;
