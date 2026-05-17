@@ -1774,12 +1774,16 @@ const App = (() => {
   function renderActiveEntryWorkColumn(entryId, concept, data, training = null, options = {}) {
     const docEl = document.querySelector('.concept-page-b2__doc');
     const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
-    const match = findConceptEntryById(backbone, entryId);
+    const fallbackMatch = entryId === 'core-thesis' && !backbone.length
+      ? selectInitialConceptEntry(backbone, training)
+      : null;
+    const match = findConceptEntryById(backbone, entryId) || fallbackMatch;
     if (!docEl || !match) return;
+    const renderBackbone = backbone.length ? backbone : [match.entry];
     docEl.innerHTML = renderActiveEntryHtml(
       match.entry,
       match.index,
-      backbone,
+      renderBackbone,
       concept,
       data,
       training,

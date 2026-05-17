@@ -1353,6 +1353,8 @@ def test_concept_open_handles_missing_and_malformed_graph_metadata(
         "Missing Metadata Concept"
     )
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+    clean_page.locator(".concept-page-b2__entry-cta").click()
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
     clean_page.evaluate("window.App.startDrillFromMap()")
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"
     clean_page.evaluate("window.App.cancelDrill()")
