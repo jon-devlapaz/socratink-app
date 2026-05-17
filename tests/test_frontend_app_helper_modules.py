@@ -698,6 +698,26 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'));
 
+        const legacyStudyHtml = renderActiveEntryHtml(
+          { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+          0,
+          [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(legacyStudyHtml.includes('study required entry 1 of 1'));
+        assert.ok(legacyStudyHtml.includes('data-active-entry-action="study"'));
+        const legacyStudyRevealedHtml = renderActiveEntryHtml(
+          { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+          0,
+          [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+          {},
+          { metadata: {} },
+          { node_records: { 'legacy-study': { attempts: [], repairs: [], study_revealed_at: '2026-05-15T10:05:00.000Z' } } }
+        );
+        assert.ok(legacyStudyRevealedHtml.includes('Legacy study note.'));
+        assert.ok(!legacyStudyRevealedHtml.includes('concept-page-b2__evidence'));
+
         const initial = selectInitialConceptEntry([
           { id: 'done', label: 'Done', drill_status: 'solidified' },
           { label: 'Next cold entry', drill_status: 'locked' },

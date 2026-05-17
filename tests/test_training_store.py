@@ -81,6 +81,8 @@ def test_training_store_uses_async_separate_namespace_and_derives_attempt_kind()
         assert.equal(training.node_records.n1.attempts[0].kind, 'cold');
         assert.equal(training.node_records.n1.attempts[1].kind, 'spaced');
         assert.equal(training.node_records.n1.attempts[0].user_text, '  Sodium rushes in because there is more outside.  ');
+        await store.deleteTraining('concept-1');
+        assert.equal(await store.loadTraining('concept-1'), null);
         """
     )
     assert result.returncode == 0, result.stderr

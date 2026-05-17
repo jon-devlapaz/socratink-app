@@ -395,6 +395,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             await trainingStore.saveTraining({ concept_id: 'saved-training', node_records: null });
             assert(JSON.parse(writes.get('socratink:training:v1:saved-training')).schema_version === 1, 'training save normalizes schema');
             await rejects(() => trainingStore.saveTraining({}), /concept-id-required/, 'training save requires concept id');
+            await trainingStore.deleteTraining('saved-training');
+            assert(await trainingStore.loadTraining('saved-training') === null, 'training delete clears concept evidence');
             await trainingStore.setProvenance('concept-training', {
               source_mode: 'source_less',
               grounding: 'learner_sketch',
@@ -963,6 +965,25 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               { metadata: {} },
             );
             assert(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'), 'concept page honors legacy drilled status when no training record exists');
+            const legacyStudyHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+              0,
+              [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+              {},
+              { metadata: {} },
+            );
+            assert(legacyStudyHtml.includes('study required entry 1 of 1'), 'legacy primed study stays in study phase');
+            assert(legacyStudyHtml.includes('data-active-entry-action="study"'), 'legacy primed study reveals study before redrill');
+            const legacyStudyRevealedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
+              0,
+              [{ id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' }],
+              {},
+              { metadata: {} },
+              { node_records: { 'legacy-study': { attempts: [], repairs: [], study_revealed_at: '2026-05-15T10:05:00.000Z' } } },
+            );
+            assert(legacyStudyRevealedHtml.includes('Legacy study note.'), 'legacy study reveal shows note without fabricating an attempt');
+            assert(!legacyStudyRevealedHtml.includes('concept-page-b2__evidence'), 'legacy study reveal does not invent learner evidence');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
               { label: 'Next cold entry', drill_status: 'locked' },

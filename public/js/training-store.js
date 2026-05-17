@@ -121,6 +121,11 @@ export function createTrainingStore({
     persist(storage, normalized.concept_id, keyPrefix, normalized);
   }
 
+  async function deleteTraining(conceptId) {
+    if (!storage) return;
+    storage.removeItem?.(keyFor(conceptId, keyPrefix));
+  }
+
   async function mutateTraining(conceptId, mutator) {
     if (!storage) return null;
     const training = loadRaw(storage, conceptId, keyPrefix) || emptyTraining(conceptId);
@@ -187,6 +192,7 @@ export function createTrainingStore({
   return {
     loadTraining,
     saveTraining,
+    deleteTraining,
     setProvenance,
     setSketch,
     appendAttempt,

@@ -369,6 +369,66 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     )
 
 
+def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
+    page: Page, base_url: str
+) -> None:
+    """Legacy primed/study nodes keep study before another reconstruction."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    core_thesis: 'Global generated thesis should stay hidden.',
+                    source_title: 'Legacy Study QA',
+                    starting_map_context: 'Legacy learner sketch.',
+                },
+                backbone: [{
+                    id: 'legacy-node',
+                    label: 'Legacy node',
+                    purpose: 'Legacy purpose.',
+                    study_note: 'Legacy study note should appear before another reconstruction.',
+                    drill_status: 'primed',
+                    drill_phase: 'study',
+                }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'legacy-study-concept',
+                name: 'Legacy Study QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'Global source preview should stay hidden.',
+                graphData,
+            }]));
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Legacy Study QA").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "study required entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reveal study note"
+    )
+
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
+        "Legacy study note should appear before another reconstruction."
+    )
+    expect(page.locator(".concept-page-b2__evidence")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reconstruct from memory"
+    )
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:legacy-study-concept')"""
+        )
+        is None
+    )
+
+
 def test_localhost_concept_repair_appends_learner_gap_work(
     page: Page, base_url: str
 ) -> None:
@@ -705,11 +765,77 @@ def test_saved_library_concept_reopens_map_view(
     expect(clean_page.locator(".concept-item.active")).to_have_count(0)
 
 
+def test_concept_open_handles_missing_and_malformed_graph_metadata(
+    clean_page: Page, base_url: str
+) -> None:
+    """Concept open covers fallback metadata and malformed graph guardrails."""
+    clean_page.evaluate(
+        """localStorage.setItem('learnops_concepts', JSON.stringify([
+            {
+                id: 'missing-metadata',
+                name: 'Missing Metadata Concept',
+                createdAt: Date.now(),
+                state: 'growing',
+                graphData: JSON.stringify({ backbone: [], clusters: [] }),
+            },
+            {
+                id: 'malformed-graph',
+                name: 'Malformed Graph Concept',
+                createdAt: Date.now(),
+                state: 'growing',
+                graphData: '{',
+            },
+        ]))"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator("#nav-library").click()
+    clean_page.locator(".library-card-vault", has_text="Missing Metadata Concept").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text(
+        "Missing Metadata Concept"
+    )
+    assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+    clean_page.evaluate("window.App.startDrillFromMap()")
+    assert clean_page.locator("body").get_attribute("data-map-open") == "true"
+    clean_page.evaluate("window.App.cancelDrill()")
+
+    clean_page.locator("#nav-library").click()
+
+    def accept_malformed(dialog) -> None:
+        assert "malformed graph data" in dialog.message
+        dialog.accept()
+
+    clean_page.once("dialog", accept_malformed)
+    clean_page.locator(".library-card-vault", has_text="Malformed Graph Concept").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text(
+        "Missing Metadata Concept"
+    )
+
+
 def test_active_concept_delete_confirms_then_returns_to_desk(
     clean_page: Page, base_url: str
 ) -> None:
     """Deleting the open concept must not leave stale concept content visible."""
     _seed_one_concept(clean_page)
+    clean_page.evaluate(
+        """localStorage.setItem('socratink:training:v1:fixture-concept', JSON.stringify({
+            concept_id: 'fixture-concept',
+            schema_version: 1,
+            node_records: {
+                'core-thesis': {
+                    attempts: [{
+                        id: 'attempt-1',
+                        at: '2026-05-15T10:00:00.000Z',
+                        user_text: 'Learner evidence that must be deleted with the concept.',
+                        classification: 'strong',
+                        gaps: [],
+                        grader_version: 'qa',
+                    }],
+                    repairs: [],
+                },
+            },
+        }))"""
+    )
     _enter_app_shell_as_guest(clean_page, base_url)
 
     clean_page.locator("#nav-library").click()
@@ -737,6 +863,12 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
     expect(clean_page.locator(".concept-item")).to_have_count(0)
     expect(clean_page.locator("#concept-header-title")).not_to_be_visible()
     assert clean_page.locator("body").get_attribute("data-map-open") != "true"
+    assert (
+        clean_page.evaluate(
+            """localStorage.getItem('socratink:training:v1:fixture-concept')"""
+        )
+        is None
+    )
 
 
 def test_desk_iso_board_state_surface_and_room_labels(

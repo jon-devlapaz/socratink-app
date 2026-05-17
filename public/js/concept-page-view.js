@@ -10,6 +10,7 @@ const FALLBACK_ACTIVE_ENTRY = {
 
 function legacyTrainingForEntry(entry) {
   const status = String(entry?.drill_status || '').toLowerCase();
+  const phase = String(entry?.drill_phase || '').toLowerCase();
   if (status === 'solidified' || status === 'solid') {
     return { state: 'solidified', next_action: null, attempted: true };
   }
@@ -17,7 +18,12 @@ function legacyTrainingForEntry(entry) {
     return { state: 'needs repair', next_action: 'spaced_attempt', attempted: true };
   }
   if (status === 'primed') {
-    return { state: 'primed', next_action: 'spaced_attempt', attempted: true };
+    return {
+      state: 'primed',
+      next_action: phase === 'study' ? 'study' : 'spaced_attempt',
+      attempted: true,
+      legacy_study_required: phase === 'study',
+    };
   }
   return null;
 }
@@ -47,7 +53,10 @@ function entryTraining(backbone, index, training, options = {}) {
   const id = getConceptEntryId(entry, index);
   const record = trainingRecordsFor(training)[id] || null;
   const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
-  const legacy = attempts.length ? null : legacyTrainingForEntry(entry);
+  const baseLegacy = attempts.length ? null : legacyTrainingForEntry(entry);
+  const legacy = baseLegacy?.legacy_study_required && record?.study_revealed_at
+    ? { ...baseLegacy, next_action: 'spaced_attempt' }
+    : baseLegacy;
   const derived = deriveNodeTraining(record, options);
   return {
     ...derived,
