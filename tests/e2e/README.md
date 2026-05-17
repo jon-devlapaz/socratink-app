@@ -35,7 +35,8 @@ Key checks include:
 9. **`test_no_console_errors_on_first_paint`** — zero same-origin
    `console.error` during first paint.
 10. **`test_no_failed_critical_asset_requests`** — zero same-origin
-    `requestfailed` events during first paint.
+    `requestfailed` events during first paint, except narrow Chromium
+    `ERR_ABORTED` bootstrap noise for `/api/health` and `/api/me`.
 11. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
     at top of `<body>` produces no errors on a fresh visit.
 12. Additional smoke tests cover the inline concept-page reconstruction flow,
@@ -184,6 +185,10 @@ In `conftest.py`:
   to `("/_vercel/speed-insights/script.js",)` because Vercel injects that
   script in production but it's absent on local uvicorn — both the request
   failure and its console error are filtered for that path.
+- `EXPECTED_ABORTED_BOOTSTRAP_PATHS` — bootstrap API paths whose Chromium
+  `ERR_ABORTED` request failures are ignored when tests deliberately navigate
+  or reload during guest setup. Defaults to `("/api/health", "/api/me")`;
+  actual HTTP failures and aborted app assets still fail the suite.
 
 ## Extending later
 

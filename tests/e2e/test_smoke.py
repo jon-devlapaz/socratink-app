@@ -1868,8 +1868,10 @@ def test_no_failed_critical_asset_requests(
     """No same-origin request fails during first paint.
 
     Cross-origin failures (analytics, third-party fonts) are ignored by the
-    listener. Specific paths can be allow-listed via EXPECTED_404_PATHS in
-    conftest.py.
+    listener. Specific 404 paths can be allow-listed via EXPECTED_404_PATHS in
+    conftest.py. Chromium ERR_ABORTED noise for narrow bootstrap API paths is
+    filtered via EXPECTED_ABORTED_BOOTSTRAP_PATHS; actual HTTP failures and
+    aborted app assets still count.
     """
     _enter_app_shell_as_guest(clean_page, base_url)
     _wait_for_app_settled(clean_page)
