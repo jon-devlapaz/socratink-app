@@ -1,6 +1,6 @@
 import { escHtml } from './html.js';
 
-const EMPTY_RECONSTRUCTION_COPY = 'No learner reconstruction recorded yet.';
+const EMPTY_RECONSTRUCTION_COPY = 'Your first reconstruction will appear here.';
 
 const ATTEMPT_CLASSIFICATION_RANK = {
   strong: 4,

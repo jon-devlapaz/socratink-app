@@ -3,7 +3,7 @@
 Covers: click a primed strip node swaps the work column; click a
 locked node shows the locked silhouette state; keyboard arrow nav
 steps through backbone entries; the first actionable entry enables
-the "Write what you remember" CTA; the Route/Graph toggle and
+the "Write from memory" CTA; the Route/Graph toggle and
 #graph-content section are absent.
 
 Uses the same seed-via-localStorage + guest-auth pattern as the
@@ -169,7 +169,7 @@ def test_first_actionable_entry_shows_try_from_memory(page: Page, base_url: str)
     _open_seeded_concept(page, base_url)
     cta = page.locator(".concept-page-b2__entry-cta")
     expect(cta).not_to_have_attribute("disabled", "")
-    expect(cta).to_have_text("Write what you remember")
+    expect(cta).to_have_text("Write from memory")
 
 
 def test_locked_entry_shows_disabled_cta(page: Page, base_url: str) -> None:

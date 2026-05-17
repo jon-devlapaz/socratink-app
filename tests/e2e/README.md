@@ -61,7 +61,7 @@ port).
 ### `test_strip_nav.py` — 7 tests
 
 Strip-as-nav behavior: click swaps the work column, keyboard navigation
-walks the strip, the first actionable entry exposes "Write what you remember",
+walks the strip, the first actionable entry exposes "Write from memory",
 locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
 section exists, and strip nodes are focusable.
 

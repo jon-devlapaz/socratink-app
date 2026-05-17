@@ -1,7 +1,7 @@
 """End-to-end smoke for the B-2 concept page layout.
 
 Covers: open a concept page; strip, threshold, active entry, and
-nearby list all render; click 'Write what you remember' opens the inline attempt.
+nearby list all render; click 'Write from memory' opens the inline attempt.
 
 Note: the Route/Graph toggle test was removed in the strip-as-nav port
 (2026-05-11). The toggle is gone. See test_strip_nav.py for the new
@@ -151,7 +151,7 @@ def test_b2_layout_renders(clean_page: Page, base_url: str) -> None:
 
 
 def test_b2_cta_opens_inline_attempt(clean_page: Page, base_url: str) -> None:
-    """Clicking 'Write what you remember' opens the inline memory attempt."""
+    """Clicking 'Write from memory' opens the inline memory attempt."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
     expect(clean_page.locator(".concept-page-b2__entry-cta")).to_be_visible(timeout=8_000)
     clean_page.locator(".concept-page-b2__entry-cta").click()

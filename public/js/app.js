@@ -3022,7 +3022,7 @@ const App = (() => {
 
     return {
       kind: 'start-cold-attempt',
-      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Write what you remember',
+      label: nodeContext.type === 'core' ? 'Start With Core Thesis' : 'Write from memory',
     };
   }
 

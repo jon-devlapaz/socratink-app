@@ -349,7 +349,7 @@ def test_library_training_render_survives_one_corrupt_record(
         "Learner-owned reconstruction visible in Library."
     )
     expect(corrupt_card.locator(".library-card-summary")).to_have_text(
-        "No learner reconstruction recorded yet."
+        "Your first reconstruction will appear here."
     )
 
 
@@ -382,11 +382,14 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
 
     card.click()
     expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
+    expect(page.locator(".concept-page-b2__provenance")).to_have_text(
+        "Shaped from your launch attempt, not verified against a source."
+    )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "study required entry 1 of 1"
+        "Study the gap"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Reveal study note"
+        "Compare with notes"
     )
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
@@ -399,7 +402,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "review pending entry 1 of 1"
+        "review pending"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     revealed_training = page.evaluate(
@@ -422,7 +425,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "Updated learner sketch."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "review pending entry 1 of 1"
+        "review pending"
     )
     edited_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
@@ -504,10 +507,10 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Study QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "study required entry 1 of 1"
+        "Study the gap"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Reveal study note"
+        "Compare with notes"
     )
 
     page.locator(".concept-page-b2__entry-cta").click()
@@ -533,7 +536,7 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     )
     page.locator(".concept-page-b2__attempt-save").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "repair the gap entry 1 of 1"
+        "Needs repair"
     )
     assert len(drill_calls) == 1
     assert drill_calls[0]["drill_mode"] == "re_drill"
@@ -560,12 +563,12 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.locator(".library-card-vault", has_text="Repair Truth QA").click()
     expect(page.locator("#concept-header-title")).to_contain_text("Repair QA source")
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "study required entry 1 of 1"
+        "Study the gap"
     )
 
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "repair the gap entry 1 of 1"
+        "Needs repair"
     )
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "voltage-gated sodium channels"
@@ -603,7 +606,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     )
     page.locator(".concept-page-b2__repair-save").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "repair the gap entry 1 of 1"
+        "Needs repair"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Try from memory again"
@@ -697,11 +700,11 @@ def test_concept_entry_mutation_preserves_active_later_entry(
     page.locator(".library-card-vault", has_text="Active Entry QA").click()
     page.locator('.concept-strip__node[data-entry-id="entry-two"]').click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "study required entry 2 of 2"
+        "Study the gap"
     )
     page.locator(".concept-page-b2__entry-cta").click()
-    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_contain_text(
-        "entry 2 of 2"
+    expect(page.locator(".concept-strip__active-name")).to_contain_text(
+        "Later target · 2 of 2"
     )
     expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
         "Entry two note."
@@ -832,10 +835,10 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
     page.locator(".concept-page-b2__attempt-save").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "study required entry 1 of 1"
+        "Study the gap"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Reveal study note"
+        "Compare with notes"
     )
 
     assert len(drill_calls) == 2
@@ -1088,7 +1091,7 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Re-drill Truth QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "spaced reconstruction ready entry 1 of 1"
+        "Ready to reconstruct again"
     )
     page.locator(".concept-page-b2__entry-cta").click()
     page.locator(".concept-page-b2__attempt-input").fill(
@@ -1097,7 +1100,7 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     page.locator(".concept-page-b2__attempt-save").click()
 
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "solidified entry 1 of 1"
+        "solidified"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     assert len(drill_calls) == 1
@@ -1201,7 +1204,7 @@ def test_localhost_concept_page_corrupt_training_storage_recovers_and_records_at
     save_button = page.locator(".concept-page-b2__attempt-save")
     save_button.click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "study required entry 1 of 1"
+        "Study the gap"
     )
     assert len(drill_calls) == 1
     assert drill_calls[0]["node_id"] == "corrupt-node"
