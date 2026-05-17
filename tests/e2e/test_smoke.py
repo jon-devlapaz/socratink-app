@@ -43,7 +43,7 @@ import json
 import time
 import os
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import pytest
 import requests
@@ -147,6 +147,11 @@ def _fetch_browser_session(page: Page) -> dict:
         }"""
     )
     return payload if isinstance(payload, dict) else {}
+
+
+def _is_loopback_base_url(base_url: str) -> bool:
+    hostname = urlparse(base_url).hostname
+    return hostname in {"localhost", "127.0.0.1", "::1"}
 
 
 def test_homepage_loads_with_critical_dom(clean_page: Page, base_url: str) -> None:
@@ -306,6 +311,8 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     page: Page, base_url: str
 ) -> None:
     """Localhost QA can seed a concept with learner-owned training evidence."""
+    if not _is_loopback_base_url(base_url):
+        pytest.skip("local QA seed controls are intentionally loopback-only")
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
 
@@ -493,6 +500,8 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page: Page, base_url: str
 ) -> None:
     """A studied thin attempt can append repair text without faking mastery."""
+    if not _is_loopback_base_url(base_url):
+        pytest.skip("local QA seed controls are intentionally loopback-only")
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
 
