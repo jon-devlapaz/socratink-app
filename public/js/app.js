@@ -1880,6 +1880,7 @@ const App = (() => {
         bypass_session_limits: true,
         api_key: localStorage.getItem('gemini_key') || undefined,
       });
+      if (getActiveId() !== concept.id) return;
       const training = await appendTrainingAttemptFromDrillTurn({
         conceptId: concept.id,
         nodeId: entryId,
@@ -1888,6 +1889,7 @@ const App = (() => {
         at,
       });
       if (!training) throw new Error('attempt-not-recorded');
+      if (getActiveId() !== concept.id) return;
       const legacyGraphPatchedConcept = drillMode === 're_drill' && !attempts.length
         ? patchActiveConceptDrillOutcome({ ...result, node_id: result?.node_id || entryId }, drillMode)
         : null;

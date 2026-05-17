@@ -891,7 +891,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(studiedHtml.includes('No repair hinge recorded for this reconstruction.'));
         assert.ok(studiedHtml.includes('concept-page-b2__study-note'));
         assert.ok(studiedHtml.includes('Study note for this entry.'));
-        assert.ok(studiedHtml.includes('Reconstruct from memory'));
+        assert.ok(!studiedHtml.includes('concept-page-b2__entry-cta'));
 
         const principleHtml = renderActiveEntryHtml(
           { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
@@ -947,8 +947,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           },
           { now: '2026-05-15T11:00:00.000Z', attemptEntryId: 'studied' }
         );
-        assert.ok(studiedAttemptHtml.includes('concept-page-b2__attempt'));
-        assert.ok(!studiedAttemptHtml.includes('concept-page-b2__study-note'));
+        assert.ok(!studiedAttemptHtml.includes('concept-page-b2__attempt'));
+        assert.ok(studiedAttemptHtml.includes('concept-page-b2__study-note'));
 
         const repairHtml = renderActiveEntryHtml(
           { id: 'repair', label: 'Repair', study_note: 'Study the channel gate.' },

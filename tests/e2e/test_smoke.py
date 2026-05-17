@@ -348,9 +348,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "review pending entry 1 of 1"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Reconstruct from memory"
-    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     revealed_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
     )
@@ -622,6 +620,128 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     assert attempt["gaps"][0]["description"] == (
         "Names sodium flow but misses that voltage threshold opens the gate."
     )
+
+
+def test_localhost_inline_attempt_stale_response_does_not_mutate_active_concept(
+    page: Page, base_url: str
+) -> None:
+    """A late inline grader response cannot write through after concept switch."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const originalFetch = window.fetch.bind(window);
+            window.__staleDrillPayloads = [];
+            window.__releaseStaleDrill = null;
+            window.fetch = (input, init = {}) => {
+                const path = typeof input === 'string' ? input : input?.url;
+                if (path === '/api/drill') {
+                    const payload = JSON.parse(init.body || '{}');
+                    window.__staleDrillPayloads.push(payload);
+                    return new Promise((resolve) => {
+                        window.__releaseStaleDrill = () => resolve(new Response(JSON.stringify({
+                            agent_response: 'Recorded too late.',
+                            generative_commitment: true,
+                            answer_mode: 'attempt',
+                            score_eligible: true,
+                            help_request_reason: 'none',
+                            classification: 'shallow',
+                            gap_description: 'The delayed response should be ignored.',
+                            routing: 'NEXT',
+                            response_tier: 2,
+                            response_band: 'link',
+                            tier_reason: 'Delayed fixture.',
+                            node_id: payload.node_id,
+                            probe_count: 0,
+                            nodes_drilled: 1,
+                            attempt_turn_count: 1,
+                            help_turn_count: 0,
+                            graph_mutated: false,
+                            ux_reward_emitted: false,
+                            session_terminated: false,
+                            termination_reason: null,
+                            prompt_version: 'qa-inline-stale',
+                        }), {
+                            status: 200,
+                            headers: { 'Content-Type': 'application/json' },
+                        }));
+                    });
+                }
+                return originalFetch(input, init);
+            };
+        })()"""
+    )
+    page.evaluate(
+        """(() => {
+            const conceptA = {
+                id: 'qa-stale-inline-a',
+                name: 'Stale Inline A',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'A preview should stay hidden.',
+                graphData: JSON.stringify({
+                    metadata: {
+                        source_title: 'Stale Inline A source',
+                        starting_map_context: 'Learner starts on A.',
+                    },
+                    backbone: [{
+                        id: 'stale-a-node',
+                        label: 'Stale A node',
+                        mechanism: 'A canonical mechanism.',
+                        study_note: 'A study note.',
+                        drill_status: null,
+                    }],
+                    clusters: [],
+                }),
+            };
+            const conceptB = {
+                id: 'qa-stale-inline-b',
+                name: 'Stale Inline B',
+                createdAt: Date.now() + 1,
+                state: 'growing',
+                contentPreview: 'B preview should stay hidden.',
+                graphData: JSON.stringify({
+                    metadata: {
+                        source_title: 'Stale Inline B source',
+                        starting_map_context: 'Learner switched to B.',
+                    },
+                    backbone: [{
+                        id: 'stale-b-node',
+                        label: 'Stale B node',
+                        study_note: 'B study note.',
+                        drill_status: null,
+                    }],
+                    clusters: [],
+                }),
+            };
+            localStorage.setItem('learnops_concepts', JSON.stringify([conceptA, conceptB]));
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Stale Inline A").click()
+    page.locator(".concept-page-b2__entry-cta").click()
+    page.locator(".concept-page-b2__attempt-input").fill("A learner answer that returns late.")
+    page.locator(".concept-page-b2__attempt-save").click()
+    page.wait_for_function("() => window.__staleDrillPayloads?.length === 1")
+    page.evaluate("App.openLibraryConcept('qa-stale-inline-b')")
+    page.evaluate("window.__releaseStaleDrill()")
+
+    expect(page.locator("#concept-header-title")).to_contain_text("Stale Inline B source")
+    page.wait_for_timeout(250)
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:qa-stale-inline-a')"""
+        )
+        is None
+    )
+    concepts = page.evaluate("""JSON.parse(localStorage.getItem('learnops_concepts'))""")
+    concept_a = next(item for item in concepts if item["id"] == "qa-stale-inline-a")
+    concept_b = next(item for item in concepts if item["id"] == "qa-stale-inline-b")
+    graph_a = json.loads(concept_a["graphData"])
+    graph_b = json.loads(concept_b["graphData"])
+    assert graph_a["backbone"][0]["drill_status"] is None
+    assert graph_b["backbone"][0]["drill_status"] is None
 
 
 def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(

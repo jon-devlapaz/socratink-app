@@ -1131,7 +1131,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageStudiedHtml.includes('A strong first attempt.'), 'concept page studied preserves learner words');
             assert(conceptPageStudiedHtml.includes('concept-page-b2__study-note'), 'concept page studied note renders');
             assert(conceptPageStudiedHtml.includes('Study note for this entry.'), 'concept page studied note uses entry purpose');
-            assert(conceptPageStudiedHtml.includes('Reconstruct from memory'), 'concept page studied re-drill cta');
+            assert(!conceptPageStudiedHtml.includes('concept-page-b2__entry-cta'), 'concept page studied review has no cta');
             const conceptPagePrincipleHtml = conceptPage.renderActiveEntryHtml(
               { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
               0,
@@ -1237,7 +1237,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               { now: '2026-05-15T11:00:00.000Z' },
             );
             assert(conceptPageReviewHtml.includes('review pending entry 1 of 1'), 'concept page review pending eyebrow');
-            assert(conceptPageReviewHtml.includes('Reconstruct from memory'), 'concept page review cta');
+            assert(!conceptPageReviewHtml.includes('concept-page-b2__entry-cta'), 'concept page review has no cta');
             const conceptPageSpacedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'spaced', label: 'Spaced' },
               0,

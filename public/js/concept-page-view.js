@@ -312,7 +312,13 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
 
   const derived = entryTraining(backbone, activeIdx, training, options);
   const isBlocked = !derived.attempted && !predecessorsAttempted(backbone, activeIdx, training, options);
-  const isAttempting = !isBlocked && options?.attemptEntryId === activeEntryId && derived.next_action !== 'study' && derived.next_action !== 'repair';
+  const isAttempting = (
+    !isBlocked
+    && options?.attemptEntryId === activeEntryId
+    && derived.next_action !== 'study'
+    && derived.next_action !== 'repair'
+    && derived.next_action !== 'review'
+  );
 
   const entryEyebrow = activeEntryEyebrow({
     isBlocked,
@@ -358,7 +364,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
       </p>
     `;
 
-  const ctaButton = isAttempting || derived.next_action === 'repair' || derived.next_action === null
+  const ctaButton = isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? ''
     : isBlocked
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Write from memory on the entry above first">Locked</button>`
