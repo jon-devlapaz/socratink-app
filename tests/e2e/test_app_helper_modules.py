@@ -1194,6 +1194,32 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageRepairHtml.includes('concept-page-b2__repair'), 'concept page repair panel');
             assert(conceptPageRepairHtml.includes('data-repair-entry-id="repair"'), 'concept page repair save target');
             assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
+            const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
+              { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
+              1,
+              [{ id: 'done', label: 'Done', drill_status: 'solidified' }, { label: 'Fallback repair', study_note: 'Study the unnamed entry.' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  'entry-1': {
+                    attempts: [{
+                      id: 'fr1',
+                      kind: 'cold',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Incomplete fallback answer.',
+                      classification: 'thin',
+                      gaps: [{ mechanism: 'fallback link', correction: 'Name the fallback mechanism.' }],
+                      grader_version: 'qa',
+                    }],
+                    study_revealed_at: '2026-05-15T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+            );
+            assert(conceptPageFallbackRepairHtml.includes('data-repair-entry-id="entry-1"'), 'concept page fallback repair save target');
+            assert(!conceptPageFallbackRepairHtml.includes('data-repair-entry-id="core-thesis"'), 'concept page fallback repair avoids core thesis target');
             const conceptPageReviewHtml = conceptPage.renderActiveEntryHtml(
               { id: 'review', label: 'Review' },
               0,

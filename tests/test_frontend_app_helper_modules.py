@@ -987,6 +987,32 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
         assert.ok(repairHtml.includes('Write the missing link'));
         assert.ok(repairHtml.includes('Save repair'));
+        const fallbackRepairHtml = renderActiveEntryHtml(
+          { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
+          1,
+          [{ id: 'done', label: 'Done', drill_status: 'solidified' }, { label: 'Fallback repair', study_note: 'Study the unnamed entry.' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              'entry-1': {
+                attempts: [{
+                  id: 'fr1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Incomplete fallback answer.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'fallback link', correction: 'Name the fallback mechanism.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(fallbackRepairHtml.includes('data-repair-entry-id="entry-1"'));
+        assert.ok(!fallbackRepairHtml.includes('data-repair-entry-id="core-thesis"'));
 
         const repairedHtml = renderActiveEntryHtml(
           { id: 'repair', label: 'Repair' },

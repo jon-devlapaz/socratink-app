@@ -677,7 +677,8 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
                 backbone: [{
                     id: 'legacy-redrill-node',
                     label: 'Legacy re-drill target',
-                    purpose: 'Explain the mechanism.',
+                    purpose: 'Explain the mechanism in learner-facing words.',
+                    mechanism: 'Canonical mechanism answer key.',
                     study_note: 'The target mechanism opens before downstream flow.',
                     drill_status: 'drilled',
                     drill_phase: null,
@@ -726,6 +727,7 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     assert drill_calls[0]["drill_mode"] == "re_drill"
     assert drill_calls[0]["client_turn_index"] == 2
     assert drill_calls[0]["attempt_turn_count"] == 1
+    assert drill_calls[0]["node_mechanism"] == "Canonical mechanism answer key."
     graph = page.evaluate(
         """() => JSON.parse(JSON.parse(localStorage.getItem('learnops_concepts'))[0].graphData)"""
     )

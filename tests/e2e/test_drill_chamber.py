@@ -314,6 +314,10 @@ def test_completed_cold_attempt_updates_training_library_card(
         """() => Boolean(localStorage.getItem('socratink:training:v1:drill-training-concept'))""",
         timeout=8_000,
     )
+    page.wait_for_timeout(2_300)
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "Study can target the missing causal step."
+    )
     assert len(drill_calls) == 2
     page.locator("#chamber-exit").click()
     page.locator("#nav-library").click()

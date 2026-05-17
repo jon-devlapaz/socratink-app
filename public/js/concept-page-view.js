@@ -253,12 +253,12 @@ function renderEvidenceArtifactHtml(derived) {
   `;
 }
 
-function renderRepairPanelHtml(activeEntry, derived) {
+function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   if (derived.next_action !== 'repair') return '';
   const gaps = Array.isArray(derived.gaps) && derived.gaps.length
     ? derived.gaps
     : [{ mechanism: 'missing link', correction: 'Write the part that was missing from your first attempt.' }];
-  const entryId = activeEntry.id || 'core-thesis';
+  const entryId = activeEntryId || activeEntry.id || 'core-thesis';
   return `
     <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
       <span class="eyebrow concept-page-b2__repair-eyebrow">repair</span>
@@ -341,7 +341,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
   const evidenceArtifactHtml = !isAttempting ? renderEvidenceArtifactHtml(derived) : '';
-  const repairPanelHtml = renderRepairPanelHtml(activeEntry, derived);
+  const repairPanelHtml = renderRepairPanelHtml(activeEntry, derived, activeEntryId);
   const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId) : '';
 
   const thresholdHtml = thresholdText

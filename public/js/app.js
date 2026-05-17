@@ -1864,7 +1864,7 @@ const App = (() => {
         concept_id: concept.id,
         node_id: entryId,
         node_label: nodeLabel,
-        node_mechanism: entry.purpose || entry.detail || entry.mechanism || entry.principle || '',
+        node_mechanism: entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || '',
         drill_session_id: `inline-${concept.id}-${entryId}-${Date.now()}`,
         client_turn_index: logicalAttemptCount + 1,
         knowledge_map: graphData,
