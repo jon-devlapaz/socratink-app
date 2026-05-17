@@ -1006,6 +1006,15 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(allSolidifiedEntry.entry.label === 'Solid', 'initial entry falls back to first node');
             assert(allSolidifiedEntry.index === 0, 'initial fallback reports first index');
             assert(allSolidifiedEntry.id === 'solid', 'initial fallback reports first id');
+            const solidifiedHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'solid', label: 'Solid', drill_status: 'solidified' },
+              0,
+              [{ id: 'solid', label: 'Solid', drill_status: 'solidified' }],
+              {},
+              { metadata: {} },
+            );
+            assert(solidifiedHtml.includes('solidified entry 1 of 1'), 'solidified entry reports final state');
+            assert(!solidifiedHtml.includes('concept-page-b2__entry-cta'), 'solidified entry suppresses reconstruction cta');
             const emptyInitialEntry = conceptPage.selectInitialConceptEntry([]);
             assert(emptyInitialEntry.entry.id === 'core-thesis', 'initial entry falls back to synthetic core thesis');
             assert(emptyInitialEntry.index === 0, 'synthetic initial entry reports zero index');

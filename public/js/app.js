@@ -3497,6 +3497,22 @@ const App = (() => {
         return;
       }
 
+      const completedColdAttempt = drillMode === 'cold_attempt' && data.generative_commitment === true;
+      const completedReDrill = data.routing === 'NEXT'
+        || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
+      const completedNodeTurn = completedColdAttempt || completedReDrill;
+
+      if (completedNodeTurn && userText) {
+        const training = await appendTrainingAttemptFromDrillTurn({
+          conceptId: concept.id,
+          nodeId: drillState.node.id,
+          userText,
+          result: data,
+          at: turnStartedAt,
+        });
+        if (!training) throw new Error('attempt-not-recorded');
+      }
+
       const graphMutationConcept = patchActiveConceptDrillOutcome(data, drillMode);
       const graphMutated = Boolean(graphMutationConcept);
 
@@ -3518,24 +3534,6 @@ const App = (() => {
         drillState.pending = false;
         drillState.sessionCompletePending = data.routing === 'SESSION_COMPLETE' || Boolean(data.session_terminated);
 
-        const completedColdAttempt = drillMode === 'cold_attempt' && data.generative_commitment === true;
-        const completedReDrill = data.routing === 'NEXT'
-          || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
-        const completedNodeTurn = completedColdAttempt || completedReDrill;
-        if (completedNodeTurn && userText) {
-          try {
-            await appendTrainingAttemptFromDrillTurn({
-              conceptId: concept.id,
-              nodeId: drillState.node.id,
-              userText,
-              result: data,
-              at: turnStartedAt,
-            });
-          } catch (err) {
-            /* c8 ignore next -- defensive localStorage/storage-adapter failure branch */
-            console.warn('Training attempt write failed.', err);
-          }
-        }
         if (completedColdAttempt) {
           persistPhaseBResumeState({ conceptId: concept.id, nodeId: drillState.node.id, mode: 'study' });
         } else if (completedReDrill) {

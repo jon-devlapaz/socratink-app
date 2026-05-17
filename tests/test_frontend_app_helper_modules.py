@@ -741,6 +741,15 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.equal(allSolidified.entry.label, 'Solid');
         assert.equal(allSolidified.index, 0);
         assert.equal(allSolidified.id, 'solid');
+        const solidifiedHtml = renderActiveEntryHtml(
+          { id: 'solid', label: 'Solid', drill_status: 'solidified' },
+          0,
+          [{ id: 'solid', label: 'Solid', drill_status: 'solidified' }],
+          {},
+          { metadata: {} }
+        );
+        assert.ok(solidifiedHtml.includes('solidified entry 1 of 1'));
+        assert.ok(!solidifiedHtml.includes('concept-page-b2__entry-cta'));
 
         const emptyInitial = selectInitialConceptEntry([]);
         assert.equal(emptyInitial.entry.id, 'core-thesis');

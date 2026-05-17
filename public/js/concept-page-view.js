@@ -357,7 +357,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
       </p>
     `;
 
-  const ctaButton = isAttempting || derived.next_action === 'repair'
+  const ctaButton = isAttempting || derived.next_action === 'repair' || derived.next_action === null
     ? ''
     : isBlocked
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Write from memory on the entry above first">Locked</button>`

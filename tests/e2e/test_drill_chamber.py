@@ -325,3 +325,101 @@ def test_completed_cold_attempt_updates_training_library_card(
     )
     assert stored["node_records"]["entry-a"]["attempts"][0]["classification"] == "thin"
     assert stored["node_records"]["entry-a"]["attempts"][0]["user_text"] == learner_text
+
+
+def test_completed_cold_attempt_without_recordable_classification_does_not_mutate_graph(
+    page: Page, base_url: str
+) -> None:
+    """A chamber turn cannot enter study unless the attempt is recordable."""
+    drill_calls: list[dict[str, Any]] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        if payload.get("session_phase") == "init":
+            body = {
+                "agent_response": "What causes the thermostat to turn heat on?",
+                "generative_commitment": None,
+                "answer_mode": None,
+                "score_eligible": False,
+                "help_request_reason": None,
+                "classification": None,
+                "gap_description": None,
+                "routing": None,
+                "response_tier": None,
+                "response_band": None,
+                "tier_reason": None,
+                "node_id": payload["node_id"],
+                "probe_count": 0,
+                "nodes_drilled": 0,
+                "attempt_turn_count": 0,
+                "help_turn_count": 0,
+                "graph_mutated": False,
+                "ux_reward_emitted": False,
+                "session_terminated": False,
+                "termination_reason": None,
+            }
+        else:
+            body = {
+                "agent_response": "You made the first mark.",
+                "generative_commitment": True,
+                "answer_mode": "attempt",
+                "score_eligible": True,
+                "help_request_reason": "none",
+                "classification": None,
+                "gap_description": None,
+                "routing": "NEXT",
+                "response_tier": 2,
+                "response_band": "link",
+                "tier_reason": "Malformed fixture omits the recordable classification.",
+                "node_id": payload["node_id"],
+                "probe_count": 0,
+                "nodes_drilled": 1,
+                "attempt_turn_count": 1,
+                "help_turn_count": 0,
+                "graph_mutated": True,
+                "ux_reward_emitted": True,
+                "session_terminated": False,
+                "termination_reason": None,
+            }
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(body))
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_concept_with_graph(page, "drill-unrecordable-concept")
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Chamber Test Concept").click()
+    page.evaluate(
+        """(() => {
+            App.startDrill({
+                id: 'entry-a',
+                label: 'Entry A',
+                fullLabel: 'Entry A',
+                detail: 'Describe what Entry A means in your own words.',
+            });
+        })()"""
+    )
+
+    expect(page.locator("#chamber-composer")).to_be_enabled(timeout=8_000)
+    page.locator("#chamber-composer").fill("The thermostat compares room temperature to the setpoint.")
+    page.locator("#chamber-send").click()
+
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "The drill service failed to respond. Try again when ready.",
+        timeout=8_000,
+    )
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    assert len(drill_calls) == 2
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:drill-unrecordable-concept')"""
+        )
+        is None
+    )
+    graph = page.evaluate(
+        """() => JSON.parse(JSON.parse(localStorage.getItem('learnops_concepts'))[0].graphData)"""
+    )
+    assert graph["backbone"][0].get("drill_status") is None
+    assert graph["backbone"][0].get("drill_phase") is None
