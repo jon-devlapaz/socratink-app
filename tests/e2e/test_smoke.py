@@ -624,6 +624,121 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
 
 
+def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
+    page: Page, base_url: str
+) -> None:
+    """Legacy post-cold entries submit inline reconstruction as re-drill."""
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Solid re-drill.",
+                    "generative_commitment": False,
+                    "answer_mode": "attempt",
+                    "score_eligible": True,
+                    "help_request_reason": "none",
+                    "classification": "solid",
+                    "gap_description": None,
+                    "routing": "NEXT",
+                    "response_tier": 3,
+                    "response_band": "mechanism",
+                    "tier_reason": "The answer names the mechanism.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 2,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-inline-redrill",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    source_title: 'Legacy Re-drill QA source',
+                    starting_map_context: 'The learner already made a cold attempt before this schema existed.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [{
+                    id: 'legacy-redrill-node',
+                    label: 'Legacy re-drill target',
+                    purpose: 'Explain the mechanism.',
+                    study_note: 'The target mechanism opens before downstream flow.',
+                    drill_status: 'drilled',
+                    drill_phase: null,
+                }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-legacy-redrill-concept',
+                name: 'Legacy Re-drill Truth QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+                contentType: null,
+                startingMapContext: 'The learner already made a cold attempt before this schema existed.',
+                graphData,
+            }]));
+            localStorage.setItem('learnops_active', 'qa-legacy-redrill-concept');
+        })()"""
+    )
+    inspect_action = page.evaluate(
+        """() => App.getNodeInspectAction({
+            id: 'legacy-redrill-node',
+            type: 'backbone',
+            available: true,
+        })"""
+    )
+    assert inspect_action["kind"] == "resume-study"
+    assert inspect_action["secondaryAction"]["kind"] == "start-repair-reps"
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Legacy Re-drill Truth QA").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "ready to reconstruct again entry 1 of 1"
+    )
+    page.locator(".concept-page-b2__entry-cta").click()
+    page.locator(".concept-page-b2__attempt-input").fill(
+        "The mechanism opens first, then the downstream flow follows."
+    )
+    page.locator(".concept-page-b2__attempt-save").click()
+
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "solidified entry 1 of 1"
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    assert len(drill_calls) == 1
+    assert drill_calls[0]["drill_mode"] == "re_drill"
+    assert drill_calls[0]["client_turn_index"] == 2
+    assert drill_calls[0]["attempt_turn_count"] == 1
+    graph = page.evaluate(
+        """() => JSON.parse(JSON.parse(localStorage.getItem('learnops_concepts'))[0].graphData)"""
+    )
+    assert graph["backbone"][0]["drill_status"] == "solidified"
+    stored = page.evaluate(
+        """() => JSON.parse(localStorage.getItem('socratink:training:v1:qa-legacy-redrill-concept'))"""
+    )
+    assert (
+        stored["node_records"]["legacy-redrill-node"]["attempts"][0]["user_text"]
+        == "The mechanism opens first, then the downstream flow follows."
+    )
+
+
 def test_localhost_concept_page_corrupt_training_storage_keeps_attempt_retryable(
     page: Page, base_url: str
 ) -> None:

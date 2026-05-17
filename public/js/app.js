@@ -1851,22 +1851,30 @@ const App = (() => {
       const loadedTraining = await trainingStore.loadTraining(concept.id);
       const record = loadedTraining?.node_records?.[entryId] || {};
       const attempts = Array.isArray(record.attempts) ? record.attempts : [];
-      const drillMode = attempts.length === 0 ? 'cold_attempt' : 're_drill';
+      const legacyStatus = String(entry?.drill_status || '').toLowerCase();
+      const legacyAttemptCount = (
+        legacyStatus === 'primed'
+        || legacyStatus === 'drilled'
+        || legacyStatus === 'solidified'
+        || legacyStatus === 'solid'
+      ) ? 1 : 0;
+      const logicalAttemptCount = attempts.length || legacyAttemptCount;
+      const drillMode = logicalAttemptCount === 0 ? 'cold_attempt' : 're_drill';
       const result = await runDrillTurn({
         concept_id: concept.id,
         node_id: entryId,
         node_label: nodeLabel,
         node_mechanism: entry.purpose || entry.detail || entry.mechanism || entry.principle || '',
         drill_session_id: `inline-${concept.id}-${entryId}-${Date.now()}`,
-        client_turn_index: attempts.length + 1,
+        client_turn_index: logicalAttemptCount + 1,
         knowledge_map: graphData,
         messages: [{ role: 'user', content: userText }],
         session_phase: 'turn',
         drill_mode: drillMode,
-        re_drill_count: Math.max(0, attempts.length - 1),
+        re_drill_count: Math.max(0, logicalAttemptCount - 1),
         probe_count: 0,
         nodes_drilled: 1,
-        attempt_turn_count: attempts.length,
+        attempt_turn_count: logicalAttemptCount,
         help_turn_count: 0,
         session_start_iso: at,
         bypass_session_limits: true,
@@ -1880,8 +1888,15 @@ const App = (() => {
         at,
       });
       if (!training) throw new Error('attempt-not-recorded');
+      const legacyGraphPatchedConcept = drillMode === 're_drill' && !attempts.length
+        ? patchActiveConceptDrillOutcome({ ...result, node_id: result?.node_id || entryId }, drillMode)
+        : null;
+      const renderConcept = legacyGraphPatchedConcept || concept;
+      const renderGraphData = legacyGraphPatchedConcept
+        ? parseConceptGraphData(legacyGraphPatchedConcept) || graphData
+        : graphData;
       const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training);
+      if (mountEl) renderConceptPageB2(mountEl, renderGraphData, renderConcept, training);
     } catch (err) {
       console.warn('Memory attempt failed.', err);
       button.disabled = false;

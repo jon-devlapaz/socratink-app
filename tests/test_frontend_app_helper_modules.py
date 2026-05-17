@@ -750,6 +750,30 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(solidifiedHtml.includes('solidified entry 1 of 1'));
         assert.ok(!solidifiedHtml.includes('concept-page-b2__entry-cta'));
+        const legacySolidWithPartialTrainingHtml = renderActiveEntryHtml(
+          { id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' },
+          0,
+          [{ id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              'legacy-solid': {
+                attempts: [{
+                  id: 'legacy-redrill',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Strong legacy re-drill.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+              },
+            },
+          }
+        );
+        assert.ok(legacySolidWithPartialTrainingHtml.includes('solidified entry 1 of 1'));
+        assert.ok(!legacySolidWithPartialTrainingHtml.includes('study required entry 1 of 1'));
+        assert.ok(!legacySolidWithPartialTrainingHtml.includes('concept-page-b2__entry-cta'));
 
         const emptyInitial = selectInitialConceptEntry([]);
         assert.equal(emptyInitial.entry.id, 'core-thesis');

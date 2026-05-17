@@ -1015,6 +1015,30 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(solidifiedHtml.includes('solidified entry 1 of 1'), 'solidified entry reports final state');
             assert(!solidifiedHtml.includes('concept-page-b2__entry-cta'), 'solidified entry suppresses reconstruction cta');
+            const legacySolidWithPartialTrainingHtml = conceptPage.renderActiveEntryHtml(
+              { id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' },
+              0,
+              [{ id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' }],
+              {},
+              { metadata: {} },
+              {
+                node_records: {
+                  'legacy-solid': {
+                    attempts: [{
+                      id: 'legacy-redrill',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Strong legacy re-drill.',
+                      classification: 'strong',
+                      gaps: [],
+                      grader_version: 'qa',
+                    }],
+                  },
+                },
+              },
+            );
+            assert(legacySolidWithPartialTrainingHtml.includes('solidified entry 1 of 1'), 'legacy terminal graph state survives partial training');
+            assert(!legacySolidWithPartialTrainingHtml.includes('study required entry 1 of 1'), 'legacy terminal graph state does not reopen study');
+            assert(!legacySolidWithPartialTrainingHtml.includes('concept-page-b2__entry-cta'), 'legacy terminal graph state suppresses cta');
             const emptyInitialEntry = conceptPage.selectInitialConceptEntry([]);
             assert(emptyInitialEntry.entry.id === 'core-thesis', 'initial entry falls back to synthetic core thesis');
             assert(emptyInitialEntry.index === 0, 'synthetic initial entry reports zero index');

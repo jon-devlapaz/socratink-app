@@ -53,7 +53,8 @@ function entryTraining(backbone, index, training, options = {}) {
   const id = getConceptEntryId(entry, index);
   const record = trainingRecordsFor(training)[id] || null;
   const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
-  const baseLegacy = attempts.length ? null : legacyTrainingForEntry(entry);
+  const legacyEntry = legacyTrainingForEntry(entry);
+  const baseLegacy = legacyEntry?.state === 'solidified' || !attempts.length ? legacyEntry : null;
   const legacy = baseLegacy?.legacy_study_required && record?.study_revealed_at
     ? { ...baseLegacy, next_action: 'spaced_attempt' }
     : baseLegacy;
