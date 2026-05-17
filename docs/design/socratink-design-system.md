@@ -101,7 +101,7 @@ The product's onboarding into any concept follows a fixed seven-screen arc. Desi
 
 1. **Generation fatigue.** Threshold and first cold attempt must not ask the same question. Threshold is **global**; cold attempt is **local**.
 2. **Zero-signal frustration.** Low-vocabulary learners get an **analogical** generation, never a blind guess. Never label anyone zero-knowledge.
-3. **Interleaving whiplash.** Going from repair → another cold attempt always passes through the **Interleaving Bridge** (Screen 6).
+3. **Interleaving whiplash.** Target flow routes repair → another cold attempt through the **Interleaving Bridge** (Screen 6). Current POC may expose inline repair retry, but that retry must not claim mastery, spacing, or interleaving credit.
 
 **The seven screens, in order:**
 
@@ -109,7 +109,7 @@ The product's onboarding into any concept follows a fixed seven-screen arc. Desi
 2. **Provisional Graph** — a draft route presented as a hypothesis, never as a knowledge claim. Legend is limited to: *draft route · ready for first attempt · locked*. No mutation.
 3. **First Cold Attempt (local)** — narrower than the threshold; quotes or paraphrases the threshold input, then asks **one** causal mechanism question inside the first node. Recordable learner evidence derives `primed` or `needs repair`. Non-substantive input writes no attempt; ask for a micro-generation. **Analogical fallback** for low-signal learners: familiar source analogy, learner predicts a causal relation *inside the analogy*, and no training evidence is recorded until substantive.
 4. **Locked Study Silhouette** — node title + one-line purpose + locked state + first-attempt CTA. **No explanation, no definitions, no solved diagram.** The absence of content is intentional.
-5. **Study Repair Artifact** — scoped to the attempted node. Five parts: learner’s exact words → the hinge (one correction) → causal spine → one clarifying diagram → 1–2 connection cues. Never claim mastery here. CTA: **Choose next room** (routes to the bridge, not another cold attempt).
+5. **Study Repair Artifact** — scoped to the attempted node. Five parts: learner’s exact words → the hinge (one correction) → causal spine → one clarifying diagram → 1–2 connection cues. Never claim mastery here. Target CTA: **Choose next room**. Current POC can also show inline repair retry after saved repair text, without mastery or spacing credit.
 6. **Interleaving Bridge** — explains *why* the learner is leaving the repaired node (“the repair is fresh”), offers **2–3 nearby rooms** each with a one-line purpose (not a mechanism reveal), plus a non-punitive **“Take a short break instead”**. Never framed as reward or completion. Node stays `primed`.
 7. **Repair History** — accumulates from attempts / feedback / repair reps / re-drills only. Never from reading.
 

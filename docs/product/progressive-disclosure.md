@@ -295,7 +295,7 @@ The core thesis is the starting room.
 Backbone principles are the second layer after the core thesis.
 
 - they frame the structure of each branch
-- their state should be persisted
+- their learner evidence should be persisted; state is derived from training records
 - each backbone independently unlocks its own dependent clusters
 
 One branch can open while another remains unresolved.

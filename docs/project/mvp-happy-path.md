@@ -23,7 +23,7 @@ For this branch, a workable MVP means a freshly created concept with a clear cau
 4. Backbone study unlocks the cluster
 5. Cluster exposes child drill rooms
 6. Child cold attempt resolves cleanly
-7. Original node can later re-drill after spacing/interleaving
+7. Original node can later re-drill after the shipped spacing timer
 8. Training evidence truthfully derives `needs repair` or `solidified`
 
 ## Manual Test
@@ -109,7 +109,9 @@ Expected:
 
 ### 9. Re-Drill Readiness
 
-Return to an earlier room only after spacing and interleaving requirements are met.
+Return to an earlier room only after the current spacing timer is met. Treat
+interleaved work as a product-science observation for now; it is not enforced by
+the shipped derivation.
 
 Expected:
 - premature re-drill is blocked with truthful copy

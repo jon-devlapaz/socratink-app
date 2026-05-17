@@ -51,9 +51,10 @@ restores the map.
 
 ### `test_concept_page_b2.py` — 3 tests
 
-B-2 concept page layout gate: strip + page layout renders, CTA opens the
-drill chamber, and the Route/Graph segmented toggle is absent (verifies the
-strip-as-nav port).
+B-2 concept page layout gate: strip + page layout renders, the reconstruction
+CTA opens the inline attempt panel while the full-screen drill chamber stays
+hidden, and the Route/Graph segmented toggle is absent (verifies the strip-as-nav
+port).
 
 ### `test_strip_nav.py` — 7 tests
 
@@ -67,7 +68,7 @@ Helper-module browser-contract guard: imports the in-app JS modules
 (`html.js`, `app-timer.js`, `app-hero.js`, `phase-b-session.js`,
 `settings-view.js`, `library-view.js`, `source-input-ui.js`,
 `board-grid.js`, `theme-preference.js`, `app-shell-ui.js`,
-`concept-page-view.js`) from the live page and exercises their pure
+`training-store.js`, `training-derive.js`, `concept-page-view.js`) from the live page and exercises their pure
 helpers against the real browser DOM/storage so renames or signature
 drift fail the suite.
 

@@ -184,7 +184,7 @@ Event {
 
 type EventType =
   | 'sketch_saved'        // first commit of the user's pre-AI thinking (concept-level)
-  | 'sketch_revised'      // edits AFTER sketch_saved, BEFORE any chamber_opened
+  | 'sketch_revised'      // edits after sketch_saved; current UI allows post-attempt edits
   | 'chamber_opened'      // user committed to cold attempt on a given entry
   | 'chamber_turn'        // each turn the user or agent sends inside the chamber
   | 'chamber_closed'      // grader's verdict (load-bearing for derivation)
@@ -344,7 +344,10 @@ payload: {
 - `node_id`: MUST be `null` (concept-level event — entries don't exist yet)
 - Trigger: user clicks "Save sketch" on the sketch screen, BEFORE `/api/extract` runs
 - Cardinality: exactly one per concept lifetime
-- Invariant: must precede any `chamber_opened` event in this concept
+- Invariant: must precede the first extraction/chamber target. Current runtime
+  still permits later sketch edits and preserves the active entry after saving;
+  freezing the sketch after first chamber open is target architecture, not the
+  shipped POC behavior.
 
 ### `sketch_revised`
 
@@ -756,8 +759,10 @@ satisfy each:
      entries-without-evidence. Derivation per §2.
 
 4. **Sketch mutability rule defined.**
-   - ✅ Sketch is mutable until first `chamber_opened` event; frozen after.
-     Post-chamber synthesis lives in `repair_committed`.
+   - ✅ Current runtime permits sketch edits after first attempt and preserves
+     the active entry after save. Target event-log architecture may freeze the
+     initial sketch after first `chamber_opened`; post-chamber synthesis still
+     belongs in `repair_committed`.
 
 5. **Write-events per stage.**
    - ✅ §3 fully specifies `sketch_saved`, `sketch_revised`,

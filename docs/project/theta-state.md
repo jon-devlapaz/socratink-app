@@ -19,7 +19,9 @@ Source of truth: code audit of `public/js/app.js`, `public/js/concept-page-view.
 - Recordable attempts append learner text, private classification, gaps, and grader version to the training record; derived state becomes `primed` or `needs repair`.
 - Targeted study shows mechanism text after an attempt; study reveal is recorded without producing `solidified`.
 - Traversal after `primed` is live behavior and should be understood as an interleaving device, not as mastery.
-- Premature re-drill is blocked until both timer and interleaving conditions are satisfied.
+- Premature spaced re-drill is blocked by the current 18-hour timer. Interleaved
+  work remains product intent and science rationale, but the shipped derivation
+  does not yet enforce an interleaving counter.
 - Spaced re-drill asks for causal reconstruction.
 - Probe/scaffold during re-drill does not mutate node state; the backend caps probes at 3.
 - Non-solid evidence stores gaps and can derive `needs repair`.
@@ -69,7 +71,7 @@ Source of truth: code audit of `public/js/app.js`, `public/js/concept-page-view.
 
 ### Low / Product Hypotheses
 
-- The exact 5-minute re-drill delay is optimal.
+- The exact short in-session re-drill delay is optimal.
 - The exact 3-probe cap is optimal.
 - Reward animation improves retention rather than only motivation.
 - AI scoring is safe across phrasing, dialect, accessibility needs, and prompt conditions without a validation set.
