@@ -104,7 +104,7 @@ The panel must be mode-pure with no content bleed.
 2. **Cold-Attempt-Active**: exploratory question + transcript. No scores.
 3. **Study**: Mechanism text + normalization message.
 4. **Re-Drill-Active**: Reconstruction demand + transcript.
-5. **Post-Re-Drill**: Result card (Solidified/Needs Revisit) + Trajectory Contrast. Sticky until `Continue`.
+5. **Post-Re-Drill**: Result card (`solidified` / `needs repair`) + Trajectory Contrast. Sticky until `Continue`.
 6. **Session-Complete**: Session guardrail reached. Save-point copy.
 7. **Repair-Reps**: Optional typed causal micro-practice after study completion or non-solid re-drill. No scores, no graph mutation, no interleaving credit, no mastery unlock.
 
@@ -119,7 +119,7 @@ The panel must be mode-pure with no content bleed.
 
 ### In-Node Routing (AI to Frontend)
 - `PROBE` / `SCAFFOLD`: Stay on node, provide help, no state mutation.
-- `NEXT`: Resolve node phase, update graph state, offer traversal.
+- `NEXT`: Resolve node phase, append training evidence, re-render derived state, and offer traversal.
 - `SESSION_COMPLETE`: Trigger guardrails.
 
 ### Session Traversal (Next Steps)

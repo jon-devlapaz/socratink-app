@@ -55,11 +55,27 @@ TrainingRecord {
   sketch: { text: string, at: timestamp } | null
   node_records: {
     [node_id: string]: {
-      attempts: Attempt[]       // append-only; kind is derived as cold/spaced
+      attempts: Attempt[]       // append-only; kind is assigned and persisted as cold/spaced
       study_revealed_at?: timestamp
       repairs: Repair[]
     }
   }
+}
+
+Attempt {
+  id: string
+  kind: 'cold' | 'spaced'
+  at: timestamp
+  user_text: string
+  classification: 'strong' | 'partial' | 'thin' | 'wrong_direction'
+  gaps: Gap[]
+  grader_version: string
+}
+
+Repair {
+  id: string
+  at: timestamp
+  text: string
 }
 ```
 
@@ -97,13 +113,15 @@ to one of them.
 
 - **Evidence-truth.** The system cannot claim a user has reconstructed
   something it doesn't have user-produced evidence of. State is a function of
-  events; events are user-produced or grader-produced; no mutable state field
-  exists for the system to lie with.
+  training evidence; evidence is user-produced or grader-produced; no mutable
+  state field exists for the system to lie with.
 - **Silent surface.** Every visible element earns its keep. Untested concepts
   render no badge. Trajectory and "improvement" signals are not rendered.
-- **Single source of truth.** One mutable surface per concept (the event log).
-  All other fields are pure derivations. Cross-view drift is structurally
-  impossible.
+- **Single source of truth.** One mutable training-evidence surface per concept
+  (`socratink:training:v1:<conceptId>` in the shipped browser store; the event
+  log in the Supabase target). All other fields are pure derivations.
+  Cross-view drift is structurally impossible after surfaces bind to that
+  derivation.
 - **Verbatim user reconstruction.** Library and other "what you've reconstructed"
   surfaces bind exclusively to user-written text. AI-generated text is never
   rendered as user content under any circumstance.
@@ -398,7 +416,7 @@ payload: {
     text: string                                          // VERBATIM user text — Library renders this
   }
   sketch_to_final_delta: 'none' | 'small' | 'meaningful' | null
-  next_action: 'study' | 'repair' | 'solidify'            // CTA hint for module-3
+  next_action: 'study' | 'repair' | 'spaced_attempt' | 'review' // CTA hint for module-3
   grader_version: string                                  // e.g. "drill-system-v2" — schema evolution
 }
 ```
@@ -488,7 +506,7 @@ EntryRender {
   state:               null | 'primed' | 'needs repair' | 'solidified'   // null ⟺ untested
   strongest_turn_text: string | null
   gaps:                Gap[]
-  next_action:         'cold_attempt' | 'study' | 'repair' | 'solidify' | 'review' | null
+  next_action:         'cold_attempt' | 'study' | 'repair' | 'spaced_attempt' | 'review' | null
   solidify_unlocks_at: timestamp | null
   last_close_at:       timestamp | null
 }
@@ -507,22 +525,21 @@ There is no `lifecycle` field. `state == null` is the canonical signal for
 
 ### `next_action` derivation
 
-`'solidify'` is offered only when the upcoming chamber can actually advance
-state to `solidified` per §2. That requires both spacing AND that the latest
-chamber close was classified `strong` — otherwise the §2 fold's
-`prior_close.classification == 'strong'` check fails and the new chamber lands
-in `primed` again. The renderer must not promise a state change the derivation
-will not deliver.
+`'spaced_attempt'` is offered only when the next reconstruction can legitimately
+be a spaced attempt. State still advances to `solidified` only after that new
+attempt is stored as `strong` and is spaced after a prior `strong` attempt. The
+renderer must not promise a state change the derivation has not recorded.
 
 ```ts
 next_action(entry):
   | state == null                                                       → 'cold_attempt'
+  | no study_revealed after latest chamber_closed                       → 'study'
   | state == 'needs repair'                                             → 'repair'
-  | state == 'primed' AND no study_revealed after latest chamber_closed → 'study'
   | state == 'primed' AND study_revealed
         AND spacing_ok(latest_close, now)
-        AND latest_close.classification == 'strong'                     → 'solidify'
-  | state == 'primed' AND study_revealed                                → 'review'
+        AND latest_close.classification == 'strong'                     → 'spaced_attempt'
+  | state == 'primed' AND latest_close.classification == 'strong'        → 'review'
+  | state == 'primed'                                                    → 'repair'
   | state == 'solidified'                                               → null
 
 solidify_unlocks_at(entry):
@@ -533,15 +550,17 @@ solidify_unlocks_at(entry):
   | otherwise → null
 ```
 
-`'review'` is the calm holding state for everything that doesn't qualify for
-`'solidify'` — either spacing isn't satisfied, or the latest close was
-partial / thin / wrong_direction so a follow-up strong wouldn't solidify even
-with spacing. In `'review'` the user can re-read study material or write
-repair text, but a chamber right now will not advance state to solidified.
-Module 3 may surface `solidify_unlocks_at` as a quiet "unlock at HH:MM"
-affordance when one is available, or stay silent — its choice.
+`'review'` is the calm holding state for a strong attempt before spacing is
+satisfied. Module 3 may surface `solidify_unlocks_at` as a quiet "unlock at
+HH:MM" affordance when one is available, or stay silent — its choice.
 
 ### Surface bindings
+
+Current shipped rollout: the concept page consumes entry training derivation for
+entry state, CTAs, inline reconstruction, study reveal, and repair panels. The
+Library card body asynchronously consumes learner attempts for reconstruction
+copy. Map badges, Desk tiles, Sidebar concept markers, and Library card badges
+still render legacy `concept.state` until the full target binding below lands.
 
 | Surface | Binds to | Notes |
 |---|---|---|
@@ -556,7 +575,8 @@ affordance when one is available, or stay silent — its choice.
 
 ### Architectural enforcement
 
-Module 3's renderers receive **only** `EntryRender` / `ConceptRender` objects.
+Target enforcement after the full binding rollout: Module 3's renderers receive
+**only** `EntryRender` / `ConceptRender` objects.
 They do not have access to the raw concept blob. There is a single derivation
 function that produces these primitives from the concept; renderers import the
 primitives and have no reference to `concept.events`, `concept.state` (legacy),
@@ -760,10 +780,10 @@ change, not a destructive rewrite.
 
 | Today (localStorage v1) | Future (Supabase) | Migration shape |
 |---|---|---|
-| `events: Event[]` on concept blob | `events` table, one row per event | Bulk insert from blob; ordered by `seq` |
-| `client_event_id: uuid` | Same; primary key with `concept_id` | Direct copy |
-| `seq: number` per-concept | Same; allows `ORDER BY seq` queries | Direct copy |
-| `node_id: string | null` | Same; nullable FK to `entries` table | Direct copy |
+| `socratink:training:v1:<conceptId>` record | `events` table, one row per event | Convert `node_records[*].attempts`, `study_revealed_at`, and `repairs` into ordered events |
+| Generated event id per converted record | `client_event_id: uuid`; primary key with `concept_id` | Generated during conversion |
+| Order inferred from `at` timestamps and record position | `seq: number` per-concept | Generated during conversion |
+| `node_records` keys | `node_id: string | null`; nullable FK to `entries` table | Direct copy of node id |
 | Derivation functions in JS | Same JS, OR materialized via SQL view | Pure-function — runs anywhere |
 | `__legacy_concept_*` backups | N/A (server is canonical from launch) | Discarded |
 

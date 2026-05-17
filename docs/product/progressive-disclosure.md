@@ -97,8 +97,12 @@ The provisional graph is the structure hypothesis. The training store is the
 evidence system of record.
 
 Drill outcomes are written into browser-local training records keyed as
-`socratink:training:v1:<conceptId>`. The concept page, Library, Desk, and graph
-state are derived from those records.
+`socratink:training:v1:<conceptId>`. The shipped rollout derives concept-page
+entry state, next actions, inline reconstruction, study reveal, and repair
+panels from those records. The Library card body uses the same records for
+learner reconstruction text; Library badges, Desk tiles, Sidebar concept
+markers, and Map/graph badges still use legacy `concept.state` until the full
+binding rollout lands.
 
 ### Persisted Drill Fields
 
@@ -384,7 +388,7 @@ The intended happy path is:
 9. system recommends spaced re-drill on the first node
 10. backend returns structured drill result
 11. frontend appends the attempt to the training store
-12. graph, concept page, and Library re-render from derived training state
+12. concept page and Library reconstruction body re-render from training evidence; legacy Map/Desk badges continue to reflect `concept.state` until the full binding rollout
 
 ## Out Of Scope For This Document
 
