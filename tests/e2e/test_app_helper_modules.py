@@ -840,8 +840,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 attempts: [attempt('a1', '2026-05-15T10:00:00.000Z', 'partial')],
                 study_revealed_at: '2026-05-15T10:01:00.000Z',
               }).next_action,
-              'review',
-              'partial after study stays in review',
+              'repair',
+              'partial after study moves to repair work',
             );
             same(
               trainingDerive.deriveNodeTraining({

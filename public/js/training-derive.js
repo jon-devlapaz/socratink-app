@@ -73,7 +73,7 @@ function deriveNextAction({ state, latestAttempt, record, now }) {
     if (latestAttempt.classification === 'strong') {
       return spacingOkAt(latestAttempt, now) ? 'spaced_attempt' : 'review';
     }
-    return 'review';
+    return 'repair';
   }
 
   return null;

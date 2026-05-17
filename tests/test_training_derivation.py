@@ -193,7 +193,7 @@ def test_node_training_derivation_preserves_single_lapse_grace() -> None:
           repairs: [],
         }, { now: '2026-05-16T06:05:00.000Z' });
         assert.equal(singleLapse.state, 'primed');
-        assert.equal(singleLapse.next_action, 'review');
+        assert.equal(singleLapse.next_action, 'repair');
 
         const twoLapses = deriveNodeTraining({
           attempts: [strongCold, firstLapse, secondLapse],

@@ -614,6 +614,90 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     )
 
 
+def test_concept_entry_mutation_preserves_active_later_entry(
+    page: Page, base_url: str
+) -> None:
+    """Study reveal on a later entry must not snap back to an earlier gap."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    source_title: 'Active Entry QA source',
+                    starting_map_context: 'Learner rough sketch.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [
+                    {
+                        id: 'entry-one',
+                        label: 'Earlier gap',
+                        purpose: 'This earlier entry should not steal focus.',
+                        study_note: 'Entry one note.',
+                    },
+                    {
+                        id: 'entry-two',
+                        label: 'Later target',
+                        purpose: 'Reveal this later entry study note.',
+                        study_note: 'Entry two note.',
+                    },
+                ],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-active-entry-concept',
+                name: 'Active Entry QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                graphData,
+            }]));
+            localStorage.setItem('socratink:training:v1:qa-active-entry-concept', JSON.stringify({
+                concept_id: 'qa-active-entry-concept',
+                schema_version: 1,
+                node_records: {
+                    'entry-one': {
+                        attempts: [{
+                            id: 'entry-one-attempt',
+                            at: '2026-05-15T10:00:00.000Z',
+                            user_text: 'Earlier strong reconstruction.',
+                            classification: 'strong',
+                            gaps: [],
+                            grader_version: 'qa',
+                        }],
+                        study_revealed_at: '2026-05-15T10:05:00.000Z',
+                        repairs: [],
+                    },
+                    'entry-two': {
+                        attempts: [{
+                            id: 'entry-two-attempt',
+                            at: '2026-05-15T10:10:00.000Z',
+                            user_text: 'Later strong reconstruction.',
+                            classification: 'strong',
+                            gaps: [],
+                            grader_version: 'qa',
+                        }],
+                        repairs: [],
+                    },
+                },
+            }));
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Active Entry QA").click()
+    page.locator('.concept-strip__node[data-entry-id="entry-two"]').click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "study required entry 2 of 2"
+    )
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_contain_text(
+        "entry 2 of 2"
+    )
+    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
+        "Entry two note."
+    )
+
+
 def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     page: Page, base_url: str
 ) -> None:

@@ -1837,7 +1837,7 @@ const App = (() => {
         new Date().toISOString(),
       );
       const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, data, concept, training);
+      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training, { activeEntryId: entryId });
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
       console.warn('Study reveal failed.', err);
@@ -1932,7 +1932,7 @@ const App = (() => {
         ? parseConceptGraphData(legacyGraphPatchedConcept) || graphData
         : graphData;
       const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, renderGraphData, renderConcept, training);
+      if (mountEl) renderConceptPageB2(mountEl, renderGraphData, renderConcept, training, { activeEntryId: entryId });
     } catch (err) {
       console.warn('Memory attempt failed.', err);
       button.disabled = false;
@@ -1964,7 +1964,7 @@ const App = (() => {
         text,
       });
       const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, data, concept, training);
+      if (mountEl) renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
       console.warn('Repair save failed.', err);
@@ -2172,19 +2172,24 @@ const App = (() => {
    * @param {Object} data - Parsed graphData (metadata, backbone, clusters, relationships)
    * @param {Object} concept - The full concept object (for threshold text + name)
    */
-  function renderConceptPageB2(mountEl, data, concept, training = null) {
+  function renderConceptPageB2(mountEl, data, concept, training = null, options = {}) {
     if (!mountEl || !data) return;
     const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+    const preferredEntryId = options?.activeEntryId || null;
+    const preferredEntry = preferredEntryId === 'core-thesis' && !backbone.length
+      ? selectInitialConceptEntry(backbone, training)
+      : findConceptEntryById(backbone, preferredEntryId);
 
     const {
       entry: activeEntry,
       index: activeIdx,
       id: activeEntryId,
-    } = selectInitialConceptEntry(backbone, training);
+    } = preferredEntry || selectInitialConceptEntry(backbone, training);
+    const renderBackbone = backbone.length ? backbone : [activeEntry];
 
     // Build the work column HTML via the shared helper
     const stripHtml = renderConceptStripHtml(backbone, activeEntry, activeIdx, training);
-    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data, training);
+    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
