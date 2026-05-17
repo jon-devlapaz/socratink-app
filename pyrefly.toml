@@ -31,6 +31,7 @@ project-excludes = [
     "**/.vercel/",
     "**/public/",
     "**/scripts/",
+    "**/agents/superpowers/",
     "**/__pycache__/",
 ]
 python-version = "3.13.0"

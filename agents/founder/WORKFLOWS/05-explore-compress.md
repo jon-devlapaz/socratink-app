@@ -27,7 +27,7 @@ Diverge into free exploration, reach resolution, compress the result to signal o
 
 ## Recommended Route
 
-```
+```text
 1. Name the fork
    State the specific question before diverging.
    If you can't name it, you're not at a real fork yet.

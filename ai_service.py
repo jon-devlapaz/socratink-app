@@ -306,7 +306,13 @@ def _normalize_drill_evaluation(
             evaluation.tier_reason = None
             evaluation.routing = "SCAFFOLD"
             evaluation.help_request_reason = (
-                evaluation.help_request_reason or "explicit_unknown"
+                (
+                    evaluation.help_request_reason
+                    if evaluation.help_request_reason != "none"
+                    else None
+                )
+                or inferred_help_request_reason
+                or "explicit_unknown"
             )
             if not evaluation.gap_description:
                 evaluation.gap_description = (

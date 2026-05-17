@@ -19,7 +19,7 @@ Good run questions:
 - Did cold attempt stay unscored and generative?
 - Did study unlock only after generative commitment?
 - Did spacing/interleaving block premature re-drill?
-- Did re-drill update the derived training state truthfully (`primed`, `needs repair`, or `solidified`)?
+- Did re-drill update the derived training state truthfully (`needs repair` or `solidified`)?
 - Did the graph patch the same active node that the backend evaluated?
 - Did hosted behavior match local behavior?
 

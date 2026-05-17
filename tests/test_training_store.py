@@ -231,3 +231,37 @@ def test_training_store_rejects_non_substantive_attempts_without_mutating_storag
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_training_store_ignores_corrupt_persisted_json() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { createTrainingStore } from './public/js/training-store.js';
+
+        const writes = new Map([
+          ['socratink:training:v1:concept-1', '{'],
+        ]);
+        const storage = {
+          getItem(key) { return writes.has(key) ? writes.get(key) : null; },
+          setItem(key, value) { writes.set(key, value); },
+          removeItem(key) { writes.delete(key); },
+        };
+        const store = createTrainingStore({ storage });
+
+        assert.equal(await store.loadTraining('concept-1'), null);
+        await store.appendAttempt('concept-1', 'n1', {
+          id: 'a1',
+          at: '2026-05-15T10:00:00.000Z',
+          user_text: 'A fresh attempt after corrupt storage.',
+          classification: 'thin',
+          gaps: [],
+          grader_version: 'test',
+        });
+
+        const training = await store.loadTraining('concept-1');
+        assert.equal(training.node_records.n1.attempts[0].user_text, 'A fresh attempt after corrupt storage.');
+        """
+    )
+    assert result.returncode == 0, result.stderr

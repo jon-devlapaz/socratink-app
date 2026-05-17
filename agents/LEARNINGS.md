@@ -51,7 +51,7 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 | Pattern key | Status | Count | Last seen | Recommended promotion target | Entry |
 | --- | --- | ---: | --- | --- | --- |
 | `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [LYYYY-2026-05-13-subagent-delegation-too-soft](#lyyyy-2026-05-13-subagent-delegation-too-soft) |
-| `explore-compress-merge` | `observed` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
+| `explore-compress-merge` | `promoted` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
 | `verification-gates-not-self-contained` | `observed` | 1 | 2026-05-17 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
 
 ## Entries
@@ -83,7 +83,7 @@ Still non-binding because this is one observed failure mode, not yet a repeated 
 
 # L0002-2026-05-15-explore-compress-merge
 
-- Status: `observed`
+- Status: `promoted`
 - Pattern key: `explore-compress-merge`
 - First seen: `2026-05-15`
 - Last seen: `2026-05-15`
@@ -104,7 +104,7 @@ The key mechanism is treating the conversation's rewind+summarize as a compressi
 
 ## Promotion Notes
 
-Already formalized in `agents/founder/WORKFLOWS/05-explore-compress.md` on first sighting because the pattern was deliberate and the founder explicitly wanted to capture it. Mark `candidate` on second sighting; verify the workflow card holds under the new evidence before promoting to `promoted`.
+Promoted immediately into `agents/founder/WORKFLOWS/05-explore-compress.md` on first sighting because the pattern was deliberate, low-risk, and the founder explicitly wanted it captured as a reusable workflow card. Revisit the card if a second sighting shows the workflow needs tighter stop rules.
 
 # L0003-2026-05-17-verification-gates-not-self-contained
 

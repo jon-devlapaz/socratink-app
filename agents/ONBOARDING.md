@@ -92,7 +92,7 @@ Before doing substantive work:
 14. Use agents/WORKFLOWS/README.md for shared hot-fix and drill workflows
 15. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
 
-The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with derived training states (`null | primed | needs repair | solidified`). Training evidence is stored under `socratink:training:v1:<conceptId>`. Only spaced strong reconstruction evidence derives `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
+The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with derived training states (`null | primed | needs repair | solidified`). Training evidence is browser-local in the MVP and must stay derivable from learner reconstruction records. Only spaced strong reconstruction evidence derives `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
 
 Operating rules:
 - Prefer a small party over too many agents

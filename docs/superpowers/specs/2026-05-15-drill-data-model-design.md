@@ -798,7 +798,7 @@ change, not a destructive rewrite.
 | `socratink:training:v1:<conceptId>` record | `events` table, one row per event | Convert `node_records[*].attempts`, `study_revealed_at`, and `repairs` into ordered events |
 | Generated event id per converted record | `client_event_id: uuid`; primary key with `concept_id` | Generated during conversion |
 | Order inferred from `at` timestamps and record position | `seq: number` per-concept | Generated during conversion |
-| `node_records` keys | `node_id: string | null`; nullable FK to `entries` table | Direct copy of node id |
+| `node_records` keys | `node_id: string \| null`; nullable FK to `entries` table | Direct copy of node id |
 | Derivation functions in JS | Same JS, OR materialized via SQL view | Pure-function — runs anywhere |
 | `__legacy_concept_*` backups | N/A (server is canonical from launch) | Discarded |
 

@@ -280,7 +280,7 @@ const App = (() => {
     setActiveId(LOCAL_QA_CONCEPT_ID);
     await trainingStore.saveTraining({
       concept_id: LOCAL_QA_CONCEPT_ID,
-      schema_version: 1,
+      schema_version: TRAINING_SCHEMA_VERSION,
       source_mode: 'source_less',
       grounding: 'learner_sketch',
       source_ref: null,
@@ -324,7 +324,7 @@ const App = (() => {
     setActiveId(LOCAL_REPAIR_QA_CONCEPT_ID);
     await trainingStore.saveTraining({
       concept_id: LOCAL_REPAIR_QA_CONCEPT_ID,
-      schema_version: 1,
+      schema_version: TRAINING_SCHEMA_VERSION,
       source_mode: 'source_less',
       grounding: 'learner_sketch',
       source_ref: null,
@@ -2324,6 +2324,7 @@ const App = (() => {
     }
 
     renderConceptPageB2(mapContent, data, concept);
+    // Keep first paint synchronous; training evidence re-renders when available.
     void trainingStore.loadTraining(concept.id)
       .then((training) => {
         if (!training) return;
@@ -2516,6 +2517,7 @@ const App = (() => {
 
     if (!concepts.length) return;
 
+    // Keep Library open immediately; learner evidence fills in asynchronously.
     Promise.all(concepts.map(async (concept) => {
       const conceptId = String(concept.id);
       try {

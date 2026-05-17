@@ -50,7 +50,12 @@ function ensureNodeRecord(training, nodeId) {
 function loadRaw(storage, conceptId, keyPrefix) {
   const raw = storage?.getItem?.(keyFor(conceptId, keyPrefix));
   if (!raw) return null;
-  const parsed = JSON.parse(raw);
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
   if (!parsed || typeof parsed !== 'object') return null;
   if (!parsed.node_records || typeof parsed.node_records !== 'object') {
     parsed.node_records = {};
