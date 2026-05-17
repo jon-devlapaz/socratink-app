@@ -60,8 +60,9 @@ port).
 ### `test_strip_nav.py` — 7 tests
 
 Strip-as-nav behavior: click swaps the work column, keyboard navigation
-walks the strip, locked entries show a disabled CTA, no Route/Graph toggle
-or `#graph-content` section exists, and strip nodes are focusable.
+walks the strip, the first actionable entry exposes "Write what you remember",
+locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
+section exists, and strip nodes are focusable.
 
 ### `test_app_helper_modules.py` — 1 test
 
@@ -160,6 +161,7 @@ tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_inline_attempt PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
 tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
+tests/e2e/test_strip_nav.py::test_first_actionable_entry_shows_try_from_memory PASSED
 tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
 tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED

@@ -296,7 +296,7 @@ This is the binding prioritization. Build first:
 - Locked study silhouette before attempt.
 - Attempt-scoped repair artifact after cold attempt.
 - Interleaving bridge with 2–3 next-room choices plus a break option *before* another cold attempt.
-- Existing spacing and graph-mutation rules unchanged.
+- Training evidence writes to the browser-local training store; displayed state derives from `null | primed | needs repair | solidified`, with `solidified` still gated by the shipped 18-hour spacing interval.
 
 Defer:
 

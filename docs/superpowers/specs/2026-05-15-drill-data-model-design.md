@@ -304,7 +304,7 @@ repair") so progress is visible alongside the gap.
 | Three parallel state machines | One source (training record now, event log target later), one derivation. Drift impossible after surfaces bind to it. |
 | "Locked" lying about agency | Replaced with `null`; UI renders no badge. |
 | Solidified earned without spacing | Requires `strong → 18h+ → strong`. |
-| Solidified earned via lucky cold attempt | First attempt maxes at `primed`. |
+| Solidified earned via lucky cold attempt | A single first attempt cannot produce `solidified`; first weak evidence may still derive `needs repair`. |
 | Partial pump (alternating thin/partial parks at primed forever) | `partial` preserves `failure_streak` rather than resetting. |
 | Stumble-to-solidify (partial prior + strong current) | Solidification requires a `strong` prior, not `partial`. |
 | Single-lapse on primed crashes to needs_repair | Symmetric grace: one non-strong from `primed` or `solidified` lands on `primed`. Two-in-a-row drops to `needs repair`. |

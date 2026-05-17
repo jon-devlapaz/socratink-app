@@ -128,7 +128,7 @@ The product's onboarding into any concept follows a fixed seven-screen arc. Desi
 
 **Forbidden on threshold / graph / attempt screens:** the words *diagnostic, evaluate, beginner/intermediate/advanced, misconceptions*; learner-visible schema labels; curriculum claims; cross-concept mastery summaries. Schema inference is internal only — the learner never sees their own schema tier.
 
-**Happy-path MVP cut (for prioritization):** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **local first cold attempt derived from threshold input** · **analogical cold-attempt fallback** · locked study silhouette · attempt-scoped repair artifact · **interleaving bridge with 2–3 next-room options + break** before another cold attempt · existing spacing + mutation rules unchanged.
+**Happy-path MVP cut (for prioritization):** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **local first cold attempt derived from threshold input** · **analogical cold-attempt fallback** · locked study silhouette · attempt-scoped repair artifact · **interleaving bridge with 2–3 next-room options + break** before another cold attempt · browser-local training evidence with derived state, plus the shipped 18-hour spacing interval.
 
 ## Copy voice
 

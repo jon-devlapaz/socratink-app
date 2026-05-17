@@ -164,7 +164,7 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
     - Violet accent should shift to lavender
     - Strip primed nodes should become cyan (not violet)
 87. Verify the theme persists across navigation (no flash of unstyled content).
-88. Switch theme MID-DRILL (chamber open). Verify the chamber re-renders correctly without losing state.
+88. Switch theme with the inline reconstruction panel open. Verify the panel re-renders correctly without losing typed state.
 
 ### 5.2 Responsive
 
@@ -176,18 +176,18 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
     - Strip is shorter (~84px)
     - Active-name label truncates with ellipsis if long
     - CTA goes full-width
-    - Chamber composer remains usable
+    - Inline reconstruction composer remains usable
     - Touch targets on strip nodes are at least 28×28 (the SVG `<rect>` overlay)
 
 ## Phase 6 — Edge cases & stress
 
 ### 6.1 Browser back
 
-91. Inside the chamber, press the browser BACK button. Note: predicted behavior is "exits app" (URL routing isn't wired for the chamber state). Document actual.
+91. With the inline reconstruction panel open, press the browser BACK button. Document whether the app exits, stays on the concept page, or loses unsaved text.
 
-### 6.2 Refresh inside chamber
+### 6.2 Refresh inside reconstruction
 
-92. Inside the chamber, hard-refresh (`Cmd+Shift+R`). Note where you land. Predicted: concept page (chamber is ephemeral state).
+92. With the inline reconstruction panel open, hard-refresh (`Cmd+Shift+R`). Note where you land and whether saved training evidence remains available.
 
 ### 6.3 Rapid concept hop
 
@@ -195,11 +195,11 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 6.4 Idle session
 
-94. (Optional, time-permitting) Leave the chamber idle for 15+ minutes. Try to send a turn. Note any auth-expiry or session-loss behavior.
+94. (Optional, time-permitting) Leave the inline reconstruction panel idle for 15+ minutes. Try to save an attempt. Note any auth-expiry or session-loss behavior.
 
 ### 6.5 Long input
 
-95. In the chamber composer, paste 3000+ characters of text. Press send. Note whether:
+95. In the inline reconstruction textarea, paste 3000+ characters of text. Press "Save what I wrote". Note whether:
     - There's a character limit warning
     - The backend accepts the payload
     - The AI response handles the long input
@@ -222,7 +222,7 @@ Produce a markdown report with this structure:
 |--|--|--|--|--|
 | 1 Landing + concept creation | 18 | ?? | ?? | |
 | 2 Concept page B-2 layout | 35 | ?? | ?? | |
-| 3 Drill chamber | 28 | ?? | ?? | |
+| 3 Inline reconstruction | 9 | ?? | ?? | |
 | 4 Doctrine + copy audit | 3 | ?? | ?? | |
 | 5 Theme + responsive | 6 | ?? | ?? | |
 | 6 Edge cases & stress | 5 | ?? | ?? | |
