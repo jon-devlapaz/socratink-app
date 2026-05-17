@@ -73,7 +73,11 @@ class VerifyAccessTokenTests(unittest.TestCase):
     def test_wrong_signature_rejected(self):
         token = _make_token()
         with self.assertRaises(InvalidAccessToken):
-            verify_access_token(token, jwt_secret="other-secret", issuer=ISSUER)
+            verify_access_token(
+                token,
+                jwt_secret="other-supabase-jwt-secret-test-fixture",
+                issuer=ISSUER,
+            )
 
     def test_garbage_token_rejected(self):
         with self.assertRaises(InvalidAccessToken):

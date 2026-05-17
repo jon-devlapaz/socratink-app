@@ -490,7 +490,7 @@ class LocalE2EGuestBootstrapTests(unittest.TestCase):
             enabled=True,
             supabase_url="https://abc123.supabase.co",
             publishable_key="pk_test",
-            jwt_secret="jwt-secret",
+            jwt_secret="auth-router-e2e-guest-jwt-secret-test-fixture",
             session_cookie_key=Fernet.generate_key().decode(),
             app_base_url="http://localhost:8000",
         )
