@@ -206,7 +206,7 @@ The learner-facing graph should keep these meanings stable:
 
 - attempted with named gaps to repair
 - unresolved stack pressure
-- worth revisiting
+- return-worthy
 
 ### `solidified`
 

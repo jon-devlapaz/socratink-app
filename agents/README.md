@@ -33,6 +33,8 @@ Canonical shared workflow truth for repo agents.
 
 `agents/LEARNINGS.md` is a special case: it lives in the canon tree so agents can find it, but its entries are non-binding until promoted into a canonical workflow, README, migration ledger, bootstrap doc, or other registered binding file.
 
+`agents/superpowers` is a reference-only Git submodule. It is not runtime canon and does not replace this repo's `agents/` workflow docs.
+
 ## Migration rule
 
 Migrate selectively. Promote only stable, high-signal, cross-model content. Preserve high-value tool-local content until its signal is captured or intentionally deprecated.

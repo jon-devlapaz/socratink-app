@@ -79,9 +79,9 @@ The chosen voice register is **reading room and field journal**. Scholarly-natur
 | The visible-evidence graph | `evidence map` | Domain noun. |
 
 ### State labels (when shown on entries)
-- `locked` — you haven't tried yet
-- `primed for study` — you tried, study has been shown, ready to repair
-- `worth revisiting` — you re-attempted, evidence is partial
+- no badge / `ready to reconstruct` — no learner reconstruction is on record yet
+- `primed` — learner reconstruction evidence is on record; the next action is derived from it
+- `needs repair` — learner reconstruction evidence has named gaps to repair
 - `solidified` — you reconstructed under spacing; durable evidence on record
 
 ---

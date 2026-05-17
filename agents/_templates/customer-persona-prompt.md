@@ -115,9 +115,9 @@ Agent({
 
 ---
 
-## The literal socratink version (for reference)
+## The socratink version (for reference)
 
-This is exactly what was sent to Gemini for the naming refactor's customer-test pass. Useful as a worked example of the template applied.
+This is the socratink naming refactor's customer-test shape, updated to use the current training-state vocabulary. Useful as a worked example of the template applied.
 
 ```
 You are a college sophomore, genuinely interested in deeply understanding what you study. You write your own notes by hand sometimes. You are *anti-cramming*, *anti-flashcard-only*, and *anti-cheat-with-AI*. You are not impressed by "AI tutor" marketing. You actively distrust apps that:
@@ -172,14 +172,14 @@ Which metaphor better matches how YOU think about learning? (Or does neither wor
 
 ## DECISION 4: State labels you see on the units
 
-When the system has evidence you understood something, it shows a state label on that unit. Proposals:
+When the system has learner reconstruction evidence for a unit, it may show a state label. Proposals:
 
-- "locked" → stays "locked" (you haven't tried yet)
-- "primed for study" → stays "primed for study" (you tried, study has been shown)
-- "drilled" → "worth revisiting" (you re-attempted, evidence is partial)
+- no attempt → no badge; copy says "ready to reconstruct" when the unit is available
+- "primed" → "primed for study" (you tried, study or review is available)
+- "needs repair" → stays "needs repair" (your reconstruction has named gaps to repair)
 - "solidified" → "recorded" (you reconstructed under spacing, the evidence is durable)
 
-Does "recorded" feel earned to you, or does it feel like a productivity-tracker word? Does "worth revisiting" feel like genuine encouragement, or like an euphemism for "you got it wrong"?
+Does "recorded" feel earned to you, or does it feel like a productivity-tracker word? Does "needs repair" feel like useful guidance, or like an euphemism for "you got it wrong"?
 
 ## DECISION 5: The brand voice
 

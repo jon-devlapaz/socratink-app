@@ -153,10 +153,10 @@
    3. NODE / CRYSTAL STATE COLORS
    =========================================================== */
 :root {
-  /* Learner-facing graph node states */
+  /* Learner-facing graph node state colors */
   --node-locked:        var(--mauve-200);
   --node-primed:        var(--lavender-500);     /* cold attempt done */
-  --node-drilled:       #d8a867;                 /* warm amber — worth revisiting */
+  --node-drilled:       #d8a867;                 /* legacy token backing needs-repair amber */
   --node-solidified:    var(--success);          /* earned, verified */
 
   /* Crystal polygon fills — authoritative (mirrors variables.css) */
@@ -180,7 +180,7 @@
   --crystal-growing-specular:    rgba(var(--cream-50-rgb),     0.96);
   --crystal-growing-glow:        rgba(var(--lavender-500-rgb), 0.34);
 
-  /* fractured = non-solid re-drill (worth revisiting, never shamed) */
+  /* fractured = needs-repair visual, never shamed */
   --crystal-fractured-top:         #b77b90;
   --crystal-fractured-upper-left:  #a06279;
   --crystal-fractured-upper-right: #794865;
