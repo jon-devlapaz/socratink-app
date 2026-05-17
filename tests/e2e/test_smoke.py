@@ -1119,10 +1119,10 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     )
 
 
-def test_localhost_concept_page_corrupt_training_storage_keeps_attempt_retryable(
+def test_localhost_concept_page_corrupt_training_storage_recovers_and_records_attempt(
     page: Page, base_url: str
 ) -> None:
-    """Corrupt local training storage should not strand the attempt button disabled."""
+    """Corrupt local training storage should recover into a valid attempt record."""
     drill_calls: list[dict] = []
 
     def fulfill_drill(route):
@@ -1200,20 +1200,25 @@ def test_localhost_concept_page_corrupt_training_storage_keeps_attempt_retryable
     )
     save_button = page.locator(".concept-page-b2__attempt-save")
     save_button.click()
-    expect(page.locator("[data-attempt-error]")).to_have_text(
-        "The system could not record this yet. Try again."
-    )
-    expect(save_button).to_be_enabled()
-    assert drill_calls == []
-
-    page.evaluate(
-        """localStorage.removeItem('socratink:training:v1:qa-corrupt-training-concept')"""
-    )
-    save_button.click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "study required entry 1 of 1"
     )
     assert len(drill_calls) == 1
+    assert drill_calls[0]["node_id"] == "corrupt-node"
+    assert drill_calls[0]["drill_mode"] == "cold_attempt"
+    assert drill_calls[0]["messages"][-1]["content"] == (
+        "The mechanism opens first, then the downstream flow follows."
+    )
+
+    stored = page.evaluate(
+        """() => JSON.parse(localStorage.getItem('socratink:training:v1:qa-corrupt-training-concept'))"""
+    )
+    attempt = stored["node_records"]["corrupt-node"]["attempts"][0]
+    assert attempt["kind"] == "cold"
+    assert attempt["classification"] == "strong"
+    assert attempt["user_text"] == (
+        "The mechanism opens first, then the downstream flow follows."
+    )
 
 
 def test_localhost_inline_scaffold_response_keeps_attempt_retryable(

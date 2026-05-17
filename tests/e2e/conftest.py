@@ -71,6 +71,11 @@ CONSOLE_ERROR_ALLOW_LIST: tuple[re.Pattern[str], ...] = ()
 # "Failed to load resource" error are expected outside Vercel.
 EXPECTED_404_PATHS: tuple[str, ...] = ("/_vercel/speed-insights/script.js",)
 
+# Chromium reports in-flight bootstrap requests as requestfailed when a smoke
+# test deliberately navigates/reloads during guest setup. Keep this narrow:
+# actual HTTP failures still fail, and aborted app assets still fail.
+EXPECTED_ABORTED_BOOTSTRAP_PATHS: tuple[str, ...] = ("/api/health", "/api/me")
+
 
 @pytest.fixture(scope="session")
 def base_url() -> str:
@@ -134,6 +139,11 @@ def captured(context: BrowserContext, same_origin) -> Iterator[dict[str, list]]:
             return
         path = urlparse(request.url).path
         if path in EXPECTED_404_PATHS:
+            return
+        if (
+            path in EXPECTED_ABORTED_BOOTSTRAP_PATHS
+            and "ERR_ABORTED" in str(request.failure)
+        ):
             return
         failed_requests.append(request)
 
