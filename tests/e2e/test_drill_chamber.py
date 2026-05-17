@@ -5,15 +5,8 @@ What this covers
 - Chamber view exists in the DOM and is hidden by default after load
 - Starting a drill opens the chamber and hides the map
 - Exiting the chamber (via the exit link) restores the map
-
-Known limitation
-----------------
-These tests target localhost:8000 which serves the main-branch code at the
-time of writing. The drill-chamber-view markup and DrillChamber JS module
-are only present on the feat/drill-chamber-port branch. Until that branch
-is deployed or merged, the chamber-specific assertions will fail against the
-live server. The tests are committed now so they run green once the branch
-lands in production.
+- Completed cold attempts persist training evidence and update Library copy
+- Unrecordable drill results leave graph state unchanged
 
 Run
 ---

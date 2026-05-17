@@ -83,7 +83,7 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
 
 def _seed_concept_with_backbone(page: Page, name: str = "Photosynthesis") -> None:
     """Seed a concept with backbone entries so the nearby list renders.
-    The first entry is primed so the CTA is enabled (for test_b2_cta_opens_chamber).
+    The first entry is primed so the inline attempt CTA is enabled.
     Seeding happens BEFORE navigation so it is picked up on page load."""
     page.evaluate(
         f"""(() => {{

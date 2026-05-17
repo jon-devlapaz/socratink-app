@@ -5,9 +5,14 @@ What this catches
 - Backend is up and the FastAPI app booted (`/api/health` shape valid)
 - Frontend renders without a blank-page regression (critical DOM IDs present)
 - Anonymous Supabase sessions are labeled as guest, not signed-in users
+- First-run guidance stays inline instead of regressing to a modal
+- Library cards render training evidence instead of AI summary copy
+- Inline concept-page attempts persist, retry, and preserve active-entry state
+- Study reveal and repair records survive localStorage reload/reconstruction
 - Drawer toggle stays visible after opening a library concept
 - Library cards reopen the concept-map view (not a stale shell) on second click
 - Deleting the active concept confirms via dialog and resets to the desk
+- Desk tile states expose the expected learner-facing labels
 - No same-origin console errors during first paint
 - No same-origin asset request failures during first paint
 - The inline theme-preloader IIFE is resilient to a blank localStorage
@@ -18,8 +23,9 @@ What this deliberately does NOT cover
   fixture in conftest.py with stored storageState). The guest-session tests
   here exercise some in-app behavior, but real signed-in flows still need a
   separate suite.
-- Full critical-flow exercise (`selectTile`, `runHeroAction`, `toggleTheme`)
-  — only library reopen and active-concept delete are partially covered here.
+- Full critical-flow exercise (`selectTile`, `runHeroAction`, `toggleTheme`);
+  smoke coverage is still targeted around shell, Library, desk, and inline
+  concept-page regressions.
 - Visual regression (screenshots are only saved on failure for debugging)
 - Performance / lighthouse metrics
 

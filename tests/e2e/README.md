@@ -45,9 +45,10 @@ Key checks include:
 
 ### `test_drill_chamber.py` — 5 tests
 
-Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`):
-hidden on initial load, opens and hides the map when entered, and exit
-restores the map.
+Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`) and
+training-evidence persistence: hidden on initial load, opens and hides the map
+when entered, exit restores the map, completed cold attempts update Library
+training copy, and unrecordable drill results do not mutate graph state.
 
 ### `test_concept_page_b2.py` — 3 tests
 
@@ -155,7 +156,7 @@ tests/e2e/test_drill_chamber.py::test_drill_chamber_view_hidden_on_load PASSED
 tests/e2e/test_drill_chamber.py::test_drill_chamber_opens_and_hides_map PASSED
 tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
-tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_chamber PASSED
+tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_inline_attempt PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
 tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
