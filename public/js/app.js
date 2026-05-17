@@ -35,7 +35,7 @@ import {
   persistPhaseBSessionState as persistStoredPhaseBSessionState,
 } from './phase-b-session.js';
 import { buildLibraryHtml } from './library-view.js';
-import { createTrainingStore } from './training-store.js';
+import { createTrainingStore, TRAINING_SCHEMA_VERSION } from './training-store.js';
 import {
   buildContentInputUI,
   hasStudyEvidence,
@@ -150,6 +150,16 @@ const App = (() => {
       gaps: buildTrainingGapsFromDrillResult(result),
       grader_version: result?.prompt_version || result?.grader_version || 'drill-system-v1',
     });
+  }
+
+  function inlineAttemptNudgeFromDrillResult(result) {
+    const isScaffold = result?.routing === 'SCAFFOLD' || result?.answer_mode === 'help_request';
+    if (!isScaffold) return null;
+    return (
+      result?.agent_response?.trim?.()
+      || result?.gap_description?.trim?.()
+      || 'Make one concrete guess before study appears.'
+    );
   }
 
   function isLocalDevHost() {
@@ -1097,10 +1107,10 @@ const App = (() => {
       startingMapContext,
       graphData: JSON.stringify(jsonPayload)
     };
+    /* c8 ignore start -- source-attached creation requires the live extraction path; the store contract is covered directly. */
     contentStore.set(id, sourceText);
     concepts.push(concept);
     saveConcepts(concepts);
-    /* c8 ignore start -- source-attached creation requires the live extraction path; the store contract is covered directly. */
     void initializeConceptTraining({
       conceptId: id,
       provenance: {
@@ -1796,6 +1806,8 @@ const App = (() => {
       ) {
         const training = {
           ...(loadedTraining || {}),
+          concept_id: concept.id,
+          schema_version: TRAINING_SCHEMA_VERSION,
           node_records: {
             ...(loadedTraining?.node_records || {}),
             [entryId]: {
@@ -1806,6 +1818,7 @@ const App = (() => {
             },
           },
         };
+        await trainingStore.saveTraining(training);
         renderActiveEntryWorkColumn(entryId, concept, graphData, training);
         return;
       }
@@ -1888,7 +1901,19 @@ const App = (() => {
         result,
         at,
       });
-      if (!training) throw new Error('attempt-not-recorded');
+      if (!training) {
+        const nudge = inlineAttemptNudgeFromDrillResult(result);
+        if (nudge) {
+          button.disabled = false;
+          if (errorEl) {
+            errorEl.textContent = nudge;
+            errorEl.hidden = false;
+          }
+          input?.focus?.();
+          return;
+        }
+        throw new Error('attempt-not-recorded');
+      }
       if (getActiveId() !== concept.id) return;
       const legacyGraphPatchedConcept = drillMode === 're_drill' && !attempts.length
         ? patchActiveConceptDrillOutcome({ ...result, node_id: result?.node_id || entryId }, drillMode)

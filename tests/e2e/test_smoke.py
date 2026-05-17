@@ -357,6 +357,12 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         is not None
     )
     page.locator("[data-edit-threshold]").click()
+    page.locator(".concept-page-b2__threshold-input").fill("Temporary learner sketch.")
+    page.keyboard.press("Escape")
+    expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
+        "Learner rough sketch baseline."
+    )
+    page.locator("[data-edit-threshold]").click()
     page.locator(".concept-page-b2__threshold-input").fill("Updated learner sketch.")
     page.locator(".concept-page-b2__threshold-save").click()
     expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
@@ -371,6 +377,42 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page: Page, base_url: str
 ) -> None:
     """Legacy primed/study nodes keep study before another reconstruction."""
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Repair the missing legacy link.",
+                    "generative_commitment": False,
+                    "answer_mode": "attempt",
+                    "score_eligible": True,
+                    "help_request_reason": "none",
+                    "classification": "shallow",
+                    "gap_description": "Names the fact but misses the causal link.",
+                    "routing": "NEXT",
+                    "response_tier": 2,
+                    "response_band": "link",
+                    "tier_reason": "The answer needs the causal link.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 2,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-legacy-study-redrill",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
     page.evaluate(
@@ -419,11 +461,31 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reconstruct from memory"
     )
+    revealed_training = page.evaluate(
+        """() => JSON.parse(localStorage.getItem('socratink:training:v1:legacy-study-concept'))"""
+    )
+    assert revealed_training["node_records"]["legacy-node"]["attempts"] == []
     assert (
-        page.evaluate(
-            """localStorage.getItem('socratink:training:v1:legacy-study-concept')"""
-        )
-        is None
+        revealed_training["node_records"]["legacy-node"]["study_revealed_at"]
+        is not None
+    )
+
+    page.locator(".concept-page-b2__entry-cta").click()
+    page.locator(".concept-page-b2__attempt-input").fill(
+        "The legacy fact happens, but I am missing why."
+    )
+    page.locator(".concept-page-b2__attempt-save").click()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "repair the gap entry 1 of 1"
+    )
+    assert len(drill_calls) == 1
+    assert drill_calls[0]["drill_mode"] == "re_drill"
+    stored = page.evaluate(
+        """() => JSON.parse(localStorage.getItem('socratink:training:v1:legacy-study-concept'))"""
+    )
+    assert (
+        stored["node_records"]["legacy-node"]["attempts"][0]["user_text"]
+        == "The legacy fact happens, but I am missing why."
     )
 
 
@@ -511,9 +573,33 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
         drill_calls.append(payload)
         if len(drill_calls) == 1:
             route.fulfill(
-                status=500,
+                status=200,
                 content_type="application/json",
-                body=json.dumps({"detail": "forced inline attempt failure"}),
+                body=json.dumps(
+                    {
+                        "agent_response": "Malformed grader response.",
+                        "generative_commitment": True,
+                        "answer_mode": "attempt",
+                        "score_eligible": True,
+                        "help_request_reason": "none",
+                        "classification": None,
+                        "gap_description": None,
+                        "routing": "NEXT",
+                        "response_tier": None,
+                        "response_band": None,
+                        "tier_reason": None,
+                        "node_id": payload["node_id"],
+                        "probe_count": 0,
+                        "nodes_drilled": 1,
+                        "attempt_turn_count": 1,
+                        "help_turn_count": 0,
+                        "graph_mutated": False,
+                        "ux_reward_emitted": False,
+                        "session_terminated": False,
+                        "termination_reason": None,
+                        "prompt_version": "qa-inline-malformed",
+                    }
+                ),
             )
             return
         route.fulfill(
@@ -956,6 +1042,98 @@ def test_localhost_concept_page_corrupt_training_storage_keeps_attempt_retryable
         "study required entry 1 of 1"
     )
     assert len(drill_calls) == 1
+
+
+def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
+    page: Page, base_url: str
+) -> None:
+    """Valid scaffold/help responses are nudges, not storage failures."""
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Make one concrete guess about the mechanism before reading.",
+                    "generative_commitment": False,
+                    "answer_mode": "help_request",
+                    "score_eligible": False,
+                    "help_request_reason": "explicit_unknown",
+                    "classification": None,
+                    "gap_description": "Learner produced zero schema; nudge to guess.",
+                    "routing": "SCAFFOLD",
+                    "response_tier": None,
+                    "response_band": None,
+                    "tier_reason": None,
+                    "node_id": payload["node_id"],
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 0,
+                    "help_turn_count": 1,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-inline-scaffold",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    source_title: 'Inline Scaffold QA source',
+                    starting_map_context: 'Learner rough sketch.',
+                    map_maturity: 'provisional',
+                },
+                backbone: [{
+                    id: 'scaffold-node',
+                    label: 'Scaffold target',
+                    purpose: 'Explain the mechanism.',
+                    study_note: 'The target mechanism opens before downstream flow.',
+                    drill_status: null,
+                }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-inline-scaffold-concept',
+                name: 'Inline Scaffold QA',
+                createdAt: Date.now(),
+                state: 'growing',
+                contentPreview: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+                contentType: null,
+                startingMapContext: 'Learner rough sketch.',
+                graphData,
+            }]));
+        })()"""
+    )
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Inline Scaffold QA").click()
+    page.locator(".concept-page-b2__entry-cta").click()
+    page.locator(".concept-page-b2__attempt-input").fill("I do not know.")
+    save_button = page.locator(".concept-page-b2__attempt-save")
+    save_button.click()
+
+    expect(page.locator("[data-attempt-error]")).to_have_text(
+        "Make one concrete guess about the mechanism before reading."
+    )
+    expect(save_button).to_be_enabled()
+    assert len(drill_calls) == 1
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:qa-inline-scaffold-concept')"""
+        )
+        is None
+    )
 
 
 def test_drawer_toggle_remains_visible_in_concept_view(
