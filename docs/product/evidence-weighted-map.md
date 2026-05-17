@@ -109,7 +109,7 @@ Two different state clocks run in this product. Keep them in different columns.
 | Driven by training records and spacing checks | Driven by the quality of the learner's own retrieval |
 | Persistable, machine-checkable | Interpretive; only partially observable |
 
-The persisted node states are the machine-readable projection of the capability evidence the system has seen. They are the best available estimate of what the learner can reconstruct — never a claim about the learner's mind.
+The derived node states are the machine-readable projection of the capability evidence the system has seen. They are computed from training records at render time, not persisted as graph truth, and they are the best available estimate of what the learner can reconstruct — never a claim about the learner's mind.
 
 Specifically:
 

@@ -90,7 +90,12 @@
 - "Actualized", "hibernating", `locked`, and `drilled` are legacy concept-shell or prior drill terms. The live training-state language is **`null`**, **`primed`**, **`needs repair`**, and **`solidified`**.
 - "Diagnostic" implies Socratink knows the learner's mind. Prefer **Routing hint** or **Starting-map anchor**.
 
-## Drift report 2026-05-12
+## Historical drift report 2026-05-12
+
+This snapshot predates the 2026-05-15 training-record implementation and is kept
+only as historical evidence. Do not treat these match counts as current code
+truth; the live training-state vocabulary now appears in the JavaScript training
+store and derivation modules.
 
 - Evidence-weighted map — 0 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.
 - Draft map — 2 verbatim `.py`/`.js` matches; documentation-only or sparse code usage.

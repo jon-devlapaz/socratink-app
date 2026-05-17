@@ -72,7 +72,7 @@ Each state is a render-time derivation from `socratink:training:v1:<conceptId>`.
 - downstream unlock checks may re-evaluate
 - evidence event, not a mastery claim about the learner
 
-These states are projected from persisted knowledge-map data, not invented separately by the rendering surface (after the strip-as-nav port, that surface is the strip + concept page in `public/js/app.js` styled by `public/css/concept-page.css`).
+These states are derived from browser-local training records, not invented separately by the rendering surface. The knowledge map remains the provisional structure and legacy compatibility surface until every view is rebound to the training derivation.
 
 ### State Transitions
 
@@ -153,14 +153,14 @@ Persistence on completion:
 
 ### Phase 2: Targeted Study
 
-Trigger: cold attempt completes. The study view opens automatically for the attempted node.
+Trigger: cold attempt completes. The concept page offers `Reveal study note` for the attempted node; study is recorded only after that explicit reveal.
 
 Frontend behavior:
 
-- the study view shows the mechanism text for this specific node
+- the study view shows the mechanism text for this specific node after the learner reveals it
 - the study view is anchored to the learner's cold attempt: where possible, highlight where the attempt diverged from the mechanism
 - the study view must not show mechanism text for other unattempted nodes
-- a 2-3 second transition beat before the study view appears (ADHD micro-delay accommodation)
+- future treatment may add a 2-3 second transition beat before the study view appears; the shipped inline flow uses an explicit reveal CTA
 
 Persistence on completion:
 
@@ -169,14 +169,14 @@ Persistence on completion:
 
 ### Phase 3: Spaced Re-Drill
 
-Trigger: learner selects a `primed` node whose spacing interval has passed, OR who has completed sufficient interleaved work on other nodes.
+Trigger: learner selects a `primed` node whose spacing interval has passed.
 
 Spacing validation:
 
-- preferred: elapsed time after study reveal, with cognitively demanding interpolated activity in between
-- minimum acceptable: 5 minutes of elapsed time with interpolated activity
-- the frontend should not offer re-drill on a node whose spacing requirement has not been met
-- interleaving cold attempts and study on other nodes is the primary spacing mechanism — the system should recommend the next cold attempt or study before offering a re-drill if spacing is insufficient
+- current runtime: fixed 18-hour elapsed interval after the latest strong attempt, with no interleaved-work check
+- future scheduler intent: elapsed time after study reveal, with cognitively demanding interpolated activity in between
+- the frontend should not offer a solidifying spaced attempt on a node whose current spacing requirement has not been met
+- interleaving cold attempts and study on other nodes remains product intent for the future scheduler; it is not enforced by the shipped derivation
 
 Backend behavior:
 

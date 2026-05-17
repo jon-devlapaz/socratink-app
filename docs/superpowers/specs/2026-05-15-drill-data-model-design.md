@@ -131,9 +131,10 @@ to one of them.
   reconstruction is learner-authored; repair artifacts render stored evidence
   plus grader metadata; no surface may present an AI tutor exchange, AI polish,
   or AI confidence as proof that learning happened.
-- **Sketch as historical record.** The sketch is the user's pre-AI thinking,
-  frozen at the moment the first chamber opens. Iterative learning lives in
-  the repair surface, not in sketch revisions.
+- **Sketch as current-model record.** The sketch is the user's expressed
+  pre-study model. The shipped browser store preserves the latest sketch edit
+  with a timestamp; iterative learning evidence still lives in attempts,
+  study reveal, and repair records, not in sketch revisions.
 - **No fabricated evidence.** When migrating legacy data, we keep what we have
   (sketches, source graphs) and reset what we cannot honestly synthesize
   (attempt history). The system never invents evidence to keep continuity.
@@ -220,27 +221,30 @@ grader-context reference — but loses all rendering rights per §4.
 
 ## §2 — State derivation
 
-Pedagogical state is **always a pure function over events filtered by `node_id`**,
-evaluated at render time (with per-entry memoization on event append). State is
-never persisted.
+Pedagogical state is **always a pure function over training evidence filtered by
+`node_id`**, evaluated at render time. State is never persisted. In the shipped
+browser store, the derivation folds `node_records[node_id].attempts` and reads
+`study_revealed_at` for next-action routing. In the future event-log target, the
+same derivation folds the equivalent `chamber_closed` and `study_revealed`
+events.
 
-### Per-entry derivation — a strict left-fold over `chamber_closed` events
+### Per-entry derivation — a strict left-fold over attempts
 
 ```ts
 type StateRecord = {
   state:           null | 'primed' | 'needs repair' | 'solidified'
-  failure_streak:  number                  // consecutive non-strong closes
-  prior_close:     ChamberClosedEvent | null
+  failure_streak:  number                  // consecutive non-strong attempts
+  prior_attempt:   Attempt | null
 }
 
-initial = { state: null, failure_streak: 0, prior_close: null }
+initial = { state: null, failure_streak: 0, prior_attempt: null }
 
-fold(rec, close):
-  let next_state = match close.classification:
+fold(rec, attempt):
+  let next_state = match attempt.classification:
     | 'strong':
-        if rec.prior_close == null                                       → 'primed'
-        else if rec.prior_close.classification == 'strong'
-                AND spacing_ok(rec.prior_close, close)                    → 'solidified'
+        if rec.prior_attempt == null                                     → 'primed'
+        else if rec.prior_attempt.classification == 'strong'
+                AND spacing_ok(rec.prior_attempt, attempt)                → 'solidified'
         else                                                              → 'primed'
 
     | 'partial':                                                          → 'primed'
@@ -250,7 +254,7 @@ fold(rec, close):
         else if rec.state == null          → 'needs repair'   // no grace on first-ever
         else                                → 'primed'         // single-lapse grace
 
-  let next_streak = match close.classification:
+  let next_streak = match attempt.classification:
     | 'strong'                → 0                       // resets
     | 'partial'               → rec.failure_streak      // preserves (closes the partial pump)
     | _                       → rec.failure_streak + 1  // increments
@@ -258,10 +262,10 @@ fold(rec, close):
   return {
     state:          next_state,
     failure_streak: next_streak,
-    prior_close:    close
+    prior_attempt:  attempt
   }
 
-state(entry) = (fold over chamber_closed events for this node_id).state
+state(entry) = (fold over attempts for this node_id).state
 
 spacing_ok(prior, current) = (current.at - prior.at) >= 18 hours
 // 18h is a wall-clock placeholder. Module 4's scheduler will replace this with
@@ -297,10 +301,10 @@ repair") so progress is visible alongside the gap.
 
 | Concern | Resolution |
 |---|---|
-| Three parallel state machines | One source (events), one derivation. Drift impossible. |
+| Three parallel state machines | One source (training record now, event log target later), one derivation. Drift impossible after surfaces bind to it. |
 | "Locked" lying about agency | Replaced with `null`; UI renders no badge. |
 | Solidified earned without spacing | Requires `strong → 18h+ → strong`. |
-| Solidified earned via lucky cold attempt | First chamber close maxes at `primed`. |
+| Solidified earned via lucky cold attempt | First attempt maxes at `primed`. |
 | Partial pump (alternating thin/partial parks at primed forever) | `partial` preserves `failure_streak` rather than resetting. |
 | Stumble-to-solidify (partial prior + strong current) | Solidification requires a `strong` prior, not `partial`. |
 | Single-lapse on primed crashes to needs_repair | Symmetric grace: one non-strong from `primed` or `solidified` lands on `primed`. Two-in-a-row drops to `needs repair`. |
@@ -312,10 +316,9 @@ repair") so progress is visible alongside the gap.
 ### Pedagogical-soundness check
 
 - **No claim of mastery without evidence.** `state ≠ null` requires at least one
-  `chamber_closed` event for that node_id. Reading study material does not
-  move state.
-- **Solidified is unreachable on a single chamber close.** Durability proof
-  requires two strong closes 18h+ apart.
+  recorded attempt for that node_id. Reading study material does not move state.
+- **Solidified is unreachable on a single attempt.** Durability proof
+  requires two strong attempts 18h+ apart.
 - **No "AI tutor" praise on thin answers.** §3's `chamber_closed` payload
   forbids the register by field shape (gaps are structured, not prose).
 - **No streaks, no XP, no improvement badges.** Trajectory and failure_streak
@@ -353,11 +356,14 @@ payload: {
 ```
 
 - `node_id`: MUST be `null`
-- Trigger: user edits sketch from the post-extract view, BEFORE any `chamber_opened` event
-- Invariant: **rejected (no-op, returns error) if any `chamber_opened` event exists
-  in the concept's log.** Sketch is frozen at first chamber open per the
-  evidence-truth principle: the cold attempt is the user's pre-AI commitment.
-- Cardinality: zero or more, all prior to first chamber_opened
+- Trigger: user edits sketch from the post-extract view
+- Shipped invariant: accepted at any time and stored as the latest
+  `{ text, at }` sketch in `TrainingRecord.sketch`; active entry selection is
+  preserved after save.
+- Future event-log invariant: if product later chooses to freeze sketches at
+  chamber open, that must be a separate product decision and migration, not an
+  assumption about the current runtime.
+- Cardinality: zero or more
 
 ### `chamber_opened`
 
@@ -372,7 +378,8 @@ payload: {
 - Trigger: user clicks the entry CTA to begin a cold attempt
 - Cardinality: one or more per node_id (re-attempts are new chambers)
 - Invariant: must be preceded by `sketch_saved` (concept-level)
-- Side effect: locks the concept's sketch from further `sketch_revised` events
+- Side effect: none in the shipped browser store; future event-log designs that
+  freeze sketches must make that an explicit migration decision
 - A new `chamber_opened` on a node implicitly supersedes any unclosed prior
   session on the same node. Orphaned (in-flight, never closed) sessions are
   ignored by derivation. Module 3 may surface "you have an open chamber" if it
@@ -441,14 +448,15 @@ payload: {
 
 ```ts
 payload: {
-  reveal_source: 'auto' | 'user_action'      // auto = post-chamber; user = manual reveal
+  reveal_source: 'user_action' | 'auto_future'
   content_ref: string                        // pointer to the study material section
 }
 ```
 
 - `node_id`: REQUIRED (study is per-entry, never concept-wide)
-- Trigger: study material rendered for the user after chamber close (auto) or
-  via explicit user action (manual)
+- Trigger: shipped runtime records this only when the learner explicitly reveals
+  the study note after an attempt; `auto_future` is reserved for a later
+  transition-beat implementation
 - Cardinality: one or more per node_id (re-reveals are fine)
 - Invariants:
   - At least one `chamber_closed` must exist for this node_id
@@ -559,15 +567,17 @@ HH:MM" affordance when one is available, or stay silent — its choice.
 Current shipped rollout: the concept page consumes entry training derivation for
 entry state, CTAs, inline reconstruction, study reveal, and repair panels. The
 Library card body asynchronously consumes learner attempts for reconstruction
-copy. Map badges, Desk tiles, Sidebar concept markers, and Library card badges
-still render legacy `concept.state` until the full target binding below lands.
+copy, choosing the best attempt across all node records by classification rank
+and then recency. Map badges, Desk tiles, Sidebar concept markers, and Library
+card badges still render legacy `concept.state` until the full target binding
+below lands.
 
 | Surface | Binds to | Notes |
 |---|---|---|
 | Map concept tile | `ConceptStatus.badge` | One vocabulary across all views. |
 | Map entry chip | `EntryRender.state` (silent for null) | Replaces redundant counters like `entry 1 · ready for first attempt, current`. |
 | Map primary CTA | `EntryRender.next_action` | Fixes the State 5 "Let's move on" and State 11 dead-click bugs. |
-| Library card body | `EntryRender.strongest_turn_text` of the primary entry | When `null`, show empty-state copy. MUST NOT fall back to `core_thesis`. |
+| Library card body | Current: best learner attempt across all node records; target: `EntryRender.strongest_turn_text` of the primary entry | When `null`, show empty-state copy. MUST NOT fall back to `core_thesis`. |
 | Library card badge | `ConceptStatus.badge` | Same string as Map. |
 | Library card composition | `ConceptStatus.composition` | "9 of 10 solidified · 1 needs repair" — pairs with badge for honest progress + honest gap. |
 | Desk tile | `ConceptStatus.badge` (silent for null) | Untested concepts render no badge. |
@@ -817,15 +827,16 @@ Substantive deltas from the prior contract:
 
 - **Transition conditions:** prior contract restricted `drilled` to
   post-spaced-re-drill non-solid outcomes. This spec allows `needs repair` on
-  the first chamber close if classification is `wrong_direction` (no grace
+  the first attempt if classification is `wrong_direction` (no grace
   from null state). The prior rule's effect was that a `wrong_direction`
   first attempt would land in `primed` — which lied about the user's actual
   position. The new rule is honest from the first close.
 
 - **State as derived, not stored:** the prior contract described state as a
   property that gets mutated by transition rules. This spec defines state as
-  a pure function over events. There are no transitions to authorize; there
-  is only the fold and what it derives.
+  a pure function over the shipped training record and the future event log.
+  There are no transitions to authorize; there is only the fold and what it
+  derives.
 
 Implementation note: `docs/drill/contract.md` now points at this design doc as
 the binding canon and carries only a short compatibility summary.

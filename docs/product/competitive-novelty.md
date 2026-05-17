@@ -135,9 +135,11 @@ and silently weakens every downstream claim the graph makes.
 
 ### 4. In-session buffer-flush requirement
 
-**Mechanism**: A re-drill is only valid after 10–15 min (5 min minimum) of
-*interleaved work on other nodes*. Time alone doesn't qualify. (See `spec.md`
-§2 Phase 3 "Buffer Flush" and §5 Traversal "Interleaving Recommendation".)
+**Mechanism**: Current runtime uses an 18-hour elapsed interval before a strong
+attempt can count as spaced reconstruction evidence. The intended mechanism is a
+shorter in-session buffer flush after *interleaved work on other nodes*; that is
+future scheduler behavior, not the shipped derivation. (See `spec.md` §2 Phase 3
+"Buffer Flush" and §5 Traversal "Interleaving Recommendation".)
 
 **Closest analog**: None. Standard SRS — Anki, FSRS, RemNote, Quizlet — uses
 calendar spacing with no in-session interleaving requirement. The cognitive

@@ -48,7 +48,7 @@ Every drillable node on the graph must move through these three phases. No phase
 
 ### Phase 3: Spaced Re-Drill (Proof Event)
 - **Goal**: Record evidence of long-term retrieval after the working memory buffer is cleared.
-- **Buffer Flush**: 10-15 minutes of interleaved work on other nodes. Minimum 5 minutes.
+- **Buffer Flush**: Current runtime uses an 18-hour elapsed interval before a strong attempt can count as spaced evidence. The 10-15 minute interleaved-work buffer remains product intent for the future scheduler, not the shipped derivation.
 - **Contract**: Demands multi-step causal reconstruction. Rubric: (a) initiating condition, (b) causal transition, (c) resulting state.
 - **Outcome**: spaced strong reconstruction can derive `solidified`. Non-solid evidence stays `primed` for a single lapse or derives `needs repair` when gaps persist.
 - **Evidence semantics**: `solidified` is the record of at least one solid spaced reconstruction. It is not a claim about the learner's mind or permanent ability.
