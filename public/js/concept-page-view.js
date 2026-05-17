@@ -270,6 +270,10 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
     ? derived.gaps
     : [{ mechanism: 'missing link', correction: 'Write the part that was missing from your first attempt.' }];
   const entryId = activeEntryId || activeEntry.id || 'core-thesis';
+  const repairs = Array.isArray(derived.record?.repairs) ? derived.record.repairs : [];
+  const nextAttemptButton = repairs.length
+    ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}">Try from memory again</button>`
+    : '';
   return `
     <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
       <span class="eyebrow concept-page-b2__repair-eyebrow">repair</span>
@@ -292,6 +296,7 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
       ></textarea>
       <p class="concept-page-b2__repair-error" data-repair-error hidden>Write the missing link before saving.</p>
       <button class="concept-page-b2__repair-save" type="button" data-repair-entry-id="${escHtml(entryId)}">Save repair</button>
+      ${nextAttemptButton}
     </section>
   `;
 }
@@ -327,7 +332,10 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     !isBlocked
     && options?.attemptEntryId === activeEntryId
     && derived.next_action !== 'study'
-    && derived.next_action !== 'repair'
+    && (
+      derived.next_action !== 'repair'
+      || (Array.isArray(derived.record?.repairs) && derived.record.repairs.length > 0)
+    )
     && derived.next_action !== 'review'
   );
 
@@ -358,7 +366,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
   const evidenceArtifactHtml = !isAttempting ? renderEvidenceArtifactHtml(derived) : '';
-  const repairPanelHtml = renderRepairPanelHtml(activeEntry, derived, activeEntryId);
+  const repairPanelHtml = isAttempting ? '' : renderRepairPanelHtml(activeEntry, derived, activeEntryId);
   const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId) : '';
 
   const thresholdHtml = thresholdText

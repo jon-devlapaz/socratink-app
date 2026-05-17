@@ -595,8 +595,13 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "repair the gap entry 1 of 1"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Try from memory again"
+    )
     expect(page.locator(".concept-page-b2__repair")).to_be_visible()
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(page.locator(".concept-page-b2__repair")).to_have_count(0)
     repaired_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
     )
