@@ -1,6 +1,6 @@
 # Theta State
 
-Last updated: 2026-05-11
+Last updated: 2026-05-17
 
 ## Current Evidence Posture
 
@@ -10,20 +10,20 @@ The live product should be described as a retrieval-centered learning loop, not 
 
 ## Verified Product Loop
 
-Source of truth: Sherlock code audit of `public/js/app.js`, `public/js/drill-chamber.js`, `public/js/store.js`, `main.py`, and `ai_service.py`. (The prior Cytoscape graph view at `public/js/graph-view.js` was removed in the strip-as-nav port; the concept view is now the strip + concept page styled by `public/css/concept-page.css`, and the live drill loop runs in the drill chamber view.)
+Source of truth: code audit of `public/js/app.js`, `public/js/concept-page-view.js`, `public/js/training-store.js`, `public/js/training-derive.js`, `main.py`, and `ai_service.py`. (The prior Cytoscape graph view at `public/js/graph-view.js` was removed in the strip-as-nav port; the concept view is now the strip + concept page styled by `public/css/concept-page.css`, and the live drill loop records learner evidence through the training store.)
 
-- Concept creation stores `graphData`; graph nodes begin mostly locked.
+- Concept creation stores `graphData` as the provisional structure and initializes browser-local training evidence under `socratink:training:v1:<conceptId>`.
 - Learner starts with the core thesis node, which is always the first available target.
-- Cold attempt is open, exploratory, and unscored.
-- Non-attempt or help request returns scaffold; the node stays locked.
-- Substantive cold attempt makes the node `primed` and unlocks targeted study.
-- Targeted study shows mechanism text; re-drill is gated by spacing plus interleaving.
+- Cold attempt is open, exploratory, and learner-facing unscored.
+- Non-attempt or help request returns scaffold and does not append a recordable attempt.
+- Recordable attempts append learner text, private classification, gaps, and grader version to the training record; derived state becomes `primed` or `needs repair`.
+- Targeted study shows mechanism text after an attempt; study reveal is recorded without producing `solidified`.
 - Traversal after `primed` is live behavior and should be understood as an interleaving device, not as mastery.
 - Premature re-drill is blocked until both timer and interleaving conditions are satisfied.
 - Spaced re-drill asks for causal reconstruction.
 - Probe/scaffold during re-drill does not mutate node state; the backend caps probes at 3.
-- Non-solid re-drill sets `drilled`, stores gap metadata, and applies backoff.
-- Solid re-drill sets `solidified` and fires reward.
+- Non-solid evidence stores gaps and can derive `needs repair`.
+- Spaced strong reconstruction derives `solidified` and fires reward.
 - `actualized` / hibernation is legacy or future-facing; it is not a live core loop path.
 
 ## Core Claim Ratings
@@ -53,8 +53,8 @@ Source of truth: Sherlock code audit of `public/js/app.js`, `public/js/drill-cha
 - Traversal after `primed`, before `solidified`, is preferable for spacing and interleaving.
   - Evidence basis: interleaving and spacing literature including Kornell and Bjork 2008, Dunlosky et al. 2013, Vlach and Sandhofer 2012, and Ebersbach et al. 2022. This supports movement to another node; it does not support saying the prerequisite is mastered.
 
-- Non-solid re-drill should lead to gap repair plus delay, not immediate repeated retry loops.
-  - Evidence basis: retrieval failure plus feedback can help, but spacing and repair matter. Code's `drilled` plus backoff direction is consistent with this; the UI must still make the next repair action clear.
+- Non-solid reconstruction evidence should lead to gap repair plus delay, not immediate repeated retry loops.
+  - Evidence basis: retrieval failure plus feedback can help, but spacing and repair matter. Code's `needs repair` derivation and repair surface direction are consistent with this; the UI must still make the next repair action clear.
 
 ### Medium Confidence
 
@@ -83,25 +83,25 @@ Source of truth: Sherlock code audit of `public/js/app.js`, `public/js/drill-cha
 | 1. Concept creation -> graphData | Orientation, relational framing, initial schema activation | Medium | Do not imply learning has occurred when a graph is generated. |
 | 2. Core thesis selected first | Task focus and top-level schema anchoring | Medium | Make the target explicit, but keep it generative. |
 | 3. Cold attempt | Pretesting, generation, prediction error | High | Keep unscored; do not show the answer before the attempt. |
-| 4. Non-attempt -> scaffold | Load reduction and productive struggle support | Medium | Give minimal hints; node stays locked. |
-| 5. Substantive attempt -> primed | Errorful generation followed by readiness for correction | High | `primed` means ready for study, not mastered. |
+| 4. Non-attempt -> scaffold | Load reduction and productive struggle support | Medium | Give minimal hints; no recordable attempt is appended. |
+| 5. Recordable attempt -> primed / needs repair | Errorful generation followed by readiness for correction | High | `primed` and `needs repair` are evidence states, not mastery labels. |
 | 6. Targeted study | Corrective feedback and gap repair | Medium-high | Show the mechanism and, where possible, the attempt-vs-mechanism divergence. |
 | 7. Traversal / interleaving | Interleaving, contextual variability, short-term fluency reduction | Medium-high | Unlock traversal after `primed`, but gate mastery claims on `solidified`. |
 | 8. Spacing block | Distributed practice and retrieval spacing | High for spacing, medium for exact timer | Require elapsed time plus intervening work before re-drill. |
 | 9. Spaced re-drill | Effortful retrieval and causal reconstruction | High | Score mastery only on spaced reconstruction, not exposure. |
 | 10. Probe / scaffold in re-drill | Feedback-guided retrieval support | Medium | Keep probes sparse and gap-specific; avoid answer reveal. |
-| 11. Non-solid -> drilled | Gap tagging, corrective repair, spaced retry | Medium-high | Store gap metadata and backoff; make the repair path visible. |
+| 11. Non-solid -> needs repair | Gap tagging, corrective repair, spaced retry | Medium-high | Store gap evidence and make the repair path visible. |
 | 12. Solid -> solidified | Durable retrieval signal | High | `solidified` is the live mastery state. |
 
 ## Design Decisions From The Audit
 
 - Treat the live core loop as cold attempt -> targeted study -> spaced re-drill.
-- Treat node states as `locked -> primed -> drilled -> solidified`.
+- Treat node states as derived training evidence: `null | primed | needs repair | solidified`.
 - Use `actualized` only as a legacy or future concept until the product has overnight retention evidence and a live implementation path.
 - Resolve the docs conflict on traversal gates this way: traversal can unlock after `primed`; dependency or mastery claims require `solidified`.
 - Add divergence highlighting to study when possible: "your attempt emphasized X; the mechanism turns on Y -> Z." This is a supported design direction, but the exact wording and UI need testing.
 - Keep non-attempt scaffolds small. A good scaffold asks for a next micro-attempt; a bad scaffold reveals the mechanism.
-- After non-solid re-drill, favor repair plus delay over immediate repeated retries. The implementation may set `drill_phase = null`, but the product must not hide the next gap-repair route.
+- After non-solid reconstruction evidence, favor repair plus delay over immediate repeated retries. The implementation derives `needs repair`; the product must not hide the next gap-repair route.
 
 ## Product Language Rules
 

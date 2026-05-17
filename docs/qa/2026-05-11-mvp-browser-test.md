@@ -105,25 +105,26 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 2.5 Active entry block
 
-47. Verify the eyebrow above the H2 reads either "FIRST COLD ATTEMPT · ENTRY 1 OF N" or "RE-DRILL READY ENTRY N OF M" or "LOCKED ENTRY N OF M" depending on state.
+47. Verify the eyebrow above the H2 reads one of the current derived-state phrases, such as "first reconstruction entry 1 of N", "study required entry N of M", "repair the gap entry N of M", "ready to reconstruct again entry N of M", "spaced reconstruction ready entry N of M", or "locked entry N of M".
 48. Verify the H2 (concept entry title) is large (~36px on desktop, ~26px on mobile).
 49. Verify a one-paragraph purpose sits below the H2.
 50. Verify the CTA button text:
-    - Locked entry 0 → "Try from memory" (entry 0 is NEVER blocked)
+    - Ready first entry → "Write what you remember" (entry 0 is NEVER blocked)
     - Locked entry N>0 with locked predecessor → "Locked" (disabled, with `disabled` attribute)
-    - Primed entry → "Re-drill from memory"
-51. Verify the "Try from memory" CTA has an arrow `→` that translates 4px right on hover.
+    - Primed entry before study reveal → "Reveal study note"
+    - Repair-ready entry → "Try from memory again" or "Write it again" after a repair record exists
+51. Verify the CTA hover treatment does not shift surrounding layout.
 
 ### 2.6 Nearby entries list
 
-52. Verify a faint list at the bottom (0.62 opacity) with the eyebrow "NEARBY ENTRIES · ALL LOCKED UNTIL FIRST ATTEMPT".
+52. Verify a faint list at the bottom (0.62 opacity) with the eyebrow "nearby entries  all locked until first reconstruction".
 53. Verify each row: monospace `01`–`0N` numbers + entry title + uppercase status pill on the right.
 
 ## Phase 3 — Drill chamber (the focused dialogue)
 
 ### 3.1 Entering the chamber
 
-54. From the concept page, click "Try from memory" on entry 0.
+54. From the concept page, click "Write what you remember" on entry 0.
 55. Verify the chamber opens full-screen, taking over the viewport. Map view should be hidden (not visible below the chamber).
 56. Verify the body has classes `chamber-open` AND `is-drilling`.
 57. Verify a crumb appears at top: `← Return to map · {concept name} · {entry name}`.

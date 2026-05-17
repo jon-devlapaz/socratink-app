@@ -56,7 +56,7 @@ The launch pad replaces the previous in-form "Starting sketch" textarea. The thr
 
 **2. Provisional Graph.** A draft route, framed as a hypothesis. Legend is constrained to three words: *draft route · ready for first attempt · locked.* No mutation.
 
-**3. First Cold Attempt.** Narrower than the threshold. **Quotes or paraphrases the learner's threshold input** before asking one causal mechanism question inside the first node. Substantive answer → `locked → primed`. Non-substantive → no mutation; ask for a micro-generation. **Analogical fallback** for low-signal learners: a familiar source analogy, learner predicts a causal relation *inside the analogy*, node stays `locked` until something substantive lands. **The learner is never labeled zero-knowledge.**
+**3. First Cold Attempt.** Narrower than the threshold. **Quotes or paraphrases the learner's threshold input** before asking one causal mechanism question inside the first node. A recordable learner answer appends training evidence and derives `primed` or `needs repair`. Non-substantive input writes no attempt and asks for a micro-generation. **Analogical fallback** for low-signal learners: a familiar source analogy, learner predicts a causal relation *inside the analogy*, and no training evidence is recorded until something substantive lands. **The learner is never labeled zero-knowledge.**
 
 **4. Locked Study Silhouette.** Pre-attempt. Title + one-line purpose + locked state + first-attempt CTA. **No explanation, no definitions, no solved diagram.** The absence of content is intentional — peeking at the room before entering would defeat the cold attempt.
 
@@ -84,7 +84,7 @@ The shape of the path is a direct response to three failure modes. Designing aga
 
 The graph's vocabulary is small on purpose. Only these phrases appear as graph-state copy:
 
-- **Allowed:** *suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction.*
+- **Allowed:** *suggested first · ready to reconstruct · primed for study · needs repair · solidified through spaced reconstruction.*
 - **Forbidden:** *you know this · mastered (from graph generation) · completed (from reading) · advanced (from fluent prose).*
 
 ### State change rules — none of these may be violated
@@ -93,13 +93,13 @@ The graph's vocabulary is small on purpose. Only these phrases appear as graph-s
 |---|---|---|
 | Threshold submitted | starting map captured | **none** |
 | Provisional graph generated | suggested first | **none** |
-| Local cold attempt — substantive | unscored attempt acknowledged | `locked → primed` |
+| Local cold attempt — recordable | learner reconstruction acknowledged | training evidence appended; derives `primed` or `needs repair` |
 | Local cold attempt — non-substantive | request for a micro-generation | **none** |
-| Study completed | repair artifact | stays `primed`; re-drill timer set |
+| Study revealed | repair artifact | study reveal recorded; no solidification |
 | Interleaving bridge shown | next-choice set + break | **none** |
 | Repair rep completed | practice history grows | **none** |
-| Spaced re-drill — solid | solid spaced reconstruction recorded | `primed / drilled → solidified` |
-| Spaced re-drill — non-solid | "worth revisiting" | `primed → drilled` (warm, never red) |
+| Spaced re-drill — strong after spacing | solid spaced reconstruction recorded | derives `solidified` |
+| Spaced re-drill — non-solid | "needs repair" | stores gaps; derives `needs repair` when warranted (warm, never red) |
 
 The graph is **the only public profile**. Routing signals, source-dependence scores, causal-depth estimates exist internally — the learner **never sees their own schema label**. No beginner/intermediate/advanced tier, no "your learning style," no curriculum claim.
 
@@ -115,11 +115,11 @@ Cognitive effectiveness of retrieval practice is subject to severe diminishing r
 
 ### Bottleneck recovery paths
 
-If a learner repeatedly lands on `drilled` on a gating node, the product can deadlock. To prevent session abandonment without lowering the mastery bar:
+If a learner repeatedly lands on `needs repair` on a gating node, the product can deadlock. To prevent session abandonment without lowering the mastery bar:
 
 - **Escalating Scaffold**: AI progressively breaks the mechanism into sub-steps across subsequent re-drills (e.g., reconstruct one piece at a time, or provide step 1 and ask for the link to step 2).
 - **Study Revisit**: After a non-solid re-drill, reopen study with an *alternate* explanation or reorganized sequence anchored to their new prediction error.
-- **Branch Escape**: For non-linear maps, allow entering a different branch's cold attempt while the blocked node stays `drilled`.
+- **Branch Escape**: For non-linear maps, allow entering a different branch's cold attempt while the blocked node stays `needs repair`.
 
 ---
 
@@ -146,7 +146,7 @@ If a mechanic relies on loss aversion, FOMO, or mechanisms that only work when t
 
 - **Endowed Progress through truth**: When entering a new cluster, visually illuminate prerequisite nodes that already carry `solidified` records. Frame the new territory as partially completed based on actual prior solid spaced reconstructions.
 - **Anti-compulsion design**: End sessions at a point of engagement by enforcing guardrails. Stop the learner while wanting is still active, and explain the science transparently. *"Evidence recorded. Let spacing do its work while you're away."*
-- **Roguelike dynamics**: The session is a "run." Permadeath means a node stays `drilled` until next time, not failed. Meta-progression is the knowledge graph recording effort. The mastery ceiling never lowers.
+- **Roguelike dynamics**: The session is a "run." Permadeath means a node can stay `needs repair` until next time, not failed. Meta-progression is the knowledge graph recording effort. The mastery ceiling never lowers.
 
 ---
 
@@ -158,7 +158,7 @@ The core motif is a **dual-diamond crystal polygon** with a vertical axis. It is
 - **The product wordmark.**
 - **Each tile on the isometric graph board.**
 
-The crystal's appearance *is* the truthful projection of recorded evidence. It morphs across five states — `locked` (mauve, dim), `primed` (lavender mid-plane, faint glow), `drilled` (warm, returnable), `solidified` (success-green, crisp facets), `fractured` (subdued danger glow, rare). Color choice for `drilled` is deliberate: **warm and return-worthy, never red, never punitive.** Struggle is honored, not hidden.
+The crystal's appearance *is* the truthful projection of recorded evidence. It morphs across the live training states — no-evidence/unavailable (mauve, dim), `primed` (lavender mid-plane, faint glow), `needs repair` (warm, returnable), and `solidified` (success-green, crisp facets), with `fractured` reserved as a rare subdued danger glow. Color choice for `needs repair` is deliberate: **warm and return-worthy, never red, never punitive.** Struggle is honored, not hidden.
 
 The graph board is **always isometric**, **always cream**. Never flat. Never a force-directed node-and-edge diagram. The isometric view enforces the dungeon-map reading and resists being mistaken for a content browser.
 
@@ -174,7 +174,7 @@ The product has no human teacher to manage attributions in real time. The interf
 ### Rules
 - Second person, singular. "You own the content." "You reconstruct from memory."
 - Lowercase `socratink`, always — even sentence-initial.
-- Lowercase state tokens: `primed`, `drilled`, `solidified`, `locked`.
+- Lowercase state tokens: `primed`, `needs repair`, `solidified`; render no badge for no-evidence/null state.
 - Title Case for section headings only.
 - UPPERCASE with wide tracking only on eyebrow kickers — the lone exception.
 - Plain, complete sentences. Periods, not telegraph style.
@@ -193,7 +193,7 @@ The product has no human teacher to manage attributions in real time. The interf
 | How it works | Imperative, low-volume | "Bring your material. Build a map. Record evidence." |
 | Drill prompt | Sparse, gap-identifying | "Explain why node B matters in the system." |
 | `primed` state | Quiet acknowledgment | "You've stepped inside. The real challenge is ahead." |
-| `drilled` state | Honored, not punitive | "Worth revisiting. The next gain is here." |
+| `needs repair` state | Honored, not punitive | "Worth revisiting. The next gain is here." |
 | `solidified` state | Earned, brief | "Solidified. Spaced reconstruction recorded." |
 | Session cap | Warm, scientific | "Evidence recorded. Let spacing do its work while you're away." |
 | Error / non-solid | Strategy, never ability | "The causal link between step 2 and step 3 needs a different angle." |
@@ -216,7 +216,7 @@ Before locking copy that sits inside a frame with other copy — button + footno
 
 Example — caught during the Paper Wave 1 button-rename round (2026-05-09): the candidate label `Commit attempt` for the launch-pad submit button sat directly above the footnote *"Study content stays locked until the cold attempt."* Same word, two referents, three inches apart. The persona caught it instantly: *"the footnote right below this button says the next phase is the cold attempt. If I click 'Commit attempt' here, I'm going to be confused about whether I just did the cold attempt or it's still coming."* Resolution: rename the button to `Save sketch` (names the artifact, not the act), leaving the footnote's `cold attempt` unambiguous.
 
-The fastest test is the persona walkthrough: ask *"what does the reader think `X` refers to in each spot?"* If the two answers differ, rewrite the less-load-bearing string. This rule is sharper than usual for socratink because the ubiquitous language (`cold attempt`, `recorded`, `solidified`, `primed`, `drilled`, `sketch`, `entry`) carries project-binding meaning that everyday-English will overwrite if a clash exists.
+The fastest test is the persona walkthrough: ask *"what does the reader think `X` refers to in each spot?"* If the two answers differ, rewrite the less-load-bearing string. This rule is sharper than usual for socratink because the ubiquitous language (`cold attempt`, `recorded`, `solidified`, `primed`, `needs repair`, `sketch`, `entry`) carries project-binding meaning that everyday-English will overwrite if a clash exists.
 
 ---
 
@@ -317,7 +317,7 @@ The product is defined as much by what it will not do. The following are hard ex
 - **No "diagnostic" framing.** The threshold is a starting map, not an evaluation.
 - **No mastery claims** from graph generation, from reading, or from fluent prose. Only spaced reconstruction can record `solidified`.
 - **No learner-visible schema labels.** The system may infer; the learner never sees a tier.
-- **No punitive surface for struggle.** `drilled` is warm, return-worthy, honored.
+- **No punitive surface for struggle.** `needs repair` is warm, return-worthy, honored.
 - **No hype.** No exclamation marks, no superlatives, no "AI-powered" boilerplate.
 - **No emoji.**
 - **No stock photos, AI portraits, "student in library" hero imagery.**

@@ -2,17 +2,17 @@
 
 ## Agent Summary
 
-> **What this document is**: The implementation-facing product spec for how the graph, drill system, and learner progression work together. This is the document an engineer reads before touching state, routing, persistence, or graph rendering code. It defines the four-state model, valid state transitions, persisted fields, phase tracking, spacing validation, routing rules, progression layers, session guardrails, and the target happy-path flow.
+> **What this document is**: The implementation-facing product spec for how the graph, drill system, and learner progression work together. This is the document an engineer reads before touching state, routing, persistence, or graph rendering code. It now delegates the data-model contract to `docs/superpowers/specs/2026-05-15-drill-data-model-design.md` and summarizes how the live UI derives state from training evidence.
 >
 > **When to read it**: Before changing node state derivation, routing semantics, unlock logic, graph rendering, drill-to-graph persistence, or phase transitions. Before implementing any part of the three-phase loop.
 >
-> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the binding drill contract (read `../drill/contract.md`).
+> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the binding drill data-model canon (read `../superpowers/specs/2026-05-15-drill-data-model-design.md`).
 >
 > **Key implementation constraints an agent must follow**:
-> - Four states: `locked → primed → drilled → solidified`. No other transitions are valid.
-> - `primed` can only result from a cold attempt. `solidified` can only result from a spaced re-drill with `solid` classification.
-> - Spacing validation: the frontend must not offer re-drill before `re_drill_eligible_after` has passed.
-> - Cold attempts are unscored: `classification`, `score_eligible`, `response_tier` must be null/false.
+> - Derived training states: `null | primed | needs repair | solidified`.
+> - `solidified` can only result from spaced strong reconstruction evidence.
+> - Study reveal and repair text are recorded in the training store but do not themselves solidify a node.
+> - Cold attempts stay learner-facing unscored: do not show scores, tiers, or ability labels. Private classification may drive repair/study routing.
 > - Session guardrails: configurable duration cap disabled by default in the current MVP, 4-node cap, 3-retrieval-per-node ceiling.
 > - Backward compatibility: existing nodes without new fields must default gracefully.
 
@@ -30,41 +30,41 @@ For enduring UX principles, read:
 - [/DESIGN.md](../../DESIGN.md)
 - [post-drill-ux-spec.md](post-drill-ux-spec.md)
 
-For the current drill contract, read:
+For the current drill data-model contract, read:
 
-- [contract.md](../drill/contract.md)
+- [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md)
 
 ## Product Model
 
 The graph is a progressively revealed, evidence-weighted map. It records what Socratink has evidence for — not what the learner knows. See [evidence-weighted-map.md](evidence-weighted-map.md) for the binding doctrine.
 
-The learner advances node by node through the three-phase loop: cold attempt, targeted study, spaced re-drill. Each node state is a persisted record of a specific evidence event:
+The learner advances node by node through the three-phase loop: cold attempt, targeted study, spaced re-drill. Each node state is derived from the training evidence record:
 
-- `primed` is recorded on a substantive cold attempt.
-- `drilled` is recorded on a non-solid spaced reconstruction.
-- `solidified` is recorded only on a solid spaced reconstruction.
+- `primed` derives from learner reconstruction evidence that is not yet solidified and not currently in persistent repair.
+- `needs repair` derives from learner reconstruction evidence with named gaps requiring repair.
+- `solidified` derives only from spaced strong reconstruction evidence.
 
 No other path mutates graph truth. Study, Repair Reps, starting-map capture, and confidence ratings must not change node state.
 
 ## State Model
 
-Each state is a persisted record of a specific evidence event. States describe what Socratink has on record for this node — not what the learner knows. See [evidence-weighted-map.md](evidence-weighted-map.md) for the binding doctrine.
+Each state is a render-time derivation from `socratink:training:v1:<conceptId>`. States describe what Socratink has on record for this node — not what the learner knows. See [evidence-weighted-map.md](evidence-weighted-map.md) for the binding doctrine.
 
-### `locked`
+### `null`
 
-- no attempt record for this node
-- prerequisites not yet satisfied
+- no learner reconstruction attempt is recorded for this node
+- UI may render the next available node as "ready to reconstruct" and blocked successors as "locked"
 
 ### `primed`
 
-- a substantive cold attempt is recorded
-- study view is unlocked
-- no mastery is implied; no spaced reconstruction is on record yet
+- learner reconstruction evidence is recorded
+- next action may be study, repair, review, or spaced reconstruction depending on study reveal, classification, and spacing
+- no mastery is implied
 
-### `drilled`
+### `needs repair`
 
-- a non-solid spaced reconstruction is recorded
-- worth revisiting; return-worthy, not punitive
+- current evidence contains named gaps that need repair
+- return-worthy, not punitive
 
 ### `solidified`
 
@@ -76,55 +76,53 @@ These states are projected from persisted knowledge-map data, not invented separ
 
 ### State Transitions
 
-The only valid transitions are:
+The valid derivation rules are:
 
-- `locked` → `primed` (cold attempt completed)
-- `primed` → `drilled` (spaced re-drill attempted, non-solid classification)
-- `primed` → `solidified` (spaced re-drill attempted, solid classification)
-- `drilled` → `solidified` (subsequent re-drill, solid classification)
+- no attempts → `null`
+- strong or partial attempt → `primed`
+- thin or wrong-direction first attempt → `needs repair`
+- a single non-strong lapse after prior evidence → `primed`
+- repeated non-strong evidence → `needs repair`
+- strong attempt followed by another strong attempt after spacing → `solidified`
 
-Invalid transitions that must never occur:
+Invalid claims that must never occur:
 
-- `locked` → `drilled` (skipping the cold attempt)
-- `locked` → `solidified` (skipping both cold attempt and spaced re-drill)
-- `primed` → `solidified` without spacing (buffer-echo mastery)
-- `solidified` → `drilled` (mastery regression without re-drill evidence)
+- `solidified` without spaced strong reconstruction evidence
+- study, reading, graph generation, sketch capture, or Repair Reps producing `solidified`
+- Library rendering AI-generated `core_thesis` as learner reconstruction
 
 ## Source Of Truth
 
-The knowledge map is the system of record.
+The provisional graph is the structure hypothesis. The training store is the
+evidence system of record.
 
-Drill outcomes are written into `concept.graphData`.
-The graph is then derived from that data.
+Drill outcomes are written into browser-local training records keyed as
+`socratink:training:v1:<conceptId>`. The concept page, Library, Desk, and graph
+state are derived from those records.
 
 ### Persisted Drill Fields
 
-For subnodes:
+For training records:
 
-- `drill_status` (locked | primed | drilled | solidified)
-- `drill_phase` (cold_attempt | study | re_drill)
-- `gap_type`
-- `gap_description`
-- `last_drilled`
-- `cold_attempt_at` (timestamp of first cold attempt)
-- `study_completed_at` (timestamp of targeted study completion)
-- `re_drill_eligible_after` (earliest timestamp for valid spaced re-drill)
-
-For backbone and core-thesis behavior:
-
-- metadata is still used in parts of the current implementation
+- concept provenance: `source_mode`, `grounding`, `source_ref`
+- learner sketch: `{ text, at }`
+- per-node attempts with `kind`, `user_text`, private `classification`, `gaps`, and `grader_version`
+- per-node `study_revealed_at`
+- per-node repair records
 
 Clusters are derived, not directly persisted as drill targets.
 
 ### Phase Tracking
 
-Each node tracks its current phase within the three-phase loop:
+Each node derives its next action within the three-phase loop:
 
-- `cold_attempt`: the node is in Phase 1. The learner has not yet attempted or has just completed the cold attempt.
-- `study`: the node is in Phase 2. The cold attempt is complete and the study view is available.
-- `re_drill`: the node is in Phase 3. Study is complete and the node is eligible for spaced re-drill (subject to spacing constraints).
+- `cold_attempt`: no learner attempt is on record.
+- `study`: an attempt exists and study has not been revealed.
+- `repair`: current evidence has named gaps after study reveal.
+- `review`: study has been revealed but spacing or evidence conditions do not yet support solidification.
+- `spaced_attempt`: a new reconstruction attempt is available.
 
-The frontend uses `drill_phase` to determine which UI mode to present in the side panel.
+The frontend uses derived `next_action`, not persisted `drill_phase`, to choose the concept-page mode.
 
 ## Three-Phase Node Loop
 
@@ -132,22 +130,22 @@ Every node moves through three phases. This section describes the implementation
 
 ### Phase 1: Cold Attempt
 
-Trigger: learner selects a `locked` or newly available node and begins drill.
+Trigger: learner selects a ready-to-reconstruct node and begins drill.
 
 Backend behavior:
 
 - `drill_mode` is `cold_attempt`
 - the drill prompt asks an open exploratory question, not a mechanism-evaluation question
-- the cold attempt is explicitly unscored: no `classification`, no `gap_type`, no `response_tier` should be persisted from this phase
+- the cold attempt is learner-facing unscored: no score, tier, band, or ability label is shown
+- private classification and named gaps may be stored to keep study/repair routing honest
 - if the AI detects zero schema (total inability to produce relevant vocabulary), it pivots to scaffolded mode: seeds foundational concepts, then asks for a micro-generation
 - the AI enforces a minimum generative commitment: if the learner provides a non-attempt, the AI nudges once for elaboration before transitioning
 
 Persistence on completion:
 
-- `drill_status` → `primed`
-- `drill_phase` → `study`
-- `cold_attempt_at` → current timestamp
-- no downstream unlock evaluation
+- append an attempt to the node's training record
+- derive the next action from the attempt classification and study reveal status
+- no downstream mastery unlock evaluation
 
 ### Phase 2: Targeted Study
 
@@ -162,18 +160,16 @@ Frontend behavior:
 
 Persistence on completion:
 
-- `study_completed_at` → current timestamp
-- `re_drill_eligible_after` → `study_completed_at` + minimum spacing interval
-- `drill_phase` → `re_drill`
-- `drill_status` remains `primed`
+- `study_revealed_at` is recorded on the node's training record
+- derived state remains evidence-based; study reveal alone cannot solidify a node
 
 ### Phase 3: Spaced Re-Drill
 
-Trigger: learner selects a `primed` node whose `re_drill_eligible_after` timestamp has passed, OR who has completed sufficient interleaved work on other nodes.
+Trigger: learner selects a `primed` node whose spacing interval has passed, OR who has completed sufficient interleaved work on other nodes.
 
 Spacing validation:
 
-- preferred: 10-15 minutes of elapsed time since `study_completed_at`, with cognitively demanding interpolated activity in between
+- preferred: elapsed time after study reveal, with cognitively demanding interpolated activity in between
 - minimum acceptable: 5 minutes of elapsed time with interpolated activity
 - the frontend should not offer re-drill on a node whose spacing requirement has not been met
 - interleaving cold attempts and study on other nodes is the primary spacing mechanism — the system should recommend the next cold attempt or study before offering a re-drill if spacing is insufficient
@@ -186,10 +182,12 @@ Backend behavior:
 - scoring, classification, and routing operate normally
 - on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in [`docs/design/socratink-ux.md`](../design/socratink-ux.md) §6
 
-Persistence on `routing === "NEXT"`:
+Persistence on a recordable reconstruction:
 
-- if `classification === "solid"`: `drill_status` → `solidified`, clear gap metadata, allow downstream unlock evaluation
-- if `classification !== "solid"`: `drill_status` → `drilled`, persist gap, do not treat as mastered
+- append the learner's text, private classification, gaps, and grader version to the node's training record
+- derive `solidified` only when the spaced strong-evidence rule is satisfied
+- derive `needs repair` when named gaps persist
+- do not treat non-solid evidence as mastery
 
 ## Drill Contract
 
@@ -212,7 +210,7 @@ Interpretation:
 - `classification` describes the quality of understanding
 - `routing` describes what the conversation should do next
 - `response_tier` and `response_band` describe the transient quality of the attempt for trajectory contrast display
-- during cold attempts, `classification` and `score_eligible` should be null/false
+- during cold attempts, classification may be stored privately for routing; learner-facing score/tier/band surfaces stay absent
 
 These are not interchangeable.
 
@@ -237,10 +235,10 @@ AI support is allowed only if it preserves the three-phase loop, the drill contr
 That means:
 
 - the learner must complete the cold attempt before the study view is shown
-- the study view must not be accessible for nodes still in `locked` state
+- the study view must not be accessible before a learner reconstruction attempt exists
 - scaffolds and feedback may clarify the gap after an attempt, but must not silently change the target
 - AI-generated explanation quality does not itself mutate graph state
-- only persisted evidence events mutate node, cluster, and unlock state: cold attempts may record `primed`; spaced re-drills may record `drilled` or `solidified`. Study, Repair Reps, starting-map capture, confidence ratings, and AI scaffolding must not mutate graph truth.
+- only persisted learner reconstruction evidence can derive `primed`, `needs repair`, or `solidified`. Study, Repair Reps, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`.
 - the AI must remain sparse during drill — if the AI talks more than the learner, the passive trap has been triggered
 - the AI must detect zero-schema states and pivot to scaffolded generation
 
@@ -257,18 +255,17 @@ That means:
 - no graph mutation
 - may provide narrower help or alternate framing, but must not convert the interaction into answer exposure
 
-### `routing === "NEXT"` with `classification === "solid"` (spaced re-drill only)
+### Recordable attempt with spaced strong reconstruction evidence
 
-- mark the current node `solidified`
-- persist the result
-- clear gap metadata on that node
+- append the attempt
+- derive the current node as `solidified`
 - allow downstream unlock evaluation
 - trigger strongest sensory celebration
 
-### `routing === "NEXT"` with non-solid classification (spaced re-drill only)
+### Recordable attempt with non-solid evidence
 
-- mark the current node `drilled`
-- persist the gap
+- append the attempt and structured gaps
+- derive `needs repair` when the gap evidence warrants it
 - do not treat the node as mastered
 - do not fake unlocks
 - no sensory celebration — copy and framing handle affect
@@ -287,7 +284,7 @@ That means:
 The core thesis is the starting room.
 
 - it is the first cold attempt target
-- backbone principles remain locked until the core thesis is solidified through a spaced re-drill
+- successor entries remain unavailable until their predecessors have learner reconstruction evidence; mastery-gated routes still require `solidified`
 
 ### Backbone
 
@@ -310,10 +307,10 @@ A cluster branch is available only when both are true:
 
 Cluster state is derived from subnode outcomes:
 
-- all subnodes solidified → cluster `solidified`
-- some subnodes primed or drilled but not all solidified → cluster `drilled`
-- some subnodes have completed cold attempts → cluster `primed`
-- no subnodes attempted → cluster `locked`
+- all subnodes solidified → cluster derives `solidified`
+- any subnode needs repair → cluster derives `needs repair`
+- some subnodes have attempts but not all solidified → cluster derives `primed`
+- no subnodes attempted → cluster derives no badge / unavailable state
 
 ### Subnodes
 
@@ -325,7 +322,7 @@ They are the smallest meaningful mechanisms the learner must reconstruct through
 
 Re-drill is normal, not edge behavior.
 
-If a learner returns to a previously `drilled` node and gets `solid` on a spaced re-drill:
+If a learner repairs a `needs repair` node and later gets spaced strong evidence:
 
 1. the node flips to `solidified`
 2. cluster state is recomputed
@@ -337,19 +334,19 @@ Per-node retrieval ceiling: three successful retrievals of the same node in one 
 
 ## Visual Intent
 
-### Locked
+### No Training Evidence
 
 - low-information
 - reduced contrast
-- clearly unavailable
+- available only when predecessor evidence allows it; otherwise clearly unavailable
 
 ### Primed
 
 - warm, open state
 - should signal "entered but not yet challenged"
-- visually distinct from both locked and drilled
+- visually distinct from both unavailable/no-evidence and needs-repair states
 
-### Drilled
+### Needs Repair
 
 - warm in-progress state
 - should signal "come back here"
@@ -378,16 +375,16 @@ The intended happy path is:
 
 1. learner creates a concept
 2. extraction produces a knowledge map
-3. graph renders from `concept.graphData`
-4. learner begins cold attempt on first available node (core thesis)
-5. cold attempt completes → node becomes `primed`, study view opens
+3. graph renders from `concept.graphData`; training evidence initializes under `socratink:training:v1:<conceptId>`
+4. learner writes a reconstruction on the first available node
+5. recordable attempt is stored; derived state and next action update; study can reveal
 6. learner reads targeted study
 7. system recommends next cold attempt on a different node (interleaving)
 8. learner completes 1-2 more cold attempts + studies (buffer flush period)
 9. system recommends spaced re-drill on the first node
 10. backend returns structured drill result
-11. frontend patches the node based on classification
-12. graph re-renders from persisted state
+11. frontend appends the attempt to the training store
+12. graph, concept page, and Library re-render from derived training state
 
 ## Out Of Scope For This Document
 

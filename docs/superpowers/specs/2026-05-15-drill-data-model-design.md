@@ -32,11 +32,41 @@ system has multiple mutable sources of state, none of which is bound to user
 evidence. The fixes layered on top of that disease will all drift unless the
 disease itself is treated.
 
-This spec treats the disease. It defines a single source of truth (an
-append-only event log per concept), a single canonical state machine derived
-from it, and a rendering contract that binds every view to that derivation. The
-three audit failures become structurally impossible — not "fixed in code,"
-structurally absent from the model.
+This spec treats the disease. It defines a single source of truth for training
+evidence, a single canonical state machine derived from it, and a rendering
+contract that binds every view to that derivation. The three audit failures
+become structurally impossible — not "fixed in code," structurally absent from
+the model.
+
+## Implementation status — 2026-05-17
+
+The shipped minimum implementation preserves this contract through
+`public/js/training-store.js` and `public/js/training-derive.js`, not through the
+full future `events[]` shape below. Browser-local training evidence is stored
+under `socratink:training:v1:<conceptId>` as:
+
+```ts
+TrainingRecord {
+  concept_id: string
+  schema_version: 1
+  source_mode: 'source_attached' | 'source_less' | null
+  grounding: 'source' | 'learner_sketch' | 'fixture' | 'ungrounded'
+  source_ref: object | null
+  sketch: { text: string, at: timestamp } | null
+  node_records: {
+    [node_id: string]: {
+      attempts: Attempt[]       // append-only; kind is derived as cold/spaced
+      study_revealed_at?: timestamp
+      repairs: Repair[]
+    }
+  }
+}
+```
+
+The shipped record model is the current runtime source of truth. The event-log
+schema in §1 remains the Supabase-ready target shape, but do not document or
+implement current UI behavior as if `events[]` already lives inside the concept
+blob.
 
 Modules 2 through 5 (grader rewrite, view re-binding, outer-loop scheduler,
 repair surface) all consume this spec as their data contract.
@@ -92,7 +122,7 @@ to one of them.
 
 ## §1 — Schema
 
-Per concept (lives inside the existing localStorage blob):
+Target shape for the later event-log migration:
 
 ```ts
 Concept {
@@ -777,9 +807,8 @@ Substantive deltas from the prior contract:
   a pure function over events. There are no transitions to authorize; there
   is only the fold and what it derives.
 
-Action item out of this spec: `docs/drill/contract.md` should be updated to
-point at this design doc as the new binding canon. That update is part of
-this module's implementation plan.
+Implementation note: `docs/drill/contract.md` now points at this design doc as
+the binding canon and carries only a short compatibility summary.
 
 ---
 

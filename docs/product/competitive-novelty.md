@@ -102,9 +102,9 @@ copy in an afternoon; copying it in execution requires giving up on every
 exposure-as-progress dopamine pattern competitors rely on, which most won't do.
 
 **Implication**: **Invest** in surfaces that make the doctrine *visible* to
-the learner — the four state badges, the hypothesis-vs-verified split in the
-graph layer, the result-state UX in `spec.md` §4 (no celebration on `drilled`,
-strongest celebration on `solidified`). **Don't invest** in dressing up
+the learner — the derived training-state badges, the hypothesis-vs-verified split
+in the graph layer, the result-state UX in `spec.md` §4 (no celebration on
+`needs repair`, strongest celebration on `solidified`). **Don't invest** in dressing up
 topology — that's the commodity layer.
 
 ---

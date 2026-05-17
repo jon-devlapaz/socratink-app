@@ -14,7 +14,7 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 6. [agents/QUALITY.md](./QUALITY.md)
 7. [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md) — binding graph-truth doctrine
 8. [docs/product/spec.md](../product/spec.md)
-9. [docs/drill/contract.md](../docs/drill/contract.md) if the task touches drill, graph, routing, or persistence
+9. [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../docs/superpowers/specs/2026-05-15-drill-data-model-design.md) if the task touches drill, graph, routing, or persistence
 10. [docs/project/doc-map.md](../project/doc-map.md) to locate any other binding doc
 11. `logs/drill-runs.jsonl` if current loop evidence matters
 
@@ -23,13 +23,13 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 - Stage: MVP stabilization, not expansion
 - Release gate: freshly created concept loop. Per ADR-0004, Library shows only the user's own reconstructed work; there is no built-in starter shelf or curated fixture concept.
 - Core architecture: cold attempt -> targeted study -> spaced re-drill
-- Core node states: `locked -> primed -> drilled -> solidified`
+- Core derived training states: `null | primed | needs repair | solidified`
 - Hosted runtime: Vercel serverless
 - Evidence sink: live logs plus the operational docs in this repo
 
 ## Working Rules
 - Local success is not hosted validation.
-- The graph shows what Socratink has evidence for, not what the learner knows. Only spaced reconstruction may mutate graph truth to `solidified`.
+- The graph shows what Socratink has evidence for, not what the learner knows. Only spaced strong reconstruction evidence may derive graph truth as `solidified`.
 - Do not violate Generation Before Recognition.
 - Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs them.
 - Update durable state after meaningful work. `docs/project/state.md` holds live execution truth; logs and merge notes hold current evidence on this branch.
@@ -52,7 +52,7 @@ Before doing substantive work:
 8. Read docs/product/spec.md.
 9. Scan docs/project/doc-map.md to locate any other binding doc the task touches.
 10. If current runtime evidence matters, inspect `logs/drill-runs.jsonl`.
-11. If the task touches drill/graph behavior, read docs/drill/contract.md.
+11. If the task touches drill/graph behavior, read docs/superpowers/specs/2026-05-15-drill-data-model-design.md and then docs/drill/contract.md.
 12. Decide which agents are actually needed. Prefer a small party.
 13. Make a plan when the task is large, risky, or ambiguous.
 14. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
@@ -92,7 +92,7 @@ Before doing substantive work:
 14. Use agents/WORKFLOWS/README.md for shared hot-fix and drill workflows
 15. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
 
-The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with a four-state model (locked → primed → drilled → solidified). Only spaced reconstruction records `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
+The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with derived training states (`null | primed | needs repair | solidified`). Training evidence is stored under `socratink:training:v1:<conceptId>`. Only spaced strong reconstruction evidence derives `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
 
 Operating rules:
 - Prefer a small party over too many agents

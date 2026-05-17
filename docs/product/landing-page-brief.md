@@ -68,7 +68,7 @@ The chosen voice register is **reading room and field journal**. Scholarly-natur
 | --- | --- | --- |
 | Product | `socratink` | Always lowercase. |
 | Empty-state nav for starting a new concept | `New Entry` | (replaces older "Ignition") |
-| Primary action — the unscored attempt | `Try from memory` | (replaces older "Start Cold Attempt") |
+| Primary action — the first reconstruction | `Write what you remember` | (replaces older "Try from memory" / "Start Cold Attempt") |
 | The smallest viable path the learner is taken into for a source-less concept | `smallest actionable route` | (replaces the older "Starting Sketch" composer; deprecated 2026-05-07) |
 | The act of attempting from memory before any explanation | `cold attempt` / `first cold attempt` | Domain noun. |
 | The learning unit in the graph (learner-facing) | `entry` | (replaces the older internal "room" / "node") |
@@ -119,7 +119,7 @@ Three or four steps, each one to two sentences. No icons-with-checkmarks. No ani
 > **2. Sketch your starting model.**
 > Parts, guesses, examples, confusions. No polished answer needed.
 >
-> **3. Try from memory.**
+> **3. Write what you remember.**
 > An unscored cold attempt — your words, before any explanation. socratink uses what you wrote to find the gap.
 >
 > **4. Return later.**
@@ -145,7 +145,7 @@ Or:
 
 ### CTA
 
-Primary CTA: `Open socratink` or `Open a smallest route` or `Try from memory →`
+Primary CTA: `Open socratink` or `Open a smallest route` or `Write what you remember`
 
 **NOT acceptable CTAs:**
 - "Get started for free" (SaaS marketing register)

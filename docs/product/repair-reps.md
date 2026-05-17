@@ -1,6 +1,6 @@
 # Repair Reps — Unified Implementation Spec
 
-> **Superseded surface (2026-05-11).** The Cytoscape graph view (`public/js/graph-view.js`) has been removed in the strip-as-nav port. All references below to `repairRepsMarkupForNode()`, `renderCurrentDetail()`, `repairRatingMarkup()`, `repairContextStripMarkup()`, `.graph-layout.mode-repair-reps`, `.graph-detail.is-repair-reps`, and the `.graph-repair-*` CSS family describe the prior implementation site. The repair-reps state machine (`startRepairReps`, `revealRepairRep`, `rateRepairRep`, `nextRepairRep`, `exitRepairReps`) still lives in `public/js/app.js`; only the rendering surface has moved. New rendering surface will land on the strip + concept-page (`public/css/concept-page.css`) or inside the drill chamber view (`public/js/drill-chamber.js`, `public/css/drill-chamber.css`). Treat the markup, CSS, and event-listener tables below as historical until the rendering surface is re-pointed.
+> **Superseded surface (2026-05-11, state model refreshed 2026-05-17).** The Cytoscape graph view (`public/js/graph-view.js`) has been removed in the strip-as-nav port. All references below to `repairRepsMarkupForNode()`, `renderCurrentDetail()`, `repairRatingMarkup()`, `repairContextStripMarkup()`, `.graph-layout.mode-repair-reps`, `.graph-detail.is-repair-reps`, and the `.graph-repair-*` CSS family describe the prior implementation site. The repair-reps state machine (`startRepairReps`, `revealRepairRep`, `rateRepairRep`, `nextRepairRep`, `exitRepairReps`) still lives in `public/js/app.js`; only the rendering surface has moved. New rendering surface will land on the strip + concept-page (`public/css/concept-page.css`) or inside the drill chamber view (`public/js/drill-chamber.js`, `public/css/drill-chamber.css`). Treat the markup, CSS, and event-listener tables below as historical until the rendering surface is re-pointed. Any state references below to `drill_status`, `drill_phase`, or `drilled` are legacy compatibility language; current training evidence lives under `socratink:training:v1:<conceptId>` and derives `null | primed | needs repair | solidified`.
 
 This document consolidates the implementation spec for Repair Reps, governing focused layout, card-stack animations, and self-rating behavior.
 
@@ -21,7 +21,7 @@ This document consolidates the implementation spec for Repair Reps, governing fo
 >
 > **Key constraints**:
 > - Repair Reps must not call `patchActiveConceptDrillOutcome()`, `recordInterleavingEvent()`, or `markNodeVisitedThisSession()`.
-> - Repair Reps must not mutate `drill_status`, `drill_phase`, `study_completed_at`, `re_drill_eligible_after`, `gap_type`, or `gap_description`.
+> - Repair Reps must not mutate graph-state fields or derive `solidified`; they may only save practice evidence in their own repair-reps store.
 > - The reference bridge must render only after the learner has typed an answer and clicked the reveal control.
 > - The focused layout must use the existing `.mode-repair-reps` and `.is-repair-reps` hooks from `syncInteractionChrome()`.
 > - Graph interactivity during focused Repair Reps must be controlled by CSS class state, not by JS `pointerEvents` mutation.
@@ -48,7 +48,7 @@ Repair Reps currently works as a truthful auxiliary practice lane, but the side-
 
 ### Primary Flow
 
-1. The learner starts Repair Reps from an eligible `primed/re_drill` or `drilled` node.
+1. The learner starts Repair Reps from an eligible `primed` or `needs repair` node.
 2. The graph enters focused repair mode using the existing `repair-reps` interaction mode. The graph is visually de-emphasized and non-interactive, while the Repair Reps workbench becomes the primary surface.
 3. A quiet context strip appears above the rep card:
    `Node label - Repair Rep 1 of 3 - Practice only`
@@ -82,8 +82,8 @@ This feature must NOT:
 - Call or modify `recordInterleavingEvent()` in `public/js/app.js`, because Repair Reps never counts as interleaving.
 - Call or modify `markNodeVisitedThisSession()` in `public/js/app.js`, because Repair Reps must not count toward node/session progression.
 - Call `completeStudy()` when launching or completing Repair Reps, because study completion remains the study flow's job.
-- Change `isRepairRepsEligible()` to include `locked`, `solidified`, or `primed/study` nodes.
-- Mutate `concept.graphData`, `drill_status`, `drill_phase`, `study_completed_at`, `re_drill_eligible_after`, `gap_type`, or `gap_description`.
+- Change `isRepairRepsEligible()` to include no-evidence/null, `solidified`, or pre-study nodes.
+- Mutate `concept.graphData`, training-derived state, or any field used to derive `solidified`.
 - Change `/api/repair-reps`, `RepairRepsRequest`, `generate_repair_reps()`, or `app_prompts/repair-reps-system-v1.md`; this is a frontend rendering/layout pass.
 - Add JS code that manually sets `element.style.pointerEvents` for the graph stage. Graph pointer behavior must follow `.graph-layout.mode-repair-reps` CSS so exit paths restore automatically.
 
@@ -415,8 +415,8 @@ The UI continues to consume the existing `target_bridge` field. The existing `fe
 
 ### Manual
 
-1. Start Repair Reps from a `primed` node with `drill_phase === "re_drill"` -> focused mode appears, graph is de-emphasized/non-interactive, context strip shows node label and `Repair Rep 1 of 3`.
-2. Start Repair Reps from a `drilled` node -> focused mode appears and existing `gap_type` / `gap_description` remain unchanged in `concept.graphData`.
+1. Start Repair Reps from an eligible `primed` node -> focused mode appears, graph is de-emphasized/non-interactive, context strip shows node label and `Repair Rep 1 of 3`.
+2. Start Repair Reps from a `needs repair` node -> focused mode appears and training-derived state remains unchanged.
 3. Inspect a `solidified` node -> Repair Reps CTA is absent or blocked.
 4. Before typing -> textarea has no placeholder; `Your bridge` label and helper remain visible.
 5. Type an answer and click `Show reference bridge` -> typed answer persists readonly above the `Reference bridge`; static cue reads `Compare the link, not the wording.`
@@ -743,7 +743,7 @@ No JS logic changes. No state shape changes. No API changes.
 >
 > **When to read it**: Before changing the repair-reps reveal flow, the repair evidence schema, or the completion screen in `repairRepsMarkupForNode()`.
 >
-> **What it is NOT**: It is not a mastery signal. Self-ratings never flow into `drill_status`, graph state, or interleaving logic. They are metacognitive self-assessment only.
+> **What it is NOT**: It is not a mastery signal. Self-ratings never flow into training-derived graph state or interleaving logic. They are metacognitive self-assessment only.
 >
 > **Key constraints**:
 > - Self-ratings are learner-assigned, never AI-scored. No LLM call per rep.

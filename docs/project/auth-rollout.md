@@ -65,7 +65,7 @@ Release gate:
 
 Release gate:
 - signed-in users can refresh or switch devices without losing truthful state
-- `locked -> primed -> drilled -> solidified` remains valid after sync
+- derived training states (`null | primed | needs repair | solidified`) remain valid after sync
 
 ### Phase 4
 

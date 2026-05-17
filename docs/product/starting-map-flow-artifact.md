@@ -1,6 +1,6 @@
 # Starting Map Flow Artifact
 
-> **Status (2026-05-07):** Storyboard only. The threshold flow has now shipped as **C-prime** (Door + Launch Pad → smallest route). For the operational rules and current contracts, see the agent brief at [docs/archive/2026-05-design-md-refactor/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md](../archive/2026-05-design-md-refactor/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md) and the canonical doctrine in [docs/product/evidence-weighted-map.md](evidence-weighted-map.md). This artifact is preserved for design context; do not cite it as the implementation contract.
+> **Status (2026-05-07, state model refreshed 2026-05-17):** Storyboard only. The threshold flow has now shipped as **C-prime** (Door + Launch Pad → smallest route). For the operational rules and current contracts, see the agent brief at [docs/archive/2026-05-design-md-refactor/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md](../archive/2026-05-design-md-refactor/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md), the canonical doctrine in [docs/product/evidence-weighted-map.md](evidence-weighted-map.md), and the drill data-model canon in [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md). This artifact is preserved for design context; do not cite it as the implementation contract.
 
 Purpose: a lightweight product design artifact for understanding the metacognitive happy path before implementation.
 
@@ -212,9 +212,9 @@ Analogical fallback rules:
 - keep the node `locked` until the learner gives a substantive micro-generation
 - do not label the learner as zero-knowledge
 
-Mutation rule:
+Training-evidence rule:
 
-- substantive cold attempt: target node `locked -> primed`, `drill_phase = study`
+- recordable cold attempt: append learner evidence; derive `primed` or `needs repair`
 - non-attempt: no graph mutation; ask for a micro-generation
 
 ## Screen 4: Locked Study Silhouette
@@ -380,12 +380,12 @@ History must not include:
 | --- | --- | --- | --- |
 | Threshold submitted | starting map captured | routing signal, source dependence, causal depth | none |
 | Provisional graph generated | draft path | first-node priority, prompt emphasis | none |
-| Local cold attempt submitted | unscored node attempt | substantive vs non-attempt | `locked -> primed` only if substantive |
-| Study completed | repair artifact | study timestamp, next interleave target | stays `primed`; set re-drill timing |
+| Local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
+| Study revealed | repair artifact | study timestamp, next interleave target | no solidification |
 | Interleaving bridge shown | small next-choice set | route preference | none |
 | Repair rep completed | practice history | self-rating, bridge quality | none |
-| Spaced re-drill solid | proof through reconstruction | solid classification | `primed/drilled -> solidified` |
-| Spaced re-drill non-solid | needs revisit | gap metadata | `primed -> drilled` |
+| Spaced re-drill strong | proof through reconstruction | strong classification after spacing | derives `solidified` |
+| Spaced re-drill non-solid | needs repair | gap metadata | derives `needs repair` when warranted |
 
 ## MVP Cut
 

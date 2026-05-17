@@ -4,10 +4,10 @@
 - Product: socratink
 - Stage: Build-Measure-Learn
 - Core architecture: cold attempt -> targeted study -> spaced re-drill
-- Core node states: `locked -> primed -> drilled -> solidified`
+- Core derived training states: `null | primed | needs repair | solidified`
 - Agent architecture: `socratinker` is the default execution agent; Socratink Brain (`.socratink-brain/`, `$socratink-brain`) is the durable product-memory substrate and maintenance skill
 - Hosted runtime: Vercel serverless
-- Current persistence: browser `localStorage`
+- Current persistence: browser `localStorage`; concepts live in `learnops_concepts`, training evidence lives under `socratink:training:v1:<conceptId>`
 - Evidence source of truth: live logs plus the operational docs in this repo
 
 ## Current Phase
@@ -24,8 +24,8 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - Generation Before Recognition is non-negotiable.
 - The graph is an evidence-weighted map. It shows what Socratink has evidence for, not what the learner knows.
 - The map starts as a hypothesis; the starting map is an anchor, not a diagnostic.
-- Cold attempts are unscored.
-- `solidified` can only result from spaced re-drill. Study and Repair Reps must not mutate graph truth.
+- Cold attempts are learner-facing unscored; private classification may drive repair/study routing.
+- `solidified` can only result from spaced strong reconstruction evidence. Study and Repair Reps must not produce `solidified`.
 - Clusters are containers in MVP, not primary drill targets.
 - The wall-clock drill duration cap is disabled by default in the current MVP and remains configurable via `DRILL_SESSION_TIME_LIMIT_SECONDS`; node and retrieval-count guardrails remain active.
 
@@ -37,7 +37,8 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 ## Use These Docs
 - [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md): binding doctrine for what the graph may/must not claim
 - [docs/product/spec.md](../product/spec.md): binding product contract
-- [docs/drill/contract.md](../drill/contract.md): current binding drill contract
+- [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md): current binding drill data-model canon
+- [docs/drill/contract.md](../drill/contract.md): compatibility redirect and runtime summary
 - [docs/project/doc-map.md](doc-map.md): curated index of canonical entry points and deep-dives, with precedence rules at the top
 - [docs/project/mvp-happy-path.md](mvp-happy-path.md): current manual release gate
 - [docs/project/operations.md](operations.md): merge and stabilization criteria
