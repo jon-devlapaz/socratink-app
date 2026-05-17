@@ -59,22 +59,44 @@ function trainingRecordsFor(training) {
     : {};
 }
 
+function recordWithLegacyStudyReveal(entry, record, legacyEntry) {
+  const status = String(entry?.drill_status || '').toLowerCase();
+  const phase = String(entry?.drill_phase || '').toLowerCase();
+  const postStudyLegacy = status === 'drilled'
+    || status === 'solidified'
+    || status === 'solid'
+    || phase === 're_drill';
+  if (
+    !record
+    || record.study_revealed_at
+    || !legacyEntry?.attempted
+    || legacyEntry?.legacy_study_required
+    || !postStudyLegacy
+  ) {
+    return record;
+  }
+  const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
+  const revealedAt = entry?.study_completed_at || entry?.last_drilled || attempts[0]?.at || null;
+  return revealedAt ? { ...record, study_revealed_at: revealedAt } : record;
+}
+
 function entryTraining(backbone, index, training, options = {}) {
   const entry = backbone[index] || null;
   const id = getConceptEntryId(entry, index);
   const record = trainingRecordsFor(training)[id] || null;
   const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
   const legacyEntry = legacyTrainingForEntry(entry, options);
+  const derivedRecord = recordWithLegacyStudyReveal(entry, record, legacyEntry);
   const baseLegacy = legacyEntry?.state === 'solidified' || !attempts.length ? legacyEntry : null;
-  const legacy = baseLegacy?.legacy_study_required && record?.study_revealed_at
+  const legacy = baseLegacy?.legacy_study_required && derivedRecord?.study_revealed_at
     ? { ...baseLegacy, next_action: 'spaced_attempt' }
     : baseLegacy;
-  const derived = deriveNodeTraining(record, options);
+  const derived = deriveNodeTraining(derivedRecord, options);
   return {
     ...derived,
     ...legacy,
     id,
-    record,
+    record: derivedRecord,
     attempted: Boolean(derived.last_attempt_at) || Boolean(legacy?.attempted),
   };
 }

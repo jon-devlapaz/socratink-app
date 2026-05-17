@@ -1924,7 +1924,7 @@ const App = (() => {
         throw new Error('attempt-not-recorded');
       }
       if (getActiveId() !== concept.id) return;
-      const legacyGraphPatchedConcept = drillMode === 're_drill' && !attempts.length
+      const legacyGraphPatchedConcept = drillMode === 're_drill'
         ? patchActiveConceptDrillOutcome({ ...result, node_id: result?.node_id || entryId }, drillMode)
         : null;
       const renderConcept = legacyGraphPatchedConcept || concept;
@@ -2037,7 +2037,7 @@ const App = (() => {
       }
     });
 
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       const next = (textarea.value || '').trim().slice(0, 1200);
       const concepts = loadConcepts();
       const liveConcept = concepts.find((c) => c.id === concept.id);
@@ -2058,6 +2058,15 @@ const App = (() => {
         console.warn('[concept-page] graphData parse failed; saved startingMapContext only.', err);
       }
       saveConcepts(concepts);
+      try {
+        await trainingStore.setSketch(concept.id, {
+          text: next,
+          at: new Date().toISOString(),
+        });
+      } catch (err) {
+        /* c8 ignore next -- defensive localStorage failure path */
+        console.warn('[concept-page] training sketch update failed.', err);
+      }
 
       // Re-render the work column with the fresh data so the quote updates
       // in place. Use the same active entry id we were on.

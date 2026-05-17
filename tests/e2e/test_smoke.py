@@ -418,6 +418,10 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "review pending entry 1 of 1"
     )
+    edited_training = page.evaluate(
+        """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
+    )
+    assert edited_training["sketch"]["text"] == "Updated learner sketch."
 
 
 def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
@@ -1038,6 +1042,31 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
                 graphData,
             }]));
             localStorage.setItem('learnops_active', 'qa-legacy-redrill-concept');
+            localStorage.setItem('socratink:training:v1:qa-legacy-redrill-concept', JSON.stringify({
+                concept_id: 'qa-legacy-redrill-concept',
+                schema_version: 1,
+                source_mode: 'source_less',
+                grounding: 'learner_sketch',
+                source_ref: null,
+                sketch: {
+                    text: 'The learner already made a cold attempt before this schema existed.',
+                    at: '2026-05-15T09:00:00.000Z',
+                },
+                node_records: {
+                    'legacy-redrill-node': {
+                        attempts: [{
+                            id: 'legacy-cold',
+                            kind: 'cold',
+                            at: '2026-05-15T10:00:00.000Z',
+                            user_text: 'The learner made a first attempt before this schema existed.',
+                            classification: 'strong',
+                            gaps: [],
+                            grader_version: 'qa',
+                        }],
+                        repairs: [],
+                    },
+                },
+            }));
         })()"""
     )
     inspect_action = page.evaluate(
@@ -1053,7 +1082,7 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Re-drill Truth QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "ready to reconstruct again entry 1 of 1"
+        "spaced reconstruction ready entry 1 of 1"
     )
     page.locator(".concept-page-b2__entry-cta").click()
     page.locator(".concept-page-b2__attempt-input").fill(
@@ -1077,8 +1106,9 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     stored = page.evaluate(
         """() => JSON.parse(localStorage.getItem('socratink:training:v1:qa-legacy-redrill-concept'))"""
     )
+    assert len(stored["node_records"]["legacy-redrill-node"]["attempts"]) == 2
     assert (
-        stored["node_records"]["legacy-redrill-node"]["attempts"][0]["user_text"]
+        stored["node_records"]["legacy-redrill-node"]["attempts"][1]["user_text"]
         == "The mechanism opens first, then the downstream flow follows."
     )
 

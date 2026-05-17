@@ -901,6 +901,43 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(primedHtml.includes('data-active-entry-action="study"'));
         assert.ok(primedHtml.includes('Reveal study note'));
 
+        const legacyRedrillWithTrainingHtml = renderActiveEntryHtml(
+          {
+            id: 'legacy-redrill-training',
+            label: 'Legacy re-drill with training',
+            drill_status: 'drilled',
+            last_drilled: '2026-05-15T10:05:00.000Z',
+          },
+          0,
+          [{
+            id: 'legacy-redrill-training',
+            label: 'Legacy re-drill with training',
+            drill_status: 'drilled',
+            last_drilled: '2026-05-15T10:05:00.000Z',
+          }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              'legacy-redrill-training': {
+                attempts: [{
+                  id: 'legacy-r1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A thin migrated attempt.',
+                  classification: 'thin',
+                  gaps: [{ type: 'mechanism', description: 'Missing causal link.' }],
+                  grader_version: 'qa',
+                }],
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(legacyRedrillWithTrainingHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(legacyRedrillWithTrainingHtml.includes('A thin migrated attempt.'));
+        assert.ok(!legacyRedrillWithTrainingHtml.includes('study required entry 1 of 1'));
+
         const studiedHtml = renderActiveEntryHtml(
           { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
           0,
