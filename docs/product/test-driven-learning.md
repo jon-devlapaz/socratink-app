@@ -108,4 +108,3 @@ around:
 ```
 cold attempt -> repair -> spacing -> proof
 ```
-
