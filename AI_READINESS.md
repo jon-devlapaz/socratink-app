@@ -288,7 +288,7 @@ cat .gitignore | grep -E '^(node_modules|dist|build|\.venv|__pycache__|\.pytest_
 | --- | --- | --- | --- |
 | `node_modules/`, `dist/`, build artifacts committed. | Some cache directories committed (`.pytest_cache`, `.mypy_cache`); large generated files in tree. | Clean tree; `.gitignore` covers the standard set. | E1 level-2 plus an `.aiignore` / retrieval-tool exclusion list keeps the indexer focused on source. |
 
-**socratink-app baseline:** `node_modules/` (monocart only) and `.vercel/` still committed; `.mypy_cache/` and `.ruff_cache/` are now in `.gitignore` alongside `.agents/` (local agent runtime context). Currently **2**; clearing the remaining `node_modules/` and `.vercel/` committed paths and adding an `.aiignore` for retrieval tooling would reach **3**.
+**socratink-app baseline:** `node_modules/`, `.vercel/`, `.mypy_cache/`, `.ruff_cache/`, and `.agents/` are ignored and not tracked; `.aiignore` now mirrors retrieval-tool exclusions for local runtime, cache, coverage, and scratch surfaces. Currently **3**.
 
 ---
 

@@ -56,8 +56,8 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 13. Verify navigation to launch pad with headline "What do you already think is inside this concept?"
 14. Verify the witness-anchor diamond is now SOLID VIOLET with a subtle halo (the actualization beat).
-15. Verify the textarea placeholder reads "A sentence or two is plenty — be specific over comprehensive." (or similar).
-16. Type a real sketch (200+ chars about photosynthesis).
+15. Verify the textarea placeholder reads "Name parts, guesses, examples, or confusions. Concrete words help most."
+16. Type a real sketch with at least 8 substantive non-stopword tokens about photosynthesis.
 17. Click "Save sketch".
 18. Verify Gemini round-trip completes within 10 seconds.
 
@@ -66,8 +66,8 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 ### 2.1 Header
 
 19. Verify concept title appears at top with crystal mark + "concept" eyebrow.
-20. Verify pills appear: a quiet "thin sketch" pill (if backend flagged low_density) and a violet "N of M entries primed" pill.
-21. Verify the "thin sketch" copy is exactly that string — NOT "lightweight draft" (older copy).
+20. Verify header pills do not include a low-density / "thin sketch" tag.
+21. Verify the starting sketch appears as "Your starting sketch:" in the concept body, not as a header tag.
 22. Verify there is NO "Try from memory" button in the header (header should only show the title + tags).
 23. Verify there is NO Route/Graph toggle in the header.
 

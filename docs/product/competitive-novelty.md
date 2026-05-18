@@ -225,7 +225,9 @@ violations break the loop's metacognitive stance in one turn.
 
 ### 8. Generative commitment threshold
 
-**Mechanism**: Cold attempt requires 3+ words and rejects "idk". (See `spec.md`
+**Mechanism**: Cold attempts require generative commitment before study;
+source-less launch-pad generation uses the shared substantive-sketch gate (8+
+substantive non-stopword tokens and no "don't know" pattern). (See `spec.md`
 §2 Phase 1.)
 
 **Closest analog**: None visible. Free-text-input apps don't gate on

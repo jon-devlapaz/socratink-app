@@ -36,7 +36,7 @@ Every drillable node on the graph must move through these three phases. No phase
 ### Phase 1: Cold Attempt (Exploration)
 - **Goal**: Generate a prediction error to prime encoding.
 - **Contract**: Exploratory question ("What do you think this involves?"). Learner-facing surfaces remain unscored; the system may privately classify the attempt to derive repair/study routing.
-- **Generative Commitment**: Requires a minimum threshold (3+ words, no "idk") to unlock study.
+- **Generative Commitment**: Cold attempts use drill-evaluation generative commitment to decide whether study unlocks; source-less launch-pad generation uses the shared substantive-sketch gate (8+ substantive non-stopword tokens and no "don't know" pattern) before drafting a provisional map.
 - **Zero-Schema Detection**: If the learner is completely lost, the AI seeds 2-3 concepts and asks for a micro-generation.
 - **Outcome**: A learner attempt is appended to the training record. Derived state becomes `primed` or `needs repair` depending on the evidence.
 
