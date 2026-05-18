@@ -140,10 +140,13 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 59. Type a substantive 2-3 sentence reconstruction and click "Save what I wrote".
 60. Verify exactly one `/api/drill` POST is sent for the save.
 61. Verify the active entry re-renders from training state: weak attempts expose "Compare with notes" or a repair panel after study; strong attempts can show review/spaced reconstruction readiness.
-62. After a weak attempt, click "Compare with notes". Verify the study note appears with a "Hide study note" toggle and the revealed mechanism text.
-63. Focus or type in the repair textarea. Verify the study note collapses, the mechanism text is hidden, the helper reads "Hidden while you write from memory.", and the toggle reads "Show study note".
-64. Click "Show study note". Verify the mechanism text returns and the toggle reads "Hide study note".
-65. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
+62. Verify the active entry shows the learner's exact saved attempt under "Your draft".
+63. Before clicking "Compare with notes", verify the active entry does NOT show "Missing piece".
+64. After a weak attempt, click "Compare with notes". Verify the study note appears with a "Hide study note" toggle and the revealed mechanism text.
+65. Verify the evidence block now shows "Missing piece" details for the saved attempt.
+66. Focus or type in the repair textarea. Verify the study note collapses, the mechanism text is hidden, the helper reads "Hidden while you write from memory.", and the toggle reads "Show study note".
+67. Click "Show study note". Verify the mechanism text returns and the toggle reads "Hide study note".
+68. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
 
 ## Phase 4 — Doctrine + copy audit
 

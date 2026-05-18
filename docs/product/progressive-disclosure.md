@@ -162,6 +162,7 @@ Trigger: cold attempt completes. The concept page offers `Compare with notes` fo
 Frontend behavior:
 
 - the study view shows the mechanism text for this specific node after the learner reveals it
+- the concept page shows the learner's saved attempt as `Your draft` before reveal, but withholds `Missing piece` details until study is revealed
 - the study view is anchored to the learner's cold attempt: where possible, highlight where the attempt diverged from the mechanism
 - once the learner focuses or types in the repair field, the revealed study note collapses behind a manual show/hide toggle so the learner writes from memory rather than copying visible mechanism text
 - the study view must not show mechanism text for other unattempted nodes
