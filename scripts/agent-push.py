@@ -120,6 +120,12 @@ def _remote_urls() -> dict[str, str]:
     return urls
 
 
+def refresh_publication_refs() -> None:
+    remotes = _remote_urls()
+    if "origin" in remotes:
+        _run_git(["fetch", "origin", "dev"])
+
+
 def _changed_paths() -> list[str]:
     paths: set[str] = set()
     branch = _run_git(["symbolic-ref", "--short", "HEAD"], check=False)
@@ -288,6 +294,26 @@ def build_payload(state: PushState, intent: PublicationIntent) -> AuthorizationP
     )
 
 
+def ensure_current_dev_base(state: PushState, intent: PublicationIntent) -> None:
+    _remote, refspec = route_to_remote_refspec(intent.chosen_route)
+    if state.branch != "dev" or refspec != "dev":
+        return
+    counts = _run_git(["rev-list", "--left-right", "--count", "origin/dev...HEAD"])
+    try:
+        behind_text, ahead_text = counts.split()
+        behind = int(behind_text)
+        ahead = int(ahead_text)
+    except ValueError as exc:
+        raise RuntimeError(f"could not parse origin/dev divergence: {counts!r}") from exc
+    if behind:
+        raise RuntimeError(
+            "local dev is behind origin/dev "
+            f"by {behind} commit(s) and ahead by {ahead} commit(s). "
+            "Sync to the daemon-published base before publishing: "
+            "preserve any work on a branch, reset dev to origin/dev, then replay the work."
+        )
+
+
 def encode_ack(payload: AuthorizationPayload) -> str:
     raw = payload.model_dump_json().encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii")
@@ -365,8 +391,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        refresh_publication_refs()
         state = collect_state()
         intent = resolve_publication_intent(state, explicit_target=args.target)
+        ensure_current_dev_base(state, intent)
         payload = build_payload(state, intent)
     except Exception as exc:
         print(f"[agent-push] ERROR: {exc}", file=sys.stderr)

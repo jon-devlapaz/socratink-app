@@ -186,3 +186,50 @@ def test_ack_payload_invalidates_when_head_changes(tmp_path):
     )
     current = payload.model_copy(update={"head_sha": "fffffff"})
     assert not mod.intent_matches(payload, current)
+
+
+def test_dev_publication_blocks_when_origin_dev_is_ahead(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["docs/project/state.md"],
+        remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="origin/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "3\t1"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    try:
+        mod.ensure_current_dev_base(state, intent)
+    except RuntimeError as exc:
+        assert "local dev is behind origin/dev by 3 commit(s)" in str(exc)
+    else:
+        raise AssertionError("stale dev publication was not blocked")
+
+
+def test_dev_publication_allows_origin_dev_ancestor(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["docs/project/state.md"],
+        remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t2"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.ensure_current_dev_base(state, intent)

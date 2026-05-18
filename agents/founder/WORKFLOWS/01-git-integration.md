@@ -42,6 +42,8 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 ## Verification
 
 - wrapper recommendation is shown
+- wrapper refreshes `origin/dev` before evaluating a `dev` publication
+- publishing `dev` is blocked when local `dev` is behind `origin/dev`
 - push intent is revalidated on ack
 - raw `git push` is blocked without authorization artifact
 
