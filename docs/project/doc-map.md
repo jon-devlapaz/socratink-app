@@ -33,6 +33,7 @@ On all other topics, the doc listed below for that topic is authoritative.
 | Topic | Doc |
 | --- | --- |
 | Derived training state and rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
+| Feynman prompt integration proposal (proposal-only, not runtime canon) | [`docs/superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md`](../superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md) |
 | Post-drill panel UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
 | Drill contract redirect | [`docs/drill/contract.md`](../drill/contract.md) |
 | Auth rollout | [`docs/project/auth-rollout.md`](auth-rollout.md) |
