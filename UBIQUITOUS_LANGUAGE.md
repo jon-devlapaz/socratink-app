@@ -19,7 +19,7 @@
 | **Graph truth** | The derived projection of training evidence Socratink has seen. The provisional graph stays a hypothesis; learner evidence lives in the training store. | What the learner knows |
 | **Training record** | Browser-local evidence record keyed as `socratink:training:v1:<conceptId>`; contains learner sketch, attempts, study reveal timestamps, and repair text. | Graph summary, mastery record |
 | **`null` training state** | No learner reconstruction attempt is on record for the node. Usually rendered silently or as "ready to reconstruct", not as a badge. | Locked knowledge, failed |
-| **`primed`** | Learner reconstruction evidence is on record; study, repair, review, or spaced-attempt routing is derived from the latest attempt. | Learned, partially mastered |
+| **`primed`** | Learner reconstruction evidence is on record; study, repair, review, or spaced-attempt routing is derived from the latest attempt. Legacy `primed`/`study` graph nodes with no attempt record may reveal study with `attempts: []` as compatibility only; that is not reconstruction evidence. | Learned, partially mastered |
 | **`needs repair`** | Current evidence contains named gaps that need repair before the next reconstruction can honestly advance. | Failed, bad, weak learner |
 | **`solidified`** | At least one solid spaced reconstruction is on record. | Mastered forever, actualized, cleared as knowledge |
 | **Traversal unlock** | Permission to move through the map based on engagement evidence. | Mastery unlock |

@@ -220,7 +220,7 @@ The doctrine preserves a four-outcome projection, but state is derived from the 
 | State | Doctrine meaning | Evidence basis |
 | --- | --- | --- |
 | `null` | No learner reconstruction attempt on record | no evidence |
-| `primed` | Learner reconstruction evidence exists; study/repair/review routing is derived from it | attempt event that is not currently durable repair or solidified |
+| `primed` | Learner reconstruction evidence exists; study/repair/review routing is derived from it. Legacy `primed`/`study` nodes may project this state with no attempt record only to preserve study compatibility. | attempt event that is not currently durable repair or solidified; legacy compatibility can carry `attempts: []` and must not be counted as evidence |
 | `needs repair` | Current evidence has named gaps requiring repair | thin/wrong-direction or repeated non-strong evidence with gaps |
 | `solidified` | Learner reconstructed the mechanism from long-term memory under spacing | spaced strong reconstruction evidence |
 
