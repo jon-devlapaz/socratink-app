@@ -44,6 +44,7 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 - wrapper recommendation is shown
 - wrapper refreshes `origin/dev` before evaluating a `dev` publication
 - publishing `dev` is blocked when local `dev` is behind `origin/dev`
+- after no-mistakes finishes, use `scripts/no-mistakes-finish-dev.sh` to refuse active runs, dirty trees, or unique local commits before folding local `dev` onto `origin/dev`
 - push intent is revalidated on ack
 - raw `git push` is blocked without authorization artifact
 
