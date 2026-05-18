@@ -248,8 +248,8 @@ AI support is allowed only if it preserves the three-phase loop, the drill contr
 
 That means:
 
-- the learner must complete the cold attempt before the study view is shown
-- the study view must not be accessible before a learner reconstruction attempt exists
+- the learner must complete the cold attempt before the study view is shown, except for the narrow legacy `primed`/`study` compatibility path that records `study_revealed_at` with `attempts: []`
+- the study view must not be accessible before a learner reconstruction attempt exists, except that legacy no-attempt reveal path must preserve the absence of evidence rather than fabricate an attempt
 - scaffolds and feedback may clarify the gap after an attempt, but must not silently change the target
 - AI-generated explanation quality does not itself mutate graph state
 - only persisted learner reconstruction evidence can derive `primed`, `needs repair`, or `solidified`. Study, Repair Reps, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`.
