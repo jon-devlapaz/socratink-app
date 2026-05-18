@@ -3,7 +3,7 @@
 **Date:** 2026-05-02
 **Status:** Brainstorm complete; ready for plan + implementation
 **Author:** Brainstormed with Claude, decisions made by jon-devlapaz
-**Supersedes (the form):** `docs/design/handoffs/2026-05-01-new-concept-modal-redesign.md` is no longer the work order. Its copy/voice fixes have been merged into `dev`; its premise — that the concept-creation surface should remain a form — is no longer the direction.
+**Supersedes (the form):** `docs/archive/2026-05-design-md-refactor/2026-05-01-new-concept-modal-redesign.md` is no longer the work order. Its copy/voice fixes have been merged into `dev`; its premise — that the concept-creation surface should remain a form — is no longer the direction.
 
 ---
 

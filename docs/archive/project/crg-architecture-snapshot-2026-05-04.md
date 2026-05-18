@@ -97,7 +97,7 @@ Top 15 by line count. Ordered descending. Files >400 lines and functions >300 li
 | 413 | File | `scripts/run_tasting_fixture.py` |
 | 387 | Function | `startAddConcept` (in `app.js`) |
 
-**Highest-leverage refactor target:** `public/js/app.js` at 4126 lines. The Plan B conversational concept creation work (in flight per `docs/design/handoffs/2026-05-04-conversational-concept-creation-frontend.md`) replaces a chunk of this file's surface; expect it to shrink meaningfully. After that lands, re-run this snapshot.
+**Highest-leverage refactor target:** `public/js/app.js` at 4126 lines. The Plan B conversational concept creation work (in flight per `docs/archive/2026-05-design-md-refactor/2026-05-04-conversational-concept-creation-frontend.md`) replaces a chunk of this file's surface; expect it to shrink meaningfully. After that lands, re-run this snapshot.
 
 **Don't refactor `mountKnowledgeGraph` reactively** — it's 1441 lines because the graph rendering is genuinely complex (D3, communities, hover state, node selection, animation). Length here is a surface symptom, not a code smell.
 

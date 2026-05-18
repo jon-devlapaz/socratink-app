@@ -1,6 +1,6 @@
 # Starting Map Flow Artifact
 
-> **Status (2026-05-07, state model refreshed 2026-05-17):** Storyboard only. The threshold flow has now shipped as **C-prime** (Door + Launch Pad → smallest route). For the operational rules and current contracts, see the binding product spec at [docs/product/spec.md](spec.md), the canonical doctrine in [docs/product/evidence-weighted-map.md](evidence-weighted-map.md), the implementation flow in [docs/product/progressive-disclosure.md](progressive-disclosure.md), and the drill data-model canon in [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md). The archived 2026-05-07 C-prime agent brief is historical only. This artifact is preserved for design context; do not cite it as the implementation contract.
+> **Status (2026-05-07, state model refreshed 2026-05-17):** Storyboard only. The threshold flow has now shipped as **C-prime** (Door + Launch Pad -> smallest route). For the operational rules and current contracts, see the binding product spec at [docs/product/spec.md](spec.md), the canonical doctrine in [docs/product/evidence-weighted-map.md](evidence-weighted-map.md), and the drill data-model canon in [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md). The archived C-prime material under [docs/archive/2026-05-design-md-refactor/](../archive/2026-05-design-md-refactor/) is historical context only. This artifact is preserved for design context; do not cite it as the implementation contract.
 
 Purpose: a lightweight product design artifact for understanding the metacognitive happy path before implementation.
 
@@ -129,7 +129,7 @@ Goal: show a proposed route without implying knowledge.
 
 ```text
 +-------------------------------------------------------------+
-| Draft Path                                                  |
+| Draft Route                                                 |
 |                                                             |
 | Here's the path Socratink thinks will expose and repair the |
 | important mechanisms. Your starting map shaped the route.   |
@@ -151,7 +151,7 @@ Goal: show a proposed route without implying knowledge.
 
 Allowed graph claims:
 
-- "Draft path"
+- "Draft route"
 - "Suggested first"
 - "Ready for first attempt"
 - "Primed for study"
@@ -379,7 +379,7 @@ History must not include:
 | Moment | What Learner Sees | What System May Infer | Allowed State Change |
 | --- | --- | --- | --- |
 | Threshold submitted | starting map captured | routing signal, source dependence, causal depth | none |
-| Provisional graph generated | draft path | first-node priority, prompt emphasis | none |
+| Provisional graph generated | draft route | first-node priority, prompt emphasis | none |
 | Local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
 | Study revealed | repair artifact | study timestamp, next interleave target | no solidification |
 | Interleaving bridge shown | small next-choice set | route preference | none |

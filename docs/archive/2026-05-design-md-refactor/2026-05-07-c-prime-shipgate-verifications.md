@@ -4,7 +4,7 @@
 
 **Date:** 2026-05-07
 **Branch under test:** `dev` @ `46f52d6` (or any commit at-or-after this SHA on `dev`)
-**Companion to:** `docs/qa/2026-05-07-c-prime-antigravity-qa-plan.md` (which left these two items BLOCKED)
+**Companion to:** `docs/archive/2026-05-design-md-refactor/2026-05-07-c-prime-antigravity-qa-plan.md` (which left these two items BLOCKED)
 
 This is a tight, focused prompt covering the two verifications that the prior QA cycle could not exercise: the server-side bypass guard (TC-04 expanded matrix) and the persistence-then-clear ordering under runtime failure injection (TC-113). Together they prove the **doctrinal contracts** of the C-prime redesign hold end-to-end:
 

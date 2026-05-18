@@ -6,7 +6,6 @@ For supporting context, read:
 
 - [spec.md](spec.md) — binding product contract (three-phase loop, derived training state model)
 - [/DESIGN.md](../../DESIGN.md) — canonical UX doctrine
-- [progressive-disclosure.md](progressive-disclosure.md) — implementation-facing state and routing spec
 - [starting-map-flow-artifact.md](starting-map-flow-artifact.md) — concept-entry storyboard that operationalizes this doctrine
 - [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md) — current binding drill data-model canon
 
@@ -231,10 +230,59 @@ Engineering rules carry:
 - thin or wrong-direction evidence can derive `needs repair`
 - `solidified` requires spaced strong reconstruction evidence
 - All other solidification claims are invalid.
+- state is derived at render time from `socratink:training:v1:<conceptId>`, not from mutable graph truth
+- the shipped browser store folds `node_records[node_id].attempts` and reads `study_revealed_at` for next-action routing
+- the future Supabase/event-log target must preserve the same derivation over equivalent learner reconstruction and study-reveal events
 
 `solidified` is the only graph-truth mutation that requires spaced reconstruction. Study completion, repair reps, self-ratings, and threshold capture must not mutate graph truth.
 
 Study may mutate the learner. The study view may not mutate graph truth.
+
+### Runtime State Contract
+
+The current runtime source of truth is one browser-local training record per
+concept:
+
+```text
+socratink:training:v1:<conceptId>
+```
+
+That record carries concept provenance, the learner sketch, per-node attempts,
+`study_revealed_at`, and learner-authored repair records. `concept.graphData`
+remains the provisional structure and legacy compatibility surface, not the
+state authority.
+
+Each entry renders through these derived fields:
+
+- `state`: `null | primed | needs repair | solidified`
+- `strongest_turn_text`: learner-written reconstruction text, or `null`
+- `gaps`: recorded gap evidence
+- `next_action`: `cold_attempt | study | repair | spaced_attempt | review | null`
+- `solidify_unlocks_at`: quiet eligibility timestamp, or `null`
+
+`next_action` must not promise a state transition the derivation has not
+recorded. `spaced_attempt` is offered only when the next reconstruction can
+legitimately count as spaced; state still advances to `solidified` only after a
+new strong attempt is stored and spaced after a prior strong attempt.
+
+Concept-level badges use weakest-link aggregation:
+
+- no tested entries -> no badge
+- any `needs repair` entry -> concept badge is `needs repair`
+- otherwise any `primed` entry -> concept badge is `primed`
+- otherwise all tested entries are `solidified` -> concept badge is `solidified`
+
+Badge and composition should travel together so the product can show honest
+progress without hiding the gap.
+
+Current shipped binding status:
+
+- concept-page entry state, CTAs, inline reconstruction, study reveal, and repair panels derive from the training record
+- Library reconstruction copy uses learner-written training records and must not fall back to AI-generated `core_thesis`
+- Map badges, Desk tiles, Sidebar markers, and Library card badges still have legacy `concept.state` bindings until the full target binding lands
+
+Implementation detail, schema shape, exact fold mechanics, and migration rules
+belong in [the drill data-model canon](../superpowers/specs/2026-05-15-drill-data-model-design.md). This doctrine owns the product truth the derivation must preserve.
 
 ---
 
@@ -243,7 +291,7 @@ Study may mutate the learner. The study view may not mutate graph truth.
 [starting-map-flow-artifact.md](starting-map-flow-artifact.md) operationalizes this doctrine at concept entry. Reading it alongside this doctrine, the contract is:
 
 - **Threshold capture** = hypothesis-shaping input. No graph mutation.
-- **Provisional graph** = draft path. No graph mutation.
+- **Provisional graph**. No graph mutation.
 - **Locked study silhouette** = absence of explanatory content is intentional. No graph mutation.
 - **First cold attempt** = the first evidence event. It appends learner reconstruction evidence and derives `primed` or `needs repair`.
 - **Repair artifact (study)** = targeted corrective feedback. No graph mutation.
@@ -271,7 +319,7 @@ Required in MVP:
 Allowed in MVP, required later:
 
 - A starting-map threshold screen that captures a global current model before any explanatory content appears. If not built yet, the existing cold-attempt-first entry still satisfies the doctrine as long as the entry is framed collaboratively, not diagnostically.
-- Editorial copy on the graph page that uses "draft path" / "ready for first attempt" / "solidified through spaced reconstruction" language instead of completion/knowledge language.
+- Editorial copy on the graph page that uses "draft route" / "ready for first attempt" / "solidified through spaced reconstruction" language instead of completion/knowledge language.
 - Trajectory contrast language that describes evidence accumulation, not mastery accrual.
 
 Explicitly out of scope for MVP (but named so we do not drift):
@@ -289,7 +337,7 @@ These are soft-drift phrases that surface in this repo's older docs, UI copy, an
 
 | Legacy phrase (do not reuse) | First-principles replacement |
 | --- | --- |
-| "verified understanding" | "solid spaced reconstruction recorded" |
+| "verified/certified knowledge" | "solid spaced reconstruction recorded" |
 | "mastered" (as node claim) | "`solidified` — at least one solid spaced reconstruction is on record" |
 | "cleared" (as knowledge claim) | UI shorthand only for the `solidified` record; never a knowledge claim |
 | "proved it" / "proven" | "the learner produced reconstruction evidence Socratink recorded" |

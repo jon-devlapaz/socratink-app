@@ -34,8 +34,8 @@ These documents define the intended product behavior, UX rules, and system archi
 
 | File | Purpose |
 | :--- | :--- |
-| [evidence-weighted-map.md](../../docs/product/evidence-weighted-map.md) | **Product Spec:** Defines how the concept map nodes and edges are structured and how they correspond to evidence from the source text. |
-| [progressive-disclosure.md](../../docs/product/progressive-disclosure.md) | **UX Spec:** Details rules on how information from the extraction phase should be revealed to the user without overwhelming them. |
-| [doc-map.md](../../docs/project/doc-map.md) | **Index:** The master map of the project's documentation, which registers all of the above specs. |
+| [evidence-weighted-map.md](../../product/evidence-weighted-map.md) | **Product Spec:** Defines how the concept map nodes and edges are structured and how they correspond to evidence from the source text. |
+| [progressive-disclosure.md](../product/progressive-disclosure.md) | **Archived UX Spec:** Historical rules for how graph, drill, and progression details were previously grouped. Current contracts live in `docs/product/spec.md` and `docs/superpowers/specs/2026-05-15-drill-data-model-design.md`. |
+| [doc-map.md](../../project/doc-map.md) | **Index:** The master map of the project's documentation, which registers all of the above specs. |
 | [drill-build-measure-learn.md](../../../agents/WORKFLOWS/drill-build-measure-learn.md) | **Context:** Details how the extracted concept map feeds into the downstream "Drill" testing phase. |
-| [engineering.md](../../docs/drill/engineering.md) | **Context:** Additional engineering details linking extraction outputs to system components. |
+| [engineering.md](../drill/engineering.md) | **Context:** Additional engineering details linking extraction outputs to system components. |

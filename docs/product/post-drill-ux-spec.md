@@ -11,7 +11,7 @@
 >
 > **When to read it**: Before changing post-phase panel copy, result-state visuals, transcript policy, attribution framing on non-solid results, sensory celebration behavior, or session-ending UX.
 >
-> **What it is NOT**: It is not the routing/state implementation spec (read `progressive-disclosure.md`), the binding drill data-model canon (read `../superpowers/specs/2026-05-15-drill-data-model-design.md`), or the full UX doctrine (read `/DESIGN.md`).
+> **What it is NOT**: It is not the routing/state implementation spec (read `spec.md` for product routing and `../superpowers/specs/2026-05-15-drill-data-model-design.md` for derivation/rendering fields), the binding drill data-model canon, or the full UX doctrine (read `/DESIGN.md`).
 >
 > **Key constraints an agent must follow**:
 > - Five canonical result states: Primed, Needs Repair, Solidified, In-Progress, Session Complete. Each must look and feel distinct.

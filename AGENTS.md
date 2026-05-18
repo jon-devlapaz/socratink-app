@@ -346,3 +346,5 @@ For a current architecture overview, use the Code Review Graph tools described i
 - Stale: 0
 - Indeterminate: 0
 - Stale claims with line refs: none found in the audited set.
+
+Any meaningful product/architecture change must update exactly one canonical doc: project/state.md, an ADR, the relevant product/design spec, or project/doc-map.md.
