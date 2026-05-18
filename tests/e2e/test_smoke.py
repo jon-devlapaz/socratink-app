@@ -7,9 +7,11 @@ What this catches
 - Anonymous Supabase sessions are labeled as guest, not signed-in users
 - First-run guidance stays inline instead of regressing to a modal
 - Library cards render training evidence instead of AI summary copy
+- Launch-pad sketch validation matches the backend substantive threshold
 - Inline concept-page attempts persist, retry, and preserve active-entry state
 - Study reveal and repair records survive localStorage reload/reconstruction
 - Drawer toggle stays visible after opening a library concept
+- Feedback opens as an accessible overlay without collapsing the sidebar
 - Library cards reopen the concept-map view (not a stale shell) on second click
 - Deleting the active concept confirms via dialog and resets to the desk
 - Desk tile states expose the expected learner-facing labels

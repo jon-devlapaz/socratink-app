@@ -204,7 +204,8 @@ python scripts/run_tasting_fixture.py
 # Full-stack diff-coverage gate. Runs the Python suite with coverage.xml,
 # captures Chromium V8 coverage from the e2e smoke run via the Chrome
 # DevTools Protocol, normalizes it through monocart-coverage-reports into
-# cobertura, then runs diff-cover against origin/main with --fail-under=100.
+# cobertura, then runs diff-cover against COMPARE_BRANCH when set or
+# origin/main / main locally with --fail-under=100.
 # Fails the script (exit 1) with the offending file and line numbers if any
 # new line in the diff lacks a covering test.
 ./scripts/check-coverage.sh
@@ -264,7 +265,7 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
   - **mypy** (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) — config in `mypy.ini`. Canonical invocation: `mypy .`. Honors `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees) plus per-module `ignore_errors` for `tests.*` and `api.*`.
   - **Scope must stay aligned** between the two configs. If you change one exclude list, change the other. `pyrefly.toml` uses positive `project-includes` (`main.py`, `ai_service.py`, `learning_commons.py`, `runtime_env.py`, `auth`, `llm`, `source_intake`, `models`) — add new top-level modules there if you create them, otherwise pyrefly silently skips them.
 - No ruff/flake8 config is checked in. Do not invent lint commands beyond `pyrefly check` and `mypy .`.
-- CI gate: `.github/workflows/preflight.yml` runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), then `bash scripts/doctor.sh`, then `.venv/bin/pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so `doctor.sh` exercises the bootstrap/auth path without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
+- CI gate: `.github/workflows/preflight.yml` runs on every `pull_request` and on pushes to `main`/`dev`. The `preflight` job runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), `bash scripts/doctor.sh`, and `.venv/bin/pytest -q --ignore=tests/e2e`; the `coverage` job installs Node/Chromium, starts a loopback app with `SOCRATINK_E2E_LOCAL_GUEST=1`, selects `COMPARE_BRANCH`, and runs `bash scripts/check-coverage.sh`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so the gates exercise bootstrap/auth paths without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`
@@ -333,8 +334,8 @@ For a current architecture overview, use the Code Review Graph tools described i
 - Run browser smoke without being asked after deploys, merges to `main`, `git push origin main` with verification framing, before claiming "the site works" or "X is live", when investigating hosted-only symptoms, and after high-risk changes to `main.py`, `api/index.py`, or `public/index.html`.
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; the only same-origin requestfailure exception is narrow Chromium `ERR_ABORTED` bootstrap noise for `/api/health` and `/api/me`, not HTTP failures or app assets.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
-- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
-- Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
+- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, launch-pad sketch validation, drawer visibility after concept entry, feedback modal/sidebar behavior, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
+- Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `COMPARE_BRANCH` when set or `origin/main` / `main` locally using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
 
 ## Audit log 2026-05-12
 
