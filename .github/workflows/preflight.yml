@@ -71,11 +71,26 @@ jobs:
       GEMINI_API_KEY: dummy-for-tests
       SOCRATINK_BASE_URL: 'http://localhost:8000'
       SOCRATINK_E2E_LOCAL_GUEST: '1'
-      COMPARE_BRANCH: origin/${{ github.base_ref || 'main' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Select coverage compare ref
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_REF: ${{ github.base_ref }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            compare_ref="origin/$PR_BASE_REF"
+          elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            compare_ref="$PUSH_BEFORE"
+          else
+            echo "Unable to determine coverage compare ref for $EVENT_NAME" >&2
+            exit 1
+          fi
+          echo "COMPARE_BRANCH=$compare_ref" >> "$GITHUB_ENV"
 
       - uses: actions/setup-python@v5
         with:
