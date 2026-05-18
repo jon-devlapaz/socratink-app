@@ -23,6 +23,7 @@
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
 import { AudioFX } from './audio.js';
+import { isSubstantiveSketch } from './sketch-validation.js';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
 // stays consistent: typing fires playKeyClick on visible keys + Backspace +
@@ -34,34 +35,17 @@ const _isPrintableLaunchPadKey = (e) =>
 const PENDING_SHELL_KEY = 'socratink:pendingShell';
 const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Substantiveness gate for the launch-pad threshold (C-prime spec §3.2).
-// Uses a simpler 3+ word / no-idk heuristic — intentionally lighter than the
-// stricter 8-token server gate (`is_substantive_sketch` in sketch_validation.py)
-// and the identical JS port in sketch-validation.js (which applies to the
-// conversational flow). This client gate fails fast on obvious non-answers;
-// the server applies the stricter 8-token check and can still return a 422.
-//
-// IDK_PATTERN covers the same "don't know" terms as the server's
-// _DONT_KNOW_PATTERNS list (`idk`, `i don't know`, `no idea`, `no clue`,
-// `dunno`, `not sure`) plus repeated-punctuation/ellipsis sequences (\?+ …+)
-// that the server handles via its _REPEATED_CHAR_RE (`^(.)\1{4,}$`).
-const SUBSTANTIVE_MIN_WORDS = 3;
-const IDK_PATTERN = /^(\?+|…+|idk|i\s*don'?t\s*know|no\s*idea|no\s*clue|dunno|not\s*sure)$/i;
-
 // Strategy-framed footer copy shown when the input is non-empty but not substantive.
 // Names the *kind* of words that move the sketch over the line so the learner
 // has something concrete to add, rather than the older "a few words" hand-wave
 // which left users guessing why a 16-word sketch was being rejected.
 const THIN_THRESHOLD_COPY =
-  'Try naming a part, a guessed step, or where the picture gets fuzzy — that gives socratink something to draft from.';
+  'Name a few concrete parts, guessed steps, examples, or confusions so socratink has enough signal to draft from.';
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 function isSubstantiveThreshold(text) {
-  const t = (text || '').trim();
-  if (!t) return false;
-  if (IDK_PATTERN.test(t)) return false;
-  return t.split(/\s+/).filter(Boolean).length >= SUBSTANTIVE_MIN_WORDS;
+  return isSubstantiveSketch(text);
 }
 
 function readPendingShell() {

@@ -47,7 +47,40 @@ The loop is the product. Anything that lets the learner skip a step, or that mut
 
 ---
 
-## 3. Starting Map As Anchor, Not Diagnostic
+## 3. Pedagogical Grounding
+
+This doctrine is grounded in cognitive learning science, not in a claim that the product can inspect the learner's mind.
+
+| Socratink move | Learning-science basis | Product implication |
+| --- | --- | --- |
+| Cold attempt before study | Retrieval practice and pretesting: trying to retrieve or generate an answer can improve later retention and encoding, even when the first attempt is incomplete. | The first node action must ask for learner generation before the study note appears. The attempt is unscored and exists to expose the current model. |
+| Verbatim learner draft | Self-explanation and metacognitive monitoring: the useful artifact is the learner's own explanation, because it makes gaps inspectable. | Store and render the learner's exact words. Do not replace the draft with AI-polished summary text. |
+| Targeted study after the attempt | Corrective feedback after retrieval failure can improve later learning when the feedback addresses the missing relation. | Study is unlocked only after a substantive attempt, and it should repair the attempted mechanism rather than become a generic lesson. |
+| Repair in the learner's words | Self-explanation research supports active explanation over passive rereading for conceptual understanding. | The repair surface asks the learner to restate the missing link. Study may be visible for inspection, but repair should bias toward generation rather than copying. |
+| Spaced re-drill before `solidified` | Distributed practice and delayed retrieval are among the strongest durable-learning findings. | A single strong cold attempt or immediate repair cannot derive `solidified`. Durable graph truth requires delayed reconstruction evidence. |
+| Scaffold after repeated collapse | Cognitive load theory and expertise-reversal work warn that unguided generation can overload novices on high-element-interactivity material. | If a learner repeatedly cannot generate a meaningful attempt, the product should shift to scaffolded completion or worked-example comparison without calling that mastery. |
+
+Evidence posture:
+
+- **High confidence:** retrieval practice, distributed practice, generation-before-recognition, and no mastery from reading.
+- **Medium-high confidence:** targeted corrective feedback and self-explanation as the repair mechanism.
+- **Conditional:** cold free recall for complex novice material. It is useful only when followed by corrective feedback and bounded by scaffolding.
+- **Speculative / must be guarded:** AI classification of conceptual understanding. Treat the grader as a gap-surfacing aid, not an oracle.
+
+Source anchors:
+
+- Roediger & Karpicke, 2006 — test-enhanced learning / retrieval practice. DOI: `10.1111/j.1467-9280.2006.01693.x`.
+- Rowland, 2014 — testing versus restudy meta-analysis. DOI: `10.1037/a0037559`.
+- Cepeda et al., 2006 — distributed practice meta-analysis. DOI: `10.1037/0033-2909.132.3.354`.
+- Dunlosky et al., 2013 — review of effective learning techniques; practice testing and distributed practice rated high utility. DOI: `10.1177/1529100612453266`.
+- Kornell, Hays & Bjork, 2009 — unsuccessful retrieval attempts can enhance later learning when followed by feedback. DOI: `10.1037/a0015729`.
+- Butler, 2010 — repeated testing with feedback can support transfer. DOI: `10.1037/a0019902`.
+- Chi et al., 1994 — elicited self-explanations improve understanding. DOI: `10.1207/s15516709cog1803_3`.
+- Kalyuga et al., 2007 — expertise-reversal effect and guidance needs for novices. DOI: `10.1007/s10648-007-9054-3`.
+
+---
+
+## 4. Starting Map As Anchor, Not Diagnostic
 
 Concept entry must onboard the learner into their own current model, not into the content. The concept page is not where the learner goes to read. It is where their current model becomes inspectable.
 
@@ -65,7 +98,7 @@ The first cold attempt is still the first evidence event. The starting map makes
 
 ---
 
-## 4. Proposed Structure vs Verified Learning State
+## 5. Proposed Structure vs Verified Learning State
 
 Two different things live on the graph. Do not collapse them.
 
@@ -83,7 +116,7 @@ The graph is the union of these two layers. The UI must never render them as the
 
 ---
 
-## 5. Map Maturity Language
+## 6. Map Maturity Language
 
 Use these names when talking about where a map sits in its lifecycle. These are product words, not new states.
 
@@ -99,7 +132,7 @@ A map is never "complete." It accumulates evidence. Evidence can decay (re-drill
 
 ---
 
-## 6. App State vs Learner Capability Evidence
+## 7. App State vs Learner Capability Evidence
 
 Two different state clocks run in this product. Keep them in different columns.
 
@@ -119,7 +152,7 @@ Specifically:
 
 ---
 
-## 7. Confidence / Evidence Language
+## 8. Confidence / Evidence Language
 
 When talking to the learner or to future agents, describe the graph in evidence terms.
 
@@ -144,7 +177,7 @@ Avoid:
 
 ---
 
-## 8. What The Graph May Claim
+## 9. What The Graph May Claim
 
 The graph may show:
 
@@ -161,7 +194,7 @@ The graph may highlight the active node, dim others, and recommend an interleavi
 
 ---
 
-## 9. What The Graph Must Never Claim
+## 10. What The Graph Must Never Claim
 
 The graph must not say or imply:
 
@@ -176,11 +209,11 @@ The graph must not say or imply:
 - that a rollback from `solidified` occurs without a contradicting re-drill
 - learner-facing diagnostic categories ("beginner", "intermediate", "advanced", "misconception detected")
 
-If the UI or copy ever makes a claim not in §8 and absent from §9, assume it is out of scope and treat it as a bug.
+If the UI or copy ever makes a claim not in §9 and absent from §10, assume it is out of scope and treat it as a bug.
 
 ---
 
-## 10. Relation To The Derived State Model
+## 11. Relation To The Derived State Model
 
 The doctrine preserves a four-outcome projection, but state is derived from the training record rather than stored as mutable graph truth.
 
@@ -205,7 +238,7 @@ Study may mutate the learner. The study view may not mutate graph truth.
 
 ---
 
-## 11. How Starting Map Flow Fits The Doctrine
+## 12. How Starting Map Flow Fits The Doctrine
 
 [starting-map-flow-artifact.md](starting-map-flow-artifact.md) operationalizes this doctrine at concept entry. Reading it alongside this doctrine, the contract is:
 
@@ -221,7 +254,7 @@ If a screen in that flow starts making mastery claims, it has left the doctrine.
 
 ---
 
-## 12. MVP-Safe Version Of The Model
+## 13. MVP-Safe Version Of The Model
 
 The full doctrine is large. The MVP must ship a credible subset without over-promising.
 
@@ -250,7 +283,7 @@ Explicitly out of scope for MVP (but named so we do not drift):
 
 ---
 
-## 13. Legacy Shorthand Replacement Table (Agent Reference)
+## 14. Legacy Shorthand Replacement Table (Agent Reference)
 
 These are soft-drift phrases that surface in this repo's older docs, UI copy, and agent transcripts. They are not always wrong, but they are the exact framings that slip into "graph shows understanding" if not anchored. When authoring or reviewing any learner-facing copy or binding doc, translate as follows.
 
@@ -276,7 +309,7 @@ These are soft-drift phrases that surface in this repo's older docs, UI copy, an
 
 Agents: when any of the left-column phrases appear in a PR diff, copy review, or proposed change, replace them or reject the change. The phrases are not individually catastrophic — they are load-bearing when they accumulate.
 
-## 14. Binding Principles (Quick Reference)
+## 15. Binding Principles (Quick Reference)
 
 - Generation Before Recognition is non-negotiable.
 - Explanatory content must not appear before the learner exposes a current model or makes a local cold attempt.

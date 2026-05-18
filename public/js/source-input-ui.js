@@ -29,9 +29,9 @@ export function hasStudyEvidence(node = {}) {
 export function SOURCE_INPUT_HTML(showClipboard) {
   return `
       <div class="overlay-tabs creation-source-tabs">
-        <button class="overlay-tab active" data-tab="paste">Paste</button>
-        <button class="overlay-tab" data-tab="url">URL</button>
-        <button class="overlay-tab" data-tab="upload">Upload</button>
+        <button class="overlay-tab active" type="button" data-tab="paste">Paste</button>
+        <button class="overlay-tab" type="button" data-tab="url">URL</button>
+        <button class="overlay-tab" type="button" data-tab="upload">Upload</button>
       </div>
       <div class="overlay-panel" data-panel="paste">
         <textarea class="overlay-textarea" placeholder="Paste source material here."></textarea>

@@ -11,7 +11,7 @@ Canonical entry points first; deep specs and ephemera below. For an agent-crawle
 
 ## Precedence
 
-On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) overrides every other binding doc — including `DESIGN.md`, `spec.md`, and all implementation-tier specs. Legacy shorthand ("verified understanding", "cleared", "mastered") falls under its §13 Legacy Shorthand Replacement Table.
+On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) overrides every other binding doc — including `DESIGN.md`, `spec.md`, and all implementation-tier specs. Legacy shorthand ("verified understanding", "cleared", "mastered") falls under its §14 Legacy Shorthand Replacement Table.
 
 On all other topics, the doc listed below for that topic is authoritative.
 

@@ -1,16 +1,14 @@
 name: preflight
 
-# Lightweight CI gate: type-check + unit/integration tests.
+# CI gates: type-check + unit/integration tests, plus strict diff coverage.
 #
 # Complements (does not replace) the local pre-deploy gate at
 # scripts/preflight-deploy.sh, which also runs `vercel build` against
 # real Vercel credentials. That gate stays local-only because it needs
 # secrets and the full deploy toolchain.
 #
-# E2E Playwright tests (tests/e2e) are intentionally excluded: they
-# need browsers + a running uvicorn server, and live behind the
-# qa-smoke launchd trigger. They will be added in a follow-up if/when
-# we want PR-time browser smoke.
+# The coverage job starts a loopback uvicorn server and runs
+# scripts/check-coverage.sh, which includes the browser/V8 coverage path.
 
 on:
   pull_request:
@@ -29,6 +27,8 @@ jobs:
       APP_BASE_URL: 'http://localhost:8000'
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -58,3 +58,82 @@ jobs:
         env:
           GEMINI_API_KEY: dummy-for-tests
         run: .venv/bin/pytest -q --ignore=tests/e2e
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AUTH_ENABLED: 'true'
+      SUPABASE_URL: 'https://example.supabase.co'
+      SUPABASE_PUBLISHABLE_KEY: 'dummy-publishable-key'
+      SUPABASE_JWT_SECRET: 'dummy-jwt-secret'
+      APP_BASE_URL: 'http://localhost:8000'
+      GEMINI_API_KEY: dummy-for-tests
+      SOCRATINK_BASE_URL: 'http://localhost:8000'
+      SOCRATINK_E2E_LOCAL_GUEST: '1'
+      COMPARE_BRANCH: origin/${{ github.base_ref || 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: '.python-version'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Generate per-run Fernet key
+        run: |
+          echo "SESSION_COOKIE_KEY=$(python -c 'import os, base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" >> $GITHUB_ENV
+
+      - name: Bootstrap repo Python + hooks
+        run: |
+          bash scripts/bootstrap-python.sh
+
+      - name: Install frontend coverage tooling
+        run: |
+          npm ci
+
+      - name: Install Chromium
+        run: |
+          .venv/bin/playwright install chromium
+
+      - name: Start local app
+        run: |
+          .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
+          echo "$!" > uvicorn.pid
+          .venv/bin/python - <<'PY'
+          import time
+          import urllib.request
+
+          deadline = time.time() + 30
+          last_error = None
+          while time.time() < deadline:
+              try:
+                  with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=2) as response:
+                      if response.status == 200:
+                          raise SystemExit(0)
+              except Exception as exc:
+                  last_error = exc
+                  time.sleep(1)
+          raise SystemExit(f"local app did not become healthy: {last_error}")
+          PY
+
+      - name: Diff coverage
+        run: |
+          bash scripts/check-coverage.sh
+
+      - name: Stop local app
+        if: always()
+        run: |
+          if [ -f uvicorn.pid ]; then
+            kill "$(cat uvicorn.pid)" 2>/dev/null || true
+          fi

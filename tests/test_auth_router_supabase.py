@@ -10,8 +10,9 @@ from urllib.parse import parse_qs, urlparse
 from cryptography.fernet import Fernet
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
-from auth.router import GUEST_COOKIE_NAME, auth_router
+from auth.router import GUEST_COOKIE_NAME, _local_e2e_guest_bootstrap_enabled, auth_router
 from auth.service import (
     AuthConfigurationError,
     AuthSessionState,
@@ -467,7 +468,14 @@ class AnonymousGuestTests(unittest.TestCase):
 
 class LocalE2EGuestBootstrapTests(unittest.TestCase):
     def setUp(self):
-        self._env_keys = ("SOCRATINK_E2E_LOCAL_GUEST", "SOCRATINK_DEV_AUTOGUEST", "VERCEL", "VERCEL_ENV", "CI")
+        self._env_keys = (
+            "SOCRATINK_E2E_LOCAL_GUEST",
+            "SOCRATINK_DEV_AUTOGUEST",
+            "GITHUB_ACTIONS",
+            "VERCEL",
+            "VERCEL_ENV",
+            "CI",
+        )
         self._env_snapshot = {key: os.environ.get(key) for key in self._env_keys}
 
     def tearDown(self):
@@ -484,7 +492,7 @@ class LocalE2EGuestBootstrapTests(unittest.TestCase):
             if value is not None:
                 os.environ[key] = value
 
-    def _client(self) -> TestClient:
+    def _client(self, *, client_address=("testclient", 50000)) -> TestClient:
         app = FastAPI()
         app.state.auth_service = SupabaseAuthService(
             enabled=True,
@@ -495,7 +503,7 @@ class LocalE2EGuestBootstrapTests(unittest.TestCase):
             app_base_url="http://localhost:8000",
         )
         app.include_router(auth_router)
-        return TestClient(app)
+        return TestClient(app, client=client_address)
 
     def test_e2e_guest_route_hidden_by_default(self):
         self._set_env()
@@ -516,6 +524,46 @@ class LocalE2EGuestBootstrapTests(unittest.TestCase):
         response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
 
         self.assertEqual(response.status_code, 404)
+
+    def test_e2e_guest_route_hidden_for_remote_clients(self):
+        self._set_env(SOCRATINK_E2E_LOCAL_GUEST="1", SOCRATINK_DEV_AUTOGUEST="1")
+        client = self._client(client_address=("203.0.113.10", 50000))
+
+        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_e2e_guest_route_enabled_for_loopback_github_actions(self):
+        self._set_env(
+            SOCRATINK_E2E_LOCAL_GUEST="1",
+            GITHUB_ACTIONS="true",
+            CI="true",
+        )
+        client = self._client()
+
+        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/")
+        self.assertIn("sb_session=", response.headers.get("set-cookie", ""))
+
+    def test_e2e_guest_route_rejects_non_loopback_github_actions_request(self):
+        self._set_env(
+            SOCRATINK_E2E_LOCAL_GUEST="1",
+            GITHUB_ACTIONS="true",
+            CI="true",
+        )
+        request = Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/auth/e2e/guest",
+                "headers": [],
+                "client": ("203.0.113.10", 12345),
+            }
+        )
+
+        self.assertIs(_local_e2e_guest_bootstrap_enabled(request), False)
 
     def test_e2e_guest_configuration_failure_uses_guest_error(self):
         self._set_env(SOCRATINK_E2E_LOCAL_GUEST="1", SOCRATINK_DEV_AUTOGUEST="1")

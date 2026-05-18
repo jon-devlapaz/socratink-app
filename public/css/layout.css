@@ -254,8 +254,12 @@ html[data-theme="dark"] #intro-particle-canvas {
     z-index: 1000;
   }
 
-  /* Hide the main nav links in the drawer on mobile because they are in the bottom nav */
+  /* Mobile bottom nav owns the primary destinations. Keep Feedback in the
+     drawer because it has no bottom-nav equivalent. */
   #drawer .sidebar-nav {
+    display: flex;
+  }
+  #drawer .sidebar-nav .sidebar-nav-item:not(#nav-feedback) {
     display: none;
   }
 

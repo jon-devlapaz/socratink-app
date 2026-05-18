@@ -790,6 +790,11 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             const shellItemHtml = shell.conceptListItemHtml({ id: 'c-shell', name: '<Unsafe>', state: 'growing' });
             assert(shellItemHtml.includes('&lt;Unsafe&gt;'), 'shell concept html escapes');
             assert(shellItemHtml.includes('data-concept-id="c-shell"'), 'shell concept id data attr');
+            assert(shellItemHtml.includes('class="concept-actions"'), 'shell concept action affordance');
+            assert(shellItemHtml.includes('aria-haspopup="menu"'), 'shell concept action menu semantics');
+            assert(shellItemHtml.includes('more_vert'), 'shell concept action icon');
+            assert(shellItemHtml.includes('class="concept-action-menu"'), 'shell concept action menu');
+            assert(shellItemHtml.includes('class="concept-delete concept-action-menu-item"'), 'shell delete menu item');
             assert(shellItemHtml.includes('App.deleteConcept(this.dataset.conceptId,this)'), 'shell delete bridge');
             const shellConceptList = document.createElement('div');
             const shellOpened = [];
@@ -807,8 +812,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(shellConceptList.children[1].classList.contains('active'), 'shell active concept');
             shellConceptList.children[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
             same(shellOpened, ['c1'], 'shell concept click');
-            shellConceptList.querySelector('.concept-delete').dispatchEvent(new MouseEvent('click', { bubbles: true }));
-            same(shellOpened, ['c1'], 'shell delete click ignored');
+            shellConceptList.querySelector('.concept-actions').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            same(shellOpened, ['c1'], 'shell actions click ignored');
 
             // Coverage for app.js wrapper line changed in this branch.
             try { window.App.toggleDrawer(); } catch (e) { throw new Error('toggleDrawer error: ' + e); }
@@ -1162,6 +1167,10 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
             assert(conceptPagePrimedHtml.includes('Study the gap'), 'concept page primed study eyebrow');
+            assert(conceptPagePrimedHtml.includes('concept-page-b2__evidence'), 'concept page primed shows recorded draft before study');
+            assert(conceptPagePrimedHtml.includes('Your draft'), 'concept page primed evidence uses learner language');
+            assert(conceptPagePrimedHtml.includes('A strong first attempt.'), 'concept page primed preserves learner words before study');
+            assert(!conceptPagePrimedHtml.includes('Missing piece'), 'concept page primed does not reveal missing-piece language before study');
             assert(conceptPagePrimedHtml.includes('data-active-entry-action="study"'), 'concept page primed study action');
             assert(conceptPagePrimedHtml.includes('Compare with notes'), 'concept page primed study cta');
             const conceptPageStudiedHtml = conceptPage.renderActiveEntryHtml(
@@ -1191,7 +1200,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPageStudiedHtml.includes('review pending'), 'concept page studied review eyebrow');
             assert(conceptPageStudiedHtml.includes('concept-page-b2__evidence'), 'concept page studied evidence artifact renders');
-            assert(conceptPageStudiedHtml.includes('learner reconstruction'), 'concept page studied evidence label');
+            assert(conceptPageStudiedHtml.includes('Your draft'), 'concept page studied evidence label');
+            assert(!conceptPageStudiedHtml.includes('learner reconstruction'), 'concept page hides internal reconstruction language');
             assert(conceptPageStudiedHtml.includes('A strong first attempt.'), 'concept page studied preserves learner words');
             assert(conceptPageStudiedHtml.includes('concept-page-b2__study-note'), 'concept page studied note renders');
             assert(conceptPageStudiedHtml.includes('Study note for this entry.'), 'concept page studied note uses entry purpose');
@@ -1253,10 +1263,14 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPageRepairHtml.includes('Needs repair'), 'concept page repair eyebrow');
             assert(conceptPageRepairHtml.includes('concept-page-b2__evidence'), 'concept page repair evidence artifact renders');
+            assert(conceptPageRepairHtml.includes('Your draft'), 'concept page repair uses learner-owned draft label');
+            assert(conceptPageRepairHtml.includes('Missing piece'), 'concept page repair uses human missing-piece label');
+            assert(!conceptPageRepairHtml.includes('repair hinge'), 'concept page repair hides rubric hinge language');
             assert(conceptPageRepairHtml.includes('Sodium just rushes in.'), 'concept page repair preserves learner words');
             assert(conceptPageRepairHtml.includes('Name that voltage-gated sodium channels open at threshold.'), 'concept page repair surfaces hinge');
             assert(conceptPageRepairHtml.includes('concept-page-b2__repair'), 'concept page repair panel');
             assert(conceptPageRepairHtml.includes('data-repair-entry-id="repair"'), 'concept page repair save target');
+            assert(conceptPageRepairHtml.includes('Put it in your words'), 'concept page repair panel uses generation language');
             assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
             const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
               { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },

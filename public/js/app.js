@@ -25,7 +25,7 @@ import {
   renderActiveEntryHtml,
   renderConceptStripHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=6';
+} from './concept-page-view.js?v=7';
 import {
   getDefaultPhaseBSessionState,
   getPhaseBSessionStorageKey,
@@ -216,7 +216,7 @@ const App = (() => {
     const graphData = {
       metadata: {
         source_title: 'Repair QA source',
-        starting_map_context: 'Learner thinks sodium just rushes in.',
+        starting_map_context: 'I think sodium just rushes in.',
         map_maturity: 'provisional',
       },
       backbone: [{
@@ -248,7 +248,7 @@ const App = (() => {
       contentType: null,
       contentFilename: null,
       sourceUrl: null,
-      startingMapContext: 'Learner thinks sodium just rushes in.',
+      startingMapContext: 'I think sodium just rushes in.',
       graphData: JSON.stringify(graphData),
     };
   }
@@ -329,7 +329,7 @@ const App = (() => {
       grounding: 'learner_sketch',
       source_ref: null,
       sketch: {
-        text: 'Learner thinks sodium just rushes in.',
+        text: 'I think sodium just rushes in.',
         at: now.toISOString(),
       },
       node_records: {
@@ -729,9 +729,31 @@ const App = (() => {
   function syncConceptListActiveState() {
     const sidebarActiveId = getSidebarActiveConceptId();
     document.querySelectorAll('#concept-list .concept-item').forEach((item) => {
-      const conceptId = item.dataset.conceptId || item.querySelector('.concept-delete')?.dataset.conceptId;
+      const conceptId = item.dataset.conceptId || item.querySelector('.concept-actions')?.dataset.conceptId;
       item.classList.toggle('active', conceptId === sidebarActiveId);
     });
+  }
+
+  function closeConceptActionMenus() {
+    document.querySelectorAll('#concept-list .concept-item.menu-open').forEach((item) => {
+      const menu = item.querySelector('.concept-action-menu');
+      const trigger = item.querySelector('.concept-actions');
+      if (menu) menu.hidden = true;
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      item.classList.remove('menu-open');
+    });
+  }
+
+  function toggleConceptActions(btn) {
+    const item = btn?.closest?.('.concept-item');
+    const menu = item?.querySelector?.('.concept-action-menu');
+    if (!item || !menu) return;
+
+    const shouldOpen = menu.hidden;
+    closeConceptActionMenus();
+    menu.hidden = !shouldOpen;
+    item.classList.toggle('menu-open', shouldOpen);
+    btn.setAttribute('aria-expanded', String(shouldOpen));
   }
 
   // ── 10. Drawer ─────────────────────────────────────────────
@@ -761,7 +783,7 @@ const App = (() => {
         showDashboard();
         selectConcept(c.id);
         if (c.graphData) showMapView(c);
-        closeDrawer();
+        if (window.innerWidth < 900) closeDrawer();
       },
     });
   }
@@ -1382,7 +1404,10 @@ const App = (() => {
 
     const conceptName = concept.name || 'this concept';
     const confirmed = window.confirm(`Delete "${conceptName}"?\n\nThis removes its draft path and recorded evidence from this browser.`);
-    if (!confirmed) return;
+    if (!confirmed) {
+      closeConceptActionMenus();
+      return;
+    }
 
     const wasActive = getActiveId() === id;
     const item = btnEl?.closest?.('.concept-item');
@@ -1761,6 +1786,31 @@ const App = (() => {
     if (repairBtn) {
       repairBtn.addEventListener('click', () => {
         void saveRepairForEntry(repairBtn, concept, data);
+      });
+    }
+    const studyNote = docEl.querySelector('.concept-page-b2__study-note');
+    const studyNoteToggle = docEl.querySelector('[data-study-note-toggle]');
+    const setStudyNoteCollapsed = (collapsed) => {
+      if (!studyNote) return;
+      studyNote.classList.toggle('is-collapsed', Boolean(collapsed));
+      if (studyNoteToggle) {
+        studyNoteToggle.textContent = collapsed ? 'Show study note' : 'Hide study note';
+        studyNoteToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      }
+    };
+    if (studyNoteToggle) {
+      studyNoteToggle.addEventListener('click', () => {
+        setStudyNoteCollapsed(!studyNote?.classList.contains('is-collapsed'));
+      });
+    }
+    const repairInput = docEl.querySelector('.concept-page-b2__repair-input');
+    if (repairInput) {
+      repairInput.addEventListener('focus', () => setStudyNoteCollapsed(true));
+      repairInput.addEventListener('input', () => {
+        setStudyNoteCollapsed(Boolean(repairInput.value.trim()));
+      });
+      repairInput.addEventListener('blur', () => {
+        setStudyNoteCollapsed(Boolean(repairInput.value.trim()));
       });
     }
     docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
@@ -2319,7 +2369,6 @@ const App = (() => {
       if (stateLabel && stateLabel !== 'no concepts yet') {
         tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
       }
-      if (meta.low_density) tagsHtml += `<span class="map-low-density">thin sketch</span>`;
       tagsEl.innerHTML = tagsHtml;
     }
 
@@ -2614,6 +2663,12 @@ const App = (() => {
     .forEach((el) => {
       el.addEventListener('click', () => AudioFX.playFocusTap());
     });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest('#concept-list .concept-actions, #concept-list .concept-action-menu')) return;
+    closeConceptActionMenus();
+  });
 
   // Render grid first (populates polygon DOM nodes)
   themePreference = getStoredThemePreference();
@@ -4076,7 +4131,7 @@ const App = (() => {
     setRepairRepDraft,
     getNodeInspectAction,
     runInspectAction,
-    deleteConcept,
+    deleteConcept, toggleConceptActions,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
     hideMapView, setMapMode, toggleCluster,

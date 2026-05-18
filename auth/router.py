@@ -777,10 +777,16 @@ def _local_e2e_guest_bootstrap_enabled(request: Request) -> bool:
         "on",
     }:
         return False
-    if not dev_autoguest_enabled():
-        return False
     client_host = request.client.host if request.client else ""
-    return client_host in {"127.0.0.1", "::1", "testclient"}
+    if client_host not in {"127.0.0.1", "::1", "testclient"}:
+        return False
+    if dev_autoguest_enabled():
+        return True
+    return (
+        os.getenv("GITHUB_ACTIONS", "").strip().lower() == "true"
+        and os.getenv("VERCEL", "").strip().lower() not in {"1", "true", "yes", "on"}
+        and not os.getenv("VERCEL_ENV")
+    )
 
 
 def load_current_session_state(request: Request) -> AuthSessionState:

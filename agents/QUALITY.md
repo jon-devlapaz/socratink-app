@@ -43,6 +43,7 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 - Delete obsolete paths when simplifying. If compatibility is needed, keep a tiny redirect file.
 - Do not commit generated local artifacts (`pyproject.toml`, `uv.lock`, `.vercel/`, caches, logs).
 - Do not claim "no verification needed" for doc-only changes that alter agent instructions, deploy instructions, dependency instructions, product doctrine, or required file paths. At minimum, run `bash scripts/doctor.sh`.
+- Verification commands must be self-contained. A documented gate must set or validate every repo-owned test/local env value it depends on; if it needs a server, browser, external service, or generated artifact, the command must provision it, fail with a precise remediation message, or be wrapped by a canonical script that does.
 - Capture reusable workflow friction in `agents/LEARNINGS.md` instead of scattering notes through adapters. Promote a pattern only after recurrence: 3 real sightings, or 2 sightings when it affects publication safety, verification integrity, bootstrap correctness, or canon boundaries.
 
 ## Verification Matrix

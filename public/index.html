@@ -15,7 +15,7 @@
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,bolt,close,help,info,memory,settings,show_chart&display=block"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,auto_stories,bolt,close,cloud_sync,delete,edit_note,help,info,memory,more_vert,rate_review,settings,show_chart,view_quilt&display=block"
     rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=2">
@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=38">
+  <link rel="stylesheet" href="/css/index.css?v=41">
   <link rel="stylesheet" href="css/drill-chamber.css?v=5">
 </head>
 
@@ -54,15 +54,15 @@
   <!-- Bottom Mobile Navigation -->
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
-      <span class="material-symbols-outlined">bolt</span>
+      <span class="material-symbols-outlined">edit_note</span>
       <span class="bottom-nav-label">New concept</span>
     </a>
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
-      <span class="material-symbols-outlined">auto_awesome</span>
+      <span class="material-symbols-outlined">view_quilt</span>
       <span class="bottom-nav-label">Desk</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showLibrary()" id="bn-library">
-      <span class="material-symbols-outlined">memory</span>
+      <span class="material-symbols-outlined">auto_stories</span>
       <span class="bottom-nav-label">Library</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showSettings()" id="bn-settings">
@@ -80,15 +80,15 @@
 
     <nav class="sidebar-nav">
       <a id="nav-ignition" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showIgnition()"><span class="material-symbols-outlined">bolt</span> New concept</a>
+        onclick="App.showIgnition()"><span class="material-symbols-outlined">edit_note</span> New concept</a>
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
-        onclick="App.showDashboard()"><span class="material-symbols-outlined">auto_awesome</span> Desk</a>
+        onclick="App.showDashboard()"><span class="material-symbols-outlined">view_quilt</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showLibrary()"><span class="material-symbols-outlined">memory</span> Library</a>
+        onclick="App.showLibrary()"><span class="material-symbols-outlined">auto_stories</span> Library</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
       <a id="nav-feedback" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="Feedback.show()"><span class="material-symbols-outlined">info</span> Send Feedback</a>
+        onclick="Feedback.show()"><span class="material-symbols-outlined">rate_review</span> Send Feedback</a>
     </nav>
 
     <div class="sidebar-divider"></div>
@@ -117,7 +117,7 @@
     </div>
 
     <!-- Close button (mobile only) -->
-    <button class="drawer-close" onclick="App.closeDrawer()" aria-label="Close sidebar">
+    <button class="drawer-close" type="button" onclick="App.closeDrawer()" aria-label="Close sidebar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -132,7 +132,7 @@
     <!-- Header bar (desktop) -->
     <header class="main-header">
       <div class="main-header-left">
-        <button class="drawer-toggle" id="drawer-toggle" onclick="App.toggleDrawer()" aria-label="Toggle sidebar"
+        <button class="drawer-toggle" id="drawer-toggle" type="button" onclick="App.toggleDrawer()" aria-label="Toggle sidebar"
           title="Toggle sidebar" aria-expanded="false" aria-controls="drawer">
           <svg class="toggle-icon" width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor"
             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -153,7 +153,7 @@
           <a class="auth-link" id="auth-login-link" href="/login">Save &amp; Sync</a>
           <button class="auth-link auth-link-secondary" id="auth-logout-btn" type="button" hidden>Log Out</button>
         </div>
-        <button class="dev-skip" id="dev-btn" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
+        <button class="dev-skip" id="dev-btn" type="button" style="display:none;" onclick="App.fastForward()">[skip 24h]</button>
         <button class="map-close-btn" id="map-close-btn" type="button" onclick="App.hideMapView()" aria-label="Close concept map">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -232,21 +232,21 @@
 
           <!-- Action Controls (Hidden for Board-First UX) -->
           <div id="primary-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button id="btn-drill" onclick="App.drill()">Start entry</button>
+            <button id="btn-drill" type="button" onclick="App.drill()">Start entry</button>
           </div>
           <div id="drill-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button onclick="App.drillFail()">Needs repair</button>
-            <button onclick="App.drillPass()">Attempt recorded</button>
+            <button type="button" onclick="App.drillFail()">Needs repair</button>
+            <button type="button" onclick="App.drillPass()">Attempt recorded</button>
           </div>
           <div id="consolidate-controls" style="display:none; gap: 8px; margin-top: 16px;">
-            <button onclick="App.consolidate()" disabled title="Spacing gate is not active in this MVP">Spacing gate unavailable</button>
+            <button type="button" onclick="App.consolidate()" disabled title="Spacing gate is not active in this MVP">Spacing gate unavailable</button>
           </div>
         </div>
 
         <!-- 3×3 isometric crystal grid -->
         <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
           <!-- Floating spacing button (disabled in the current MVP) -->
-          <button id="btn-consolidate-float" class="btn-consolidate-float" onclick="App.consolidate()"
+          <button id="btn-consolidate-float" class="btn-consolidate-float" type="button" onclick="App.consolidate()"
             style="display:none;" disabled title="Spacing gate is not active in this MVP" aria-label="Spacing gate unavailable">
             <svg
               style="display: block; width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; pointer-events: none;"
@@ -375,7 +375,7 @@
               onsubmit="return App.runLaunchPadAction(event)" autocomplete="off">
           <textarea class="composer-card__field" id="launch-pad-input"
                     rows="5" maxlength="1200"
-                    placeholder="A sentence or two is plenty — be specific over comprehensive."
+                    placeholder="Name parts, guesses, examples, or confusions. Concrete words help most."
                     aria-describedby="launch-pad-validation"
                     aria-label="What do you already think is inside this concept?"></textarea>
 
@@ -462,19 +462,19 @@
   <div id="tooltip-root" aria-hidden="true"></div>
 
   <script src="js/drill-chamber.js?v=6"></script>
-  <script type="module" src="js/app.js?v=120"></script>
+  <script type="module" src="js/app.js?v=124"></script>
   <script src="js/intro-particles.js?v=8"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=5"></script>
   <script type="module" src="js/iso-board-state-surface.js?v=5"></script>
-  <script type="module" src="js/feedback.js?v=1"></script>
+  <script type="module" src="js/feedback.js?v=4"></script>
 
   <!-- Feedback Modal -->
-  <div id="feedback-overlay" class="modal-overlay" hidden onclick="Feedback.hide()">
+  <div id="feedback-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="feedback-title" hidden onclick="Feedback.hide()">
     <div class="modal-card feedback-modal" onclick="event.stopPropagation()">
       <div class="modal-header">
-        <h2 class="modal-title">Send Feedback</h2>
-        <button class="modal-close" onclick="Feedback.hide()">
+        <h2 class="modal-title" id="feedback-title">Feedback</h2>
+        <button class="modal-close" type="button" onclick="Feedback.hide()" aria-label="Close feedback">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -482,7 +482,7 @@
         </button>
       </div>
       <form id="feedback-form" onsubmit="return Feedback.submit(event)">
-        <p class="modal-desc">Experiencing an issue? Have an idea? Your feedback goes directly to my local TODO list.</p>
+        <p class="modal-desc">Share a bug, rough edge, or idea. It helps shape what gets sharpened next.</p>
         <textarea id="feedback-message" class="modal-textarea"
                   placeholder="Tell me what's on your mind"
                   minlength="10" maxlength="1000" required></textarea>

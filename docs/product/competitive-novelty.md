@@ -89,7 +89,7 @@ metric.
 
 **Mechanism**: The graph shows what Socratink has *evidence for*, not what the
 learner *knows*. Topology is a hypothesis until reconstruction earns trust.
-(See `evidence-weighted-map.md` §1 and §4.)
+(See `evidence-weighted-map.md` §1 and §5.)
 
 **Closest analog**: None as doctrine. Heptabase, Logseq, Obsidian, and
 RemNote render *content* graphs (notes/links). NotebookLM's "mastery tracking"
