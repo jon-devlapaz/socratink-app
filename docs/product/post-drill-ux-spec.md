@@ -51,7 +51,7 @@ What it means:
 Required visual treatment:
 
 - node appears `primed` (warm, open, distinct from no-evidence and needs-repair states)
-- concept page offers an explicit `Reveal study note` action; study material is not recorded as revealed until the learner takes it
+- concept page offers an explicit `Compare with notes` action; study material is not recorded as revealed until the learner takes it
 - future side-panel treatment may add the 2-3 second transition beat after that explicit reveal
 - the result framing emphasizes exploration, not evaluation
 - no score, no tier/band, no performance metrics are shown
@@ -59,7 +59,7 @@ Required visual treatment:
 
 Required copy:
 
-- headline: `Reveal study note` CTA before study material appears
+- headline: `Compare with notes` CTA before study material appears
 - normalization message (one of): "Your guess just primed your brain. Now let's see what's really going on." / "Most learners get this wrong the first time. That's by design." / "This is how your brain prepares to learn." / "That attempt just activated your semantic networks. The study material will land harder now."
 
 Sensory treatment:
