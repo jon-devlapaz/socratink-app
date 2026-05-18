@@ -91,7 +91,10 @@ Training evidence is stored separately from `concept.graphData` under
 
 Legacy `drill_status`, `drill_phase`, gap metadata, and timer fields in
 `graphData` are compatibility inputs only; new behavior must derive from the
-training record.
+training record. Exception: legacy `drill_status: "primed"` +
+`drill_phase: "study"` nodes with no attempts may record
+`study_revealed_at` with `attempts: []` when the learner reveals study, so the
+app preserves the old study route without inventing reconstruction evidence.
 
 ---
 

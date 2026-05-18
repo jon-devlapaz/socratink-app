@@ -131,6 +131,10 @@ Each node derives its next action within the three-phase loop:
 - `spaced_attempt`: a new reconstruction attempt is available.
 
 The frontend uses derived `next_action`, not persisted `drill_phase`, to choose the concept-page mode.
+Legacy `drill_status: "primed"` + `drill_phase: "study"` nodes are the narrow
+compatibility exception: when no training attempts exist, the concept page may
+offer `Compare with notes`, then persist `study_revealed_at` with `attempts: []`
+instead of fabricating a cold attempt.
 
 ## Three-Phase Node Loop
 
@@ -157,7 +161,7 @@ Persistence on completion:
 
 ### Phase 2: Targeted Study
 
-Trigger: cold attempt completes. The concept page offers `Compare with notes` for the attempted node; study is recorded only after that explicit reveal.
+Trigger: cold attempt completes. The concept page offers `Compare with notes` for the attempted node; study is recorded only after that explicit reveal. For the legacy no-attempt compatibility path above, study may reveal first and the page intentionally shows no `Your draft` artifact until the learner reconstructs again.
 
 Frontend behavior:
 

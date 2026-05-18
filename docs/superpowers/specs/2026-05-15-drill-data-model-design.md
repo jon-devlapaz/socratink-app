@@ -640,10 +640,13 @@ gap/timing fields — but they do not carry verbatim turn-by-turn user text from
 past chambers. Without the verbatim text, we cannot honestly construct
 `chamber_closed` events. So we don't.
 
-Legacy concepts keep their sketch and graph but lose their attempt history. The
-user re-attempts from cold on their first interaction with each existing
-concept. Given current test data is a single user's machine, this is the
-right trade.
+Legacy concepts keep their sketch and graph but lose their attempt history.
+Most nodes re-attempt from cold on first interaction. The narrow exception is a
+legacy `primed`/`study` node: it may reveal study first and persist
+`study_revealed_at` with `attempts: []`, then the next reconstruction appends
+new learner text as fresh evidence. This preserves the old route without
+synthesizing missing attempt history. Given current test data is a single
+user's machine, this is the right trade.
 
 ### Migration boot flow
 
