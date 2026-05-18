@@ -140,7 +140,10 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 59. Type a substantive 2-3 sentence reconstruction and click "Save what I wrote".
 60. Verify exactly one `/api/drill` POST is sent for the save.
 61. Verify the active entry re-renders from training state: weak attempts expose "Compare with notes" or a repair panel after study; strong attempts can show review/spaced reconstruction readiness.
-62. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
+62. After a weak attempt, click "Compare with notes". Verify the study note appears with a "Hide study note" toggle and the revealed mechanism text.
+63. Focus or type in the repair textarea. Verify the study note collapses, the mechanism text is hidden, the helper reads "Hidden while you write from memory.", and the toggle reads "Show study note".
+64. Click "Show study note". Verify the mechanism text returns and the toggle reads "Hide study note".
+65. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
 
 ## Phase 4 — Doctrine + copy audit
 
@@ -233,7 +236,7 @@ Produce a markdown report with this structure:
 |--|--|--|--|--|
 | 1 Landing + concept creation | 18 | ?? | ?? | |
 | 2 Concept page B-2 layout | 35 | ?? | ?? | |
-| 3 Inline reconstruction | 9 | ?? | ?? | |
+| 3 Inline reconstruction | 12 | ?? | ?? | |
 | 4 Doctrine + copy audit | 3 | ?? | ?? | |
 | 5 Theme + responsive | 6 | ?? | ?? | |
 | 6 Edge cases & stress | 8 | ?? | ?? | |

@@ -272,12 +272,14 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
   - serverless function excludes everything else (tests, docs, scripts, db, agents, node_modules, dotfiles, and root-level config/docs like `*.md`, `*.yaml`, `*.json`, `*.ini`); see `vercel.json` for the canonical glob
 
 ### Stylesheet cache-bust discipline
-- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `index.css` `@imports` `tokens.css`, `styles.css`, `antigravity.css`, `paper.css` (each with their own `?v=M` cache-bust pins).
-- **When editing a stylesheet that's imported via `@import` in `index.css`, bump BOTH version pins:**
-  1. The inner `?v=M` on the `@import` line inside `public/css/index.css` (e.g., `?v=14` → `?v=15` for an antigravity edit).
-  2. The outer `?v=N` on the `<link>` to `/css/index.css` inside `public/index.html` (e.g., `?v=3` → `?v=4`).
-- Bumping only the inner pin is **not enough** — the browser keeps serving the cached `index.css?v=N`, which still has the old `?v=M-1` import baked in. The cached outer file points at the cached inner file; bumping only one breaks the chain at the wrong link.
-- The two numbers don't have to match — only that each changes when its file changes. When in doubt, bump both.
+- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `public/css/index.css` → `public/styles.css` → `public/css/*.css`, with `antigravity.css` and `paper.css` still imported directly by `public/css/index.css`.
+- **When editing a stylesheet imported by `public/styles.css`, bump all THREE version pins:**
+  1. The component import in `public/styles.css` (e.g., `./css/concept-page.css?v=9` → `?v=10`).
+  2. The `../styles.css?v=M` import in `public/css/index.css`.
+  3. The outer `/css/index.css?v=N` link in `public/index.html`.
+- For stylesheets imported directly by `public/css/index.css` (currently `antigravity.css` and `paper.css`), bump that import pin plus the outer `/css/index.css?v=N` link.
+- Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent CSS file, which still points at the previous child `?v=` value.
+- The numbers don't have to match — only that each relevant parent and child pin changes when its file changes. When in doubt, trace the import chain from `public/index.html` and bump every parent link on that path.
 - Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
 
 ## Agent bootstrap discovery

@@ -131,7 +131,7 @@
 > 1. Capture all console messages during every pass. **Fail on any unhandled error** other than the known `_vercel/speed-insights/script.js` 404 in local dev.
 > 2. Capture all failed network requests (`fetch`/`XHR` non-2xx, image 404, missing fonts, missing CSS). Report each.
 > 3. Capture any `Cross-Origin Read Blocking` warnings, mixed-content warnings, or `Refused to apply style` errors.
-> 4. Verify CSS cache-busters on `styles.css`, `antigravity.css`, and the `@import`-ed `css/*.css` files are bumped if any of those files have `git diff` against `main`. (Run `git diff --name-only origin/main` in `public/css/` to find changed files; cross-reference against the `?v=` query param in `styles.css`.)
+> 4. Verify CSS cache-busters across the full chain. If `public/css/*.css` changed, confirm its pin moved in `public/styles.css`, the `../styles.css?v=...` pin moved in `public/css/index.css`, and the outer `/css/index.css?v=...` link moved in `public/index.html`. If `antigravity.css` or `paper.css` changed, confirm its direct `public/css/index.css` import pin and the outer `public/index.html` link moved.
 >
 > ---
 >

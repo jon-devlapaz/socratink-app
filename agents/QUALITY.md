@@ -55,5 +55,6 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 | Dependencies or Vercel config | `bash scripts/preflight-deploy.sh` |
 | Auth/session behavior | targeted auth pytest plus `bash scripts/doctor.sh` |
 | Drill, graph, or mastery behavior | targeted pytest plus review against `docs/product/evidence-weighted-map.md` |
+| Production backend or public JS behavior | targeted pytest plus `./scripts/check-coverage.sh` |
 | External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs, Playwright, browser APIs) | fetch current docs via Context7 before edit; targeted pytest if behavior is testable; `bash scripts/qa-smoke.sh` when the surface is hosted-visible |
 | Hosted release confidence | `bash scripts/verify-deploy.sh HEAD` after deployment |
