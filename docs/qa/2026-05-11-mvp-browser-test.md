@@ -39,6 +39,11 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 1. Navigate to base URL.
 2. If redirected to `/login`, click "Continue as guest".
 3. Verify Desk view loads with sidebar nav (`New concept`, `Desk`, `Library`, `Settings`, `Send Feedback`).
+   - Click `Send Feedback`. Verify `#feedback-overlay` opens as `role="dialog"` with `aria-modal="true"`, the title "Feedback", and focus in the feedback textarea.
+   - Verify the sidebar stays open on desktop after the feedback overlay opens.
+   - Press `Esc`. Verify the overlay closes and keyboard focus returns to `Send Feedback`.
+   - Reopen feedback. If your browser tool can mock `/api/feedback`, return HTTP 200, submit a short message, close the overlay, reopen it, and verify the submit button is enabled and the textarea is empty.
+   - On mobile width, open the drawer, verify `Send Feedback` is reachable there, click it, and verify the feedback overlay opens without closing the drawer.
 4. Verify the isometric board renders.
 5. Verify no console errors (one allowed: `/_vercel/speed-insights/script.js` 404 — cosmetic).
 
@@ -193,13 +198,19 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 93. Open Concept A. Wait for it to render. Open Concept B. Verify the strip + work column show Concept B's data, NOT Concept A's (no ghost nodes from a stale render).
 
-### 6.4 Idle session
+### 6.4 Active concept deletion
 
-94. (Optional, time-permitting) Leave the inline reconstruction panel idle for 15+ minutes. Try to save an attempt. Note any auth-expiry or session-loss behavior.
+94. Open an active concept from the sidebar concept list. Verify the active list item exposes a concept actions button (`.concept-actions`) instead of a direct delete icon.
+95. Open the active concept action menu. Click `Delete concept`, dismiss the browser confirm dialog, and verify the concept page remains on the same concept with one active sidebar item.
+96. Open the action menu again. Click `Delete concept`, accept the confirm dialog, and verify the app returns to Desk, the sidebar concept item is gone, and stale concept-header content is no longer visible.
 
-### 6.5 Long input
+### 6.5 Idle session
 
-95. In the inline reconstruction textarea, paste 3000+ characters of text. Press "Save what I wrote". Note whether:
+97. (Optional, time-permitting) Leave the inline reconstruction panel idle for 15+ minutes. Try to save an attempt. Note any auth-expiry or session-loss behavior.
+
+### 6.6 Long input
+
+98. In the inline reconstruction textarea, paste 3000+ characters of text. Press "Save what I wrote". Note whether:
     - There's a character limit warning
     - The backend accepts the payload
     - The AI response handles the long input
@@ -225,7 +236,7 @@ Produce a markdown report with this structure:
 | 3 Inline reconstruction | 9 | ?? | ?? | |
 | 4 Doctrine + copy audit | 3 | ?? | ?? | |
 | 5 Theme + responsive | 6 | ?? | ?? | |
-| 6 Edge cases & stress | 5 | ?? | ?? | |
+| 6 Edge cases & stress | 8 | ?? | ?? | |
 
 ## Bugs found
 
