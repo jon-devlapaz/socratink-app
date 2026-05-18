@@ -48,7 +48,7 @@ Enter concept
 
 ### What each screen does — and refuses to do
 
-**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures only the concept name (and optional source attach). Source-less concepts pass through a **launch pad** that captures the learner's threshold (rough whole-concept model) before any AI generation runs. See `docs/product/spec.md` and `docs/product/progressive-disclosure.md` for the current contract.
+**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures only the concept name (and optional source attach). Source-less concepts pass through a **launch pad** that captures the learner's threshold (rough whole-concept model) before any AI generation runs. See `docs/product/spec.md` for the current contract.
 
 The launch pad replaces the previous in-form "Starting sketch" textarea. The threshold is no longer a field on the door; it is a dedicated post-commit surface. This change preserves the learner-seeded route contract: no graph or thesis is generated from the concept name alone.
 

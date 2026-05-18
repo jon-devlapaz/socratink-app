@@ -67,7 +67,7 @@ def test_hero_helpers_preserve_state_labels_and_actions() -> None:
         );
         assert.deepEqual(
           getHeroActionConfig({ state: 'growing', graphData: { nodes: [] } }),
-          { label: 'Open Draft Path', action: 'open-map', disabled: false }
+          { label: 'Open Concept', action: 'open-map', disabled: false }
         );
         assert.deepEqual(
           getHeroActionConfig({ state: 'hibernating', graphData: null }),

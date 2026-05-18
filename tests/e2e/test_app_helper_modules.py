@@ -168,9 +168,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(hero.getHeroGuidance({ state: 'actualized' }).includes('Spaced evidence'), 'actualized guidance');
             assert(hero.getHeroGuidance({ state: 'unknown' }).includes('Pick a tile'), 'fallback guidance');
             same(hero.getHeroActionConfig(null), { label: 'Begin', action: 'add', disabled: false }, 'empty action');
-            same(hero.getHeroActionConfig({ state: 'instantiated', graphData: {} }), { label: 'Open Draft Path', action: 'open-map', disabled: false }, 'instantiated graph action');
+            same(hero.getHeroActionConfig({ state: 'instantiated', graphData: {} }), { label: 'Open Concept', action: 'open-map', disabled: false }, 'instantiated graph action');
             same(hero.getHeroActionConfig({ state: 'instantiated', graphData: null }), { label: 'Draft Map', action: 'extract', disabled: false }, 'instantiated draft action');
-            same(hero.getHeroActionConfig({ state: 'growing', graphData: {} }), { label: 'Open Draft Path', action: 'open-map', disabled: false }, 'growing graph action');
+            same(hero.getHeroActionConfig({ state: 'growing', graphData: {} }), { label: 'Open Concept', action: 'open-map', disabled: false }, 'growing graph action');
             same(hero.getHeroActionConfig({ state: 'growing', graphData: null }), { label: 'Draft Map', action: 'extract', disabled: false }, 'growing draft action');
             same(hero.getHeroActionConfig({ state: 'fractured' }), { label: 'Repair Gap', action: 'drill', disabled: false }, 'fractured action');
             same(hero.getHeroActionConfig({ state: 'hibernating', graphData: {} }), { label: 'Open Evidence Map', action: 'open-map', disabled: false }, 'hibernating graph action');

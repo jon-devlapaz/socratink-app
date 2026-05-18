@@ -1403,7 +1403,7 @@ const App = (() => {
     if (!concept) return;
 
     const conceptName = concept.name || 'this concept';
-    const confirmed = window.confirm(`Delete "${conceptName}"?\n\nThis removes its draft path and recorded evidence from this browser.`);
+    const confirmed = window.confirm(`Delete "${conceptName}"?\n\nThis removes the concept and its recorded evidence from this browser.`);
     if (!confirmed) {
       closeConceptActionMenus();
       return;
