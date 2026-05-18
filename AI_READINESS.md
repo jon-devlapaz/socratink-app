@@ -165,7 +165,7 @@ ls scripts/preflight-deploy.sh scripts/doctor.sh scripts/verify-deploy.sh
 | --- | --- | --- | --- |
 | No automated check before merge or deploy. | Manual scripts exist but rely on developer remembering to run them. | Pre-commit hook OR local pre-deploy script that runs tests + typecheck + lint and blocks on failure. | CI on push/PR + diff-coverage threshold + typecheck + lint, mirrored locally by a single script. |
 
-**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` invokes `bash scripts/doctor.sh` (which runs **both `pyrefly check` and `mypy .`** as parallel type-check gates) plus `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`, all mirrored locally by `scripts/doctor.sh`. Diff-coverage is still local-only via `scripts/check-coverage.sh`. Currently **3** for the type-check + non-e2e-test gate; raising diff-coverage to CI would lock in level **3** across the board.
+**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` invokes `bash scripts/doctor.sh` (which runs **both `pyrefly check` and `mypy .`** as parallel type-check gates) plus `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`; its `coverage` job starts a loopback app, selects `COMPARE_BRANCH`, and runs `scripts/check-coverage.sh` for strict diff coverage. The same gates are mirrored locally by `scripts/doctor.sh` and `scripts/check-coverage.sh`. Currently **3**.
 
 ---
 
