@@ -202,23 +202,22 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
   `;
 }
 
-function activeEntryEyebrow({ isBlocked, attempted, state, nextAction, activeIdx, totalNodes }) {
-  const suffix = `entry ${activeIdx + 1} of ${totalNodes}`;
-  if (isBlocked) return `locked ${suffix}`;
-  if (!attempted) return `first reconstruction ${suffix}`;
-  if (nextAction === 'study') return `study required ${suffix}`;
-  if (nextAction === 'repair') return `repair the gap ${suffix}`;
-  if (state === 'needs repair' && nextAction === 'spaced_attempt') return `ready to reconstruct again ${suffix}`;
-  if (state === 'solidified') return `solidified ${suffix}`;
-  if (nextAction === 'spaced_attempt') return `spaced reconstruction ready ${suffix}`;
-  if (nextAction === 'review') return `review pending ${suffix}`;
-  if (state === 'needs repair') return `repair needed ${suffix}`;
-  return `re-drill ready ${suffix}`;
+function activeEntryEyebrow({ isBlocked, attempted, state, nextAction }) {
+  if (isBlocked) return 'locked';
+  if (!attempted) return 'Start from memory';
+  if (nextAction === 'study') return 'Study the gap';
+  if (nextAction === 'repair') return 'Needs repair';
+  if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
+  if (state === 'solidified') return 'solidified';
+  if (nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
+  if (nextAction === 'review') return 'review pending';
+  if (state === 'needs repair') return 'Needs repair';
+  return 'Ready to reconstruct again';
 }
 
 function activeEntryCtaLabel({ attempted, state, nextAction }) {
-  if (!attempted) return 'Write what you remember';
-  if (nextAction === 'study') return 'Reveal study note';
+  if (!attempted) return 'Write from memory';
+  if (nextAction === 'study') return 'Compare with notes';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Write it again';
   if (state === 'solidified') return 'Reconstruct from memory';
   if (state === 'primed' && (nextAction === 'spaced_attempt' || nextAction === 'review')) {
@@ -404,6 +403,13 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
       </p>
     `;
+  const provenanceHtml = training?.source_mode === 'source_less'
+    ? `
+      <p class="concept-page-b2__provenance">
+        Shaped from your launch attempt, not verified against a source.
+      </p>
+    `
+    : '';
 
   const ctaButton = isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? ''
@@ -445,5 +451,5 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
 
-  return `${thresholdHtml}${activeHtml}${nearbyHtml}`;
+  return `${thresholdHtml}${provenanceHtml}${activeHtml}${nearbyHtml}`;
 }

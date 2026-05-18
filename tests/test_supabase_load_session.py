@@ -15,7 +15,7 @@ from auth.session_seal import seal_session_tokens, unseal_session_tokens
 
 
 SESSION_KEY = Fernet.generate_key().decode()
-JWT_SECRET = "jwt-secret"
+JWT_SECRET = "supabase-load-session-jwt-secret-test-fixture"
 ISSUER = "https://abc123.supabase.co/auth/v1"
 
 

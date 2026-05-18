@@ -23,6 +23,7 @@ On all other topics, the doc listed below for that topic is authoritative.
 | Design system component rules | [`docs/design/socratink-design-system.md`](../design/socratink-design-system.md) |
 | Product spec (three-phase loop, panel modes, guardrails) | [`docs/product/spec.md`](../product/spec.md) |
 | Evidence-weighted map doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
+| Test-driven learning founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
 | Drill data-model canon | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
 | ADR index (append-only architectural decisions) | [`docs/adr/README.md`](../adr/README.md) |
 | Theta-state (evidence posture for product-science claims) | [`docs/project/theta-state.md`](theta-state.md) |

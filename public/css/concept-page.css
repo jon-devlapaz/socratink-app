@@ -133,6 +133,13 @@
 }
 [data-theme="dark"] .concept-page-b2__threshold { border-left-color: rgba(176, 156, 224, 0.55); }
 .concept-page-b2__threshold--empty { opacity: 0.55; }
+.concept-page-b2__provenance {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: -36px 0 48px 22px;
+  max-width: 520px;
+}
 .concept-page-b2__entry-eyebrow { display: block; margin-bottom: 14px; }
 .concept-page-b2__entry-title { font-size: 36px; line-height: 1.15; font-weight: 600; margin: 0 0 16px; color: var(--text-strong); }
 .concept-page-b2__entry-purpose { color: var(--text-muted); font-size: 16px; line-height: 1.65; margin: 0 0 32px; max-width: 520px; }

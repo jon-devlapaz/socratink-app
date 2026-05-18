@@ -333,7 +333,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               ],
             };
             same(library.getLibraryConceptMeta({ name: 'Concept', state: 'growing', graphData: graph }), {
-              thesis: 'No learner reconstruction recorded yet.',
+              thesis: 'Your first reconstruction will appear here.',
               summarySource: 'none',
               architecture: 'cause effect',
               difficulty: 'medium',
@@ -365,7 +365,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 },
               },
             };
-            assert(library.getLibraryConceptMeta({ graphData: '{' }).thesis.includes('No learner reconstruction'), 'library malformed fallback');
+            assert(library.getLibraryConceptMeta({ graphData: '{' }).thesis.includes('first reconstruction'), 'library malformed fallback');
             assert(library.getLibraryConceptMeta({ graphData: graph }, training).thesis === 'Learner-owned reconstruction.', 'library learner evidence');
             assert(library.buildLibraryHtml([]).includes('Begin a reconstruction.'), 'library empty state');
             const libraryHtml = library.buildLibraryHtml([
@@ -964,7 +964,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               {},
               { metadata: {} },
             );
-            assert(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'), 'concept page honors legacy drilled status when no training record exists');
+            assert(legacyDrilledHtml.includes('Ready to reconstruct again'), 'concept page honors legacy drilled status when no training record exists');
             const legacyStudyHtml = conceptPage.renderActiveEntryHtml(
               { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
               0,
@@ -972,8 +972,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               {},
               { metadata: {} },
             );
-            assert(legacyStudyHtml.includes('study required entry 1 of 1'), 'legacy primed study stays in study phase');
+            assert(legacyStudyHtml.includes('Study the gap'), 'legacy primed study stays in study phase');
             assert(legacyStudyHtml.includes('data-active-entry-action="study"'), 'legacy primed study reveals study before redrill');
+            assert(legacyStudyHtml.includes('Compare with notes'), 'legacy primed study cta is learner-facing');
             const legacyStudyRevealedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
               0,
@@ -1003,7 +1004,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               null,
               { now: '2026-05-15T20:00:00.000Z' },
             );
-            assert(legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'), 'legacy primed spacing lock renders review state');
+            assert(legacyPrimedWaitingHtml.includes('review pending'), 'legacy primed spacing lock renders review state');
             assert(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing lock suppresses reattempt cta');
             const legacyPrimedReadyHtml = conceptPage.renderActiveEntryHtml(
               {
@@ -1024,7 +1025,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               null,
               { now: '2026-05-16T05:00:00.000Z' },
             );
-            assert(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'), 'legacy primed spacing unlock renders ready state');
+            assert(legacyPrimedReadyHtml.includes('Ready to reconstruct again'), 'legacy primed spacing unlock renders ready state');
             assert(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing unlock shows reattempt cta');
             const legacyDrilledWaitingHtml = conceptPage.renderActiveEntryHtml(
               {
@@ -1045,7 +1046,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               null,
               { now: '2026-05-15T20:00:00.000Z' },
             );
-            assert(legacyDrilledWaitingHtml.includes('review pending entry 1 of 1'), 'legacy drilled spacing lock renders review state');
+            assert(legacyDrilledWaitingHtml.includes('review pending'), 'legacy drilled spacing lock renders review state');
             assert(!legacyDrilledWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy drilled spacing lock suppresses reattempt cta');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
@@ -1076,7 +1077,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               {},
               { metadata: {} },
             );
-            assert(solidifiedHtml.includes('solidified entry 1 of 1'), 'solidified entry reports final state');
+            assert(solidifiedHtml.includes('solidified'), 'solidified entry reports final state');
             assert(!solidifiedHtml.includes('concept-page-b2__entry-cta'), 'solidified entry suppresses reconstruction cta');
             const legacySolidWithPartialTrainingHtml = conceptPage.renderActiveEntryHtml(
               { id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' },
@@ -1099,7 +1100,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 },
               },
             );
-            assert(legacySolidWithPartialTrainingHtml.includes('solidified entry 1 of 1'), 'legacy terminal graph state survives partial training');
+            assert(legacySolidWithPartialTrainingHtml.includes('solidified'), 'legacy terminal graph state survives partial training');
             assert(!legacySolidWithPartialTrainingHtml.includes('study required entry 1 of 1'), 'legacy terminal graph state does not reopen study');
             assert(!legacySolidWithPartialTrainingHtml.includes('concept-page-b2__entry-cta'), 'legacy terminal graph state suppresses cta');
             const emptyInitialEntry = conceptPage.selectInitialConceptEntry([]);
@@ -1120,7 +1121,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               conceptTraining
             );
             assert(conceptPageHtml.includes('&lt;threshold &amp; sketch&gt;'), 'concept page threshold escapes');
-            assert(conceptPageHtml.includes('locked entry 3 of 3'), 'concept page blocked eyebrow');
+            assert(conceptPageHtml.includes('locked'), 'concept page blocked eyebrow');
             assert(conceptPageHtml.includes('aria-disabled="true"'), 'concept page blocked cta');
             assert(conceptPageHtml.includes('Second &amp; unsafe'), 'concept page nearby escapes');
             assert(conceptPageHtml.includes('READY TO RECONSTRUCT'), 'concept page derives nearby readiness from training');
@@ -1160,9 +1161,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               }
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
-            assert(conceptPagePrimedHtml.includes('study required entry 1 of 1'), 'concept page primed study-required eyebrow');
+            assert(conceptPagePrimedHtml.includes('Study the gap'), 'concept page primed study eyebrow');
             assert(conceptPagePrimedHtml.includes('data-active-entry-action="study"'), 'concept page primed study action');
-            assert(conceptPagePrimedHtml.includes('Reveal study note'), 'concept page primed study cta');
+            assert(conceptPagePrimedHtml.includes('Compare with notes'), 'concept page primed study cta');
             const conceptPageStudiedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
               0,
@@ -1188,7 +1189,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               },
               { now: '2026-05-15T11:00:00.000Z' },
             );
-            assert(conceptPageStudiedHtml.includes('review pending entry 1 of 1'), 'concept page studied review eyebrow');
+            assert(conceptPageStudiedHtml.includes('review pending'), 'concept page studied review eyebrow');
             assert(conceptPageStudiedHtml.includes('concept-page-b2__evidence'), 'concept page studied evidence artifact renders');
             assert(conceptPageStudiedHtml.includes('learner reconstruction'), 'concept page studied evidence label');
             assert(conceptPageStudiedHtml.includes('A strong first attempt.'), 'concept page studied preserves learner words');
@@ -1250,7 +1251,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 },
               },
             );
-            assert(conceptPageRepairHtml.includes('repair the gap entry 1 of 1'), 'concept page repair eyebrow');
+            assert(conceptPageRepairHtml.includes('Needs repair'), 'concept page repair eyebrow');
             assert(conceptPageRepairHtml.includes('concept-page-b2__evidence'), 'concept page repair evidence artifact renders');
             assert(conceptPageRepairHtml.includes('Sodium just rushes in.'), 'concept page repair preserves learner words');
             assert(conceptPageRepairHtml.includes('Name that voltage-gated sodium channels open at threshold.'), 'concept page repair surfaces hinge');
@@ -1299,7 +1300,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               },
               { now: '2026-05-15T11:00:00.000Z' },
             );
-            assert(conceptPageReviewHtml.includes('review pending entry 1 of 1'), 'concept page review pending eyebrow');
+            assert(conceptPageReviewHtml.includes('review pending'), 'concept page review pending eyebrow');
             assert(!conceptPageReviewHtml.includes('concept-page-b2__entry-cta'), 'concept page review has no cta');
             const conceptPageSpacedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'spaced', label: 'Spaced' },
@@ -1317,7 +1318,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               },
               { now: '2026-05-16T05:00:00.000Z' },
             );
-            assert(conceptPageSpacedHtml.includes('spaced reconstruction ready entry 1 of 1'), 'concept page spaced eyebrow');
+            assert(conceptPageSpacedHtml.includes('Ready to reconstruct again'), 'concept page spaced eyebrow');
             const conceptPageDefensiveHtml = conceptPage.renderActiveEntryHtml(
               { id: 'defensive', label: 'Defensive' },
               0,
@@ -1333,7 +1334,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 },
               },
             );
-            assert(conceptPageDefensiveHtml.includes('re-drill ready entry 1 of 1'), 'concept page has defensive attempted fallback');
+            assert(conceptPageDefensiveHtml.includes('Ready to reconstruct again'), 'concept page has defensive attempted fallback');
             const conceptStripHtml = conceptPage.renderConceptStripHtml(conceptBackbone, conceptBackbone[1], 1, conceptTraining);
             assert(conceptStripHtml.includes('class="concept-strip"'), 'concept strip wrapper');
             assert(conceptStripHtml.includes('concept-strip__edge is-active'), 'concept strip active edge');

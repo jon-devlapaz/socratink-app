@@ -105,13 +105,13 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 2.5 Active entry block
 
-47. Verify the eyebrow above the H2 reads one of the current derived-state phrases, such as "first reconstruction entry 1 of N", "study required entry N of M", "repair the gap entry N of M", "ready to reconstruct again entry N of M", "spaced reconstruction ready entry N of M", or "locked entry N of M".
+47. Verify the eyebrow above the H2 reads one of the current derived-state phrases, such as "Start from memory", "Study the gap", "Needs repair", "Ready to reconstruct again", "solidified", "review pending", or "locked".
 48. Verify the H2 (concept entry title) is large (~36px on desktop, ~26px on mobile).
 49. Verify a one-paragraph purpose sits below the H2.
 50. Verify the CTA button text:
-    - Ready first entry → "Write what you remember" (entry 0 is NEVER blocked)
+    - Ready first entry → "Write from memory" (entry 0 is NEVER blocked)
     - Locked entry N>0 with locked predecessor → "Locked" (disabled, with `disabled` attribute)
-    - Primed entry before study reveal → "Reveal study note"
+    - Primed entry before study reveal → "Compare with notes"
     - Repair-ready entry → "Try from memory again" or "Write it again" after a repair record exists
 51. Verify the CTA hover treatment does not shift surrounding layout.
 
@@ -124,7 +124,7 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 ### 3.1 Entering the reconstruction panel
 
-54. From the concept page, click "Write what you remember" on entry 0.
+54. From the concept page, click "Write from memory" on entry 0.
 55. Verify an inline `.concept-page-b2__attempt` panel appears in the active entry block; the concept page stays visible.
 56. Verify the textarea is focused, has `aria-label="Write what you can reconstruct"`, and uses the placeholder "Put the part you can explain in your own words."
 57. Verify the body does NOT enter `chamber-open` or `is-drilling` for this inline reconstruction path.
@@ -134,7 +134,7 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 58. Click "Save what I wrote" while the textarea is empty. Verify the inline error appears and focus returns to the textarea.
 59. Type a substantive 2-3 sentence reconstruction and click "Save what I wrote".
 60. Verify exactly one `/api/drill` POST is sent for the save.
-61. Verify the active entry re-renders from training state: weak attempts expose "Reveal study note" or a repair panel after study; strong attempts can show review/spaced reconstruction readiness.
+61. Verify the active entry re-renders from training state: weak attempts expose "Compare with notes" or a repair panel after study; strong attempts can show review/spaced reconstruction readiness.
 62. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
 
 ## Phase 4 — Doctrine + copy audit

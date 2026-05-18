@@ -275,7 +275,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         assert.deepEqual(
           getLibraryConceptMeta({ name: 'Concept', state: 'growing', graphData: graph }),
           {
-            thesis: 'No learner reconstruction recorded yet.',
+            thesis: 'Your first reconstruction will appear here.',
             summarySource: 'none',
             architecture: 'cause effect',
             difficulty: 'medium',
@@ -291,7 +291,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           }).sourceLabel,
           'Source: PDF'
         );
-        assert.ok(getLibraryConceptMeta({ graphData: '{' }).thesis.includes('No learner reconstruction'));
+        assert.ok(getLibraryConceptMeta({ graphData: '{' }).thesis.includes('first reconstruction'));
 
         const training = {
           node_records: {
@@ -696,7 +696,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           {},
           { metadata: {} }
         );
-        assert.ok(legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'));
+        assert.ok(legacyDrilledHtml.includes('Ready to reconstruct again'));
+        assert.ok(!legacyDrilledHtml.includes('ready to reconstruct again entry 1 of 1'));
 
         const legacyStudyHtml = renderActiveEntryHtml(
           { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
@@ -705,8 +706,10 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           {},
           { metadata: {} }
         );
-        assert.ok(legacyStudyHtml.includes('study required entry 1 of 1'));
+        assert.ok(legacyStudyHtml.includes('Study the gap'));
+        assert.ok(!legacyStudyHtml.includes('study required entry 1 of 1'));
         assert.ok(legacyStudyHtml.includes('data-active-entry-action="study"'));
+        assert.ok(legacyStudyHtml.includes('Compare with notes'));
         const legacyStudyRevealedHtml = renderActiveEntryHtml(
           { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
           0,
@@ -736,7 +739,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           null,
           { now: '2026-05-15T20:00:00.000Z' }
         );
-        assert.ok(legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'));
+        assert.ok(legacyPrimedWaitingHtml.includes('review pending'));
+        assert.ok(!legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'));
         assert.ok(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'));
         const legacyPrimedReadyHtml = renderActiveEntryHtml(
           {
@@ -757,7 +761,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           null,
           { now: '2026-05-16T05:00:00.000Z' }
         );
-        assert.ok(legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'));
+        assert.ok(legacyPrimedReadyHtml.includes('Ready to reconstruct again'));
+        assert.ok(!legacyPrimedReadyHtml.includes('spaced reconstruction ready entry 1 of 1'));
         assert.ok(legacyPrimedReadyHtml.includes('concept-page-b2__entry-cta'));
 
         const initial = selectInitialConceptEntry([
@@ -790,7 +795,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           {},
           { metadata: {} }
         );
-        assert.ok(solidifiedHtml.includes('solidified entry 1 of 1'));
+        assert.ok(solidifiedHtml.includes('solidified'));
         assert.ok(!solidifiedHtml.includes('concept-page-b2__entry-cta'));
         const legacySolidWithPartialTrainingHtml = renderActiveEntryHtml(
           { id: 'legacy-solid', label: 'Legacy solid', drill_status: 'solidified' },
@@ -813,7 +818,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(legacySolidWithPartialTrainingHtml.includes('solidified entry 1 of 1'));
+        assert.ok(legacySolidWithPartialTrainingHtml.includes('solidified'));
         assert.ok(!legacySolidWithPartialTrainingHtml.includes('study required entry 1 of 1'));
         assert.ok(!legacySolidWithPartialTrainingHtml.includes('concept-page-b2__entry-cta'));
 
@@ -837,7 +842,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           training
         );
         assert.ok(blockedHtml.includes('&lt;threshold &amp; sketch&gt;'));
-        assert.ok(blockedHtml.includes('locked entry 3 of 3'));
+        assert.ok(blockedHtml.includes('locked'));
         assert.ok(blockedHtml.includes('aria-disabled="true"'));
         assert.ok(blockedHtml.includes('>Locked</button>'));
         assert.ok(blockedHtml.includes('&lt;Core&gt;'));
@@ -853,9 +858,35 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           training
         );
         assert.ok(readyHtml.includes('metadata sketch'));
-        assert.ok(readyHtml.includes('first reconstruction entry 2 of 3'));
+        assert.ok(readyHtml.includes('Start from memory'));
+        assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('data-active-entry-id="entry-2"'));
-        assert.ok(readyHtml.includes('Write what you remember'));
+        assert.ok(readyHtml.includes('Write from memory'));
+
+        const sourceLessHtml = renderActiveEntryHtml(
+          backbone[1],
+          1,
+          backbone,
+          { startingMapContext: '' },
+          { metadata: { starting_map_context: 'metadata sketch' } },
+          {
+            source_mode: 'source_less',
+            node_records: training.node_records,
+          }
+        );
+        assert.ok(sourceLessHtml.includes('Shaped from your launch attempt, not verified against a source.'));
+        const sourceAttachedHtml = renderActiveEntryHtml(
+          backbone[1],
+          1,
+          backbone,
+          { startingMapContext: '' },
+          { metadata: { starting_map_context: 'metadata sketch' } },
+          {
+            source_mode: 'source_attached',
+            node_records: training.node_records,
+          }
+        );
+        assert.ok(!sourceAttachedHtml.includes('not verified against a source'));
 
         const readyAttemptHtml = renderActiveEntryHtml(
           backbone[1],
@@ -897,9 +928,10 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
         assert.ok(primedHtml.includes('add sketch'));
-        assert.ok(primedHtml.includes('study required entry 1 of 1'));
+        assert.ok(primedHtml.includes('Study the gap'));
+        assert.ok(!primedHtml.includes('study required entry 1 of 1'));
         assert.ok(primedHtml.includes('data-active-entry-action="study"'));
-        assert.ok(primedHtml.includes('Reveal study note'));
+        assert.ok(primedHtml.includes('Compare with notes'));
 
         const legacyRedrillWithTrainingHtml = renderActiveEntryHtml(
           {
@@ -934,7 +966,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(legacyRedrillWithTrainingHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(legacyRedrillWithTrainingHtml.includes('Needs repair'));
+        assert.ok(!legacyRedrillWithTrainingHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(legacyRedrillWithTrainingHtml.includes('A thin migrated attempt.'));
         assert.ok(!legacyRedrillWithTrainingHtml.includes('study required entry 1 of 1'));
 
@@ -963,7 +996,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           },
           { now: '2026-05-15T11:00:00.000Z' }
         );
-        assert.ok(studiedHtml.includes('review pending entry 1 of 1'));
+        assert.ok(studiedHtml.includes('review pending'));
+        assert.ok(!studiedHtml.includes('review pending entry 1 of 1'));
         assert.ok(studiedHtml.includes('concept-page-b2__evidence'));
         assert.ok(studiedHtml.includes('learner reconstruction'));
         assert.ok(studiedHtml.includes('A strong first attempt.'));
@@ -1056,7 +1090,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(repairHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(repairHtml.includes('Needs repair'));
+        assert.ok(!repairHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence'));
         assert.ok(repairHtml.includes('Sodium just rushes in.'));
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
@@ -1121,7 +1156,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(repairedHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(repairedHtml.includes('Needs repair'));
+        assert.ok(!repairedHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(!repairedHtml.includes('Write it again'));
         assert.ok(repairedHtml.includes('concept-page-b2__repair'));
         assert.ok(repairedHtml.includes('Try from memory again'));

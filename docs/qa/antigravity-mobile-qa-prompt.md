@@ -27,7 +27,7 @@
 > - Bottom nav: Ignition / Desk / Library / Settings (mobile only, `<900px`)
 > - Top chrome: floating hamburger button only (fixed, translucent blur scrim on mobile)
 > - On localhost only, Library exposes QA seed buttons (`Seed QA concept`, `Seed repair QA`) for creating a real concept fixture before opening the concept view
-> - Concept view chrome (mobile): strip + concept-page B-2 layout with primary action text derived from training state, usually "Write what you remember" for a fresh first entry
+> - Concept view chrome (mobile): strip + concept-page B-2 layout with primary action text derived from training state, usually "Write from memory" for a fresh first entry
 > - Legacy map drilling activates `body.is-drilling`. The concept-page reconstruction path is inline and does not hide chrome; verify it with the dedicated inline reconstruction flow below.
 >
 > **Tooling fallbacks.** If your Browser Sub-Agent cannot natively resize the viewport or inject CDN scripts, use these escape hatches BEFORE skipping a pass:
@@ -107,8 +107,8 @@
 > Run each flow and assert at every step. Capture a Walkthrough for each.
 >
 > 1. **Empty-state hero → submit gate.** Type "Photosynthesis" in Concept, leave Starting-map empty. Submit must be disabled. Type a 6-word sketch. Submit must enable. Submit (don't follow). Verify `App.runHeroAction` fires.
-> 2. **Library → concept view.** From Library, open a concept. Verify the primary button text reflects the derived training state: "Write what you remember", "Reveal study note", "Try from memory again", or a disabled "Locked" for blocked successors. After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
-> 3. **Inline reconstruction.** From the concept view, click the first-reconstruction primary action ("Write what you remember"). Verify the inline reconstruction textarea appears, focuses, and saves through "Save what I wrote". The map-mode segmented switch no longer exists.
+> 2. **Library → concept view.** From Library, open a concept. Verify the primary button text reflects the derived training state: "Write from memory", "Compare with notes", "Try from memory again", or a disabled "Locked" for blocked successors. After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
+> 3. **Inline reconstruction.** From the concept view, click the first-reconstruction primary action ("Write from memory"). Verify the inline reconstruction textarea appears, focuses, and saves through "Save what I wrote". The map-mode segmented switch no longer exists.
 > 4. **Inline validation.** Click "Save what I wrote" with an empty reconstruction. Verify the inline error appears, focus stays in the textarea, and chrome remains visible.
 > 5. **Empty-tile click in Desk.** From Desk view (after creating a concept), click a blank tile. Verify `AudioFX.playTileClick()` fires (assert via `console.log` instrumentation OR by listening for the underlying `<audio>` start event), then verify the add-concept drawer opens.
 > 6. **Bottom-nav cycling.** Tap each nav item; verify the corresponding view becomes `.visible` and others lose `.visible` within 400ms. Verify URL or in-memory route updates.
@@ -119,7 +119,7 @@
 > For each (viewport × theme × motion × view) cell, take a full-page screenshot. Run a vision pass with these prompts and report findings:
 >
 > 1. *"Is there any visible color seam, hard edge, or banding between the top floating chrome and the page background? Describe the gradient transition. The intended look is a soft translucent blur with no hard edge."*
-> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended first-reconstruction action is 'Write what you remember'."*
+> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended first-reconstruction action is 'Write from memory'."*
 > 3. *"Describe the segmented control labeled 'Route / Graph' (if present). Is its visual weight peripheral (subtle, ≤30px tall, content-width) or primary (heavy, full-width, deep saturation)? Intended: peripheral."*
 > 4. *"Are any controls or text clipped, cut off, or overlapped by other UI? List positions."*
 > 5. *"Does the bottom nav have any element overlapping it? Describe the gap between the bottom nav and the closest non-nav element above."*

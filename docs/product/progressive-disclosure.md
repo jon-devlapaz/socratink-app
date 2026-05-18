@@ -116,6 +116,10 @@ For training records:
 
 Clusters are derived, not directly persisted as drill targets.
 
+Concept pages render source-less provenance from the training record: when
+`source_mode === "source_less"`, show `Shaped from your launch attempt, not
+verified against a source.` before the active entry block.
+
 ### Phase Tracking
 
 Each node derives its next action within the three-phase loop:
@@ -153,7 +157,7 @@ Persistence on completion:
 
 ### Phase 2: Targeted Study
 
-Trigger: cold attempt completes. The concept page offers `Reveal study note` for the attempted node; study is recorded only after that explicit reveal.
+Trigger: cold attempt completes. The concept page offers `Compare with notes` for the attempted node; study is recorded only after that explicit reveal.
 
 Frontend behavior:
 
