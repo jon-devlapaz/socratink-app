@@ -7,13 +7,11 @@ if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   color_ok="$(printf '\033[32m')"
   color_warn="$(printf '\033[33m')"
   color_block="$(printf '\033[31m')"
-  color_dim="$(printf '\033[2m')"
   color_reset="$(printf '\033[0m')"
 else
   color_ok=""
   color_warn=""
   color_block=""
-  color_dim=""
   color_reset=""
 fi
 
