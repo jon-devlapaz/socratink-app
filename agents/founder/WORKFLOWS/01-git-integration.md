@@ -57,6 +57,7 @@ scripts/git-worktree-cleanup.sh --remove-clean --apply
 - wrapper recommendation is shown
 - wrapper refreshes `origin/dev` before evaluating a `dev` publication
 - publishing `dev` is blocked when local `dev` is behind `origin/dev`
+- a branch that is both behind and ahead of its upstream is diverged; inspect with `git fetch && git status --short --branch && git diff @{u}...HEAD`, not `scripts/agent-push.py`
 - after no-mistakes finishes, use `scripts/no-mistakes-finish-dev.sh` to refuse active runs, dirty trees, or unique local commits before folding local `dev` onto `origin/dev`
 - when a dirty tree blocks finishing, use `scripts/git-wip-explain.sh` to classify staged, unstaged, and untracked work before deciding what to commit or move
 - when stale worktrees create session confusion, use `scripts/git-worktree-cleanup.sh` to list candidates and remove only clean registered worktrees with `--remove <path> --apply`

@@ -12,10 +12,10 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 4. [agents/founder/WORKFLOWS/](./founder/WORKFLOWS/) if the task touches a founder workflow
 5. [docs/project/state.md](../docs/project/state.md)
 6. [agents/QUALITY.md](./QUALITY.md)
-7. [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md) — binding graph-truth doctrine
-8. [docs/product/spec.md](../product/spec.md)
+7. [docs/product/evidence-weighted-map.md](../docs/product/evidence-weighted-map.md) — binding graph-truth doctrine
+8. [docs/product/spec.md](../docs/product/spec.md)
 9. [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../docs/superpowers/specs/2026-05-15-drill-data-model-design.md) if the task touches drill, graph, routing, or persistence
-10. [docs/project/doc-map.md](../project/doc-map.md) to locate any other binding doc
+10. [docs/project/doc-map.md](../docs/project/doc-map.md) to locate any other binding doc
 11. `logs/drill-runs.jsonl` if current loop evidence matters
 
 ## Current Repo Reality
