@@ -32,6 +32,17 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 - use `origin/feat/*` for feature-branch publication intended for PR flow
 - use `no-mistakes/dev` for larger, higher-blast-radius, or higher-risk publication
 
+## Helper Commands
+
+```text
+scripts/git-wip-explain.sh              # full local/session orientation
+scripts/git-wip-explain.sh --short      # compact terminal-start summary
+python3 scripts/agent-push.py --target no-mistakes/dev
+no-mistakes attach
+scripts/no-mistakes-finish-dev.sh       # after no-mistakes finishes
+scripts/git-worktree-cleanup.sh         # list stale worktrees
+```
+
 ## Required Confirmation
 
 - no silent publication

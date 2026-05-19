@@ -68,7 +68,27 @@ def test_shows_upstream_local_and_remote_commit_orientation(tmp_path: Path) -> N
     assert "Remote commits not in local HEAD (0):" in result.stdout
     assert "[WARN] Upstream: local branch has 1 unpublished commit(s)" in result.stdout
     assert "[BLOCKED] Finish helper: local commits are not on origin/dev" in result.stdout
+    assert "Next: python3 scripts/agent-push.py --target no-mistakes/dev" in result.stdout
     assert "Blocks no-mistakes finish helper: yes" in result.stdout
+
+
+def test_short_mode_summarizes_state_and_next_command(tmp_path: Path) -> None:
+    origin = tmp_path / "origin.git"
+    repo = _init_repo(tmp_path)
+    _run(["git", "init", "--bare", str(origin)], tmp_path)
+    _git(repo, "remote", "add", "origin", str(origin))
+    _git(repo, "push", "-u", "origin", "dev")
+    (repo / "local.txt").write_text("local\n", encoding="utf-8")
+    _git(repo, "add", "local.txt")
+    _git(repo, "commit", "-m", "local work")
+
+    result = _run(["bash", str(SCRIPT), "--short"], repo)
+
+    assert result.returncode == 0
+    assert "dev @" in result.stdout
+    assert "upstream=behind:0 ahead:1" in result.stdout
+    assert "Next: python3 scripts/agent-push.py --target no-mistakes/dev" in result.stdout
+    assert "Known worktrees:" not in result.stdout
 
 
 def test_classifies_staged_unstaged_and_untracked_work(tmp_path: Path) -> None:
@@ -89,6 +109,8 @@ def test_classifies_staged_unstaged_and_untracked_work(tmp_path: Path) -> None:
     assert "untracked.txt" in result.stdout
     assert "[BLOCKED] Worktree: 3 staged/unstaged/untracked item(s)" in result.stdout
     assert "[BLOCKED] Finish helper: dirty working tree" in result.stdout
+    assert "Recommended next command:" in result.stdout
+    assert "git diff && git status --short" in result.stdout
     assert "Blocks no-mistakes finish helper: yes" in result.stdout
 
 

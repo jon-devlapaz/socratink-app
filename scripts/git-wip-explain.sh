@@ -28,22 +28,31 @@ badge() {
 
 usage() {
   cat <<'EOF'
-Usage: scripts/git-wip-explain.sh [--help]
+Usage: scripts/git-wip-explain.sh [--short] [--help]
 
 Read-only helper that explains staged, unstaged, and untracked work.
 It does not add, remove, reset, stash, commit, fetch, or push.
 EOF
 }
 
-if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
-  usage
-  exit 0
-fi
+short_mode="0"
 
-if [ "$#" -ne 0 ]; then
-  usage >&2
-  exit 2
-fi
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --short)
+      short_mode="1"
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
 
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || {
   echo "[git-wip-explain] ERROR: not inside a git repository" >&2
@@ -55,22 +64,32 @@ branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")"
 upstream="$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
 head_sha="$(git rev-parse --short HEAD)"
 head_subject="$(git log -1 --pretty=%s)"
+behind=0
+ahead=0
 
-echo "[git-wip-explain] repo:   $repo_root"
-echo "[git-wip-explain] branch: $branch"
-echo "[git-wip-explain] head:   $head_sha $head_subject"
+if [ "$short_mode" != "1" ]; then
+  echo "[git-wip-explain] repo:   $repo_root"
+  echo "[git-wip-explain] branch: $branch"
+  echo "[git-wip-explain] head:   $head_sha $head_subject"
+fi
 
 if [ -n "$upstream" ]; then
   counts="$(git rev-list --left-right --count "$upstream"...HEAD 2>/dev/null || true)"
   if [ -n "$counts" ]; then
     behind="${counts%%[[:space:]]*}"
     ahead="${counts##*[[:space:]]}"
-    echo "[git-wip-explain] upstream: $upstream (behind=$behind ahead=$ahead)"
+    if [ "$short_mode" != "1" ]; then
+      echo "[git-wip-explain] upstream: $upstream (behind=$behind ahead=$ahead)"
+    fi
   else
-    echo "[git-wip-explain] upstream: $upstream"
+    if [ "$short_mode" != "1" ]; then
+      echo "[git-wip-explain] upstream: $upstream"
+    fi
   fi
 else
-  echo "[git-wip-explain] upstream: none"
+  if [ "$short_mode" != "1" ]; then
+    echo "[git-wip-explain] upstream: none"
+  fi
 fi
 
 print_commit_preview() {
@@ -89,13 +108,15 @@ print_commit_preview() {
   fi
 }
 
-if [ -n "$upstream" ] && [ -n "${ahead:-}" ] && [ -n "${behind:-}" ]; then
+if [ "$short_mode" != "1" ] && [ -n "$upstream" ]; then
   print_commit_preview "Local commits not on $upstream" "$upstream..HEAD" "$ahead"
   print_commit_preview "Remote commits not in local HEAD" "HEAD..$upstream" "$behind"
 fi
 
-echo
-echo "Known worktrees:"
+if [ "$short_mode" != "1" ]; then
+  echo
+  echo "Known worktrees:"
+fi
 current_wt=""
 current_head=""
 current_branch=""
@@ -115,7 +136,9 @@ print_worktree_entry() {
     same_branch_count=$((same_branch_count + 1))
     marker="!"
   fi
-  printf '  %s %-34s %-8s %s\n' "$marker" "$display_branch" "$short_head" "$current_wt"
+  if [ "$short_mode" != "1" ]; then
+    printf '  %s %-34s %-8s %s\n' "$marker" "$display_branch" "$short_head" "$current_wt"
+  fi
 }
 
 while IFS= read -r line; do
@@ -134,15 +157,19 @@ while IFS= read -r line; do
 done < <(git worktree list --porcelain)
 print_worktree_entry
 
-echo "  * current worktree"
-echo "  ! another worktree on the same branch"
-if [ "$same_branch_count" -gt 0 ]; then
-  echo "[git-wip-explain] WARNING: $same_branch_count other worktree(s) are on branch $branch."
+if [ "$short_mode" != "1" ]; then
+  echo "  * current worktree"
+  echo "  ! another worktree on the same branch"
+  if [ "$same_branch_count" -gt 0 ]; then
+    echo "[git-wip-explain] WARNING: $same_branch_count other worktree(s) are on branch $branch."
+  fi
 fi
 
-echo
-echo "Raw status:"
-git status --short --branch
+if [ "$short_mode" != "1" ]; then
+  echo
+  echo "Raw status:"
+  git status --short --branch
+fi
 
 status_lines="$(git status --porcelain)"
 
@@ -223,12 +250,31 @@ elif [ -z "$upstream" ]; then
   finish_message="no upstream configured"
 fi
 
+recommended_next="none; ready for new work"
+if [ "$dirty_count" -gt 0 ]; then
+  recommended_next="git diff && git status --short"
+elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ]; then
+  recommended_next="python3 scripts/agent-push.py --target no-mistakes/dev"
+elif [ -n "$upstream" ] && [ "$behind" -gt 0 ]; then
+  recommended_next="scripts/no-mistakes-finish-dev.sh"
+elif [ "$same_branch_count" -gt 0 ]; then
+  recommended_next="scripts/git-worktree-cleanup.sh"
+fi
+
+if [ "$short_mode" = "1" ]; then
+  printf '%s %s @ %s | worktree=%s | upstream=behind:%s ahead:%s | sessions=%s | finish=%s\n' \
+    "$(badge "$upstream_state")" "$branch" "$head_sha" "$worktree_state" "$behind" "$ahead" "$session_state" "$finish_state"
+  echo "Next: $recommended_next"
+  exit 0
+fi
+
 echo
 echo "Health summary:"
 printf '  %s Worktree: %s\n' "$(badge "$worktree_state")" "$worktree_message"
 printf '  %s Upstream: %s\n' "$(badge "$upstream_state")" "$upstream_message"
 printf '  %s Sessions: %s\n' "$(badge "$session_state")" "$session_message"
 printf '  %s Finish helper: %s\n' "$(badge "$finish_state")" "$finish_message"
+echo "  Next: $recommended_next"
 
 if [ "$dirty_count" -eq 0 ]; then
   echo
@@ -268,6 +314,9 @@ fi
 
 echo
 echo "Blocks no-mistakes finish helper: $finish_blocked"
+echo
+echo "Recommended next command:"
+echo "  $recommended_next"
 echo
 echo "Least-resistance next step:"
 if [ "$unstaged_count" -gt 0 ] || [ "$untracked_count" -gt 0 ]; then
