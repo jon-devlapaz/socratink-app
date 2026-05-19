@@ -150,7 +150,7 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 Abbreviated pass shape (47 tests across the five files):
 
-```
+```text
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
 tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED
 tests/e2e/test_smoke.py::test_first_run_guidance_is_inline_not_modal PASSED

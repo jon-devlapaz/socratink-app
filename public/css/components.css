@@ -568,6 +568,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   cursor:pointer;
   color:var(--text-sub);
   opacity:0;
+  pointer-events:none;
   font-size:16px; line-height:1; padding:0; border-radius:10px;
   flex:none; width:36px; height:36px; min-height:36px;
   display:inline-flex; align-items:center; justify-content:center;
@@ -587,12 +588,14 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .concept-item:focus-within .concept-actions,
 .concept-item.menu-open .concept-actions {
   opacity:1;
+  pointer-events:auto;
   transform:scale(1);
 }
 .concept-actions:hover,
 .concept-actions:focus-visible,
 .concept-item.menu-open .concept-actions {
   opacity:1;
+  pointer-events:auto;
   color:var(--primary-readable) !important;
   background:rgba(var(--lavender-500-rgb), 0.14);
   border-color:rgba(var(--lavender-500-rgb), 0.28);

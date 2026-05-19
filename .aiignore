@@ -13,8 +13,6 @@ __pycache__/
 .vercel/
 .env
 .env*.local
-pyproject.toml
-uv.lock
 
 # Local diagnostics, coverage, and browser/QA artifacts.
 .coverage

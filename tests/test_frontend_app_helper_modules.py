@@ -4,12 +4,26 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEST_NODE_TIMEOUT_SECONDS = 30
+
+
+class ButtonTypeParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.missing_type: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "button":
+            return
+        attr_names = {name.lower() for name, _value in attrs}
+        if "type" not in attr_names:
+            self.missing_type.append(self.get_starttag_text() or "<button>")
 
 
 def run_node_module(script: str) -> subprocess.CompletedProcess[str]:
@@ -678,13 +692,10 @@ def test_feedback_modal_copy_and_button_contract() -> None:
 
 def test_static_buttons_declare_type() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
-    missing_type = [
-        line.strip()
-        for line in index_html.splitlines()
-        if "<button" in line and "type=" not in line
-    ]
+    parser = ButtonTypeParser()
+    parser.feed(index_html)
 
-    assert missing_type == []
+    assert parser.missing_type == []
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
