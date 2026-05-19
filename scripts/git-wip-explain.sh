@@ -264,7 +264,11 @@ elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ]; then
     recommended_next="git status --short --branch && git log --oneline @{u}..HEAD"
   fi
 elif [ -n "$upstream" ] && [ "$behind" -gt 0 ]; then
-  recommended_next="scripts/no-mistakes-finish-dev.sh"
+  if [ "$branch" = "dev" ]; then
+    recommended_next="scripts/no-mistakes-finish-dev.sh"
+  else
+    recommended_next="git fetch && git status --short --branch && git log --oneline HEAD..@{u}"
+  fi
 elif [ "$same_branch_count" -gt 0 ]; then
   recommended_next="scripts/git-worktree-cleanup.sh"
 fi
