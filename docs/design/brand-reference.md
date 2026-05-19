@@ -104,7 +104,7 @@ Enter concept
 | Moment | What the learner sees | What the system may infer | Allowed state change |
 |---|---|---|---|
 | Threshold submitted | starting map captured | routing signal, source dependence, causal depth | **none** |
-| Provisional graph generated | draft path | first-node priority, prompt emphasis | **none** |
+| Provisional graph generated | draft route | first-node priority, prompt emphasis | **none** |
 | Local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
 | Study revealed | repair artifact | `study_revealed_at`; no mastery signal | stays `primed`; current re-drill readiness derives from attempt timing, not study completion |
 | Interleaving bridge shown | small next-choice set (2–3 rooms + break) | route preference | **none** |
@@ -119,7 +119,7 @@ Enter concept
 - "Give your best current map. Rough is fine."
 - "What do you want to be able to explain when this clicks?"
 - "This is global context. The first room will ask one smaller question."
-- "Draft path." · "Suggested first." · "Ready for first attempt."
+- "Draft route." · "Suggested first." · "Ready for first attempt."
 - "Let this one cool." · "The repair is fresh." · "Take a short break instead."
 
 **Forbidden on these screens:**
@@ -134,7 +134,7 @@ Enter concept
 
 Only these phrases may appear as graph-state copy:
 
-- **Allowed:** *draft path · suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction*
+- **Allowed:** *draft route · suggested first · ready for first attempt · primed for study · solidified through spaced reconstruction*
 - **Forbidden:** *you know this · mastered (from graph generation) · completed (from reading) · advanced (from fluent prose)*
 
 ### Schema labels are internal

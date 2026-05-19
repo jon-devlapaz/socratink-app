@@ -43,6 +43,7 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 - Delete obsolete paths when simplifying. If compatibility is needed, keep a tiny redirect file.
 - Do not commit generated local artifacts (`pyproject.toml`, `uv.lock`, `.vercel/`, caches, logs).
 - Do not claim "no verification needed" for doc-only changes that alter agent instructions, deploy instructions, dependency instructions, product doctrine, or required file paths. At minimum, run `bash scripts/doctor.sh`.
+- Verification commands must be self-contained. A documented gate must set or validate every repo-owned test/local env value it depends on; if it needs a server, browser, external service, or generated artifact, the command must provision it, fail with a precise remediation message, or be wrapped by a canonical script that does.
 - Capture reusable workflow friction in `agents/LEARNINGS.md` instead of scattering notes through adapters. Promote a pattern only after recurrence: 3 real sightings, or 2 sightings when it affects publication safety, verification integrity, bootstrap correctness, or canon boundaries.
 
 ## Verification Matrix
@@ -54,5 +55,6 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 | Dependencies or Vercel config | `bash scripts/preflight-deploy.sh` |
 | Auth/session behavior | targeted auth pytest plus `bash scripts/doctor.sh` |
 | Drill, graph, or mastery behavior | targeted pytest plus review against `docs/product/evidence-weighted-map.md` |
+| Production backend or public JS behavior | targeted pytest plus `./scripts/check-coverage.sh` |
 | External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs, Playwright, browser APIs) | fetch current docs via Context7 before edit; targeted pytest if behavior is testable; `bash scripts/qa-smoke.sh` when the surface is hosted-visible |
 | Hosted release confidence | `bash scripts/verify-deploy.sh HEAD` after deployment |

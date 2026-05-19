@@ -32,16 +32,35 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 - use `origin/feat/*` for feature-branch publication intended for PR flow
 - use `no-mistakes/dev` for larger, higher-blast-radius, or higher-risk publication
 
+## Helper Commands
+
+```text
+scripts/git-wip-explain.sh              # full local/session orientation
+scripts/git-wip-explain.sh --short      # compact terminal-start summary
+python3 scripts/agent-push.py --target no-mistakes/dev
+no-mistakes attach
+scripts/no-mistakes-finish-dev.sh       # after no-mistakes finishes
+scripts/git-worktree-cleanup.sh         # list stale worktrees
+scripts/git-worktree-cleanup.sh --remove-clean --apply
+```
+
 ## Required Confirmation
 
 - no silent publication
 - use `scripts/agent-push.py`
 - follow the wrapper's ack/override flow
+- treat the printed `--ack` token as an opaque receipt for the previewed branch, HEAD, dirty state, route, remote URL/refspec, diff fingerprint, risk class, nonce, and timestamp; copy the full generated command without inspecting or editing the token
 - urgency is never authorization
 
 ## Verification
 
 - wrapper recommendation is shown
+- wrapper refreshes `origin/dev` before evaluating a `dev` publication
+- publishing `dev` is blocked when local `dev` is behind `origin/dev`
+- a branch that is both behind and ahead of its upstream is diverged; inspect with `git fetch && git status --short --branch && git diff @{u}...HEAD`, not `scripts/agent-push.py`
+- after no-mistakes finishes, use `scripts/no-mistakes-finish-dev.sh` to refuse active runs, dirty trees, or unique local commits before folding local `dev` onto `origin/dev`
+- when a dirty tree blocks finishing, use `scripts/git-wip-explain.sh` to classify staged, unstaged, and untracked work before deciding what to commit or move
+- when stale worktrees create session confusion, use `scripts/git-worktree-cleanup.sh` to list candidates and remove only clean registered worktrees with `--remove <path> --apply`
 - push intent is revalidated on ack
 - raw `git push` is blocked without authorization artifact
 

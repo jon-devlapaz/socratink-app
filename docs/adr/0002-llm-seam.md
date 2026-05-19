@@ -1,7 +1,7 @@
 # ADR-0002 — LLM provider lives behind a seam; application asks for cognitive artifacts
 
 **Status:** Accepted (2026-05-01)
-**Driver:** [foundation design spec, §5.2 + §5.3](../superpowers/specs/2026-05-01-foundation-design.md), PR #76
+**Driver:** [foundation design spec, §5.2 + §5.3](../archive/superpowers/specs/2026-05-01-foundation-design.md), PR #76
 
 ## Context
 

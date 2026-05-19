@@ -89,7 +89,7 @@ metric.
 
 **Mechanism**: The graph shows what Socratink has *evidence for*, not what the
 learner *knows*. Topology is a hypothesis until reconstruction earns trust.
-(See `evidence-weighted-map.md` §1 and §4.)
+(See `evidence-weighted-map.md` §1 and §5.)
 
 **Closest analog**: None as doctrine. Heptabase, Logseq, Obsidian, and
 RemNote render *content* graphs (notes/links). NotebookLM's "mastery tracking"
@@ -127,7 +127,7 @@ classifiable evidence event," which is what makes node-state assignment
 defensible. Whoever ships this with the best eval wins.
 
 **Implication**: **Invest** in rubric quality and offline eval. The
-extraction-evals/rubric work in `docs/archive/2026-05-design-md-refactor/handoffs/2026-05-02-extraction-evals-and-rubric.md`
+extraction-evals/rubric work in `docs/archive/2026-05-design-md-refactor/2026-05-02-extraction-evals-and-rubric.md`
 is the right axis. Underinvesting here turns proof events into noisy labels
 and silently weakens every downstream claim the graph makes.
 
@@ -225,7 +225,9 @@ violations break the loop's metacognitive stance in one turn.
 
 ### 8. Generative commitment threshold
 
-**Mechanism**: Cold attempt requires 3+ words and rejects "idk". (See `spec.md`
+**Mechanism**: Cold attempts require generative commitment before study;
+source-less launch-pad generation uses the shared substantive-sketch gate (8+
+substantive non-stopword tokens and no "don't know" pattern). (See `spec.md`
 §2 Phase 1.)
 
 **Closest analog**: None visible. Free-text-input apps don't gate on

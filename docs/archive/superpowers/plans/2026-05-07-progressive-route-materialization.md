@@ -9,7 +9,7 @@
 **Tech Stack:** Python 3.x + FastAPI (backend); vanilla JS + HTML + CSS (frontend); pytest (backend tests); existing LLM client (`build_llm_client`) and Pydantic `ProvisionalMap` model.
 
 **Spec:** `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`
-**Brief:** `docs/design/handoffs/2026-05-07-progressive-route-materialization-agent-brief.md`
+**Brief:** `docs/archive/2026-05-design-md-refactor/2026-05-07-progressive-route-materialization-agent-brief.md`
 
 ---
 

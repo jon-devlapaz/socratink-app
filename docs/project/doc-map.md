@@ -4,6 +4,7 @@ Canonical entry points first; deep specs and ephemera below. For an agent-crawle
 
 ## Entry points
 
+- [`docs/README.md`](../README.md) — docs-vault front door and memory boundary
 - [`/DESIGN.md`](../../DESIGN.md) — canonical product/design hub (intent, decisions, primitives, voice, boundaries)
 - [`/AGENTS.md`](../../AGENTS.md) — agent ops canon (commands, conventions, git workflow)
 - [`/UBIQUITOUS_LANGUAGE.md`](../../UBIQUITOUS_LANGUAGE.md) — canonical domain terms and aliases-to-avoid
@@ -11,7 +12,7 @@ Canonical entry points first; deep specs and ephemera below. For an agent-crawle
 
 ## Precedence
 
-On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) overrides every other binding doc — including `DESIGN.md`, `spec.md`, and all implementation-tier specs. Legacy shorthand ("verified understanding", "cleared", "mastered") falls under its §13 Legacy Shorthand Replacement Table.
+On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) overrides every other binding doc — including `DESIGN.md`, `spec.md`, and all implementation-tier specs. Legacy knowledge/completion shorthand falls under its §14 Legacy Shorthand Replacement Table.
 
 On all other topics, the doc listed below for that topic is authoritative.
 
@@ -21,21 +22,20 @@ On all other topics, the doc listed below for that topic is authoritative.
 | --- | --- |
 | Full UX manifesto (prose source for DESIGN.md §§3–6) | [`docs/design/socratink-ux.md`](../design/socratink-ux.md) |
 | Design system component rules | [`docs/design/socratink-design-system.md`](../design/socratink-design-system.md) |
-| Product spec (three-phase loop, panel modes, guardrails) | [`docs/product/spec.md`](../product/spec.md) |
+| Product spec (three-phase loop, routing, progression layers, panel modes, guardrails) | [`docs/product/spec.md`](../product/spec.md) |
 | Evidence-weighted map doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
 | Test-driven learning founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
 | Drill data-model canon | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
 | ADR index (append-only architectural decisions) | [`docs/adr/README.md`](../adr/README.md) |
-| Theta-state (evidence posture for product-science claims) | [`docs/project/theta-state.md`](theta-state.md) |
 
 ## Implementation-facing specs
 
 | Topic | Doc |
 | --- | --- |
-| Derived training state implementation | [`docs/product/progressive-disclosure.md`](../product/progressive-disclosure.md) |
+| Derived training state and rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
+| Feynman prompt integration proposal (proposal-only, not runtime canon) | [`docs/superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md`](../superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md) |
 | Post-drill panel UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
 | Drill contract redirect | [`docs/drill/contract.md`](../drill/contract.md) |
-| Repair Reps | [`docs/product/repair-reps.md`](../product/repair-reps.md) |
 | Auth rollout | [`docs/project/auth-rollout.md`](auth-rollout.md) |
 
 ## Release gates
@@ -43,7 +43,6 @@ On all other topics, the doc listed below for that topic is authoritative.
 - [`docs/project/state.md`](state.md) — current release gate
 - [`docs/project/mvp-happy-path.md`](mvp-happy-path.md) — narrow MVP ship gate
 - [`docs/project/operations.md`](operations.md) — merge standard and release checks
-- [`docs/qa/2026-05-11-mvp-browser-test.md`](../qa/2026-05-11-mvp-browser-test.md) — current pre-merge browser QA
 - [`docs/qa/antigravity-mobile-qa-prompt.md`](../qa/antigravity-mobile-qa-prompt.md) — mobile regression audit
 
 ## Agent infra
@@ -56,6 +55,7 @@ Ephemeral handoffs and dated QA plans live under [`docs/archive/`](../archive/).
 
 ## Maintenance
 
+- Open `docs/` as an Obsidian vault only as a navigation layer. Git and the docs listed here remain authoritative.
 - When a new doc is added under `docs/`, list it here under the right section.
 - When a doc becomes superseded, `git mv` it under `docs/archive/<date-context>/`. Don't delete.
 - When doctrine shifts, update DESIGN.md §4 first; the registry follows.

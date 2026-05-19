@@ -8,7 +8,7 @@ one shell command, against local dev / Vercel preview / production.
 
 The suite spans five files:
 
-### `test_smoke.py` — 25 tests
+### `test_smoke.py` — 31 tests
 
 Key checks include:
 
@@ -18,31 +18,39 @@ Key checks include:
    `#concept-list`, `.sidebar-brand-mark` all attached after navigation.
 3. **`test_guest_session_is_labeled_as_guest`** — anonymous Supabase sessions
    render as guest, not as signed-in users.
-4. **`test_drawer_toggle_remains_visible_in_concept_view`** — sidebar toggle
+4. **`test_launch_pad_sketch_gate_matches_substantive_backend_rule`** —
+   launch-pad validation stays aligned with the backend's substantive sketch
+   threshold.
+5. **`test_drawer_toggle_remains_visible_in_concept_view`** — sidebar toggle
    stays available after opening a library concept (regression gate for the
    drawer-toggle visibility fix).
-5. **`test_saved_library_concept_reopens_map_view`** — library cards reopen
+6. **`test_feedback_button_keeps_sidebar_open`** — feedback opens as an
+   overlay action without collapsing the sidebar.
+7. **`test_feedback_dialog_has_accessible_escape_close`** — feedback keeps the
+   modal dialog role, Escape close behavior, and labeled title contract.
+8. **`test_saved_library_concept_reopens_map_view`** — library cards reopen
    the concept-map view, not a stale shell, on the second click (regression
    gate for the library reopen fix).
-6. **`test_active_concept_delete_confirms_then_returns_to_desk`** — deleting
+9. **`test_active_concept_delete_confirms_then_returns_to_desk`** — deleting
    the open concept confirms via dialog and resets the workspace to the desk
    (regression gate for the active-concept delete flow).
-7. **`test_desk_iso_board_state_surface_and_room_labels`** — desk iso board
+10. **`test_desk_iso_board_state_surface_and_room_labels`** — desk iso board
    exposes truthful tile state and quiet hover/focus room labels.
-8. **`test_desk_layout_identical_when_empty_or_populated`** — empty desk
+11. **`test_desk_layout_identical_when_empty_or_populated`** — empty desk
    renders the same 9-tile iso-board geometry as a populated library
    (regression gate against the old empty-state hide rule).
-9. **`test_no_console_errors_on_first_paint`** — zero same-origin
+12. **`test_no_console_errors_on_first_paint`** — zero same-origin
    `console.error` during first paint.
-10. **`test_no_failed_critical_asset_requests`** — zero same-origin
+13. **`test_no_failed_critical_asset_requests`** — zero same-origin
     `requestfailed` events during first paint, except narrow Chromium
     `ERR_ABORTED` bootstrap noise for `/api/health` and `/api/me`.
-11. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
+14. **`test_theme_preloader_resilient_on_blank_localstorage`** — inline IIFE
     at top of `<body>` produces no errors on a fresh visit.
-12. Additional smoke tests cover the inline concept-page reconstruction flow,
+15. Additional smoke tests cover the inline concept-page reconstruction flow,
     study reveal persistence, repair QA seeding, Library reconstruction copy,
-    active-entry preservation after sketch edits, training-store hydration, and
-    local guest bootstrap behavior.
+    active-entry preservation after sketch edits, training-store hydration,
+    feedback submit/reopen and mobile access, and local guest bootstrap
+    behavior.
 
 ### `test_drill_chamber.py` — 5 tests
 
@@ -77,7 +85,7 @@ drift fail the suite.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`
-  fixture). Tests 4–6 use a guest Supabase session, so they exercise some
+  fixture). Several tests use a guest Supabase session, so they exercise some
   in-app behavior, but real signed-in flows still need a separate suite.
 - Full critical-flow exercise (`selectTile`, `runHeroAction`, `toggleTheme`)
   — only library reopen and concept delete are partially covered here.
@@ -97,8 +105,8 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
-`test_smoke.py` (25 tests). Use the raw pytest invocations below to run the
-full suite (41 tests across the five files).
+`test_smoke.py` (31 tests). Use the raw pytest invocations below to run the
+full suite (47 tests across the five files).
 
 Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
 `SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default,
@@ -122,7 +130,7 @@ Raw pytest invocations (when you need flags the wrapper doesn't pass through,
 or want the full five-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all five files, 41 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all five files, 47 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)
@@ -140,13 +148,17 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 ## Output
 
-Abbreviated pass shape (41 tests across the five files):
+Abbreviated pass shape (47 tests across the five files):
 
-```
+```text
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
 tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED
+tests/e2e/test_smoke.py::test_first_run_guidance_is_inline_not_modal PASSED
 tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED
+tests/e2e/test_smoke.py::test_launch_pad_sketch_gate_matches_substantive_backend_rule PASSED
 tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED
+tests/e2e/test_smoke.py::test_feedback_button_keeps_sidebar_open PASSED
+tests/e2e/test_smoke.py::test_feedback_dialog_has_accessible_escape_close PASSED
 tests/e2e/test_smoke.py::test_saved_library_concept_reopens_map_view PASSED
 tests/e2e/test_smoke.py::test_active_concept_delete_confirms_then_returns_to_desk PASSED
 tests/e2e/test_smoke.py::test_desk_iso_board_state_surface_and_room_labels PASSED
@@ -169,7 +181,7 @@ tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
 tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
 tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
 
-============================== 41 passed ==============================
+============================== 47 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,

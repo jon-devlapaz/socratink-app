@@ -17,7 +17,7 @@ This document consolidates the implementation spec for Repair Reps, governing fo
 > - Before changing `.graph-layout.mode-repair-reps`, `.graph-detail.is-repair-reps`, or `.graph-repair-*` layout rules in `public/css/layout.css`.
 > - Before changing the visible wording around "Your bridge", "Reference bridge", or Repair Reps completion.
 >
-> **What it is NOT**: This does not own the Repair Reps backend generation contract in `main.py` or `ai_service.py`. It does not own the card-stack animation vocabulary already specified in `docs/product/repair-reps-card-stack-spec.md`. It does not own the self-rating semantics or stored rating evidence already specified in `docs/product/repair-reps-self-rating-spec.md`. It does not govern the full three-phase graph progression contract in `docs/product/progressive-disclosure.md`.
+> **What it is NOT**: This does not own the Repair Reps backend generation contract in `main.py` or `ai_service.py`. It does not own the card-stack animation vocabulary already specified in `docs/product/repair-reps-card-stack-spec.md`. It does not own the self-rating semantics or stored rating evidence already specified in `docs/product/repair-reps-self-rating-spec.md`. It does not govern the full three-phase graph progression contract now consolidated into `docs/product/spec.md`.
 >
 > **Key constraints**:
 > - Repair Reps must not call `patchActiveConceptDrillOutcome()`, `recordInterleavingEvent()`, or `markNodeVisitedThisSession()`.

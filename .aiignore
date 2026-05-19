@@ -1,0 +1,39 @@
+# Generated dependencies and package-manager caches.
+node_modules/
+
+# Local virtualenvs and Python caches.
+.venv*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local deployment, build, and environment state.
+.vercel/
+.env
+.env*.local
+
+# Local diagnostics, coverage, and browser/QA artifacts.
+.coverage
+coverage.xml
+.qa-runs/
+.playwright-mcp/
+logs/
+tmp/
+output/
+
+# Agent/tool runtime state and generated code-review graph data.
+.agents/
+.claude/
+.codex/
+.code-review-graph/
+.superpowers/
+.worktrees/
+.vscode/
+.mcp.json
+
+# Local research/scratch surfaces that are not repo canon.
+docs/research/
+docs/pipeline/
+.socratink-brain/

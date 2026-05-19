@@ -3,7 +3,7 @@
 **Date drafted:** 2026-05-04
 **Status:** Ready for pickup. Backend (Plan A) is on `dev` at `086e617`.
 **Drafted by:** Claude Opus 4.7 (1M context), in conversation with jon-devlapaz
-**Supersedes:** `docs/design/handoffs/2026-05-01-new-concept-modal-redesign.md` (form-polish handoff). The form is being deleted, not polished.
+**Supersedes:** `docs/archive/2026-05-design-md-refactor/2026-05-01-new-concept-modal-redesign.md` (form-polish handoff). The form is being deleted, not polished.
 
 ## Required skills (load BOTH, in order, before touching any code)
 

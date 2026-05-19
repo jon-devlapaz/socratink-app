@@ -8,23 +8,25 @@ export const Feedback = (() => {
   const textarea = document.getElementById('feedback-message');
   const status = document.getElementById('feedback-status');
   const submitBtn = document.getElementById('feedback-submit');
+  let opener = null;
 
   function show() {
     if (!overlay) return;
+    opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     overlay.hidden = false;
     textarea.value = '';
     status.textContent = '';
     status.className = 'modal-status';
+    submitBtn.disabled = false;
     textarea.focus();
-    // Close sidebar if open (mobile)
-    if (window.App && typeof App.closeDrawer === 'function') {
-      App.closeDrawer();
-    }
   }
 
   function hide() {
     if (!overlay) return;
     overlay.hidden = true;
+    if (opener && document.contains(opener) && typeof opener.focus === 'function') {
+      opener.focus({ preventScroll: true });
+    }
   }
 
   async function submit(event) {
@@ -69,6 +71,12 @@ export const Feedback = (() => {
     status.textContent = text;
     status.className = 'modal-status ' + (kind || '');
   }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && overlay && !overlay.hidden) {
+      hide();
+    }
+  });
 
   // Export to global scope for onclick handlers in HTML
   window.Feedback = { show, hide, submit };

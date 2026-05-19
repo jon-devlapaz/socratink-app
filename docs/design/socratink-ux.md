@@ -48,7 +48,7 @@ Enter concept
 
 ### What each screen does — and refuses to do
 
-**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures only the concept name (and optional source attach). Source-less concepts pass through a **launch pad** that captures the learner's threshold (rough whole-concept model) before any AI generation runs. See `docs/superpowers/specs/2026-05-07-progressive-route-materialization-design.md`.
+**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures only the concept name (and optional source attach). Source-less concepts pass through a **launch pad** that captures the learner's threshold (rough whole-concept model) before any AI generation runs. See `docs/product/spec.md` for the current contract.
 
 The launch pad replaces the previous in-form "Starting sketch" textarea. The threshold is no longer a field on the door; it is a dedicated post-commit surface. This change preserves the learner-seeded route contract: no graph or thesis is generated from the concept name alone.
 
@@ -239,25 +239,17 @@ The aesthetic mirrors the work the product asks of its learners: **quiet, schola
 - **No noise, grain, or film overlays.** Warmth comes from the gradient.
 - **No left-border-accent cards.** Reads as AI-slop trope; clashes with the jeweled palette.
 
-> **In-app exception (Antigravity theme).** The shipping in-app shell (`public/index.html`) loads `public/antigravity.css` and applies `.antigravity-theme` to `<body>` unconditionally — a deliberate divergence from the cream-paper rules above. It introduces `--accent-color` / `--accent-mint`, a neutral `#F2F0F5` light page surface, a `#18181b` graphite dark page (Pattern A unified — the earlier `#0B0D17` indigo and its violet radial bloom were retired), glassy panels, and Outfit (loaded from Google Fonts) for ignition/hero display headings. Marketing pages and external surfaces still follow the cream-paper rules verbatim. See `docs/design/socratink-design-system.md` and `docs/design/brand-reference.md` for the canonical exception details.
+> **In-app exception (Antigravity theme).** The shipping in-app shell deliberately diverges from the cream-paper marketing surface: it is calmer, glassier, and tuned for repeated work inside the app rather than external persuasion. Marketing pages and external surfaces still follow the cream-paper rules verbatim. Technical token values, font exceptions, and file-level implementation details live in `docs/design/socratink-design-system.md` and `docs/design/brand-reference.md`.
 
 ### Motion
-Drill surfaces are quiet. Standard easing for hover and press. **Spring easing only on `solidified`** — the one moment that earns celebration. Crystal polygon morphs at 600ms; everything else lives at 140 / 220 / 320ms. No 1s+ animations. No scroll-hijacking, no parallax, no autoplay video. `prefers-reduced-motion: reduce` is respected on every motion surface, and the in-app Settings → Reduced motion toggle is an additive override: it persists `socratink.motion = "reduced"` to localStorage, surfaces as `html[data-motion="reduced"]` (preloaded inline by `public/index.html` and the login page), and is mirrored across base/components/crystal/layout/login/experiment stylesheets via the shared `public/js/motion.js` helper. Any new motion surface must gate on both the OS query and the data attribute.
+Drill surfaces are quiet. Motion should feel like attention moving across paper, not like an app performing for the learner. **Spring motion is reserved for `solidified`** — the one moment that earns celebration. Everything else should be brief, legible, and subordinate to the current cognitive target. No scroll-hijacking, no parallax, no autoplay video. Reduced-motion preferences are binding; implementation details live in the design-system doc.
 
 ### Audio
-Material, not musical. The palette is canonical in `public/js/audio.js`; reach for that file when retuning. The vocabulary today:
-
-- **Typing** — `playKeyClick` (F·brush): lowpass noise around 600Hz, ~18ms. Bound to keystrokes in the threshold composer / drill input.
-- **Focus tap** — `playFocusTap` (I·breath): highpass noise around 4kHz, ~10ms. Sidebar, bottom-nav, and primary-control focus.
-- **Tile click** — `playTileClick` (D·thud): 60Hz square + bandpass noise. Iso-board tile activation.
-- **Drawer toggle** — `playDrawerToggle` (F·body): lowpass cloth around 1.1kHz, ~30ms. Open/close of the desk drawer.
-- **Threshold submit** — `playSubmitChime`: long G4→C4 settle. Reserved for the Ignition submit moment.
-
-On by default; toggled in Settings. Honors `prefers-reduced-motion: reduce`. No ambient loops, no notification stings, no UI-as-instrument.
+Material, not musical. Audio should read as contact with the surface: brush, breath, thud, cloth, settle. It is feedback for an action the learner just took, never ambience and never a notification layer. On by default, user-controllable in Settings, and respectful of reduced-motion/sensory restraint. The canonical helper names and synthesis details live in the design-system doc.
 
 ### Hover, press, focus
-- **Hover** = the page lifts, it doesn't brighten. `translateY(-1 to -3px)` + border swap to `--accent-border-strong` + warmer shadow.
-- **Press** = `scale(0.97)` with no color shift. The component admits it was touched.
+- **Hover** = the page lifts, it doesn't brighten.
+- **Press** = the component admits it was touched without becoming louder.
 - **Focus** = a soft violet ring. Never a thick blue outline; never nothing.
 - **Disabled** = surface drops to nested, text to muted, shadow off.
 

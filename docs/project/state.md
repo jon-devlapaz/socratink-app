@@ -11,7 +11,7 @@
 - Evidence source of truth: live logs plus the operational docs in this repo
 
 ## Current Phase
-The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library now shows only the user's own reconstructed work — both the multi-concept starter shelf and the curated Hermes Agent fixture have been removed. Current smoke tests seed a concept directly into `learnops_concepts` localStorage. The product is now in Build-Measure-Learn: build features, measure with instrumentation and Socratink Brain, learn from compiled evidence.
+The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library now shows only the user's own reconstructed work; both the multi-concept starter shelf and the curated Hermes Agent fixture have been removed. Current smoke tests seed a concept directly into `learnops_concepts` localStorage. The product is now in Build-Measure-Learn: build features, measure with instrumentation and Socratink Brain, learn from compiled evidence.
 
 ## Active Risks
 - Hosted behavior may still diverge from local behavior.
@@ -19,6 +19,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - Chat/test instrumentation is incomplete, so some regressions will still be harder to reconstruct than they should be.
 - External ingestion paths still need defensive hosted behavior and graceful fallback.
 - Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user with no concepts must bring their own source.
+- `ai_service.py` still imports Gemini directly for `drill_chat` and `generate_repair_reps`; ADR-0002's temporary LLM seam exception remains unresolved until those paths migrate through `llm/`.
 
 ## Product Constraints
 - Generation Before Recognition is non-negotiable.
@@ -36,8 +37,8 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 
 ## Use These Docs
 - [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md): binding doctrine for what the graph may/must not claim
-- [docs/product/spec.md](../product/spec.md): binding product contract
-- [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md): current binding drill data-model canon
+- [docs/product/spec.md](../product/spec.md): binding product contract for the three-phase loop, routing, progression layers, panel modes, and guardrails
+- [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md): binding drill data-model canon for training evidence, derivation math, and rendering fields
 - [docs/drill/contract.md](../drill/contract.md): compatibility redirect and runtime summary
 - [docs/project/doc-map.md](doc-map.md): curated index of canonical entry points and deep-dives, with precedence rules at the top
 - [docs/project/mvp-happy-path.md](mvp-happy-path.md): current manual release gate

@@ -204,7 +204,8 @@ python scripts/run_tasting_fixture.py
 # Full-stack diff-coverage gate. Runs the Python suite with coverage.xml,
 # captures Chromium V8 coverage from the e2e smoke run via the Chrome
 # DevTools Protocol, normalizes it through monocart-coverage-reports into
-# cobertura, then runs diff-cover against origin/main with --fail-under=100.
+# cobertura, then runs diff-cover against COMPARE_BRANCH when set or
+# origin/main / main locally with --fail-under=100.
 # Fails the script (exit 1) with the offending file and line numbers if any
 # new line in the diff lacks a covering test.
 ./scripts/check-coverage.sh
@@ -264,19 +265,21 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
   - **mypy** (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) — config in `mypy.ini`. Canonical invocation: `mypy .`. Honors `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees) plus per-module `ignore_errors` for `tests.*` and `api.*`.
   - **Scope must stay aligned** between the two configs. If you change one exclude list, change the other. `pyrefly.toml` uses positive `project-includes` (`main.py`, `ai_service.py`, `learning_commons.py`, `runtime_env.py`, `auth`, `llm`, `source_intake`, `models`) — add new top-level modules there if you create them, otherwise pyrefly silently skips them.
 - No ruff/flake8 config is checked in. Do not invent lint commands beyond `pyrefly check` and `mypy .`.
-- CI gate: `.github/workflows/preflight.yml` runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), then `bash scripts/doctor.sh`, then `.venv/bin/pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so `doctor.sh` exercises the bootstrap/auth path without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
+- CI gate: `.github/workflows/preflight.yml` runs on every `pull_request` and on pushes to `main`/`dev`. The `preflight` job runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), `bash scripts/doctor.sh`, and `.venv/bin/pytest -q --ignore=tests/e2e`; the `coverage` job installs Node/Chromium, starts a loopback app with `SOCRATINK_E2E_LOCAL_GUEST=1`, selects `COMPARE_BRANCH`, and runs `bash scripts/check-coverage.sh`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so the gates exercise bootstrap/auth paths without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`
   - serverless function explicitly includes `public/**` and `app_prompts/**`
   - serverless function excludes everything else (tests, docs, scripts, db, agents, node_modules, dotfiles, and root-level config/docs like `*.md`, `*.yaml`, `*.json`, `*.ini`); see `vercel.json` for the canonical glob
 
 ### Stylesheet cache-bust discipline
-- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `index.css` `@imports` `tokens.css`, `styles.css`, `antigravity.css`, `paper.css` (each with their own `?v=M` cache-bust pins).
-- **When editing a stylesheet that's imported via `@import` in `index.css`, bump BOTH version pins:**
-  1. The inner `?v=M` on the `@import` line inside `public/css/index.css` (e.g., `?v=14` → `?v=15` for an antigravity edit).
-  2. The outer `?v=N` on the `<link>` to `/css/index.css` inside `public/index.html` (e.g., `?v=3` → `?v=4`).
-- Bumping only the inner pin is **not enough** — the browser keeps serving the cached `index.css?v=N`, which still has the old `?v=M-1` import baked in. The cached outer file points at the cached inner file; bumping only one breaks the chain at the wrong link.
-- The two numbers don't have to match — only that each changes when its file changes. When in doubt, bump both.
+- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `public/css/index.css` → `public/styles.css` → `public/css/*.css`, with `antigravity.css` and `paper.css` still imported directly by `public/css/index.css`.
+- **When editing a stylesheet imported by `public/styles.css`, bump all THREE version pins:**
+  1. The component import in `public/styles.css` (e.g., `./css/concept-page.css?v=9` → `?v=10`).
+  2. The `../styles.css?v=M` import in `public/css/index.css`.
+  3. The outer `/css/index.css?v=N` link in `public/index.html`.
+- For stylesheets imported directly by `public/css/index.css` (currently `antigravity.css` and `paper.css`), bump that import pin plus the outer `/css/index.css?v=N` link.
+- Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent CSS file, which still points at the previous child `?v=` value.
+- The numbers don't have to match — only that each relevant parent and child pin changes when its file changes. When in doubt, trace the import chain from `public/index.html` and bump every parent link on that path.
 - Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
 
 ## Agent bootstrap discovery
@@ -333,8 +336,8 @@ For a current architecture overview, use the Code Review Graph tools described i
 - Run browser smoke without being asked after deploys, merges to `main`, `git push origin main` with verification framing, before claiming "the site works" or "X is live", when investigating hosted-only symptoms, and after high-risk changes to `main.py`, `api/index.py`, or `public/index.html`.
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; the only same-origin requestfailure exception is narrow Chromium `ERR_ABORTED` bootstrap noise for `/api/health` and `/api/me`, not HTTP failures or app assets.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
-- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, drawer visibility after concept entry, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
-- Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `origin/main` using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
+- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, launch-pad sketch validation, drawer visibility after concept entry, feedback modal/sidebar behavior, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
+- Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `COMPARE_BRANCH` when set or `origin/main` / `main` locally using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
 
 ## Audit log 2026-05-12
 
@@ -343,3 +346,5 @@ For a current architecture overview, use the Code Review Graph tools described i
 - Stale: 0
 - Indeterminate: 0
 - Stale claims with line refs: none found in the audited set.
+
+Any meaningful product/architecture change must update exactly one canonical doc: project/state.md, an ADR, the relevant product/design spec, or project/doc-map.md.

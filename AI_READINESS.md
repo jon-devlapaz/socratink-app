@@ -145,7 +145,7 @@ time pytest --co -q | tail -3
 | --- | --- | --- | --- |
 | No tests or tests cannot be discovered by the framework's default runner. | Tests exist but require manual env setup; long boot; flaky. | One-command run; test:source ratio ≥ 0.5; clear which tests cover which module. | One-command run; test:source ≥ 1.0; collocation/naming makes coverage of a unit obvious; smoke tests subsettable (`-m smoke`). |
 
-**socratink-app baseline:** 62 tests, 1.8:1 ratio, `pytest.ini` works, Playwright e2e present — currently scoring **3** *if* the runner is one-command from a clean checkout (verify with `scripts/bootstrap-python.sh && pytest -q`).
+**socratink-app baseline:** 68 test files, 1.74:1 ratio, `pytest.ini` works, Playwright e2e present — currently scoring **3** *if* the runner is one-command from a clean checkout (verify with `scripts/bootstrap-python.sh && pytest -q`).
 
 ---
 
@@ -165,7 +165,7 @@ ls scripts/preflight-deploy.sh scripts/doctor.sh scripts/verify-deploy.sh
 | --- | --- | --- | --- |
 | No automated check before merge or deploy. | Manual scripts exist but rely on developer remembering to run them. | Pre-commit hook OR local pre-deploy script that runs tests + typecheck + lint and blocks on failure. | CI on push/PR + diff-coverage threshold + typecheck + lint, mirrored locally by a single script. |
 
-**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` invokes `bash scripts/doctor.sh` (which runs **both `pyrefly check` and `mypy .`** as parallel type-check gates) plus `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`, all mirrored locally by `scripts/doctor.sh`. Diff-coverage is still local-only via `scripts/check-coverage.sh`. Currently **3** for the type-check + non-e2e-test gate; raising diff-coverage to CI would lock in level **3** across the board.
+**socratink-app baseline:** `scripts/preflight-deploy.sh` + `scripts/doctor.sh` exist; `.github/workflows/preflight.yml` invokes `bash scripts/doctor.sh` (which runs **both `pyrefly check` and `mypy .`** as parallel type-check gates) plus `pytest -q --ignore=tests/e2e` on every `pull_request` and on pushes to `main`/`dev`; its `coverage` job starts a loopback app, selects `COMPARE_BRANCH`, and runs `scripts/check-coverage.sh` for strict diff coverage. The same gates are mirrored locally by `scripts/doctor.sh` and `scripts/check-coverage.sh`. Currently **3**.
 
 ---
 
@@ -288,7 +288,7 @@ cat .gitignore | grep -E '^(node_modules|dist|build|\.venv|__pycache__|\.pytest_
 | --- | --- | --- | --- |
 | `node_modules/`, `dist/`, build artifacts committed. | Some cache directories committed (`.pytest_cache`, `.mypy_cache`); large generated files in tree. | Clean tree; `.gitignore` covers the standard set. | E1 level-2 plus an `.aiignore` / retrieval-tool exclusion list keeps the indexer focused on source. |
 
-**socratink-app baseline:** `node_modules/` (monocart only) and `.vercel/` still committed; `.mypy_cache/` and `.ruff_cache/` are now in `.gitignore` alongside `.agents/` (local agent runtime context). Currently **2**; clearing the remaining `node_modules/` and `.vercel/` committed paths and adding an `.aiignore` for retrieval tooling would reach **3**.
+**socratink-app baseline:** `node_modules/`, `.vercel/`, `.mypy_cache/`, `.ruff_cache/`, and `.agents/` are ignored and not tracked; `.aiignore` now mirrors retrieval-tool exclusions for local runtime, cache, coverage, and scratch surfaces. Currently **3**.
 
 ---
 
@@ -345,5 +345,5 @@ ls .code-review-graph/graph.db .code-review-graph/wiki/ 2>/dev/null
 ## Provenance
 
 - Empirical claims sourced from cAST (arXiv 2506.15655), SWE-bench (arXiv 2310.06770), SWE-Bench+ (OpenReview R40rS2afQ3), PatchDiff (arXiv 2503.15223), Type-constrained decoding (arXiv 2504.09246), MLSec ICSE 2026, Arize Prompt Learning on .clinerules, SWE-agent NeurIPS 2024, Tree-sitter limitations (blog.jez.io/tree-sitter-limitations).
-- Codebase indicators sourced from a survey of socratink-app at commit `cc92040` (2026-05-12).
+- Codebase indicators sourced from a survey of socratink-app at commit `cc92040` (2026-05-12), with CI, retrieval-exclusion, and test/source baselines refreshed at commit `ee257c4` (2026-05-18).
 - Folklore items removed from the previous draft are listed in *"What this rubric intentionally does not score"* with cited reasons.

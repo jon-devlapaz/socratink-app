@@ -146,6 +146,7 @@ html[data-motion="reduced"] .theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   min-height: 38px;
   padding: 0 14px;
   border-radius: 999px;
@@ -159,6 +160,14 @@ html[data-motion="reduced"] .theme-toggle {
   cursor: pointer;
   line-height: 1;
   transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+#auth-login-link::before {
+  content: "cloud_sync";
+  font-family: "Material Symbols Outlined";
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
 }
 
 .auth-link:hover:not(:disabled) {
@@ -431,19 +440,25 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .sidebar-nav-item {
   display:flex; align-items:center; gap:10px; padding:9px 12px;
   border-radius:var(--radius-sm); font-size:13px; font-weight:600;
+  border:1px solid transparent;
   color:var(--text-sub); text-decoration:none;
-  transition:background-color 0.15s, color 0.15s; cursor:pointer;
+  transition:background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s; cursor:pointer;
 }
 .sidebar-nav-item .material-symbols-outlined {
   font-size: 20px;
   color: inherit;
   flex-shrink: 0;
 }
-.sidebar-nav-item:hover { background:var(--border); color:var(--text); }
+.sidebar-nav-item:hover {
+  background:var(--surface-nested);
+  color:var(--text);
+  border-color:var(--border-subtle);
+}
 .sidebar-nav-item.active {
-  background:var(--accent-soft);
-  color:var(--primary);
-  box-shadow: inset 0 0 0 1px var(--accent-border);
+  background:rgba(var(--lavender-500-rgb), 0.12);
+  color:var(--primary-readable);
+  border-color:rgba(var(--lavender-500-rgb), 0.22);
+  box-shadow:none;
   font-weight: 700;
 }
 
@@ -508,11 +523,23 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 /* ── 10. Concept list items ──────────────────────────────── */
 .concept-item {
   display:flex; align-items:center; gap:10px;
-  padding:10px 20px; cursor:pointer;
-  transition:background-color 0.15s;
+  position:relative;
+  min-height:44px;
+  margin:2px 12px;
+  padding:8px 8px 8px 12px; cursor:pointer;
+  border:1px solid transparent;
+  border-radius:10px;
+  transition:background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
-.concept-item:hover { background-color:var(--border); }
-.concept-item.active { background-color:var(--accent-soft); }
+.concept-item:hover {
+  background-color:var(--surface-nested);
+  border-color:var(--border-subtle);
+}
+.concept-item.active {
+  background:rgba(var(--lavender-500-rgb), 0.16);
+  border-color:rgba(var(--lavender-500-rgb), 0.34);
+  box-shadow:inset 3px 0 0 rgba(var(--lavender-500-rgb), 0.78);
+}
 .concept-item.active .concept-item-name { color:var(--primary-readable); font-weight:600; }
 
 .concept-dot {
@@ -533,17 +560,99 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   transition:color 0.2s;
 }
-.concept-delete {
-  background:none; border:none; cursor:pointer; color:transparent;
-  font-size:16px; line-height:1; padding:0; border-radius:6px;
-  /* 36×36 touch target meets the polish floor while remaining unobtrusive
-     until the row is hovered (color stays transparent until then). */
+.concept-actions {
+  appearance:none;
+  background:transparent;
+  border:1px solid transparent;
+  box-shadow:none !important;
+  cursor:pointer;
+  color:var(--text-sub);
+  opacity:0;
+  pointer-events:none;
+  font-size:16px; line-height:1; padding:0; border-radius:10px;
   flex:none; width:36px; height:36px; min-height:36px;
   display:inline-flex; align-items:center; justify-content:center;
-  transition:color 0.15s, background-color 0.15s;
+  transform:scale(0.94);
+  transition:
+    opacity 0.15s,
+    color 0.15s,
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
 }
-.concept-item:hover .concept-delete { color:var(--text-sub); }
-.concept-delete:hover { color:var(--danger) !important; background-color:var(--pill-danger-bg); }
+.concept-actions .material-symbols-outlined {
+  font-size:20px;
+  pointer-events:none;
+}
+.concept-item:hover .concept-actions,
+.concept-item.active .concept-actions,
+.concept-item:focus-within .concept-actions,
+.concept-item.menu-open .concept-actions {
+  opacity:1;
+  pointer-events:auto;
+  transform:scale(1);
+}
+@media (hover: none), (pointer: coarse) {
+  .concept-actions {
+    opacity:1;
+    pointer-events:auto;
+    transform:scale(1);
+  }
+}
+.concept-actions:hover,
+.concept-actions:focus-visible,
+.concept-item.menu-open .concept-actions {
+  opacity:1;
+  pointer-events:auto;
+  color:var(--primary-readable) !important;
+  background:rgba(var(--lavender-500-rgb), 0.14);
+  border-color:rgba(var(--lavender-500-rgb), 0.28);
+}
+.concept-action-menu[hidden] {
+  display:none;
+}
+.concept-item.menu-open {
+  align-items:flex-start;
+  flex-wrap:wrap;
+}
+.concept-action-menu {
+  flex:0 0 calc(100% - 18px);
+  margin:4px 0 4px 18px;
+  padding:6px;
+  border:1px solid var(--border-subtle);
+  border-radius:10px;
+  background:var(--surface-card);
+  box-shadow:var(--shadow-soft);
+}
+.concept-action-menu-item {
+  appearance:none;
+  width:100%;
+  min-height:36px;
+  padding:0 10px;
+  border:1px solid transparent;
+  border-radius:8px;
+  background:transparent;
+  color:var(--text-sub);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font:inherit;
+  font-size:12px;
+  font-weight:700;
+  text-align:left;
+  cursor:pointer;
+  box-shadow:none !important;
+}
+.concept-action-menu-item .material-symbols-outlined {
+  font-size:18px;
+}
+.concept-action-menu-item:hover,
+.concept-action-menu-item:focus-visible {
+  color:var(--danger) !important;
+  background:var(--pill-danger-bg);
+  border-color:rgba(var(--danger-rgb), 0.22);
+  outline:none;
+}
 
 
 .add-input-row {

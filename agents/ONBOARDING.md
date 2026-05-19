@@ -12,10 +12,10 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 4. [agents/founder/WORKFLOWS/](./founder/WORKFLOWS/) if the task touches a founder workflow
 5. [docs/project/state.md](../docs/project/state.md)
 6. [agents/QUALITY.md](./QUALITY.md)
-7. [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md) — binding graph-truth doctrine
-8. [docs/product/spec.md](../product/spec.md)
+7. [docs/product/evidence-weighted-map.md](../docs/product/evidence-weighted-map.md) — binding graph-truth doctrine
+8. [docs/product/spec.md](../docs/product/spec.md)
 9. [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../docs/superpowers/specs/2026-05-15-drill-data-model-design.md) if the task touches drill, graph, routing, or persistence
-10. [docs/project/doc-map.md](../project/doc-map.md) to locate any other binding doc
+10. [docs/project/doc-map.md](../docs/project/doc-map.md) to locate any other binding doc
 11. `logs/drill-runs.jsonl` if current loop evidence matters
 
 ## Current Repo Reality
@@ -84,7 +84,7 @@ Before doing substantive work:
 6. Read agents/QUALITY.md
 7. Read docs/product/evidence-weighted-map.md (binding graph-truth doctrine; overrides other docs on graph/evidence/mastery claims)
 8. Scan docs/project/doc-map.md to locate other binding docs for this task
-9. Read docs/theta/state.md when the task touches product science or claims
+9. For product science or claims, use docs/product/evidence-weighted-map.md plus docs/project/doc-map.md to locate current supporting docs
 10. Read docs/product/spec.md when the task involves the cold attempt, study, or re-drill architecture
 11. Use the theta-research skill when the task touches learning science
 12. Decide which agents are actually needed

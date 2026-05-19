@@ -7,9 +7,11 @@ What this catches
 - Anonymous Supabase sessions are labeled as guest, not signed-in users
 - First-run guidance stays inline instead of regressing to a modal
 - Library cards render training evidence instead of AI summary copy
+- Launch-pad sketch validation matches the backend substantive threshold
 - Inline concept-page attempts persist, retry, and preserve active-entry state
 - Study reveal and repair records survive localStorage reload/reconstruction
 - Drawer toggle stays visible after opening a library concept
+- Feedback opens as an accessible overlay without collapsing the sidebar
 - Library cards reopen the concept-map view (not a stale shell) on second click
 - Deleting the active concept confirms via dialog and resets to the desk
 - Desk tile states expose the expected learner-facing labels
@@ -391,12 +393,15 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Compare with notes"
     )
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "Learner-owned reconstruction visible in Library."
+    )
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
         "Learner-owned reconstruction visible in Library."
     )
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
-        "No repair hinge recorded for this reconstruction."
+        "No missing piece recorded for this draft."
     )
     expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
         "The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair."
@@ -562,14 +567,26 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.locator("[data-local-repair-qa-seed]").click()
     page.locator(".library-card-vault", has_text="Repair Truth QA").click()
     expect(page.locator("#concept-header-title")).to_contain_text("Repair QA source")
+    expect(page.locator("#concept-header-tags")).not_to_contain_text("thin sketch")
+    expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
+        "Your starting sketch:"
+    )
+    expect(page.locator(".concept-page-b2__threshold")).not_to_contain_text(
+        "Learner thinks"
+    )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Study the gap"
+    )
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text("Your draft")
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "Sodium rushes in because there is more sodium outside."
     )
 
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Needs repair"
     )
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text("Missing piece")
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "voltage-gated sodium channels"
     )
@@ -591,6 +608,15 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.locator(".concept-page-b2__repair-input").fill(
         "This save should fail before persistence."
     )
+    expect(page.locator(".concept-page-b2__study-note")).to_have_class(
+        re.compile(r"is-collapsed")
+    )
+    expect(page.locator("[data-study-note-toggle]")).to_have_text("Show study note")
+    page.locator("[data-study-note-toggle]").click()
+    expect(page.locator(".concept-page-b2__study-note")).not_to_have_class(
+        re.compile(r"is-collapsed")
+    )
+    expect(page.locator("[data-study-note-toggle]")).to_have_text("Hide study note")
     page.locator(".concept-page-b2__repair-save").click()
     expect(page.locator("[data-repair-error]")).to_have_text(
         "Repair could not be saved. Try again."
@@ -625,6 +651,38 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         repaired_training["node_records"]["repair-node"]["attempts"][0]["classification"]
         == "thin"
     )
+
+
+def test_launch_pad_sketch_gate_matches_substantive_backend_rule(
+    page: Page, base_url: str
+) -> None:
+    """The launch-pad affordance should not enable sketches the backend rejects."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate(
+        """(() => {
+            sessionStorage.setItem('socratink:pendingShell', JSON.stringify({
+                name: 'ADHD',
+                ts: Date.now(),
+            }));
+            window.App.showLaunchPad();
+        })()"""
+    )
+
+    expect(page.locator("#launch-pad-input")).to_have_attribute(
+        "placeholder",
+        "Name parts, guesses, examples, or confusions. Concrete words help most.",
+    )
+    page.locator("#launch-pad-input").fill("parts guesses confusion")
+    expect(page.locator("#launch-pad-submit")).to_be_disabled()
+    expect(page.locator("#launch-pad-validation")).to_have_text(
+        "Name a few concrete parts, guessed steps, examples, or confusions so socratink has enough signal to draft from."
+    )
+
+    page.locator("#launch-pad-input").fill(
+        "attention shifts between rewards deadlines novelty sleep stress routines medication"
+    )
+    expect(page.locator("#launch-pad-submit")).to_be_enabled()
+    expect(page.locator("#launch-pad-validation")).to_have_text("")
 
 
 def test_concept_entry_mutation_preserves_active_later_entry(
@@ -1419,11 +1477,114 @@ def test_drawer_toggle_remains_visible_in_concept_view(
 
     toggle = clean_page.locator("#drawer-toggle")
     expect(toggle).to_be_visible()
+    assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
+
+    clean_page.locator(".concept-item", has_text="Test Concept").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
+    expect(toggle).to_be_visible()
+    assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
+    assert clean_page.locator("body").get_attribute("data-drawer-open") == "true"
 
     clean_page.locator("#nav-library").click()
     clean_page.locator(".library-card-vault", has_text="Test Concept").click()
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
     expect(toggle).to_be_visible()
+
+
+def test_feedback_button_keeps_sidebar_open(
+    clean_page: Page, base_url: str
+) -> None:
+    """Feedback is an overlay action, not a navigation view that collapses the shell."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    expect(clean_page.locator("#drawer")).to_be_visible()
+    assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
+
+    clean_page.locator("#nav-feedback").click()
+
+    expect(clean_page.locator("#feedback-overlay")).to_be_visible()
+    assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
+    assert clean_page.locator("body").get_attribute("data-drawer-open") == "true"
+
+
+def test_feedback_submit_reenables_on_reopen(
+    clean_page: Page, base_url: str
+) -> None:
+    """A successful feedback send must not leave the next feedback modal disabled."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.route(
+        "**/api/feedback",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body='{"ok": true}',
+        ),
+    )
+
+    clean_page.locator("#nav-feedback").click()
+    clean_page.locator("#feedback-message").fill("This feedback should submit cleanly.")
+    clean_page.locator("#feedback-submit").click()
+
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Thank you! Feedback captured."
+    )
+    clean_page.locator(".modal-close").click()
+
+    clean_page.locator("#nav-feedback").click()
+
+    expect(clean_page.locator("#feedback-submit")).to_be_enabled()
+    expect(clean_page.locator("#feedback-message")).to_have_value("")
+
+
+def test_feedback_dialog_has_accessible_escape_close(
+    clean_page: Page, base_url: str
+) -> None:
+    """Feedback is a modal dialog and should follow the standard Escape contract."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator("#nav-feedback").click()
+
+    expect(clean_page.locator("#feedback-overlay")).to_have_attribute("role", "dialog")
+    expect(clean_page.locator("#feedback-overlay")).to_have_attribute("aria-modal", "true")
+    expect(clean_page.locator("#feedback-overlay")).to_have_attribute("aria-labelledby", "feedback-title")
+    expect(clean_page.locator("#feedback-title")).to_have_text("Feedback")
+
+    clean_page.keyboard.press("Escape")
+
+    expect(clean_page.locator("#feedback-overlay")).not_to_be_visible()
+
+
+def test_feedback_dialog_returns_focus_to_opener(
+    clean_page: Page, base_url: str
+) -> None:
+    """Closing feedback should return keyboard focus to the row that opened it."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator("#nav-feedback").click()
+    expect(clean_page.locator("#feedback-message")).to_be_focused()
+
+    clean_page.keyboard.press("Escape")
+
+    expect(clean_page.locator("#feedback-overlay")).not_to_be_visible()
+    expect(clean_page.locator("#nav-feedback")).to_be_focused()
+
+
+def test_mobile_drawer_keeps_feedback_accessible(
+    page: Page, base_url: str
+) -> None:
+    """Mobile bottom nav replaces primary rows, but feedback still needs drawer access."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    _enter_app_shell_as_guest(page, base_url)
+
+    page.locator("#drawer-toggle").click()
+    expect(page.locator("#drawer")).to_be_visible()
+    assert page.locator("#drawer").get_attribute("data-open") == "true"
+    expect(page.locator("#nav-feedback")).to_be_visible()
+
+    page.locator("#nav-feedback").click()
+
+    expect(page.locator("#feedback-overlay")).to_be_visible()
+    assert page.locator("#drawer").get_attribute("data-open") == "true"
 
 
 def test_saved_library_concept_reopens_map_view(
@@ -1533,6 +1694,7 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
     clean_page.locator(".library-card-vault", has_text="Test Concept").click()
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
 
+    concept_actions = clean_page.locator(".concept-item.active .concept-actions")
     delete_button = clean_page.locator(".concept-item.active .concept-delete")
 
     def dismiss_delete(dialog) -> None:
@@ -1540,6 +1702,7 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
         dialog.dismiss()
 
     clean_page.once("dialog", dismiss_delete)
+    concept_actions.click()
     delete_button.click()
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
     expect(clean_page.locator(".concept-item.active")).to_have_count(1)
@@ -1549,6 +1712,7 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
         dialog.accept()
 
     clean_page.once("dialog", accept_delete)
+    concept_actions.click()
     delete_button.click()
     expect(clean_page.locator("#title")).to_have_text("What do you want to understand?")
     expect(clean_page.locator(".concept-item")).to_have_count(0)

@@ -18,6 +18,9 @@ rendering. It supersedes this file on every point of disagreement.
 - `null` means no learner reconstruction evidence is on record for the node.
 - `primed` means learner reconstruction evidence exists and study/repair/review
   routing is derived from that evidence.
+- Legacy `drill_status: "primed"` + `drill_phase: "study"` graph nodes may
+  reveal study with `attempts: []` as a compatibility path; that preserves the
+  absence of evidence and must not be treated as learner reconstruction.
 - `needs repair` means the current evidence has named gaps that require repair.
 - `solidified` requires spaced strong reconstruction evidence; study or reading
   alone cannot produce it.

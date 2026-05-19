@@ -52,7 +52,7 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 | --- | --- | ---: | --- | --- | --- |
 | `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [LYYYY-2026-05-13-subagent-delegation-too-soft](#lyyyy-2026-05-13-subagent-delegation-too-soft) |
 | `explore-compress-merge` | `promoted` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
-| `verification-gates-not-self-contained` | `observed` | 1 | 2026-05-17 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
+| `verification-gates-not-self-contained` | `promoted` | 2 | 2026-05-18 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
 
 ## Entries
 
@@ -108,11 +108,11 @@ Promoted immediately into `agents/founder/WORKFLOWS/05-explore-compress.md` on f
 
 # L0003-2026-05-17-verification-gates-not-self-contained
 
-- Status: `observed`
+- Status: `promoted`
 - Pattern key: `verification-gates-not-self-contained`
 - First seen: `2026-05-17`
-- Last seen: `2026-05-17`
-- Evidence count: `1`
+- Last seen: `2026-05-18`
+- Evidence count: `2`
 - Affected workflow surface: `verification discipline`
 - Recommended promotion target: `agents/QUALITY.md`
 - Related canonical files: `scripts/qa-smoke.sh`, `scripts/check-coverage.sh`, `agents/QUALITY.md`
@@ -124,7 +124,8 @@ A command documented as a local verification gate must carry its own local-only 
 ## Evidence
 
 - `2026-05-17`: `./scripts/check-coverage.sh` passed because it set `SOCRATINK_E2E_LOCAL_GUEST=1`, but `bash scripts/qa-smoke.sh local` initially failed four guest-bootstrap tests by redirecting to `/login?auth_error=authentication_failed`. The fix was to make `qa-smoke.sh` enable the local E2E guest path for loopback targets only.
+- `2026-05-18`: promoting `scripts/check-coverage.sh` into GitHub Actions exposed another hidden harness assumption: the browser coverage path needed a loopback app plus a CI-safe `/auth/e2e/guest` bootstrap contract. The CI workflow now provisions Python, Node coverage tooling, Chromium, the local app, and an explicit compare branch before running the gate.
 
 ## Promotion Notes
 
-Keep observed for now. Promote to `agents/QUALITY.md` if another local verification command is found to require implicit wrapper env.
+Promoted into `agents/QUALITY.md` after the second sighting affected verification integrity. Keep subagent edit-contract guidance unpromoted until it recurs; that pattern remains a delegation prompt habit, not binding quality doctrine.

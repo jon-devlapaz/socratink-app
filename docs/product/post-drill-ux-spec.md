@@ -11,7 +11,7 @@
 >
 > **When to read it**: Before changing post-phase panel copy, result-state visuals, transcript policy, attribution framing on non-solid results, sensory celebration behavior, or session-ending UX.
 >
-> **What it is NOT**: It is not the routing/state implementation spec (read `progressive-disclosure.md`), the binding drill data-model canon (read `../superpowers/specs/2026-05-15-drill-data-model-design.md`), or the full UX doctrine (read `/DESIGN.md`).
+> **What it is NOT**: It is not the routing/state implementation spec (read `spec.md` for product routing and `../superpowers/specs/2026-05-15-drill-data-model-design.md` for derivation/rendering fields), the binding drill data-model canon, or the full UX doctrine (read `/DESIGN.md`).
 >
 > **Key constraints an agent must follow**:
 > - Five canonical result states: Primed, Needs Repair, Solidified, In-Progress, Session Complete. Each must look and feel distinct.
@@ -52,6 +52,8 @@ Required visual treatment:
 
 - node appears `primed` (warm, open, distinct from no-evidence and needs-repair states)
 - concept page offers an explicit `Compare with notes` action; study material is not recorded as revealed until the learner takes it
+- concept page preserves the latest learner attempt as `Your draft` before study reveal
+- `Missing piece` details remain hidden until `study_revealed_at` exists
 - future side-panel treatment may add the 2-3 second transition beat after that explicit reveal
 - the result framing emphasizes exploration, not evaluation
 - no score, no tier/band, no performance metrics are shown
@@ -60,6 +62,7 @@ Required visual treatment:
 Required copy:
 
 - headline: `Compare with notes` CTA before study material appears
+- evidence artifact: `Your draft` with the learner's exact attempt text; no `Missing piece` list until study is revealed
 - normalization message (one of): "Your guess just primed your brain. Now let's see what's really going on." / "Most learners get this wrong the first time. That's by design." / "This is how your brain prepares to learn." / "That attempt just activated your semantic networks. The study material will land harder now."
 
 Sensory treatment:
@@ -248,6 +251,9 @@ The panel must not silently mix these modes.
 
 - mechanism text for the attempted node is displayed
 - anchored to the learner's cold attempt where possible
+- `Missing piece` details may appear now that study has been revealed
+- the study note has a manual show/hide toggle
+- focusing or typing in the repair field collapses the study note so the learner writes from memory instead of copying visible mechanism text
 - normalization message visible
 - no drill affordance for this node until spacing is satisfied
 - the system may recommend the next cold attempt on a different node

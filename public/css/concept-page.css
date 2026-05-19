@@ -140,6 +140,11 @@
   margin: -36px 0 48px 22px;
   max-width: 520px;
 }
+.concept-page-b2__threshold-label {
+  color: var(--text-strong);
+  font-style: normal;
+  font-weight: 600;
+}
 .concept-page-b2__entry-eyebrow { display: block; margin-bottom: 14px; }
 .concept-page-b2__entry-title { font-size: 36px; line-height: 1.15; font-weight: 600; margin: 0 0 16px; color: var(--text-strong); }
 .concept-page-b2__entry-purpose { color: var(--text-muted); font-size: 16px; line-height: 1.65; margin: 0 0 32px; max-width: 520px; }
@@ -151,12 +156,37 @@
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.42);
 }
-.concept-page-b2__study-note-eyebrow { display: block; margin-bottom: 8px; }
+.concept-page-b2__study-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.concept-page-b2__study-note-eyebrow { display: block; }
+.concept-page-b2__study-note-toggle {
+  border: 0;
+  border-bottom: 1px dotted currentcolor;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+}
 .concept-page-b2__study-note p {
   margin: 0;
   color: var(--text-strong);
   font-size: 15px;
   line-height: 1.65;
+}
+.concept-page-b2__study-note-hidden { display: none; }
+.concept-page-b2__study-note.is-collapsed [data-study-note-body] { display: none; }
+.concept-page-b2__study-note.is-collapsed .concept-page-b2__study-note-hidden {
+  display: block;
+  color: var(--text-muted);
+  font-style: italic;
 }
 [data-theme="dark"] .concept-page-b2__study-note { background: rgba(255, 255, 255, 0.04); }
 .concept-page-b2__repair {
@@ -498,7 +528,7 @@
   letter-spacing: 0.04em;
   color: var(--accent-primary);
   text-decoration: none;
-  border-bottom: 1px dashed currentColor;
+  border-bottom: 1px dashed currentcolor;
   padding-bottom: 1px;
   cursor: pointer;
 }

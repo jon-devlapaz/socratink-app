@@ -6,7 +6,6 @@ For supporting context, read:
 
 - [spec.md](spec.md) — binding product contract (three-phase loop, derived training state model)
 - [/DESIGN.md](../../DESIGN.md) — canonical UX doctrine
-- [progressive-disclosure.md](progressive-disclosure.md) — implementation-facing state and routing spec
 - [starting-map-flow-artifact.md](starting-map-flow-artifact.md) — concept-entry storyboard that operationalizes this doctrine
 - [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md) — current binding drill data-model canon
 
@@ -47,7 +46,40 @@ The loop is the product. Anything that lets the learner skip a step, or that mut
 
 ---
 
-## 3. Starting Map As Anchor, Not Diagnostic
+## 3. Pedagogical Grounding
+
+This doctrine is grounded in cognitive learning science, not in a claim that the product can inspect the learner's mind.
+
+| Socratink move | Learning-science basis | Product implication |
+| --- | --- | --- |
+| Cold attempt before study | Retrieval practice and pretesting: trying to retrieve or generate an answer can improve later retention and encoding, even when the first attempt is incomplete. | The first node action must ask for learner generation before the study note appears. The attempt is unscored and exists to expose the current model. |
+| Verbatim learner draft | Self-explanation and metacognitive monitoring: the useful artifact is the learner's own explanation, because it makes gaps inspectable. | Store and render the learner's exact words. Do not replace the draft with AI-polished summary text. |
+| Targeted study after the attempt | Corrective feedback after retrieval failure can improve later learning when the feedback addresses the missing relation. | Study is unlocked only after a substantive attempt, and it should repair the attempted mechanism rather than become a generic lesson. Legacy `primed`/`study` nodes with no recorded attempt may reveal study as compatibility, but must not fabricate draft evidence. |
+| Repair in the learner's words | Self-explanation research supports active explanation over passive rereading for conceptual understanding. | The repair surface asks the learner to restate the missing link. Study may be visible for inspection, but repair should bias toward generation rather than copying. |
+| Spaced re-drill before `solidified` | Distributed practice and delayed retrieval are among the strongest durable-learning findings. | A single strong cold attempt or immediate repair cannot derive `solidified`. Durable graph truth requires delayed reconstruction evidence. |
+| Scaffold after repeated collapse | Cognitive load theory and expertise-reversal work warn that unguided generation can overload novices on high-element-interactivity material. | If a learner repeatedly cannot generate a meaningful attempt, the product should shift to scaffolded completion or worked-example comparison without calling that mastery. |
+
+Evidence posture:
+
+- **High confidence:** retrieval practice, distributed practice, generation-before-recognition, and no mastery from reading.
+- **Medium-high confidence:** targeted corrective feedback and self-explanation as the repair mechanism.
+- **Conditional:** cold free recall for complex novice material. It is useful only when followed by corrective feedback and bounded by scaffolding.
+- **Speculative / must be guarded:** AI classification of conceptual understanding. Treat the grader as a gap-surfacing aid, not an oracle.
+
+Source anchors:
+
+- Roediger & Karpicke, 2006 — test-enhanced learning / retrieval practice. DOI: `10.1111/j.1467-9280.2006.01693.x`.
+- Rowland, 2014 — testing versus restudy meta-analysis. DOI: `10.1037/a0037559`.
+- Cepeda et al., 2006 — distributed practice meta-analysis. DOI: `10.1037/0033-2909.132.3.354`.
+- Dunlosky et al., 2013 — review of effective learning techniques; practice testing and distributed practice rated high utility. DOI: `10.1177/1529100612453266`.
+- Kornell, Hays & Bjork, 2009 — unsuccessful retrieval attempts can enhance later learning when followed by feedback. DOI: `10.1037/a0015729`.
+- Butler, 2010 — repeated testing with feedback can support transfer. DOI: `10.1037/a0019902`.
+- Chi et al., 1994 — elicited self-explanations improve understanding. DOI: `10.1207/s15516709cog1803_3`.
+- Kalyuga et al., 2007 — expertise-reversal effect and guidance needs for novices. DOI: `10.1007/s10648-007-9054-3`.
+
+---
+
+## 4. Starting Map As Anchor, Not Diagnostic
 
 Concept entry must onboard the learner into their own current model, not into the content. The concept page is not where the learner goes to read. It is where their current model becomes inspectable.
 
@@ -65,7 +97,7 @@ The first cold attempt is still the first evidence event. The starting map makes
 
 ---
 
-## 4. Proposed Structure vs Verified Learning State
+## 5. Proposed Structure vs Verified Learning State
 
 Two different things live on the graph. Do not collapse them.
 
@@ -83,7 +115,7 @@ The graph is the union of these two layers. The UI must never render them as the
 
 ---
 
-## 5. Map Maturity Language
+## 6. Map Maturity Language
 
 Use these names when talking about where a map sits in its lifecycle. These are product words, not new states.
 
@@ -99,7 +131,7 @@ A map is never "complete." It accumulates evidence. Evidence can decay (re-drill
 
 ---
 
-## 6. App State vs Learner Capability Evidence
+## 7. App State vs Learner Capability Evidence
 
 Two different state clocks run in this product. Keep them in different columns.
 
@@ -119,7 +151,7 @@ Specifically:
 
 ---
 
-## 7. Confidence / Evidence Language
+## 8. Confidence / Evidence Language
 
 When talking to the learner or to future agents, describe the graph in evidence terms.
 
@@ -144,7 +176,7 @@ Avoid:
 
 ---
 
-## 8. What The Graph May Claim
+## 9. What The Graph May Claim
 
 The graph may show:
 
@@ -161,7 +193,7 @@ The graph may highlight the active node, dim others, and recommend an interleavi
 
 ---
 
-## 9. What The Graph Must Never Claim
+## 10. What The Graph Must Never Claim
 
 The graph must not say or imply:
 
@@ -176,18 +208,18 @@ The graph must not say or imply:
 - that a rollback from `solidified` occurs without a contradicting re-drill
 - learner-facing diagnostic categories ("beginner", "intermediate", "advanced", "misconception detected")
 
-If the UI or copy ever makes a claim not in §8 and absent from §9, assume it is out of scope and treat it as a bug.
+If the UI or copy ever makes a claim not in §9 and absent from §10, assume it is out of scope and treat it as a bug.
 
 ---
 
-## 10. Relation To The Derived State Model
+## 11. Relation To The Derived State Model
 
 The doctrine preserves a four-outcome projection, but state is derived from the training record rather than stored as mutable graph truth.
 
 | State | Doctrine meaning | Evidence basis |
 | --- | --- | --- |
 | `null` | No learner reconstruction attempt on record | no evidence |
-| `primed` | Learner reconstruction evidence exists; study/repair/review routing is derived from it | attempt event that is not currently durable repair or solidified |
+| `primed` | Learner reconstruction evidence exists; study/repair/review routing is derived from it. Legacy `primed`/`study` nodes may project this state with no attempt record only to preserve study compatibility. | attempt event that is not currently durable repair or solidified; legacy compatibility can carry `attempts: []` and must not be counted as evidence |
 | `needs repair` | Current evidence has named gaps requiring repair | thin/wrong-direction or repeated non-strong evidence with gaps |
 | `solidified` | Learner reconstructed the mechanism from long-term memory under spacing | spaced strong reconstruction evidence |
 
@@ -198,19 +230,68 @@ Engineering rules carry:
 - thin or wrong-direction evidence can derive `needs repair`
 - `solidified` requires spaced strong reconstruction evidence
 - All other solidification claims are invalid.
+- state is derived at render time from `socratink:training:v1:<conceptId>`, not from mutable graph truth
+- the shipped browser store folds `node_records[node_id].attempts` and reads `study_revealed_at` for next-action routing
+- the future Supabase/event-log target must preserve the same derivation over equivalent learner reconstruction and study-reveal events
 
 `solidified` is the only graph-truth mutation that requires spaced reconstruction. Study completion, repair reps, self-ratings, and threshold capture must not mutate graph truth.
 
 Study may mutate the learner. The study view may not mutate graph truth.
 
+### Runtime State Contract
+
+The current runtime source of truth is one browser-local training record per
+concept:
+
+```text
+socratink:training:v1:<conceptId>
+```
+
+That record carries concept provenance, the learner sketch, per-node attempts,
+`study_revealed_at`, and learner-authored repair records. `concept.graphData`
+remains the provisional structure and legacy compatibility surface, not the
+state authority.
+
+Each entry renders through these derived fields:
+
+- `state`: `null | primed | needs repair | solidified`
+- `strongest_turn_text`: learner-written reconstruction text, or `null`
+- `gaps`: recorded gap evidence
+- `next_action`: `cold_attempt | study | repair | spaced_attempt | review | null`
+- `solidify_unlocks_at`: quiet eligibility timestamp, or `null`
+
+`next_action` must not promise a state transition the derivation has not
+recorded. `spaced_attempt` is offered only when the next reconstruction can
+legitimately count as spaced; state still advances to `solidified` only after a
+new strong attempt is stored and spaced after a prior strong attempt.
+
+Concept-level badges use weakest-link aggregation:
+
+- no tested entries -> no badge
+- any `needs repair` entry -> concept badge is `needs repair`
+- otherwise any `primed` entry -> concept badge is `primed`
+- otherwise all tested entries are `solidified` -> concept badge is `solidified`
+
+Badge and composition should travel together so the product can show honest
+progress without hiding the gap.
+
+Current shipped binding status:
+
+- concept-page entry state, CTAs, inline reconstruction, study reveal, and repair panels derive from the training record
+- Library reconstruction copy uses learner-written training records and must not fall back to AI-generated `core_thesis`
+- Map badges, Desk tiles, Sidebar markers, and Library card badges still have legacy `concept.state` bindings until the full target binding lands
+
+Implementation detail, schema shape, exact fold mechanics, and migration rules
+belong in [the drill data-model canon](../superpowers/specs/2026-05-15-drill-data-model-design.md). This doctrine owns the product truth the derivation must preserve.
+
 ---
 
-## 11. How Starting Map Flow Fits The Doctrine
+## 12. How Starting Map Flow Fits The Doctrine
 
 [starting-map-flow-artifact.md](starting-map-flow-artifact.md) operationalizes this doctrine at concept entry. Reading it alongside this doctrine, the contract is:
 
 - **Threshold capture** = hypothesis-shaping input. No graph mutation.
-- **Provisional graph** = draft path. No graph mutation.
+- **Provisional graph**. No graph mutation.
 - **Locked study silhouette** = absence of explanatory content is intentional. No graph mutation.
 - **First cold attempt** = the first evidence event. It appends learner reconstruction evidence and derives `primed` or `needs repair`.
 - **Repair artifact (study)** = targeted corrective feedback. No graph mutation.
@@ -221,7 +302,7 @@ If a screen in that flow starts making mastery claims, it has left the doctrine.
 
 ---
 
-## 12. MVP-Safe Version Of The Model
+## 13. MVP-Safe Version Of The Model
 
 The full doctrine is large. The MVP must ship a credible subset without over-promising.
 
@@ -238,7 +319,7 @@ Required in MVP:
 Allowed in MVP, required later:
 
 - A starting-map threshold screen that captures a global current model before any explanatory content appears. If not built yet, the existing cold-attempt-first entry still satisfies the doctrine as long as the entry is framed collaboratively, not diagnostically.
-- Editorial copy on the graph page that uses "draft path" / "ready for first attempt" / "solidified through spaced reconstruction" language instead of completion/knowledge language.
+- Editorial copy on the graph page that uses "draft route" / "ready for first attempt" / "solidified through spaced reconstruction" language instead of completion/knowledge language.
 - Trajectory contrast language that describes evidence accumulation, not mastery accrual.
 
 Explicitly out of scope for MVP (but named so we do not drift):
@@ -250,13 +331,13 @@ Explicitly out of scope for MVP (but named so we do not drift):
 
 ---
 
-## 13. Legacy Shorthand Replacement Table (Agent Reference)
+## 14. Legacy Shorthand Replacement Table (Agent Reference)
 
 These are soft-drift phrases that surface in this repo's older docs, UI copy, and agent transcripts. They are not always wrong, but they are the exact framings that slip into "graph shows understanding" if not anchored. When authoring or reviewing any learner-facing copy or binding doc, translate as follows.
 
 | Legacy phrase (do not reuse) | First-principles replacement |
 | --- | --- |
-| "verified understanding" | "solid spaced reconstruction recorded" |
+| "verified/certified knowledge" | "solid spaced reconstruction recorded" |
 | "mastered" (as node claim) | "`solidified` — at least one solid spaced reconstruction is on record" |
 | "cleared" (as knowledge claim) | UI shorthand only for the `solidified` record; never a knowledge claim |
 | "proved it" / "proven" | "the learner produced reconstruction evidence Socratink recorded" |
@@ -276,7 +357,7 @@ These are soft-drift phrases that surface in this repo's older docs, UI copy, an
 
 Agents: when any of the left-column phrases appear in a PR diff, copy review, or proposed change, replace them or reject the change. The phrases are not individually catastrophic — they are load-bearing when they accumulate.
 
-## 14. Binding Principles (Quick Reference)
+## 15. Binding Principles (Quick Reference)
 
 - Generation Before Recognition is non-negotiable.
 - Explanatory content must not appear before the learner exposes a current model or makes a local cold attempt.

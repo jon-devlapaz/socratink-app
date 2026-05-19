@@ -1,12 +1,18 @@
 # socratink — Progressive Disclosure
 
+> Archived 2026-05-18. Binding product contracts moved to
+> [docs/product/spec.md](../../product/spec.md). Binding derivation math,
+> training-record schema, and rendering fields live in
+> [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../../superpowers/specs/2026-05-15-drill-data-model-design.md).
+> Keep this file only as historical context.
+
 ## Agent Summary
 
 > **What this document is**: The implementation-facing product spec for how the graph, drill system, and learner progression work together. This is the document an engineer reads before touching state, routing, persistence, or graph rendering code. It now delegates the data-model contract to `docs/superpowers/specs/2026-05-15-drill-data-model-design.md` and summarizes how the live UI derives state from training evidence.
 >
 > **When to read it**: Before changing node state derivation, routing semantics, unlock logic, graph rendering, drill-to-graph persistence, or phase transitions. Before implementing any part of the three-phase loop.
 >
-> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `post-drill-ux-spec.md`), or the binding drill data-model canon (read `../superpowers/specs/2026-05-15-drill-data-model-design.md`).
+> **What it is NOT**: It is not the UX doctrine (read `/DESIGN.md`), the post-drill result-state spec (read `../../product/post-drill-ux-spec.md`), or the binding drill data-model canon (read `../../superpowers/specs/2026-05-15-drill-data-model-design.md`).
 >
 > **Key implementation constraints an agent must follow**:
 > - Derived training states: `null | primed | needs repair | solidified`.
@@ -23,20 +29,20 @@ It should stay closer to current truth than to aspirational philosophy.
 
 For the binding graph-truth doctrine, read:
 
-- [evidence-weighted-map.md](evidence-weighted-map.md)
+- [evidence-weighted-map.md](../../product/evidence-weighted-map.md)
 
 For enduring UX principles, read:
 
-- [/DESIGN.md](../../DESIGN.md)
-- [post-drill-ux-spec.md](post-drill-ux-spec.md)
+- [/DESIGN.md](../../../DESIGN.md)
+- [post-drill-ux-spec.md](../../product/post-drill-ux-spec.md)
 
 For the current drill data-model contract, read:
 
-- [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md)
+- [../superpowers/specs/2026-05-15-drill-data-model-design.md](../../superpowers/specs/2026-05-15-drill-data-model-design.md)
 
 ## Product Model
 
-The graph is a progressively revealed, evidence-weighted map. It records what Socratink has evidence for — not what the learner knows. See [evidence-weighted-map.md](evidence-weighted-map.md) for the binding doctrine.
+The graph is a progressively revealed, evidence-weighted map. It records what Socratink has evidence for — not what the learner knows. See [evidence-weighted-map.md](../../product/evidence-weighted-map.md) for the binding doctrine.
 
 The learner advances node by node through the three-phase loop: cold attempt, targeted study, spaced re-drill. Each node state is derived from the training evidence record:
 
@@ -48,7 +54,7 @@ No other path mutates graph truth. Study, Repair Reps, starting-map capture, and
 
 ## State Model
 
-Each state is a render-time derivation from `socratink:training:v1:<conceptId>`. States describe what Socratink has on record for this node — not what the learner knows. See [evidence-weighted-map.md](evidence-weighted-map.md) for the binding doctrine.
+Each state is a render-time derivation from `socratink:training:v1:<conceptId>`. States describe what Socratink has on record for this node — not what the learner knows. See [evidence-weighted-map.md](../../product/evidence-weighted-map.md) for the binding doctrine.
 
 ### `null`
 
@@ -131,10 +137,14 @@ Each node derives its next action within the three-phase loop:
 - `spaced_attempt`: a new reconstruction attempt is available.
 
 The frontend uses derived `next_action`, not persisted `drill_phase`, to choose the concept-page mode.
+Legacy `drill_status: "primed"` + `drill_phase: "study"` nodes are the narrow
+compatibility exception: when no training attempts exist, the concept page may
+offer `Compare with notes`, then persist `study_revealed_at` with `attempts: []`
+instead of fabricating a cold attempt.
 
 ## Three-Phase Node Loop
 
-Every node moves through three phases. This section describes the implementation behavior. For the product rationale, read [/DESIGN.md](../../DESIGN.md).
+Every node moves through three phases. This section describes the implementation behavior. For the product rationale, read [/DESIGN.md](../../../DESIGN.md).
 
 ### Phase 1: Cold Attempt
 
@@ -157,12 +167,14 @@ Persistence on completion:
 
 ### Phase 2: Targeted Study
 
-Trigger: cold attempt completes. The concept page offers `Compare with notes` for the attempted node; study is recorded only after that explicit reveal.
+Trigger: cold attempt completes. The concept page offers `Compare with notes` for the attempted node; study is recorded only after that explicit reveal. For the legacy no-attempt compatibility path above, study may reveal first and the page intentionally shows no `Your draft` artifact until the learner reconstructs again.
 
 Frontend behavior:
 
 - the study view shows the mechanism text for this specific node after the learner reveals it
+- the concept page shows the learner's saved attempt as `Your draft` before reveal, but withholds `Missing piece` details until study is revealed
 - the study view is anchored to the learner's cold attempt: where possible, highlight where the attempt diverged from the mechanism
+- once the learner focuses or types in the repair field, the revealed study note collapses behind a manual show/hide toggle so the learner writes from memory rather than copying visible mechanism text
 - the study view must not show mechanism text for other unattempted nodes
 - future treatment may add a 2-3 second transition beat before the study view appears; the shipped inline flow uses an explicit reveal CTA
 
@@ -188,7 +200,7 @@ Backend behavior:
 - the drill prompt demands multi-step causal reconstruction
 - the prompt angle should vary across re-drill attempts on the same node (self-explanation, summarization, teaching, problem-posing) to prevent linguistic mimicry
 - scoring, classification, and routing operate normally
-- on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in [`docs/design/socratink-ux.md`](../design/socratink-ux.md) §6
+- on repeated non-solid results for the same node across sessions, the AI escalates scaffolding per the Bottleneck Recovery contract in [`docs/design/socratink-ux.md`](../../design/socratink-ux.md) §6
 
 Persistence on a recordable reconstruction:
 
@@ -242,8 +254,8 @@ AI support is allowed only if it preserves the three-phase loop, the drill contr
 
 That means:
 
-- the learner must complete the cold attempt before the study view is shown
-- the study view must not be accessible before a learner reconstruction attempt exists
+- the learner must complete the cold attempt before the study view is shown, except for the narrow legacy `primed`/`study` compatibility path that records `study_revealed_at` with `attempts: []`
+- the study view must not be accessible before a learner reconstruction attempt exists, except that legacy no-attempt reveal path must preserve the absence of evidence rather than fabricate an attempt
 - scaffolds and feedback may clarify the gap after an attempt, but must not silently change the target
 - AI-generated explanation quality does not itself mutate graph state
 - only persisted learner reconstruction evidence can derive `primed`, `needs repair`, or `solidified`. Study, Repair Reps, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`.
@@ -404,6 +416,5 @@ This document should not become:
 
 Keep those in:
 
-- [/DESIGN.md](../../DESIGN.md)
-- [mvp-happy-path.md](../project/mvp-happy-path.md)
-- [mvp-happy-path.md](../project/mvp-happy-path.md)
+- [/DESIGN.md](../../../DESIGN.md)
+- [mvp-happy-path.md](../../project/mvp-happy-path.md)

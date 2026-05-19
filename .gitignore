@@ -40,6 +40,7 @@ output/
 
 # Local agent runtime context
 .codex/
+.cursor/
 .vscode/
 learnops/
 
@@ -48,6 +49,9 @@ learnops/
 !docs/
 !docs/**
 docs/**/.DS_Store
+docs/.obsidian/*
+!docs/.obsidian/
+!docs/.obsidian/app.json
 
 # Local-only checks and exports unless promoted into tracked scripts/tests.
 scripts/run-checks.sh

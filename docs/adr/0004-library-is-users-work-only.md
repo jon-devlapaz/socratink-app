@@ -33,12 +33,12 @@ A first-run user with no source of their own currently has no built-in sandbox c
 - **Files removed:** `public/data/library/hermes_agent.json`, `docs/reference/hermes-agent-concept-source.md`, `docs/reference/hermes-agent-docs-manifest.md`, `BUILT_IN_LIBRARY_CONCEPTS` and `importLibraryConcept` in `public/js/app.js`, `loadLibraryConcept` in `public/js/api-client.js`, the `App.importLibraryConcept` namespace export.
 - **Files kept:** `.library-card-vault` CSS rules (still used by the user's own concept cards), `getLibraryConceptMeta` (called for user concepts in the non-empty render path), the `Your Library` section render.
 - **Tests rewritten:** Three smoke tests in `tests/e2e/test_smoke.py` previously used Hermes Agent as a fixture (not as a feature under test). They now seed a single concept directly into `learnops_concepts` localStorage via a new `_seed_one_concept(page)` helper. No test coverage of real behavior is lost.
-- **Term affected:** `draft path` was the card-state label for "this seed hasn't been imported yet." With seeding gone, the term has no referent. It is removed from product copy. Future use of the phrase should be considered legacy.
+- **Term affected:** the old seed-card state label for "this seed hasn't been imported yet" has no referent now that seeding is gone. It is removed from product copy. Future copy should use current route language only.
 - **First-run friction:** A user landing on Library with no concepts sees only the empty-state line: *"No concepts yet. Start one at New concept."* They must bring a source. This is the persona-blessed posture; if real-user testing later shows new users bouncing on the friction, follow-up is a separate decision (likely option E from the grill-with-docs session).
 
 ## Alternatives considered
 
-- **A — Quiet footer link in Ignition.** Keep the seeding mechanism, relocate the affordance into a "Samples" tab inside the source panel. Cheapest, but preserved the "draft path" jargon and the persona's "pre-baked" smell. Persona ranked second behind D.
+- **A — Quiet footer link in Ignition.** Keep the seeding mechanism, relocate the affordance into a "Samples" tab inside the source panel. Cheapest, but preserved legacy seed-card jargon and the persona's "pre-baked" smell. Persona ranked second behind D.
 - **E — "Paste sample text" button.** Replace the pre-graphed JSON import with a raw-text seed that flows through the same extraction pipeline as user-provided text. Highest alignment with "raw tool, not content library." Persona's unprompted invention. Scoped out of *this* decision because it's a new affordance question, not a Library-meaning question. Tracked as a follow-up candidate.
 - **D — Removed entirely (chosen).** Most philosophically honest. Library's trust signal is preserved by deletion, not by relocation. Open question of "where does first-run scaffolding live?" is left for a separate design moment, when there's evidence it matters.
 

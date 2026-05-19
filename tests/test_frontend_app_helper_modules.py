@@ -4,12 +4,26 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEST_NODE_TIMEOUT_SECONDS = 30
+
+
+class ButtonTypeParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.missing_type: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.lower() != "button":
+            return
+        attr_names = {name.lower() for name, _value in attrs}
+        if "type" not in attr_names:
+            self.missing_type.append(self.get_starttag_text() or "<button>")
 
 
 def run_node_module(script: str) -> subprocess.CompletedProcess[str]:
@@ -67,7 +81,7 @@ def test_hero_helpers_preserve_state_labels_and_actions() -> None:
         );
         assert.deepEqual(
           getHeroActionConfig({ state: 'growing', graphData: { nodes: [] } }),
-          { label: 'Open Draft Path', action: 'open-map', disabled: false }
+          { label: 'Open Concept', action: 'open-map', disabled: false }
         );
         assert.deepEqual(
           getHeroActionConfig({ state: 'hibernating', graphData: null }),
@@ -385,7 +399,9 @@ def test_source_input_helpers_preserve_blocking_and_text_contracts() -> None:
         assert.equal(hasStudyEvidence({ gap_type: 'misread' }), true);
         assert.equal(hasStudyEvidence({ drill_status: 'new' }), false);
 
-        assert.ok(SOURCE_INPUT_HTML(false).includes('data-tab="url"'));
+        assert.ok(SOURCE_INPUT_HTML(false).includes('type="button" data-tab="paste"'));
+        assert.ok(SOURCE_INPUT_HTML(false).includes('type="button" data-tab="url"'));
+        assert.ok(SOURCE_INPUT_HTML(false).includes('type="button" data-tab="upload"'));
         assert.ok(!SOURCE_INPUT_HTML(false).includes('paste-clipboard-btn'));
         assert.ok(SOURCE_INPUT_HTML(true).includes('paste-clipboard-btn'));
         """
@@ -601,6 +617,12 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         const html = conceptListItemHtml({ id: 'c1', name: '<Unsafe>', state: 'growing' });
         assert.ok(html.includes('&lt;Unsafe&gt;'));
         assert.ok(html.includes('data-concept-id="c1"'));
+        assert.ok(html.includes('class="concept-actions"'));
+        assert.ok(html.includes('aria-haspopup="menu"'));
+        assert.ok(html.includes('more_vert'));
+        assert.ok(html.includes('class="concept-action-menu"'));
+        assert.ok(html.includes('hidden'));
+        assert.ok(html.includes('class="concept-delete concept-action-menu-item"'));
         assert.ok(html.includes('App.deleteConcept(this.dataset.conceptId,this)'));
 
         class FakeElement {
@@ -636,13 +658,44 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.equal(conceptListEl.children[1].dataset.conceptId, 'c2');
         conceptListEl.children[0].listeners.click({ target: new FakeElement() });
         assert.deepEqual(clicked, ['c1']);
-        const deleteTarget = new FakeElement();
-        deleteTarget.closest = (selector) => selector === '.concept-delete' ? {} : null;
-        conceptListEl.children[1].listeners.click({ target: deleteTarget });
+        const menuTarget = new FakeElement();
+        menuTarget.closest = (selector) => selector.includes('.concept-actions') ? {} : null;
+        conceptListEl.children[1].listeners.click({ target: menuTarget });
         assert.deepEqual(clicked, ['c1']);
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_app_shell_uses_organic_icon_contract() -> None:
+    index_html = (REPO_ROOT / "public" / "index.html").read_text()
+
+    assert "edit_note</span> New concept" in index_html
+    assert "view_quilt</span> Desk" in index_html
+    assert "auto_stories</span> Library" in index_html
+    assert "rate_review</span> Send Feedback" in index_html
+    for icon_name in ("edit_note", "view_quilt", "auto_stories", "rate_review", "cloud_sync", "more_vert"):
+        assert icon_name in index_html
+
+
+def test_feedback_modal_copy_and_button_contract() -> None:
+    index_html = (REPO_ROOT / "public" / "index.html").read_text()
+
+    assert 'role="dialog"' in index_html
+    assert 'aria-modal="true"' in index_html
+    assert 'aria-labelledby="feedback-title"' in index_html
+    assert '<h2 class="modal-title" id="feedback-title">Feedback</h2>' in index_html
+    assert "my local TODO list" not in index_html
+    assert "Share a bug, rough edge, or idea. It helps shape what gets sharpened next." in index_html
+    assert '<button class="modal-close" type="button" onclick="Feedback.hide()" aria-label="Close feedback">' in index_html
+
+
+def test_static_buttons_declare_type() -> None:
+    index_html = (REPO_ROOT / "public" / "index.html").read_text()
+    parser = ButtonTypeParser()
+    parser.feed(index_html)
+
+    assert parser.missing_type == []
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
@@ -930,6 +983,9 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(primedHtml.includes('add sketch'));
         assert.ok(primedHtml.includes('Study the gap'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));
+        assert.ok(primedHtml.includes('Your draft'));
+        assert.ok(primedHtml.includes('A strong first attempt.'));
+        assert.ok(!primedHtml.includes('Missing piece'));
         assert.ok(primedHtml.includes('data-active-entry-action="study"'));
         assert.ok(primedHtml.includes('Compare with notes'));
 
@@ -999,9 +1055,10 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(studiedHtml.includes('review pending'));
         assert.ok(!studiedHtml.includes('review pending entry 1 of 1'));
         assert.ok(studiedHtml.includes('concept-page-b2__evidence'));
-        assert.ok(studiedHtml.includes('learner reconstruction'));
+        assert.ok(studiedHtml.includes('Your draft'));
+        assert.ok(!studiedHtml.includes('learner reconstruction'));
         assert.ok(studiedHtml.includes('A strong first attempt.'));
-        assert.ok(studiedHtml.includes('No repair hinge recorded for this reconstruction.'));
+        assert.ok(studiedHtml.includes('No missing piece recorded for this draft.'));
         assert.ok(studiedHtml.includes('concept-page-b2__study-note'));
         assert.ok(studiedHtml.includes('Study note for this entry.'));
         assert.ok(!studiedHtml.includes('concept-page-b2__entry-cta'));
@@ -1093,12 +1150,16 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Needs repair'));
         assert.ok(!repairHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence'));
+        assert.ok(repairHtml.includes('Your draft'));
+        assert.ok(repairHtml.includes('Missing piece'));
+        assert.ok(!repairHtml.includes('repair hinge'));
         assert.ok(repairHtml.includes('Sodium just rushes in.'));
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
         assert.ok(repairHtml.includes('concept-page-b2__repair'));
         assert.ok(repairHtml.includes('channel gate'));
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
         assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
+        assert.ok(repairHtml.includes('Put it in your words'));
         assert.ok(repairHtml.includes('Write the missing link'));
         assert.ok(repairHtml.includes('Save repair'));
         const fallbackRepairHtml = renderActiveEntryHtml(

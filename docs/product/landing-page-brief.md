@@ -57,7 +57,7 @@ The chosen voice register is **reading room and field journal**. Scholarly-natur
 - correction (in the diagnostic / defect-framing sense)
 
 ### Allowed verbs (these came through the in-app refactor)
-- begin, open (an entry / a page / a draft path), reconstruct, sketch, repair, return, record, revisit, read, attempt, spaced re-drill, study
+- begin, open (an entry / a page / a draft route), reconstruct, sketch, repair, return, record, revisit, read, attempt, spaced re-drill, study
 - **Avoid `enter` as a verb** for entering an "entry" — the field-journal motif uses `open` instead. (You "open a journal entry," not "enter" one.)
 
 ---
@@ -69,7 +69,7 @@ The chosen voice register is **reading room and field journal**. Scholarly-natur
 | Product | `socratink` | Always lowercase. |
 | Empty-state nav for starting a new concept | `New Entry` | (replaces older "Ignition") |
 | Primary action — the first reconstruction | `Write from memory` | (replaces older first-reconstruction labels) |
-| The smallest viable path the learner is taken into for a source-less concept | `smallest actionable route` | (replaces the older "Starting Sketch" composer; deprecated 2026-05-07) |
+| The smallest viable path the learner is taken into for a source-less concept | `smallest actionable route` | (replaces the older "launch attempt" / "threshold" composer) |
 | The act of attempting from memory before any explanation | `cold attempt` / `first cold attempt` | Domain noun. |
 | The learning unit in the graph (learner-facing) | `entry` | (replaces the older internal "room" / "node") |
 | A grouping of entries under a backbone branch | `section` | (replaces the older internal "cluster") |

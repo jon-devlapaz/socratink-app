@@ -61,13 +61,16 @@ Changed lines on this branch are required to be 100% covered across both the
 Python backend and the JavaScript frontend. The gate runs in CI and locally:
 
 ```bash
-bash scripts/test-cov.sh        # collect Python (pytest-cov) + frontend (monocart) coverage
-bash scripts/check-coverage.sh  # enforce 100% diff coverage vs. main using diff-cover
+bash scripts/test-cov.sh        # collect backend Python coverage with pytest-cov
+bash scripts/check-coverage.sh  # collect full-stack coverage and enforce 100% diff coverage
 ```
 
-The frontend leg (`scripts/generate-frontend-coverage.js`) requires Node (run
-`npm install` once to fetch `monocart-coverage-reports`). The Python leg adds
-`pytest-cov` and `diff-cover` from `requirements-dev.txt`.
+`scripts/check-coverage.sh` calls the backend Python leg, generates frontend V8
+coverage via `scripts/generate-frontend-coverage.js`, then runs diff-cover
+against `COMPARE_BRANCH` when set or `origin/main` / `main` locally. The
+frontend leg requires Node (run `npm install` once to fetch
+`monocart-coverage-reports`). The Python leg adds `pytest-cov` and
+`diff-cover` from `requirements-dev.txt`.
 
 ### Type-check and PR preflight
 
@@ -90,9 +93,12 @@ mypy .                    # honors mypy.ini exclude list (.venv/, tests/e2e/, pu
 - `mypy.ini` (Python 3.13, `warn_unreachable`, `strict_optional`,
   `check_untyped_defs`, `warn_return_any`) stays the cross-check.
 
-`.github/workflows/preflight.yml` invokes `bash scripts/doctor.sh` (which runs
-both checkers) plus `pytest -q --ignore=tests/e2e` on every `pull_request` and
-on pushes to `main`/`dev`. It is the public PR-time signal contributors will
+`.github/workflows/preflight.yml` runs two CI jobs on every `pull_request` and
+on pushes to `main`/`dev`: the preflight job invokes `bash scripts/doctor.sh`
+(which runs both checkers) plus `pytest -q --ignore=tests/e2e`, and the
+coverage job installs Node/Chromium, starts a loopback app with
+`SOCRATINK_E2E_LOCAL_GUEST=1`, selects `COMPARE_BRANCH`, and runs
+`scripts/check-coverage.sh`. It is the public PR-time signal contributors will
 see and is intentionally narrower than the local `scripts/preflight-deploy.sh`,
 which additionally runs `vercel build` against real Vercel credentials and
 stays local-only.

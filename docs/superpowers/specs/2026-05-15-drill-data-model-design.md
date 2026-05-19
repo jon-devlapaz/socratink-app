@@ -568,7 +568,7 @@ HH:MM" affordance when one is available, or stay silent — its choice.
 ### Surface bindings
 
 Current shipped rollout: the concept page consumes entry training derivation for
-entry state, CTAs, inline reconstruction, study reveal, and repair panels. The
+entry state, CTAs, inline reconstruction, draft evidence, study reveal, and repair panels. The
 Library card body asynchronously consumes learner attempts for reconstruction
 copy, choosing the best attempt across all node records by classification rank
 and then recency. Map badges, Desk tiles, Sidebar concept markers, and Library
@@ -580,6 +580,7 @@ below lands.
 | Map concept tile | `ConceptStatus.badge` | One vocabulary across all views. |
 | Map entry chip | `EntryRender.state` (silent for null) | Replaces redundant counters like `entry 1 · ready for first attempt, current`. |
 | Map primary CTA | `EntryRender.next_action` | Fixes the State 5 "Let's move on" and State 11 dead-click bugs. |
+| Concept page draft evidence | Latest attempt for the active entry | Show the learner's draft before study reveal. Show `Missing piece` details only after `study_revealed_at`. |
 | Library card body | Current: best learner attempt across all node records; target: `EntryRender.strongest_turn_text` of the primary entry | When `null`, show empty-state copy. MUST NOT fall back to `core_thesis`. |
 | Library card badge | `ConceptStatus.badge` | Same string as Map. |
 | Library card composition | `ConceptStatus.composition` | "9 of 10 solidified · 1 needs repair" — pairs with badge for honest progress + honest gap. |
@@ -639,10 +640,13 @@ gap/timing fields — but they do not carry verbatim turn-by-turn user text from
 past chambers. Without the verbatim text, we cannot honestly construct
 `chamber_closed` events. So we don't.
 
-Legacy concepts keep their sketch and graph but lose their attempt history. The
-user re-attempts from cold on their first interaction with each existing
-concept. Given current test data is a single user's machine, this is the
-right trade.
+Legacy concepts keep their sketch and graph but lose their attempt history.
+Most nodes re-attempt from cold on first interaction. The narrow exception is a
+legacy `primed`/`study` node: it may reveal study first and persist
+`study_revealed_at` with `attempts: []`, then the next reconstruction appends
+new learner text as fresh evidence. This preserves the old route without
+synthesizing missing attempt history. Given current test data is a single
+user's machine, this is the right trade.
 
 ### Migration boot flow
 

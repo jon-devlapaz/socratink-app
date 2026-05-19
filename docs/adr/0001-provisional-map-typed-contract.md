@@ -1,7 +1,7 @@
 # ADR-0001 — `ProvisionalMap` as a typed cognitive artifact contract
 
 **Status:** Accepted (2026-05-01)
-**Driver:** [foundation design spec, §5.1](../superpowers/specs/2026-05-01-foundation-design.md), PR #76
+**Driver:** [foundation design spec, §5.1](../archive/superpowers/specs/2026-05-01-foundation-design.md), PR #76
 
 ## Context
 

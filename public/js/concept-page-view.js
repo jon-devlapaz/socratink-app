@@ -258,29 +258,35 @@ function latestAttemptForRecord(record) {
 }
 
 function renderEvidenceArtifactHtml(derived) {
-  if (!derived.record?.study_revealed_at) return '';
   const attempt = latestAttemptForRecord(derived.record);
   if (!attempt?.user_text) return '';
+  const hasStudyReveal = Boolean(derived.record?.study_revealed_at);
   const gaps = Array.isArray(attempt.gaps) && attempt.gaps.length
     ? attempt.gaps
     : (Array.isArray(derived.gaps) ? derived.gaps : []);
-  const hingeHtml = gaps.length
-    ? gaps.map((gap, index) => `
-        <li>
-          <strong>${escHtml(repairGapTitle(gap, index))}</strong>
-          <span>${escHtml(repairGapCorrection(gap))}</span>
-        </li>
-      `).join('')
-    : '<li><span>No repair hinge recorded for this reconstruction.</span></li>';
+  const hingeHtml = hasStudyReveal
+    ? `
+      <div class="concept-page-b2__evidence-hinge">
+        <span class="concept-page-b2__evidence-label">Missing piece</span>
+        <ul>
+          ${gaps.length
+            ? gaps.map((gap, index) => `
+              <li>
+                <strong>${escHtml(repairGapTitle(gap, index))}</strong>
+                <span>${escHtml(repairGapCorrection(gap))}</span>
+              </li>
+            `).join('')
+            : '<li><span>No missing piece recorded for this draft.</span></li>'}
+        </ul>
+      </div>
+    `
+    : '';
 
   return `
-    <section class="concept-page-b2__evidence" aria-label="Learner reconstruction evidence">
-      <span class="eyebrow concept-page-b2__evidence-eyebrow">learner reconstruction</span>
+    <section class="concept-page-b2__evidence" aria-label="Learner draft evidence">
+      <span class="eyebrow concept-page-b2__evidence-eyebrow">Your draft</span>
       <blockquote>${escHtml(attempt.user_text)}</blockquote>
-      <div class="concept-page-b2__evidence-hinge">
-        <span class="concept-page-b2__evidence-label">repair hinge</span>
-        <ul>${hingeHtml}</ul>
-      </div>
+      ${hingeHtml}
     </section>
   `;
 }
@@ -297,7 +303,7 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
     : '';
   return `
     <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
-      <span class="eyebrow concept-page-b2__repair-eyebrow">repair</span>
+      <span class="eyebrow concept-page-b2__repair-eyebrow">Put it in your words</span>
       <h3>Write the missing link</h3>
       <ul class="concept-page-b2__repair-gaps">
         ${gaps.map((gap, index) => `
@@ -381,8 +387,12 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const studyNoteHtml = derived.record?.study_revealed_at && !isAttempting
     ? `
       <section class="concept-page-b2__study-note" aria-label="Study note">
-        <span class="eyebrow concept-page-b2__study-note-eyebrow">study note</span>
-        <p>${escHtml(studyNoteForEntry(activeEntry, concept, data))}</p>
+        <div class="concept-page-b2__study-note-header">
+          <span class="eyebrow concept-page-b2__study-note-eyebrow">Study note</span>
+          <button class="concept-page-b2__study-note-toggle" type="button" data-study-note-toggle aria-expanded="true">Hide study note</button>
+        </div>
+        <p data-study-note-body>${escHtml(studyNoteForEntry(activeEntry, concept, data))}</p>
+        <p class="concept-page-b2__study-note-hidden" data-study-note-hidden>Hidden while you write from memory.</p>
       </section>
     `
     : '';
@@ -393,6 +403,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const thresholdHtml = thresholdText
     ? `
       <p class="concept-page-b2__threshold">
+        <span class="concept-page-b2__threshold-label">Your starting sketch:</span>
         ${escHtml(thresholdText)}
         <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
       </p>

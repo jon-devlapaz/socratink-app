@@ -185,7 +185,7 @@ Does "recorded" feel earned to you, or does it feel like a productivity-tracker 
 
 The whole app is going for: calm, Socratic, reading-room-not-dashboard, lowercase socratink, no exclamation marks, no emoji, no hype. Sample copy on the empty Library:
 
-> "No draft paths yet. Begin one at New Entry."
+> "No concepts yet. Start one at New concept."
 > "Your library is quiet until evidence changes the map."
 > "The graph stays honest because evidence comes from your reconstruction."
 

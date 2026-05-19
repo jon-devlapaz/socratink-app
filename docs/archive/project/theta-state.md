@@ -4,7 +4,7 @@ Last updated: 2026-05-17
 
 ## Current Evidence Posture
 
-socratink's strongest science case is the code-verified loop of generation, correction, spacing, and retrieval. The learner first makes an unscored attempt, receives targeted corrective study, works other nodes so short-term fluency decays, then returns for effortful re-drill. The graph is an evidence-weighted map — it shows what Socratink has evidence for, not what the learner knows — and only marks mastery when a spaced, self-generated reconstruction is solid. See [../product/evidence-weighted-map.md](../product/evidence-weighted-map.md) for the binding doctrine.
+socratink's strongest science case is the code-verified loop of generation, correction, spacing, and retrieval. The learner first makes an unscored attempt, receives targeted corrective study, works other nodes so short-term fluency decays, then returns for effortful re-drill. The graph is an evidence-weighted map — it shows what Socratink has evidence for, not what the learner knows — and only marks mastery when a spaced, self-generated reconstruction is solid. See [../product/evidence-weighted-map.md](../../product/evidence-weighted-map.md) for the binding doctrine.
 
 The live product should be described as a retrieval-centered learning loop, not as a general AI tutor or a sleep-consolidation system. AI is a support layer for ingestion, routing, feedback, and friction reduction; it is not itself evidence that learning occurred.
 

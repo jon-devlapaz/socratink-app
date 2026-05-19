@@ -38,11 +38,11 @@ export function getHeroActionConfig(concept) {
   switch (concept.state) {
     case 'instantiated':
       return concept.graphData
-        ? { label: 'Open Draft Path', action: 'open-map', disabled: false }
+        ? { label: 'Open Concept', action: 'open-map', disabled: false }
         : { label: 'Draft Map', action: 'extract', disabled: false };
     case 'growing':
       return concept.graphData
-        ? { label: 'Open Draft Path', action: 'open-map', disabled: false }
+        ? { label: 'Open Concept', action: 'open-map', disabled: false }
         : { label: 'Draft Map', action: 'extract', disabled: false };
     case 'fractured':
       return { label: 'Repair Gap', action: 'drill', disabled: false };

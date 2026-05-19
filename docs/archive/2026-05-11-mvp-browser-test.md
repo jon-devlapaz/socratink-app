@@ -39,6 +39,11 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 1. Navigate to base URL.
 2. If redirected to `/login`, click "Continue as guest".
 3. Verify Desk view loads with sidebar nav (`New concept`, `Desk`, `Library`, `Settings`, `Send Feedback`).
+   - Click `Send Feedback`. Verify `#feedback-overlay` opens as `role="dialog"` with `aria-modal="true"`, the title "Feedback", and focus in the feedback textarea.
+   - Verify the sidebar stays open on desktop after the feedback overlay opens.
+   - Press `Esc`. Verify the overlay closes and keyboard focus returns to `Send Feedback`.
+   - Reopen feedback. If your browser tool can mock `/api/feedback`, return HTTP 200, submit a short message, close the overlay, reopen it, and verify the submit button is enabled and the textarea is empty.
+   - On mobile width, open the drawer, verify `Send Feedback` is reachable there, click it, and verify the feedback overlay opens without closing the drawer.
 4. Verify the isometric board renders.
 5. Verify no console errors (one allowed: `/_vercel/speed-insights/script.js` 404 — cosmetic).
 
@@ -56,8 +61,8 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 13. Verify navigation to launch pad with headline "What do you already think is inside this concept?"
 14. Verify the witness-anchor diamond is now SOLID VIOLET with a subtle halo (the actualization beat).
-15. Verify the textarea placeholder reads "A sentence or two is plenty — be specific over comprehensive." (or similar).
-16. Type a real sketch (200+ chars about photosynthesis).
+15. Verify the textarea placeholder reads "Name parts, guesses, examples, or confusions. Concrete words help most."
+16. Type a real sketch with at least 8 substantive non-stopword tokens about photosynthesis.
 17. Click "Save sketch".
 18. Verify Gemini round-trip completes within 10 seconds.
 
@@ -66,8 +71,8 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 ### 2.1 Header
 
 19. Verify concept title appears at top with crystal mark + "concept" eyebrow.
-20. Verify pills appear: a quiet "thin sketch" pill (if backend flagged low_density) and a violet "N of M entries primed" pill.
-21. Verify the "thin sketch" copy is exactly that string — NOT "lightweight draft" (older copy).
+20. Verify header pills do not include a low-density / "thin sketch" tag.
+21. Verify the starting sketch appears as "Your starting sketch:" in the concept body, not as a header tag.
 22. Verify there is NO "Try from memory" button in the header (header should only show the title + tags).
 23. Verify there is NO Route/Graph toggle in the header.
 
@@ -135,7 +140,13 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 59. Type a substantive 2-3 sentence reconstruction and click "Save what I wrote".
 60. Verify exactly one `/api/drill` POST is sent for the save.
 61. Verify the active entry re-renders from training state: weak attempts expose "Compare with notes" or a repair panel after study; strong attempts can show review/spaced reconstruction readiness.
-62. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
+62. Verify the active entry shows the learner's exact saved attempt under "Your draft".
+63. Before clicking "Compare with notes", verify the active entry does NOT show "Missing piece".
+64. After a weak attempt, click "Compare with notes". Verify the study note appears with a "Hide study note" toggle and the revealed mechanism text.
+65. Verify the evidence block now shows "Missing piece" details for the saved attempt.
+66. Focus or type in the repair textarea. Verify the study note collapses, the mechanism text is hidden, the helper reads "Hidden while you write from memory.", and the toggle reads "Show study note".
+67. Click "Show study note". Verify the mechanism text returns and the toggle reads "Hide study note".
+68. Verify the Library card body later shows the learner's saved reconstruction, not `graphData.metadata.core_thesis`.
 
 ## Phase 4 — Doctrine + copy audit
 
@@ -193,13 +204,19 @@ Flag any violation as **BLOCKER**. These rules bind every surface:
 
 93. Open Concept A. Wait for it to render. Open Concept B. Verify the strip + work column show Concept B's data, NOT Concept A's (no ghost nodes from a stale render).
 
-### 6.4 Idle session
+### 6.4 Active concept deletion
 
-94. (Optional, time-permitting) Leave the inline reconstruction panel idle for 15+ minutes. Try to save an attempt. Note any auth-expiry or session-loss behavior.
+94. Open an active concept from the sidebar concept list. Verify the active list item exposes a concept actions button (`.concept-actions`) instead of a direct delete icon.
+95. Open the active concept action menu. Click `Delete concept`, dismiss the browser confirm dialog, and verify the concept page remains on the same concept with one active sidebar item.
+96. Open the action menu again. Click `Delete concept`, accept the confirm dialog, and verify the app returns to Desk, the sidebar concept item is gone, and stale concept-header content is no longer visible.
 
-### 6.5 Long input
+### 6.5 Idle session
 
-95. In the inline reconstruction textarea, paste 3000+ characters of text. Press "Save what I wrote". Note whether:
+97. (Optional, time-permitting) Leave the inline reconstruction panel idle for 15+ minutes. Try to save an attempt. Note any auth-expiry or session-loss behavior.
+
+### 6.6 Long input
+
+98. In the inline reconstruction textarea, paste 3000+ characters of text. Press "Save what I wrote". Note whether:
     - There's a character limit warning
     - The backend accepts the payload
     - The AI response handles the long input
@@ -222,10 +239,10 @@ Produce a markdown report with this structure:
 |--|--|--|--|--|
 | 1 Landing + concept creation | 18 | ?? | ?? | |
 | 2 Concept page B-2 layout | 35 | ?? | ?? | |
-| 3 Inline reconstruction | 9 | ?? | ?? | |
+| 3 Inline reconstruction | 15 | ?? | ?? | |
 | 4 Doctrine + copy audit | 3 | ?? | ?? | |
 | 5 Theme + responsive | 6 | ?? | ?? | |
-| 6 Edge cases & stress | 5 | ?? | ?? | |
+| 6 Edge cases & stress | 8 | ?? | ?? | |
 
 ## Bugs found
 
