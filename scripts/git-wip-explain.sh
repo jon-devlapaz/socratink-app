@@ -256,7 +256,13 @@ if [ "$dirty_count" -gt 0 ]; then
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
   recommended_next="git fetch && git status --short --branch && git diff @{u}...HEAD"
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ]; then
-  recommended_next="python3 scripts/agent-push.py --target no-mistakes/dev"
+  if [ "$branch" = "dev" ]; then
+    recommended_next="python3 scripts/agent-push.py --target no-mistakes/dev"
+  elif [[ "$branch" == feat/* ]]; then
+    recommended_next="python3 scripts/agent-push.py --target origin/$branch"
+  else
+    recommended_next="git status --short --branch && git log --oneline @{u}..HEAD"
+  fi
 elif [ -n "$upstream" ] && [ "$behind" -gt 0 ]; then
   recommended_next="scripts/no-mistakes-finish-dev.sh"
 elif [ "$same_branch_count" -gt 0 ]; then

@@ -591,6 +591,13 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   pointer-events:auto;
   transform:scale(1);
 }
+@media (hover: none), (pointer: coarse) {
+  .concept-actions {
+    opacity:1;
+    pointer-events:auto;
+    transform:scale(1);
+  }
+}
 .concept-actions:hover,
 .concept-actions:focus-visible,
 .concept-item.menu-open .concept-actions {

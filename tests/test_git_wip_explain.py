@@ -91,6 +91,27 @@ def test_short_mode_summarizes_state_and_next_command(tmp_path: Path) -> None:
     assert "Known worktrees:" not in result.stdout
 
 
+def test_feature_branch_ahead_recommends_feature_publication(tmp_path: Path) -> None:
+    origin = tmp_path / "origin.git"
+    repo = _init_repo(tmp_path)
+    _run(["git", "init", "--bare", str(origin)], tmp_path)
+    _git(repo, "remote", "add", "origin", str(origin))
+    _git(repo, "push", "-u", "origin", "dev")
+    _git(repo, "checkout", "-b", "feat/demo")
+    _git(repo, "push", "-u", "origin", "feat/demo")
+    (repo / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(repo, "add", "feature.txt")
+    _git(repo, "commit", "-m", "feature work")
+
+    result = _run(["bash", str(SCRIPT), "--short"], repo)
+
+    assert result.returncode == 0
+    assert "feat/demo @" in result.stdout
+    assert "upstream=behind:0 ahead:1" in result.stdout
+    assert "Next: python3 scripts/agent-push.py --target origin/feat/demo" in result.stdout
+    assert "no-mistakes/dev" not in result.stdout
+
+
 def test_diverged_branch_recommends_inspection_not_publish(tmp_path: Path) -> None:
     origin = tmp_path / "origin.git"
     repo = _init_repo(tmp_path)

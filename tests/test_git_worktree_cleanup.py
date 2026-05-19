@@ -96,10 +96,15 @@ def test_bulk_remove_clean_removes_only_clean_removable_worktrees(tmp_path: Path
     clean_one = tmp_path / "clean-one"
     clean_two = tmp_path / "clean-two"
     dirty = tmp_path / "dirty"
+    detached = tmp_path / "detached"
     _git(repo, "worktree", "add", "-b", "feature/clean-one", str(clean_one))
     _git(repo, "worktree", "add", "-b", "feature/clean-two", str(clean_two))
     _git(repo, "worktree", "add", "-b", "feature/dirty", str(dirty))
+    _git(repo, "worktree", "add", "--detach", str(detached), "dev")
     (dirty / "scratch.txt").write_text("dirty\n", encoding="utf-8")
+    (detached / "detached.txt").write_text("detached\n", encoding="utf-8")
+    _git(detached, "add", "detached.txt")
+    _git(detached, "commit", "-m", "detached work")
 
     result = _run(["bash", str(SCRIPT), "--remove-clean", "--apply"], repo)
 
@@ -108,6 +113,7 @@ def test_bulk_remove_clean_removes_only_clean_removable_worktrees(tmp_path: Path
     assert not clean_one.exists()
     assert not clean_two.exists()
     assert dirty.exists()
+    assert detached.exists()
     assert repo.exists()
 
 
@@ -129,6 +135,21 @@ def test_refuses_current_worktree(tmp_path: Path) -> None:
     assert result.returncode == 2
     assert "current worktree" in result.stderr or "main worktree" in result.stderr
     assert repo.exists()
+
+
+def test_refuses_clean_detached_worktree_with_unique_commit(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    wt = tmp_path / "detached"
+    _git(repo, "worktree", "add", "--detach", str(wt), "dev")
+    (wt / "detached.txt").write_text("detached\n", encoding="utf-8")
+    _git(wt, "add", "detached.txt")
+    _git(wt, "commit", "-m", "detached work")
+
+    result = _run(["bash", str(SCRIPT), "--remove", str(wt), "--apply"], repo)
+
+    assert result.returncode == 2
+    assert "refusing to remove detached HEAD worktree" in result.stderr
+    assert wt.exists()
 
 
 def test_script_is_executable() -> None:

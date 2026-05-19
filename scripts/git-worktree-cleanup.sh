@@ -70,6 +70,11 @@ is_clean_worktree() {
     && [ -z "$(git -C "$path" ls-files --others --exclude-standard)" ]
 }
 
+has_branch_head() {
+  local path="$1"
+  git -C "$path" symbolic-ref --quiet --short HEAD >/dev/null
+}
+
 collect_clean_removable_worktrees() {
   local repo_root_canonical main_canonical wt wt_canonical
   repo_root_canonical="$(canonical_path "$repo_root")"
@@ -83,6 +88,7 @@ collect_clean_removable_worktrees() {
         wt_canonical="$(canonical_path "$wt")" || continue
         [ "$wt_canonical" != "$repo_root_canonical" ] || continue
         [ "$wt_canonical" != "$main_canonical" ] || continue
+        has_branch_head "$wt_canonical" || continue
         if is_clean_worktree "$wt_canonical"; then
           printf '%s\n' "$wt_canonical"
         fi
@@ -112,6 +118,8 @@ print_list() {
     elif [ "$current_wt" = "$main_worktree" ]; then
       marker="M"
       status="main"
+    elif [ -z "$current_branch" ]; then
+      status="detached-blocked"
     elif [ -d "$current_wt" ]; then
       if is_clean_worktree "$current_wt"; then
         status="clean-removable"
@@ -146,6 +154,7 @@ print_list() {
   echo "  M main worktree; never removed by this helper"
   echo "  clean-removable: can be removed with --remove <path> --apply"
   echo "  all clean-removable: can be removed with --remove-clean --apply"
+  echo "  detached-blocked: detached HEAD; create or move a branch before removal"
   echo "  dirty-blocked: has staged, unstaged, or untracked files"
   echo "  missing-prunable: path is gone; run git worktree prune manually if needed"
 }
@@ -196,6 +205,7 @@ while IFS= read -r line; do
 done < <(git worktree list --porcelain)
 
 [ "$registered" = "1" ] || fail "path is not a registered worktree: $remove_path"
+has_branch_head "$target" || fail "refusing to remove detached HEAD worktree; create or move a branch first"
 
 dirty_status="$(git -C "$target" status --porcelain)"
 if [ -n "$dirty_status" ]; then
