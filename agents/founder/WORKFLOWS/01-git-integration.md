@@ -49,6 +49,7 @@ scripts/git-worktree-cleanup.sh --remove-clean --apply
 - no silent publication
 - use `scripts/agent-push.py`
 - follow the wrapper's ack/override flow
+- treat the printed `--ack` token as an opaque receipt for the previewed branch, HEAD, dirty state, route, remote URL/refspec, diff fingerprint, risk class, nonce, and timestamp; copy the full generated command without inspecting or editing the token
 - urgency is never authorization
 
 ## Verification

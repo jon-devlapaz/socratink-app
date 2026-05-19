@@ -145,7 +145,7 @@ time pytest --co -q | tail -3
 | --- | --- | --- | --- |
 | No tests or tests cannot be discovered by the framework's default runner. | Tests exist but require manual env setup; long boot; flaky. | One-command run; test:source ratio ≥ 0.5; clear which tests cover which module. | One-command run; test:source ≥ 1.0; collocation/naming makes coverage of a unit obvious; smoke tests subsettable (`-m smoke`). |
 
-**socratink-app baseline:** 62 tests, 1.8:1 ratio, `pytest.ini` works, Playwright e2e present — currently scoring **3** *if* the runner is one-command from a clean checkout (verify with `scripts/bootstrap-python.sh && pytest -q`).
+**socratink-app baseline:** 68 test files, 1.74:1 ratio, `pytest.ini` works, Playwright e2e present — currently scoring **3** *if* the runner is one-command from a clean checkout (verify with `scripts/bootstrap-python.sh && pytest -q`).
 
 ---
 
@@ -345,5 +345,5 @@ ls .code-review-graph/graph.db .code-review-graph/wiki/ 2>/dev/null
 ## Provenance
 
 - Empirical claims sourced from cAST (arXiv 2506.15655), SWE-bench (arXiv 2310.06770), SWE-Bench+ (OpenReview R40rS2afQ3), PatchDiff (arXiv 2503.15223), Type-constrained decoding (arXiv 2504.09246), MLSec ICSE 2026, Arize Prompt Learning on .clinerules, SWE-agent NeurIPS 2024, Tree-sitter limitations (blog.jez.io/tree-sitter-limitations).
-- Codebase indicators sourced from a survey of socratink-app at commit `cc92040` (2026-05-12).
+- Codebase indicators sourced from a survey of socratink-app at commit `cc92040` (2026-05-12), with CI, retrieval-exclusion, and test/source baselines refreshed at commit `ee257c4` (2026-05-18).
 - Folklore items removed from the previous draft are listed in *"What this rubric intentionally does not score"* with cited reasons.

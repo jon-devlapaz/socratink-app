@@ -84,7 +84,7 @@ Before doing substantive work:
 6. Read agents/QUALITY.md
 7. Read docs/product/evidence-weighted-map.md (binding graph-truth doctrine; overrides other docs on graph/evidence/mastery claims)
 8. Scan docs/project/doc-map.md to locate other binding docs for this task
-9. Read docs/theta/state.md when the task touches product science or claims
+9. For product science or claims, use docs/product/evidence-weighted-map.md plus docs/project/doc-map.md to locate current supporting docs
 10. Read docs/product/spec.md when the task involves the cold attempt, study, or re-drill architecture
 11. Use the theta-research skill when the task touches learning science
 12. Decide which agents are actually needed
