@@ -91,6 +91,35 @@ def test_short_mode_summarizes_state_and_next_command(tmp_path: Path) -> None:
     assert "Known worktrees:" not in result.stdout
 
 
+def test_diverged_branch_recommends_inspection_not_publish(tmp_path: Path) -> None:
+    origin = tmp_path / "origin.git"
+    repo = _init_repo(tmp_path)
+    _run(["git", "init", "--bare", str(origin)], tmp_path)
+    _git(repo, "remote", "add", "origin", str(origin))
+    _git(repo, "push", "-u", "origin", "dev")
+
+    remote_clone = tmp_path / "remote-clone"
+    _run(["git", "clone", "-b", "dev", str(origin), str(remote_clone)], tmp_path)
+    _git(remote_clone, "config", "user.email", "remote@example.com")
+    _git(remote_clone, "config", "user.name", "Remote User")
+    (remote_clone / "remote.txt").write_text("remote\n", encoding="utf-8")
+    _git(remote_clone, "add", "remote.txt")
+    _git(remote_clone, "commit", "-m", "remote work")
+    _git(remote_clone, "push", "origin", "dev")
+
+    (repo / "local.txt").write_text("local\n", encoding="utf-8")
+    _git(repo, "add", "local.txt")
+    _git(repo, "commit", "-m", "local work")
+    _git(repo, "fetch", "origin", "dev")
+
+    result = _run(["bash", str(SCRIPT), "--short"], repo)
+
+    assert result.returncode == 0
+    assert "upstream=behind:1 ahead:1" in result.stdout
+    assert "Next: git fetch && git status --short --branch && git diff @{u}...HEAD" in result.stdout
+    assert "agent-push.py" not in result.stdout
+
+
 def test_classifies_staged_unstaged_and_untracked_work(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path)
     (repo / "tracked.txt").write_text("base\nunstaged\n", encoding="utf-8")

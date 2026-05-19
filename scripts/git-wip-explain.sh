@@ -253,6 +253,8 @@ fi
 recommended_next="none; ready for new work"
 if [ "$dirty_count" -gt 0 ]; then
   recommended_next="git diff && git status --short"
+elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
+  recommended_next="git fetch && git status --short --branch && git diff @{u}...HEAD"
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ]; then
   recommended_next="python3 scripts/agent-push.py --target no-mistakes/dev"
 elif [ -n "$upstream" ] && [ "$behind" -gt 0 ]; then
