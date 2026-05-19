@@ -184,7 +184,7 @@ The system should err toward false negatives. A slightly strict gate protects gr
 
 AI support is allowed only if it preserves the three-phase loop, the drill contract, and graph truth:
 - the learner must complete the cold attempt before the study view is shown
-- the study view must not be accessible before a learner reconstruction attempt exists
+- the study view must not be accessible before a learner reconstruction attempt exists, except for legacy `primed` + `study` compatibility where no prior attempt exists; that exception may preserve the old study route but must not invent reconstruction evidence or weaken the three-phase loop, drill contract, or graph truth
 - scaffolds and feedback may clarify the gap after an attempt, but must not silently change the target
 - AI-generated explanation quality does not itself mutate graph state
 - only persisted learner reconstruction evidence can derive `primed`, `needs repair`, or `solidified`

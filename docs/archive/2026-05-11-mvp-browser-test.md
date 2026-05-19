@@ -239,7 +239,7 @@ Produce a markdown report with this structure:
 |--|--|--|--|--|
 | 1 Landing + concept creation | 18 | ?? | ?? | |
 | 2 Concept page B-2 layout | 35 | ?? | ?? | |
-| 3 Inline reconstruction | 12 | ?? | ?? | |
+| 3 Inline reconstruction | 15 | ?? | ?? | |
 | 4 Doctrine + copy audit | 3 | ?? | ?? | |
 | 5 Theme + responsive | 6 | ?? | ?? | |
 | 6 Edge cases & stress | 8 | ?? | ?? | |

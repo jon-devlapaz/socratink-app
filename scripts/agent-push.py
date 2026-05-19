@@ -298,6 +298,10 @@ def ensure_current_dev_base(state: PushState, intent: PublicationIntent) -> None
     _remote, refspec = route_to_remote_refspec(intent.chosen_route)
     if state.branch != "dev" or refspec != "dev":
         return
+    if "origin" not in state.remote_urls:
+        return
+    if not _run_git(["rev-parse", "--verify", "origin/dev"], check=False):
+        return
     counts = _run_git(["rev-list", "--left-right", "--count", "origin/dev...HEAD"])
     try:
         behind_text, ahead_text = counts.split()

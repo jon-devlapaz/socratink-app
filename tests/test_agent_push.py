@@ -200,6 +200,8 @@ def test_dev_publication_blocks_when_origin_dev_is_ahead(monkeypatch):
     intent = mod.resolve_publication_intent(state, explicit_target="origin/dev")
 
     def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
         if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
             return "3\t1"
         raise AssertionError(f"unexpected git call: {args}")
@@ -226,8 +228,50 @@ def test_dev_publication_allows_origin_dev_ancestor(monkeypatch):
     intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
 
     def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
         if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
             return "0\t2"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.ensure_current_dev_base(state, intent)
+
+
+def test_dev_publication_skips_divergence_check_without_origin(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["docs/project/state.md"],
+        remote_urls={"some": "https://example.com/some.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
+
+    def fake_run_git(args, *, check=True):
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.ensure_current_dev_base(state, intent)
+
+
+def test_dev_publication_skips_divergence_check_without_origin_dev_ref(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["docs/project/state.md"],
+        remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="origin/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return ""
         raise AssertionError(f"unexpected git call: {args}")
 
     monkeypatch.setattr(mod, "_run_git", fake_run_git)
