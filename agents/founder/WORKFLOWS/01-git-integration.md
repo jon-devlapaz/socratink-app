@@ -41,6 +41,7 @@ python3 scripts/agent-push.py --target no-mistakes/dev
 no-mistakes attach
 scripts/no-mistakes-finish-dev.sh       # after no-mistakes finishes
 scripts/git-worktree-cleanup.sh         # list stale worktrees
+scripts/git-worktree-cleanup.sh --remove-clean --apply
 ```
 
 ## Required Confirmation

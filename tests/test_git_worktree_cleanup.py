@@ -79,6 +79,48 @@ def test_refuses_dirty_worktree(tmp_path: Path) -> None:
     assert wt.exists()
 
 
+def test_bulk_remove_clean_requires_apply(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    wt = tmp_path / "feature"
+    _git(repo, "worktree", "add", "-b", "feature/demo", str(wt))
+
+    result = _run(["bash", str(SCRIPT), "--remove-clean"], repo)
+
+    assert result.returncode == 2
+    assert "bulk removal requires --apply" in result.stderr
+    assert wt.exists()
+
+
+def test_bulk_remove_clean_removes_only_clean_removable_worktrees(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    clean_one = tmp_path / "clean-one"
+    clean_two = tmp_path / "clean-two"
+    dirty = tmp_path / "dirty"
+    _git(repo, "worktree", "add", "-b", "feature/clean-one", str(clean_one))
+    _git(repo, "worktree", "add", "-b", "feature/clean-two", str(clean_two))
+    _git(repo, "worktree", "add", "-b", "feature/dirty", str(dirty))
+    (dirty / "scratch.txt").write_text("dirty\n", encoding="utf-8")
+
+    result = _run(["bash", str(SCRIPT), "--remove-clean", "--apply"], repo)
+
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert "removing 2 clean-removable worktree(s)" in result.stdout
+    assert not clean_one.exists()
+    assert not clean_two.exists()
+    assert dirty.exists()
+    assert repo.exists()
+
+
+def test_bulk_remove_clean_noops_when_none_found(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+
+    result = _run(["bash", str(SCRIPT), "--remove-clean", "--apply"], repo)
+
+    assert result.returncode == 0
+    assert "no clean-removable worktrees found" in result.stdout
+    assert repo.exists()
+
+
 def test_refuses_current_worktree(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path)
 
