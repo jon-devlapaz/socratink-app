@@ -585,6 +585,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   pointer-events:none;
 }
 .concept-item:hover .concept-actions,
+.concept-item.active .concept-actions,
 .concept-item:focus-within .concept-actions,
 .concept-item.menu-open .concept-actions {
   opacity:1;
