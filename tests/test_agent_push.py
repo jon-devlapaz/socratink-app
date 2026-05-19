@@ -72,6 +72,26 @@ def test_publication_diff_paths_are_included_after_commit(monkeypatch):
     assert mod._changed_paths() == ["main.py"]
 
 
+def test_refresh_publication_refs_updates_origin_dev(monkeypatch):
+    mod = _load_module()
+    calls = []
+
+    def fake_run_git(args, *, check=True):
+        calls.append(args)
+        if args == ["remote", "-v"]:
+            return "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)"
+        return ""
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.refresh_publication_refs()
+
+    assert calls == [
+        ["remote", "-v"],
+        ["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"],
+    ]
+
+
 def test_explicit_target_records_override_against_recommendation(tmp_path):
     mod = _load_module()
     state = mod.PushState(

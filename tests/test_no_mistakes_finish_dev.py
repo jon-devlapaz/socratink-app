@@ -118,6 +118,27 @@ def test_refuses_unique_local_work(tmp_path: Path) -> None:
     assert _git(local, "log", "-1", "--pretty=%s") == "local only"
 
 
+def test_fetch_refreshes_origin_dev_before_divergence_check(tmp_path: Path) -> None:
+    local, origin = _init_repo(tmp_path)
+
+    daemon = tmp_path / "daemon"
+    _run(["git", "clone", str(origin), str(daemon)], tmp_path)
+    _git(daemon, "switch", "dev")
+    _git(daemon, "config", "user.email", "daemon@example.com")
+    _git(daemon, "config", "user.name", "No Mistakes")
+    daemon_tip = _commit(daemon, "daemon only", "docs/daemon.md", "daemon\n")
+    _git(daemon, "push", "origin", "dev")
+
+    assert _git(local, "rev-parse", "origin/dev") != daemon_tip
+
+    env = _env_with_no_mistakes(tmp_path, "no active run\n")
+    result = _run(["bash", str(SCRIPT)], local, env=env)
+
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert _git(local, "rev-parse", "origin/dev") == daemon_tip
+    assert _git(local, "rev-parse", "HEAD") == daemon_tip
+
+
 def test_script_is_executable() -> None:
     assert SCRIPT.exists()
     assert os.access(SCRIPT, os.X_OK), "finish script must be executable"

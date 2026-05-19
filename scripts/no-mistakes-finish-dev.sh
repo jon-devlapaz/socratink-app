@@ -44,7 +44,7 @@ if [ -n "$dirty_status" ]; then
 fi
 
 info "fetching daemon output from origin/dev"
-git fetch origin dev
+git fetch origin +refs/heads/dev:refs/remotes/origin/dev
 
 counts="$(git rev-list --left-right --count origin/dev...HEAD)"
 behind="${counts%%[[:space:]]*}"
