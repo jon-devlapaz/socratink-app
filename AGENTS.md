@@ -243,6 +243,12 @@ scripts/snap.py library-empty-variants
 scripts/snap.py library-empty-variants -v A,D,E --open    # custom variants + auto-Preview (macOS)
 scripts/snap.py --list                                    # what _lab surfaces exist?
 
+# Share one _lab prototype to a phone over the internet. This serves only
+# public/ through a loopback static server, then opens a temporary ngrok URL.
+# Keep the command running while reviewing; Ctrl-C closes the tunnel.
+scripts/share-lab.sh minimal-gestalt-overview
+scripts/share-lab.sh --list
+
 # Pipe a customer-persona prompt through Gemini, filtered and auto-logged
 # to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
 # template lives at agents/_templates/customer-persona-prompt.md.
