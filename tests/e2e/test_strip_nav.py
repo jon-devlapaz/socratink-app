@@ -97,10 +97,12 @@ def _seed_concept_with_backbone(page: Page) -> None:
                 backbone: [
                   { id: 'b1', label: 'Light reactions', drill_status: 'locked',
                     purpose: 'The first entry asks for the governing idea.' },
-                  { id: 'b2', label: 'Calvin cycle', drill_status: 'primed',
+                  { id: 'b2', drill_status: 'primed',
                     purpose: 'Carbon fixation via RuBisCO.' },
-                  { id: 'b3', label: 'Electron transport', drill_status: 'locked',
+                  { id: 'b3', drill_status: 'locked',
                     purpose: 'ATP synthesis via the proton gradient.' },
+                  { id: 'b4', drill_status: 'locked',
+                    purpose: 'Oxygen accepts electrons at the end of the chain.' },
                 ],
                 clusters: [],
             });
@@ -146,6 +148,18 @@ def test_strip_click_swaps_work_column(page: Page, base_url: str) -> None:
     page.wait_for_timeout(700)
     new_title = page.locator(".concept-page-b2__entry-title").text_content()
     assert new_title != initial_title, "work column did not swap on strip click"
+    expect(page.locator(".concept-strip__active-name")).to_have_text("Second entry · 2 of 4")
+    expect(page.locator(".concept-strip__node.is-active")).to_have_attribute(
+        "aria-label", "Second entry, primed, current"
+    )
+    expect(page.locator(".concept-strip__node.is-active text")).to_have_text("Second entry")
+    nodes.nth(3).click()
+    page.wait_for_timeout(700)
+    expect(page.locator(".concept-strip__active-name")).to_have_text("Entry 4 · 4 of 4")
+    expect(page.locator(".concept-strip__node.is-active")).to_have_attribute(
+        "aria-label", "Entry 4, locked, current"
+    )
+    expect(page.locator(".concept-strip__node.is-active text")).to_have_text("Entry 4")
 
 
 def test_strip_keyboard_nav(page: Page, base_url: str) -> None:

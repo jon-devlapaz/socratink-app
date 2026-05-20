@@ -384,6 +384,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
 
     card.click()
     expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
+    expect(page.locator("#concept-header-tags .map-badge.state")).to_have_count(0)
     expect(page.locator(".concept-page-b2__provenance")).to_have_text(
         "Shaped from your launch attempt, not verified against a source."
     )

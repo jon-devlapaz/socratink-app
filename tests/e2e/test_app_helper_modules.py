@@ -1271,6 +1271,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageRepairHtml.includes('concept-page-b2__repair'), 'concept page repair panel');
             assert(conceptPageRepairHtml.includes('data-repair-entry-id="repair"'), 'concept page repair save target');
             assert(conceptPageRepairHtml.includes('Put it in your words'), 'concept page repair panel uses generation language');
+            assert(conceptPageRepairHtml.includes('1 missing link to repair'), 'concept page repair shows missing link count');
+            assert(conceptPageRepairHtml.includes('Save this repair before you try from memory again.'), 'concept page repair explains retry order');
             assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
             const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
               { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
@@ -1357,6 +1359,55 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptStripHtml.includes('concept-strip__node--locked'), 'concept strip locked node');
             assert(conceptStripHtml.includes('Second &amp; unsafe · 2 of 3'), 'concept strip active label escapes');
             assert(conceptStripHtml.includes('aria-label="Second &amp; unsafe, ready to reconstruct, current"'), 'concept strip aria escapes');
+            const statefulConceptStripHtml = conceptPage.renderConceptStripHtml(
+              [
+                { id: 'repair-node', label: 'Repair node' },
+                { id: 'solid-node', label: 'Solid node' },
+                { id: 'ready-node' },
+              ],
+              { id: 'ready-node' },
+              2,
+              {
+                node_records: {
+                  'repair-node': {
+                    attempts: [{
+                      id: 'thin-1',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Thin answer.',
+                      classification: 'thin',
+                      gaps: [{ mechanism: 'missing link', correction: 'Name the missing link.' }],
+                      grader_version: 'qa',
+                    }],
+                    repairs: [],
+                  },
+                  'solid-node': {
+                    attempts: [
+                      { id: 'solid-1', at: '2026-05-14T10:00:00.000Z', user_text: 'first strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                      { id: 'solid-2', at: '2026-05-15T10:30:00.000Z', user_text: 'second strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                    ],
+                    study_revealed_at: '2026-05-14T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+            );
+            assert(statefulConceptStripHtml.includes('concept-strip__node--needs-repair'), 'concept strip separates repair state');
+            assert(statefulConceptStripHtml.includes('concept-strip__node--solidified'), 'concept strip separates solidified state');
+            assert(statefulConceptStripHtml.includes('Third entry · 3 of 3'), 'concept strip fallback active label is human');
+            assert(statefulConceptStripHtml.includes('aria-label="Third entry, ready to reconstruct, current"'), 'concept strip fallback aria label is human');
+            const fourthFallbackConceptStripHtml = conceptPage.renderConceptStripHtml(
+              [
+                { id: 'first-node' },
+                { id: 'second-node' },
+                { id: 'third-node' },
+                { id: 'fourth-node' },
+              ],
+              { id: 'fourth-node' },
+              3,
+              {},
+            );
+            assert(fourthFallbackConceptStripHtml.includes('Entry 4 · 4 of 4'), 'concept strip fourth fallback label is human');
+            assert(fourthFallbackConceptStripHtml.includes('aria-label="Entry 4, locked, current"'), 'concept strip fourth fallback aria label is human');
             const emptyConceptStripHtml = conceptPage.renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
             assert(emptyConceptStripHtml.includes('data-entry-id="core-thesis"'), 'concept strip empty synthetic node');
             assert(emptyConceptStripHtml.includes('<text x="60" y="80">core thesis</text>'), 'concept strip empty label');

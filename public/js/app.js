@@ -2160,6 +2160,24 @@ const App = (() => {
    * @param {Object} data - Parsed graphData
    * @param {Object} concept - The full concept object
    */
+  function routeEntryDisplayLabel(entry, index) {
+    const label = String(entry?.label || '').trim();
+    if (label) return label;
+    if (index === 0) return 'First entry';
+    if (index === 1) return 'Second entry';
+    if (index === 2) return 'Third entry';
+    return `Entry ${index + 1}`;
+  }
+
+  function inactiveStripNodeRadius(node) {
+    return (
+      node.classList.contains('concept-strip__node--primed')
+      || node.classList.contains('concept-strip__node--needs-repair')
+      || node.classList.contains('concept-strip__node--solidified')
+      || node.classList.contains('concept-strip__node--ready')
+    ) ? 7 : 6;
+  }
+
   function setActiveEntry(entryId, data, concept, training = null) {
     if (!data || !entryId) return;
     if (entryId === _activeEntryId) return;
@@ -2176,7 +2194,12 @@ const App = (() => {
     // Update strip node active class without full rebuild
     mountEl.querySelectorAll('.concept-strip__node').forEach((g) => {
       const isThisOne = g.getAttribute('data-entry-id') === entryId;
+      const idx = parseInt(g.getAttribute('data-entry-index'), 10);
+      const entry = Number.isInteger(idx) ? backbone[idx] : null;
+      const labelText = routeEntryDisplayLabel(entry, idx);
       g.classList.toggle('is-active', isThisOne);
+      const ariaBase = (g.getAttribute('aria-label') || labelText).replace(/, current$/, '');
+      g.setAttribute('aria-label', `${ariaBase}${isThisOne ? ', current' : ''}`);
       // Update label: active node shows its label; others hide it
       const text = g.querySelector('text');
       if (isThisOne && !text) {
@@ -2184,7 +2207,6 @@ const App = (() => {
         if (circle) {
           const cx = parseFloat(circle.getAttribute('cx'));
           const cy = parseFloat(circle.getAttribute('cy'));
-          const labelText = backbone[newIdx]?.label || `entry ${newIdx + 1}`;
           const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           t.setAttribute('x', cx);
           t.setAttribute('y', cy + 25);
@@ -2197,14 +2219,14 @@ const App = (() => {
       // Bump radius on active
       const circle = g.querySelector('circle');
       if (circle) {
-        circle.setAttribute('r', isThisOne ? 9 : (g.classList.contains('concept-strip__node--primed') ? 7 : 6));
+        circle.setAttribute('r', isThisOne ? 9 : inactiveStripNodeRadius(g));
       }
     });
 
     // Update strip overlay label
     const overlayName = mountEl.querySelector('.concept-strip__active-name');
     if (overlayName) {
-      overlayName.textContent = `${newEntry.label || 'entry'} · ${newIdx + 1} of ${backbone.length}`;
+      overlayName.textContent = `${routeEntryDisplayLabel(newEntry, newIdx)} · ${newIdx + 1} of ${backbone.length}`;
     }
 
     // Swap the work column with a fade transition
@@ -2318,7 +2340,7 @@ const App = (() => {
           if (!circle) return;
           const containerRect = stripContainer.getBoundingClientRect();
           const circleRect = circle.getBoundingClientRect();
-          tooltip.textContent = entry.label || `entry ${idx + 1}`;
+          tooltip.textContent = routeEntryDisplayLabel(entry, idx);
           tooltip.style.left = `${circleRect.left + circleRect.width / 2 - containerRect.left}px`;
           tooltip.style.top = `${circleRect.top - containerRect.top - 8}px`;
           tooltip.hidden = false;
@@ -2364,12 +2386,7 @@ const App = (() => {
     const tagsEl = document.getElementById('concept-header-tags');
     if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
     if (tagsEl) {
-      let tagsHtml = '';
-      const stateLabel = getHeroStateLabel(concept.state);
-      if (stateLabel && stateLabel !== 'no concepts yet') {
-        tagsHtml += `<span class="map-badge state" data-state="${escHtml(concept.state || '')}"><span class="map-badge-dot" aria-hidden="true"></span>${escHtml(stateLabel)}</span>`;
-      }
-      tagsEl.innerHTML = tagsHtml;
+      tagsEl.innerHTML = '';
     }
 
     renderConceptPageB2(mapContent, data, concept);

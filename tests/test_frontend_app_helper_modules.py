@@ -1149,6 +1149,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(repairHtml.includes('Needs repair'));
         assert.ok(!repairHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(!repairHtml.includes('nearby entries  all locked until first reconstruction'));
+        assert.ok(repairHtml.includes('nearby entries'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence'));
         assert.ok(repairHtml.includes('Your draft'));
         assert.ok(repairHtml.includes('Missing piece'));
@@ -1160,6 +1162,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
         assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
         assert.ok(repairHtml.includes('Put it in your words'));
+        assert.ok(repairHtml.includes('1 missing link to repair'));
+        assert.ok(repairHtml.includes('Save this repair before you try from memory again.'));
         assert.ok(repairHtml.includes('Write the missing link'));
         assert.ok(repairHtml.includes('Save repair'));
         const fallbackRepairHtml = renderActiveEntryHtml(
@@ -1236,6 +1240,57 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(stripHtml.includes('r="9"'));
         assert.ok(stripHtml.includes('Second &amp; unsafe · 2 of 3'));
         assert.ok(stripHtml.includes('aria-label="Second &amp; unsafe, ready to reconstruct, current"'));
+
+        const statefulStripHtml = renderConceptStripHtml(
+          [
+            { id: 'repair-node', label: 'Repair node' },
+            { id: 'solid-node', label: 'Solid node' },
+            { id: 'ready-node' },
+          ],
+          { id: 'ready-node' },
+          2,
+          {
+            node_records: {
+              'repair-node': {
+                attempts: [{
+                  id: 'thin-1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Thin answer.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'missing link', correction: 'Name the missing link.' }],
+                  grader_version: 'qa',
+                }],
+                repairs: [],
+              },
+              'solid-node': {
+                attempts: [
+                  { id: 'solid-1', at: '2026-05-14T10:00:00.000Z', user_text: 'first strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                  { id: 'solid-2', at: '2026-05-15T10:30:00.000Z', user_text: 'second strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                ],
+                study_revealed_at: '2026-05-14T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(statefulStripHtml.includes('concept-strip__node--needs-repair'));
+        assert.ok(statefulStripHtml.includes('concept-strip__node--solidified'));
+        assert.ok(statefulStripHtml.includes('Third entry · 3 of 3'));
+        assert.ok(statefulStripHtml.includes('aria-label="Third entry, ready to reconstruct, current"'));
+
+        const fourthFallbackStripHtml = renderConceptStripHtml(
+          [
+            { id: 'first-node' },
+            { id: 'second-node' },
+            { id: 'third-node' },
+            { id: 'fourth-node' },
+          ],
+          { id: 'fourth-node' },
+          3,
+          {}
+        );
+        assert.ok(fourthFallbackStripHtml.includes('Entry 4 · 4 of 4'));
+        assert.ok(fourthFallbackStripHtml.includes('aria-label="Entry 4, locked, current"'));
 
         const emptyStripHtml = renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
         assert.ok(emptyStripHtml.includes('data-entry-id="core-thesis"'));

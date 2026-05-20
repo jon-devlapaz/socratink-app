@@ -115,6 +115,22 @@ function entryLearnerState(backbone, index, training, options = {}) {
     : 'locked';
 }
 
+function entryDisplayLabel(entry, index) {
+  const label = String(entry?.label || '').trim();
+  if (label) return label;
+  if (index === 0) return 'First entry';
+  if (index === 1) return 'Second entry';
+  if (index === 2) return 'Third entry';
+  return `Entry ${index + 1}`;
+}
+
+function stripStateClass({ attempted, state, isReady }) {
+  if (!attempted) return isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked';
+  if (state === 'needs repair') return 'concept-strip__node--needs-repair';
+  if (state === 'solidified') return 'concept-strip__node--solidified';
+  return 'concept-strip__node--primed';
+}
+
 export function selectInitialConceptEntry(backbone, training = null, options = {}) {
   const actionableIndex = backbone.findIndex((_, index) => {
     const state = entryTraining(backbone, index, training, options).state;
@@ -146,16 +162,14 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
     const isActive = i === activeIdx;
     const cls = [
       'concept-strip__node',
-      isPrimed
-        ? 'concept-strip__node--primed'
-        : (isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked'),
+      stripStateClass({ attempted: isPrimed, state: derived.state, isReady }),
     ];
     if (isActive) cls.push('is-active');
     const r = isActive ? 9 : (isPrimed ? 7 : (isReady ? 7 : 6));
     const entryId = node.id || `entry-${i}`;
-    const label = escHtml(node.label || `entry ${i + 1}`);
+    const label = escHtml(entryDisplayLabel(node, i));
     const learnerState = entryLearnerState(backbone, i, training, options);
-    const ariaLabel = `${node.label || 'entry'}, ${learnerState}${isActive ? ', current' : ''}`;
+    const ariaLabel = `${entryDisplayLabel(node, i)}, ${learnerState}${isActive ? ', current' : ''}`;
     return `
       <g class="${cls.join(' ')}"
          role="button"
@@ -181,9 +195,7 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
     return `<line class="concept-strip__edge${isActiveEdge ? ' is-active' : ''}" x1="${x1}" y1="${strokeY}" x2="${x2}" y2="${strokeY}"></line>`;
   }).join('');
 
-  const stripActiveLabel = activeEntry.label
-    ? `${escHtml(activeEntry.label)} · ${activeIdx + 1} of ${totalNodes}`
-    : `${activeIdx + 1} of ${totalNodes}`;
+  const stripActiveLabel = `${escHtml(entryDisplayLabel(activeEntry, activeIdx))} · ${activeIdx + 1} of ${totalNodes}`;
 
   return `
     <div class="concept-strip">
@@ -301,10 +313,14 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   const nextAttemptButton = repairs.length
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}">Try from memory again</button>`
     : '';
+  const gapCount = gaps.length;
+  const gapCountText = `${gapCount} missing ${gapCount === 1 ? 'link' : 'links'} to repair`;
   return `
     <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
       <span class="eyebrow concept-page-b2__repair-eyebrow">Put it in your words</span>
       <h3>Write the missing link</h3>
+      <p class="concept-page-b2__repair-summary">${escHtml(gapCountText)}</p>
+      <p class="concept-page-b2__repair-helper">Save this repair before you try from memory again.</p>
       <ul class="concept-page-b2__repair-gaps">
         ${gaps.map((gap, index) => `
           <li>
@@ -443,7 +459,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const nearbyHtml = nearby.length
     ? `
       <section class="concept-page-b2__nearby">
-        <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries  all locked until first reconstruction</span>
+        <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries</span>
         <div class="concept-page-b2__nearby-list">
           ${nearby.map((n) => {
             const idx = backbone.indexOf(n);
@@ -452,7 +468,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
             return `
               <div class="concept-page-b2__nearby-item">
                 <span class="concept-page-b2__nearby-num">${escHtml(num)}</span>
-                <span>${escHtml(n.label || `entry ${idx + 1}`)}</span>
+                <span>${escHtml(entryDisplayLabel(n, idx))}</span>
                 <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
               </div>
             `;
