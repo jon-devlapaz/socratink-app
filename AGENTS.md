@@ -116,6 +116,25 @@ When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`)
 - **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it can surface unrelated Python flows. Skip it; go straight to `query_graph importers_of <file>`.
 
 ## Common development commands
+### Local AI review
+```bash
+# Read-only advisory reviewer backed by local Ollama DeepSeek R1.
+# Use canned modes; do not call raw Ollama for repo workflow review.
+scripts/local-ai-review.sh check
+scripts/local-ai-review.sh staged
+scripts/local-ai-review.sh diff
+scripts/local-ai-review.sh wip
+scripts/local-ai-review.sh publish-preview
+scripts/local-ai-review.sh smoke-local
+scripts/local-ai-review.sh pytest -- .venv/bin/pytest tests/path/test_file.py -q --tb=short
+```
+
+- This command is advisory only. Verify findings against repo files, tests, browser checks, or deterministic helpers before acting.
+- It must not replace `scripts/agent-push.py`, `scripts/no-mistakes-finish-dev.sh`, `scripts/git-wip-explain.sh`, `scripts/qa-smoke.sh`, or `./scripts/check-coverage.sh`.
+- Do not pipe its output into shell commands or use it to generate/modify ack tokens.
+- Keep Ollama local-only (`127.0.0.1` / `localhost`). Do not expose the local model server to LAN or public interfaces for this workflow.
+- The wrapper refuses likely secrets and oversized payloads; narrow the diff or test output instead of bypassing those checks.
+
 ### Environment setup
 ```bash
 bash scripts/bootstrap-python.sh
