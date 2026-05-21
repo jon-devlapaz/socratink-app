@@ -564,6 +564,43 @@ def generate_repair_reps(
     }
 
 
+def _find_target_subnode_context(knowledge_map: dict, node_id: str) -> dict | None:
+    clusters = knowledge_map.get("clusters") if isinstance(knowledge_map, dict) else None
+    if not isinstance(clusters, list):
+        return None
+    for cluster in clusters:
+        if not isinstance(cluster, dict):
+            continue
+        subnodes = cluster.get("subnodes")
+        if not isinstance(subnodes, list):
+            continue
+        for subnode in subnodes:
+            if isinstance(subnode, dict) and subnode.get("id") == node_id:
+                return subnode
+    return None
+
+
+def _format_learner_scaffold_for_drill(scaffold: object) -> str:
+    if not isinstance(scaffold, dict):
+        return ""
+    ordered_keys = (
+        "bloom_level",
+        "learner_move",
+        "task_label",
+        "task_cue",
+        "entry_prompt",
+        "expected_shape",
+        "blank_hint",
+        "evidence_goal",
+    )
+    lines = []
+    for key in ordered_keys:
+        value = scaffold.get(key)
+        if isinstance(value, str) and value.strip():
+            lines.append(f"{key}: {value.strip()}")
+    return "\n".join(lines)
+
+
 def drill_chat(
     *,
     knowledge_map: dict,
@@ -643,9 +680,29 @@ def drill_chat(
     system_prompt_extras += (
         f"Node ID: {node_id}\nNode Label: {node_label}\nMechanism: {node_mechanism}\n"
     )
+    scaffold_text = _format_learner_scaffold_for_drill(
+        (_find_target_subnode_context(pruned_context, node_id) or {}).get("learner_scaffold")
+    )
+    if scaffold_text:
+        system_prompt_extras += (
+            "\n### Learner Scaffold (TASK CONTRACT — DO NOT SHOW BLOOM LABELS)\n"
+            f"{scaffold_text}\n"
+            "Use `evidence_goal` as the intended scope of this node. The scaffold may shape "
+            "the opening question and evaluation target, but it must not reveal or replace "
+            "the mechanism answer key.\n"
+        )
 
     if drill_mode == "cold_attempt":
-        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question on init; do not reveal the mechanism. On turn, evaluate the learner's first genuine generative attempt against the rubric and populate classification, score_eligible, response_tier, response_band, and tier_reason. If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess with classification/tier null."
+        system_prompt_extras += (
+            "\nMODE: COLD ATTEMPT. Ask an open exploratory question on init; do not reveal the mechanism. "
+            "On turn, evaluate the learner's first genuine generative attempt against the rubric and populate "
+            "classification, score_eligible, response_tier, response_band, and tier_reason. "
+            "If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. "
+            "If metadata.learner_goal is present, use `metadata.learner_goal` only to frame relevance and why this node matters for the learner's goal. "
+            "Do not grade against the broad learner goal; grade only against the Target Node mechanism and the Learner Scaffold evidence_goal when present. "
+            "Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. "
+            "If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess with classification/tier null."
+        )
     else:
         system_prompt_extras += f"\nMODE: RE-DRILL (Attempt {re_drill_count + 1}). Demand multi-step causal reconstruction. Vary prompt angle (e.g. self-explanation, summarization, teaching, problem-posing). Apply concrete rubric: Does response contain (a) initiating condition, (b) causal transition, and (c) resulting state? Err toward false negatives."
         if re_drill_count >= 2:

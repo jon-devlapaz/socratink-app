@@ -23,7 +23,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=111">
+  <link rel="stylesheet" href="/css/index.css?v=118">
   <link rel="stylesheet" href="css/drill-chamber.css?v=5">
 </head>
 
@@ -359,9 +359,10 @@
         </div>
 
         <p class="ig-concept-mark">
-          <span class="ig-concept-mark__key">on </span><span
+          <span class="ig-concept-mark__key">Concept:</span><span
             class="ig-concept-mark__name" id="launch-pad-concept-name"></span>
         </p>
+        <p class="ig-concept-goal" id="launch-pad-concept-goal" hidden></p>
 
         <h1 class="ig-title" id="launch-pad-title" tabindex="-1">
           What do you already think<br>is inside this concept?
@@ -414,8 +415,24 @@
             <h2 class="concept-header-title" id="concept-header-title"></h2>
             <div class="concept-header-tags" id="concept-header-tags"></div>
           </div>
+          <div class="concept-header-actions">
+            <button
+              class="concept-view-switch"
+              id="concept-view-switch"
+              type="button"
+              data-map-mode="constellation"
+              aria-controls="concept-constellation-content"
+              aria-pressed="false"
+            >Constellation</button>
+          </div>
         </header>
         <div id="map-content"></div>
+        <section
+          id="concept-constellation-content"
+          class="concept-constellation"
+          aria-label="Concept constellation"
+          hidden
+        ></section>
       </div>
     </section>
 
@@ -462,7 +479,7 @@
   <div id="tooltip-root" aria-hidden="true"></div>
 
   <script src="js/drill-chamber.js?v=6"></script>
-  <script type="module" src="js/app.js?v=126"></script>
+  <script type="module" src="js/app.js?v=130"></script>
   <script src="js/intro-particles.js?v=8"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=5"></script>

@@ -20,11 +20,13 @@ import {
 } from './app-hero.js';
 import { createCountdownTimer } from './app-timer.js';
 import {
+  deriveConceptEntries,
   findConceptEntryById,
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=8';
+} from './concept-page-view.js?v=9';
+import { renderConceptConstellationHtml } from './concept-constellation-view.js?v=3';
 import { deriveConceptBadge } from './concept-status.js';
 import {
   getDefaultPhaseBSessionState,
@@ -71,7 +73,11 @@ import {
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
 import { AudioFX } from './audio.js?v=4';
-import { showLaunchPad as _showLaunchPad, runLaunchPadAction as _runLaunchPadAction } from './launch-pad.js';
+import {
+  buildPendingShellFromDoorInput,
+  showLaunchPad as _showLaunchPad,
+  runLaunchPadAction as _runLaunchPadAction,
+} from './launch-pad.js';
 import { emitTelemetry } from './telemetry.js';
 
 import {
@@ -99,6 +105,7 @@ const App = (() => {
   let drillSessionTimeLimitSeconds = null;
   let firstColdAttemptCreedShownThisSession = false;
   let conceptListRenderSeq = 0;
+  let currentMapMode = 'route';
 
   function applyRuntimeConfig(config = {}) {
     const limitSeconds = Number(config.drill_session_time_limit_seconds);
@@ -433,6 +440,10 @@ const App = (() => {
     document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
   }
 
+  function conceptViewSwitchButton() {
+    return document.getElementById('concept-view-switch');
+  }
+
   function renderHero(concept) {
     if (!concept) {
       titleEl.textContent = 'What do you want to understand?';
@@ -504,8 +515,9 @@ const App = (() => {
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       const conceptField = document.getElementById('hero-single-input-field');
-      const name = (conceptField ? conceptField.value : '').trim();
-      if (!name) return false;
+      const rawName = (conceptField ? conceptField.value : '').trim();
+      const shell = buildPendingShellFromDoorInput(rawName);
+      if (!shell.name) return false;
 
       const sourcePayload = App._pendingDoorSource || null;
 
@@ -521,8 +533,10 @@ const App = (() => {
           has_source: true,
           source_type: sourcePayload?.type || null,
           sourceless: false,
+          name_normalized: shell.name !== rawName,
         });
-        runSourceAttachedSubmit({ name, source: sourcePayload });
+        /* c8 ignore next -- source-attached submit enters the live extraction path; source UI contracts are covered separately. */
+        runSourceAttachedSubmit({ name: shell.name, source: sourcePayload });
         return false;
       }
 
@@ -532,7 +546,7 @@ const App = (() => {
       try {
         sessionStorage.setItem(
           'socratink:pendingShell',
-          JSON.stringify({ name, ts: Date.now() }),
+          JSON.stringify({ ...shell, ts: Date.now() }),
         );
       } catch (err) {
         // sessionStorage unavailable (disabled by the browser, quota exceeded, etc.)
@@ -549,6 +563,7 @@ const App = (() => {
         has_source: false,
         source_type: null,
         sourceless: true,
+        name_normalized: shell.name !== rawName,
       });
       App.showLaunchPad();
       return false;
@@ -797,7 +812,7 @@ const App = (() => {
       try {
         return [conceptId, await trainingStore.loadTraining(conceptId)];
       } catch (err) {
-        /* c8 ignore next -- defensive corrupt localStorage branch */
+        /* c8 ignore next 2 -- defensive corrupt localStorage branch */
         console.warn('Training record unavailable for sidebar concept.', conceptId, err);
         return [conceptId, null];
       }
@@ -1233,6 +1248,9 @@ const App = (() => {
     const jsonPayload = { ...map, metadata: { ...(map.metadata || {}) } };
     jsonPayload.metadata.starting_map_context = startingMapContext;
     jsonPayload.metadata.map_maturity = 'provisional';
+    if (shell.goal) {
+      jsonPayload.metadata.learner_goal = shell.goal;
+    }
 
     const concept = {
       id,
@@ -1244,6 +1262,7 @@ const App = (() => {
       contentType: null,
       contentFilename: null,
       sourceUrl: null,
+      learnerGoal: shell.goal || '',
       startingMapContext,
       graphData: JSON.stringify(jsonPayload),
     };
@@ -1788,6 +1807,25 @@ const App = (() => {
   // Module-level state: which backbone entry is currently shown in the
   // work column. Set on initial mount and updated by setActiveEntry.
   let _activeEntryId = null;
+  const routeAttemptDrafts = new Map();
+
+  function routeAttemptDraftKey(entryId) {
+    return `${getActiveId() || 'concept'}:${entryId}`;
+  }
+
+  function captureActiveEntryDraft() {
+    if (!_activeEntryId) return;
+    const input = document.querySelector('.concept-page-b2__attempt-input');
+    if (!input) return;
+    routeAttemptDrafts.set(routeAttemptDraftKey(_activeEntryId), input.value || '');
+  }
+
+  function restoreActiveEntryDraft(entryId) {
+    const input = document.querySelector('.concept-page-b2__attempt-input');
+    const key = routeAttemptDraftKey(entryId);
+    if (!input || !routeAttemptDrafts.has(key)) return;
+    input.value = routeAttemptDrafts.get(key) || '';
+  }
 
   /**
    * Wire event handlers on the work column after a swap or initial mount.
@@ -1807,6 +1845,7 @@ const App = (() => {
         }
         const inlineAttempt = docEl.querySelector('.concept-page-b2__attempt-input');
         if (inlineAttempt) {
+          /* c8 ignore next 2 -- defensive: CTA is not rendered while the inline attempt is present */
           inlineAttempt.focus();
           return;
         }
@@ -1860,7 +1899,7 @@ const App = (() => {
 
   function renderActiveEntryWorkColumn(entryId, concept, data, training = null, options = {}) {
     const docEl = document.querySelector('.concept-page-b2__doc');
-    const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
+    const backbone = deriveConceptEntries(data);
     const fallbackMatch = entryId === 'core-thesis' && !backbone.length
       ? selectInitialConceptEntry(backbone, training)
       : null;
@@ -1890,7 +1929,7 @@ const App = (() => {
   async function revealStudyForEntry(entryId, concept, data) {
     if (!entryId || !concept?.id) return;
     const graphData = parseConceptGraphData(concept) || data || {};
-    const backbone = Array.isArray(graphData.backbone) ? graphData.backbone : [];
+    const backbone = deriveConceptEntries(graphData);
     const entry = findConceptEntryById(backbone, entryId)?.entry || null;
     try {
       const loadedTraining = await trainingStore.loadTraining(concept.id);
@@ -1940,7 +1979,6 @@ const App = (() => {
     if (!entryId || !concept?.id) return;
     if (userText.trim() === '') {
       if (errorEl) {
-        errorEl.textContent = 'Put down the part you can explain, even if it is incomplete.';
         errorEl.hidden = false;
       }
       input?.focus?.();
@@ -1950,7 +1988,7 @@ const App = (() => {
     button.disabled = true;
 
     const graphData = parseConceptGraphData(concept) || data || {};
-    const backbone = Array.isArray(graphData.backbone) ? graphData.backbone : [];
+    const backbone = deriveConceptEntries(graphData);
     const match = findConceptEntryById(backbone, entryId);
     const entry = match?.entry || {};
     const nodeLabel = entry.label || concept.name || 'Concept entry';
@@ -2174,7 +2212,7 @@ const App = (() => {
         if (freshData?.clusters) data.clusters = freshData.clusters;
         if (freshData?.relationships) data.relationships = freshData.relationships;
       }
-      const backbone = Array.isArray(freshData?.backbone) ? freshData.backbone : [];
+      const backbone = deriveConceptEntries(freshData);
       const activeIdx = Math.max(
         0,
         backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
@@ -2202,7 +2240,7 @@ const App = (() => {
     if (!data || !entryId) return;
     if (entryId === _activeEntryId) return;
 
-    const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+    const backbone = deriveConceptEntries(data);
     const activeMatch = findConceptEntryById(backbone, entryId);
     if (!activeMatch) return;
     const newEntry = activeMatch.entry;
@@ -2214,11 +2252,13 @@ const App = (() => {
     // Swap the work column with a fade transition
     const doc = mountEl.querySelector('.concept-page-b2__doc');
     if (!doc) return;
+    captureActiveEntryDraft();
     doc.classList.add('is-fading-out');
     setTimeout(() => {
       doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training);
       rebindActiveEntryHandlers(doc, concept, data, training);
       bindConceptRouteMarginHandlers(mountEl, data, concept, training);
+      restoreActiveEntryDraft(entryId);
       doc.classList.remove('is-fading-out');
       void doc.offsetWidth; // force reflow so the fade-in animates
       doc.classList.add('is-fading-in');
@@ -2226,6 +2266,7 @@ const App = (() => {
     }, 240);
 
     _activeEntryId = entryId;
+    updateConstellationActiveEntry(entryId);
   }
 
   function bindConceptRouteMarginHandlers(mountEl, data, concept, training = null) {
@@ -2255,7 +2296,7 @@ const App = (() => {
 
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
 
-      const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
+      const backbone = deriveConceptEntries(data);
       if (!backbone.length) return;
       e.preventDefault();
       const dir = e.key === 'ArrowUp' ? -1 : 1;
@@ -2273,6 +2314,37 @@ const App = (() => {
     });
   }
 
+  function renderConceptConstellationView(mountEl, data, concept, training = null, options = {}) {
+    if (!mountEl || !data) return;
+    const activeId = options?.activeEntryId || _activeEntryId;
+    mountEl.innerHTML = renderConceptConstellationHtml(data, {
+      concept,
+      training,
+      activeEntryId: activeId,
+    });
+    updateConstellationActiveEntry(activeId);
+  }
+
+  function updateConstellationActiveEntry(entryId) {
+    const mountEl = document.getElementById('concept-constellation-content');
+    if (!mountEl || !entryId) return;
+    mountEl.querySelectorAll('.concept-constellation__node').forEach((node) => {
+      const isActive = node.getAttribute('data-entry-id') === entryId;
+      node.classList.toggle('is-active', isActive);
+      if (isActive) {
+        const stateEl = mountEl.querySelector('[data-constellation-selected-state]');
+        const titleEl = mountEl.querySelector('[data-constellation-selected-name]');
+        const purposeEl = mountEl.querySelector('[data-constellation-selected-purpose]');
+        if (stateEl) stateEl.textContent = node.getAttribute('data-state-label') || '';
+        if (titleEl) titleEl.textContent = node.getAttribute('data-selected-name') || '';
+        if (purposeEl) purposeEl.textContent = node.getAttribute('data-selected-purpose') || '';
+      }
+    });
+    mountEl.querySelectorAll('.concept-constellation__edge').forEach((edge) => {
+      edge.classList.toggle('is-lit', edge.getAttribute('data-edge-evidence') === 'true');
+    });
+  }
+
   /**
    * Render the B-2 route-margin concept page layout into #map-content.
    * Replaces the prior Route view card stack.
@@ -2283,7 +2355,7 @@ const App = (() => {
    */
   function renderConceptPageB2(mountEl, data, concept, training = null, options = {}) {
     if (!mountEl || !data) return;
-    const backbone = Array.isArray(data.backbone) ? data.backbone : [];
+    const backbone = deriveConceptEntries(data);
     const preferredEntryId = options?.activeEntryId || null;
     const preferredEntry = preferredEntryId === 'core-thesis' && !backbone.length
       ? selectInitialConceptEntry(backbone, training)
@@ -2296,7 +2368,7 @@ const App = (() => {
     } = preferredEntry || selectInitialConceptEntry(backbone, training);
     const renderBackbone = backbone.length ? backbone : [activeEntry];
 
-    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training);
+    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training, options);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
@@ -2320,6 +2392,7 @@ const App = (() => {
   function showMapView(concept, opts = {}) {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
+    const constellationContent = document.getElementById('concept-constellation-content');
     const heroCard = document.querySelector('.hero-card');
     const libraryView = document.getElementById('library-view');
 
@@ -2352,12 +2425,14 @@ const App = (() => {
     }
 
     renderConceptPageB2(mapContent, data, concept);
+    renderConceptConstellationView(constellationContent, data, concept, null, { activeEntryId: _activeEntryId });
     // Keep first paint synchronous; training evidence re-renders when available.
     void trainingStore.loadTraining(concept.id)
       .then((training) => {
         if (!training) return;
         if (getActiveId() !== concept.id || document.body.dataset.mapOpen !== 'true') return;
         renderConceptPageB2(mapContent, data, concept, training);
+        renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
       })
       .catch((err) => {
         /* c8 ignore next -- defensive localStorage failure branch */
@@ -2379,7 +2454,7 @@ const App = (() => {
     heroCard.style.display = 'none';
     mapView.classList.add('visible');
     setMapShellOpen(true);
-    if (mapContent) mapContent.hidden = false;
+    setMapMode('route');
     if (window.innerWidth < 900) closeDrawer();
     restoreStudyResume(concept, data);
     // Skeleton-line is opt-in via opts.fromLaunchPad (default off). Centralised
@@ -2422,19 +2497,65 @@ const App = (() => {
     if (launchPadView) launchPadView.setAttribute('hidden', '');
   }
 
-  // setMapMode: formerly switched between the Route and Graph views.
-  // The Graph view has been deleted (strip-as-nav port, 2026-05-11).
-  // Retained as a no-op so call sites in startDrill, restoreStudyResume,
-  // etc. continue to compile without a cascade of edits; they will be
-  // cleaned up when those flows are refactored in a follow-up.
-  function setMapMode() {
+  function setMapMode(mode = 'route') {
+    const nextMode = mode === 'constellation' ? 'constellation' : 'route';
     const mapContent = document.getElementById('map-content');
-    if (mapContent) mapContent.hidden = false;
+    const constellationContent = document.getElementById('concept-constellation-content');
+    const mapView = document.getElementById('map-view');
+    const switchBtn = conceptViewSwitchButton();
+
+    currentMapMode = nextMode;
+    if (mapContent) mapContent.hidden = nextMode !== 'route';
+    if (constellationContent) constellationContent.hidden = nextMode !== 'constellation';
+    if (mapView) mapView.dataset.mapMode = nextMode;
+    if (switchBtn) {
+      const showingConstellation = nextMode === 'constellation';
+      switchBtn.textContent = showingConstellation ? 'Return to route' : 'Constellation';
+      switchBtn.dataset.mapMode = showingConstellation ? 'route' : 'constellation';
+      switchBtn.setAttribute('aria-pressed', String(showingConstellation));
+      switchBtn.setAttribute('aria-controls', showingConstellation ? 'map-content' : 'concept-constellation-content');
+    }
   }
 
-  // bindMapModeControls: no longer needed (toggle markup deleted).
-  // Retained as a no-op so the initialization block can stay untouched.
-  function bindMapModeControls() {}
+  function bindMapModeControls() {
+    document.addEventListener('click', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const constellationNode = target?.closest('.concept-constellation__node[data-entry-id]') || null;
+      if (constellationNode) {
+        const entryId = constellationNode.getAttribute('data-entry-id');
+        const state = constellationNode.getAttribute('data-state');
+        if (state === 'locked') return;
+        const concept = getActiveConcept();
+        const data = parseConceptGraphData(concept);
+        if (entryId && data && concept) {
+          event.preventDefault();
+          void trainingStore.loadTraining(concept.id)
+            .then((training) => setActiveEntry(entryId, data, concept, training))
+            .catch(() => setActiveEntry(entryId, data, concept, null));
+        }
+        return;
+      }
+
+      const button = target
+        ? target.closest('[data-map-mode]')
+        : null;
+      if (!button) return;
+      const mode = button.getAttribute('data-map-mode');
+      if (mode === 'route' || mode === 'constellation') {
+        event.preventDefault();
+        setMapMode(mode);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = event.target instanceof Element ? event.target : null;
+      const constellationNode = target?.closest('.concept-constellation__node[data-entry-id]') || null;
+      if (!constellationNode) return;
+      event.preventDefault();
+      constellationNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    });
+  }
 
   function setNavActive(id) {
     currentPrimaryNav = id;

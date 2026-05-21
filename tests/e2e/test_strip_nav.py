@@ -149,16 +149,16 @@ def test_route_margin_click_swaps_work_column(page: Page, base_url: str) -> None
     new_title = page.locator(".concept-page-b2__entry-title").text_content()
     assert new_title != initial_title, "work column did not swap on route-margin click"
     expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
-        "aria-label", "Core Logic, primed, current"
+        "aria-label", "Explain how, primed, current"
     )
-    expect(page.locator(".concept-page-b2__route-item.is-active .concept-page-b2__route-title")).to_have_text("Core Logic")
+    expect(page.locator(".concept-page-b2__route-item.is-active .concept-page-b2__route-title")).to_have_text("Explain how")
     items = page.locator(".concept-page-b2__route-item")
     items.nth(3).click()
     page.wait_for_timeout(700)
     expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
-        "aria-label", "Transfer, locked, current"
+        "aria-label", "Test the edge, locked, current"
     )
-    expect(page.locator(".concept-page-b2__route-item.is-active .concept-page-b2__route-title")).to_have_text("Transfer")
+    expect(page.locator(".concept-page-b2__route-item.is-active .concept-page-b2__route-title")).to_have_text("Test the edge")
 
 
 def test_route_margin_keyboard_nav(page: Page, base_url: str) -> None:

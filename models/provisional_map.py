@@ -42,10 +42,29 @@ class Metadata(BaseModel):
     low_density: bool = False
 
 
+class LearnerScaffold(BaseModel):
+    """Non-answer task shape for the learner's local reconstruction attempt.
+
+    Bloom is internal scaffolding metadata. The learner sees plain task labels,
+    prompts, and hints, never the taxonomy label itself.
+    """
+
+    bloom_level: Literal["remember", "understand", "apply"]
+    learner_move: str
+    task_label: str
+    task_cue: str
+    entry_prompt: str
+    expected_shape: str
+    sentence_starter: str
+    blank_hint: str
+    evidence_goal: str
+
+
 class Subnode(BaseModel):
     id: str
     label: str
     mechanism: str
+    learner_scaffold: Optional[LearnerScaffold] = None
     drill_status: Optional[str] = None
     gap_type: Optional[str] = None
     gap_description: Optional[str] = None

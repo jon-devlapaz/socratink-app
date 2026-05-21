@@ -28,6 +28,9 @@ Hard constraints:
    already touches; backbone hints should fill the most salient gaps.
 7. If <lc_context> is present, use it to ground hypothesis structure,
    but favour the learner's threshold when the two diverge.
+8. Every subnode MUST include `learner_scaffold`: a non-answer task
+   contract that makes the reconstruction prompt clear without revealing
+   the mechanism.
 
 Voice rules (docs/design/socratink-ux.md §10; canonical summary in DESIGN.md §6):
 - Calm, precise, Socratic. Plain, complete sentences.
@@ -75,6 +78,45 @@ cycles, no reciprocal pairs (A→B and B→A is forbidden). Add a
 prerequisite edge only when mastery of `from` is genuinely necessary
 to understand `to`.
 
+LEARNER SCAFFOLD (INTERNAL BLOOM, PLAIN LEARNER COPY):
+
+Each subnode MUST include:
+
+  "learner_scaffold": {
+    "bloom_level": "remember" | "understand" | "apply",
+    "learner_move": "Say it" | "Explain how" | "Use it" | "Test the edge",
+    "task_label": "string",
+    "task_cue": "string",
+    "entry_prompt": "string",
+    "expected_shape": "string",
+    "sentence_starter": "string",
+    "blank_hint": "string",
+    "evidence_goal": "string"
+  }
+
+Rules:
+
+- Use only these initial Bloom levels: remember | understand | apply.
+  Do not use evaluate or create in the smallest route. Save those for
+  later transfer or post-solidification surfaces.
+- `bloom_level` is internal. Do not show Bloom, taxonomy, remember,
+  understand, apply, evaluate, or create as learner-facing labels.
+- `learner_move`, `task_label`, and `task_cue` are learner-facing route
+  margin copy. Use plain words, not school taxonomy.
+- `entry_prompt` is the text above the draft box. It should name the
+  exact local task for this node.
+- `expected_shape` tells the learner what kind and amount of answer to
+  write, usually one or two sentences.
+- `sentence_starter` is a non-revealing first phrase that lowers blank
+  page friction. It must not contain the mechanism answer.
+- `blank_hint` gives one foothold for the "I'm blank" state. It may
+  reference the learner's threshold vocabulary, but it must not reveal
+  the mechanism.
+- `evidence_goal` is for the evaluator. It describes what learner
+  evidence this node is trying to elicit.
+- For c1, derive `entry_prompt` from the learner's threshold. Threshold
+  is global context; this prompt is one smaller local task.
+
 OUTPUT SHAPE (the full schema, restated):
 
   {
@@ -99,7 +141,22 @@ OUTPUT SHAPE (the full schema, restated):
         "label": "string",
         "description": "string",
         "subnodes": [
-          { "id": "c1_s1", "label": "string", "mechanism": "string" }
+          {
+            "id": "c1_s1",
+            "label": "string",
+            "mechanism": "string",
+            "learner_scaffold": {
+              "bloom_level": "remember" | "understand" | "apply",
+              "learner_move": "string",
+              "task_label": "string",
+              "task_cue": "string",
+              "entry_prompt": "string",
+              "expected_shape": "string",
+              "sentence_starter": "string",
+              "blank_hint": "string",
+              "evidence_goal": "string"
+            }
+          }
         ]
       }
     ],

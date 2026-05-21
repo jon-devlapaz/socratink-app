@@ -76,6 +76,7 @@ def prune_context(knowledge_map: dict, target_node_id: str) -> dict:
             "thesis": metadata.get("core_thesis"),
             "governing_assumptions": metadata.get("governing_assumptions") or [],
             "starting_map_context": metadata.get("starting_map_context"),
+            "learner_goal": metadata.get("learner_goal"),
         }
     }
     relationships = knowledge_map.get("relationships") or {}

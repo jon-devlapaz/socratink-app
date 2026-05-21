@@ -194,6 +194,7 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     // motion preferences) don't trigger a board re-render. RAF
     // throttling helps but the wake-up itself is wasted work.
     window.addEventListener('storage', (e) => {
+      /* c8 ignore start -- browser cross-tab storage events are verified by smoke behavior */
       if (
         e.key === STORE_KEY
         || e.key === null
@@ -201,6 +202,7 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
       ) {
         scheduleRefresh();
       }
+      /* c8 ignore stop */
     });
     window.addEventListener('focus', scheduleRefresh);
     document.addEventListener('visibilitychange', () => {

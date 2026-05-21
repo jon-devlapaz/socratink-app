@@ -124,6 +124,111 @@ function entryDisplayLabel(entry, index) {
   return `Entry ${index + 1}`;
 }
 
+function cleanScaffoldText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeLearnerScaffold(scaffold) {
+  if (!scaffold || typeof scaffold !== 'object') return null;
+  const normalized = {
+    bloom_level: cleanScaffoldText(scaffold.bloom_level),
+    learner_move: cleanScaffoldText(scaffold.learner_move),
+    task_label: cleanScaffoldText(scaffold.task_label),
+    task_cue: cleanScaffoldText(scaffold.task_cue),
+    entry_prompt: cleanScaffoldText(scaffold.entry_prompt),
+    expected_shape: cleanScaffoldText(scaffold.expected_shape),
+    sentence_starter: cleanScaffoldText(scaffold.sentence_starter),
+    blank_hint: cleanScaffoldText(scaffold.blank_hint),
+    evidence_goal: cleanScaffoldText(scaffold.evidence_goal),
+  };
+  return Object.values(normalized).some(Boolean) ? normalized : null;
+}
+
+function entryScaffold(entry) {
+  return normalizeLearnerScaffold(entry?.learner_scaffold);
+}
+
+function learnerGoalForConcept(concept, data) {
+  return cleanScaffoldText(concept?.learnerGoal)
+    || cleanScaffoldText(data?.metadata?.learner_goal);
+}
+
+function attemptPlaceholderForScaffold(scaffold) {
+  if (!scaffold) return 'Draft what you can recall. Messy is useful.';
+  return 'Draft your starting guess: what it does, what it connects to, or why it matters.';
+}
+
+function blankHintForScaffold(scaffold) {
+  if (!scaffold) return 'Start with a word, a rough picture, or the part that feels fuzzy.';
+  return 'Not sure yet? Type what you think it might do, or list a few terms you recognize.';
+}
+
+export function deriveConceptEntries(data = {}) {
+  const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
+  const backboneEntries = backbone.map((entry, index) => ({
+    ...entry,
+    label: cleanScaffoldText(entry?.label) || cleanScaffoldText(entry?.principle) || entryDisplayLabel(entry, index),
+    learner_scaffold: normalizeLearnerScaffold(entry?.learner_scaffold),
+  }));
+
+  const clusterEntries = (Array.isArray(data?.clusters) ? data.clusters : []).flatMap((cluster, clusterIndex) => {
+    const subnodes = Array.isArray(cluster?.subnodes) ? cluster.subnodes : [];
+    return subnodes.map((subnode, subnodeIndex) => {
+      const scaffold = normalizeLearnerScaffold(subnode?.learner_scaffold || cluster?.learner_scaffold);
+      const fallbackId = cluster?.id ? `${cluster.id}_s${subnodeIndex + 1}` : `entry-${clusterIndex}-${subnodeIndex}`;
+      const label = (
+        scaffold?.task_label
+        || cleanScaffoldText(subnode?.label)
+        || cleanScaffoldText(cluster?.label)
+        || cleanScaffoldText(cluster?.title)
+        || entryDisplayLabel(subnode, clusterIndex)
+      );
+      return {
+        ...subnode,
+        id: cleanScaffoldText(subnode?.id) || fallbackId,
+        label,
+        purpose: cleanScaffoldText(subnode?.purpose)
+          || cleanScaffoldText(cluster?.description)
+          || scaffold?.task_cue
+          || '',
+        study_note: subnode?.study_note || subnode?.study_material || subnode?.mechanism,
+        cluster_id: cluster?.id || null,
+        cluster_label: cluster?.label || cluster?.title || '',
+        learner_scaffold: scaffold,
+      };
+    });
+  });
+
+  if (clusterEntries.length && (!backboneEntries.length || clusterEntries.some((entry) => entry.learner_scaffold))) {
+    return clusterEntries;
+  }
+  return backboneEntries;
+}
+
+export function deriveConceptEntryViewState(backbone, index, training = null, options = {}) {
+  const entries = Array.isArray(backbone) ? backbone : [];
+  const safeIndex = Number.isInteger(index) && index >= 0 ? index : 0;
+  const entry = entries[safeIndex] || null;
+  /* c8 ignore next 7 -- defensive public-helper branch covered by Node module tests; the browser route always has a selected fallback entry. */
+  if (!entry) {
+    return {
+      id: getConceptEntryId(null, safeIndex),
+      attempted: false,
+      state: 'locked',
+      nextAction: null,
+    };
+  }
+  const id = getConceptEntryId(entry, safeIndex);
+  const derived = entryTraining(entries, safeIndex, training, options);
+  const state = entryLearnerState(entries, safeIndex, training, options);
+  return {
+    id,
+    attempted: Boolean(derived.attempted),
+    state,
+    nextAction: state === 'locked' ? null : (derived.next_action || null),
+  };
+}
+
 function stripStateClass({ attempted, state, isReady }) {
   if (!attempted) return isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked';
   if (state === 'needs repair') return 'concept-strip__node--needs-repair';
@@ -217,7 +322,7 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
 function activeEntryEyebrow({ isBlocked, attempted, state, nextAction }) {
   if (isBlocked) return 'locked';
   if (!attempted) return 'Start from memory';
-  if (nextAction === 'study') return 'Study the gap';
+  if (nextAction === 'study') return 'Draft saved';
   if (nextAction === 'repair') return 'Needs repair';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
   if (state === 'solidified') return 'solidified';
@@ -229,7 +334,7 @@ function activeEntryEyebrow({ isBlocked, attempted, state, nextAction }) {
 
 function activeEntryCtaLabel({ attempted, state, nextAction }) {
   if (!attempted) return 'Draft from memory';
-  if (nextAction === 'study') return 'Compare with notes';
+  if (nextAction === 'study') return 'Reveal notes and compare';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Write it again';
   if (state === 'solidified') return 'Reconstruct from memory';
   if (state === 'primed' && (nextAction === 'spaced_attempt' || nextAction === 'review')) {
@@ -273,9 +378,17 @@ function renderEvidenceArtifactHtml(derived) {
   const attempt = latestAttemptForRecord(derived.record);
   if (!attempt?.user_text) return '';
   const hasStudyReveal = Boolean(derived.record?.study_revealed_at);
+  const isStudyGate = derived.next_action === 'study' && !hasStudyReveal;
   const gaps = Array.isArray(attempt.gaps) && attempt.gaps.length
     ? attempt.gaps
     : (Array.isArray(derived.gaps) ? derived.gaps : []);
+  const bridgeHtml = isStudyGate
+    ? `
+      <p class="concept-page-b2__evidence-bridge">
+        Your words made the gap inspectable. The next step compares them with the notes.
+      </p>
+    `
+    : '';
   const hingeHtml = hasStudyReveal
     ? `
       <div class="concept-page-b2__evidence-hinge">
@@ -296,8 +409,9 @@ function renderEvidenceArtifactHtml(derived) {
 
   return `
     <section class="concept-page-b2__evidence" aria-label="Learner draft evidence">
-      <span class="eyebrow concept-page-b2__evidence-eyebrow">Your draft</span>
+      <span class="eyebrow concept-page-b2__evidence-eyebrow">${isStudyGate ? 'Your memory draft' : 'Your draft'}</span>
       <blockquote>${escHtml(attempt.user_text)}</blockquote>
+      ${bridgeHtml}
       ${hingeHtml}
     </section>
   `;
@@ -344,31 +458,55 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   `;
 }
 
-function renderAttemptPanelHtml(activeEntryId) {
+function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
+  const scaffold = options.useScaffold ? entryScaffold(activeEntry) : null;
+  const learnerGoal = cleanScaffoldText(options.learnerGoal);
+  const targetLabel = cleanScaffoldText(scaffold?.task_label) || cleanScaffoldText(activeEntry?.label) || 'this entry';
+  const heading = scaffold?.entry_prompt || 'Draft what you can recall';
+  const helperParts = [
+    learnerGoal && scaffold
+      ? `Goal: ${learnerGoal}. First make a starting guess for ${targetLabel}.`
+      : '',
+    scaffold?.expected_shape || '',
+  ].filter(Boolean);
+  const helper = helperParts.join(' ');
+  const placeholder = attemptPlaceholderForScaffold(scaffold);
+  const buttonLabel = scaffold ? 'Save starting guess for comparison' : 'Draft from memory';
+  const errorText = scaffold
+    ? 'Write the smallest useful guess before study appears.'
+    : 'Put down the part you can explain, even if it is incomplete.';
   return `
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
       <span class="eyebrow concept-page-b2__attempt-eyebrow">first inquiry</span>
-      <h3>Draft what you can recall</h3>
+      <h3>${escHtml(heading)}</h3>
+      ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
       <textarea
         class="concept-page-b2__attempt-input"
         data-attempt-entry-id="${escHtml(activeEntryId)}"
         aria-label="Write what you can reconstruct"
         rows="6"
         maxlength="2400"
-        placeholder="Draft what you can recall. Messy is useful."
+        placeholder="${escHtml(placeholder)}"
       ></textarea>
-      <p class="concept-page-b2__attempt-error" data-attempt-error hidden>Put down the part you can explain, even if it is incomplete.</p>
-      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">Draft from memory</button>
+      <p class="concept-page-b2__attempt-error" data-attempt-error hidden>${escHtml(errorText)}</p>
+      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">${escHtml(buttonLabel)}</button>
     </section>
   `;
 }
 
-function routeMarginPhase(index) {
+function routeMarginPhase(entry, index) {
+  const scaffold = entryScaffold(entry);
+  if (scaffold) {
+    return {
+      title: scaffold.task_label || scaffold.learner_move || `Entry ${index + 1}`,
+      cue: scaffold.task_cue || 'Write the smallest useful guess.',
+    };
+  }
   const phases = [
-    { title: 'Recall', cue: 'start with what you can reconstruct' },
-    { title: 'Core Logic', cue: 'name the rule that holds' },
-    { title: 'Connections', cue: 'link the moving parts' },
-    { title: 'Transfer', cue: 'try it nearby' },
+    { title: 'Say it', cue: 'Put the current model into words.' },
+    { title: 'Explain how', cue: 'Name what causes what.' },
+    { title: 'Use it', cue: 'Try the idea in a nearby case.' },
+    { title: 'Test the edge', cue: 'Find where the model might break.' },
   ];
   return phases[index] || { title: `Entry ${index + 1}`, cue: 'continue the route' };
 }
@@ -380,7 +518,7 @@ function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
       <span class="eyebrow concept-page-b2__route-eyebrow">route margin</span>
       <ol class="concept-page-b2__route-list">
         ${nodes.map((entry, index) => {
-          const phase = routeMarginPhase(index);
+          const phase = routeMarginPhase(entry, index);
           const state = entryLearnerState(nodes, index, training, options);
           const isActive = index === activeIdx;
           const entryId = getConceptEntryId(entry, index);
@@ -410,11 +548,12 @@ function renderScopeBoundaryHtml() {
   `;
 }
 
-function renderBlankStartHtml() {
+function renderBlankStartHtml(scaffold = null) {
+  const hint = blankHintForScaffold(scaffold);
   return `
     <details class="concept-page-b2__blank-start">
       <summary>I'm blank</summary>
-      <p>Start with a word, a rough picture, or the part that feels fuzzy. The mechanism stays hidden.</p>
+      <p>${escHtml(hint)} The mechanism stays hidden.</p>
     </details>
   `;
 }
@@ -447,7 +586,12 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     activeIdx,
     totalNodes,
   });
-  const entryPurpose = activeEntry.purpose
+  const studyGatePurpose = derived.attempted && derived.next_action === 'study'
+    ? 'Your draft gives the notes something specific to work against. Study stays hidden until you choose to compare.'
+    : '';
+  const entryPurpose = studyGatePurpose
+    || activeEntry.purpose
+    || entryScaffold(activeEntry)?.task_cue
     || (isBlocked
       ? 'Locked until you write from memory on the entry above. The mechanism stays hidden until you have put your current model into words.'
       : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
@@ -471,8 +615,12 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     : '';
   const evidenceArtifactHtml = !isAttempting ? renderEvidenceArtifactHtml(derived) : '';
   const repairPanelHtml = isAttempting ? '' : renderRepairPanelHtml(activeEntry, derived, activeEntryId);
-  const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId) : '';
-  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml() : '';
+  const scaffold = entryScaffold(activeEntry);
+  const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId, activeEntry, {
+    useScaffold: isColdReadyEntry,
+    learnerGoal: learnerGoalForConcept(concept, data),
+  }) : '';
+  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml(scaffold) : '';
 
   const thresholdHtml = thresholdText
     ? `

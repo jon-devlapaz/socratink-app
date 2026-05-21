@@ -103,15 +103,20 @@ Two different things live on the graph. Do not collapse them.
 
 ### Proposed structure
 - What the extractor thinks the domain looks like.
-- Derived from source material, starting map, and stated goal.
+- Derived from source material, starting map, and learner goal.
 - Hypothesis only. Topology does not prove anything about the learner.
+
+### Learner goal
+- What the learner wants to be able to explain.
+- Governs relevance: route shape, first-node emphasis, study hinge, repair framing, future Feynman notes, and metacognitive-agent memory.
+- Not evidence. A goal can make the route personal, but it cannot mutate graph truth.
 
 ### Verified learning state
 - What Socratink has evidence for about the learner's understanding.
 - Encoded as per-node derived training state: `null`, `primed`, `needs repair`, `solidified`.
 - Only spaced reconstruction can move a node to `solidified`.
 
-The graph is the union of these two layers. The UI must never render them as the same thing.
+The graph is the union of these layers. The learner goal governs relevance; learner reconstruction governs evidence. The UI must never render them as the same thing.
 
 ---
 

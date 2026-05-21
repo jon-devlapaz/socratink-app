@@ -259,7 +259,96 @@ def _seed_route_margin_concept(page: Page) -> None:
                         drill_status: null,
                     },
                 ],
-                clusters: [],
+                clusters: [
+                    {
+                        id: 'c1',
+                        label: 'Sodium channel gate',
+                        description: 'Name what opens the channel.',
+                        subnodes: [{
+                            id: 'c1_s1',
+                            label: 'Sodium channel gate',
+                            mechanism: 'Sodium channels open when membrane voltage reaches threshold, then sodium enters because the electrochemical gradient favors inward flow.',
+                            drill_status: null,
+                            learner_scaffold: {
+                                bloom_level: 'remember',
+                                learner_move: 'Say it',
+                                task_label: 'Sodium gate',
+                                task_cue: 'Name what opens the channel.',
+                                entry_prompt: 'What do you think makes the sodium channel open?',
+                                expected_shape: 'Write one sentence. Name the trigger, even if you are guessing.',
+                                sentence_starter: 'My current guess is that the sodium channel opens when...',
+                                blank_hint: 'Start with the word threshold and say what it might do.',
+                                evidence_goal: 'Learner names a trigger for channel opening before study content appears.',
+                            },
+                        }],
+                    },
+                    {
+                        id: 'c2',
+                        label: 'Backbone principle',
+                        description: 'Explain the rule that holds the mechanism together.',
+                        subnodes: [{
+                            id: 'c2_s1',
+                            label: 'Backbone principle',
+                            mechanism: 'Voltage threshold changes the channel conformation before sodium flow begins.',
+                            drill_status: null,
+                            learner_scaffold: {
+                                bloom_level: 'understand',
+                                learner_move: 'Explain how',
+                                task_label: 'Opening rule',
+                                task_cue: 'Name what has to happen before flow.',
+                                entry_prompt: 'How does threshold connect to sodium movement?',
+                                expected_shape: 'Write a cause-then-effect sentence.',
+                                sentence_starter: 'Threshold matters because...',
+                                blank_hint: 'Separate opening the gate from sodium moving through it.',
+                                evidence_goal: 'Learner separates gate opening from ion movement.',
+                            },
+                        }],
+                    },
+                    {
+                        id: 'c3',
+                        label: 'Mechanism cluster',
+                        description: 'Connect the steps that cause the signal to move.',
+                        subnodes: [{
+                            id: 'c3_s1',
+                            label: 'Mechanism cluster',
+                            mechanism: 'After enough sodium enters, depolarization spreads and opens neighboring voltage-gated channels.',
+                            drill_status: null,
+                            learner_scaffold: {
+                                bloom_level: 'apply',
+                                learner_move: 'Use it',
+                                task_label: 'Signal spread',
+                                task_cue: 'Use the rule on the next channel.',
+                                entry_prompt: 'What would make the next nearby channel open?',
+                                expected_shape: 'Write a nearby-case prediction.',
+                                sentence_starter: 'The next channel would open when...',
+                                blank_hint: 'Use the same threshold idea one step later.',
+                                evidence_goal: 'Learner applies threshold gating to neighboring channels.',
+                            },
+                        }],
+                    },
+                    {
+                        id: 'c4',
+                        label: 'Transfer check',
+                        description: 'Use the same idea in a nearby case.',
+                        subnodes: [{
+                            id: 'c4_s1',
+                            label: 'Transfer check',
+                            mechanism: 'If sodium channels fail to open, the depolarizing current cannot propagate normally.',
+                            drill_status: null,
+                            learner_scaffold: {
+                                bloom_level: 'apply',
+                                learner_move: 'Test the edge',
+                                task_label: 'Blocked gate',
+                                task_cue: 'Predict what breaks if the gate stays shut.',
+                                entry_prompt: 'What would happen if the sodium channel never opened?',
+                                expected_shape: 'Write one consequence for the signal.',
+                                sentence_starter: 'If the gate never opened...',
+                                blank_hint: 'Ask what sodium can no longer do.',
+                                evidence_goal: 'Learner predicts a failure case from the gating rule.',
+                            },
+                        }],
+                    },
+                ],
             });
             localStorage.setItem('learnops_concepts', JSON.stringify([{
                 id: 'route-margin-concept',
@@ -278,7 +367,20 @@ def _seed_route_margin_concept(page: Page) -> None:
                 grounding: 'learner_sketch',
                 source_ref: null,
                 sketch: { text: 'I think sodium just rushes in.' },
-                node_records: {},
+                node_records: {
+                    c2_s1: {
+                        attempts: [{
+                            id: 'attempt-opening-rule',
+                            at: '2026-05-21T10:00:00.000Z',
+                            user_text: 'Threshold opens the gate before sodium moves through.',
+                            classification: 'partial',
+                            grader_version: 'fixture',
+                            gaps: [],
+                            kind: 'cold',
+                        }],
+                        repairs: [],
+                    },
+                },
             }));
         })()"""
     )
@@ -458,10 +560,10 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "Shaped from your launch attempt, not verified against a source."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Study the gap"
+        "Draft saved"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Compare with notes"
+        "Reveal notes and compare"
     )
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
         "Learner-owned reconstruction visible in Library."
@@ -582,10 +684,10 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Study QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Study the gap"
+        "Draft saved"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Compare with notes"
+        "Reveal notes and compare"
     )
 
     page.locator(".concept-page-b2__entry-cta").click()
@@ -645,9 +747,11 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Learner thinks"
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Study the gap"
+        "Draft saved"
     )
-    expect(page.locator(".concept-page-b2__evidence")).to_contain_text("Your draft")
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "Your memory draft"
+    )
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
         "Sodium rushes in because there is more sodium outside."
     )
@@ -828,7 +932,7 @@ def test_concept_entry_mutation_preserves_active_later_entry(
     page.locator(".library-card-vault", has_text="Active Entry QA").click()
     page.locator('.concept-page-b2__route-item[data-entry-id="entry-two"]').click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Study the gap"
+        "Draft saved"
     )
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
@@ -962,10 +1066,10 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
     page.locator(".concept-page-b2__attempt-save").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Study the gap"
+        "Draft saved"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Compare with notes"
+        "Reveal notes and compare"
     )
 
     assert len(drill_calls) == 2
@@ -1331,7 +1435,7 @@ def test_localhost_concept_page_corrupt_training_storage_recovers_and_records_at
     save_button = page.locator(".concept-page-b2__attempt-save")
     save_button.click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Study the gap"
+        "Draft saved"
     )
     assert len(drill_calls) == 1
     assert drill_calls[0]["node_id"] == "corrupt-node"
@@ -1698,35 +1802,98 @@ def test_concept_view_opens_to_route_margin_canvas(
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible()
+    expect(clean_page.locator("#concept-view-switch")).to_have_text("Constellation")
+    expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
     expect(canvas.locator(".concept-page-b2__scope")).to_contain_text(
         "Study material stays hidden until you draft from memory."
     )
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(4)
-    expect(canvas.locator(".concept-page-b2__route-item").nth(0)).to_contain_text(
-        "Recall"
-    )
-    expect(canvas.locator(".concept-page-b2__route-item").nth(1)).to_contain_text(
-        "Core Logic"
-    )
-    expect(canvas.locator(".concept-page-b2__route-item").nth(2)).to_contain_text(
-        "Connections"
-    )
-    expect(canvas.locator(".concept-page-b2__route-item").nth(3)).to_contain_text(
-        "Transfer"
-    )
+    expect(canvas.locator(".concept-page-b2__route-item").nth(0)).to_contain_text("Sodium gate")
+    expect(canvas.locator(".concept-page-b2__route-item").nth(1)).to_contain_text("Opening rule")
+    expect(canvas.locator(".concept-page-b2__route-item").nth(2)).to_contain_text("Signal spread")
+    expect(canvas.locator(".concept-page-b2__route-item").nth(3)).to_contain_text("Blocked gate")
     expect(canvas).not_to_contain_text("Sodium channels open at threshold")
     expect(canvas).not_to_contain_text("This generated summary must not")
+    expect(canvas).not_to_contain_text("bloom")
 
     expect(canvas.locator(".concept-page-b2__attempt-input")).to_be_visible()
     expect(canvas.locator(".concept-page-b2__attempt-input")).to_have_attribute(
         "placeholder",
-        "Draft what you can recall. Messy is useful.",
+        "Draft your starting guess: what it does, what it connects to, or why it matters.",
+    )
+    expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
+        "What do you think makes the sodium channel open?"
+    )
+    expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
+        "Write one sentence. Name the trigger, even if you are guessing."
     )
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text(
-        "Draft from memory"
+        "Save starting guess for comparison"
     )
     expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
-        "I'm blank"
+        "Not sure yet? Type what you think it might do, or list a few terms you recognize."
+    )
+    canvas.locator(".concept-page-b2__attempt-input").fill(
+        "Sodium channels probably open when voltage reaches a trigger."
+    )
+    clean_page.locator("#concept-view-switch").click()
+    expect(clean_page.locator("#map-content")).to_be_hidden()
+    constellation = clean_page.locator("#concept-constellation-content")
+    expect(constellation).to_be_visible()
+    expect(clean_page.locator("#concept-view-switch")).to_have_text("Return to route")
+    expect(constellation).to_contain_text("Draft structure only.")
+    expect(constellation).to_contain_text("Overview first.")
+    expect(constellation.locator(".concept-constellation__selected")).to_be_visible()
+    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
+        "Sodium gate"
+    )
+    expect(constellation.locator(".concept-constellation__node")).to_have_count(4)
+    expect(constellation.locator(".concept-constellation__node").nth(0)).to_have_attribute(
+        "role", "button"
+    )
+    expect(constellation.locator(".concept-constellation__node").nth(0)).to_have_attribute(
+        "tabindex", "0"
+    )
+    expect(constellation).to_contain_text("Sodium gate")
+    expect(constellation).to_contain_text("Opening rule")
+    expect(constellation).not_to_contain_text("Sodium channels open at threshold")
+    expect(constellation).not_to_contain_text("This generated summary must not")
+    expect(constellation).not_to_contain_text("Voltage threshold changes")
+    expect(constellation).not_to_contain_text("Name what has to happen before flow.")
+    constellation.locator('.concept-constellation__node[data-entry-id="c3_s1"]').click()
+    constellation.locator(".concept-constellation__return").click()
+    expect(clean_page.locator("#map-content")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
+        "Sodium gate"
+    )
+    expect(clean_page.locator(".concept-page-b2__entry-title")).not_to_contain_text(
+        "Signal spread"
+    )
+    clean_page.locator("#concept-view-switch").click()
+    expect(constellation).to_be_visible()
+    constellation.locator('.concept-constellation__node[data-entry-id="c2_s1"]').focus()
+    clean_page.keyboard.press("Enter")
+    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
+        "Opening rule"
+    )
+    constellation.locator(".concept-constellation__return").click()
+    expect(clean_page.locator("#map-content")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
+        "Opening rule"
+    )
+    expect(clean_page.locator(".concept-page-b2__study-note")).to_have_count(0)
+    expect(clean_page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c1_s1"]').click()
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
+        "Sodium gate"
+    )
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_have_value(
+        "Sodium channels probably open when voltage reaches a trigger."
+    )
+    clean_page.locator(".concept-page-b2__attempt-input").fill("")
+    canvas.locator(".concept-page-b2__attempt-save").click()
+    expect(canvas.locator(".concept-page-b2__attempt-error")).to_have_text(
+        "Write the smallest useful guess before study appears."
     )
 
 

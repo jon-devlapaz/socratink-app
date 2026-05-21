@@ -20,6 +20,27 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     expect(page.locator("#concept-list")).to_be_attached()
 
 
+def test_launch_pad_displays_normalized_concept_and_goal(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(
+        "I want to understand why sodium rushing into a neuron starts an electrical signal"
+    )
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#launch-pad-concept-name")).to_have_text(
+        "sodium rushing into a neuron starts an electrical signal"
+    )
+    expect(clean_page.locator("#launch-pad-concept-goal")).to_have_text(
+        "Goal: I want to understand why sodium rushing into a neuron starts an electrical signal"
+    )
+    expect(clean_page.locator(".ig-concept-mark")).not_to_contain_text(
+        "on I want"
+    )
+
+
 def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_url: str) -> None:
     _enter_app_shell_as_guest(clean_page, base_url)
 
@@ -564,7 +585,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 backbone: [{ id: 'lp-node', label: 'Launch-pad node' }],
                 clusters: [],
               },
-              { name: 'Launch Pad Provenance' },
+              { name: 'Launch Pad Provenance', goal: 'raw learner goal' },
               'rough learner threshold'
             );
             await new Promise((resolve) => setTimeout(resolve, 0));
@@ -573,6 +594,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(savedLaunchPadTraining.source_mode === 'source_less', 'launch pad writes source-less provenance');
             assert(savedLaunchPadTraining.grounding === 'learner_sketch', 'launch pad writes learner sketch grounding');
             assert(savedLaunchPadTraining.sketch.text === 'rough learner threshold', 'launch pad writes sketch text');
+            assert(savedLaunchPadConcept.learnerGoal === 'raw learner goal', 'launch pad preserves learner goal on concept');
+            assert(JSON.parse(savedLaunchPadConcept.graphData).metadata.learner_goal === 'raw learner goal', 'launch pad preserves learner goal in graph metadata');
 
             const sourceInput = await import('/js/source-input-ui.js');
             assert(sourceInput.isBlockedVideoUrl('https://youtu.be/abc'), 'blocked short youtube url');
@@ -977,9 +1000,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               {},
               { metadata: {} },
             );
-            assert(legacyStudyHtml.includes('Study the gap'), 'legacy primed study stays in study phase');
+            assert(legacyStudyHtml.includes('Draft saved'), 'legacy primed study stays in study phase');
             assert(legacyStudyHtml.includes('data-active-entry-action="study"'), 'legacy primed study reveals study before redrill');
-            assert(legacyStudyHtml.includes('Compare with notes'), 'legacy primed study cta is learner-facing');
+            assert(legacyStudyHtml.includes('Reveal notes and compare'), 'legacy primed study cta is learner-facing');
             const legacyStudyRevealedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
               0,
@@ -1166,13 +1189,13 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               }
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
-            assert(conceptPagePrimedHtml.includes('Study the gap'), 'concept page primed study eyebrow');
+            assert(conceptPagePrimedHtml.includes('Draft saved'), 'concept page primed study eyebrow');
             assert(conceptPagePrimedHtml.includes('concept-page-b2__evidence'), 'concept page primed shows recorded draft before study');
-            assert(conceptPagePrimedHtml.includes('Your draft'), 'concept page primed evidence uses learner language');
+            assert(conceptPagePrimedHtml.includes('Your memory draft'), 'concept page primed evidence uses learner language');
             assert(conceptPagePrimedHtml.includes('A strong first attempt.'), 'concept page primed preserves learner words before study');
             assert(!conceptPagePrimedHtml.includes('Missing piece'), 'concept page primed does not reveal missing-piece language before study');
             assert(conceptPagePrimedHtml.includes('data-active-entry-action="study"'), 'concept page primed study action');
-            assert(conceptPagePrimedHtml.includes('Compare with notes'), 'concept page primed study cta');
+            assert(conceptPagePrimedHtml.includes('Reveal notes and compare'), 'concept page primed study cta');
             const conceptPageStudiedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
               0,

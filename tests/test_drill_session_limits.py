@@ -37,6 +37,22 @@ def sample_knowledge_map():
     }
 
 
+def scaffolded_knowledge_map():
+    knowledge_map = sample_knowledge_map()
+    knowledge_map["clusters"][0]["subnodes"][0]["learner_scaffold"] = {
+        "bloom_level": "understand",
+        "learner_move": "Say it",
+        "task_label": "Starting model",
+        "task_cue": "Put the system in your words.",
+        "entry_prompt": "How would you explain the thermostat loop right now?",
+        "expected_shape": "Write 1-2 sentences naming the comparison and result.",
+        "sentence_starter": "My current guess is that the thermostat...",
+        "blank_hint": "Start with what the thermostat compares.",
+        "evidence_goal": "Learner states the comparison and the resulting heater state.",
+    }
+    return knowledge_map
+
+
 def old_session_start():
     return (datetime.now(timezone.utc) - timedelta(minutes=26)).isoformat()
 
@@ -359,6 +375,91 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
         self.assertEqual(result["answer_mode"], "help_request")
         self.assertEqual(result["routing"], "SCAFFOLD")
         self.assertEqual(result["help_request_reason"], "explicit_explain_request")
+
+    def test_cold_attempt_passes_learner_scaffold_into_drill_contract(self):
+        """Drill evaluation must see the same scaffold that shaped the UI."""
+        captured = {}
+
+        def fake_call(_client, *, model, contents, config):
+            captured["contents"] = contents
+            captured["system_instruction"] = getattr(config, "system_instruction", "")
+            return drill_response(routing="NEXT", classification="deep")
+
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch("ai_service._call_gemini_with_retry", side_effect=fake_call),
+        ):
+            ai_service.drill_chat(
+                knowledge_map=scaffolded_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "The thermostat compares room temperature to a target.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="cold_attempt",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=True,
+            )
+
+        self.assertIn("Learner Scaffold", captured["system_instruction"])
+        self.assertIn("bloom_level: understand", captured["system_instruction"])
+        self.assertIn("evidence_goal: Learner states the comparison", captured["system_instruction"])
+        self.assertIn("How would you explain the thermostat loop", captured["contents"])
+
+    def test_cold_attempt_passes_learner_goal_as_relevance_not_grading(self):
+        """Goal may shape the question, but node grading stays local."""
+        captured = {}
+        knowledge_map = scaffolded_knowledge_map()
+        knowledge_map["metadata"][
+            "learner_goal"
+        ] = "Explain why thermostats avoid overheating a room."
+
+        def fake_call(_client, *, model, contents, config):
+            captured["contents"] = contents
+            captured["system_instruction"] = getattr(config, "system_instruction", "")
+            return drill_response(routing="NEXT", classification="deep")
+
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch("ai_service._call_gemini_with_retry", side_effect=fake_call),
+        ):
+            ai_service.drill_chat(
+                knowledge_map=knowledge_map,
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[],
+                session_phase="init",
+                drill_mode="cold_attempt",
+                bypass_session_limits=True,
+            )
+
+        self.assertIn("learner_goal", captured["contents"])
+        self.assertIn(
+            "Explain why thermostats avoid overheating a room.", captured["contents"]
+        )
+        self.assertIn(
+            "use `metadata.learner_goal` only to frame relevance",
+            captured["system_instruction"],
+        )
+        self.assertIn(
+            "Do not grade against the broad learner goal",
+            captured["system_instruction"],
+        )
 
 
 if __name__ == "__main__":

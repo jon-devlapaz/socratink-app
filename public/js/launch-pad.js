@@ -42,6 +42,40 @@ const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const THIN_THRESHOLD_COPY =
   'Name a few concrete parts, guessed steps, examples, or confusions so socratink has enough signal to draft from.';
 
+function normalizeWhitespace(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function cleanConceptName(text) {
+  return normalizeWhitespace(text)
+    .replace(/[.?!]+$/g, '')
+    .trim();
+}
+
+export function buildPendingShellFromDoorInput(rawInput) {
+  const raw = normalizeWhitespace(rawInput);
+  const fallback = cleanConceptName(raw);
+  if (!fallback) return { name: '', goal: '' };
+
+  const goalPatterns = [
+    /^(?:i\s+)?(?:want|need|would like)\s+to\s+(?:understand|learn|know|explain|grasp|figure out)\s+/i,
+    /^(?:i\s+am|i'm)\s+trying\s+to\s+(?:understand|learn|know|explain|grasp|figure out)\s+/i,
+  ];
+  const matchedPattern = goalPatterns.find((pattern) => pattern.test(raw));
+  if (!matchedPattern) return { name: fallback, goal: '' };
+
+  const derived = cleanConceptName(
+    raw
+      .replace(matchedPattern, '')
+      .replace(/^(?:why|how|what|whether)\s+/i, ''),
+  );
+
+  return {
+    name: derived || fallback,
+    goal: raw,
+  };
+}
+
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 function isSubstantiveThreshold(text) {
@@ -54,6 +88,7 @@ function readPendingShell() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.name !== 'string' || typeof parsed.ts !== 'number') return null;
+    if (typeof parsed.goal !== 'string') parsed.goal = '';
     if (Date.now() - parsed.ts > PENDING_SHELL_MAX_AGE_MS) return null;
     return parsed;
   } catch {
@@ -124,9 +159,15 @@ export function showLaunchPad(App) {
   const form = document.getElementById('launch-pad-form');
   if (form) form.dataset.state = '';
 
-  // Hydrate concept name.
+  // Hydrate concept name and preserve the learner's raw goal when the door
+  // input was phrased as intent rather than a clean topic title.
   const nameEl = document.getElementById('launch-pad-concept-name');
   if (nameEl) nameEl.textContent = shell.name;
+  const goalEl = document.getElementById('launch-pad-concept-goal');
+  if (goalEl) {
+    goalEl.textContent = shell.goal ? `Goal: ${shell.goal}` : '';
+    goalEl.hidden = !shell.goal;
+  }
 
   emitTelemetry('concept_create.launch_pad.entered', {
     age_ms: Date.now() - shell.ts,
