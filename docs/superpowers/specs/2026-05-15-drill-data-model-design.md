@@ -571,9 +571,9 @@ Current shipped rollout: the concept page consumes entry training derivation for
 entry state, CTAs, inline reconstruction, draft evidence, study reveal, and repair panels. The
 Library card body asynchronously consumes learner attempts for reconstruction
 copy, choosing the best attempt across all node records by classification rank
-and then recency. Map badges, Desk tiles, Sidebar concept markers, and Library
-card badges still render legacy `concept.state` until the full target binding
-below lands.
+and then recency. Sidebar concept markers, Library card badges, and Desk tiles
+derive from the training store; no-evidence concepts stay visually quiet instead
+of inheriting legacy `concept.state` or `drill_status` claims.
 
 | Surface | Binds to | Notes |
 |---|---|---|

@@ -1743,7 +1743,7 @@ def test_desk_iso_board_state_surface_and_room_labels(
 
     def seed_board_concepts(count: int = 9) -> str:
         return f"""(() => {{
-            const graph = (status, extra = {{}}) => JSON.stringify({{
+            const graph = (status = null, extra = {{}}) => JSON.stringify({{
                 metadata: {{
                     core_thesis: 'Seeded thesis',
                     drill_status: status,
@@ -1752,6 +1752,29 @@ def test_desk_iso_board_state_surface_and_room_labels(
                 }},
                 backbone: [],
                 clusters: [],
+            }});
+            const iso = (hoursAgo) => new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
+            const attempt = (classification, hoursAgo, gaps = []) => ({{
+                id: `${{classification}}-${{hoursAgo}}`,
+                at: iso(hoursAgo),
+                user_text: `${{classification}} reconstruction`,
+                classification,
+                grader_version: 'fixture',
+                gaps,
+            }});
+            const training = (conceptId, attempts) => ({{
+                concept_id: conceptId,
+                schema_version: 1,
+                source_mode: 'source_less',
+                grounding: 'learner_sketch',
+                source_ref: null,
+                sketch: null,
+                node_records: {{
+                    [`${{conceptId}}-node`]: {{
+                        attempts,
+                        repairs: [],
+                    }},
+                }},
             }});
             const concepts = [
                 {{
@@ -1766,7 +1789,7 @@ def test_desk_iso_board_state_surface_and_room_labels(
                     name: 'Primed Board Tile',
                     state: 'growing',
                     createdAt: Date.now() + 1,
-                    graphData: graph('primed'),
+                    graphData: graph(null),
                 }},
                 {{
                     id: 'drilled-board-tile',
@@ -1781,9 +1804,9 @@ def test_desk_iso_board_state_surface_and_room_labels(
                 {{
                     id: 'solidified-board-tile',
                     name: 'Solidified Board Tile',
-                    state: 'actualized',
+                    state: 'growing',
                     createdAt: Date.now() + 3,
-                    graphData: graph('solidified'),
+                    graphData: graph(null),
                 }},
                 {{
                     id: 'hibernating-board-tile',
@@ -1823,6 +1846,27 @@ def test_desk_iso_board_state_surface_and_room_labels(
             ].slice(0, {count});
             localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
             localStorage.setItem('learnops_active', concepts[0]?.id || '');
+            localStorage.setItem('socratink:training:v1:primed-board-tile', JSON.stringify(
+                training('primed-board-tile', [attempt('strong', 1)])
+            ));
+            localStorage.setItem('socratink:training:v1:drilled-board-tile', JSON.stringify(
+                training('drilled-board-tile', [
+                    attempt('thin', 2, [{{ type: 'missing_link', detail: 'first miss' }}]),
+                    attempt('thin', 1, [{{ type: 'missing_link', detail: 'second miss' }}]),
+                ])
+            ));
+            localStorage.setItem('socratink:training:v1:solidified-board-tile', JSON.stringify(
+                training('solidified-board-tile', [
+                    attempt('strong', 20),
+                    attempt('strong', 1),
+                ])
+            ));
+            localStorage.setItem('socratink:training:v1:front-board-tile', JSON.stringify(
+                training('front-board-tile', [
+                    attempt('strong', 20),
+                    attempt('strong', 1),
+                ])
+            ));
         }})()"""
 
     _enter_app_shell_as_guest(clean_page, base_url)
@@ -1835,16 +1879,28 @@ def test_desk_iso_board_state_surface_and_room_labels(
     expected_states = {
         "#tile-0": ("growing", "locked"),
         "#tile-1": ("growing", "primed"),
-        "#tile-2": ("fractured", "drilled"),
-        "#tile-3": ("actualized", "solidified"),
+        "#tile-2": ("fractured", "fractured"),
+        "#tile-3": ("growing", "solidified"),
         "#tile-4": ("hibernating", "locked"),
-        "#tile-7": ("growing", "solidified"),
+        "#tile-6": ("primed", "locked"),
+        "#tile-7": ("growing", "locked"),
         "#tile-8": ("actualized", "solidified"),
     }
     for selector, (source_state, board_state) in expected_states.items():
         tile = clean_page.locator(selector)
         expect(tile).to_have_attribute("data-source-state", source_state)
         expect(tile).to_have_attribute("data-board-state", board_state)
+
+    expected_hints = {
+        "#tile-1": "Reconstruction evidence is on record.",
+        "#tile-2": "A specific gap is ready to repair.",
+        "#tile-3": "Spaced reconstruction is on record.",
+        "#tile-8": "Spaced reconstruction is on record.",
+    }
+    for selector, hint in expected_hints.items():
+        expect(clean_page.locator(selector)).to_have_attribute("data-evidence-hint", hint)
+    expect(clean_page.locator("#tile-0")).not_to_have_attribute("data-evidence-hint", re.compile(r".+"))
+    expect(clean_page.locator("#tile-6")).not_to_have_attribute("data-evidence-hint", re.compile(r".+"))
 
     # Button semantics so screen readers announce tiles as actionable.
     expect(clean_page.locator("#tile-1")).to_have_attribute("role", "button")
