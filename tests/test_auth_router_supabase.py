@@ -93,6 +93,15 @@ class FakeSupabaseAuthService:
     def callback_redirect_uri(self) -> str:
         return f"{self.app_base_url.rstrip('/')}{self.callback_path}"
 
+    def build_local_dev_guest_session(self):
+        return AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            user=AuthUser(id="local_dev_guest"),
+            guest_mode=True,
+            sealed_session="sealed-local-dev-guest",
+        )
+
 
 def build_client(service: FakeSupabaseAuthService) -> TestClient:
     app = FastAPI()
@@ -102,6 +111,24 @@ def build_client(service: FakeSupabaseAuthService) -> TestClient:
 
 
 class LoginRouteTests(unittest.TestCase):
+    def setUp(self):
+        self._env_keys = ("SOCRATINK_DEV_AUTOGUEST", "VERCEL", "VERCEL_ENV", "CI")
+        self._env_snapshot = {key: os.environ.get(key) for key in self._env_keys}
+
+    def tearDown(self):
+        for key, value in self._env_snapshot.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def _set_env(self, **values):
+        for key in self._env_keys:
+            os.environ.pop(key, None)
+        for key, value in values.items():
+            if value is not None:
+                os.environ[key] = value
+
     def test_identified_user_redirects_from_login(self):
         service = FakeSupabaseAuthService(enabled=True)
         service.current_state = AuthSessionState(
@@ -133,6 +160,19 @@ class LoginRouteTests(unittest.TestCase):
         body = response.text
         self.assertIn("Continue with Google", body)
         self.assertIn("continue as guest", body)
+
+    def test_dev_autoguest_login_error_retries_guest_entry(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+        client = build_client(service)
+
+        response = client.get(
+            "/login?return_to=/&auth_error=authentication_failed",
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/auth/guest?return_to=%2F")
 
 
 class GoogleAuthStartTests(unittest.TestCase):
@@ -345,6 +385,24 @@ class ApiMeAndLogoutTests(unittest.TestCase):
 
 
 class AnonymousGuestTests(unittest.TestCase):
+    def setUp(self):
+        self._env_keys = ("SOCRATINK_DEV_AUTOGUEST", "VERCEL", "VERCEL_ENV", "CI")
+        self._env_snapshot = {key: os.environ.get(key) for key in self._env_keys}
+
+    def tearDown(self):
+        for key, value in self._env_snapshot.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    def _set_env(self, **values):
+        for key in self._env_keys:
+            os.environ.pop(key, None)
+        for key, value in values.items():
+            if value is not None:
+                os.environ[key] = value
+
     def test_guest_calls_sign_in_anonymously_and_sets_session_cookie(self):
         service = FakeSupabaseAuthService(enabled=True)
         called = {}
@@ -400,6 +458,100 @@ class AnonymousGuestTests(unittest.TestCase):
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
         self.assertEqual(response.status_code, 302)
         self.assertIn("auth_error=authentication_failed", response.headers["location"])
+
+    def test_dev_autoguest_falls_back_to_local_guest_when_supabase_guest_fails(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise RuntimeError("supabase anonymous sign-in disabled")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/")
+        self.assertIn(
+            "sb_session=sealed-local-dev-guest", response.headers.get("set-cookie", "")
+        )
+
+    def test_dev_autoguest_falls_back_to_local_guest_when_guest_config_fails(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise AuthConfigurationError("anonymous sign-in unavailable")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/")
+        self.assertIn(
+            "sb_session=sealed-local-dev-guest", response.headers.get("set-cookie", "")
+        )
+
+    def test_dev_autoguest_keeps_error_when_local_guest_config_fails(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise RuntimeError("supabase anonymous sign-in disabled")
+
+        def local_boom():
+            raise AuthConfigurationError("local guest config missing")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        service.build_local_dev_guest_session = local_boom  # type: ignore[method-assign]
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+
+    def test_dev_autoguest_keeps_error_when_local_guest_has_no_cookie(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise RuntimeError("supabase anonymous sign-in disabled")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        service.build_local_dev_guest_session = lambda: AuthSessionState(  # type: ignore[method-assign]
+            auth_enabled=True,
+            authenticated=True,
+            guest_mode=True,
+            user=AuthUser(id="local_dev_guest"),
+        )
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+
+    def test_dev_autoguest_falls_back_when_supabase_guest_state_is_incomplete(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+        service.sign_in_anonymously = lambda: AuthSessionState(  # type: ignore[assignment]
+            auth_enabled=True,
+            authenticated=False,
+            user=AuthUser(id="anon_uuid_456"),
+        )
+        client = build_client(service)
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/")
+        self.assertIn(
+            "sb_session=sealed-local-dev-guest", response.headers.get("set-cookie", "")
+        )
 
     def test_guest_configuration_failure_uses_guest_error(self):
         service = FakeSupabaseAuthService(enabled=True)
@@ -611,6 +763,23 @@ class LocalE2EGuestBootstrapTests(unittest.TestCase):
         payload = session.json()
         self.assertIs(payload.get("authenticated"), True)
         self.assertIs(payload.get("guest_mode"), True)
+
+    def test_local_dev_guest_alias_builds_same_local_session_shape(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = SupabaseAuthService(
+            enabled=True,
+            supabase_url="https://abc123.supabase.co",
+            publishable_key="pk_test",
+            jwt_secret="auth-router-e2e-guest-jwt-secret-test-fixture",
+            session_cookie_key=Fernet.generate_key().decode(),
+            app_base_url="http://localhost:8000",
+        )
+
+        state = service.build_local_dev_guest_session()
+
+        self.assertTrue(state.authenticated)
+        self.assertTrue(state.guest_mode)
+        self.assertIsNotNone(state.sealed_session)
 
 
 if __name__ == "__main__":

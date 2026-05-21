@@ -789,6 +789,13 @@ def _local_e2e_guest_bootstrap_enabled(request: Request) -> bool:
     )
 
 
+def _local_dev_guest_bootstrap_enabled(request: Request) -> bool:
+    if not dev_autoguest_enabled():
+        return False
+    client_host = request.client.host if request.client else ""
+    return client_host in {"127.0.0.1", "::1", "testclient"}
+
+
 def load_current_session_state(request: Request) -> AuthSessionState:
     service = _get_auth_service(request)
     sealed_session = request.cookies.get(service.cookie_name)
@@ -839,6 +846,11 @@ def login(request: Request, return_to: str | None = None) -> Response:
     sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated and not current.guest_mode:
         response: Response = RedirectResponse(url=sanitized_return_to, status_code=302)
+    elif not current.authenticated and _local_dev_guest_bootstrap_enabled(request):
+        response = RedirectResponse(
+            url=f"/auth/guest?{urlencode({'return_to': sanitized_return_to})}",
+            status_code=302,
+        )
     else:
         response = HTMLResponse(_render_login_html())
     if current.should_clear_cookie:
@@ -850,10 +862,30 @@ def login(request: Request, return_to: str | None = None) -> Response:
 def auth_guest(request: Request, return_to: str | None = None) -> Response:
     service = _get_auth_service(request)
     sanitized_return_to = sanitize_return_to_path(return_to)
+
+    def local_dev_guest_response() -> Response | None:
+        if not _local_dev_guest_bootstrap_enabled(request):
+            return None
+        try:
+            local_state = service.build_local_dev_guest_session()
+        except AuthConfigurationError as err:
+            logger.warning("Local dev guest bootstrap failed (config): %s", err)
+            return None
+        if not local_state.sealed_session:
+            logger.warning("Local dev guest bootstrap did not return a sealed session")
+            return None
+        response = RedirectResponse(url=sanitized_return_to, status_code=302)
+        _apply_session_cookie(response, request, local_state.sealed_session)
+        response.delete_cookie(GUEST_COOKIE_NAME, path="/")
+        return response
+
     try:
         auth_state = service.sign_in_anonymously()
     except AuthConfigurationError as err:
         logger.warning("Anonymous sign-in failed (config): %s", err)
+        local_response = local_dev_guest_response()
+        if local_response is not None:
+            return local_response
         return RedirectResponse(
             url=_build_login_redirect(
                 return_to=sanitized_return_to,
@@ -863,6 +895,9 @@ def auth_guest(request: Request, return_to: str | None = None) -> Response:
         )
     except Exception:
         logger.exception("Anonymous sign-in failed unexpectedly")
+        local_response = local_dev_guest_response()
+        if local_response is not None:
+            return local_response
         return RedirectResponse(
             url=_build_login_redirect(
                 return_to=sanitized_return_to,
@@ -878,6 +913,9 @@ def auth_guest(request: Request, return_to: str | None = None) -> Response:
         or not auth_state.sealed_session
     ):
         logger.warning("Anonymous sign-in did not return a guest session")
+        local_response = local_dev_guest_response()
+        if local_response is not None:
+            return local_response
         return RedirectResponse(
             url=_build_login_redirect(
                 return_to=sanitized_return_to,
