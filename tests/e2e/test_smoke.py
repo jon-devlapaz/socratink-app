@@ -224,6 +224,66 @@ def _seed_one_concept(page: Page, name: str = "Test Concept") -> None:
     )
 
 
+def _seed_route_margin_concept(page: Page) -> None:
+    """Seed a cold concept with a route shape for the gestalt canvas."""
+    page.evaluate(
+        """(() => {
+            const graphData = JSON.stringify({
+                metadata: {
+                    core_thesis: 'Sodium channels open at threshold and sodium enters the neuron.',
+                    starting_map_context: 'I think sodium just rushes in.',
+                },
+                backbone: [
+                    {
+                        id: 'core-thesis',
+                        label: 'Core thesis',
+                        purpose: 'Name the first change in the signal without reading the study note.',
+                        drill_status: null,
+                    },
+                    {
+                        id: 'backbone-principle',
+                        label: 'Backbone principle',
+                        purpose: 'Explain the rule that holds the mechanism together.',
+                        drill_status: null,
+                    },
+                    {
+                        id: 'mechanism-cluster',
+                        label: 'Mechanism cluster',
+                        purpose: 'Connect the steps that cause the signal to move.',
+                        drill_status: null,
+                    },
+                    {
+                        id: 'transfer-check',
+                        label: 'Transfer check',
+                        purpose: 'Use the same idea in a nearby case.',
+                        drill_status: null,
+                    },
+                ],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'route-margin-concept',
+                name: 'How sodium channels create an action potential',
+                createdAt: new Date().toISOString(),
+                state: 'growing',
+                contentPreview: 'This generated summary must not be the first thing shown.',
+                contentType: 'fixture',
+                startingMapContext: 'I think sodium just rushes in.',
+                graphData,
+            }]));
+            localStorage.setItem('socratink:training:v1:route-margin-concept', JSON.stringify({
+                concept_id: 'route-margin-concept',
+                schema_version: 1,
+                source_mode: 'source_less',
+                grounding: 'learner_sketch',
+                source_ref: null,
+                sketch: { text: 'I think sodium just rushes in.' },
+                node_records: {},
+            }));
+        })()"""
+    )
+
+
 def _seed_training_truth_concept(page: Page) -> None:
     """Seed one concept plus node-training evidence for Library truth checks."""
     page.evaluate(
@@ -766,13 +826,13 @@ def test_concept_entry_mutation_preserves_active_later_entry(
 
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Active Entry QA").click()
-    page.locator('.concept-strip__node[data-entry-id="entry-two"]').click()
+    page.locator('.concept-page-b2__route-item[data-entry-id="entry-two"]').click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Study the gap"
     )
     page.locator(".concept-page-b2__entry-cta").click()
-    expect(page.locator(".concept-strip__active-name")).to_contain_text(
-        "Later target · 2 of 2"
+    expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "data-entry-id", "entry-two"
     )
     expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
         "Entry two note."
@@ -887,7 +947,6 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     expect(page.locator("#concept-header-title")).to_contain_text(
         "Cold Attempt QA source"
     )
-    page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     expect(page.locator(".concept-page-b2__study-note")).to_have_count(0)
     page.locator(".concept-page-b2__attempt-save").click()
@@ -1023,7 +1082,7 @@ def test_localhost_inline_attempt_stale_response_does_not_mutate_active_concept(
 
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Stale Inline A").click()
-    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     page.locator(".concept-page-b2__attempt-input").fill("A learner answer that returns late.")
     page.locator(".concept-page-b2__attempt-save").click()
     page.wait_for_function("() => window.__staleDrillPayloads?.length === 1")
@@ -1265,7 +1324,7 @@ def test_localhost_concept_page_corrupt_training_storage_recovers_and_records_at
 
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Corrupt Training QA").click()
-    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     page.locator(".concept-page-b2__attempt-input").fill(
         "The mechanism opens first, then the downstream flow follows."
     )
@@ -1366,7 +1425,7 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
 
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Inline Scaffold QA").click()
-    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     page.locator(".concept-page-b2__attempt-input").fill("I do not know.")
     save_button = page.locator(".concept-page-b2__attempt-save")
     save_button.click()
@@ -1458,7 +1517,7 @@ def test_localhost_inline_non_score_eligible_attempt_is_not_evidence(
 
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Inline Unscored QA").click()
-    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     page.locator(".concept-page-b2__attempt-input").fill(
         "The mechanism opens first."
     )
@@ -1625,6 +1684,52 @@ def test_saved_library_concept_reopens_map_view(
     expect(clean_page.locator(".concept-item.active")).to_have_count(0)
 
 
+def test_concept_view_opens_to_route_margin_canvas(
+    clean_page: Page, base_url: str
+) -> None:
+    """A cold concept opens on a gestalt route margin with inline generation."""
+    _seed_route_margin_concept(clean_page)
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator(".concept-item", has_text="How sodium channels").click()
+    expect(clean_page.locator("#concept-header-title")).to_contain_text(
+        "How sodium channels create an action potential"
+    )
+
+    canvas = clean_page.locator(".concept-page-b2__gestalt")
+    expect(canvas).to_be_visible()
+    expect(canvas.locator(".concept-page-b2__scope")).to_contain_text(
+        "Study material stays hidden until you draft from memory."
+    )
+    expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(4)
+    expect(canvas.locator(".concept-page-b2__route-item").nth(0)).to_contain_text(
+        "Recall"
+    )
+    expect(canvas.locator(".concept-page-b2__route-item").nth(1)).to_contain_text(
+        "Core Logic"
+    )
+    expect(canvas.locator(".concept-page-b2__route-item").nth(2)).to_contain_text(
+        "Connections"
+    )
+    expect(canvas.locator(".concept-page-b2__route-item").nth(3)).to_contain_text(
+        "Transfer"
+    )
+    expect(canvas).not_to_contain_text("Sodium channels open at threshold")
+    expect(canvas).not_to_contain_text("This generated summary must not")
+
+    expect(canvas.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(canvas.locator(".concept-page-b2__attempt-input")).to_have_attribute(
+        "placeholder",
+        "Draft what you can recall. Messy is useful.",
+    )
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text(
+        "Draft from memory"
+    )
+    expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
+        "I'm blank"
+    )
+
+
 def test_concept_open_handles_missing_and_malformed_graph_metadata(
     clean_page: Page, base_url: str
 ) -> None:
@@ -1655,7 +1760,6 @@ def test_concept_open_handles_missing_and_malformed_graph_metadata(
         "Missing Metadata Concept"
     )
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"
-    clean_page.locator(".concept-page-b2__entry-cta").click()
     expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
     clean_page.evaluate("window.App.startDrillFromMap()")
     assert clean_page.locator("body").get_attribute("data-map-open") == "true"

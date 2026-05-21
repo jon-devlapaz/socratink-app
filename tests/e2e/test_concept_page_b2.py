@@ -1,11 +1,10 @@
 """End-to-end smoke for the B-2 concept page layout.
 
-Covers: open a concept page; strip, threshold, active entry, and
-nearby list all render; click 'Write from memory' opens the inline attempt.
+Covers: open a concept page; route margin, threshold, active entry, and
+nearby list all render; the cold-entry draft surface is inline.
 
-Note: the Route/Graph toggle test was removed in the strip-as-nav port
-(2026-05-11). The toggle is gone. See test_strip_nav.py for the new
-strip-click and keyboard-nav coverage.
+Note: the Route/Graph toggle test was removed in the route-margin port.
+The toggle is gone. See test_strip_nav.py for click and keyboard-nav coverage.
 
 Uses the same seed-via-localStorage + guest-auth pattern as test_smoke.py.
 The seeded concept has backbone entries so the nearby list renders.
@@ -13,7 +12,7 @@ The seeded concept has backbone entries so the nearby list renders.
 Navigation: uses the sidebar concept-item click (not the library card),
 because openLibraryConcept() immediately calls setMapMode which (as a
 no-op post-port) still works; the sidebar path calls showMapView()
-and renders the B-2 strip + page layout in #map-content.
+and renders the B-2 route-margin layout in #map-content.
 """
 from __future__ import annotations
 
@@ -83,7 +82,7 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
 
 def _seed_concept_with_backbone(page: Page, name: str = "Photosynthesis") -> None:
     """Seed a concept with backbone entries so the nearby list renders.
-    The first entry is primed so the inline attempt CTA is enabled.
+    The first entry is cold-ready so the inline draft surface is visible.
     Seeding happens BEFORE navigation so it is picked up on page load."""
     page.evaluate(
         f"""(() => {{
@@ -94,7 +93,7 @@ def _seed_concept_with_backbone(page: Page, name: str = "Photosynthesis") -> Non
                   starting_map_context: 'I think photosynthesis uses light to make sugar from CO2.',
                 }},
                 backbone: [
-                  {{ id: 'b1', label: 'Light reactions', drill_status: 'primed',
+                  {{ id: 'b1', label: 'Light reactions', drill_status: null,
                      purpose: 'The first entry asks for the governing idea.' }},
                   {{ id: 'b2', label: 'Calvin cycle', drill_status: 'locked',
                      purpose: 'Carbon fixation via RuBisCO.' }},
@@ -122,7 +121,7 @@ def _open_seeded_concept_via_sidebar(page: Page, base_url: str) -> None:
 
     Uses the sidebar path (not openLibraryConcept) because the sidebar
     calls showMapView() and leaves the map in study mode -- showing the
-    B-2 strip + page layout in #map-content.
+    B-2 route-margin layout in #map-content.
     """
     # Seed before navigating so localStorage is already set when app loads.
     page.goto(base_url)
@@ -139,11 +138,11 @@ def _open_seeded_concept_via_sidebar(page: Page, base_url: str) -> None:
 
 
 def test_b2_layout_renders(clean_page: Page, base_url: str) -> None:
-    """Strip, threshold, active entry, and nearby list all render."""
+    """Route margin, threshold, active entry, and nearby list all render."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
-    expect(clean_page.locator(".concept-strip__inner")).to_be_visible(timeout=8_000)
+    expect(clean_page.locator(".concept-page-b2__route")).to_be_visible(timeout=8_000)
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_be_visible()
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
     # threshold must be present (either with learner text or empty-state)
     expect(clean_page.locator(".concept-page-b2__threshold")).to_be_visible()
     # 3-entry backbone: 1 active + 2 nearby
@@ -151,19 +150,18 @@ def test_b2_layout_renders(clean_page: Page, base_url: str) -> None:
 
 
 def test_b2_cta_opens_inline_attempt(clean_page: Page, base_url: str) -> None:
-    """Clicking 'Write from memory' opens the inline memory attempt."""
+    """Cold entries expose the inline memory attempt without a transition."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_be_visible(timeout=8_000)
-    clean_page.locator(".concept-page-b2__entry-cta").click()
     expect(clean_page.locator(".concept-page-b2__attempt")).to_be_visible(timeout=8_000)
+    clean_page.locator(".concept-page-b2__attempt-input").focus()
     expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_focused()
     expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
 
 
 def test_b2_no_route_graph_toggle(clean_page: Page, base_url: str) -> None:
-    """Route/Graph toggle and #graph-content are absent (strip-as-nav port)."""
+    """Route/Graph toggle and #graph-content are absent."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
-    expect(clean_page.locator(".concept-strip__inner")).to_be_visible(timeout=8_000)
+    expect(clean_page.locator(".concept-page-b2__route")).to_be_visible(timeout=8_000)
     expect(clean_page.locator("#map-mode-graph")).to_have_count(0)
     expect(clean_page.locator("#map-mode-study")).to_have_count(0)
     expect(clean_page.locator("#graph-content")).to_have_count(0)

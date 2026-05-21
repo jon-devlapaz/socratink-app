@@ -980,10 +980,15 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           training
         );
         assert.ok(readyHtml.includes('metadata sketch'));
+        assert.ok(readyHtml.includes('concept-page-b2__gestalt'));
+        assert.ok(readyHtml.includes('concept-page-b2__route'));
+        assert.ok(readyHtml.includes('Study material stays hidden until you draft from memory.'));
         assert.ok(readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
-        assert.ok(readyHtml.includes('data-active-entry-id="entry-2"'));
-        assert.ok(readyHtml.includes('Write from memory'));
+        assert.ok(readyHtml.includes('Draft from memory'));
+        assert.ok(readyHtml.includes("I'm blank"));
+        assert.ok(readyHtml.includes('concept-page-b2__attempt'));
+        assert.ok(!readyHtml.includes('concept-page-b2__entry-cta'));
 
         const sourceLessHtml = renderActiveEntryHtml(
           backbone[1],
@@ -1021,8 +1026,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(readyAttemptHtml.includes('concept-page-b2__attempt'));
         assert.ok(readyAttemptHtml.includes('data-attempt-entry-id="entry-2"'));
-        assert.ok(readyAttemptHtml.includes('Write what you can reconstruct'));
-        assert.ok(readyAttemptHtml.includes('Save what I wrote'));
+        assert.ok(readyAttemptHtml.includes('Draft what you can recall'));
+        assert.ok(readyAttemptHtml.includes('Draft from memory'));
         assert.ok(!readyAttemptHtml.includes('concept-page-b2__entry-cta'));
 
         const primedHtml = renderActiveEntryHtml(

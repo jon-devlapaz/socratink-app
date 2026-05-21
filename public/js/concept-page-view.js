@@ -228,7 +228,7 @@ function activeEntryEyebrow({ isBlocked, attempted, state, nextAction }) {
 }
 
 function activeEntryCtaLabel({ attempted, state, nextAction }) {
-  if (!attempted) return 'Write from memory';
+  if (!attempted) return 'Draft from memory';
   if (nextAction === 'study') return 'Compare with notes';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Write it again';
   if (state === 'solidified') return 'Reconstruct from memory';
@@ -347,19 +347,75 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
 function renderAttemptPanelHtml(activeEntryId) {
   return `
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
-      <span class="eyebrow concept-page-b2__attempt-eyebrow">your reconstruction</span>
-      <h3>Write what you can reconstruct</h3>
+      <span class="eyebrow concept-page-b2__attempt-eyebrow">first inquiry</span>
+      <h3>Draft what you can recall</h3>
       <textarea
         class="concept-page-b2__attempt-input"
         data-attempt-entry-id="${escHtml(activeEntryId)}"
         aria-label="Write what you can reconstruct"
         rows="6"
         maxlength="2400"
-        placeholder="Put the part you can explain in your own words."
+        placeholder="Draft what you can recall. Messy is useful."
       ></textarea>
       <p class="concept-page-b2__attempt-error" data-attempt-error hidden>Put down the part you can explain, even if it is incomplete.</p>
-      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">Save what I wrote</button>
+      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">Draft from memory</button>
     </section>
+  `;
+}
+
+function routeMarginPhase(index) {
+  const phases = [
+    { title: 'Recall', cue: 'start with what you can reconstruct' },
+    { title: 'Core Logic', cue: 'name the rule that holds' },
+    { title: 'Connections', cue: 'link the moving parts' },
+    { title: 'Transfer', cue: 'try it nearby' },
+  ];
+  return phases[index] || { title: `Entry ${index + 1}`, cue: 'continue the route' };
+}
+
+function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
+  const nodes = backbone.length ? backbone : [FALLBACK_ACTIVE_ENTRY];
+  return `
+    <aside class="concept-page-b2__route" aria-label="Concept route">
+      <span class="eyebrow concept-page-b2__route-eyebrow">route margin</span>
+      <ol class="concept-page-b2__route-list">
+        ${nodes.map((entry, index) => {
+          const phase = routeMarginPhase(index);
+          const state = entryLearnerState(nodes, index, training, options);
+          const isActive = index === activeIdx;
+          const entryId = getConceptEntryId(entry, index);
+          const currentAttr = isActive ? ' aria-current="step"' : '';
+          return `
+            <li class="concept-page-b2__route-item${isActive ? ' is-active' : ''}" role="button" tabindex="0" data-entry-id="${escHtml(entryId)}" data-entry-index="${index}" data-route-state="${escHtml(state)}" aria-label="${escHtml(`${phase.title}, ${state}${isActive ? ', current' : ''}`)}"${currentAttr}>
+              <span class="concept-page-b2__route-index">${String(index + 1).padStart(2, '0')}</span>
+              <span class="concept-page-b2__route-marker" aria-hidden="true"></span>
+              <span class="concept-page-b2__route-copy">
+                <span class="concept-page-b2__route-title">${escHtml(phase.title)}</span>
+                <span class="concept-page-b2__route-cue">${escHtml(phase.cue)}</span>
+              </span>
+            </li>
+          `;
+        }).join('')}
+      </ol>
+    </aside>
+  `;
+}
+
+function renderScopeBoundaryHtml() {
+  return `
+    <p class="concept-page-b2__scope">
+      <span>Scope:</span>
+      Study material stays hidden until you draft from memory.
+    </p>
+  `;
+}
+
+function renderBlankStartHtml() {
+  return `
+    <details class="concept-page-b2__blank-start">
+      <summary>I'm blank</summary>
+      <p>Start with a word, a rough picture, or the part that feels fuzzy. The mechanism stays hidden.</p>
+    </details>
   `;
 }
 
@@ -371,9 +427,10 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
 
   const derived = entryTraining(backbone, activeIdx, training, options);
   const isBlocked = !derived.attempted && !predecessorsAttempted(backbone, activeIdx, training, options);
+  const isColdReadyEntry = !isBlocked && !derived.attempted;
   const isAttempting = (
     !isBlocked
-    && options?.attemptEntryId === activeEntryId
+    && (isColdReadyEntry || options?.attemptEntryId === activeEntryId)
     && derived.next_action !== 'study'
     && (
       derived.next_action !== 'repair'
@@ -415,6 +472,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const evidenceArtifactHtml = !isAttempting ? renderEvidenceArtifactHtml(derived) : '';
   const repairPanelHtml = isAttempting ? '' : renderRepairPanelHtml(activeEntry, derived, activeEntryId);
   const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId) : '';
+  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml() : '';
 
   const thresholdHtml = thresholdText
     ? `
@@ -445,14 +503,17 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="${escHtml(ctaAction)}">${ctaLabel}</button>`;
 
   const activeHtml = `
-    <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
-    <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
-    <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
-    ${evidenceArtifactHtml}
-    ${studyNoteHtml}
-    ${repairPanelHtml}
-    ${attemptPanelHtml}
-    ${ctaButton}
+    <section class="concept-page-b2__active-entry" aria-label="Active concept entry">
+      <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
+      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
+      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
+      ${evidenceArtifactHtml}
+      ${studyNoteHtml}
+      ${repairPanelHtml}
+      ${attemptPanelHtml}
+      ${blankStartHtml}
+      ${ctaButton}
+    </section>
   `;
 
   const nearby = backbone.filter((n) => n !== activeEntry);
@@ -478,5 +539,17 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
 
-  return `${thresholdHtml}${provenanceHtml}${activeHtml}${nearbyHtml}`;
+  return `
+    <section class="concept-page-b2__gestalt" aria-label="Concept gestalt canvas">
+      ${renderRouteMarginHtml(backbone, activeIdx, training, options)}
+      <div class="concept-page-b2__work">
+        ${renderScopeBoundaryHtml()}
+        ${thresholdHtml}
+        ${provenanceHtml}
+        ${activeHtml}
+        ${nearbyHtml}
+        <p class="concept-page-b2__truth-note">Your words shape the path. They do not grade you.</p>
+      </div>
+    </section>
+  `;
 }

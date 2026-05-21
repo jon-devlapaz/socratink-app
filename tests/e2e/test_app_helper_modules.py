@@ -1141,7 +1141,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPageAttemptHtml.includes('concept-page-b2__attempt'), 'concept page inline attempt form');
             assert(conceptPageAttemptHtml.includes('data-attempt-entry-id="entry-2"'), 'concept page inline attempt target');
-            assert(conceptPageAttemptHtml.includes('Save what I wrote'), 'concept page inline attempt save');
+            assert(conceptPageAttemptHtml.includes('Draft from memory'), 'concept page inline attempt save');
             const conceptPagePrimedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'primed', label: 'Primed', drill_status: 'primed' },
               0,

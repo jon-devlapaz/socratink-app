@@ -61,17 +61,16 @@ training copy, and unrecordable drill results do not mutate graph state.
 
 ### `test_concept_page_b2.py` — 3 tests
 
-B-2 concept page layout gate: strip + page layout renders, the reconstruction
+B-2 concept page layout gate: route-margin layout renders, the reconstruction
 CTA opens the inline attempt panel while the full-screen drill chamber stays
-hidden, and the Route/Graph segmented toggle is absent (verifies the strip-as-nav
-port).
+hidden, and the Route/Graph segmented toggle is absent.
 
 ### `test_strip_nav.py` — 7 tests
 
-Strip-as-nav behavior: click swaps the work column, keyboard navigation
-walks the strip, the first actionable entry exposes "Write from memory",
+Route-margin behavior: click swaps the work column, keyboard navigation
+walks the route, the first actionable entry exposes the inline draft surface,
 locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
-section exists, and strip nodes are focusable.
+section exists, and route items are focusable.
 
 ### `test_app_helper_modules.py` — 1 test
 
@@ -172,13 +171,13 @@ tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_inline_attempt PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
-tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
-tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
+tests/e2e/test_strip_nav.py::test_route_margin_click_swaps_work_column PASSED
+tests/e2e/test_strip_nav.py::test_route_margin_keyboard_nav PASSED
 tests/e2e/test_strip_nav.py::test_first_actionable_entry_shows_try_from_memory PASSED
 tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
 tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
-tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
+tests/e2e/test_strip_nav.py::test_route_items_are_focusable PASSED
 tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
 
 ============================== 47 passed ==============================

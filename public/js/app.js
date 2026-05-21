@@ -23,9 +23,8 @@ import {
   findConceptEntryById,
   getConceptEntryId,
   renderActiveEntryHtml,
-  renderConceptStripHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=7';
+} from './concept-page-view.js?v=8';
 import { deriveConceptBadge } from './concept-status.js';
 import {
   getDefaultPhaseBSessionState,
@@ -1806,6 +1805,11 @@ const App = (() => {
           void revealStudyForEntry(ctaBtn.dataset.activeEntryId, concept, data);
           return;
         }
+        const inlineAttempt = docEl.querySelector('.concept-page-b2__attempt-input');
+        if (inlineAttempt) {
+          inlineAttempt.focus();
+          return;
+        }
         showInlineAttemptForEntry(ctaBtn.dataset.activeEntryId, concept, data, training);
       });
     }
@@ -2157,10 +2161,10 @@ const App = (() => {
         ? JSON.parse(liveConcept.graphData)
         : liveConcept.graphData;
       // Mutate the closed-over concept/data references in place so the
-      // strip-node click and keyboard handlers wired in renderConceptPageB2
-      // see the just-saved threshold on subsequent navigation. Without
-      // this, those handlers re-render via setActiveEntry using stale
-      // references and the edit appears to vanish until full reload.
+      // route-margin handlers wired in renderConceptPageB2 see the just-saved
+      // threshold on subsequent navigation. Without this, those handlers
+      // re-render via setActiveEntry using stale references and the edit
+      // appears to vanish until full reload.
       concept.startingMapContext = liveConcept.startingMapContext;
       concept.graphData = liveConcept.graphData;
       if (data) {
@@ -2178,13 +2182,14 @@ const App = (() => {
       const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
       docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training);
       rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
+      bindConceptRouteMarginHandlers(document.getElementById('map-content'), freshData, liveConcept, training);
     });
   }
 
   /**
    * Swap the work column to show a different backbone entry without
-   * rebuilding the whole concept page. Called by strip-node clicks
-   * and keyboard arrow nav.
+   * rebuilding the whole concept page. Called by route-margin clicks
+   * and vertical keyboard arrow nav.
    *
    * Animates: 240ms opacity fade-out, swap, 320ms opacity + 4px
    * translateY fade-in. Does NOT animate layout properties.
@@ -2193,24 +2198,6 @@ const App = (() => {
    * @param {Object} data - Parsed graphData
    * @param {Object} concept - The full concept object
    */
-  function routeEntryDisplayLabel(entry, index) {
-    const label = String(entry?.label || '').trim();
-    if (label) return label;
-    if (index === 0) return 'First entry';
-    if (index === 1) return 'Second entry';
-    if (index === 2) return 'Third entry';
-    return `Entry ${index + 1}`;
-  }
-
-  function inactiveStripNodeRadius(node) {
-    return (
-      node.classList.contains('concept-strip__node--primed')
-      || node.classList.contains('concept-strip__node--needs-repair')
-      || node.classList.contains('concept-strip__node--solidified')
-      || node.classList.contains('concept-strip__node--ready')
-    ) ? 7 : 6;
-  }
-
   function setActiveEntry(entryId, data, concept, training = null) {
     if (!data || !entryId) return;
     if (entryId === _activeEntryId) return;
@@ -2224,44 +2211,6 @@ const App = (() => {
     const mountEl = document.getElementById('map-content');
     if (!mountEl) return;
 
-    // Update strip node active class without full rebuild
-    mountEl.querySelectorAll('.concept-strip__node').forEach((g) => {
-      const isThisOne = g.getAttribute('data-entry-id') === entryId;
-      const idx = parseInt(g.getAttribute('data-entry-index'), 10);
-      const entry = Number.isInteger(idx) ? backbone[idx] : null;
-      const labelText = routeEntryDisplayLabel(entry, idx);
-      g.classList.toggle('is-active', isThisOne);
-      const ariaBase = (g.getAttribute('aria-label') || labelText).replace(/, current$/, '');
-      g.setAttribute('aria-label', `${ariaBase}${isThisOne ? ', current' : ''}`);
-      // Update label: active node shows its label; others hide it
-      const text = g.querySelector('text');
-      if (isThisOne && !text) {
-        const circle = g.querySelector('circle');
-        if (circle) {
-          const cx = parseFloat(circle.getAttribute('cx'));
-          const cy = parseFloat(circle.getAttribute('cy'));
-          const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          t.setAttribute('x', cx);
-          t.setAttribute('y', cy + 25);
-          t.textContent = labelText;
-          g.appendChild(t);
-        }
-      } else if (!isThisOne && text) {
-        text.remove();
-      }
-      // Bump radius on active
-      const circle = g.querySelector('circle');
-      if (circle) {
-        circle.setAttribute('r', isThisOne ? 9 : inactiveStripNodeRadius(g));
-      }
-    });
-
-    // Update strip overlay label
-    const overlayName = mountEl.querySelector('.concept-strip__active-name');
-    if (overlayName) {
-      overlayName.textContent = `${routeEntryDisplayLabel(newEntry, newIdx)} · ${newIdx + 1} of ${backbone.length}`;
-    }
-
     // Swap the work column with a fade transition
     const doc = mountEl.querySelector('.concept-page-b2__doc');
     if (!doc) return;
@@ -2269,6 +2218,7 @@ const App = (() => {
     setTimeout(() => {
       doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training);
       rebindActiveEntryHandlers(doc, concept, data, training);
+      bindConceptRouteMarginHandlers(mountEl, data, concept, training);
       doc.classList.remove('is-fading-out');
       void doc.offsetWidth; // force reflow so the fade-in animates
       doc.classList.add('is-fading-in');
@@ -2278,8 +2228,53 @@ const App = (() => {
     _activeEntryId = entryId;
   }
 
+  function bindConceptRouteMarginHandlers(mountEl, data, concept, training = null) {
+    const route = mountEl?.querySelector('.concept-page-b2__route');
+    if (!route || route.dataset.bound === 'true') return;
+    route.dataset.bound = 'true';
+
+    route.addEventListener('click', (e) => {
+      const item = e.target.closest('.concept-page-b2__route-item');
+      if (!item) return;
+      const id = item.getAttribute('data-entry-id');
+      if (id) setActiveEntry(id, data, concept, training);
+    });
+
+    route.addEventListener('keydown', (e) => {
+      const item = e.target.closest('.concept-page-b2__route-item');
+      if (!item) return;
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        const id = item.getAttribute('data-entry-id');
+        if (id) {
+          e.preventDefault();
+          setActiveEntry(id, data, concept, training);
+        }
+        return;
+      }
+
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+
+      const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
+      if (!backbone.length) return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowUp' ? -1 : 1;
+      const currentMatch = findConceptEntryById(backbone, _activeEntryId);
+      const currentIdx = currentMatch ? currentMatch.index : 0;
+      const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
+      const nextEntry = backbone[nextIdx];
+      if (!nextEntry) return;
+      const nextId = getConceptEntryId(nextEntry, nextIdx);
+      setActiveEntry(nextId, data, concept, training);
+      setTimeout(() => {
+        const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
+        nextItem?.focus();
+      }, 280);
+    });
+  }
+
   /**
-   * Render the B-2 "Strip + page" concept page layout into #map-content.
+   * Render the B-2 route-margin concept page layout into #map-content.
    * Replaces the prior Route view card stack.
    *
    * @param {HTMLElement} mountEl - The #map-content element
@@ -2301,14 +2296,11 @@ const App = (() => {
     } = preferredEntry || selectInitialConceptEntry(backbone, training);
     const renderBackbone = backbone.length ? backbone : [activeEntry];
 
-    // Build the work column HTML via the shared helper
-    const stripHtml = renderConceptStripHtml(backbone, activeEntry, activeIdx, training);
     const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
     mountEl.innerHTML = `
-      ${stripHtml}
       <div class="concept-page-b2__doc">
         ${docHtml}
       </div>
@@ -2321,71 +2313,8 @@ const App = (() => {
     const docEl = mountEl.querySelector('.concept-page-b2__doc');
     if (docEl) rebindActiveEntryHandlers(docEl, concept, data, training);
 
-    // Wire strip-node click + keyboard nav
-    const stripContainer = mountEl.querySelector('.concept-strip__inner');
-    const tooltip = mountEl.querySelector('#concept-strip-tooltip');
-    if (stripContainer) {
-      stripContainer.addEventListener('click', (e) => {
-        const node = e.target.closest('.concept-strip__node');
-        if (!node) return;
-        const id = node.getAttribute('data-entry-id');
-        if (id) setActiveEntry(id, data, concept, training);
-      });
-
-      stripContainer.addEventListener('keydown', (e) => {
-        const node = e.target.closest('.concept-strip__node');
-        if (e.key === 'Enter' || e.key === ' ') {
-          const id = node?.getAttribute('data-entry-id');
-          if (id) {
-            e.preventDefault();
-            setActiveEntry(id, data, concept, training);
-          }
-        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-          e.preventDefault();
-          const dir = e.key === 'ArrowLeft' ? -1 : 1;
-          const currentMatch = findConceptEntryById(backbone, _activeEntryId);
-          const currentIdx = currentMatch ? currentMatch.index : -1;
-          const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
-          const nextNode = backbone[nextIdx];
-          if (nextNode) {
-            const nextId = getConceptEntryId(nextNode, nextIdx);
-            setActiveEntry(nextId, data, concept, training);
-            // Move keyboard focus to the new active node
-            const nextG = mountEl.querySelector(`.concept-strip__node[data-entry-id="${nextId}"]`);
-            nextG?.focus();
-          }
-        }
-      });
-
-      // Hover tooltip for non-active nodes
-      if (tooltip) {
-        stripContainer.addEventListener('mouseover', (e) => {
-          const node = e.target.closest('.concept-strip__node');
-          if (!node || node.classList.contains('is-active')) {
-            tooltip.removeAttribute('data-visible');
-            tooltip.hidden = true;
-            return;
-          }
-          const idx = parseInt(node.getAttribute('data-entry-index'), 10);
-          const entry = backbone[idx];
-          if (!entry) return;
-          const circle = node.querySelector('circle');
-          if (!circle) return;
-          const containerRect = stripContainer.getBoundingClientRect();
-          const circleRect = circle.getBoundingClientRect();
-          tooltip.textContent = routeEntryDisplayLabel(entry, idx);
-          tooltip.style.left = `${circleRect.left + circleRect.width / 2 - containerRect.left}px`;
-          tooltip.style.top = `${circleRect.top - containerRect.top - 8}px`;
-          tooltip.hidden = false;
-          requestAnimationFrame(() => tooltip.setAttribute('data-visible', 'true'));
-        });
-
-        stripContainer.addEventListener('mouseleave', () => {
-          tooltip.removeAttribute('data-visible');
-          setTimeout(() => { tooltip.hidden = true; }, 200);
-        });
-      }
-    }
+    // Wire route-margin click + vertical keyboard nav.
+    bindConceptRouteMarginHandlers(mountEl, data, concept, training);
   }
 
   function showMapView(concept, opts = {}) {
