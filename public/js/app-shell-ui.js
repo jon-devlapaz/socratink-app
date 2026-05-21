@@ -1,4 +1,5 @@
 import { escHtml } from './html.js';
+import { deriveConceptBadge } from './concept-status.js';
 
 export function openDrawer({ drawer, drawerToggle, documentRef = document }) {
   drawer.dataset.open = 'true';
@@ -28,8 +29,9 @@ export function clearSettingsPanel({ documentRef = document } = {}) {
   host.innerHTML = '';
 }
 
-export function conceptListItemHtml(concept) {
-  const safeState = escHtml(String(concept?.state ?? ''));
+export function conceptListItemHtml(concept, training = null) {
+  const derivedState = deriveConceptBadge(concept, training) || '';
+  const safeState = escHtml(derivedState);
   const safeId = escHtml(String(concept?.id ?? ''));
   const safeName = escHtml(concept.name);
   return `
@@ -49,6 +51,7 @@ export function conceptListItemHtml(concept) {
 export function renderConceptList({
   concepts,
   activeId,
+  trainingByConceptId = {},
   conceptListEl,
   documentRef = document,
   elementCtor = typeof Element !== 'undefined' ? Element : null,
@@ -60,7 +63,7 @@ export function renderConceptList({
     const item = documentRef.createElement('div');
     item.className = 'concept-item' + (concept.id === activeId ? ' active' : '');
     item.dataset.conceptId = String(concept?.id ?? '');
-    item.innerHTML = conceptListItemHtml(concept);
+    item.innerHTML = conceptListItemHtml(concept, trainingByConceptId[String(concept?.id ?? '')] || null);
     item.addEventListener('click', e => {
       if (elementCtor && e.target instanceof elementCtor && e.target.closest('.concept-actions, .concept-action-menu')) return;
       onOpenConcept(concept);

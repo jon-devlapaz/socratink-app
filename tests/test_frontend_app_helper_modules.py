@@ -361,6 +361,41 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         assert.ok(!cardHtml.includes('This is the central claim.'));
         assert.ok(cardHtml.includes('2 sections'));
         assert.ok(cardHtml.includes('3 entries'));
+
+        const noEvidenceHtml = buildLibraryHtml([
+          { id: 'legacy-solid', name: 'Legacy Solid', state: 'actualized', graphData: graph },
+        ], {});
+        assert.ok(noEvidenceHtml.includes('data-state=""'));
+        assert.ok(!noEvidenceHtml.includes('actualized'));
+
+        const needsRepairTraining = {
+          node_records: {
+            a: {
+              attempts: [
+                {
+                  id: 'thin-1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Too vague.',
+                  classification: 'thin',
+                  gaps: ['causal trigger missing'],
+                },
+                {
+                  id: 'thin-2',
+                  at: '2026-05-15T11:00:00.000Z',
+                  user_text: 'Still too vague.',
+                  classification: 'thin',
+                  gaps: ['causal trigger missing'],
+                },
+              ],
+            },
+          },
+        };
+        const derivedHtml = buildLibraryHtml([
+          { id: 'c-derived', name: 'Derived', state: 'actualized', graphData: graph },
+        ], { 'c-derived': needsRepairTraining });
+        assert.ok(derivedHtml.includes('data-state="needs repair"'));
+        assert.ok(derivedHtml.includes('>needs repair<'));
+        assert.ok(!derivedHtml.includes('actualized'));
         """
     )
     assert result.returncode == 0, result.stderr
@@ -614,6 +649,11 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.equal(settingsHost.innerHTML, '');
         assert.equal('engaged' in settingsBtn.dataset, false);
 
+        const shellGraph = {
+          clusters: [
+            { subnodes: [{ id: 'n1' }] },
+          ],
+        };
         const html = conceptListItemHtml({ id: 'c1', name: '<Unsafe>', state: 'growing' });
         assert.ok(html.includes('&lt;Unsafe&gt;'));
         assert.ok(html.includes('data-concept-id="c1"'));
@@ -624,6 +664,30 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.ok(html.includes('hidden'));
         assert.ok(html.includes('class="concept-delete concept-action-menu-item"'));
         assert.ok(html.includes('App.deleteConcept(this.dataset.conceptId,this)'));
+        assert.ok(html.includes('data-state=""'));
+        assert.ok(!html.includes('data-state="growing"'));
+
+        const primedTraining = {
+          node_records: {
+            n1: {
+              attempts: [
+                {
+                  id: 'a1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A substantive first reconstruction.',
+                  classification: 'strong',
+                  gaps: [],
+                },
+              ],
+            },
+          },
+        };
+        const primedHtml = conceptListItemHtml(
+          { id: 'c1', name: 'Primed', state: 'actualized', graphData: shellGraph },
+          primedTraining
+        );
+        assert.ok(primedHtml.includes('data-state="primed"'));
+        assert.ok(!primedHtml.includes('actualized'));
 
         class FakeElement {
           constructor() {
@@ -641,10 +705,13 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         const clicked = [];
         renderConceptList({
           concepts: [
-            { id: 'c1', name: 'First', state: 'growing', graphData: true },
+            { id: 'c1', name: 'First', state: 'growing', graphData: shellGraph },
             { id: 'c2', name: 'Second', state: 'hibernating' },
           ],
           activeId: 'c2',
+          trainingByConceptId: {
+            c1: primedTraining,
+          },
           conceptListEl,
           documentRef: { createElement() { return new FakeElement(); } },
           elementCtor: FakeElement,
@@ -654,8 +721,10 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.equal(conceptListEl.children.length, 2);
         assert.equal(conceptListEl.children[0].className, 'concept-item');
         assert.equal(conceptListEl.children[0].dataset.conceptId, 'c1');
+        assert.ok(conceptListEl.children[0].innerHTML.includes('data-state="primed"'));
         assert.equal(conceptListEl.children[1].className, 'concept-item active');
         assert.equal(conceptListEl.children[1].dataset.conceptId, 'c2');
+        assert.ok(conceptListEl.children[1].innerHTML.includes('data-state=""'));
         conceptListEl.children[0].listeners.click({ target: new FakeElement() });
         assert.deepEqual(clicked, ['c1']);
         const menuTarget = new FakeElement();

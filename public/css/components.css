@@ -552,6 +552,7 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .concept-dot[data-state="actualized"]   { background:var(--crystal-actualized-upper-right); box-shadow:0 0 5px var(--crystal-actualized-upper-right); }
 .concept-dot[data-state="locked"]       { background:var(--node-locked); }
 .concept-dot[data-state="primed"]       { background:var(--node-primed); }
+.concept-dot[data-state="needs repair"] { background:var(--danger); box-shadow:0 0 5px rgba(var(--danger-rgb), 0.30); }
 .concept-dot[data-state="drilled"]      { background:var(--node-drilled); }
 .concept-dot[data-state="solidified"]   { background:var(--node-solidified); box-shadow:0 0 5px rgba(var(--node-solidified-rgb), 0.44); }
 
@@ -829,6 +830,16 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   border-radius: 999px;
   padding: 5px 10px;
   white-space: nowrap;
+}
+.library-card-state[data-state="needs repair"] {
+  color: var(--danger);
+  background: rgba(var(--danger-rgb), 0.10);
+  border-color: rgba(var(--danger-rgb), 0.24);
+}
+.library-card-state[data-state="solidified"] {
+  color: var(--node-solidified);
+  background: rgba(var(--node-solidified-rgb), 0.12);
+  border-color: rgba(var(--node-solidified-rgb), 0.24);
 }
 
 /* ── 13.1 Library vault ─────────────────────────────────────── */

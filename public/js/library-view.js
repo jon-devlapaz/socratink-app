@@ -1,4 +1,5 @@
 import { escHtml } from './html.js';
+import { deriveConceptBadge, parseConceptGraphData } from './concept-status.js';
 
 const EMPTY_RECONSTRUCTION_COPY = 'Your first reconstruction will appear here.';
 
@@ -38,12 +39,7 @@ export function getBestLearnerAttempt(training) {
 }
 
 export function getLibraryConceptMeta(concept, training = null) {
-  let graph = null;
-  try {
-    graph = typeof concept.graphData === 'string' ? JSON.parse(concept.graphData) : concept.graphData;
-  } catch {
-    graph = null;
-  }
+  const graph = parseConceptGraphData(concept);
 
   const metadata = graph?.metadata || {};
   const clusters = Array.isArray(graph?.clusters) ? graph.clusters : [];
@@ -96,15 +92,20 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
   } else {
     html += `<div class="library-vault-grid">` + concepts.map(c => {
       const conceptId = String(c?.id ?? '');
-      const meta = getLibraryConceptMeta(c, trainingByConceptId[conceptId] || null);
+      const training = trainingByConceptId[conceptId] || null;
+      const meta = getLibraryConceptMeta(c, training);
+      const derivedState = deriveConceptBadge(c, training) || '';
+      const stateBadge = derivedState
+        ? `<span class="library-card-state" data-state="${escHtml(derivedState)}">${escHtml(derivedState)}</span>`
+        : '';
       return `
-          <div class="library-card library-card-vault" data-state="${escHtml(c.state || '')}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
+          <div class="library-card library-card-vault" data-state="${escHtml(derivedState)}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
             <div class="library-card-header">
               <div>
                 <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
                 <span class="library-card-name">${escHtml(c.name)}</span>
               </div>
-              <span class="library-card-state">${escHtml(c.state)}</span>
+              ${stateBadge}
             </div>
             <p class="library-card-summary">${escHtml(meta.thesis)}</p>
             <div class="library-card-meta">

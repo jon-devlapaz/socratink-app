@@ -268,6 +268,7 @@ def _seed_training_truth_concept(page: Page) -> None:
                 startingMapContext: 'Learner rough sketch baseline.',
                 graphData,
             }]));
+            localStorage.setItem('learnops_active', 'qa-training-card');
             localStorage.setItem('socratink:training:v1:qa-training-card', JSON.stringify({
                 concept_id: 'qa-training-card',
                 schema_version: 1,
@@ -304,13 +305,21 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
     _seed_training_truth_concept(page)
+    page.reload()
+    _wait_for_app_settled(page)
+
+    sidebar_dot = page.locator(".concept-item", has_text="Training Truth QA").locator(".concept-dot")
+    expect(sidebar_dot).to_have_attribute("data-state", "primed")
 
     page.locator("#nav-library").click()
     card = page.locator(".library-card-vault", has_text="Training Truth QA")
     expect(card).to_be_visible()
+    expect(card).to_have_attribute("data-state", "primed")
+    expect(card.locator(".library-card-state")).to_have_text("primed")
     expect(card.locator(".library-card-summary")).to_have_text(
         "Learner-owned reconstruction visible in Library."
     )
+    expect(card).not_to_contain_text("growing")
     expect(card).not_to_contain_text("AI GENERATED CORE THESIS SHOULD NOT APPEAR")
     expect(card).not_to_contain_text("SOURCE PREVIEW SHOULD NOT APPEAR")
 

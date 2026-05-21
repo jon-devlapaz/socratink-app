@@ -26,6 +26,7 @@ import {
   renderConceptStripHtml,
   selectInitialConceptEntry,
 } from './concept-page-view.js?v=7';
+import { deriveConceptBadge } from './concept-status.js';
 import {
   getDefaultPhaseBSessionState,
   getPhaseBSessionStorageKey,
@@ -98,6 +99,7 @@ const App = (() => {
   let sessionState = getDefaultPhaseBSessionState();
   let drillSessionTimeLimitSeconds = null;
   let firstColdAttemptCreedShownThisSession = false;
+  let conceptListRenderSeq = 0;
 
   function applyRuntimeConfig(config = {}) {
     const limitSeconds = Number(config.drill_session_time_limit_seconds);
@@ -775,6 +777,7 @@ const App = (() => {
 
   // ── 11. Concept list render ────────────────────────────────
   function renderConceptList(concepts = loadConcepts()) {
+    const renderSeq = ++conceptListRenderSeq;
     renderShellConceptList({
       concepts,
       activeId: getSidebarActiveConceptId(),
@@ -786,6 +789,36 @@ const App = (() => {
         if (window.innerWidth < 900) closeDrawer();
       },
     });
+
+    if (!concepts.length) return;
+
+    Promise.all(concepts.map(async (concept) => {
+      const conceptId = String(concept?.id ?? '');
+      if (!conceptId) return [conceptId, null];
+      try {
+        return [conceptId, await trainingStore.loadTraining(conceptId)];
+      } catch (err) {
+        /* c8 ignore next -- defensive corrupt localStorage branch */
+        console.warn('Training record unavailable for sidebar concept.', conceptId, err);
+        return [conceptId, null];
+      }
+    }))
+      .then((entries) => {
+        if (renderSeq !== conceptListRenderSeq) return;
+        const conceptsById = new Map(concepts.map((concept) => [String(concept?.id ?? ''), concept]));
+        entries.forEach(([conceptId, training]) => {
+          const item = Array.from(conceptListEl.querySelectorAll('.concept-item'))
+            .find((el) => el.dataset.conceptId === conceptId);
+          const dot = item?.querySelector('.concept-dot');
+          if (!dot) return;
+          const concept = conceptsById.get(conceptId);
+          dot.dataset.state = deriveConceptBadge(concept, training) || '';
+        });
+      })
+      .catch((err) => {
+        /* c8 ignore next -- defensive localStorage failure branch */
+        console.warn('Training records unavailable for sidebar render.', err);
+      });
   }
 
   // ── 12. CRUD ───────────────────────────────────────────────
