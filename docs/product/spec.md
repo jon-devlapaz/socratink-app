@@ -139,9 +139,12 @@ the concept page renders a post-reveal comparison on the same surface before
 expanding the full route margin. This comparison may show the learner's draft,
 the same-entry study note, and named gaps when recorded. It must not show
 score/tier/band, diagnose the learner, reveal future entries, or count as graph
-truth. The only comparison-exit action is `Keep working`, which writes
+truth. The normal comparison-exit action is `Keep working`, which writes
 UI-only acknowledgement state so return/reload can restore the expanded
-workspace; it does not append training evidence or imply progress.
+workspace; it does not append training evidence or imply progress. In the repair
+branch only, saving a repair record may also expand the workspace: the completed
+repair state hides the composer/helper/save controls and offers `Try from memory
+again`, without treating the repair as graph truth or progress.
 
 ---
 

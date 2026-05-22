@@ -195,7 +195,7 @@ Before the first Cold attempt exists for the active source-less concept entry, q
 
 Route controls and the 2-column Route Margin Canvas are post-compare affordances, not merely post-attempt affordances. After the attempt is saved but before explicit study reveal, the learner remains in the one-column saved-draft study gate; route previews and route navigation must not let them skip reveal.
 
-Once study is explicitly revealed for that entry, render the immediate post-reveal comparison first. The layout may expand into the Route Margin Canvas only after the learner clicks `Keep working`, or later returns to an entry that already has a real recorded attempt, `study_revealed_at`, and persistent UI-only comparison acknowledgement. An unrevealed saved draft restores the one-column saved-draft study gate.
+Once study is explicitly revealed for that entry, render the immediate post-reveal comparison first. The layout may expand into the Route Margin Canvas after the learner clicks `Keep working`, after a repair record exists for the repair branch, or later returns to an entry that already has a real recorded attempt, `study_revealed_at`, and persistent UI-only comparison acknowledgement. An unrevealed saved draft restores the one-column saved-draft study gate.
 
 Legacy `primed`/`study` records with `attempts: []` preserve compatibility only and must not count as evidence for route-control unlock. They also must not be routed to the Cold attempt surface if `study_revealed_at` already exists, because the learner is no longer truly pre-study.
 
@@ -207,7 +207,7 @@ After the learner submits their first draft in Stage 1:
 3. After explicit reveal, show the study note/comparison on the same concept surface.
 4. Keep the learner in context; do not introduce a separate "Enter Concept Board" destination.
 5. Keep route markers inert through the immediate post-reveal comparison.
-6. Expand route-margin affordances from the same surface only when the learner clicks `Keep working`, or when the learner later returns with recorded attempt evidence, `study_revealed_at`, and persistent UI-only comparison acknowledgement.
+6. Expand route-margin affordances from the same surface when the learner clicks `Keep working`, when a repair record exists for the repair branch, or when the learner later returns with recorded attempt evidence, `study_revealed_at`, and persistent UI-only comparison acknowledgement.
 
 No session-level learning flag is needed. A persistent UI-only comparison acknowledgment is allowed only to preserve render continuity across reload/back navigation; it is not learning evidence. If the relevant training evidence exists and the comparison is no longer the immediate render target, returning to the concept restores the expanded route-margin workspace. If training evidence is reset, the cover/work surface naturally returns and the UI-only acknowledgment must be cleared or ignored.
 
@@ -233,15 +233,15 @@ The post-reveal comparison state must not show:
 
 Repair UI may appear in this state only when the derived entry `next_action` is `repair` after `study_revealed_at`. Missing-piece comparison is not itself a repair composer.
 
-Route affordances do not dismiss the immediate post-reveal comparison. If route markers are visible during comparison, they remain subordinate and inert. Full Route Margin Canvas expansion happens only when the learner clicks `Keep working`, or later returns to an entry with a real recorded attempt, `study_revealed_at`, and persistent UI-only comparison acknowledgement.
+Route affordances do not dismiss the immediate post-reveal comparison. If route markers are visible during comparison, they remain subordinate and inert. Full Route Margin Canvas expansion happens when the learner clicks `Keep working`, when a repair record exists for the repair branch, or later returns to an entry with a real recorded attempt, `study_revealed_at`, and persistent UI-only comparison acknowledgement.
 
-The learner leaves the immediate post-reveal comparison through one low-drama action: `Keep working`.
+The learner normally leaves the immediate post-reveal comparison through one low-drama action: `Keep working`. In the repair branch, saving a repair record is the only additional exit; it hides the composer/helper/save controls and keeps `Try from memory again` available.
 
 `Keep working` expands the same concept surface into the Route Margin Canvas. It is not a navigation gate, not a new destination, and not evidence of completion, mastery, progress, or route success.
 
 During the immediate post-reveal comparison state, route markers may be visible only as subordinate, noninteractive orientation. Do not render them as buttons, links, tabbable controls, or `data-entry-id` navigation targets in this state. Clicking a route marker must not be an alternate way to dismiss the comparison.
 
-After `Keep working`, the Route Margin Canvas may render normal route controls. Only traversal-allowed entries may be interactive; locked/future entries remain inert. The expanded workspace continues to derive all copy and actions from the training record and per-entry `next_action`.
+After expansion via `Keep working` or a repair record, the Route Margin Canvas may render normal route controls. Only traversal-allowed entries may be interactive; locked/future entries remain inert. The expanded workspace continues to derive all copy and actions from the training record and per-entry `next_action`.
 
 If the active entry derives `next_action === "repair"` after `study_revealed_at`, the post-reveal comparison must keep repair clearly available and strategy-framed. Before a repair is saved, show the repair composer. After a repair record exists, hide the composer/helper/save controls and offer `Try from memory again`. `Keep working` may expand the workspace, but it must not hide or demote the repair obligation behind generic navigation.
 
@@ -254,7 +254,7 @@ Forbidden copy: `Enter Concept Board`, `Continue the route`, `Complete`, `Done`,
 | Load -> Cold attempt surface | Source-less concept opens on active entry | `source_mode === "source_less"`; active record has zero real attempts and no `study_revealed_at` | concept name, learner Launch attempt as Starting sketch, provenance, one scaffold prompt, textarea, inert markers | `core_thesis`, mechanisms, study notes, statuses, nearby entries, clickable markers | none | no marker is tabbable/clickable; no `core_thesis` visible as sketch |
 | Cold submit -> Saved-draft gate | recordable drill result from inline attempt | latest real attempt persisted with exact `user_text`; no `study_revealed_at` | exact draft, neutral bridge, `Reveal notes and compare` | gaps, note, score/tier/band, route/status chrome, repair UI | append attempt only | reload restores saved gate, not workspace |
 | Saved gate -> Post-reveal comparison | learner clicks `Reveal notes and compare` | real attempt exists; `study_revealed_at` written | exact draft, same-entry study note, neutral compare copy, gaps only if present | "no missing piece", scores, future notes, route clicks, completion/progress | persist `study_revealed_at`; pass render-only `justRevealedEntryId` | immediate screen is comparison, not route canvas |
-| Comparison -> Expanded workspace | learner clicks `Keep working` | real attempt + `study_revealed_at`; comparison acknowledged in persistent UI-only state | Route Margin Canvas, traversal-gated route controls, repair primary if `next_action === "repair"` | route marker as alternate exit, `Continue the route`, mastery/progress copy | no training mutation; write/invalidate UI-only acknowledgement | before click markers inert; after click allowed controls work; reload/back restores workspace |
+| Comparison -> Expanded workspace | learner clicks `Keep working`, or saves a repair in the repair branch | real attempt + `study_revealed_at`; comparison acknowledged in persistent UI-only state or repair record exists | Route Margin Canvas, traversal-gated route controls, repair primary if `next_action === "repair"`, `Try from memory again` after repair record | route marker as alternate exit, `Continue the route`, mastery/progress copy, repair composer after a repair record exists | `Keep working`: no training mutation, write/invalidate UI-only acknowledgement; repair save: append repair only | before click/save markers inert; after click/save allowed controls work; reload/back restores workspace |
 | Legacy revealed/no-attempt -> Compatibility workspace | legacy source-less record has `study_revealed_at` but zero attempts | study boundary already crossed; no real attempt evidence | existing study surface without cold-attempt framing | cold attempt claim, route progress, mastery, route unlock from study alone | none | does not ask for a "cold" attempt after study reveal |
 | Expanded -> Repair / re-drill | save repair or later reconstruction | repair requires `study_revealed_at`; re-drill derives from spacing/evidence | repair composer before first repair, study reference, `Try from memory again` after repair record, later spaced attempt | `solidified` from study/repair, scores during active work, repair composer after a repair record exists | append repair or spaced attempt | only spaced strong reconstruction can derive `solidified` |
 
@@ -265,7 +265,7 @@ Before production edits, use `/prototype` with the UI branch:
 - Keep the question narrow: "Does the full state chain preserve the minimum remarkable loop without dashboard creep?"
 - Simulate the full chain: `Cold attempt -> saved-draft study gate -> Reveal notes and compare -> immediate comparison -> Keep working -> Route Margin Canvas`.
 - Include both branches: a no-gap attempt with no "no missing piece" verdict, and a gap/repair attempt where **Missing piece** is visible and repair remains clearly available.
-- Verify route markers are inert until `Keep working`, and that `Keep working` is the only comparison-exit action.
+- Verify route markers are inert until `Keep working` or repair save, and that repair save is the only comparison-exit exception.
 - Capture the verdict in a sibling `*.NOTES.md` before deleting or absorbing the prototype.
 
 When ready to implement, use `/codebaseGoalPlanner` to produce one reviewable `/goal` prompt for the bounded production slice. Do not let it expand the product scope; constrain it to the files and validation in this handoff.
@@ -293,7 +293,7 @@ Port the `.concept-page-b2__overview*` styles from the worktree's `public/css/co
 - **Do NOT show route previews during the saved-draft study gate.** After attempt save and before explicit reveal, keep the learner's draft as the object of attention.
 - **Do NOT skip the post-reveal comparison state.** Recording `study_revealed_at` must not immediately dump the learner into the full Route Margin Canvas.
 - **Do NOT render "no missing piece" as a verdict.** Absence of recorded gaps is not a mastery, correctness, or graph-truth claim.
-- **Do NOT let route marker clicks dismiss post-reveal comparison.** The only comparison-exit action is `Keep working`.
+- **Do NOT let route marker clicks dismiss post-reveal comparison.** The normal comparison-exit action is `Keep working`; repair save is the only exception.
 - **Do NOT use progress/completion copy for the comparison exit.** `Keep working` is allowed; `Continue the route`, `Complete`, `Done`, `Mastered`, and `Progress made` are not.
 - **Do NOT create a separate active-entry state variable.** Expanded route controls must reuse the existing `setActiveEntry()` path. Quiet pre-attempt/comparison markers are not route controls and must not use the route-item class, `data-entry-id`, or delegated route selectors.
 - **Do NOT use `extra="forbid"` on the Pydantic models.** This repo intentionally avoids that for Gemini-bound schemas.
@@ -305,7 +305,7 @@ Port the `.concept-page-b2__overview*` styles from the worktree's `public/css/co
 ## 5. Verification Plan
 
 1. **Unit tests:** Model validation, prompt contract assertions, pure renderer output.
-2. **Browser tests:** Cover/work surface appears before first attempt, pre-attempt route markers are visible but not clickable/focusable and cannot reveal future entry prompts, inline cold attempt persists through the drill evaluator path, the saved-draft study gate shows the learner's draft without route previews before study reveal, post-reveal comparison appears on the same surface only after explicit reveal without score/tier/band/no-gap verdicts, route markers cannot dismiss comparison, `Keep working` expands the workspace, reload/back preserves that expansion via UI-only acknowledgement, and route controls navigate to entries without a separate board gate only after real attempt evidence plus `study_revealed_at` plus comparison acknowledgement exists.
+2. **Browser tests:** Cover/work surface appears before first attempt, pre-attempt route markers are visible but not clickable/focusable and cannot reveal future entry prompts, inline cold attempt persists through the drill evaluator path, the saved-draft study gate shows the learner's draft without route previews before study reveal, post-reveal comparison appears on the same surface only after explicit reveal without score/tier/band/no-gap verdicts, route markers cannot dismiss comparison, `Keep working` expands the workspace, repair save expands only into completed-repair state, reload/back preserves that expansion via UI-only acknowledgement or repair record, and route controls navigate to entries without a separate board gate only after real attempt evidence plus `study_revealed_at` plus comparison acknowledgement or repair record exists.
 3. **Coverage gate:** `./scripts/check-coverage.sh` must pass (diff-level 100%).
 4. **Manual inspection:**
    - Create a source-less concept → see cover/work surface with the active cold-attempt writing task visible.
@@ -336,7 +336,7 @@ A follow-up customer/persona critique accepted the immediate writing box but rej
 - the cover is a work surface, not passive orientation
 - the cold-attempt writing task is primary
 - generated route/scaffold is restrained before the attempt
-- the route-margin board expands from the same concept surface only after explicit compare/reveal and `Keep working`
+- the route-margin board expands from the same concept surface only after explicit compare/reveal and `Keep working`, or after a repair record exists for the repair branch
 - no separate overview prompt/schema unless absolutely required
 
 ### Vault Context Check
@@ -347,7 +347,7 @@ High-signal vault findings that reinforce this handoff:
 - **Training evidence surface binding:** visible state surfaces must derive learner-facing truth from `socratink:training:v1:<conceptId>`, not legacy shell state. This supports keeping comparison acknowledgement UI-only and keeping graph truth tied to attempts, repair, and spaced re-drill evidence.
 - **Finished-loop demo:** first-session clarity depends on showing what the learner supplies, what Socratink transforms, and what evidence returns to the map. This supports the self-contained loop shape: learner draft -> targeted comparison -> continued route work, without an "Enter Concept Board" dashboard step.
 - **Tiny Repair Rep floor:** Repair Reps are optional typed micro-practice after a visible gap; they never unlock graph progress, spacing credit, scores, completion, mastery, or `solidified`. This supports showing repair only after study reveal when `next_action === "repair"`, while keeping repair separate from the comparison itself.
-- **Surface leverage map:** Provisional map / Route Margin work must make structure inspectable without implying knowledge, mastery, completion, or diagnostic certainty. This supports inert pre-attempt markers and traversal-gated route controls only after `Keep working`.
+- **Surface leverage map:** Provisional map / Route Margin work must make structure inspectable without implying knowledge, mastery, completion, or diagnostic certainty. This supports inert pre-attempt markers and traversal-gated route controls only after `Keep working` or a repair record.
 
 No new runtime feature is promoted from the vault check. The accepted move is contract tightening only: preserve the minimum loop, keep Repair Reps graph-neutral, and verify the visible surfaces against training-derived evidence.
 
