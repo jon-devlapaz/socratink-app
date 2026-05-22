@@ -8,7 +8,12 @@ accepts any non-empty source-less learner launch attempt and rejects only empty
 sketches before smallest-route generation. Use the maintained pytest coverage
 for current behavior before relying on this manual smoke.
 
-Historical scenarios embedded below:
+Historical scenarios embedded below. Scenario 2 is intentionally stale and
+kept only as migration evidence; do not use it as the current acceptance signal.
+Current pytest coverage expects non-empty source-less attempts like "idk" to
+reach smallest-route generation and only empty sketches to return 422.
+
+Historical scenarios:
   1. Source-less substantive sketch
   2. Obsolete thin-sketch rejection path
   3. Legacy text-only payload

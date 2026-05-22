@@ -251,7 +251,7 @@ The intended happy path is:
 9. system recommends spaced re-drill on the first node
 10. backend returns structured drill result
 11. frontend appends the attempt to the training store
-12. concept page and Library reconstruction body re-render from training evidence; legacy Map/Desk badges continue to reflect `concept.state` until the full binding rollout
+12. concept page, Library reconstruction body, Library badges, Desk tiles, and Sidebar concept markers re-render from training evidence; remaining legacy graph/status fields are compatibility fallback only
 
 ---
 
