@@ -1,0 +1,7 @@
+tools:
+    shell:
+        allow:
+            - npm test
+            - "true"
+            - python *
+            - tail *

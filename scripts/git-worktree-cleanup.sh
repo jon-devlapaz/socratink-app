@@ -7,6 +7,7 @@ usage() {
   cat <<'EOF'
 Usage:
   scripts/git-worktree-cleanup.sh
+  scripts/git-worktree-cleanup.sh --json
   scripts/git-worktree-cleanup.sh --remove <worktree-path> --apply
   scripts/git-worktree-cleanup.sh --remove-clean --apply
 
@@ -26,12 +27,17 @@ main_worktree="$(git worktree list --porcelain | awk '/^worktree /{sub(/^worktre
 remove_path=""
 remove_clean="0"
 apply="0"
+json_mode="0"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --help|-h)
       usage
       exit 0
+      ;;
+    --json)
+      json_mode="1"
+      shift
       ;;
     --remove)
       [ "$#" -ge 2 ] || fail "--remove requires a worktree path"
@@ -54,6 +60,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -z "$remove_path" ] || [ "$remove_clean" = "0" ] || fail "--remove and --remove-clean cannot be combined"
+[ "$json_mode" = "0" ] || { [ -z "$remove_path" ] && [ "$remove_clean" = "0" ]; } || fail "--json is only supported in list mode"
 
 canonical_path() {
   local path="$1"
@@ -159,6 +166,100 @@ print_list() {
   echo "  missing-prunable: path is gone; run git worktree prune manually if needed"
 }
 
+print_list_json() {
+  python3 - "$repo_root" "$main_worktree" <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+
+repo_root = Path(sys.argv[1]).resolve()
+main_worktree = Path(sys.argv[2]).resolve()
+
+
+def git(args, cwd=repo_root, check=True):
+    result = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if check and result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip()
+        raise SystemExit(f"git {' '.join(args)} failed: {message}")
+    return result.stdout.strip()
+
+
+def is_clean(path: Path) -> bool:
+    return (
+        subprocess.run(["git", "-C", str(path), "diff", "--quiet", "--ignore-submodules", "--"], check=False).returncode == 0
+        and subprocess.run(["git", "-C", str(path), "diff", "--cached", "--quiet", "--ignore-submodules", "--"], check=False).returncode == 0
+        and not git(["ls-files", "--others", "--exclude-standard"], cwd=path, check=False)
+    )
+
+
+def has_branch_head(path: Path) -> bool:
+    return subprocess.run(
+        ["git", "-C", str(path), "symbolic-ref", "--quiet", "--short", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    ).returncode == 0
+
+
+worktrees = []
+current = {}
+for line in git(["worktree", "list", "--porcelain"]).splitlines() + [""]:
+    if not line:
+        if current:
+            raw_path = current.get("path", "")
+            path = Path(raw_path)
+            exists = path.is_dir()
+            resolved = path.resolve() if exists else path
+            branch_ref = current.get("branch", "")
+            branch = branch_ref.removeprefix("refs/heads/") if branch_ref else "detached"
+            if resolved == repo_root:
+                status = "current"
+            elif resolved == main_worktree:
+                status = "main"
+            elif not branch_ref:
+                status = "detached-blocked"
+            elif exists and has_branch_head(resolved):
+                status = "clean-removable" if is_clean(resolved) else "dirty-blocked"
+            else:
+                status = "missing-prunable"
+            worktrees.append(
+                {
+                    "path": str(resolved),
+                    "branch": branch,
+                    "head": current.get("head", ""),
+                    "status": status,
+                    "exists": exists,
+                    "current": resolved == repo_root,
+                    "main": resolved == main_worktree,
+                }
+            )
+        current = {}
+        continue
+    if line.startswith("worktree "):
+        current["path"] = line.removeprefix("worktree ")
+    elif line.startswith("HEAD "):
+        current["head"] = line.removeprefix("HEAD ")
+    elif line.startswith("branch "):
+        current["branch"] = line.removeprefix("branch ")
+
+payload = {
+    "schema_version": 1,
+    "repo": str(repo_root),
+    "main_worktree": str(main_worktree),
+    "worktrees": worktrees,
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+}
+
 if [ "$remove_clean" = "1" ]; then
   [ "$apply" = "1" ] || fail "bulk removal requires --apply"
   clean_worktrees=()
@@ -179,6 +280,10 @@ if [ "$remove_clean" = "1" ]; then
 fi
 
 if [ -z "$remove_path" ]; then
+  if [ "$json_mode" = "1" ]; then
+    print_list_json
+    exit 0
+  fi
   print_list
   exit 0
 fi

@@ -429,15 +429,47 @@ def append_decision_log(payload: AuthorizationPayload, intent: PublicationIntent
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
 
-def _print_first_run(payload: AuthorizationPayload, intent: PublicationIntent) -> None:
+def print_first_run(
+    payload: AuthorizationPayload,
+    intent: PublicationIntent,
+    *,
+    json_output: bool = False,
+) -> None:
     token = encode_ack(payload)
+    ack_command = f"python3 scripts/agent-push.py --target {payload.route} --ack {token}"
+    if json_output:
+        preview = {
+            "schema_version": 1,
+            "recommended_route": intent.recommendation.route,
+            "chosen_route": payload.route,
+            "override": intent.override,
+            "risk_class": payload.risk_class,
+            "triggered_rules": intent.recommendation.triggers,
+            "ack_command": ack_command,
+            "dirty": payload.dirty,
+            "branch": payload.branch,
+            "head_sha": payload.head_sha,
+        }
+        print(json.dumps(preview, sort_keys=True))
+        return
     print(f"Recommended route: {intent.recommendation.route}")
     print(f"Chosen route: {payload.route}")
     print(f"Override: {str(intent.override).lower()}")
     print(f"Risk class: {payload.risk_class}")
     print(f"Triggered rules: {', '.join(intent.recommendation.triggers)}")
     print("No push executed. Re-run with this ack token to publish:")
-    print(f"python3 scripts/agent-push.py --target {payload.route} --ack {token}")
+    print(ack_command)
+
+
+def _print_first_run(payload: AuthorizationPayload, intent: PublicationIntent) -> None:
+    print_first_run(payload, intent)
+
+
+def print_error(message: str, *, json_output: bool = False) -> None:
+    if json_output:
+        print(json.dumps({"schema_version": 1, "error": {"message": message}}, sort_keys=True))
+        return
+    print(f"[agent-push] ERROR: {message}", file=sys.stderr)
 
 
 def _push(payload: AuthorizationPayload) -> int:
@@ -452,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Authorize and execute one Socratink git publication.")
     parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name, no-mistakes/dev")
     parser.add_argument("--ack", help="ack token printed by the first run")
+    parser.add_argument("--json", action="store_true", help="emit machine-readable preview output")
     args = parser.parse_args(argv)
 
     try:
@@ -463,21 +496,21 @@ def main(argv: list[str] | None = None) -> int:
         ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)
     except Exception as exc:
-        print(f"[agent-push] ERROR: {exc}", file=sys.stderr)
+        print_error(str(exc), json_output=args.json)
         return 2
 
     if not args.ack:
-        _print_first_run(payload, intent)
+        print_first_run(payload, intent, json_output=args.json)
         return 1
 
     try:
         original = decode_ack(args.ack)
     except ValueError as exc:
-        print(f"[agent-push] ERROR: {exc}", file=sys.stderr)
+        print_error(str(exc), json_output=args.json)
         return 2
 
     if not intent_matches(original, payload):
-        print("[agent-push] ERROR: push intent changed since ack was issued", file=sys.stderr)
+        print_error("push intent changed since ack was issued", json_output=args.json)
         return 2
 
     write_authorization(payload)

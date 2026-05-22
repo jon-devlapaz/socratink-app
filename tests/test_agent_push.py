@@ -428,3 +428,58 @@ def test_dev_publication_skips_divergence_check_without_origin_dev_ref(monkeypat
     monkeypatch.setattr(mod, "_run_git", fake_run_git)
 
     mod.ensure_current_dev_base(state, intent)
+
+
+def test_print_first_run_json_emits_machine_readable_preview(capsys):
+    mod = _load_module()
+    recommendation = mod.RouteRecommendation(
+        route="no-mistakes/dev",
+        risk_class="confirm",
+        triggers=["main.py"],
+    )
+    intent = mod.PublicationIntent(recommendation=recommendation, chosen_route="origin/dev")
+    payload = mod.AuthorizationPayload(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        route="origin/dev",
+        remote_url="https://github.com/jon-devlapaz/socratink-app.git",
+        refspec="dev",
+        diff_fingerprint="fingerprint-1",
+        risk_class="confirm",
+        nonce="nonce-1",
+        issued_at_epoch=1,
+    )
+
+    mod.print_first_run(payload, intent, json_output=True)
+
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["schema_version"] == 1
+    assert preview["recommended_route"] == "no-mistakes/dev"
+    assert preview["chosen_route"] == "origin/dev"
+    assert preview["override"] is True
+    assert preview["ack_command"].startswith("python3 scripts/agent-push.py --target origin/dev --ack ")
+    assert preview["triggered_rules"] == ["main.py"]
+
+
+def test_json_error_output_is_machine_readable(monkeypatch, capsys):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "refresh_publication_refs", lambda: None)
+    monkeypatch.setattr(
+        mod,
+        "collect_state",
+        lambda: mod.PushState(
+            branch="dev",
+            head_sha="abc1234",
+            dirty=False,
+            changed_paths=[],
+            remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+        ),
+    )
+
+    result = mod.main(["--target", "unsupported/target", "--json"])
+
+    assert result == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema_version"] == 1
+    assert payload["error"]["message"] == "unsupported push target: unsupported/target"

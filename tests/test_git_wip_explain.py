@@ -1,4 +1,5 @@
 import os
+import json
 import subprocess
 from pathlib import Path
 
@@ -89,6 +90,31 @@ def test_short_mode_summarizes_state_and_next_command(tmp_path: Path) -> None:
     assert "upstream=behind:0 ahead:1" in result.stdout
     assert "Next: python3 scripts/agent-push.py --target no-mistakes/dev" in result.stdout
     assert "Known worktrees:" not in result.stdout
+
+
+def test_json_mode_returns_stable_state_contract(tmp_path: Path) -> None:
+    origin = tmp_path / "origin.git"
+    repo = _init_repo(tmp_path)
+    _run(["git", "init", "--bare", str(origin)], tmp_path)
+    _git(repo, "remote", "add", "origin", str(origin))
+    _git(repo, "push", "-u", "origin", "dev")
+    (repo / "local.txt").write_text("local\n", encoding="utf-8")
+    _git(repo, "add", "local.txt")
+    _git(repo, "commit", "-m", "local work")
+
+    result = _run(["bash", str(SCRIPT), "--json"], repo)
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["schema_version"] == 1
+    assert payload["branch"] == "dev"
+    assert payload["upstream"]["name"] == "origin/dev"
+    assert payload["upstream"]["ahead"] == 1
+    assert payload["upstream"]["behind"] == 0
+    assert payload["worktree"]["dirty_count"] == 0
+    assert payload["finish"]["blocked"] is True
+    assert payload["recommended_next"] == "python3 scripts/agent-push.py --target no-mistakes/dev"
+    assert "[git-wip-explain]" not in result.stdout
 
 
 def test_feature_branch_ahead_recommends_feature_publication(tmp_path: Path) -> None:
