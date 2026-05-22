@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Read-only local AI reviewer for Socratink workflow artifacts.
+# No-push/no-file-edit local AI reviewer for Socratink workflow artifacts.
 
 set -euo pipefail
 
@@ -22,9 +22,11 @@ Usage:
   scripts/local-ai-review.sh smoke-local
   scripts/local-ai-review.sh pytest -- <pytest command>
 
-Read-only advisory wrapper around /Users/jondev/bin/deepseek-local.
+Advisory wrapper around /Users/jondev/bin/deepseek-local.
 It uses canned prompts, refuses likely secrets, caps payload size, and never
-performs persistent repo actions.
+edits files or pushes. publish-preview runs agent-push.py in preview mode,
+which may fetch/refresh local remote-tracking refs before producing redacted
+output.
 EOF
 }
 

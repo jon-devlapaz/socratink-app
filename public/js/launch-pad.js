@@ -1,6 +1,6 @@
 // public/js/launch-pad.js
 //
-// Launch pad for source-less concept creation (C-prime spec §3.2).
+// Launch pad for source-less concept creation.
 //
 // Reads the pending shell from sessionStorage, captures the learner's
 // launch attempt (threshold), POSTs to /api/extract via submitConceptCreate

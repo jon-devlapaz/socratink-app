@@ -143,7 +143,7 @@ Routing signals, source-dependence scores, causal-depth estimates, schema profil
 
 ### MVP cut (for design prioritization)
 
-**Build first:** Concept Threshold before any study-like page · pasted text + global learner-map inputs only · internal routing signals · provisional-graph copy · **first cold attempt is local and derived from the threshold input** · **analogical cold-attempt fallback** for low-signal learners · locked study silhouette before attempt · attempt-scoped repair artifact after cold attempt · **interleaving bridge with 2–3 next-room choices plus a "take a short break" option** before another cold attempt · browser-local training evidence with derived state, plus the shipped 18-hour spacing interval.
+**Build first:** Door + Launch Pad before any study-like page · concept name plus optional learner goal/source at the Door · any non-empty source-less Launch attempt on the Launch Pad · internal routing signals · smallest-actionable-route copy · **first cold attempt is local and derived from the Launch attempt** · **analogical cold-attempt fallback** for low-signal learners · locked study silhouette before attempt · attempt-scoped repair artifact after cold attempt · **interleaving bridge with 2–3 next-room choices plus a "take a short break" option** before another cold attempt · browser-local training evidence with derived state, plus the shipped 18-hour spacing interval.
 
 **Defer:** learner-visible schema profiles · long-term curriculum claims · cross-concept mastery summaries · rich notebook features · URL ingestion (until SSRF hardening + manual fallback ships).
 

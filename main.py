@@ -283,15 +283,16 @@ class ExtractRequest(BaseModel):
 
     Two payload shapes are accepted:
 
-    NEW (Plan A — conversational concept creation):
+    CURRENT (conversational concept creation):
       {name, learner_goal?, starting_sketch, source, api_key?}
 
-    LEGACY (back-compat for the existing form-based client during rollout):
+    LEGACY (back-compat for text-only callers):
       {text, api_key?}
 
-    Server-side validation in /api/extract enforces the spec §3.2 rule:
-    source-less submits require a non-empty learner sketch. learner_goal may
-    frame route generation, but it is not learner-capability evidence.
+    Server-side validation in /api/extract enforces the current source-less
+    launch contract: source-less submits require a non-empty learner sketch.
+    learner_goal may frame route generation, but it is not
+    learner-capability evidence.
     """
     # New shape
     name: str | None = Field(None, max_length=200)
@@ -312,8 +313,9 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
       {"path": "from_threshold", "name": str, "threshold": str, "learner_goal": str}
       {"path": "error", "status": 422, "error": str, "message": str}
 
-    Spec §3.2 truth table is enforced here as defense in depth. learner_goal is
-    forwarded only as relevance/scaffold context; it never proves understanding.
+    The source-less launch truth table is enforced here as defense in depth.
+    learner_goal is forwarded only as relevance/scaffold context; it never
+    proves understanding.
     """
     # Legacy {text} payload — back-compat path. Bypasses the new shape entirely.
     if req.text is not None and req.name is None and req.source is None:

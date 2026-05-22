@@ -281,11 +281,11 @@ The corollary discipline: when authoring a new surface, start from blank paper +
 
 This is the binding prioritization. Build first:
 
-- Concept Threshold *before* any study-like page.
-- Pasted text + global learner-map inputs only.
+- Door + Launch Pad *before* any study-like page.
+- Concept name plus optional learner goal/source at the Door; any non-empty source-less Launch attempt on the Launch Pad.
 - Internal routing signals (never learner-visible).
-- Provisional-graph copy.
-- Local first cold attempt derived from threshold input.
+- Smallest-actionable-route copy.
+- Local first cold attempt derived from the Launch attempt.
 - Analogical cold-attempt fallback.
 - Locked study silhouette before attempt.
 - Attempt-scoped repair artifact after cold attempt.

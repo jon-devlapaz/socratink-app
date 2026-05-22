@@ -5,8 +5,8 @@ source-less launch-pad contract accepts any non-empty learner launch attempt;
 empty sketches are rejected in ``main._resolve_extract_path`` before generation.
 
 This module remains as a parity-locked helper for legacy/frontend callers that
-need the older "substantive sketch" verdict. Frontend (Plan B) ports this exact
-behavior to JS and verifies parity against
+need the older "substantive sketch" verdict. The frontend JS helper keeps this
+exact behavior and verifies parity against
 ``tests/fixtures/sketch_validation_parity.json``.
 
 A sketch is "substantive" when it carries enough learner-generated signal to
@@ -20,7 +20,7 @@ simple — token count + a small "don't know" pattern list — because:
 When in doubt, this returns False. That verdict is not a graph-truth claim and
 is not the current source-less route-generation contract.
 
-JS PORT NOTE (REQUIRED for Plan B parity):
+JS PORT NOTE (REQUIRED for legacy parity):
 
 The Python regex `[^\w\s]` matches Unicode by default — `\w` in Python
 includes letters, digits, and underscore for ALL scripts (`café`, `光合`, etc.).
@@ -37,8 +37,8 @@ same reason (`.` matches BMP code units only without it).
 
 The parity fixture includes Spanish, French, and mixed-script entries
 specifically to lock this behavior. If the JS port silently uses
-ASCII `\w`, those entries will fail and the parity test will block
-the merge — that's the contract working as intended.
+ASCII `\w`, those entries will fail the parity test — that's the contract
+working as intended.
 """
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
 """End-to-end tests for the source-optional /api/extract endpoint.
 
-Covers the four truth-table states from spec §3.2:
+Covers the current source/source-less launch truth table:
   | Source | Sketch present? | Expected behavior          |
   | ------ | --------------- | -------------------------- |
   |  yes   |       any       | success via extract path   |
@@ -183,8 +183,7 @@ def test_whitespace_only_concept_returns_422_missing_concept(client):
 def test_legacy_text_only_payload_still_works(client):
     """Back-compat: the old {text, api_key} payload still hits extract path.
 
-    Plan B will deprecate this once the new frontend ships, but during
-    rollout the old client must keep working.
+    Keep this until the legacy text-only caller path is intentionally removed.
     """
     fake_map = _minimal_map()
     with patch("main.extract_knowledge_map", return_value=fake_map) as fake_extract:

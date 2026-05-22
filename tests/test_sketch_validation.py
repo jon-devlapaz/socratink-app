@@ -24,7 +24,7 @@ def test_parity_fixture_entries(text: str, expected: bool):
     """Every parity-fixture entry must produce the labeled result.
 
     This test is the contract enforced between Python and JS implementations.
-    A divergence between this and Plan B's JS implementation is a release-blocker.
+    A divergence means the legacy parity contract is broken.
     """
     assert is_substantive_sketch(text) is expected, (
         f"is_substantive_sketch({text!r}) returned "
