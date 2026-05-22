@@ -44,30 +44,37 @@ def client():
         main.app.state.auth_service = original
 
 
-def test_extract_thin_sketch_no_source_still_rejected(client):
-    """The existing thin_sketch_no_source guard is preserved (defense in depth)."""
+def test_extract_empty_sketch_no_source_still_rejected(client):
+    """Source-less generation still requires some learner-written response."""
     r = client.post("/api/extract", json={
         "name": "Photosynthesis",
         "starting_sketch": "",
         "source": None,
     })
     assert r.status_code == 422
-    assert r.json()["detail"]["error"] == "thin_sketch_no_source"
+    assert r.json()["detail"]["error"] == "missing_sketch"
 
 
-def test_extract_idk_sketch_no_source_rejected(client):
-    """`idk` is not substantive."""
-    r = client.post("/api/extract", json={
-        "name": "Photosynthesis",
-        "starting_sketch": "idk",
-        "source": None,
-    })
-    assert r.status_code == 422
-    assert r.json()["detail"]["error"] == "thin_sketch_no_source"
+def test_extract_short_sketch_no_source_returns_smallest_route(client):
+    """Any non-empty source-less launch attempt can seed the draft route."""
+    from tests._helpers.provisional_map_factory import provisional_map_with_node_count
+
+    fake_pm = provisional_map_with_node_count(3)
+
+    with patch("main.generate_smallest_provisional_map", return_value=fake_pm) as mocked:
+        r = client.post("/api/extract", json={
+            "name": "Photosynthesis",
+            "starting_sketch": "idk",
+            "source": None,
+        })
+
+    assert r.status_code == 200
+    _args, kwargs = mocked.call_args
+    assert kwargs.get("threshold") == "idk" or (len(_args) > 1 and _args[1] == "idk")
 
 
-def test_extract_substantive_threshold_returns_smallest_route(client):
-    """Source-less + substantive threshold → smallest ProvisionalMap (≤4)."""
+def test_extract_fuller_sketch_returns_smallest_route(client):
+    """Source-less + non-empty sketch → smallest ProvisionalMap (≤4)."""
     from tests._helpers.provisional_map_factory import provisional_map_with_node_count
 
     fake_pm = provisional_map_with_node_count(3)

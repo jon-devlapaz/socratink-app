@@ -111,6 +111,24 @@ def _emit_ai_call(*, stage: str, model: str, latency_ms: float,
     )
 
 
+def _legacy_gemini_error_to_http(route_name: str, err: Exception) -> HTTPException:
+    logger.warning("%s: %s: %s", route_name, err.__class__.__name__, err)
+    if isinstance(err, MissingAPIKeyError):
+        return HTTPException(
+            status_code=401,
+            detail="No API key configured. Add one in Settings to continue.",
+        )
+    if isinstance(err, GeminiRateLimitError):
+        return HTTPException(
+            status_code=429,
+            detail="The AI service is rate-limiting requests. Try again in a minute.",
+        )
+    return HTTPException(
+        status_code=503,
+        detail="The AI service is temporarily unavailable. Please try again shortly.",
+    )
+
+
 PROTECTED_HTML_PATHS = frozenset({"/", "/index.html"})
 PROTECTED_API_PATHS = frozenset(
     {
@@ -271,8 +289,8 @@ class ExtractRequest(BaseModel):
     LEGACY (back-compat for the existing form-based client during rollout):
       {text, api_key?}
 
-    Server-side validation in /api/extract enforces the spec §3.2
-    substantiveness rule: source-less submits require a substantive sketch.
+    Server-side validation in /api/extract enforces the spec §3.2 rule:
+    source-less submits require a non-empty learner sketch.
     """
     # New shape
     name: str | None = Field(None, max_length=200)
@@ -295,8 +313,6 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     Spec §3.2 truth table is enforced here as defense in depth.
     """
-    from models.sketch_validation import is_substantive_sketch
-
     # Legacy {text} payload — back-compat path. Bypasses the new shape entirely.
     if req.text is not None and req.name is None and req.source is None:
         if not req.text.strip():
@@ -322,7 +338,6 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
         and req.source.type == "url"
         and (req.source.url or "").strip()
     )
-    sketch_ok = is_substantive_sketch(sketch)
 
     if has_source_text:
         assert req.source is not None
@@ -337,17 +352,13 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
                 "error": "url_source_unsupported_here",
                 "message": "URL sources go through /api/extract-url."}
 
-    if not sketch_ok:
-        # Spec §3.2 row 1: thin sketch + no source → block.
-        # Server-side message names BOTH escape paths (sketch or source)
-        # because the conversational concept-create modal can also reach
-        # this 422 (modal has both a sketch chip and a source chip).
-        # The launch-pad surface has no source-attach affordance, so it
-        # overrides this copy locally — see launch-pad.js handling of the
-        # thin_sketch_no_source code, which routes to THIN_THRESHOLD_COPY.
+    if not sketch:
+        # Source-less route generation can use even a rough learner response,
+        # but still needs some learner-authored text to preserve the
+        # launch-attempt/provisional-map distinction.
         return {"path": "error", "status": 422,
-                "error": "thin_sketch_no_source",
-                "message": "Add more to your sketch, or attach source material — either path opens the build."}
+                "error": "missing_sketch",
+                "message": "Write anything you think about the concept before building the draft."}
 
     return {
         "path": "from_threshold",
@@ -765,12 +776,8 @@ def drill(req: DrillRequest):
         )
         response_payload = {"concept_id": req.concept_id, **result}
         return response_payload
-    except MissingAPIKeyError as err:
-        raise HTTPException(status_code=401, detail=str(err))
-    except GeminiRateLimitError as err:
-        raise HTTPException(status_code=429, detail=str(err))
-    except GeminiServiceError as err:
-        raise HTTPException(status_code=503, detail=str(err))
+    except (MissingAPIKeyError, GeminiRateLimitError, GeminiServiceError) as err:
+        raise _legacy_gemini_error_to_http("drill", err) from err
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid knowledge_map JSON.")
     except ValueError as err:
@@ -820,12 +827,8 @@ def repair_reps(req: RepairRepsRequest):
             api_key=req.api_key,
         )
         return {"concept_id": req.concept_id, **result}
-    except MissingAPIKeyError as err:
-        raise HTTPException(status_code=401, detail=str(err))
-    except GeminiRateLimitError as err:
-        raise HTTPException(status_code=429, detail=str(err))
-    except GeminiServiceError as err:
-        raise HTTPException(status_code=503, detail=str(err))
+    except (MissingAPIKeyError, GeminiRateLimitError, GeminiServiceError) as err:
+        raise _legacy_gemini_error_to_http("repair-reps", err) from err
     except json.JSONDecodeError as err:
         raise HTTPException(
             status_code=400, detail="Invalid knowledge_map JSON."

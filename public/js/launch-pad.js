@@ -23,7 +23,6 @@
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
 import { AudioFX } from './audio.js';
-import { isSubstantiveSketch } from './sketch-validation.js';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
 // stays consistent: typing fires playKeyClick on visible keys + Backspace +
@@ -35,12 +34,8 @@ const _isPrintableLaunchPadKey = (e) =>
 const PENDING_SHELL_KEY = 'socratink:pendingShell';
 const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Strategy-framed footer copy shown when the input is non-empty but not substantive.
-// Names the *kind* of words that move the sketch over the line so the learner
-// has something concrete to add, rather than the older "a few words" hand-wave
-// which left users guessing why a 16-word sketch was being rejected.
-const THIN_THRESHOLD_COPY =
-  'Name a few concrete parts, guessed steps, examples, or confusions so socratink has enough signal to draft from.';
+const MISSING_THRESHOLD_COPY =
+  'Write anything you think about the concept before building the draft.';
 
 function normalizeWhitespace(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
@@ -78,8 +73,8 @@ export function buildPendingShellFromDoorInput(rawInput) {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function isSubstantiveThreshold(text) {
-  return isSubstantiveSketch(text);
+function hasLaunchAttempt(text) {
+  return normalizeWhitespace(text).length > 0;
 }
 
 function readPendingShell() {
@@ -188,13 +183,9 @@ export function showLaunchPad(App) {
     input.parentNode.replaceChild(fresh, input);
 
     fresh.addEventListener('input', () => {
-      const ok = isSubstantiveThreshold(fresh.value);
+      const ok = hasLaunchAttempt(fresh.value);
       if (submit) submit.disabled = !ok;
-      if (validation) {
-        validation.textContent = !ok && (fresh.value || '').trim()
-          ? THIN_THRESHOLD_COPY
-          : '';
-      }
+      if (validation) validation.textContent = '';
     });
 
     // Audio cues mirror the door's concept-input pattern (app.js): focus tap
@@ -231,8 +222,8 @@ export function showLaunchPad(App) {
  * the pending shell ONLY after persistence succeeds.
  *
  * Persistence failures leave the shell in place so the learner can retry.
- * 422 thin-sketch rejections render the strategy-framed footer and leave
- * the shell in place for a retry.
+ * 422 validation rejections render the server message and leave the shell in
+ * place for a retry.
  *
  * @param {Event} event  The form submit event.
  * @param {object} App   The App namespace object (passed by app.js wrapper).
@@ -255,10 +246,10 @@ export async function runLaunchPadAction(event, App) {
   const validation = document.getElementById('launch-pad-validation');
   const threshold = (input ? input.value : '').trim();
 
-  if (!isSubstantiveThreshold(threshold)) {
+  if (!hasLaunchAttempt(threshold)) {
     // Client-side gate: the submit button should already be disabled, but
     // handle direct invocation (assistive tech, test harness) defensively.
-    if (validation) validation.textContent = THIN_THRESHOLD_COPY;
+    if (validation) validation.textContent = MISSING_THRESHOLD_COPY;
     emitTelemetry('concept_create.bypass_rejected', { path: 'client' });
     return false;
   }
@@ -311,19 +302,9 @@ export async function runLaunchPadAction(event, App) {
     });
   } catch (err) {
     if (err && err.status === 422) {
-      // Server-side thin-sketch rejection (thin_sketch_no_source) or other 422.
-      // For thin_sketch_no_source specifically, override the server message
-      // with THIN_THRESHOLD_COPY because the launch-pad has no source-attach
-      // affordance — the server message names "or attach source material" as
-      // an escape path, but that path only exists at the door / modal. For
-      // other 422 codes, surface the server message verbatim.
-      const code = err.body && err.body.error;
-      const isThinSketch = code === 'thin_sketch_no_source';
-      const validationCopy = isThinSketch
-        ? THIN_THRESHOLD_COPY
-        : ((err.body && err.body.message)
-          ? String(err.body.message)
-          : THIN_THRESHOLD_COPY);
+      const validationCopy = (err.body && err.body.message)
+        ? String(err.body.message)
+        : MISSING_THRESHOLD_COPY;
       if (validation) validation.textContent = validationCopy;
       if (submit) submit.disabled = false;
       clearBuildingState();

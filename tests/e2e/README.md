@@ -18,9 +18,9 @@ Key checks include:
    `#concept-list`, `.sidebar-brand-mark` all attached after navigation.
 3. **`test_guest_session_is_labeled_as_guest`** — anonymous Supabase sessions
    render as guest, not as signed-in users.
-4. **`test_launch_pad_sketch_gate_matches_substantive_backend_rule`** —
-   launch-pad validation stays aligned with the backend's substantive sketch
-   threshold.
+4. **`test_launch_pad_accepts_any_non_empty_sketch`** —
+   launch-pad validation enables any non-empty learner response and keeps empty
+   sketches blocked.
 5. **`test_drawer_toggle_remains_visible_in_concept_view`** — sidebar toggle
    stays available after opening a library concept (regression gate for the
    drawer-toggle visibility fix).
@@ -154,7 +154,7 @@ tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
 tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED
 tests/e2e/test_smoke.py::test_first_run_guidance_is_inline_not_modal PASSED
 tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED
-tests/e2e/test_smoke.py::test_launch_pad_sketch_gate_matches_substantive_backend_rule PASSED
+tests/e2e/test_smoke.py::test_launch_pad_accepts_any_non_empty_sketch PASSED
 tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED
 tests/e2e/test_smoke.py::test_feedback_button_keeps_sidebar_open PASSED
 tests/e2e/test_smoke.py::test_feedback_dialog_has_accessible_escape_close PASSED

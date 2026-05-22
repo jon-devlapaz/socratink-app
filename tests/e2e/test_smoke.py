@@ -7,7 +7,7 @@ What this catches
 - Anonymous Supabase sessions are labeled as guest, not signed-in users
 - First-run guidance stays inline instead of regressing to a modal
 - Library cards render training evidence instead of AI summary copy
-- Launch-pad sketch validation matches the backend substantive threshold
+- Launch-pad sketch validation accepts any non-empty learner response
 - Inline concept-page attempts persist, retry, and preserve active-entry state
 - Study reveal and repair records survive localStorage reload/reconstruction
 - Drawer toggle stays visible after opening a library concept
@@ -827,10 +827,10 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     )
 
 
-def test_launch_pad_sketch_gate_matches_substantive_backend_rule(
+def test_launch_pad_accepts_any_non_empty_sketch(
     page: Page, base_url: str
 ) -> None:
-    """The launch-pad affordance should not enable sketches the backend rejects."""
+    """The launch-pad affordance should enable any non-empty learner response."""
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate(
         """(() => {
@@ -847,16 +847,34 @@ def test_launch_pad_sketch_gate_matches_substantive_backend_rule(
         "Name parts, guesses, examples, or confusions. Concrete words help most.",
     )
     page.locator("#launch-pad-input").fill("parts guesses confusion")
-    expect(page.locator("#launch-pad-submit")).to_be_disabled()
-    expect(page.locator("#launch-pad-validation")).to_have_text(
-        "Name a few concrete parts, guessed steps, examples, or confusions so socratink has enough signal to draft from."
-    )
-
-    page.locator("#launch-pad-input").fill(
-        "attention shifts between rewards deadlines novelty sleep stress routines medication"
-    )
     expect(page.locator("#launch-pad-submit")).to_be_enabled()
     expect(page.locator("#launch-pad-validation")).to_have_text("")
+
+    page.locator("#launch-pad-input").fill("")
+    expect(page.locator("#launch-pad-submit")).to_be_disabled()
+    expect(page.locator("#launch-pad-validation")).to_have_text("")
+    page.evaluate(
+        """() => window.App.runLaunchPadAction({ preventDefault() {} })"""
+    )
+    expect(page.locator("#launch-pad-validation")).to_have_text(
+        "Write anything you think about the concept before building the draft."
+    )
+
+    def fulfill_missing_sketch(route):
+        route.fulfill(
+            status=422,
+            content_type="application/json",
+            body=json.dumps({"detail": {"error": "missing_sketch"}}),
+        )
+
+    page.route("**/api/extract", fulfill_missing_sketch)
+    page.locator("#launch-pad-input").fill("idk")
+    expect(page.locator("#launch-pad-submit")).to_be_enabled()
+    expect(page.locator("#launch-pad-validation")).to_have_text("")
+    page.locator("#launch-pad-submit").click()
+    expect(page.locator("#launch-pad-validation")).to_have_text(
+        "Write anything you think about the concept before building the draft."
+    )
 
 
 def test_concept_entry_mutation_preserves_active_later_entry(
