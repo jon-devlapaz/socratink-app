@@ -390,6 +390,31 @@ def test_publication_allows_destination_ancestor(monkeypatch):
     mod.ensure_destination_fast_forward(state, intent)
 
 
+def test_feature_publication_refreshes_destination_ref(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="feat/demo-flow",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["public/js/app.js"],
+        remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="origin/feat/demo-flow")
+    calls = []
+
+    def fake_run_git(args, *, check=True):
+        calls.append(args)
+        return ""
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.ensure_destination_ref_current(state, intent)
+
+    assert calls == [
+        ["fetch", "origin", "+refs/heads/feat/demo-flow:refs/remotes/origin/feat/demo-flow"]
+    ]
+
+
 def test_dev_publication_skips_divergence_check_without_origin(monkeypatch):
     mod = _load_module()
     state = mod.PushState(

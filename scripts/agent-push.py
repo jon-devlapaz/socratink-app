@@ -340,7 +340,7 @@ def ensure_destination_ref_current(state: PushState, intent: PublicationIntent) 
     remote, refspec = route_to_remote_refspec(intent.chosen_route)
     if remote not in state.remote_urls:
         return
-    if refspec not in {"dev", "main"}:
+    if refspec not in {"dev", "main"} and not refspec.startswith("feat/"):
         return
     _run_git(["fetch", remote, f"+refs/heads/{refspec}:refs/remotes/{remote}/{refspec}"])
 
