@@ -233,6 +233,7 @@ python scripts/run_tasting_fixture.py
 - Threshold is on the diff, not the project total. Brand-new code without coverage fails; existing legacy gaps are not scored.
 - Pure-deletion diffs, doc-only diffs, and config-only diffs are correctly no-ops — diff-cover only scores added/modified executable lines.
 - Backend scope is `api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
+- With the default `SOCRATINK_BASE_URL` (`http://localhost:8000`) or `http://127.0.0.1:8000`, the script reuses a healthy local app if one is already running; otherwise it starts loopback uvicorn and writes `.qa-runs/check-coverage-uvicorn.log`. Non-local `SOCRATINK_BASE_URL` values are used as-is and are not auto-started.
 - If the script crashes outside of a coverage failure (missing V8 data, missing `coverage.xml`), inspect `.qa-runs/v8-coverage/*.json` and `.qa-runs/coverage-reports/cobertura-coverage.xml` before reaching for `--no-verify`-style escapes. The gate is the brake; do not bypass it silently.
 
 ### Deploy verification

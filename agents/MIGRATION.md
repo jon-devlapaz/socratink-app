@@ -52,6 +52,8 @@ For any non-terminal entry (`adapter-only` or `preserved-pending-review`), recor
 | `.claude/skills/empirical-grill/SKILL.md` | `tool-specific` | slash-command-heavy Claude workflow; not ready for cross-model canon |
 | `.codex/` | `tool-specific` | runtime/config/memory surface |
 | `.gemini/` | `tool-specific` | runtime/config/auth surface |
+| `.poolside/` | `tool-specific` | tracked Poolside tool allowlist/config surface; do not treat as shared workflow canon |
+| `.antigravitycli/` | `tool-specific` | ignored local Antigravity CLI runtime state; do not track or migrate into `agents/` |
 | `.agents/` | `tool-specific` | local substrate only; use only for external install-state under `.agents/skills/` and ignored runtime evidence under `.agents/runtime/` |
 | `.agents/skills/fastapi/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
 | `.agents/skills/gemini-interactions-api/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
