@@ -85,11 +85,30 @@ fi
 
 normalize_target() {
   local raw="$1"
-  raw="${raw#public/}"
-  raw="${raw#./public/}"
-  raw="${raw#_lab/}"
-  raw="${raw#/}"
+  while true; do
+    case "$raw" in
+      ./public/*) raw="${raw#./public/}" ;;
+      public/*) raw="${raw#public/}" ;;
+      /_lab/*) raw="${raw#/_lab/}" ;;
+      _lab/*) raw="${raw#_lab/}" ;;
+      /*) raw="${raw#/}" ;;
+      *) break ;;
+    esac
+  done
   raw="${raw%.html}"
+  if [[ -z "$raw" || "$raw" == */ || "$raw" == *'//'* ]]; then
+    echo "share-lab.sh: invalid _lab target: $1" >&2
+    exit 2
+  fi
+  local segment
+  local -a segments
+  IFS='/' read -r -a segments <<< "$raw"
+  for segment in "${segments[@]}"; do
+    if [[ -z "$segment" || "$segment" == "." || "$segment" == ".." ]]; then
+      echo "share-lab.sh: invalid _lab target: $1" >&2
+      exit 2
+    fi
+  done
   printf '/_lab/%s.html' "$raw"
 }
 
