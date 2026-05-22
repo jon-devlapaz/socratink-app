@@ -432,6 +432,9 @@
     0 18px 44px rgba(var(--ink-900-rgb), 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.62);
 }
+.concept-page-b2__gestalt--single-column {
+  grid-template-columns: minmax(0, 1fr);
+}
 [data-theme="dark"] .concept-page-b2__gestalt {
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(144, 103, 198, 0.08)),

@@ -1365,6 +1365,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(!savedHtml.includes('Missing piece'));
         assert.ok(!savedHtml.includes('threshold as the opening condition'));
         assert.ok(!savedHtml.includes('concept-page-b2__route'));
+        assert.ok(savedHtml.includes('concept-page-b2__gestalt--single-column'));
         assert.ok(!savedHtml.includes('concept-page-b2__nearby'));
 
         const cleanRevealedTraining = {
@@ -1400,6 +1401,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(compareHtml.includes('data-active-entry-action="keep-working"'));
         assert.ok(!compareHtml.includes('No missing piece recorded for this draft.'));
         assert.ok(!compareHtml.includes('concept-page-b2__route-item'));
+        assert.ok(compareHtml.includes('concept-page-b2__gestalt--single-column'));
         assert.ok(!compareHtml.includes('data-entry-id="spread"'));
         assert.ok(!compareHtml.includes('concept-page-b2__nearby'));
 

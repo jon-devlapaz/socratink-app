@@ -792,8 +792,10 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
 
+  const gestaltClass = `concept-page-b2__gestalt${hidesRouteAndNearby ? ' concept-page-b2__gestalt--single-column' : ''}`;
+
   return `
-    <section class="concept-page-b2__gestalt" aria-label="Concept gestalt canvas">
+    <section class="${gestaltClass}" aria-label="Concept gestalt canvas">
       ${hidesRouteAndNearby ? '' : renderRouteMarginHtml(backbone, activeIdx, training, {
         ...options,
         interactive: !showsOnlyQuietRoute,
