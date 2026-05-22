@@ -31,7 +31,7 @@ import {
   hasComparisonAcknowledgement,
   markComparisonAcknowledged,
 } from './comparison-acknowledgement.js';
-import { renderConceptConstellationHtml } from './concept-constellation-view.js?v=3';
+import { renderConceptConstellationHtml } from './concept-constellation-view.js?v=4';
 import { deriveConceptBadge } from './concept-status.js';
 import {
   getDefaultPhaseBSessionState,
@@ -1996,11 +1996,20 @@ const App = (() => {
         entryId,
         new Date().toISOString(),
       );
-      const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training, {
+      const renderOptions = {
         activeEntryId: entryId,
         justRevealedEntryId: entryId,
-      });
+      };
+      const mountEl = document.getElementById('map-content');
+      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training, renderOptions);
+      const constellationContent = document.getElementById('concept-constellation-content');
+      if (constellationContent) renderConceptConstellationView(
+        constellationContent,
+        graphData,
+        concept,
+        training,
+        renderOptions,
+      );
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
       console.warn('Study reveal failed.', err);
@@ -2362,6 +2371,7 @@ const App = (() => {
     if (!mountEl || !data) return;
     const activeId = options?.activeEntryId || _activeEntryId;
     mountEl.innerHTML = renderConceptConstellationHtml(data, {
+      ...options,
       concept,
       training,
       activeEntryId: activeId,

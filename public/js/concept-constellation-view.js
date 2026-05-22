@@ -147,7 +147,7 @@ function entrySafePurpose(entry, viewState, index, isActive) {
     : 'Use this room to extend the route without reading ahead.';
 }
 
-function entryForTrainingState(entry) {
+export function entryForTrainingState(entry) {
   if (!entry || typeof entry !== 'object') return entry;
   const {
     drill_status,
@@ -193,11 +193,10 @@ function displayStateLabel(viewState) {
 }
 
 function buildConstellationModel(entries, training, activeEntryId, options = {}) {
-  const stateEntries = entries.map(entryForTrainingState);
   const angles = resolveBackboneAngles(entries.length);
   const nodes = entries.map((entry, index) => {
     const id = getConceptEntryId(entry, index);
-    const viewState = deriveConceptEntryViewState(stateEntries, index, training, options);
+    const viewState = deriveConceptEntryViewState(entries, index, training, options);
     const isActive = id === activeEntryId;
     const position = resolveNodePosition(entries, entry, index, angles);
     const label = canShowEntryLabel(viewState, index, isActive)

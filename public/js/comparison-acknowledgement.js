@@ -17,28 +17,56 @@ function defaultStorage() {
 export function hasComparisonAcknowledgement(conceptId, entryId, storage = defaultStorage()) {
   const key = storageKey(conceptId, entryId);
   if (!key || !storage) return false;
-  return storage.getItem(key) === '1';
+  try {
+    return storage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
 }
 
 export function markComparisonAcknowledged(conceptId, entryId, storage = defaultStorage()) {
   const key = storageKey(conceptId, entryId);
   if (!key || !storage) return;
-  storage.setItem(key, '1');
+  try {
+    storage.setItem(key, '1');
+  } catch {
+    // Storage acknowledgement is best-effort UI state.
+  }
 }
 
 export function clearComparisonAcknowledgement(conceptId, entryId, storage = defaultStorage()) {
   const key = storageKey(conceptId, entryId);
   if (!key || !storage) return;
-  storage.removeItem(key);
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Storage acknowledgement is best-effort UI state.
+  }
 }
 
 export function clearComparisonAcknowledgementsForConcept(conceptId, storage = defaultStorage()) {
   if (!conceptId || !storage) return;
   const prefix = `${COMPARISON_ACK_PREFIX}:${conceptId}:`;
   const keys = [];
-  for (let i = 0; i < (storage.length || 0); i += 1) {
-    const key = storage.key?.(i);
-    if (key?.startsWith(prefix)) keys.push(key);
+  let length = 0;
+  try {
+    length = Number(storage.length) || 0;
+  } catch {
+    return;
   }
-  keys.forEach((key) => storage.removeItem(key));
+  for (let i = 0; i < length; i += 1) {
+    try {
+      const key = typeof storage.key === 'function' ? storage.key(i) : null;
+      if (typeof key === 'string' && key.startsWith(prefix)) keys.push(key);
+    } catch {
+      // Keep scanning; one bad storage slot should not break cleanup.
+    }
+  }
+  keys.forEach((key) => {
+    try {
+      storage.removeItem(key);
+    } catch {
+      // Storage acknowledgement is best-effort UI state.
+    }
+  });
 }

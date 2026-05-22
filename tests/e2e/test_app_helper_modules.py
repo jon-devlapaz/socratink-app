@@ -852,6 +852,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             }
 
             const conceptPage = await import('/js/concept-page-view.js');
+            const conceptConstellation = await import('/js/concept-constellation-view.js');
+            const comparisonAck = await import('/js/comparison-acknowledgement.js');
             const trainingDerive = await import('/js/training-derive.js');
             const attempt = (id, at, classification) => ({
               id,
@@ -956,6 +958,54 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               trainingDerive.deriveConceptStatus(null, 'not-array').composition.total,
               0,
               'concept status tolerates non-array node ids',
+            );
+            same(
+              conceptConstellation.entryForTrainingState({
+                id: 'legacy-entry',
+                label: 'Legacy entry',
+                drill_status: 'primed',
+                drill_phase: 'study',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+                study_completed_at: '2026-05-15T10:05:00.000Z',
+                last_drilled: '2026-05-15T10:00:00.000Z',
+              }),
+              { id: 'legacy-entry', label: 'Legacy entry' },
+              'constellation training sanitizer strips legacy drill fields',
+            );
+            same(conceptConstellation.entryForTrainingState(null), null, 'constellation sanitizer tolerates null');
+
+            const throwingAckStorage = {
+              getItem() { throw new Error('get blocked'); },
+              setItem() { throw new Error('set blocked'); },
+              removeItem() { throw new Error('remove blocked'); },
+              key() { throw new Error('key blocked'); },
+              get length() { throw new Error('length blocked'); },
+            };
+            assert(
+              comparisonAck.hasComparisonAcknowledgement('concept-1', 'entry-1', throwingAckStorage) === false,
+              'comparison ack get failure degrades to false',
+            );
+            comparisonAck.markComparisonAcknowledged('concept-1', 'entry-1', throwingAckStorage);
+            comparisonAck.clearComparisonAcknowledgement('concept-1', 'entry-1', throwingAckStorage);
+            comparisonAck.clearComparisonAcknowledgementsForConcept('concept-1', throwingAckStorage);
+
+            const partiallyFailingAckStorage = {
+              removed: [],
+              get length() { return 3; },
+              key(index) {
+                if (index === 0) throw new Error('slot blocked');
+                if (index === 1) return 'socratink:comparison_ack:v1:concept-1:entry-3';
+                return 'socratink:comparison_ack:v1:concept-2:entry-1';
+              },
+              removeItem(key) {
+                this.removed.push(key);
+              },
+            };
+            comparisonAck.clearComparisonAcknowledgementsForConcept('concept-1', partiallyFailingAckStorage);
+            same(
+              partiallyFailingAckStorage.removed,
+              ['socratink:comparison_ack:v1:concept-1:entry-3'],
+              'comparison ack cleanup skips bad slots and removes matching keys',
             );
             const conceptBackbone = [
               { id: 'core', label: '<Core>', drill_status: 'drilled', purpose: 'First purpose' },

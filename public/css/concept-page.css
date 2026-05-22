@@ -606,7 +606,7 @@
 .concept-page-b2__study-note-eyebrow { display: block; }
 .concept-page-b2__study-note-toggle {
   border: 0;
-  border-bottom: 1px dotted currentcolor;
+  border-bottom: 1px dotted currentColor;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -854,7 +854,7 @@
   color: var(--accent-primary);
   padding: 9px 0;
   border: 0;
-  border-bottom: 1px dashed currentcolor;
+  border-bottom: 1px dashed currentColor;
   border-radius: 0;
   font-family: inherit; font-size: 14px; font-weight: 600;
   letter-spacing: 0.02em;
@@ -1026,7 +1026,7 @@
   letter-spacing: 0.04em;
   color: var(--accent-primary);
   text-decoration: none;
-  border-bottom: 1px dashed currentcolor;
+  border-bottom: 1px dashed currentColor;
   padding-bottom: 1px;
   cursor: pointer;
 }

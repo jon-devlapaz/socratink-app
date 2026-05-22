@@ -1053,7 +1053,7 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
               },
               {
                 id: 'legacy',
-                label: 'Legacy label should not appear',
+                label: 'Legacy fallback label',
                 drill_status: 'primed',
               },
             ],
@@ -1088,11 +1088,10 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.match(activeHtml, /data-constellation-selected-purpose>Write the first useful reconstruction before study appears\\./);
         assert.match(activeHtml, /Sodium gate/);
         assert.match(activeHtml, /Entry 02/);
-        assert.match(activeHtml, /Entry 04/);
+        assert.match(activeHtml, /Legacy fallback label/);
         assert.doesNotMatch(activeHtml, /Signal spread/);
         assert.doesNotMatch(activeHtml, /Reset phase/);
-        assert.doesNotMatch(activeHtml, /Legacy label should not appear/);
-        assert.doesNotMatch(activeHtml, /data-entry-id="legacy"[\\s\\S]*data-state="primed"/);
+        assert.match(activeHtml, /data-entry-id="legacy"[\\s\\S]*data-state="primed"/);
 
         const attemptedHtml = renderConceptConstellationHtml(data, {
           activeEntryId: 'reset',
@@ -1118,7 +1117,7 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.match(coldHtml, /data-entry-id="gate"[\\s\\S]*data-state="ready"/);
         assert.match(coldHtml, /Entry 02/);
         assert.doesNotMatch(coldHtml, /Signal spread/);
-        assert.doesNotMatch(coldHtml, /Legacy label should not appear/);
+        assert.match(coldHtml, /data-entry-id="legacy"[\\s\\S]*data-state="primed"/);
 
         for (const forbidden of [
           /Sodium channels open at threshold/,
@@ -1196,6 +1195,45 @@ def test_comparison_acknowledgement_is_ui_only_and_reset_scoped() -> None:
         assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
         assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-2', storage), false);
         assert.equal(hasComparisonAcknowledgement('concept-2', 'entry-1', storage), true);
+
+        const throwingStorage = {
+          getItem() {
+            throw new Error('get blocked');
+          },
+          setItem() {
+            throw new Error('set blocked');
+          },
+          removeItem() {
+            throw new Error('remove blocked');
+          },
+          key() {
+            throw new Error('key blocked');
+          },
+          get length() {
+            throw new Error('length blocked');
+          },
+        };
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', throwingStorage), false);
+        assert.doesNotThrow(() => markComparisonAcknowledged('concept-1', 'entry-1', throwingStorage));
+        assert.doesNotThrow(() => clearComparisonAcknowledgement('concept-1', 'entry-1', throwingStorage));
+        assert.doesNotThrow(() => clearComparisonAcknowledgementsForConcept('concept-1', throwingStorage));
+
+        const partiallyFailingStorage = {
+          removed: [],
+          get length() {
+            return 3;
+          },
+          key(index) {
+            if (index === 0) throw new Error('slot blocked');
+            if (index === 1) return 'socratink:comparison_ack:v1:concept-1:entry-3';
+            return 'socratink:comparison_ack:v1:concept-2:entry-1';
+          },
+          removeItem(key) {
+            this.removed.push(key);
+          },
+        };
+        clearComparisonAcknowledgementsForConcept('concept-1', partiallyFailingStorage);
+        assert.deepEqual(partiallyFailingStorage.removed, ['socratink:comparison_ack:v1:concept-1:entry-3']);
         """
     )
     assert result.returncode == 0, result.stderr
