@@ -147,7 +147,6 @@ function sourceModeForConcept(concept, data, training) {
     cleanScaffoldText(concept?.contentType)
     || cleanScaffoldText(concept?.contentFilename)
     || cleanScaffoldText(concept?.sourceUrl)
-    || cleanScaffoldText(data?.metadata?.source_title)
     || cleanScaffoldText(data?.metadata?.source_url)
   );
   return hasNullContentType && hasNullSourceUrl && !hasSourceMarker ? 'source_less' : '';

@@ -1215,6 +1215,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           metadata: {
             core_thesis: 'AI-generated answer structure must stay hidden.',
             learner_goal: 'explain sodium channel gating',
+            source_title: 'Learner launch sketch',
           },
           clusters: [{
             id: 'c1',
