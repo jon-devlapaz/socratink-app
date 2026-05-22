@@ -2133,6 +2133,9 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(!repairedHtml.includes('Write it again'));
         assert.ok(repairedHtml.includes('concept-page-b2__repair'));
         assert.ok(repairedHtml.includes('Try from memory again'));
+        assert.ok(!repairedHtml.includes('concept-page-b2__repair-input'));
+        assert.ok(!repairedHtml.includes('concept-page-b2__repair-save'));
+        assert.ok(!repairedHtml.includes('Save this repair before you try from memory again.'));
 
         const stripHtml = renderConceptStripHtml(backbone, backbone[1], 1, training);
         assert.ok(stripHtml.includes('class="concept-strip"'));
