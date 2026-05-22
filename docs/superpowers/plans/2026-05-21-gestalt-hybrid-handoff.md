@@ -119,7 +119,7 @@ function renderConceptPageB2(mountEl, data, concept, training, options) {
     !studyRevealed || firstAttempt.at <= activeRecord.study_revealed_at
   ));
   const comparisonAcknowledged = !hasPreStudyColdAttempt || hasComparisonAcknowledgement(concept.id, active.id);
-  
+
   if (training?.source_mode === 'source_less' && !activeHasRealAttempt && !studyRevealed) {
     renderColdAttemptSurface(mountEl, data, concept, active, training);
     return;
@@ -139,7 +139,7 @@ function renderConceptPageB2(mountEl, data, concept, training, options) {
     renderPostRevealComparison(mountEl, data, concept, active, training);
     return;
   }
-  
+
   // Expanded Route Margin Canvas (existing behavior)
   // ... existing renderActiveEntryHtml path ...
 }
