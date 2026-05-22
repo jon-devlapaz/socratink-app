@@ -1,9 +1,9 @@
 # models/
 
 Provisional-map data model. The shape every part of the pipeline (extract,
-draft, drill, repair-reps) reads and writes. Pydantic-backed; the `parsed`
-field of every `StructuredLLMResult` from the extract stage is an instance
-of `ProvisionalMap`.
+smallest-route generation, draft, drill, repair-reps) reads and writes.
+Pydantic-backed; the `parsed` field of map-producing `StructuredLLMResult`
+objects is an instance of `ProvisionalMap`.
 
 ## Public surface
 
@@ -71,6 +71,9 @@ Import from `models` directly.
 
 ## Related
 
-- Schema producer: `app_prompts/extract-system-v1.txt` declares the shape.
-- Validation: `ai_service.py` parses LLM output into `ProvisionalMap`.
+- Schema producers: `app_prompts/extract-system-v1.txt` declares the base shape;
+  `app_prompts/generate-smallest-route-system-v1.txt` produces the same model
+  and owns the source-less `learner_scaffold` route-task shape.
+- Validation: `ai_service.py` parses LLM output into `ProvisionalMap` and
+  enforces smallest-route-only scaffold requirements in `_validate_smallest_route`.
 - Drill consumer: drill agent reads the map and routes by node kind.

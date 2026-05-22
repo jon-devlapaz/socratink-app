@@ -1,8 +1,9 @@
 """ProvisionalMap — the typed cognitive artifact contract.
 
-Mirrors the JSON schema described in ``app_prompts/extract-system-v1.txt``.
-Application code that consumes extraction output sees this type, never a
-dict. Structural integrity is enforced at parse time:
+Mirrors the JSON schemas described in ``app_prompts/extract-system-v1.txt``
+and ``app_prompts/generate-smallest-route-system-v1.txt``. Application code
+that consumes generated map output sees this type, never a dict. Structural
+integrity is enforced at parse time:
 
   - Every id (backbone, cluster, subnode) matches the identifier grammar
   - Every subnode lives in its declared cluster (c1_s2 must be inside c1)
@@ -14,6 +15,8 @@ dict. Structural integrity is enforced at parse time:
 What is NOT enforced here:
   - Quality minimums (>=N nodes total): governed by the prompt
   - Framework quality gates: governed by the prompt
+  - Smallest-route profile rules: governed by ``ai_service._validate_smallest_route``
+    (for example, ``learner_scaffold`` is optional generally but required there)
 
 Models do NOT use ``extra="forbid"`` because Gemini's response_schema
 parameter rejects the resulting JSON Schema (additionalProperties: false).
