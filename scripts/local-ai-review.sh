@@ -137,7 +137,16 @@ collect_pytest() {
   [ "${1:-}" = "--" ] || fail "pytest mode requires: scripts/local-ai-review.sh pytest -- <pytest command>"
   shift
   [ "$#" -gt 0 ] || fail "pytest mode requires a command after --"
-  "$@" 2>&1
+  local runner_name
+  runner_name="$(basename "$1")"
+  case "$runner_name" in
+    pytest|pytest3)
+      ;;
+    *)
+      fail "pytest mode requires a pytest runner after --, got: $1"
+      ;;
+  esac
+  "$@" 2>&1 || true
 }
 
 ensure_local_ollama_host
@@ -178,10 +187,11 @@ case "$mode" in
       "$(collect_smoke_local)"
     ;;
   pytest)
+    pytest_context="$(collect_pytest "$@")"
     review_payload \
       "pytest" \
       "Summarize this pytest output. Identify the likely root cause and the smallest next debugging step. Do not invent code not shown here and do not recommend bypassing tests." \
-      "$(collect_pytest "$@")"
+      "$pytest_context"
     ;;
   *)
     usage >&2

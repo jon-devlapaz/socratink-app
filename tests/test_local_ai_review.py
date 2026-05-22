@@ -10,6 +10,8 @@ SCRIPT = REPO_ROOT / "scripts" / "local-ai-review.sh"
 
 def _run(args: list[str], cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     merged_env = os.environ.copy()
+    if not env or "OLLAMA_HOST" not in env:
+        merged_env.pop("OLLAMA_HOST", None)
     if env:
         merged_env.update(env)
     return subprocess.run(args, cwd=cwd, text=True, capture_output=True, check=False, env=merged_env)
@@ -128,7 +130,9 @@ def test_wip_mode_uses_repo_wip_helper_when_available(tmp_path: Path) -> None:
 def test_pytest_mode_summarizes_failing_command_output(tmp_path: Path) -> None:
     fake, capture = _fake_deepseek(tmp_path)
     repo = _init_repo(tmp_path)
-    failing = tmp_path / "failing-pytest"
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    failing = bin_dir / "pytest"
     failing.write_text(
         "#!/usr/bin/env bash\n"
         "printf 'FAILED tests/demo.py::test_demo\\n'\n"
@@ -147,6 +151,21 @@ def test_pytest_mode_summarizes_failing_command_output(tmp_path: Path) -> None:
     captured = capture.read_text(encoding="utf-8")
     assert "Summarize this pytest output" in captured
     assert "FAILED tests/demo.py::test_demo" in captured
+
+
+def test_pytest_mode_rejects_non_pytest_command(tmp_path: Path) -> None:
+    fake, capture = _fake_deepseek(tmp_path)
+    repo = _init_repo(tmp_path)
+
+    result = _run(
+        ["bash", str(SCRIPT), "pytest", "--", "echo", "not-pytest"],
+        repo,
+        {"DEEPSEEK_LOCAL_BIN": str(fake), "DEEPSEEK_CAPTURE": str(capture)},
+    )
+
+    assert result.returncode == 2
+    assert "pytest mode requires a pytest runner after --" in result.stderr
+    assert not capture.exists()
 
 
 def test_publish_preview_redacts_ack_token_before_model_call(tmp_path: Path) -> None:
