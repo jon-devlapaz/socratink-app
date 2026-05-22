@@ -54,7 +54,7 @@ Stage 3: EXPANDED WORKSPACE (ongoing concept work after comparison is acknowledg
 
 ### On `dev` HEAD (the implementation target)
 
-- **2-column layout** in `renderActiveEntryHtml()` → wraps output in `.concept-page-b2__gestalt` with `grid-template-columns: minmax(150px, 220px) minmax(0, 1fr)`.
+- **Route-aware layout** in `renderActiveEntryHtml()` → wraps output in `.concept-page-b2__gestalt` with the 2-column Route Margin Canvas by default, and adds `.concept-page-b2__gestalt--single-column` when saved-draft and post-reveal comparison states hide route/nearby UI.
 - **Route Margin sidebar** rendered by `renderRouteMarginHtml()` in `concept-page-view.js`.
 - **Constellation graph toggle** in `concept-constellation-view.js`, wired via `#concept-view-switch` in `app.js`.
 - **`renderConceptPageB2()`** in `app.js` (line ~2356) is the top-level mount function. It calls `renderActiveEntryHtml()` and sets `mountEl.innerHTML`.
@@ -243,7 +243,7 @@ During the immediate post-reveal comparison state, route markers may be visible 
 
 After `Keep working`, the Route Margin Canvas may render normal route controls. Only traversal-allowed entries may be interactive; locked/future entries remain inert. The expanded workspace continues to derive all copy and actions from the training record and per-entry `next_action`.
 
-If the active entry derives `next_action === "repair"` after `study_revealed_at`, the post-reveal comparison must keep repair clearly available and strategy-framed. `Keep working` may expand the workspace, but it must not hide or demote the repair obligation behind generic navigation.
+If the active entry derives `next_action === "repair"` after `study_revealed_at`, the post-reveal comparison must keep repair clearly available and strategy-framed. Before a repair is saved, show the repair composer. After a repair record exists, hide the composer/helper/save controls and offer `Try from memory again`. `Keep working` may expand the workspace, but it must not hide or demote the repair obligation behind generic navigation.
 
 Forbidden copy: `Enter Concept Board`, `Continue the route`, `Complete`, `Done`, `Mastered`, `Progress made`, or any label implying that reading the study note changed graph truth.
 
@@ -256,7 +256,7 @@ Forbidden copy: `Enter Concept Board`, `Continue the route`, `Complete`, `Done`,
 | Saved gate -> Post-reveal comparison | learner clicks `Reveal notes and compare` | real attempt exists; `study_revealed_at` written | exact draft, same-entry study note, neutral compare copy, gaps only if present | "no missing piece", scores, future notes, route clicks, completion/progress | persist `study_revealed_at`; pass render-only `justRevealedEntryId` | immediate screen is comparison, not route canvas |
 | Comparison -> Expanded workspace | learner clicks `Keep working` | real attempt + `study_revealed_at`; comparison acknowledged in persistent UI-only state | Route Margin Canvas, traversal-gated route controls, repair primary if `next_action === "repair"` | route marker as alternate exit, `Continue the route`, mastery/progress copy | no training mutation; write/invalidate UI-only acknowledgement | before click markers inert; after click allowed controls work; reload/back restores workspace |
 | Legacy revealed/no-attempt -> Compatibility workspace | legacy source-less record has `study_revealed_at` but zero attempts | study boundary already crossed; no real attempt evidence | existing study surface without cold-attempt framing | cold attempt claim, route progress, mastery, route unlock from study alone | none | does not ask for a "cold" attempt after study reveal |
-| Expanded -> Repair / re-drill | save repair or later reconstruction | repair requires `study_revealed_at`; re-drill derives from spacing/evidence | repair composer, study reference, later spaced attempt | `solidified` from study/repair, scores during active work | append repair or spaced attempt | only spaced strong reconstruction can derive `solidified` |
+| Expanded -> Repair / re-drill | save repair or later reconstruction | repair requires `study_revealed_at`; re-drill derives from spacing/evidence | repair composer before first repair, study reference, `Try from memory again` after repair record, later spaced attempt | `solidified` from study/repair, scores during active work, repair composer after a repair record exists | append repair or spaced attempt | only spaced strong reconstruction can derive `solidified` |
 
 ### 3f. Prototype and Goal Workflow
 
