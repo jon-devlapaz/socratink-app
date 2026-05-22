@@ -25,7 +25,12 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=9';
+} from './concept-page-view.js?v=10';
+import {
+  clearComparisonAcknowledgementsForConcept,
+  hasComparisonAcknowledgement,
+  markComparisonAcknowledged,
+} from './comparison-acknowledgement.js';
 import { renderConceptConstellationHtml } from './concept-constellation-view.js?v=3';
 import { deriveConceptBadge } from './concept-status.js';
 import {
@@ -1468,6 +1473,7 @@ const App = (() => {
       const concepts = loadConcepts().filter(c => c.id !== id);
       saveConcepts(concepts);
       clearRepairRepsStateForConcept(id);
+      clearComparisonAcknowledgementsForConcept(id);
       void trainingStore.deleteTraining(id).catch((err) => {
         /* c8 ignore next -- defensive localStorage deletion failure branch */
         console.warn('Unable to clear deleted concept training evidence.', err);
@@ -1813,6 +1819,16 @@ const App = (() => {
     return `${getActiveId() || 'concept'}:${entryId}`;
   }
 
+  function conceptPageRenderOptionsForEntry(concept, entryId, options = {}) {
+    if (!concept?.id || !entryId) return options;
+    return {
+      ...options,
+      comparisonAcknowledged: options?.justRevealedEntryId === entryId
+        ? false
+        : hasComparisonAcknowledgement(concept.id, entryId),
+    };
+  }
+
   function captureActiveEntryDraft() {
     if (!_activeEntryId) return;
     const input = document.querySelector('.concept-page-b2__attempt-input');
@@ -1841,6 +1857,19 @@ const App = (() => {
       ctaBtn.addEventListener('click', () => {
         if (ctaBtn.dataset.activeEntryAction === 'study') {
           void revealStudyForEntry(ctaBtn.dataset.activeEntryId, concept, data);
+          return;
+        }
+        if (ctaBtn.dataset.activeEntryAction === 'keep-working') {
+          const entryId = ctaBtn.dataset.activeEntryId;
+          markComparisonAcknowledged(concept.id, entryId);
+          const mountEl = document.getElementById('map-content');
+          if (mountEl) {
+            renderConceptPageB2(mountEl, data, concept, training, {
+              activeEntryId: entryId,
+              viewMode: 'expanded-workspace',
+              comparisonAcknowledged: true,
+            });
+          }
           return;
         }
         const inlineAttempt = docEl.querySelector('.concept-page-b2__attempt-input');
@@ -1906,6 +1935,7 @@ const App = (() => {
     const match = findConceptEntryById(backbone, entryId) || fallbackMatch;
     if (!docEl || !match) return;
     const renderBackbone = backbone.length ? backbone : [match.entry];
+    const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, options);
     docEl.innerHTML = renderActiveEntryHtml(
       match.entry,
       match.index,
@@ -1913,7 +1943,7 @@ const App = (() => {
       concept,
       data,
       training,
-      options,
+      renderOptions,
     );
     rebindActiveEntryHandlers(docEl, concept, data, training);
   }
@@ -1963,7 +1993,10 @@ const App = (() => {
         new Date().toISOString(),
       );
       const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training, { activeEntryId: entryId });
+      if (mountEl) renderConceptPageB2(mountEl, graphData, concept, training, {
+        activeEntryId: entryId,
+        justRevealedEntryId: entryId,
+      });
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
       console.warn('Study reveal failed.', err);
@@ -2112,7 +2145,6 @@ const App = (() => {
   function enterThresholdEditMode(docEl, concept, data, training = null) {
     const currentText = (concept?.startingMapContext
       || data?.metadata?.starting_map_context
-      || data?.metadata?.core_thesis
       || '').trim();
     const thresholdEl = docEl.querySelector('.concept-page-b2__threshold');
     if (!thresholdEl) return;
@@ -2218,7 +2250,8 @@ const App = (() => {
         backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
       );
       const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
-      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training);
+      const renderOptions = conceptPageRenderOptionsForEntry(liveConcept, _activeEntryId, {});
+      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
       rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
       bindConceptRouteMarginHandlers(document.getElementById('map-content'), freshData, liveConcept, training);
     });
@@ -2254,8 +2287,13 @@ const App = (() => {
     if (!doc) return;
     captureActiveEntryDraft();
     doc.classList.add('is-fading-out');
+    const routeExpanded = mountEl.querySelector('.concept-page-b2__route')?.dataset?.routeExpanded === 'true';
+    const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, routeExpanded ? {
+      viewMode: 'expanded-workspace',
+      comparisonAcknowledged: true,
+    } : {});
     setTimeout(() => {
-      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training);
+      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training, renderOptions);
       rebindActiveEntryHandlers(doc, concept, data, training);
       bindConceptRouteMarginHandlers(mountEl, data, concept, training);
       restoreActiveEntryDraft(entryId);
@@ -2277,6 +2315,7 @@ const App = (() => {
     route.addEventListener('click', (e) => {
       const item = e.target.closest('.concept-page-b2__route-item');
       if (!item) return;
+      if (route.dataset.lockedInert === 'true' && item.dataset.routeState === 'locked') return;
       const id = item.getAttribute('data-entry-id');
       if (id) setActiveEntry(id, data, concept, training);
     });
@@ -2287,7 +2326,7 @@ const App = (() => {
 
       if (e.key === 'Enter' || e.key === ' ') {
         const id = item.getAttribute('data-entry-id');
-        if (id) {
+        if (id && !(route.dataset.lockedInert === 'true' && item.dataset.routeState === 'locked')) {
           e.preventDefault();
           setActiveEntry(id, data, concept, training);
         }
@@ -2306,9 +2345,10 @@ const App = (() => {
       const nextEntry = backbone[nextIdx];
       if (!nextEntry) return;
       const nextId = getConceptEntryId(nextEntry, nextIdx);
+      const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
+      if (route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
       setActiveEntry(nextId, data, concept, training);
       setTimeout(() => {
-        const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
         nextItem?.focus();
       }, 280);
     });
@@ -2368,7 +2408,8 @@ const App = (() => {
     } = preferredEntry || selectInitialConceptEntry(backbone, training);
     const renderBackbone = backbone.length ? backbone : [activeEntry];
 
-    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training, options);
+    const renderOptions = conceptPageRenderOptionsForEntry(concept, activeEntryId, options);
+    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training, renderOptions);
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');

@@ -87,6 +87,7 @@ Each subnode MUST include:
     "learner_move": "Say it" | "Explain how" | "Use it" | "Test the edge",
     "task_label": "string",
     "task_cue": "string",
+    "tailoring_anchor": "string",
     "entry_prompt": "string",
     "expected_shape": "string",
     "sentence_starter": "string",
@@ -103,6 +104,11 @@ Rules:
   understand, apply, evaluate, or create as learner-facing labels.
 - `learner_move`, `task_label`, and `task_cue` are learner-facing route
   margin copy. Use plain words, not school taxonomy.
+- `tailoring_anchor` is a learner-facing sentence that names the sketch
+  detail that shaped this local task. It should make the learner feel
+  the route came from their threshold, not from a generic lesson. It
+  MUST NOT diagnose a gap, reveal the mechanism, name the hidden target,
+  or say what the learner missed.
 - `entry_prompt` is the text above the draft box. It should name the
   exact local task for this node.
 - `expected_shape` tells the learner what kind and amount of answer to
@@ -116,6 +122,9 @@ Rules:
   evidence this node is trying to elicit.
 - For c1, derive `entry_prompt` from the learner's threshold. Threshold
   is global context; this prompt is one smaller local task.
+- For c1, derive `tailoring_anchor` directly from the learner's threshold.
+  It should use one concrete phrase or relationship the learner supplied
+  and explain why this first task starts there.
 
 OUTPUT SHAPE (the full schema, restated):
 
@@ -150,6 +159,7 @@ OUTPUT SHAPE (the full schema, restated):
               "learner_move": "string",
               "task_label": "string",
               "task_cue": "string",
+              "tailoring_anchor": "string",
               "entry_prompt": "string",
               "expected_shape": "string",
               "sentence_starter": "string",

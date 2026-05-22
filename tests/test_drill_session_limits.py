@@ -44,6 +44,7 @@ def scaffolded_knowledge_map():
         "learner_move": "Say it",
         "task_label": "Starting model",
         "task_cue": "Put the system in your words.",
+        "tailoring_anchor": "You mentioned room temperature and heat, so this starts by naming what the thermostat compares.",
         "entry_prompt": "How would you explain the thermostat loop right now?",
         "expected_shape": "Write 1-2 sentences naming the comparison and result.",
         "sentence_starter": "My current guess is that the thermostat...",

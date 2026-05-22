@@ -126,6 +126,12 @@ Concept pages render source-less provenance from the training record: when
 `source_mode === "source_less"`, show `Shaped from your launch attempt, not
 verified against a source.` before the active entry block.
 
+Source-less first entries may also render `learner_scaffold.tailoring_anchor`
+inside the cold-attempt panel. This is learner-facing evidence of tailoring
+from the launch attempt, not feedback on correctness: it may name the sketch
+detail that shaped the prompt, but it must not diagnose a gap, reveal the
+mechanism, name the hidden target, or say what the learner missed.
+
 ---
 
 ## 4. Side Panel & Result States

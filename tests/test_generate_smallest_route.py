@@ -52,6 +52,7 @@ def test_provisional_map_accepts_learner_scaffold_on_subnodes():
             "learner_move": "Say it",
             "task_label": "Starting model",
             "task_cue": "Put the system in your words.",
+            "tailoring_anchor": "You mentioned a self-improving agent, so this starts by naming what parts are working together.",
             "entry_prompt": "How would you explain Hermes Agent to a classmate right now?",
             "expected_shape": "Write 1-2 sentences. Name what it does and one fuzzy part.",
             "sentence_starter": "My current guess is that Hermes Agent works by...",
@@ -85,6 +86,7 @@ def test_provisional_map_accepts_learner_scaffold_on_subnodes():
     assert scaffold is not None
     assert scaffold.bloom_level == "understand"
     assert scaffold.learner_move == "Say it"
+    assert scaffold.tailoring_anchor.startswith("You mentioned a self-improving agent")
     assert scaffold.entry_prompt.startswith("How would you explain")
 
 
@@ -98,6 +100,7 @@ def test_smallest_route_prompt_requires_internal_bloom_scaffold_contract():
         "learner_move",
         "task_label",
         "task_cue",
+        "tailoring_anchor",
         "entry_prompt",
         "expected_shape",
         "sentence_starter",

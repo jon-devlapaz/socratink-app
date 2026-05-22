@@ -990,6 +990,293 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_comparison_acknowledgement_is_ui_only_and_reset_scoped() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          clearComparisonAcknowledgement,
+          clearComparisonAcknowledgementsForConcept,
+          hasComparisonAcknowledgement,
+          markComparisonAcknowledged,
+        } from './public/js/comparison-acknowledgement.js';
+
+        const backing = new Map();
+        const storage = {
+          getItem(key) {
+            return backing.has(key) ? backing.get(key) : null;
+          },
+          setItem(key, value) {
+            backing.set(key, String(value));
+          },
+          removeItem(key) {
+            backing.delete(key);
+          },
+          key(index) {
+            return Array.from(backing.keys())[index] || null;
+          },
+          get length() {
+            return backing.size;
+          },
+        };
+
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
+        markComparisonAcknowledged('concept-1', 'entry-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), true);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-2', storage), false);
+        assert.equal(hasComparisonAcknowledgement('concept-2', 'entry-1', storage), false);
+
+        // Later repairs or spaced re-drills change attempts, but the UI-only
+        // acknowledgement remains scoped to the entry, not the latest attempt id.
+        markComparisonAcknowledged('concept-1', 'entry-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), true);
+
+        clearComparisonAcknowledgement('concept-1', 'entry-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
+
+        markComparisonAcknowledged('concept-1', 'entry-1', storage);
+        markComparisonAcknowledged('concept-1', 'entry-2', storage);
+        markComparisonAcknowledged('concept-2', 'entry-1', storage);
+        clearComparisonAcknowledgementsForConcept('concept-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-2', storage), false);
+        assert.equal(hasComparisonAcknowledgement('concept-2', 'entry-1', storage), true);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_source_less_gestalt_hybrid_stage_contracts() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          deriveConceptEntries,
+          renderActiveEntryHtml,
+        } from './public/js/concept-page-view.js';
+
+        const graphData = {
+          metadata: {
+            core_thesis: 'AI-generated answer structure must stay hidden.',
+            learner_goal: 'explain sodium channel gating',
+          },
+          clusters: [{
+            id: 'c1',
+            label: 'Generated cluster label should not be a pre-attempt marker',
+            description: 'Generated cluster description should stay hidden.',
+            subnodes: [
+              {
+                id: 'gate',
+                label: 'Voltage threshold opens sodium channels',
+                mechanism: 'Sodium channels open when membrane voltage reaches threshold.',
+                study_note: 'Voltage-gated sodium channels open at threshold, letting sodium rush in.',
+                learner_scaffold: {
+                  learner_move: 'Say it',
+                  task_label: 'Sodium gate',
+                  task_cue: 'Name the trigger without reading the note.',
+                  entry_prompt: 'What do you think makes the sodium channel open?',
+                  expected_shape: 'Write one sentence. Name the trigger, even if you are guessing.',
+                  blank_hint: 'Use voltage, signal, or trigger if one of those feels useful.',
+                },
+              },
+              {
+                id: 'spread',
+                label: 'Sodium influx causes depolarization',
+                mechanism: 'Sodium influx depolarizes the next membrane segment.',
+                study_note: 'Hidden future study note.',
+                learner_scaffold: {
+                  learner_move: 'Explain how',
+                  task_label: 'Signal spread',
+                  task_cue: 'Connect one step to the next.',
+                  entry_prompt: 'How do you think the signal moves?',
+                },
+              },
+            ],
+          }],
+        };
+        const entries = deriveConceptEntries(graphData);
+        const concept = {
+          id: 'sample-customer-sketch',
+          name: 'action potentials',
+          startingMapContext: 'I think nerves send electricity by opening little gates, but I am fuzzy on what starts it.',
+        };
+
+        const coldHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          { source_mode: 'source_less', node_records: {} },
+          { viewMode: 'cold-surface' }
+        );
+        assert.ok(coldHtml.includes('Your starting sketch'));
+        assert.ok(coldHtml.includes('I think nerves send electricity'));
+        assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
+        assert.ok(coldHtml.includes('Sodium gate'));
+        assert.ok(coldHtml.includes('Signal spread'));
+        assert.ok(!coldHtml.includes('AI-generated answer structure must stay hidden.'));
+        assert.ok(!coldHtml.includes('Voltage threshold opens sodium channels'));
+        assert.ok(!coldHtml.includes('Sodium influx causes depolarization'));
+        assert.ok(!coldHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!coldHtml.includes('data-entry-id="spread"'));
+        assert.ok(!coldHtml.includes('concept-page-b2__nearby'));
+
+        const savedDraftTraining = {
+          source_mode: 'source_less',
+          node_records: {
+            gate: {
+              attempts: [{
+                id: 'cold-1',
+                kind: 'cold',
+                at: '2026-05-21T10:00:00.000Z',
+                user_text: 'The gate probably opens when the voltage gets high enough.',
+                classification: 'partial',
+                gaps: [{ mechanism: 'threshold', correction: 'Name threshold as the opening condition.' }],
+                grader_version: 'qa',
+              }],
+              repairs: [],
+            },
+          },
+        };
+        const savedHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          savedDraftTraining,
+          { viewMode: 'saved-draft-study-gate' }
+        );
+        assert.ok(savedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
+        assert.ok(savedHtml.includes('The gate probably opens when the voltage gets high enough.'));
+        assert.ok(savedHtml.includes('Reveal notes and compare'));
+        assert.ok(!savedHtml.includes('Missing piece'));
+        assert.ok(!savedHtml.includes('threshold as the opening condition'));
+        assert.ok(!savedHtml.includes('concept-page-b2__route'));
+        assert.ok(!savedHtml.includes('concept-page-b2__nearby'));
+
+        const cleanRevealedTraining = {
+          source_mode: 'source_less',
+          node_records: {
+            gate: {
+              attempts: [{
+                id: 'cold-2',
+                kind: 'cold',
+                at: '2026-05-21T10:00:00.000Z',
+                user_text: 'The channel opens when voltage reaches threshold.',
+                classification: 'strong',
+                gaps: [],
+                grader_version: 'qa',
+              }],
+              study_revealed_at: '2026-05-21T10:05:00.000Z',
+              repairs: [],
+            },
+          },
+        };
+        const compareHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          cleanRevealedTraining,
+          { viewMode: 'post-reveal-comparison', now: '2026-05-21T11:00:00.000Z' }
+        );
+        assert.ok(compareHtml.includes('The channel opens when voltage reaches threshold.'));
+        assert.ok(compareHtml.includes('Voltage-gated sodium channels open at threshold'));
+        assert.ok(compareHtml.includes('Keep working'));
+        assert.ok(compareHtml.includes('data-active-entry-action="keep-working"'));
+        assert.ok(!compareHtml.includes('No missing piece recorded for this draft.'));
+        assert.ok(!compareHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!compareHtml.includes('data-entry-id="spread"'));
+        assert.ok(!compareHtml.includes('concept-page-b2__nearby'));
+
+        const expandedHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          cleanRevealedTraining,
+          { viewMode: 'expanded-workspace', now: '2026-05-21T11:00:00.000Z' }
+        );
+        assert.ok(expandedHtml.includes('concept-page-b2__route-item'));
+        assert.ok(expandedHtml.includes('data-entry-id="spread"'));
+        assert.ok(!expandedHtml.includes('data-active-entry-action="keep-working"'));
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_source_less_view_mode_derivation_preserves_comparison_seams() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { deriveSourceLessViewMode } from './public/js/concept-page-view.js';
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: false,
+          record: null,
+          next_action: 'cold_attempt',
+        }), 'cold-surface');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'study',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            repairs: [],
+          },
+        }), 'saved-draft-study-gate');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'repair',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: false }), 'post-reveal-comparison');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'review',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: false }), 'expanded-workspace');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'repair',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: true }), 'expanded-workspace');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'spaced_attempt',
+          record: {
+            attempts: [{ id: 'legacy-after-study', at: '2026-05-21T10:10:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: false }), 'expanded-workspace');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_concept_page_view_renders_active_entry_html_contract() -> None:
     result = run_node_module(
         """
@@ -1273,6 +1560,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
                 learner_move: 'Say it',
                 task_label: 'Starting model',
                 task_cue: 'Put the system in your words.',
+                tailoring_anchor: 'You mentioned a self-improving agent, so this starts by naming what parts are working together.',
                 entry_prompt: 'How would you explain Hermes Agent to a classmate right now?',
                 expected_shape: 'Write 1-2 sentences. Name what it does and one fuzzy part.',
                 sentence_starter: 'My current guess is that Hermes Agent works by...',
@@ -1297,6 +1585,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(scaffoldHtml.includes('Starting model'));
         assert.ok(scaffoldHtml.includes('Put the system in your words.'));
+        assert.ok(scaffoldHtml.includes('Shaped by your sketch: You mentioned a self-improving agent, so this starts by naming what parts are working together.'));
+        assert.ok(!scaffoldHtml.includes('State the system in your own words.'));
         assert.ok(scaffoldHtml.includes('How would you explain Hermes Agent to a classmate right now?'));
         assert.ok(scaffoldHtml.includes('Goal: build a reliable agent system. First make a starting guess for Starting model.'));
         assert.ok(scaffoldHtml.includes('Write 1-2 sentences. Name what it does and one fuzzy part.'));
@@ -1324,6 +1614,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
                 learner_move: 'Use it',
                 task_label: '',
                 task_cue: '',
+                tailoring_anchor: '',
                 entry_prompt: 'What is your current model?',
                 expected_shape: 'Write one sentence.',
                 sentence_starter: 'My current model is...',
@@ -1375,7 +1666,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));
         assert.ok(primedHtml.includes('Your memory draft'));
-        assert.ok(primedHtml.includes('Your words made the gap inspectable.'));
+        assert.ok(primedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
         assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(primedHtml.includes('A strong first attempt.'));
         assert.ok(!primedHtml.includes('Missing piece'));
@@ -1452,7 +1743,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(studiedHtml.includes('Your draft'));
         assert.ok(!studiedHtml.includes('learner reconstruction'));
         assert.ok(studiedHtml.includes('A strong first attempt.'));
-        assert.ok(studiedHtml.includes('No missing piece recorded for this draft.'));
+        assert.ok(!studiedHtml.includes('No missing piece recorded for this draft.'));
         assert.ok(studiedHtml.includes('concept-page-b2__study-note'));
         assert.ok(studiedHtml.includes('Study note for this entry.'));
         assert.ok(!studiedHtml.includes('concept-page-b2__entry-cta'));

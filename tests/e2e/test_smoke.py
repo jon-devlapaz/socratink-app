@@ -572,7 +572,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
         "Learner-owned reconstruction visible in Library."
     )
-    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+    expect(page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "No missing piece recorded for this draft."
     )
     expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
@@ -1807,11 +1807,12 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__scope")).to_contain_text(
         "Study material stays hidden until you draft from memory."
     )
-    expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(4)
-    expect(canvas.locator(".concept-page-b2__route-item").nth(0)).to_contain_text("Sodium gate")
-    expect(canvas.locator(".concept-page-b2__route-item").nth(1)).to_contain_text("Opening rule")
-    expect(canvas.locator(".concept-page-b2__route-item").nth(2)).to_contain_text("Signal spread")
-    expect(canvas.locator(".concept-page-b2__route-item").nth(3)).to_contain_text("Blocked gate")
+    expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
+    expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(4)
+    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(0)).to_contain_text("Sodium gate")
+    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(1)).to_contain_text("Opening rule")
+    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(2)).to_contain_text("Signal spread")
+    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(3)).to_contain_text("Blocked gate")
     expect(canvas).not_to_contain_text("Sodium channels open at threshold")
     expect(canvas).not_to_contain_text("This generated summary must not")
     expect(canvas).not_to_contain_text("bloom")
@@ -1860,7 +1861,6 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(constellation).not_to_contain_text("This generated summary must not")
     expect(constellation).not_to_contain_text("Voltage threshold changes")
     expect(constellation).not_to_contain_text("Name what has to happen before flow.")
-    constellation.locator('.concept-constellation__node[data-entry-id="c3_s1"]').click()
     constellation.locator(".concept-constellation__return").click()
     expect(clean_page.locator("#map-content")).to_be_visible()
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
@@ -1869,24 +1869,8 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(clean_page.locator(".concept-page-b2__entry-title")).not_to_contain_text(
         "Signal spread"
     )
-    clean_page.locator("#concept-view-switch").click()
-    expect(constellation).to_be_visible()
-    constellation.locator('.concept-constellation__node[data-entry-id="c2_s1"]').focus()
-    clean_page.keyboard.press("Enter")
-    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
-        "Opening rule"
-    )
-    constellation.locator(".concept-constellation__return").click()
-    expect(clean_page.locator("#map-content")).to_be_visible()
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
-        "Opening rule"
-    )
     expect(clean_page.locator(".concept-page-b2__study-note")).to_have_count(0)
     expect(clean_page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
-    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c1_s1"]').click()
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
-        "Sodium gate"
-    )
     expect(clean_page.locator(".concept-page-b2__attempt-input")).to_have_value(
         "Sodium channels probably open when voltage reaches a trigger."
     )
@@ -1895,6 +1879,345 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__attempt-error")).to_have_text(
         "Write the smallest useful guess before study appears."
     )
+
+
+def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
+    clean_page: Page, base_url: str
+) -> None:
+    """A realistic customer sketch enters through Ignition before the hybrid loop."""
+
+    sketch_text = (
+        "I manage facilities for a small clinic. I think thermostats turn heat on when "
+        "the room feels cold, but I am fuzzy on what they compare."
+    )
+
+    def fulfill_extract(route) -> None:
+        payload = route.request.post_data_json
+        assert payload["name"] == "Thermostat feedback loop"
+        assert payload["starting_sketch"] == sketch_text
+        assert payload["source"] is None
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "provisional_map": {
+                        "metadata": {
+                            "source_title": "Thermostat feedback loop",
+                            "core_thesis": "A thermostat compares a room reading to a target before calling for heat.",
+                            "architecture_type": "causal_chain",
+                            "difficulty": "easy",
+                            "governing_assumptions": [
+                                "Learner works from a clinic facilities example."
+                            ],
+                            "low_density": True,
+                            "learner_goal": "explain thermostat feedback loops to a new technician",
+                        },
+                        "backbone": [
+                            {
+                                "id": "b1",
+                                "principle": "Thermostat feedback starts with a comparison.",
+                                "dependent_clusters": ["c1", "c2", "c3"],
+                            }
+                        ],
+                        "clusters": [
+                            {
+                                "id": "c1",
+                                "label": "Thermostat compares room temperature with set point",
+                                "description": "Generated description should not leak before the draft.",
+                                "subnodes": [
+                                    {
+                                        "id": "c1_s1",
+                                        "label": "Thermostat compares room temperature with set point",
+                                        "mechanism": "The thermostat compares measured room temperature with the set point before calling for heat.",
+                                        "study_note": "The thermostat compares the measured room temperature with the set point. Heat starts only when the measured value is below that target.",
+                                        "learner_scaffold": {
+                                            "bloom_level": "understand",
+                                            "learner_move": "Say it",
+                                            "task_label": "Compare target",
+                                            "task_cue": "Name what gets compared.",
+                                            "tailoring_anchor": "You mentioned a clinic room feeling cold, so this starts with what the thermostat checks before heat starts.",
+                                            "entry_prompt": "What do you think the thermostat checks before it calls for heat?",
+                                            "expected_shape": "Write one sentence. Name the signal and the target if you can.",
+                                            "sentence_starter": "I think it checks...",
+                                            "blank_hint": "Use room temperature, target, or heat if one of those feels useful.",
+                                            "evidence_goal": "Learner names a comparison before a heat call.",
+                                        },
+                                    }
+                                ],
+                            },
+                            {
+                                "id": "c2",
+                                "label": "Below-target reading calls for heat",
+                                "description": "Generated future description should not leak before expansion.",
+                                "subnodes": [
+                                    {
+                                        "id": "c2_s1",
+                                        "label": "Below-target reading calls for heat",
+                                        "mechanism": "When measured temperature is below the set point, the thermostat calls for heat.",
+                                        "study_note": "Hidden future study note.",
+                                        "learner_scaffold": {
+                                            "bloom_level": "understand",
+                                            "learner_move": "Explain how",
+                                            "task_label": "Call for heat",
+                                            "task_cue": "Connect comparison to action.",
+                                            "tailoring_anchor": "Your sketch mentioned heat turning on, so this later step connects the check to the heat call.",
+                                            "entry_prompt": "How do you think the comparison turns into a heat call?",
+                                            "expected_shape": "Write one cause-then-action sentence.",
+                                            "sentence_starter": "When the room reading is...",
+                                            "blank_hint": "Separate what is checked from what turns on.",
+                                            "evidence_goal": "Learner connects comparison to heater action.",
+                                        },
+                                    }
+                                ],
+                            },
+                            {
+                                "id": "c3",
+                                "label": "Reached set point stops heat",
+                                "description": "Generated locked description should remain inert.",
+                                "subnodes": [
+                                    {
+                                        "id": "c3_s1",
+                                        "label": "Reached set point stops heat",
+                                        "mechanism": "When measured temperature reaches the set point, the heat call stops.",
+                                        "study_note": "Hidden locked study note.",
+                                        "learner_scaffold": {
+                                            "bloom_level": "apply",
+                                            "learner_move": "Test the edge",
+                                            "task_label": "Stop rule",
+                                            "task_cue": "Predict when the call stops.",
+                                            "tailoring_anchor": "Your sketch focused on heat starting, so this later step tests when the loop stops.",
+                                            "entry_prompt": "What would make the thermostat stop calling for heat?",
+                                            "expected_shape": "Write one stopping condition.",
+                                            "sentence_starter": "It would stop when...",
+                                            "blank_hint": "Ask what has to be true for heat to no longer be needed.",
+                                            "evidence_goal": "Learner predicts the stopping condition.",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                        "relationships": {
+                            "domain_mechanics": [
+                                {
+                                    "from": "c1",
+                                    "to": "c2",
+                                    "type": "causal",
+                                    "mechanism": "The comparison determines whether heat is called.",
+                                },
+                                {
+                                    "from": "c2",
+                                    "to": "c3",
+                                    "type": "causal",
+                                    "mechanism": "Heating changes the room until the call can stop.",
+                                },
+                            ],
+                            "learning_prerequisites": [
+                                {
+                                    "from": "c1",
+                                    "to": "c2",
+                                    "rationale": "The action depends on the comparison.",
+                                },
+                                {
+                                    "from": "c2",
+                                    "to": "c3",
+                                    "rationale": "Stopping follows from understanding the call.",
+                                },
+                            ],
+                        },
+                        "frameworks": [],
+                    }
+                }
+            ),
+        )
+
+    def fulfill_drill(route) -> None:
+        payload = route.request.post_data_json
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Draft saved. Compare it with the notes before repairing the missing link.",
+                    "generative_commitment": True,
+                    "classification": "partial",
+                    "gap_description": "The sketch names current but misses comparison to a target set point.",
+                    "gaps": [
+                        {
+                            "mechanism": "comparison target",
+                            "correction": "Name that the thermostat compares room temperature with the set point.",
+                        }
+                    ],
+                    "routing": "NEXT",
+                    "node_id": payload["node_id"],
+                    "answer_mode": "attempt",
+                    "score_eligible": True,
+                    "response_tier": "partial",
+                    "response_band": "link",
+                    "tier_reason": "The learner names the action but not the comparison rule.",
+                    "probe_count": 0,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 1,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-gestalt-hybrid",
+                }
+            ),
+        )
+
+    def reopen_created_concept() -> None:
+        clean_page.locator("#nav-library").click()
+        clean_page.locator(
+            ".library-card-vault",
+            has_text="Thermostat feedback loop",
+        ).click()
+
+    clean_page.route("**/api/extract", fulfill_extract)
+    clean_page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.evaluate("localStorage.clear(); sessionStorage.clear();")
+
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill("Thermostat feedback loop")
+    expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
+    clean_page.locator("#hero-door-submit").click()
+    expect(clean_page.locator("#launch-pad-view")).to_be_visible()
+    clean_page.locator("#launch-pad-input").fill(sketch_text)
+    expect(clean_page.locator("#launch-pad-submit")).to_be_enabled()
+    clean_page.locator("#launch-pad-submit").click()
+
+    canvas = clean_page.locator(".concept-page-b2__gestalt")
+    expect(canvas).to_be_visible(timeout=8_000)
+    expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
+        "What do you think the thermostat checks before it calls for heat?"
+    )
+    expect(canvas).to_contain_text(
+        "Shaped by your sketch: You mentioned a clinic room feeling cold"
+    )
+    expect(canvas).to_contain_text("Compare target")
+    expect(canvas).to_contain_text("Call for heat")
+    expect(canvas).not_to_contain_text("compares measured room temperature")
+    expect(canvas).not_to_contain_text("Generated description should not leak")
+    expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
+    expect(canvas.locator(".concept-page-b2__nearby")).to_have_count(0)
+
+    clean_page.locator(".concept-page-b2__attempt-input").fill(
+        "It checks if the room is colder than what we wanted and then starts heat."
+    )
+    clean_page.locator(".concept-page-b2__attempt-save").click()
+    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Draft saved")
+    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "It checks if the room is colder than what we wanted and then starts heat."
+    )
+    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text("Draft recorded.")
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reveal notes and compare"
+    )
+
+    clean_page.locator(".concept-page-b2__entry-cta").click()
+    expect(clean_page.locator(".concept-page-b2__study-note")).to_contain_text(
+        "measured room temperature with the set point"
+    )
+    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text("Missing piece")
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "Generated description should not leak"
+    )
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
+
+    clean_page.reload()
+    reopen_created_concept()
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
+
+    clean_page.locator(".concept-page-b2__entry-cta").click()
+    expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
+        "data-route-expanded", "true"
+    )
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
+        "data-locked-inert", "true"
+    )
+
+    clean_page.reload()
+    reopen_created_concept()
+    expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c2_s1"]').click()
+    clean_page.wait_for_timeout(700)
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Call for heat")
+
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c3_s1"]').click()
+    clean_page.wait_for_timeout(700)
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Call for heat")
+
+
+def test_source_less_defensive_ui_paths_remain_inert(
+    clean_page: Page, base_url: str
+) -> None:
+    """Defensive local UI paths do not mutate truth or leave drill state behind."""
+    _seed_route_margin_concept(clean_page)
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator(".concept-item", has_text="How sodium channels").click()
+    clean_page.locator("[data-edit-threshold]").click()
+    clean_page.locator(".concept-page-b2__threshold-input").fill(
+        "This edit races with a deleted local concept."
+    )
+    clean_page.evaluate("localStorage.setItem('learnops_concepts', JSON.stringify([]))")
+    clean_page.locator(".concept-page-b2__threshold-save").click()
+    expect(clean_page.locator(".concept-page-b2__threshold-editor")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__threshold")).to_be_visible()
+
+    _seed_route_margin_concept(clean_page)
+    clean_page.locator("#nav-library").click()
+    clean_page.locator(".concept-item", has_text="How sodium channels").click()
+    clean_page.evaluate(
+        """() => {
+            App.startDrill({
+                id: 'core-thesis',
+                type: 'core',
+                label: 'Core thesis',
+                detail: 'Explain the current model.',
+            });
+        }"""
+    )
+    expect(clean_page.locator("body")).to_have_class(re.compile(r"\bis-drilling\b"))
+    clean_page.evaluate("App.hideMapView()")
+    expect(clean_page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
+
+    fallback_mode = clean_page.evaluate(
+        """async () => {
+            const view = await import('/js/concept-page-view.js?v=10');
+            return view.deriveSourceLessViewMode({
+                attempted: true,
+                next_action: 'spaced_attempt',
+                state: 'primed',
+                record: { attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }] },
+            });
+        }"""
+    )
+    assert fallback_mode == "expanded-workspace"
+
+    clean_page.evaluate(
+        """async () => {
+            const ack = await import('/js/comparison-acknowledgement.js');
+            ack.markComparisonAcknowledged('route-margin-concept', 'c1_s1');
+            ack.clearComparisonAcknowledgement('route-margin-concept', 'c1_s1');
+        }"""
+    )
+    acknowledged = clean_page.evaluate(
+        """async () => {
+            const ack = await import('/js/comparison-acknowledgement.js');
+            return ack.hasComparisonAcknowledgement('route-margin-concept', 'c1_s1');
+        }"""
+    )
+    assert acknowledged is False
 
 
 def test_concept_open_handles_missing_and_malformed_graph_metadata(

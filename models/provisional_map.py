@@ -53,6 +53,7 @@ class LearnerScaffold(BaseModel):
     learner_move: str
     task_label: str
     task_cue: str
+    tailoring_anchor: str
     entry_prompt: str
     expected_shape: str
     sentence_starter: str

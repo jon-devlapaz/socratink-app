@@ -588,6 +588,7 @@ def _format_learner_scaffold_for_drill(scaffold: object) -> str:
         "learner_move",
         "task_label",
         "task_cue",
+        "tailoring_anchor",
         "entry_prompt",
         "expected_shape",
         "blank_hint",

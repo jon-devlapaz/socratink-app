@@ -457,7 +457,8 @@
   padding: 0;
   list-style: none;
 }
-.concept-page-b2__route-item {
+.concept-page-b2__route-item,
+.concept-page-b2__route-marker-item {
   position: relative;
   display: grid;
   grid-template-columns: auto 18px 1fr;
@@ -465,10 +466,13 @@
   min-height: 74px;
   color: var(--text-muted);
   opacity: 0.58;
-  cursor: pointer;
   outline: none;
 }
-.concept-page-b2__route-item::after {
+.concept-page-b2__route-item {
+  cursor: pointer;
+}
+.concept-page-b2__route-item::after,
+.concept-page-b2__route-marker-item::after {
   content: "";
   position: absolute;
   top: 24px;
@@ -477,10 +481,12 @@
   width: 1px;
   background: linear-gradient(180deg, rgba(var(--violet-600-rgb), 0.22), rgba(var(--violet-600-rgb), 0.04));
 }
-.concept-page-b2__route-item:last-child::after {
+.concept-page-b2__route-item:last-child::after,
+.concept-page-b2__route-marker-item:last-child::after {
   display: none;
 }
-.concept-page-b2__route-item.is-active {
+.concept-page-b2__route-item.is-active,
+.concept-page-b2__route-marker-item.is-active {
   color: var(--text-strong);
   opacity: 1;
 }
@@ -512,7 +518,8 @@
   transform: rotate(45deg);
   background: rgba(var(--mauve-200-rgb), 0.22);
 }
-.concept-page-b2__route-item.is-active .concept-page-b2__route-marker {
+.concept-page-b2__route-item.is-active .concept-page-b2__route-marker,
+.concept-page-b2__route-marker-item.is-active .concept-page-b2__route-marker {
   background: rgba(var(--lavender-500-rgb), 0.72);
   border-color: rgba(var(--lavender-500-rgb), 0.88);
   box-shadow: 0 0 0 5px rgba(var(--lavender-500-rgb), 0.10);
@@ -1197,7 +1204,8 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
   }
-  .concept-page-b2__route-item {
+  .concept-page-b2__route-item,
+  .concept-page-b2__route-marker-item {
     grid-template-columns: auto 1fr;
     min-height: 0;
     padding: 10px;
@@ -1205,6 +1213,7 @@
     border-radius: 10px;
   }
   .concept-page-b2__route-item::after,
+  .concept-page-b2__route-marker-item::after,
   .concept-page-b2__route-marker {
     display: none;
   }
