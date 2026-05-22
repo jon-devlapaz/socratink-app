@@ -3,8 +3,9 @@
 Covers: open a concept page; route margin, threshold, active entry, and
 nearby list all render; the cold-entry draft surface is inline.
 
-Note: the Route/Graph toggle test was removed in the route-margin port.
-The toggle is gone. See test_strip_nav.py for click and keyboard-nav coverage.
+Note: this file checks that the legacy Route/Graph toggle is gone. The live
+Route/Constellation switch is covered in test_smoke.py; see test_strip_nav.py
+for route-margin click and keyboard-nav coverage.
 
 Uses the same seed-via-localStorage + guest-auth pattern as test_smoke.py.
 The seeded concept has backbone entries so the nearby list renders.

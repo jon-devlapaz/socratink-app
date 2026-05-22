@@ -61,16 +61,18 @@ training copy, and unrecordable drill results do not mutate graph state.
 
 ### `test_concept_page_b2.py` — 3 tests
 
-B-2 concept page layout gate: route-margin layout renders, the reconstruction
-CTA opens the inline attempt panel while the full-screen drill chamber stays
-hidden, and the Route/Graph segmented toggle is absent.
+B-2 concept page layout gate: route-margin layout renders, the cold-entry
+inline attempt surface appears while the full-screen drill chamber stays
+hidden, and the legacy Route/Graph segmented toggle is absent.
 
 ### `test_strip_nav.py` — 7 tests
 
 Route-margin behavior: click swaps the work column, keyboard navigation
 walks the route, the first actionable entry exposes the inline draft surface,
-locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
-section exists, and route items are focusable.
+locked entries show a disabled CTA, no legacy Route/Graph toggle or
+`#graph-content` section exists, and route items are focusable. The live
+Route/Constellation switch and `#concept-constellation-content` are covered in
+`test_smoke.py`.
 
 ### `test_app_helper_modules.py` — 2 tests
 

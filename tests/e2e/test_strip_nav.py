@@ -1,10 +1,11 @@
 """End-to-end smoke for route-margin navigation on the concept page.
 
 Covers: click a route item swaps the work column; click a
-locked node shows the locked silhouette state; keyboard arrow nav
+locked route item shows the locked silhouette state; keyboard arrow nav
 steps through backbone entries; the first actionable entry enables
-the inline draft-from-memory surface; the Route/Graph toggle and
-#graph-content section are absent.
+the inline draft-from-memory surface; the legacy Route/Graph toggle and
+#graph-content section are absent. The live Route/Constellation switch is
+covered in test_smoke.py.
 
 Uses the same seed-via-localStorage + guest-auth pattern as the
 existing e2e suite. The seeded concept has three backbone entries so

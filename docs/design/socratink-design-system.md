@@ -78,7 +78,7 @@ Constellation is the only scoped graph-view exception: a secondary SVG orientati
 
 ### Audio
 - Canonical implementation lives in `public/js/audio.js`; retune there rather than creating new helpers.
-- `playKeyClick` (F brush): lowpass noise around 600Hz, about 18ms. Bound to keystrokes in the threshold composer and drill input.
+- `playKeyClick` (F brush): lowpass noise around 600Hz, about 18ms. Bound to printable keystrokes in the Door concept field, source-attach fields, and Launch Pad input (`#launch-pad-input`).
 - `playFocusTap` (I breath): highpass noise around 4kHz, about 10ms. Sidebar, bottom-nav, and primary-control focus.
 - `playTileClick` (D thud): 60Hz square plus bandpass noise. Iso-board tile activation.
 - `playDrawerToggle` (F body): lowpass cloth around 1.1kHz, about 30ms. Open/close of the desk drawer.
