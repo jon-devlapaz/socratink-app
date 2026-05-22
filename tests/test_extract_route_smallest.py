@@ -92,6 +92,24 @@ def test_extract_substantive_threshold_returns_smallest_route(client):
     )
 
 
+def test_extract_source_less_forwards_learner_goal(client):
+    from tests._helpers.provisional_map_factory import provisional_map_with_node_count
+
+    fake_pm = provisional_map_with_node_count(3)
+
+    with patch("main.generate_smallest_provisional_map", return_value=fake_pm) as mocked:
+        r = client.post("/api/extract", json={
+            "name": "Photosynthesis",
+            "learner_goal": "I want to explain why leaves make sugar.",
+            "starting_sketch": "plants take in light and somehow make sugar through leaves",
+            "source": None,
+        })
+
+    assert r.status_code == 200
+    _args, kwargs = mocked.call_args
+    assert kwargs.get("learner_goal") == "I want to explain why leaves make sugar."
+
+
 def test_extract_smallest_route_cap_exceeded_returns_500(client):
     """SmallestRouteCapExceeded must surface as 500, not 422.
 

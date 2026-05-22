@@ -31,6 +31,9 @@ Hard constraints:
 8. Every subnode MUST include `learner_scaffold`: a non-answer task
    contract that makes the reconstruction prompt clear without revealing
    the mechanism.
+9. If <learner_goal> is present, use it to shape relevance, route
+   emphasis, and local scaffold framing. It is not evidence of
+   understanding and must not mutate graph truth.
 
 Voice rules (docs/design/socratink-ux.md §10; canonical summary in DESIGN.md §6):
 - Calm, precise, Socratic. Plain, complete sentences.

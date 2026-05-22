@@ -1861,6 +1861,16 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(constellation).not_to_contain_text("This generated summary must not")
     expect(constellation).not_to_contain_text("Voltage threshold changes")
     expect(constellation).not_to_contain_text("Name what has to happen before flow.")
+    second_constellation_node = constellation.locator(".concept-constellation__node").nth(1)
+    second_constellation_node.click()
+    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
+        "Opening rule"
+    )
+    first_constellation_node = constellation.locator(".concept-constellation__node").nth(0)
+    first_constellation_node.press("Enter")
+    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
+        "Sodium gate"
+    )
     constellation.locator(".concept-constellation__return").click()
     expect(clean_page.locator("#map-content")).to_be_visible()
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(

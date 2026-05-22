@@ -436,6 +436,17 @@ def _validate_smallest_route(pm: ProvisionalMap) -> None:
             "smallest route must have at least one drillable node "
             "(the suggested first target / core thesis)"
         )
+    for cluster in clusters:
+        subnodes = list(cluster.subnodes or [])
+        if len(subnodes) != 1:
+            raise SmallestRouteCapExceeded(
+                f"smallest route cluster {cluster.id!r} must contain exactly one subnode"
+            )
+        subnode = subnodes[0]
+        if subnode.learner_scaffold is None:
+            raise SmallestRouteCapExceeded(
+                f"smallest route subnode {subnode.id!r} missing learner_scaffold"
+            )
     if n > SMALLEST_ROUTE_MAX_DRILLABLE_NODES:
         raise SmallestRouteCapExceeded(
             f"smallest route exceeded cap: {n} drillable nodes "
@@ -453,6 +464,7 @@ def generate_smallest_provisional_map(
     concept: str,
     threshold: str,
     *,
+    learner_goal: str | None = None,
     llm: LLMClient | None = None,
     api_key: str | None = None,
     lc_context: list["LCStandard"] | None = None,
@@ -474,6 +486,9 @@ def generate_smallest_provisional_map(
         f"<concept>{concept}</concept>",
         f"<threshold>{threshold}</threshold>",
     ]
+    clean_learner_goal = (learner_goal or "").strip()
+    if clean_learner_goal:
+        user_prompt_parts.append(f"<learner_goal>{clean_learner_goal}</learner_goal>")
     if lc_context:
         lc_block_lines = ["<lc_context>"]
         for std in lc_context:

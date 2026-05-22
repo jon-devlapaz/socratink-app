@@ -304,6 +304,7 @@ export async function runLaunchPadAction(event, App) {
       undefined;
     data = await submitConceptCreate({
       name: shell.name,
+      learnerGoal: shell.goal,
       startingSketch: threshold,
       source: null,
       apiKey,

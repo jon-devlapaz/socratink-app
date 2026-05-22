@@ -202,6 +202,128 @@ def test_launch_pad_normalizes_goal_shaped_door_input() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_submit_concept_create_sends_learner_goal() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { submitConceptCreate } from './public/js/ai_service.js';
+
+        let capturedBody = null;
+        globalThis.fetch = async (_url, options) => {
+          capturedBody = JSON.parse(options.body);
+          return new Response(JSON.stringify({ provisional_map: {} }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        };
+
+        await submitConceptCreate({
+          name: 'Sodium channels',
+          learnerGoal: 'I want to explain why sodium starts the signal.',
+          startingSketch: 'sodium moves into the neuron and starts a signal somehow',
+          source: null,
+          apiKey: undefined,
+        });
+
+        assert.equal(capturedBody.name, 'Sodium channels');
+        assert.equal(capturedBody.learner_goal, 'I want to explain why sodium starts the signal.');
+        assert.equal(capturedBody.starting_sketch, 'sodium moves into the neuron and starts a signal somehow');
+        assert.equal(capturedBody.source, null);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { runLaunchPadAction } from './public/js/launch-pad.js';
+
+        const storage = new Map();
+        globalThis.sessionStorage = {
+          getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+          setItem(key, value) { storage.set(key, String(value)); },
+          removeItem(key) { storage.delete(key); },
+        };
+        globalThis.localStorage = {
+          getItem() { return null; },
+        };
+
+        const elements = {
+          'launch-pad-input': {
+            value: 'Sodium moves into the neuron through channels and that movement starts an electrical signal somehow.',
+          },
+          'launch-pad-submit': {
+            disabled: false,
+            textContent: 'Save sketch',
+          },
+          'launch-pad-validation': {
+            textContent: '',
+          },
+          'launch-pad-form': {
+            dataset: {},
+            setAttribute(name, value) { this[name] = value; },
+            removeAttribute(name) { delete this[name]; },
+          },
+        };
+        globalThis.document = {
+          getElementById(id) { return elements[id] || null; },
+        };
+
+        let capturedBody = null;
+        globalThis.fetch = async (_url, options) => {
+          capturedBody = JSON.parse(options.body);
+          return new Response(JSON.stringify({
+            provisional_map: {
+              metadata: {},
+              backbone: [{ id: 'b1', principle: 'Signal start', dependent_clusters: ['c1'] }],
+              clusters: [{
+                id: 'c1',
+                label: 'Signal start',
+                description: 'Explain the initial movement.',
+                subnodes: [{ id: 'c1_s1', label: 'Signal start', mechanism: 'Sodium influx depolarizes the neuron.' }],
+              }],
+              relationships: { domain_mechanics: [], learning_prerequisites: [] },
+              frameworks: [],
+            },
+          }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        };
+
+        storage.set('socratink:pendingShell', JSON.stringify({
+          name: 'Sodium channels',
+          goal: 'I want to explain why sodium starts the signal.',
+          ts: Date.now(),
+        }));
+
+        const calls = [];
+        const App = {
+          persistCreatedConceptFromLaunchPad(map, shell, threshold) {
+            calls.push({ map, shell, threshold });
+          },
+          navigateToGraphViewFromLaunchPad(options) {
+            calls.push({ options });
+          },
+        };
+
+        const resultValue = await runLaunchPadAction({ preventDefault() {} }, App);
+
+        assert.equal(resultValue, false);
+        assert.equal(capturedBody.name, 'Sodium channels');
+        assert.equal(capturedBody.learner_goal, 'I want to explain why sodium starts the signal.');
+        assert.equal(capturedBody.starting_sketch, elements['launch-pad-input'].value);
+        assert.equal(calls.length, 2);
+        assert.equal(storage.has('socratink:pendingShell'), false);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_phase_b_session_helpers_preserve_storage_contract() -> None:
     result = run_node_module(
         """

@@ -6,13 +6,28 @@ from pathlib import Path
 import pytest
 
 from ai_service import _validate_smallest_route, SmallestRouteCapExceeded
-from models.provisional_map import Cluster, ProvisionalMap, Relationships, Subnode
+from models.provisional_map import Cluster, LearnerScaffold, ProvisionalMap, Relationships, Subnode
 from tests._helpers.provisional_map_factory import (
     provisional_map_with_node_count as _provisional_map_with_node_count,
 )
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _learner_scaffold() -> LearnerScaffold:
+    return LearnerScaffold(
+        bloom_level="understand",
+        learner_move="Say it",
+        task_label="Starting model",
+        task_cue="Put the relationship in your own words.",
+        tailoring_anchor="You mentioned the input and output, so this starts there.",
+        entry_prompt="How would you explain the relationship right now?",
+        expected_shape="Write one or two sentences.",
+        sentence_starter="My current guess is that...",
+        blank_hint="Start with the part you named in your sketch.",
+        evidence_goal="The learner states an initial model without reading source content.",
+    )
 
 
 def test_smallest_route_validator_accepts_one_node():
@@ -38,6 +53,52 @@ def test_smallest_route_validator_rejects_zero_nodes():
     """No drillable nodes is a malformed route (no first target)."""
     pm = _provisional_map_with_node_count(0)
     with pytest.raises(SmallestRouteCapExceeded):
+        _validate_smallest_route(pm)
+
+
+def test_smallest_route_validator_rejects_missing_learner_scaffold():
+    pm = _provisional_map_with_node_count(1, include_learner_scaffold=False)
+
+    with pytest.raises(SmallestRouteCapExceeded, match="learner_scaffold"):
+        _validate_smallest_route(pm)
+
+
+def test_smallest_route_validator_rejects_multiple_subnodes_per_cluster():
+    pm = ProvisionalMap(
+        metadata={
+            "source_title": "test",
+            "core_thesis": "test thesis",
+            "architecture_type": "causal_chain",
+            "difficulty": "medium",
+            "low_density": True,
+        },
+        backbone=[{"id": "b1", "principle": "Test backbone", "dependent_clusters": ["c1"]}],
+        clusters=[
+            Cluster(
+                id="c1",
+                label="Cluster 1",
+                description="Test cluster 1",
+                subnodes=[
+                    Subnode(
+                        id="c1_s1",
+                        label="Node 1",
+                        mechanism="test mechanism",
+                        learner_scaffold=_learner_scaffold(),
+                    ),
+                    Subnode(
+                        id="c1_s2",
+                        label="Node 2",
+                        mechanism="test mechanism",
+                        learner_scaffold=_learner_scaffold(),
+                    ),
+                ],
+            )
+        ],
+        relationships=Relationships(),
+        frameworks=[],
+    )
+
+    with pytest.raises(SmallestRouteCapExceeded, match="exactly one subnode"):
         _validate_smallest_route(pm)
 
 
@@ -112,6 +173,8 @@ def test_smallest_route_prompt_requires_internal_bloom_scaffold_contract():
     assert "remember | understand | apply" in prompt
     assert "Do not use evaluate or create" in prompt
     assert "Do not show Bloom" in prompt
+    assert "<learner_goal>" in prompt
+    assert "not evidence" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -134,18 +197,21 @@ def test_generate_smallest_provisional_map_uses_new_prompt():
     class FakeClient:
         def generate_structured(self, request):
             captured["system_prompt"] = request.system_prompt
+            captured["user_prompt"] = request.user_prompt
             captured["task_name"] = request.task_name
             return fake_result
 
     out = generate_smallest_provisional_map(
         concept="Photosynthesis",
         threshold="plants take in light and somehow make sugar",
+        learner_goal="I want to understand why leaves make sugar.",
         llm=FakeClient(),
     )
 
     assert out is fake_pm
     # New prompt is loaded, not the from-sketch one
     assert "smallest actionable route" in captured["system_prompt"].lower()
+    assert "<learner_goal>I want to understand why leaves make sugar.</learner_goal>" in captured["user_prompt"]
     # Task name is distinct so telemetry can distinguish stages
     assert captured["task_name"] == "smallest_route_from_threshold"
 

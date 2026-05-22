@@ -30,14 +30,15 @@ export async function generateKnowledgeMap(rawText, onProgress) {
  * node cap. Non-JSON error bodies fall back to a generic
  * `Server error <status>: <text>` message with `.status` set.
  *
- * @param {{ name: string, startingSketch: string,
+ * @param {{ name: string, learnerGoal?: string, startingSketch: string,
  *           source: null | { type: 'text'|'url'|'file', text?: string, url?: string, filename?: string },
  *           apiKey?: string }} args
  * @returns {Promise<{ provisional_map?: object, knowledge_map?: object }>}
  */
-export async function submitConceptCreate({ name, startingSketch, source, apiKey }) {
+export async function submitConceptCreate({ name, learnerGoal, startingSketch, source, apiKey }) {
   const body = {
     name,
+    learner_goal: learnerGoal || undefined,
     starting_sketch: startingSketch,
     source,
     api_key: apiKey,

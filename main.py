@@ -276,6 +276,7 @@ class ExtractRequest(BaseModel):
     """
     # New shape
     name: str | None = Field(None, max_length=200)
+    learner_goal: str | None = Field(None, max_length=1_000)
     starting_sketch: str | None = Field(None, max_length=10_000)
     source: SourceAttachment | None = None
     # Legacy back-compat
@@ -308,6 +309,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
     if not name:
         return {"path": "error", "status": 422,
                 "error": "missing_concept", "message": "Concept name required."}
+    learner_goal = (req.learner_goal or "").strip()
 
     sketch = (req.starting_sketch or "").strip()
     has_source_text = (
@@ -347,7 +349,12 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
                 "error": "thin_sketch_no_source",
                 "message": "Add more to your sketch, or attach source material — either path opens the build."}
 
-    return {"path": "from_threshold", "name": name, "threshold": sketch}
+    return {
+        "path": "from_threshold",
+        "name": name,
+        "threshold": sketch,
+        "learner_goal": learner_goal,
+    }
 
 
 class UrlExtractRequest(BaseModel):
@@ -549,6 +556,7 @@ def extract(req: ExtractRequest):
             provisional_map = generate_smallest_provisional_map(
                 concept=decision["name"],
                 threshold=decision["threshold"],
+                learner_goal=decision.get("learner_goal"),
                 lc_context=lc_context,
                 api_key=req.api_key,
                 on_call_complete=_on_sketch_call,
