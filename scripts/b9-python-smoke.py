@@ -18,9 +18,12 @@ Historical scenarios:
   2. Obsolete thin-sketch rejection path
   3. Legacy text-only payload
 
-Run from repo root with the venv active:
+Historical invocation from repo root with the venv active:
   $ . .venv/bin/activate
   $ python scripts/b9-python-smoke.py
+
+Do not treat a full-script failure on Scenario 2 as a product regression; the
+active route tests supersede this stale negative-control path.
 """
 from __future__ import annotations
 
@@ -124,6 +127,8 @@ if __name__ == "__main__":
         expected_status=200,
     ))
 
+    # Historical negative-control only. Current /api/extract accepts "idk" as
+    # a non-empty source-less launch attempt; see tests/test_extract_route_*.
     results.append(_scenario(
         "2. Source-less thin sketch (no Gemini call)",
         {

@@ -595,6 +595,8 @@ of inheriting legacy `concept.state` or `drill_status` claims.
 | Map entry chip | `EntryRender.state` (silent for null) | Replaces redundant counters like `entry 1 · ready for first attempt, current`. |
 | Map primary CTA | `EntryRender.next_action` | Fixes the State 5 "Let's move on" and State 11 dead-click bugs. |
 | Concept page draft evidence | Latest attempt for the active entry | Show the learner's draft before study reveal. Show `Missing piece` details only after `study_revealed_at`. |
+| Constellation node/detail | `deriveConceptEntryViewState` plus safe scaffold labels | Secondary orientation only. Route remains the reconstruction surface; future rooms hide labels, purposes, mechanism, source preview, and study-shaped content until reconstruction evidence exists. |
+| Constellation edge | Attempt evidence for both adjacent entries | Edges light only when both linked entries have learner attempt evidence; map topology alone cannot imply progress. |
 | Library card body | Current: best learner attempt across all node records; target: `EntryRender.strongest_turn_text` of the primary entry | When `null`, show empty-state copy. MUST NOT fall back to `core_thesis`. |
 | Library card badge | `ConceptStatus.badge` | Same string as Map. |
 | Library card composition | `ConceptStatus.composition` | "9 of 10 solidified · 1 needs repair" — pairs with badge for honest progress + honest gap. |
