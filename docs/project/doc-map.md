@@ -36,7 +36,6 @@ On all other topics, the doc listed below for that topic is authoritative.
 | Feynman prompt integration proposal (proposal-only, not runtime canon) | [`docs/superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md`](../superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md) |
 | Post-drill panel UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
 | Drill contract redirect | [`docs/drill/contract.md`](../drill/contract.md) |
-| Auth rollout | [`docs/project/auth-rollout.md`](auth-rollout.md) |
 
 ## Release gates
 
@@ -44,10 +43,18 @@ On all other topics, the doc listed below for that topic is authoritative.
 - [`docs/project/mvp-happy-path.md`](mvp-happy-path.md) — narrow MVP ship gate
 - [`docs/project/operations.md`](operations.md) — merge standard and release checks
 - [`docs/qa/antigravity-mobile-qa-prompt.md`](../qa/antigravity-mobile-qa-prompt.md) — mobile regression audit
+- [`docs/qa/gestalt-hybrid-launch-qa-prompt.md`](../qa/gestalt-hybrid-launch-qa-prompt.md) — source-less launch/compare QA prompt
 
 ## Agent infra
 
 See [`agents/README.md`](../../agents/README.md) for the canonical workflow hub. Founder workflows in `agents/founder/WORKFLOWS/`.
+
+## Current working plans
+
+- [`docs/superpowers/plans/2026-05-21-constellation-svg-recovery.md`](../superpowers/plans/2026-05-21-constellation-svg-recovery.md) — constellation SVG recovery plan
+- [`docs/superpowers/plans/2026-05-21-gestalt-hybrid-handoff.md`](../superpowers/plans/2026-05-21-gestalt-hybrid-handoff.md) — source-less gestalt hybrid handoff
+- [`docs/superpowers/plans/2026-05-21-learner-goal-thread.md`](../superpowers/plans/2026-05-21-learner-goal-thread.md) — learner-goal threading plan
+- [`docs/superpowers/plans/constellation-ux-goal-log.md`](../superpowers/plans/constellation-ux-goal-log.md) — constellation UX goal log
 
 ## Archive
 

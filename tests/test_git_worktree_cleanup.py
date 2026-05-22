@@ -1,4 +1,5 @@
 import os
+import json
 import subprocess
 from pathlib import Path
 
@@ -39,6 +40,24 @@ def test_lists_worktrees_without_removing(tmp_path: Path) -> None:
     assert "registered worktrees" in result.stdout
     assert "clean-removable" in result.stdout
     assert str(wt) in result.stdout
+    assert wt.exists()
+
+
+def test_json_mode_lists_worktrees_with_status_contract(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path)
+    wt = tmp_path / "feature"
+    _git(repo, "worktree", "add", "-b", "feature/demo", str(wt))
+
+    result = _run(["bash", str(SCRIPT), "--json"], repo)
+
+    assert result.returncode == 0
+    payload = json.loads(result.stdout)
+    assert payload["schema_version"] == 1
+    assert payload["repo"] == str(repo)
+    statuses = {entry["path"]: entry["status"] for entry in payload["worktrees"]}
+    assert statuses[str(repo)] in {"current", "main"}
+    assert statuses[str(wt)] == "clean-removable"
+    assert "registered worktrees" not in result.stdout
     assert wt.exists()
 
 

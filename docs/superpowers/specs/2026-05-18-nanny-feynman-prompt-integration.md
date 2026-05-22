@@ -47,9 +47,13 @@ Current runtime prompts:
 - `drill-system-v1.md` drives the structured Socratic drill.
 - `repair-reps-system-v1.md` creates graph-neutral causal micro-practice.
 
-The drill backend appends the target node answer key at runtime and expects a
-strict `DrillEvaluation` object with routing, classification, gap, tier, and
-mode fields. Any prompt integration must preserve that parser contract.
+The drill backend appends the target node answer key at runtime. When the
+target subnode carries `learner_scaffold`, it also appends scaffold task fields
+and `evidence_goal`; when `metadata.learner_goal` is present, cold-attempt
+instructions may use it for relevance only. The backend expects a strict
+`DrillEvaluation` object with routing, classification, gap, tier, and mode
+fields. Any prompt integration must preserve that parser contract and must not
+turn learner goals or scaffold fields into graph-truth evidence.
 
 ## Decision
 

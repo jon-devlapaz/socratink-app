@@ -111,6 +111,24 @@ def _emit_ai_call(*, stage: str, model: str, latency_ms: float,
     )
 
 
+def _legacy_gemini_error_to_http(route_name: str, err: Exception) -> HTTPException:
+    logger.warning("%s: %s: %s", route_name, err.__class__.__name__, err)
+    if isinstance(err, MissingAPIKeyError):
+        return HTTPException(
+            status_code=401,
+            detail="No API key configured. Add one in Settings to continue.",
+        )
+    if isinstance(err, GeminiRateLimitError):
+        return HTTPException(
+            status_code=429,
+            detail="The AI service is rate-limiting requests. Try again in a minute.",
+        )
+    return HTTPException(
+        status_code=503,
+        detail="The AI service is temporarily unavailable. Please try again shortly.",
+    )
+
+
 PROTECTED_HTML_PATHS = frozenset({"/", "/index.html"})
 PROTECTED_API_PATHS = frozenset(
     {
@@ -265,17 +283,20 @@ class ExtractRequest(BaseModel):
 
     Two payload shapes are accepted:
 
-    NEW (Plan A — conversational concept creation):
-      {name, starting_sketch, source, api_key?}
+    CURRENT (conversational concept creation):
+      {name, learner_goal?, starting_sketch, source, api_key?}
 
-    LEGACY (back-compat for the existing form-based client during rollout):
+    LEGACY (back-compat for text-only callers):
       {text, api_key?}
 
-    Server-side validation in /api/extract enforces the spec §3.2
-    substantiveness rule: source-less submits require a substantive sketch.
+    Server-side validation in /api/extract enforces the current source-less
+    launch contract: source-less submits require a non-empty learner sketch.
+    learner_goal may frame route generation, but it is not
+    learner-capability evidence.
     """
     # New shape
     name: str | None = Field(None, max_length=200)
+    learner_goal: str | None = Field(None, max_length=1_000)
     starting_sketch: str | None = Field(None, max_length=10_000)
     source: SourceAttachment | None = None
     # Legacy back-compat
@@ -289,13 +310,13 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     Returns one of:
       {"path": "extract", "text": str}
-      {"path": "from_threshold", "name": str, "threshold": str}
+      {"path": "from_threshold", "name": str, "threshold": str, "learner_goal": str}
       {"path": "error", "status": 422, "error": str, "message": str}
 
-    Spec §3.2 truth table is enforced here as defense in depth.
+    The source-less launch truth table is enforced here as defense in depth.
+    learner_goal is forwarded only as relevance/scaffold context; it never
+    proves understanding.
     """
-    from models.sketch_validation import is_substantive_sketch
-
     # Legacy {text} payload — back-compat path. Bypasses the new shape entirely.
     if req.text is not None and req.name is None and req.source is None:
         if not req.text.strip():
@@ -308,6 +329,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
     if not name:
         return {"path": "error", "status": 422,
                 "error": "missing_concept", "message": "Concept name required."}
+    learner_goal = (req.learner_goal or "").strip()
 
     sketch = (req.starting_sketch or "").strip()
     has_source_text = (
@@ -320,7 +342,6 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
         and req.source.type == "url"
         and (req.source.url or "").strip()
     )
-    sketch_ok = is_substantive_sketch(sketch)
 
     if has_source_text:
         assert req.source is not None
@@ -335,19 +356,20 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
                 "error": "url_source_unsupported_here",
                 "message": "URL sources go through /api/extract-url."}
 
-    if not sketch_ok:
-        # Spec §3.2 row 1: thin sketch + no source → block.
-        # Server-side message names BOTH escape paths (sketch or source)
-        # because the conversational concept-create modal can also reach
-        # this 422 (modal has both a sketch chip and a source chip).
-        # The launch-pad surface has no source-attach affordance, so it
-        # overrides this copy locally — see launch-pad.js handling of the
-        # thin_sketch_no_source code, which routes to THIN_THRESHOLD_COPY.
+    if not sketch:
+        # Source-less route generation can use even a rough learner response,
+        # but still needs some learner-authored text to preserve the
+        # launch-attempt/provisional-map distinction.
         return {"path": "error", "status": 422,
-                "error": "thin_sketch_no_source",
-                "message": "Add more to your sketch, or attach source material — either path opens the build."}
+                "error": "missing_sketch",
+                "message": "Write anything you think about the concept before building the draft."}
 
-    return {"path": "from_threshold", "name": name, "threshold": sketch}
+    return {
+        "path": "from_threshold",
+        "name": name,
+        "threshold": sketch,
+        "learner_goal": learner_goal,
+    }
 
 
 class UrlExtractRequest(BaseModel):
@@ -549,6 +571,7 @@ def extract(req: ExtractRequest):
             provisional_map = generate_smallest_provisional_map(
                 concept=decision["name"],
                 threshold=decision["threshold"],
+                learner_goal=decision.get("learner_goal"),
                 lc_context=lc_context,
                 api_key=req.api_key,
                 on_call_complete=_on_sketch_call,
@@ -623,10 +646,11 @@ def extract(req: ExtractRequest):
             detail="The AI service is temporarily unavailable. Please try again shortly.",
         )
     except SmallestRouteCapExceeded as err:
-        # C-prime spec §5.1: cap exceeded is a server-side generation failure,
-        # not a client input failure → 500 (not 422). Must be caught BEFORE the
-        # generic ValueError handler below because SmallestRouteCapExceeded
-        # subclasses ValueError.
+        # Malformed source-less route generation is a server-side generation
+        # failure, not a client input failure -> 500 (not 422). This includes
+        # over-cap output, invalid cluster shape, and missing learner_scaffold.
+        # Must be caught BEFORE the generic ValueError handler below because
+        # SmallestRouteCapExceeded subclasses ValueError.
         logger.error("extract: smallest_route_cap_exceeded: %s", err)
         raise HTTPException(
             status_code=500,
@@ -757,12 +781,8 @@ def drill(req: DrillRequest):
         )
         response_payload = {"concept_id": req.concept_id, **result}
         return response_payload
-    except MissingAPIKeyError as err:
-        raise HTTPException(status_code=401, detail=str(err))
-    except GeminiRateLimitError as err:
-        raise HTTPException(status_code=429, detail=str(err))
-    except GeminiServiceError as err:
-        raise HTTPException(status_code=503, detail=str(err))
+    except (MissingAPIKeyError, GeminiRateLimitError, GeminiServiceError) as err:
+        raise _legacy_gemini_error_to_http("drill", err) from err
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid knowledge_map JSON.")
     except ValueError as err:
@@ -812,12 +832,8 @@ def repair_reps(req: RepairRepsRequest):
             api_key=req.api_key,
         )
         return {"concept_id": req.concept_id, **result}
-    except MissingAPIKeyError as err:
-        raise HTTPException(status_code=401, detail=str(err))
-    except GeminiRateLimitError as err:
-        raise HTTPException(status_code=429, detail=str(err))
-    except GeminiServiceError as err:
-        raise HTTPException(status_code=503, detail=str(err))
+    except (MissingAPIKeyError, GeminiRateLimitError, GeminiServiceError) as err:
+        raise _legacy_gemini_error_to_http("repair-reps", err) from err
     except json.JSONDecodeError as err:
         raise HTTPException(
             status_code=400, detail="Invalid knowledge_map JSON."

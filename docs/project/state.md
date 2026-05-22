@@ -18,7 +18,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - `localStorage` is fragile and easy to wipe.
 - Chat/test instrumentation is incomplete, so some regressions will still be harder to reconstruct than they should be.
 - External ingestion paths still need defensive hosted behavior and graceful fallback.
-- Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user with no concepts must bring their own source.
+- Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user may start source-less through Door -> Launch pad -> non-empty Launch attempt -> Smallest actionable route.
 - `ai_service.py` still imports Gemini directly for `drill_chat` and `generate_repair_reps`; ADR-0002's temporary LLM seam exception remains unresolved until those paths migrate through `llm/`.
 
 ## Product Constraints

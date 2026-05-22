@@ -20,6 +20,27 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     expect(page.locator("#concept-list")).to_be_attached()
 
 
+def test_launch_pad_displays_normalized_concept_and_goal(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(
+        "I want to understand why sodium rushing into a neuron starts an electrical signal"
+    )
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#launch-pad-concept-name")).to_have_text(
+        "sodium rushing into a neuron starts an electrical signal"
+    )
+    expect(clean_page.locator("#launch-pad-concept-goal")).to_have_text(
+        "Goal: I want to understand why sodium rushing into a neuron starts an electrical signal"
+    )
+    expect(clean_page.locator(".ig-concept-mark")).not_to_contain_text(
+        "on I want"
+    )
+
+
 def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_url: str) -> None:
     _enter_app_shell_as_guest(clean_page, base_url)
 
@@ -564,7 +585,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 backbone: [{ id: 'lp-node', label: 'Launch-pad node' }],
                 clusters: [],
               },
-              { name: 'Launch Pad Provenance' },
+              { name: 'Launch Pad Provenance', goal: 'raw learner goal' },
               'rough learner threshold'
             );
             await new Promise((resolve) => setTimeout(resolve, 0));
@@ -573,6 +594,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(savedLaunchPadTraining.source_mode === 'source_less', 'launch pad writes source-less provenance');
             assert(savedLaunchPadTraining.grounding === 'learner_sketch', 'launch pad writes learner sketch grounding');
             assert(savedLaunchPadTraining.sketch.text === 'rough learner threshold', 'launch pad writes sketch text');
+            assert(savedLaunchPadConcept.learnerGoal === 'raw learner goal', 'launch pad preserves learner goal on concept');
+            assert(JSON.parse(savedLaunchPadConcept.graphData).metadata.learner_goal === 'raw learner goal', 'launch pad preserves learner goal in graph metadata');
 
             const sourceInput = await import('/js/source-input-ui.js');
             assert(sourceInput.isBlockedVideoUrl('https://youtu.be/abc'), 'blocked short youtube url');
@@ -829,6 +852,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             }
 
             const conceptPage = await import('/js/concept-page-view.js');
+            const conceptConstellation = await import('/js/concept-constellation-view.js');
+            const comparisonAck = await import('/js/comparison-acknowledgement.js');
             const trainingDerive = await import('/js/training-derive.js');
             const attempt = (id, at, classification) => ({
               id,
@@ -934,6 +959,54 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               0,
               'concept status tolerates non-array node ids',
             );
+            same(
+              conceptConstellation.entryForTrainingState({
+                id: 'legacy-entry',
+                label: 'Legacy entry',
+                drill_status: 'primed',
+                drill_phase: 'study',
+                re_drill_eligible_after: '2026-05-16T04:00:00.000Z',
+                study_completed_at: '2026-05-15T10:05:00.000Z',
+                last_drilled: '2026-05-15T10:00:00.000Z',
+              }),
+              { id: 'legacy-entry', label: 'Legacy entry' },
+              'constellation training sanitizer strips legacy drill fields',
+            );
+            same(conceptConstellation.entryForTrainingState(null), null, 'constellation sanitizer tolerates null');
+
+            const throwingAckStorage = {
+              getItem() { throw new Error('get blocked'); },
+              setItem() { throw new Error('set blocked'); },
+              removeItem() { throw new Error('remove blocked'); },
+              key() { throw new Error('key blocked'); },
+              get length() { throw new Error('length blocked'); },
+            };
+            assert(
+              comparisonAck.hasComparisonAcknowledgement('concept-1', 'entry-1', throwingAckStorage) === false,
+              'comparison ack get failure degrades to false',
+            );
+            comparisonAck.markComparisonAcknowledged('concept-1', 'entry-1', throwingAckStorage);
+            comparisonAck.clearComparisonAcknowledgement('concept-1', 'entry-1', throwingAckStorage);
+            comparisonAck.clearComparisonAcknowledgementsForConcept('concept-1', throwingAckStorage);
+
+            const partiallyFailingAckStorage = {
+              removed: [],
+              get length() { return 3; },
+              key(index) {
+                if (index === 0) throw new Error('slot blocked');
+                if (index === 1) return 'socratink:comparison_ack:v1:concept-1:entry-3';
+                return 'socratink:comparison_ack:v1:concept-2:entry-1';
+              },
+              removeItem(key) {
+                this.removed.push(key);
+              },
+            };
+            comparisonAck.clearComparisonAcknowledgementsForConcept('concept-1', partiallyFailingAckStorage);
+            same(
+              partiallyFailingAckStorage.removed,
+              ['socratink:comparison_ack:v1:concept-1:entry-3'],
+              'comparison ack cleanup skips bad slots and removes matching keys',
+            );
             const conceptBackbone = [
               { id: 'core', label: '<Core>', drill_status: 'drilled', purpose: 'First purpose' },
               { id: 'entry-2', label: 'Second & unsafe', drill_status: 'locked' },
@@ -977,9 +1050,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               {},
               { metadata: {} },
             );
-            assert(legacyStudyHtml.includes('Study the gap'), 'legacy primed study stays in study phase');
+            assert(legacyStudyHtml.includes('Draft saved'), 'legacy primed study stays in study phase');
             assert(legacyStudyHtml.includes('data-active-entry-action="study"'), 'legacy primed study reveals study before redrill');
-            assert(legacyStudyHtml.includes('Compare with notes'), 'legacy primed study cta is learner-facing');
+            assert(legacyStudyHtml.includes('Reveal notes and compare'), 'legacy primed study cta is learner-facing');
             const legacyStudyRevealedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
               0,
@@ -1141,7 +1214,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPageAttemptHtml.includes('concept-page-b2__attempt'), 'concept page inline attempt form');
             assert(conceptPageAttemptHtml.includes('data-attempt-entry-id="entry-2"'), 'concept page inline attempt target');
-            assert(conceptPageAttemptHtml.includes('Save what I wrote'), 'concept page inline attempt save');
+            assert(conceptPageAttemptHtml.includes('Draft from memory'), 'concept page inline attempt save');
             const conceptPagePrimedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'primed', label: 'Primed', drill_status: 'primed' },
               0,
@@ -1166,13 +1239,13 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               }
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
-            assert(conceptPagePrimedHtml.includes('Study the gap'), 'concept page primed study eyebrow');
+            assert(conceptPagePrimedHtml.includes('Draft saved'), 'concept page primed study eyebrow');
             assert(conceptPagePrimedHtml.includes('concept-page-b2__evidence'), 'concept page primed shows recorded draft before study');
-            assert(conceptPagePrimedHtml.includes('Your draft'), 'concept page primed evidence uses learner language');
+            assert(conceptPagePrimedHtml.includes('Your memory draft'), 'concept page primed evidence uses learner language');
             assert(conceptPagePrimedHtml.includes('A strong first attempt.'), 'concept page primed preserves learner words before study');
             assert(!conceptPagePrimedHtml.includes('Missing piece'), 'concept page primed does not reveal missing-piece language before study');
             assert(conceptPagePrimedHtml.includes('data-active-entry-action="study"'), 'concept page primed study action');
-            assert(conceptPagePrimedHtml.includes('Compare with notes'), 'concept page primed study cta');
+            assert(conceptPagePrimedHtml.includes('Reveal notes and compare'), 'concept page primed study cta');
             const conceptPageStudiedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
               0,
@@ -1271,6 +1344,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageRepairHtml.includes('concept-page-b2__repair'), 'concept page repair panel');
             assert(conceptPageRepairHtml.includes('data-repair-entry-id="repair"'), 'concept page repair save target');
             assert(conceptPageRepairHtml.includes('Put it in your words'), 'concept page repair panel uses generation language');
+            assert(conceptPageRepairHtml.includes('1 missing link to repair'), 'concept page repair shows missing link count');
+            assert(conceptPageRepairHtml.includes('Save this repair before you try from memory again.'), 'concept page repair explains retry order');
             assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
             const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
               { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
@@ -1357,6 +1432,55 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptStripHtml.includes('concept-strip__node--locked'), 'concept strip locked node');
             assert(conceptStripHtml.includes('Second &amp; unsafe · 2 of 3'), 'concept strip active label escapes');
             assert(conceptStripHtml.includes('aria-label="Second &amp; unsafe, ready to reconstruct, current"'), 'concept strip aria escapes');
+            const statefulConceptStripHtml = conceptPage.renderConceptStripHtml(
+              [
+                { id: 'repair-node', label: 'Repair node' },
+                { id: 'solid-node', label: 'Solid node' },
+                { id: 'ready-node' },
+              ],
+              { id: 'ready-node' },
+              2,
+              {
+                node_records: {
+                  'repair-node': {
+                    attempts: [{
+                      id: 'thin-1',
+                      at: '2026-05-15T10:00:00.000Z',
+                      user_text: 'Thin answer.',
+                      classification: 'thin',
+                      gaps: [{ mechanism: 'missing link', correction: 'Name the missing link.' }],
+                      grader_version: 'qa',
+                    }],
+                    repairs: [],
+                  },
+                  'solid-node': {
+                    attempts: [
+                      { id: 'solid-1', at: '2026-05-14T10:00:00.000Z', user_text: 'first strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                      { id: 'solid-2', at: '2026-05-15T10:30:00.000Z', user_text: 'second strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                    ],
+                    study_revealed_at: '2026-05-14T10:05:00.000Z',
+                    repairs: [],
+                  },
+                },
+              },
+            );
+            assert(statefulConceptStripHtml.includes('concept-strip__node--needs-repair'), 'concept strip separates repair state');
+            assert(statefulConceptStripHtml.includes('concept-strip__node--solidified'), 'concept strip separates solidified state');
+            assert(statefulConceptStripHtml.includes('Third entry · 3 of 3'), 'concept strip fallback active label is human');
+            assert(statefulConceptStripHtml.includes('aria-label="Third entry, ready to reconstruct, current"'), 'concept strip fallback aria label is human');
+            const fourthFallbackConceptStripHtml = conceptPage.renderConceptStripHtml(
+              [
+                { id: 'first-node' },
+                { id: 'second-node' },
+                { id: 'third-node' },
+                { id: 'fourth-node' },
+              ],
+              { id: 'fourth-node' },
+              3,
+              {},
+            );
+            assert(fourthFallbackConceptStripHtml.includes('Entry 4 · 4 of 4'), 'concept strip fourth fallback label is human');
+            assert(fourthFallbackConceptStripHtml.includes('aria-label="Entry 4, locked, current"'), 'concept strip fourth fallback aria label is human');
             const emptyConceptStripHtml = conceptPage.renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
             assert(emptyConceptStripHtml.includes('data-entry-id="core-thesis"'), 'concept strip empty synthetic node');
             assert(emptyConceptStripHtml.includes('<text x="60" y="80">core thesis</text>'), 'concept strip empty label');

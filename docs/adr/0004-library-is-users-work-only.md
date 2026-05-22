@@ -28,13 +28,15 @@ The `Library` term in `UBIQUITOUS_LANGUAGE.md` is now constrained: *"the visible
 
 A first-run user with no source of their own currently has no built-in sandbox concept. This is intentional: the friction of bringing real learning material is the filter the product wants. A "paste sample text" affordance on Ignition (the persona's option E) is a candidate for a follow-up but is **not** part of this decision — that's a new entry-point question, separate from the question of what Library is.
 
+2026-05 update: the Library decision still governs deletion of pre-graphed seed concepts and the meaning of Library as the user's own work. It no longer describes the current first-run entry requirement: source-less Door → Launch Pad → non-empty launch attempt can now generate a smallest actionable route without imported source material.
+
 ## Consequences
 
 - **Files removed:** `public/data/library/hermes_agent.json`, `docs/reference/hermes-agent-concept-source.md`, `docs/reference/hermes-agent-docs-manifest.md`, `BUILT_IN_LIBRARY_CONCEPTS` and `importLibraryConcept` in `public/js/app.js`, `loadLibraryConcept` in `public/js/api-client.js`, the `App.importLibraryConcept` namespace export.
 - **Files kept:** `.library-card-vault` CSS rules (still used by the user's own concept cards), `getLibraryConceptMeta` (called for user concepts in the non-empty render path), the `Your Library` section render.
 - **Tests rewritten:** Three smoke tests in `tests/e2e/test_smoke.py` previously used Hermes Agent as a fixture (not as a feature under test). They now seed a single concept directly into `learnops_concepts` localStorage via a new `_seed_one_concept(page)` helper. No test coverage of real behavior is lost.
 - **Term affected:** the old seed-card state label for "this seed hasn't been imported yet" has no referent now that seeding is gone. It is removed from product copy. Future copy should use current route language only.
-- **First-run friction:** A user landing on Library with no concepts sees only the empty-state line: *"No concepts yet. Start one at New concept."* They must bring a source. This is the persona-blessed posture; if real-user testing later shows new users bouncing on the friction, follow-up is a separate decision (likely option E from the grill-with-docs session).
+- **First-run friction:** A user landing on Library with no concepts sees only the empty-state line: *"No concepts yet. Start one at New concept."* This ADR still forbids pre-loaded sample concepts in Library; current entry flows may start from source-less launch attempts instead of imported source material.
 
 ## Alternatives considered
 

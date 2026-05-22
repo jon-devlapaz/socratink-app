@@ -156,9 +156,11 @@ Concept {
   graph: {
     backbone: Node[]
     clusters: Cluster[]
-    metadata: { core_thesis, architecture_type, source_title, … }
+    metadata: { core_thesis, architecture_type, source_title, learner_goal?, … }
     //         core_thesis stays in the blob as a system-internal grader-context
     //         reference. It MUST NOT be rendered as "what you've reconstructed."
+    //         learner_goal may frame relevance and prompt shape. It is not
+    //         learner-capability evidence and cannot derive state.
   }
 
   // The single source of truth for everything stateful.
@@ -171,6 +173,18 @@ Entry {
   node_id: string                       // stable across the concept's lifetime
   label: string
   mechanism?: string                    // canonical mechanism reference (for grader)
+  learner_scaffold?: {                  // source-less smallest-route task shape
+    bloom_level: 'remember' | 'understand' | 'apply' // internal only
+    learner_move: string
+    task_label: string
+    task_cue: string
+    tailoring_anchor: string
+    entry_prompt: string
+    expected_shape: string
+    sentence_starter: string
+    blank_hint: string
+    evidence_goal: string               // evaluator scope, not learner evidence
+  }
 }
 
 Event {
@@ -571,9 +585,9 @@ Current shipped rollout: the concept page consumes entry training derivation for
 entry state, CTAs, inline reconstruction, draft evidence, study reveal, and repair panels. The
 Library card body asynchronously consumes learner attempts for reconstruction
 copy, choosing the best attempt across all node records by classification rank
-and then recency. Map badges, Desk tiles, Sidebar concept markers, and Library
-card badges still render legacy `concept.state` until the full target binding
-below lands.
+and then recency. Sidebar concept markers, Library card badges, and Desk tiles
+derive from the training store; no-evidence concepts stay visually quiet instead
+of inheriting legacy `concept.state` or `drill_status` claims.
 
 | Surface | Binds to | Notes |
 |---|---|---|
@@ -581,6 +595,8 @@ below lands.
 | Map entry chip | `EntryRender.state` (silent for null) | Replaces redundant counters like `entry 1 · ready for first attempt, current`. |
 | Map primary CTA | `EntryRender.next_action` | Fixes the State 5 "Let's move on" and State 11 dead-click bugs. |
 | Concept page draft evidence | Latest attempt for the active entry | Show the learner's draft before study reveal. Show `Missing piece` details only after `study_revealed_at`. |
+| Constellation node/detail | `deriveConceptEntryViewState` plus safe scaffold labels | Secondary orientation only. Route remains the reconstruction surface; future rooms hide labels, purposes, mechanism, source preview, and study-shaped content until reconstruction evidence exists. |
+| Constellation edge | Attempt evidence for both adjacent entries | Edges light only when both linked entries have learner attempt evidence; map topology alone cannot imply progress. |
 | Library card body | Current: best learner attempt across all node records; target: `EntryRender.strongest_turn_text` of the primary entry | When `null`, show empty-state copy. MUST NOT fall back to `core_thesis`. |
 | Library card badge | `ConceptStatus.badge` | Same string as Map. |
 | Library card composition | `ConceptStatus.composition` | "9 of 10 solidified · 1 needs repair" — pairs with badge for honest progress + honest gap. |

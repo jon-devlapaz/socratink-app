@@ -53,6 +53,7 @@ If the learning belongs in a founder workflow card, promote it there rather than
 - Root entrypoints: `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md`.
 - Bootstrap and agent quality docs: `agents/ONBOARDING.md` and `agents/QUALITY.md`.
 - Executable enforcement: `scripts/agent-push.py`, `scripts/git-hooks/pre-push`, and `scripts/doctor.sh`.
+- Founder-facing git command map and local readiness checks: `scripts/git-founder-help.sh`.
 - Runtime state: `.agents/runtime/`.
 
 ## What V1 Solves

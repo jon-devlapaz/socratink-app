@@ -1,12 +1,12 @@
 """End-to-end tests for the source-optional /api/extract endpoint.
 
-Covers the four truth-table states from spec §3.2:
-  | Source | Sketch substantive? | Expected behavior          |
-  | ------ | ------------------- | -------------------------- |
-  |  yes   |       any           | success via extract path   |
-  |  no    |       yes           | success via sketch path    |
-  |  yes   |       no            | success via extract path   |
-  |  no    |       no            | 422 thin_sketch_no_source  |
+Covers the current source/source-less launch truth table:
+  | Source | Sketch present? | Expected behavior          |
+  | ------ | --------------- | -------------------------- |
+  |  yes   |       any       | success via extract path   |
+  |  no    |       yes       | success via sketch path    |
+  |  yes   |       no        | success via extract path   |
+  |  no    |       no        | 422 missing_sketch         |
 
 Plus: missing concept name → 422 missing_concept.
 """
@@ -83,7 +83,7 @@ def _minimal_map() -> ProvisionalMap:
     )
 
 
-def test_substantive_sketch_no_source_dispatches_to_sketch_path(client):
+def test_non_empty_sketch_no_source_dispatches_to_sketch_path(client):
     fake_map = _minimal_map()
     with patch(
         "main.generate_smallest_provisional_map",
@@ -99,16 +99,32 @@ def test_substantive_sketch_no_source_dispatches_to_sketch_path(client):
     assert not fake_extract.called, "must NOT call extract_knowledge_map"
 
 
-def test_thin_sketch_no_source_returns_422_thin_sketch(client):
+def test_short_sketch_no_source_dispatches_to_sketch_path(client):
+    fake_map = _minimal_map()
+    with patch(
+        "main.generate_smallest_provisional_map",
+        return_value=fake_map,
+    ) as fake_gen, patch("main.extract_knowledge_map") as fake_extract:
+        response = client.post("/api/extract", json={
+            "name": "Photosynthesis",
+            "starting_sketch": "idk",
+            "source": None,
+        })
+    assert response.status_code == 200
+    assert fake_gen.called, "must call generate_smallest_provisional_map"
+    assert not fake_extract.called, "must NOT call extract_knowledge_map"
+
+
+def test_empty_sketch_no_source_returns_422_missing_sketch(client):
     response = client.post("/api/extract", json={
         "name": "Photosynthesis",
-        "starting_sketch": "idk",
+        "starting_sketch": "   ",
         "source": None,
     })
     assert response.status_code == 422
     body = response.json()
     detail = body.get("detail", body)
-    assert (detail.get("error") if isinstance(detail, dict) else None) == "thin_sketch_no_source"
+    assert (detail.get("error") if isinstance(detail, dict) else None) == "missing_sketch"
 
 
 def test_substantive_sketch_with_source_dispatches_to_extract_path(client):
@@ -167,8 +183,7 @@ def test_whitespace_only_concept_returns_422_missing_concept(client):
 def test_legacy_text_only_payload_still_works(client):
     """Back-compat: the old {text, api_key} payload still hits extract path.
 
-    Plan B will deprecate this once the new frontend ships, but during
-    rollout the old client must keep working.
+    Keep this until the legacy text-only caller path is intentionally removed.
     """
     fake_map = _minimal_map()
     with patch("main.extract_knowledge_map", return_value=fake_map) as fake_extract:

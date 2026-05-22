@@ -8,6 +8,7 @@ from __future__ import annotations
 from models.provisional_map import (
     BackboneItem,
     Cluster,
+    LearnerScaffold,
     Metadata,
     ProvisionalMap,
     Relationships,
@@ -15,7 +16,22 @@ from models.provisional_map import (
 )
 
 
-def provisional_map_with_node_count(n: int) -> ProvisionalMap:
+def _learner_scaffold() -> LearnerScaffold:
+    return LearnerScaffold(
+        bloom_level="understand",
+        learner_move="Say it",
+        task_label="Starting model",
+        task_cue="Put the relationship in your own words.",
+        tailoring_anchor="You mentioned the input and output, so this starts there.",
+        entry_prompt="How would you explain the relationship right now?",
+        expected_shape="Write one or two sentences.",
+        sentence_starter="My current guess is that...",
+        blank_hint="Start with the part you named in your sketch.",
+        evidence_goal="The learner states an initial model without reading source content.",
+    )
+
+
+def provisional_map_with_node_count(n: int, *, include_learner_scaffold: bool = True) -> ProvisionalMap:
     """Build a ProvisionalMap with `n` drillable cluster nodes for the cap test.
 
     n must be >= 0. Raises ValueError for negative values.
@@ -34,6 +50,7 @@ def provisional_map_with_node_count(n: int) -> ProvisionalMap:
                     id=f"c{i + 1}_s1",
                     label=f"Node {i + 1}",
                     mechanism="test mechanism",
+                    learner_scaffold=_learner_scaffold() if include_learner_scaffold else None,
                 )
             ],
         )

@@ -6,10 +6,11 @@
 // avoiding a MutationObserver self-trigger loop.
 
 import { Bus } from './bus.js';
+import { deriveConceptBadge } from './concept-status.js';
+import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
 
 (function () {
   const STORE_KEY = 'learnops_concepts';
-  const BOARD_STATES = new Set(['solidified', 'drilled', 'primed', 'locked', 'fractured']);
 
   function loadConcepts() {
     try {
@@ -20,62 +21,61 @@ import { Bus } from './bus.js';
     }
   }
 
-  function parseGraphData(concept) {
-    if (!concept?.graphData) return null;
+  function loadTraining(conceptId) {
+    if (!conceptId) return null;
     try {
-      return typeof concept.graphData === 'string'
-        ? JSON.parse(concept.graphData)
-        : concept.graphData;
-    } catch (err) {
+      const raw = localStorage.getItem(`${TRAINING_STORE_KEY_PREFIX}${conceptId}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch {
       return null;
     }
   }
 
-  function collectDrillNodes(graphData) {
-    if (!graphData || typeof graphData !== 'object') return [];
-    const nodes = [];
-    if (graphData.metadata && typeof graphData.metadata === 'object') {
-      nodes.push(graphData.metadata);
-    }
-    (graphData.backbone || []).forEach((item) => {
-      if (item && typeof item === 'object') nodes.push(item);
-    });
-    (graphData.clusters || []).forEach((cluster) => {
-      if (cluster && typeof cluster === 'object') nodes.push(cluster);
-      (cluster?.subnodes || []).forEach((subnode) => {
-        if (subnode && typeof subnode === 'object') nodes.push(subnode);
-      });
-    });
-    return nodes;
+  function boardStateFromBadge(badge) {
+    if (badge === 'solidified') return 'solidified';
+    if (badge === 'needs repair') return 'fractured';
+    if (badge === 'primed') return 'primed';
+    return null;
   }
 
-  // Maps the concept-shell state (legacy + live mix) onto the live five-state
-  // board vocabulary defined in docs/design/socratink-ux.md §5 and UBIQUITOUS_LANGUAGE.md.
-  // 'actualized' is sanctioned legacy for 'solidified'. 'hibernating' is a
-  // legacy alias-to-avoid (UBIQUITOUS_LANGUAGE.md:80) with no live equivalent
-  // — defaulting to 'locked' avoids overclaiming readiness on the board.
-  function fallbackBoardState(sourceState) {
-    if (sourceState === 'actualized') return 'solidified';
-    if (sourceState === 'fractured') return 'fractured';
-    if (BOARD_STATES.has(sourceState)) return sourceState;
-    return 'locked';
+  function legacyBoardStateFromConceptState(state) {
+    const normalized = String(state || '').toLowerCase();
+    if (normalized === 'actualized') return 'solidified';
+    if (normalized === 'fractured') return 'fractured';
+    if (normalized === 'primed') return 'primed';
+    return null;
+  }
+
+  function evidenceHintForBoardState(boardState) {
+    if (boardState === 'solidified') return 'Spaced reconstruction is on record.';
+    if (boardState === 'fractured') return 'A specific gap is ready to repair.';
+    if (boardState === 'primed') return 'Reconstruction evidence is on record.';
+    return '';
+  }
+
+  function syncEvidenceHint(tile, hint) {
+    let title = tile.querySelector('.iso-board-state-title');
+    if (!hint) {
+      tile.removeAttribute('data-evidence-hint');
+      if (title) title.remove();
+      return;
+    }
+
+    tile.dataset.evidenceHint = hint;
+    if (!title) {
+      title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.classList.add('iso-board-state-title');
+      tile.insertBefore(title, tile.firstChild);
+    }
+    title.textContent = hint;
   }
 
   function deriveBoardState(concept) {
-    const graphData = parseGraphData(concept);
-    const drillNodes = collectDrillNodes(graphData);
-    const statuses = drillNodes.map((node) => node?.drill_status).filter(Boolean);
-
-    if (statuses.some((status) => status === 'solidified' || status === 'solid')) {
-      return 'solidified';
-    }
-    if (statuses.includes('drilled') || drillNodes.some((node) => node?.gap_type || node?.gap_description)) {
-      return 'drilled';
-    }
-    if (statuses.includes('primed')) {
-      return 'primed';
-    }
-    return fallbackBoardState(concept?.state);
+    const training = loadTraining(concept?.id);
+    const badge = deriveConceptBadge(concept, training);
+    return boardStateFromBadge(badge) || legacyBoardStateFromConceptState(concept?.state) || 'locked';
   }
 
   function crystalMarkup(state) {
@@ -108,6 +108,7 @@ import { Bus } from './bus.js';
     if (!concept) {
       tile.removeAttribute('data-source-state');
       tile.removeAttribute('data-board-state');
+      syncEvidenceHint(tile, '');
       // Cross-tab storage events can call syncTile without a preceding
       // renderGrid(). When a tab deletes the concept that previously
       // owned this tile, the populated pin/crystal markup stays in the
@@ -131,6 +132,7 @@ import { Bus } from './bus.js';
     const boardState = deriveBoardState(concept);
     tile.dataset.sourceState = concept.state || '';
     tile.dataset.boardState = boardState;
+    syncEvidenceHint(tile, evidenceHintForBoardState(boardState));
 
     // Defensive: drop any stale empty affordance the previous render may
     // have inserted. Canonical renderGrid flow wipes innerHTML before
@@ -200,7 +202,15 @@ import { Bus } from './bus.js';
     // motion preferences) don't trigger a board re-render. RAF
     // throttling helps but the wake-up itself is wasted work.
     window.addEventListener('storage', (e) => {
-      if (e.key === STORE_KEY || e.key === null) scheduleRefresh();
+      /* c8 ignore start -- browser cross-tab storage events are verified by smoke behavior */
+      if (
+        e.key === STORE_KEY
+        || e.key === null
+        || e.key?.startsWith(TRAINING_STORE_KEY_PREFIX)
+      ) {
+        scheduleRefresh();
+      }
+      /* c8 ignore stop */
     });
     window.addEventListener('focus', scheduleRefresh);
     document.addEventListener('visibilitychange', () => {

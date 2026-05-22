@@ -2,8 +2,8 @@
 //
 // Substantiveness heuristic — JS port of models/sketch_validation.py.
 // Verified against tests/fixtures/sketch_validation_parity.json by
-// tests/test_frontend_sketch_validation.py. A divergence is a
-// release-blocker per spec §5.3.
+// tests/test_frontend_sketch_validation.py. A divergence breaks the legacy
+// parity contract for callers that still need the older verdict.
 //
 // Why /u everywhere: Python's \w is Unicode by default; JS's is ASCII-only.
 // Without /u, the same input ("café résumé naïve …") would tokenize differently

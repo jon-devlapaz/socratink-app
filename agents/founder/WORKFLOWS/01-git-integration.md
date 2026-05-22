@@ -37,11 +37,16 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 ```text
 scripts/git-wip-explain.sh              # full local/session orientation
 scripts/git-wip-explain.sh --short      # compact terminal-start summary
+scripts/git-wip-explain.sh --json       # stable machine-readable orientation
 python3 scripts/agent-push.py --target no-mistakes/dev
+python3 scripts/agent-push.py --target no-mistakes/dev --json
 no-mistakes attach
 scripts/no-mistakes-finish-dev.sh       # after no-mistakes finishes
 scripts/git-worktree-cleanup.sh         # list stale worktrees
+scripts/git-worktree-cleanup.sh --json  # stable machine-readable worktree list
 scripts/git-worktree-cleanup.sh --remove-clean --apply
+scripts/git-founder-help.sh             # founder-facing command map
+scripts/git-founder-help.sh doctor      # read-only helper readiness check
 ```
 
 ## Required Confirmation
@@ -56,11 +61,15 @@ scripts/git-worktree-cleanup.sh --remove-clean --apply
 
 - wrapper recommendation is shown
 - wrapper refreshes `origin/dev` before evaluating a `dev` publication
+- wrapper refreshes `no-mistakes/dev` before publishing there and blocks early if the destination is not an ancestor of local `HEAD`
 - publishing `dev` is blocked when local `dev` is behind `origin/dev`
+- a rejected `no-mistakes/dev` push with `fetch first` means the gate ref moved or was rewritten; inspect `git cherry -v no-mistakes/dev HEAD`, preserve local `dev`, then replay only unique local commits on top of the refreshed gate ref
 - a branch that is both behind and ahead of its upstream is diverged; inspect with `git fetch && git status --short --branch && git diff @{u}...HEAD`, not `scripts/agent-push.py`
 - after no-mistakes finishes, use `scripts/no-mistakes-finish-dev.sh` to refuse active runs, dirty trees, or unique local commits before folding local `dev` onto `origin/dev`
 - when a dirty tree blocks finishing, use `scripts/git-wip-explain.sh` to classify staged, unstaged, and untracked work before deciding what to commit or move
 - when stale worktrees create session confusion, use `scripts/git-worktree-cleanup.sh` to list candidates and remove only clean registered worktrees with `--remove <path> --apply`
+- use the `--json` forms only for agents/scripts that need stable fields; founder-facing terminal usage should stay prose-first unless structured output is explicitly useful
+- use `scripts/git-founder-help.sh doctor` when shell shortcuts, hook installation, helper executability, or `no-mistakes` availability is suspect
 - push intent is revalidated on ack
 - raw `git push` is blocked without authorization artifact
 

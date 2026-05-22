@@ -1,8 +1,9 @@
 """ProvisionalMap — the typed cognitive artifact contract.
 
-Mirrors the JSON schema described in ``app_prompts/extract-system-v1.txt``.
-Application code that consumes extraction output sees this type, never a
-dict. Structural integrity is enforced at parse time:
+Mirrors the JSON schemas described in ``app_prompts/extract-system-v1.txt``
+and ``app_prompts/generate-smallest-route-system-v1.txt``. Application code
+that consumes generated map output sees this type, never a dict. Structural
+integrity is enforced at parse time:
 
   - Every id (backbone, cluster, subnode) matches the identifier grammar
   - Every subnode lives in its declared cluster (c1_s2 must be inside c1)
@@ -14,6 +15,8 @@ dict. Structural integrity is enforced at parse time:
 What is NOT enforced here:
   - Quality minimums (>=N nodes total): governed by the prompt
   - Framework quality gates: governed by the prompt
+  - Smallest-route profile rules: governed by ``ai_service._validate_smallest_route``
+    (for example, ``learner_scaffold`` is optional generally but required there)
 
 Models do NOT use ``extra="forbid"`` because Gemini's response_schema
 parameter rejects the resulting JSON Schema (additionalProperties: false).
@@ -42,10 +45,30 @@ class Metadata(BaseModel):
     low_density: bool = False
 
 
+class LearnerScaffold(BaseModel):
+    """Non-answer task shape for the learner's local reconstruction attempt.
+
+    Bloom is internal scaffolding metadata. The learner sees plain task labels,
+    prompts, and hints, never the taxonomy label itself.
+    """
+
+    bloom_level: Literal["remember", "understand", "apply"]
+    learner_move: str
+    task_label: str
+    task_cue: str
+    tailoring_anchor: str
+    entry_prompt: str
+    expected_shape: str
+    sentence_starter: str
+    blank_hint: str
+    evidence_goal: str
+
+
 class Subnode(BaseModel):
     id: str
     label: str
     mechanism: str
+    learner_scaffold: Optional[LearnerScaffold] = None
     drill_status: Optional[str] = None
     gap_type: Optional[str] = None
     gap_description: Optional[str] = None

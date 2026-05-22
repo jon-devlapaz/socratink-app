@@ -204,6 +204,16 @@
   font-weight: 600;
   margin-left: 4px;
 }
+.ig-concept-goal {
+  max-width: 42rem;
+  margin: calc(-1 * var(--space-3)) auto var(--space-2);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
 
 .launch-pad-view__inner > .ig-title {
   margin-top: var(--space-2);

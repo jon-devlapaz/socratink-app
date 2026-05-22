@@ -115,6 +115,152 @@ function entryLearnerState(backbone, index, training, options = {}) {
     : 'locked';
 }
 
+function entryDisplayLabel(entry, index) {
+  const label = String(entry?.label || '').trim();
+  if (label) return label;
+  if (index === 0) return 'First entry';
+  if (index === 1) return 'Second entry';
+  if (index === 2) return 'Third entry';
+  return `Entry ${index + 1}`;
+}
+
+function cleanScaffoldText(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeSourceMode(value) {
+  const mode = cleanScaffoldText(value);
+  return mode === 'source_less' || mode === 'source_attached' ? mode : '';
+}
+
+function sourceModeForConcept(concept, data, training) {
+  const explicitMode = normalizeSourceMode(training?.source_mode)
+    || normalizeSourceMode(concept?.sourceMode)
+    || normalizeSourceMode(concept?.source_mode)
+    || normalizeSourceMode(data?.metadata?.source_mode);
+  if (explicitMode) return explicitMode;
+  const hasNullContentType = Object.prototype.hasOwnProperty.call(concept || {}, 'contentType')
+    && concept?.contentType === null;
+  const hasNullSourceUrl = Object.prototype.hasOwnProperty.call(concept || {}, 'sourceUrl')
+    && concept?.sourceUrl === null;
+  const hasSourceMarker = Boolean(
+    cleanScaffoldText(concept?.contentType)
+    || cleanScaffoldText(concept?.contentFilename)
+    || cleanScaffoldText(concept?.sourceUrl)
+    || cleanScaffoldText(data?.metadata?.source_url)
+  );
+  return hasNullContentType && hasNullSourceUrl && !hasSourceMarker ? 'source_less' : '';
+}
+
+function normalizeLearnerScaffold(scaffold) {
+  if (!scaffold || typeof scaffold !== 'object') return null;
+  const normalized = {
+    bloom_level: cleanScaffoldText(scaffold.bloom_level),
+    learner_move: cleanScaffoldText(scaffold.learner_move),
+    task_label: cleanScaffoldText(scaffold.task_label),
+    task_cue: cleanScaffoldText(scaffold.task_cue),
+    tailoring_anchor: cleanScaffoldText(scaffold.tailoring_anchor),
+    entry_prompt: cleanScaffoldText(scaffold.entry_prompt),
+    expected_shape: cleanScaffoldText(scaffold.expected_shape),
+    sentence_starter: cleanScaffoldText(scaffold.sentence_starter),
+    blank_hint: cleanScaffoldText(scaffold.blank_hint),
+    evidence_goal: cleanScaffoldText(scaffold.evidence_goal),
+  };
+  return Object.values(normalized).some(Boolean) ? normalized : null;
+}
+
+function entryScaffold(entry) {
+  return normalizeLearnerScaffold(entry?.learner_scaffold);
+}
+
+function learnerGoalForConcept(concept, data) {
+  return cleanScaffoldText(concept?.learnerGoal)
+    || cleanScaffoldText(data?.metadata?.learner_goal);
+}
+
+function attemptPlaceholderForScaffold(scaffold) {
+  if (!scaffold) return 'Draft what you can recall. Messy is useful.';
+  return 'Draft your starting guess: what it does, what it connects to, or why it matters.';
+}
+
+function blankHintForScaffold(scaffold) {
+  if (!scaffold) return 'Start with a word, a rough picture, or the part that feels fuzzy.';
+  return 'Not sure yet? Type what you think it might do, or list a few terms you recognize.';
+}
+
+export function deriveConceptEntries(data = {}) {
+  const backbone = Array.isArray(data?.backbone) ? data.backbone : [];
+  const backboneEntries = backbone.map((entry, index) => ({
+    ...entry,
+    label: cleanScaffoldText(entry?.label) || cleanScaffoldText(entry?.principle) || entryDisplayLabel(entry, index),
+    learner_scaffold: normalizeLearnerScaffold(entry?.learner_scaffold),
+  }));
+
+  const clusterEntries = (Array.isArray(data?.clusters) ? data.clusters : []).flatMap((cluster, clusterIndex) => {
+    const subnodes = Array.isArray(cluster?.subnodes) ? cluster.subnodes : [];
+    return subnodes.map((subnode, subnodeIndex) => {
+      const scaffold = normalizeLearnerScaffold(subnode?.learner_scaffold || cluster?.learner_scaffold);
+      const fallbackId = cluster?.id ? `${cluster.id}_s${subnodeIndex + 1}` : `entry-${clusterIndex}-${subnodeIndex}`;
+      const label = (
+        scaffold?.task_label
+        || cleanScaffoldText(subnode?.label)
+        || cleanScaffoldText(cluster?.label)
+        || cleanScaffoldText(cluster?.title)
+        || entryDisplayLabel(subnode, clusterIndex)
+      );
+      return {
+        ...subnode,
+        id: cleanScaffoldText(subnode?.id) || fallbackId,
+        label,
+        purpose: cleanScaffoldText(subnode?.purpose)
+          || cleanScaffoldText(cluster?.description)
+          || scaffold?.task_cue
+          || '',
+        study_note: subnode?.study_note || subnode?.study_material || subnode?.mechanism,
+        cluster_id: cluster?.id || null,
+        cluster_label: cluster?.label || cluster?.title || '',
+        learner_scaffold: scaffold,
+      };
+    });
+  });
+
+  if (clusterEntries.length && (!backboneEntries.length || clusterEntries.some((entry) => entry.learner_scaffold))) {
+    return clusterEntries;
+  }
+  return backboneEntries;
+}
+
+export function deriveConceptEntryViewState(backbone, index, training = null, options = {}) {
+  const entries = Array.isArray(backbone) ? backbone : [];
+  const safeIndex = Number.isInteger(index) && index >= 0 ? index : 0;
+  const entry = entries[safeIndex] || null;
+  /* c8 ignore next 7 -- defensive public-helper branch covered by Node module tests; the browser route always has a selected fallback entry. */
+  if (!entry) {
+    return {
+      id: getConceptEntryId(null, safeIndex),
+      attempted: false,
+      state: 'locked',
+      nextAction: null,
+    };
+  }
+  const id = getConceptEntryId(entry, safeIndex);
+  const derived = entryTraining(entries, safeIndex, training, options);
+  const state = entryLearnerState(entries, safeIndex, training, options);
+  return {
+    id,
+    attempted: Boolean(derived.attempted),
+    state,
+    nextAction: state === 'locked' ? null : (derived.next_action || null),
+  };
+}
+
+function stripStateClass({ attempted, state, isReady }) {
+  if (!attempted) return isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked';
+  if (state === 'needs repair') return 'concept-strip__node--needs-repair';
+  if (state === 'solidified') return 'concept-strip__node--solidified';
+  return 'concept-strip__node--primed';
+}
+
 export function selectInitialConceptEntry(backbone, training = null, options = {}) {
   const actionableIndex = backbone.findIndex((_, index) => {
     const state = entryTraining(backbone, index, training, options).state;
@@ -146,16 +292,14 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
     const isActive = i === activeIdx;
     const cls = [
       'concept-strip__node',
-      isPrimed
-        ? 'concept-strip__node--primed'
-        : (isReady ? 'concept-strip__node--ready' : 'concept-strip__node--locked'),
+      stripStateClass({ attempted: isPrimed, state: derived.state, isReady }),
     ];
     if (isActive) cls.push('is-active');
     const r = isActive ? 9 : (isPrimed ? 7 : (isReady ? 7 : 6));
     const entryId = node.id || `entry-${i}`;
-    const label = escHtml(node.label || `entry ${i + 1}`);
+    const label = escHtml(entryDisplayLabel(node, i));
     const learnerState = entryLearnerState(backbone, i, training, options);
-    const ariaLabel = `${node.label || 'entry'}, ${learnerState}${isActive ? ', current' : ''}`;
+    const ariaLabel = `${entryDisplayLabel(node, i)}, ${learnerState}${isActive ? ', current' : ''}`;
     return `
       <g class="${cls.join(' ')}"
          role="button"
@@ -181,9 +325,7 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
     return `<line class="concept-strip__edge${isActiveEdge ? ' is-active' : ''}" x1="${x1}" y1="${strokeY}" x2="${x2}" y2="${strokeY}"></line>`;
   }).join('');
 
-  const stripActiveLabel = activeEntry.label
-    ? `${escHtml(activeEntry.label)} · ${activeIdx + 1} of ${totalNodes}`
-    : `${activeIdx + 1} of ${totalNodes}`;
+  const stripActiveLabel = `${escHtml(entryDisplayLabel(activeEntry, activeIdx))} · ${activeIdx + 1} of ${totalNodes}`;
 
   return `
     <div class="concept-strip">
@@ -205,7 +347,7 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
 function activeEntryEyebrow({ isBlocked, attempted, state, nextAction }) {
   if (isBlocked) return 'locked';
   if (!attempted) return 'Start from memory';
-  if (nextAction === 'study') return 'Study the gap';
+  if (nextAction === 'study') return 'Draft saved';
   if (nextAction === 'repair') return 'Needs repair';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
   if (state === 'solidified') return 'solidified';
@@ -216,8 +358,8 @@ function activeEntryEyebrow({ isBlocked, attempted, state, nextAction }) {
 }
 
 function activeEntryCtaLabel({ attempted, state, nextAction }) {
-  if (!attempted) return 'Write from memory';
-  if (nextAction === 'study') return 'Compare with notes';
+  if (!attempted) return 'Draft from memory';
+  if (nextAction === 'study') return 'Reveal notes and compare';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Write it again';
   if (state === 'solidified') return 'Reconstruct from memory';
   if (state === 'primed' && (nextAction === 'spaced_attempt' || nextAction === 'review')) {
@@ -257,26 +399,64 @@ function latestAttemptForRecord(record) {
   return attempts.length ? attempts[attempts.length - 1] : null;
 }
 
+export function deriveSourceLessViewMode(derived, options = {}) {
+  if (options?.viewMode) return options.viewMode;
+  const attempts = Array.isArray(derived?.record?.attempts) ? derived.record.attempts : [];
+  const repairs = Array.isArray(derived?.record?.repairs) ? derived.record.repairs : [];
+  const firstAttempt = attempts[0] || null;
+  const studyRevealedAt = derived?.record?.study_revealed_at || null;
+  const firstAttemptMs = Date.parse(firstAttempt?.at || '');
+  const studyRevealedMs = Date.parse(studyRevealedAt || '');
+  if (repairs.length || derived?.state === 'solidified' || derived?.next_action === null) {
+    return 'expanded-workspace';
+  }
+  const hasPreStudyColdAttempt = Boolean(firstAttempt && (
+    !studyRevealedAt
+    || !Number.isFinite(firstAttemptMs)
+    || !Number.isFinite(studyRevealedMs)
+    || firstAttemptMs <= studyRevealedMs
+  ));
+  if (
+    derived.attempted
+    && studyRevealedAt
+    && derived.next_action === 'repair'
+    && hasPreStudyColdAttempt
+    && options?.comparisonAcknowledged === false
+  ) {
+    return 'post-reveal-comparison';
+  }
+  if (derived.attempted && studyRevealedAt) return 'expanded-workspace';
+  if (derived.attempted && derived.next_action === 'study') return 'saved-draft-study-gate';
+  if (!derived.attempted) return 'cold-surface';
+  return 'expanded-workspace';
+}
+
 function renderEvidenceArtifactHtml(derived) {
   const attempt = latestAttemptForRecord(derived.record);
   if (!attempt?.user_text) return '';
   const hasStudyReveal = Boolean(derived.record?.study_revealed_at);
+  const isStudyGate = derived.next_action === 'study' && !hasStudyReveal;
   const gaps = Array.isArray(attempt.gaps) && attempt.gaps.length
     ? attempt.gaps
     : (Array.isArray(derived.gaps) ? derived.gaps : []);
-  const hingeHtml = hasStudyReveal
+  const bridgeHtml = isStudyGate
+    ? `
+      <p class="concept-page-b2__evidence-bridge">
+        Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.
+      </p>
+    `
+    : '';
+  const hingeHtml = hasStudyReveal && gaps.length
     ? `
       <div class="concept-page-b2__evidence-hinge">
         <span class="concept-page-b2__evidence-label">Missing piece</span>
         <ul>
-          ${gaps.length
-            ? gaps.map((gap, index) => `
+          ${gaps.map((gap, index) => `
               <li>
                 <strong>${escHtml(repairGapTitle(gap, index))}</strong>
                 <span>${escHtml(repairGapCorrection(gap))}</span>
               </li>
-            `).join('')
-            : '<li><span>No missing piece recorded for this draft.</span></li>'}
+            `).join('')}
         </ul>
       </div>
     `
@@ -284,8 +464,9 @@ function renderEvidenceArtifactHtml(derived) {
 
   return `
     <section class="concept-page-b2__evidence" aria-label="Learner draft evidence">
-      <span class="eyebrow concept-page-b2__evidence-eyebrow">Your draft</span>
+      <span class="eyebrow concept-page-b2__evidence-eyebrow">${isStudyGate ? 'Your memory draft' : 'Your draft'}</span>
       <blockquote>${escHtml(attempt.user_text)}</blockquote>
+      ${bridgeHtml}
       ${hingeHtml}
     </section>
   `;
@@ -301,10 +482,14 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   const nextAttemptButton = repairs.length
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}">Try from memory again</button>`
     : '';
+  const gapCount = gaps.length;
+  const gapCountText = `${gapCount} missing ${gapCount === 1 ? 'link' : 'links'} to repair`;
   return `
     <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
       <span class="eyebrow concept-page-b2__repair-eyebrow">Put it in your words</span>
       <h3>Write the missing link</h3>
+      <p class="concept-page-b2__repair-summary">${escHtml(gapCountText)}</p>
+      <p class="concept-page-b2__repair-helper">Save this repair before you try from memory again.</p>
       <ul class="concept-page-b2__repair-gaps">
         ${gaps.map((gap, index) => `
           <li>
@@ -328,36 +513,155 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   `;
 }
 
-function renderAttemptPanelHtml(activeEntryId) {
+function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
+  const scaffold = options.useScaffold ? entryScaffold(activeEntry) : null;
+  const learnerGoal = cleanScaffoldText(options.learnerGoal);
+  const targetLabel = cleanScaffoldText(scaffold?.task_label) || cleanScaffoldText(activeEntry?.label) || 'this entry';
+  const heading = scaffold?.entry_prompt || 'Draft what you can recall';
+  const helperParts = [
+    learnerGoal && scaffold
+      ? `Goal: ${learnerGoal}. First make a starting guess for ${targetLabel}.`
+      : '',
+    scaffold?.expected_shape || '',
+  ].filter(Boolean);
+  const helper = helperParts.join(' ');
+  const tailoringAnchor = scaffold?.tailoring_anchor
+    ? `Shaped by your sketch: ${scaffold.tailoring_anchor}`
+    : '';
+  const placeholder = attemptPlaceholderForScaffold(scaffold);
+  const buttonLabel = scaffold ? 'Save starting guess for comparison' : 'Draft from memory';
+  const errorText = scaffold
+    ? 'Write the smallest useful guess before study appears.'
+    : 'Put down the part you can explain, even if it is incomplete.';
   return `
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
-      <span class="eyebrow concept-page-b2__attempt-eyebrow">your reconstruction</span>
-      <h3>Write what you can reconstruct</h3>
+      <span class="eyebrow concept-page-b2__attempt-eyebrow">first inquiry</span>
+      <h3>${escHtml(heading)}</h3>
+      ${tailoringAnchor ? `<p class="concept-page-b2__attempt-helper">${escHtml(tailoringAnchor)}</p>` : ''}
+      ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
       <textarea
         class="concept-page-b2__attempt-input"
         data-attempt-entry-id="${escHtml(activeEntryId)}"
         aria-label="Write what you can reconstruct"
         rows="6"
         maxlength="2400"
-        placeholder="Put the part you can explain in your own words."
+        placeholder="${escHtml(placeholder)}"
       ></textarea>
-      <p class="concept-page-b2__attempt-error" data-attempt-error hidden>Put down the part you can explain, even if it is incomplete.</p>
-      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">Save what I wrote</button>
+      <p class="concept-page-b2__attempt-error" data-attempt-error hidden>${escHtml(errorText)}</p>
+      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">${escHtml(buttonLabel)}</button>
     </section>
+  `;
+}
+
+function routeMarginPhase(entry, index) {
+  const scaffold = entryScaffold(entry);
+  if (scaffold) {
+    return {
+      title: scaffold.task_label || scaffold.learner_move || `Entry ${index + 1}`,
+      cue: scaffold.task_cue || 'Write the smallest useful guess.',
+    };
+  }
+  const phases = [
+    { title: 'Say it', cue: 'Put the current model into words.' },
+    { title: 'Explain how', cue: 'Name what causes what.' },
+    { title: 'Use it', cue: 'Try the idea in a nearby case.' },
+    { title: 'Test the edge', cue: 'Find where the model might break.' },
+  ];
+  return phases[index] || { title: `Entry ${index + 1}`, cue: 'continue the route' };
+}
+
+function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
+  const nodes = backbone.length ? backbone : [FALLBACK_ACTIVE_ENTRY];
+  const interactive = options.interactive !== false;
+  const quiet = Boolean(options.quiet);
+  const routeAttrs = [
+    options.expandedRoute ? 'data-route-expanded="true"' : '',
+    options.lockedInert ? 'data-locked-inert="true"' : '',
+  ].filter(Boolean).join(' ');
+  return `
+    <aside class="concept-page-b2__route" aria-label="Concept route"${routeAttrs ? ` ${routeAttrs}` : ''}>
+      <span class="eyebrow concept-page-b2__route-eyebrow">route margin</span>
+      <ol class="concept-page-b2__route-list">
+        ${nodes.map((entry, index) => {
+          const scaffold = entryScaffold(entry);
+          const phase = quiet
+            ? {
+              title: scaffold?.task_label || scaffold?.learner_move || '',
+              cue: '',
+            }
+            : routeMarginPhase(entry, index);
+          const state = entryLearnerState(nodes, index, training, options);
+          const isActive = index === activeIdx;
+          const entryId = getConceptEntryId(entry, index);
+          const currentAttr = isActive ? ' aria-current="step"' : '';
+          if (!interactive) {
+            return `
+              <li class="concept-page-b2__route-marker-item${isActive ? ' is-active' : ''}" aria-label="${escHtml(`${phase.title || `Entry ${index + 1}`}${isActive ? ', current' : ''}`)}"${currentAttr}>
+                <span class="concept-page-b2__route-index">${String(index + 1).padStart(2, '0')}</span>
+                <span class="concept-page-b2__route-marker" aria-hidden="true"></span>
+                ${phase.title ? `
+                  <span class="concept-page-b2__route-copy">
+                    <span class="concept-page-b2__route-title">${escHtml(phase.title)}</span>
+                  </span>
+                ` : ''}
+              </li>
+            `;
+          }
+          return `
+            <li class="concept-page-b2__route-item${isActive ? ' is-active' : ''}" role="button" tabindex="0" data-entry-id="${escHtml(entryId)}" data-entry-index="${index}" data-route-state="${escHtml(state)}" aria-label="${escHtml(`${phase.title}, ${state}${isActive ? ', current' : ''}`)}"${currentAttr}>
+              <span class="concept-page-b2__route-index">${String(index + 1).padStart(2, '0')}</span>
+              <span class="concept-page-b2__route-marker" aria-hidden="true"></span>
+              <span class="concept-page-b2__route-copy">
+                <span class="concept-page-b2__route-title">${escHtml(phase.title)}</span>
+                <span class="concept-page-b2__route-cue">${escHtml(phase.cue)}</span>
+              </span>
+            </li>
+          `;
+        }).join('')}
+      </ol>
+    </aside>
+  `;
+}
+
+function renderScopeBoundaryHtml() {
+  return `
+    <p class="concept-page-b2__scope">
+      <span>Scope:</span>
+      Study material stays hidden until you draft from memory.
+    </p>
+  `;
+}
+
+function renderBlankStartHtml(scaffold = null) {
+  const hint = blankHintForScaffold(scaffold);
+  return `
+    <details class="concept-page-b2__blank-start">
+      <summary>I'm blank</summary>
+      <p>${escHtml(hint)} The mechanism stays hidden.</p>
+    </details>
   `;
 }
 
 export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data, training = null, options = {}) {
   const meta = data?.metadata || {};
-  const thresholdText = (concept?.startingMapContext || meta.starting_map_context || meta.core_thesis || '').trim();
+  const thresholdText = (concept?.startingMapContext || meta.starting_map_context || '').trim();
   const totalNodes = backbone.length || 1;
   const activeEntryId = getConceptEntryId(activeEntry, activeIdx);
 
   const derived = entryTraining(backbone, activeIdx, training, options);
+  const sourceMode = sourceModeForConcept(concept, data, training);
+  const isSourceLess = sourceMode === 'source_less';
+  const viewMode = isSourceLess ? deriveSourceLessViewMode(derived, options) : (options?.viewMode || 'expanded-workspace');
+  const isSavedDraftStudyGate = viewMode === 'saved-draft-study-gate';
+  const isPostRevealComparison = viewMode === 'post-reveal-comparison';
+  const isExpandedWorkspace = viewMode === 'expanded-workspace';
+  const showsOnlyQuietRoute = viewMode === 'cold-surface';
+  const hidesRouteAndNearby = isSavedDraftStudyGate || isPostRevealComparison;
   const isBlocked = !derived.attempted && !predecessorsAttempted(backbone, activeIdx, training, options);
+  const isColdReadyEntry = !isBlocked && !derived.attempted;
   const isAttempting = (
     !isBlocked
-    && options?.attemptEntryId === activeEntryId
+    && (isColdReadyEntry || options?.attemptEntryId === activeEntryId)
     && derived.next_action !== 'study'
     && (
       derived.next_action !== 'repair'
@@ -374,7 +678,13 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     activeIdx,
     totalNodes,
   });
-  const entryPurpose = activeEntry.purpose
+  const studyGatePurpose = derived.attempted && derived.next_action === 'study'
+    ? 'Your draft gives the notes something specific to work against. Study stays hidden until you choose to compare.'
+    : '';
+  const scaffold = entryScaffold(activeEntry);
+  const entryPurpose = studyGatePurpose
+    || scaffold?.task_cue
+    || activeEntry.purpose
     || (isBlocked
       ? 'Locked until you write from memory on the entry above. The mechanism stays hidden until you have put your current model into words.'
       : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
@@ -398,7 +708,11 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     : '';
   const evidenceArtifactHtml = !isAttempting ? renderEvidenceArtifactHtml(derived) : '';
   const repairPanelHtml = isAttempting ? '' : renderRepairPanelHtml(activeEntry, derived, activeEntryId);
-  const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId) : '';
+  const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId, activeEntry, {
+    useScaffold: isColdReadyEntry,
+    learnerGoal: learnerGoalForConcept(concept, data),
+  }) : '';
+  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml(scaffold) : '';
 
   const thresholdHtml = thresholdText
     ? `
@@ -414,7 +728,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
       </p>
     `;
-  const provenanceHtml = training?.source_mode === 'source_less'
+  const provenanceHtml = isSourceLess
     ? `
       <p class="concept-page-b2__provenance">
         Shaped from your launch attempt, not verified against a source.
@@ -423,27 +737,32 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     : '';
 
   const ctaButton = isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
-    ? ''
+    ? (isPostRevealComparison
+      ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="keep-working">Keep working</button>`
+      : '')
     : isBlocked
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Write from memory on the entry above first">Locked</button>`
     : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="${escHtml(ctaAction)}">${ctaLabel}</button>`;
 
   const activeHtml = `
-    <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
-    <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
-    <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
-    ${evidenceArtifactHtml}
-    ${studyNoteHtml}
-    ${repairPanelHtml}
-    ${attemptPanelHtml}
-    ${ctaButton}
+    <section class="concept-page-b2__active-entry" aria-label="Active concept entry">
+      <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
+      <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
+      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
+      ${evidenceArtifactHtml}
+      ${studyNoteHtml}
+      ${repairPanelHtml}
+      ${attemptPanelHtml}
+      ${blankStartHtml}
+      ${ctaButton}
+    </section>
   `;
 
-  const nearby = backbone.filter((n) => n !== activeEntry);
+  const nearby = isExpandedWorkspace ? backbone.filter((n) => n !== activeEntry) : [];
   const nearbyHtml = nearby.length
     ? `
       <section class="concept-page-b2__nearby">
-        <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries  all locked until first reconstruction</span>
+        <span class="eyebrow concept-page-b2__nearby-eyebrow">nearby entries</span>
         <div class="concept-page-b2__nearby-list">
           ${nearby.map((n) => {
             const idx = backbone.indexOf(n);
@@ -452,7 +771,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
             return `
               <div class="concept-page-b2__nearby-item">
                 <span class="concept-page-b2__nearby-num">${escHtml(num)}</span>
-                <span>${escHtml(n.label || `entry ${idx + 1}`)}</span>
+                <span>${escHtml(entryDisplayLabel(n, idx))}</span>
                 <span class="concept-page-b2__nearby-status">${escHtml(status)}</span>
               </div>
             `;
@@ -462,5 +781,23 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
 
-  return `${thresholdHtml}${provenanceHtml}${activeHtml}${nearbyHtml}`;
+  return `
+    <section class="concept-page-b2__gestalt" aria-label="Concept gestalt canvas">
+      ${hidesRouteAndNearby ? '' : renderRouteMarginHtml(backbone, activeIdx, training, {
+        ...options,
+        interactive: !showsOnlyQuietRoute,
+        quiet: showsOnlyQuietRoute,
+        expandedRoute: isSourceLess && isExpandedWorkspace,
+        lockedInert: isSourceLess && isExpandedWorkspace,
+      })}
+      <div class="concept-page-b2__work">
+        ${renderScopeBoundaryHtml()}
+        ${thresholdHtml}
+        ${provenanceHtml}
+        ${activeHtml}
+        ${nearbyHtml}
+        <p class="concept-page-b2__truth-note">Your words shape the path. They do not grade you.</p>
+      </div>
+    </section>
+  `;
 }

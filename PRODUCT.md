@@ -18,6 +18,38 @@ socratink is an evidence-weighted map for learning by reconstruction. It turns m
 
 Success means the learner can trust the map because it never rewards mere exposure. The graph shows what socratink has evidence for, not what the learner knows.
 
+## Product Doctrine
+
+socratink's core doctrine is maximum agent-assisted learning, minimum agent-replaced thinking.
+
+The product should use agents to reduce friction around structure, gap localization, retrieval scheduling, connection-making, and reflection. It must not use agents to replace the learner's generative work. The learner's own reconstruction is the event that matters. Everything else is scaffolding around that event.
+
+The start of the product outputs a provisional cognitive object, not a lesson:
+
+- with an imported source, extraction produces a provisional map
+- without a source, the launch attempt produces a smallest actionable route
+- in both cases, the first serious product surface is a draft route plus a first reconstruction target
+- graph truth begins only when the learner generates reconstruction evidence
+
+This doctrine makes the concept view the first real learning surface. Its job is to reveal the proposed shape of a concept and ask the learner to make the first node real in their own words. It should feel like a draft route artifact with an active reconstruction node, not a study page, dashboard, content browser, or progress tracker.
+
+## Moat Thesis
+
+socratink's moat is not generating learning content. Content generation, concept maps, Feynman notes, AI tutors, summaries, and polished study pages are copyable.
+
+The defensible asset is a longitudinal reconstruction graph: a record of what a learner can actually generate, where they break down, how they repair, when they can reconstruct again under spacing, and which future challenge should come next.
+
+The product compounds when it preserves four layers:
+
+- **Proposed structure**: provisional maps and smallest actionable routes generated from sources, launch attempts, and later concept connections.
+- **Learner evidence**: cold attempts, gaps, repair text, study reveals, and spaced re-drills.
+- **Transfer context**: relationships between concepts, prerequisites, analogies, recurring mechanisms, and contrasts.
+- **Metacognitive memory**: patterns in how the learner learns, such as missing causal triggers, overusing recognition, needing examples before abstraction, or improving after repair.
+
+Feynman notes, concept-to-concept connections, and a long-lived metacognitive agent are strategic only when they sit on top of this evidence graph. If they drift into generic AI summary, chat, or coaching, they weaken the product.
+
+The durable promise is: socratink helps the learner face the next challenge at the edge of their reconstructive capability, with agents doing everything around the thinking except the thinking itself.
+
 ## Product Promise
 
 The promise is small, specific, and load-bearing:

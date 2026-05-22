@@ -3,6 +3,82 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+LOCAL_SERVER_PID=""
+CLEANUP_INTENT_TO_ADD=0
+
+cleanup() {
+    if [ "$CLEANUP_INTENT_TO_ADD" = "1" ] && [ -n "${UNTRACKED_FILES:-}" ]; then
+        printf '%s\n' "$UNTRACKED_FILES" | xargs -I{} git reset --quiet -- "{}" 2>/dev/null || true
+    fi
+    if [ -n "$LOCAL_SERVER_PID" ]; then
+        kill "$LOCAL_SERVER_PID" 2>/dev/null || true
+        wait "$LOCAL_SERVER_PID" 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
+wait_for_health() {
+    local health_url="$1"
+    .venv/bin/python - "$health_url" <<'PY'
+import sys
+import time
+import urllib.request
+
+health_url = sys.argv[1]
+deadline = time.time() + 30
+last_error = None
+while time.time() < deadline:
+    try:
+        with urllib.request.urlopen(health_url, timeout=2) as response:
+            if response.status == 200:
+                raise SystemExit(0)
+    except Exception as exc:  # noqa: BLE001 - shell diagnostic path
+        last_error = exc
+        time.sleep(1)
+raise SystemExit(f"local app did not become healthy: {last_error}")
+PY
+}
+
+ensure_local_server() {
+    local base_url="${SOCRATINK_BASE_URL:-http://localhost:8000}"
+    case "$base_url" in
+        http://localhost:8000|http://127.0.0.1:8000)
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    local health_url="${base_url%/}/api/health"
+    if .venv/bin/python - "$health_url" <<'PY'
+import sys
+import urllib.request
+
+try:
+    with urllib.request.urlopen(sys.argv[1], timeout=2) as response:
+        raise SystemExit(0 if response.status == 200 else 1)
+except Exception:
+    raise SystemExit(1)
+PY
+    then
+        return 0
+    fi
+
+    if [ ! -x ".venv/bin/uvicorn" ]; then
+        echo "check-coverage.sh: local app is not reachable and .venv/bin/uvicorn is missing." >&2
+        echo "  Run: bash scripts/bootstrap-python.sh" >&2
+        exit 1
+    fi
+
+    echo "Starting local app for browser coverage at $base_url..."
+    mkdir -p .qa-runs
+    SOCRATINK_DEV_AUTOGUEST="${SOCRATINK_DEV_AUTOGUEST:-1}" \
+    SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}" \
+    .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 >.qa-runs/check-coverage-uvicorn.log 2>&1 &
+    LOCAL_SERVER_PID="$!"
+    wait_for_health "$health_url"
+}
+
 DIFF_COVER_BIN="${DIFF_COVER_BIN:-.venv/bin/diff-cover}"
 if [ ! -x "$DIFF_COVER_BIN" ]; then
     DIFF_COVER_BIN="diff-cover"
@@ -13,14 +89,13 @@ UNTRACKED_FILES=$(git ls-files --others --exclude-standard)
 if [ -n "$UNTRACKED_FILES" ]; then
     # shellcheck disable=SC2086
     printf '%s\n' "$UNTRACKED_FILES" | xargs -I{} git add -N -- "{}"
-    cleanup_intent_to_add() {
-        printf '%s\n' "$UNTRACKED_FILES" | xargs -I{} git reset --quiet -- "{}" 2>/dev/null || true
-    }
-    trap cleanup_intent_to_add EXIT
+    CLEANUP_INTENT_TO_ADD=1
 fi
 
 echo "Clearing old V8 coverage data..."
 rm -rf .qa-runs/v8-coverage .qa-runs/coverage-reports
+
+ensure_local_server
 
 echo "Generating backend and raw V8 coverage..."
 SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}" ./scripts/test-cov.sh --quiet

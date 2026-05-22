@@ -14,6 +14,7 @@ def sample_map() -> dict:
             "core_thesis": "The thermostat closes a feedback loop.",
             "governing_assumptions": ["Room temperature can be measured."],
             "starting_map_context": "Thermostat control",
+            "learner_goal": "Explain why a thermostat turns heat on and off.",
         },
         "backbone": [
             {
@@ -147,6 +148,7 @@ def test_prune_context_for_backbone_target_keeps_dependent_cluster_shells() -> N
         "thesis": "The thermostat closes a feedback loop.",
         "governing_assumptions": ["Room temperature can be measured."],
         "starting_map_context": "Thermostat control",
+        "learner_goal": "Explain why a thermostat turns heat on and off.",
     }
     assert pruned["backbone"][0]["id"] == "b1"
     assert pruned["clusters"] == [

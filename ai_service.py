@@ -404,21 +404,24 @@ def extract_knowledge_map(
 
 
 SMALLEST_ROUTE_MAX_DRILLABLE_NODES = 4
-"""C-prime spec §5.1: ≤4 drillable nodes total (1 first target + ≤3 hints)."""
+"""Smallest source-less route cap: 1 first target plus up to 3 hints."""
 
 
 class SmallestRouteCapExceeded(ValueError):
-    """Raised when source-less generation returns a ProvisionalMap exceeding
-    the smallest-route cap. Server returns 500 in this case (it's a
-    generation-side failure, not a client-input failure)."""
+    """Raised when source-less generation violates smallest-route shape.
+
+    Server returns 500 in this case because cap, cluster-shape, and scaffold
+    failures are generation-side failures, not client-input failures.
+    """
 
 
 def _validate_smallest_route(pm: ProvisionalMap) -> None:
-    """Enforce C-prime spec §5.1 ≤4-node cap.
+    """Enforce the source-less smallest-route generation contract.
 
     Counts total drillable subnodes across all clusters on the
     ProvisionalMap. Raises SmallestRouteCapExceeded if the count is 0
-    or >4.
+    or >4, if any cluster contains anything other than one subnode, or if
+    any generated subnode lacks learner_scaffold.
 
     Counting subnodes rather than top-level clusters is the actual
     structural defence of the spec invariant: ProvisionalMap permits
@@ -436,6 +439,17 @@ def _validate_smallest_route(pm: ProvisionalMap) -> None:
             "smallest route must have at least one drillable node "
             "(the suggested first target / core thesis)"
         )
+    for cluster in clusters:
+        subnodes = list(cluster.subnodes or [])
+        if len(subnodes) != 1:
+            raise SmallestRouteCapExceeded(
+                f"smallest route cluster {cluster.id!r} must contain exactly one subnode"
+            )
+        subnode = subnodes[0]
+        if subnode.learner_scaffold is None:
+            raise SmallestRouteCapExceeded(
+                f"smallest route subnode {subnode.id!r} missing learner_scaffold"
+            )
     if n > SMALLEST_ROUTE_MAX_DRILLABLE_NODES:
         raise SmallestRouteCapExceeded(
             f"smallest route exceeded cap: {n} drillable nodes "
@@ -453,17 +467,20 @@ def generate_smallest_provisional_map(
     concept: str,
     threshold: str,
     *,
+    learner_goal: str | None = None,
     llm: LLMClient | None = None,
     api_key: str | None = None,
     lc_context: list["LCStandard"] | None = None,
     on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
-    """Generate a smallest actionable route from {concept, threshold}.
+    """Generate a smallest actionable route from source-less launch context.
 
-    C-prime spec §5.1: returns a ProvisionalMap with ≤4 drillable nodes
-    total (one suggested first target which carries the core thesis,
-    plus up to 3 backbone hints). Raises SmallestRouteCapExceeded if the
-    model returns more.
+    ``concept`` and ``threshold`` are required. ``learner_goal`` may frame
+    relevance, but it is not evidence of learner understanding. Returns a
+    ProvisionalMap with no more than 4 drillable nodes total (one suggested
+    first target plus up to 3 hints). Raises SmallestRouteCapExceeded for
+    generation-side shape failures: over-cap routes, missing routes,
+    multi-subnode clusters, or generated subnodes without learner_scaffold.
 
     Optional ``lc_context`` is grounding-only, never authoritative.
     """
@@ -474,6 +491,9 @@ def generate_smallest_provisional_map(
         f"<concept>{concept}</concept>",
         f"<threshold>{threshold}</threshold>",
     ]
+    clean_learner_goal = (learner_goal or "").strip()
+    if clean_learner_goal:
+        user_prompt_parts.append(f"<learner_goal>{clean_learner_goal}</learner_goal>")
     if lc_context:
         lc_block_lines = ["<lc_context>"]
         for std in lc_context:
@@ -564,6 +584,44 @@ def generate_repair_reps(
     }
 
 
+def _find_target_subnode_context(knowledge_map: dict, node_id: str) -> dict | None:
+    clusters = knowledge_map.get("clusters") if isinstance(knowledge_map, dict) else None
+    if not isinstance(clusters, list):
+        return None
+    for cluster in clusters:
+        if not isinstance(cluster, dict):
+            continue
+        subnodes = cluster.get("subnodes")
+        if not isinstance(subnodes, list):
+            continue
+        for subnode in subnodes:
+            if isinstance(subnode, dict) and subnode.get("id") == node_id:
+                return subnode
+    return None
+
+
+def _format_learner_scaffold_for_drill(scaffold: object) -> str:
+    if not isinstance(scaffold, dict):
+        return ""
+    ordered_keys = (
+        "bloom_level",
+        "learner_move",
+        "task_label",
+        "task_cue",
+        "tailoring_anchor",
+        "entry_prompt",
+        "expected_shape",
+        "blank_hint",
+        "evidence_goal",
+    )
+    lines = []
+    for key in ordered_keys:
+        value = scaffold.get(key)
+        if isinstance(value, str) and value.strip():
+            lines.append(f"{key}: {value.strip()}")
+    return "\n".join(lines)
+
+
 def drill_chat(
     *,
     knowledge_map: dict,
@@ -643,9 +701,29 @@ def drill_chat(
     system_prompt_extras += (
         f"Node ID: {node_id}\nNode Label: {node_label}\nMechanism: {node_mechanism}\n"
     )
+    scaffold_text = _format_learner_scaffold_for_drill(
+        (_find_target_subnode_context(pruned_context, node_id) or {}).get("learner_scaffold")
+    )
+    if scaffold_text:
+        system_prompt_extras += (
+            "\n### Learner Scaffold (TASK CONTRACT — DO NOT SHOW BLOOM LABELS)\n"
+            f"{scaffold_text}\n"
+            "Use `evidence_goal` as the intended scope of this node. The scaffold may shape "
+            "the opening question and evaluation target, but it must not reveal or replace "
+            "the mechanism answer key.\n"
+        )
 
     if drill_mode == "cold_attempt":
-        system_prompt_extras += "\nMODE: COLD ATTEMPT. Ask an open exploratory question on init; do not reveal the mechanism. On turn, evaluate the learner's first genuine generative attempt against the rubric and populate classification, score_eligible, response_tier, response_band, and tier_reason. If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess with classification/tier null."
+        system_prompt_extras += (
+            "\nMODE: COLD ATTEMPT. Ask an open exploratory question on init; do not reveal the mechanism. "
+            "On turn, evaluate the learner's first genuine generative attempt against the rubric and populate "
+            "classification, score_eligible, response_tier, response_band, and tier_reason. "
+            "If metadata.starting_map_context is present, reference it as global context in one short clause, then ask one smaller target-node question. "
+            "If metadata.learner_goal is present, use `metadata.learner_goal` only to frame relevance and why this node matters for the learner's goal. "
+            "Do not grade against the broad learner goal; grade only against the Target Node mechanism and the Learner Scaffold evidence_goal when present. "
+            "Do not treat the threshold as evidence, confidence, or diagnosis. Emphasize it is ok to guess. "
+            "If the user produces zero schema or asks for help, provide a tiny hint or nudge to guess with classification/tier null."
+        )
     else:
         system_prompt_extras += f"\nMODE: RE-DRILL (Attempt {re_drill_count + 1}). Demand multi-step causal reconstruction. Vary prompt angle (e.g. self-explanation, summarization, teaching, problem-posing). Apply concrete rubric: Does response contain (a) initiating condition, (b) causal transition, and (c) resulting state? Err toward false negatives."
         if re_drill_count >= 2:

@@ -6,7 +6,6 @@ For supporting context, read:
 
 - [spec.md](spec.md) — binding product contract (three-phase loop, derived training state model)
 - [/DESIGN.md](../../DESIGN.md) — canonical UX doctrine
-- [starting-map-flow-artifact.md](starting-map-flow-artifact.md) — concept-entry storyboard that operationalizes this doctrine
 - [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md) — current binding drill data-model canon
 
 ---
@@ -103,15 +102,20 @@ Two different things live on the graph. Do not collapse them.
 
 ### Proposed structure
 - What the extractor thinks the domain looks like.
-- Derived from source material, starting map, and stated goal.
+- Derived from source material, starting map, and learner goal.
 - Hypothesis only. Topology does not prove anything about the learner.
+
+### Learner goal
+- What the learner wants to be able to explain.
+- Governs relevance: route shape, first-node emphasis, study hinge, repair framing, future Feynman notes, and metacognitive-agent memory.
+- Not evidence. A goal can make the route personal, but it cannot mutate graph truth.
 
 ### Verified learning state
 - What Socratink has evidence for about the learner's understanding.
 - Encoded as per-node derived training state: `null`, `primed`, `needs repair`, `solidified`.
 - Only spaced reconstruction can move a node to `solidified`.
 
-The graph is the union of these two layers. The UI must never render them as the same thing.
+The graph is the union of these layers. The learner goal governs relevance; learner reconstruction governs evidence. The UI must never render them as the same thing.
 
 ---
 
@@ -279,16 +283,18 @@ Current shipped binding status:
 
 - concept-page entry state, CTAs, inline reconstruction, study reveal, and repair panels derive from the training record
 - Library reconstruction copy uses learner-written training records and must not fall back to AI-generated `core_thesis`
-- Map badges, Desk tiles, Sidebar markers, and Library card badges still have legacy `concept.state` bindings until the full target binding lands
+- Library card badges, Desk tiles, and Sidebar markers derive concept-level badges from the training record, with legacy graph/status fields as compatibility fallback
+- Any remaining map/graph badge surfaces outside the concept-page route may still use legacy graph/status fields until their binding rollout lands
 
 Implementation detail, schema shape, exact fold mechanics, and migration rules
 belong in [the drill data-model canon](../superpowers/specs/2026-05-15-drill-data-model-design.md). This doctrine owns the product truth the derivation must preserve.
 
 ---
 
-## 12. How Starting Map Flow Fits The Doctrine
+## 12. How Concept Entry Fits The Doctrine
 
-[starting-map-flow-artifact.md](starting-map-flow-artifact.md) operationalizes this doctrine at concept entry. Reading it alongside this doctrine, the contract is:
+`spec.md` §2–§3 and the drill data-model canon operationalize this doctrine at
+concept entry. Reading them alongside this doctrine, the contract is:
 
 - **Threshold capture** = hypothesis-shaping input. No graph mutation.
 - **Provisional graph**. No graph mutation.

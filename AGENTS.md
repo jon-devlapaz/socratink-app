@@ -116,6 +116,26 @@ When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`)
 - **`get_minimal_context` returns generic suggestions on small diffs.** When the diff is two JS files, it can surface unrelated Python flows. Skip it; go straight to `query_graph importers_of <file>`.
 
 ## Common development commands
+### Local AI review
+```bash
+# Read-only advisory reviewer backed by local Ollama DeepSeek R1.
+# Use canned modes; do not call raw Ollama for repo workflow review.
+scripts/local-ai-review.sh check
+scripts/local-ai-review.sh staged
+scripts/local-ai-review.sh diff
+scripts/local-ai-review.sh wip
+scripts/local-ai-review.sh publish-preview
+scripts/local-ai-review.sh smoke-local
+scripts/local-ai-review.sh pytest -- .venv/bin/pytest tests/path/test_file.py -q --tb=short
+```
+
+- This command is advisory only. Verify findings against repo files, tests, browser checks, or deterministic helpers before acting.
+- `publish-preview` still does not push or edit files, but it delegates to `scripts/agent-push.py` and may refresh local remote-tracking refs such as `origin/dev` and `no-mistakes/dev` before printing the preview.
+- It must not replace `scripts/agent-push.py`, `scripts/no-mistakes-finish-dev.sh`, `scripts/git-wip-explain.sh`, `scripts/qa-smoke.sh`, or `./scripts/check-coverage.sh`.
+- Do not pipe its output into shell commands or use it to generate/modify ack tokens.
+- Keep Ollama local-only (`127.0.0.1` / `localhost`). Do not expose the local model server to LAN or public interfaces for this workflow.
+- The wrapper refuses likely secrets and oversized payloads; narrow the diff or test output instead of bypassing those checks.
+
 ### Environment setup
 ```bash
 bash scripts/bootstrap-python.sh
@@ -213,6 +233,7 @@ python scripts/run_tasting_fixture.py
 - Threshold is on the diff, not the project total. Brand-new code without coverage fails; existing legacy gaps are not scored.
 - Pure-deletion diffs, doc-only diffs, and config-only diffs are correctly no-ops — diff-cover only scores added/modified executable lines.
 - Backend scope is `api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
+- With the default `SOCRATINK_BASE_URL` (`http://localhost:8000`) or `http://127.0.0.1:8000`, the script reuses a healthy local app if one is already running; otherwise it starts loopback uvicorn and writes `.qa-runs/check-coverage-uvicorn.log`. Non-local `SOCRATINK_BASE_URL` values are used as-is and are not auto-started.
 - If the script crashes outside of a coverage failure (missing V8 data, missing `coverage.xml`), inspect `.qa-runs/v8-coverage/*.json` and `.qa-runs/coverage-reports/cobertura-coverage.xml` before reaching for `--no-verify`-style escapes. The gate is the brake; do not bypass it silently.
 
 ### Deploy verification
@@ -242,6 +263,12 @@ review them. Two scripts compress the loop:
 scripts/snap.py library-empty-variants
 scripts/snap.py library-empty-variants -v A,D,E --open    # custom variants + auto-Preview (macOS)
 scripts/snap.py --list                                    # what _lab surfaces exist?
+
+# Share one _lab prototype to a phone over the internet. This serves only
+# public/ through a loopback static server, then opens a temporary ngrok URL.
+# Keep the command running while reviewing; Ctrl-C closes the tunnel.
+scripts/share-lab.sh minimal-gestalt-overview
+scripts/share-lab.sh --list
 
 # Pipe a customer-persona prompt through Gemini, filtered and auto-logged
 # to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
@@ -336,7 +363,7 @@ For a current architecture overview, use the Code Review Graph tools described i
 - Run browser smoke without being asked after deploys, merges to `main`, `git push origin main` with verification framing, before claiming "the site works" or "X is live", when investigating hosted-only symptoms, and after high-risk changes to `main.py`, `api/index.py`, or `public/index.html`.
 - Same-origin browser console errors and asset failures are real bugs. Cross-origin noise is filtered by the smoke suite; the only same-origin requestfailure exception is narrow Chromium `ERR_ABORTED` bootstrap noise for `/api/health` and `/api/me`, not HTTP failures or app assets.
 - On smoke failure, report the pytest output and inspect the Playwright trace at `test-results/<test>/trace.zip` with `playwright show-trace`.
-- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, launch-pad sketch validation, drawer visibility after concept entry, feedback modal/sidebar behavior, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
+- The smoke suite checks `/api/health`, critical homepage DOM, guest session labeling, source-less launch/compare flow, Constellation route view, training-derived concept evidence paths, corrupt-training recovery, non-score-eligible attempts, drawer visibility after concept entry, feedback modal/sidebar behavior, library card reopen behavior, active-concept delete/reset behavior, same-origin console errors, same-origin asset failures, and theme preloader resilience.
 - Before declaring an implementation task complete on production code — Python under the backend scope (`api/`, `auth/`, `db/`, `llm/`, `models/`, `source_intake/`) or JS under `public/js/**` — run `./scripts/check-coverage.sh` and confirm exit 0. The gate enforces 100% coverage on the diff against `COMPARE_BRANCH` when set or `origin/main` / `main` locally using V8-via-CDP for the frontend and pytest for the backend; see "Coverage gate" under common dev commands. Skip only for doc-only, config-only, prototype-only (`public/_lab/`), or pure-deletion diffs. Treat a coverage failure the same way you would treat a smoke-test failure: fix the gap before declaring done, do not bypass.
 
 ## Audit log 2026-05-12

@@ -1,9 +1,9 @@
 # models/
 
 Provisional-map data model. The shape every part of the pipeline (extract,
-draft, drill, repair-reps) reads and writes. Pydantic-backed; the `parsed`
-field of every `StructuredLLMResult` from the extract stage is an instance
-of `ProvisionalMap`.
+smallest-route generation, draft, drill, repair-reps) reads and writes.
+Pydantic-backed; the `parsed` field of map-producing `StructuredLLMResult`
+objects is an instance of `ProvisionalMap`.
 
 ## Public surface
 
@@ -14,7 +14,7 @@ Import from `models` directly.
 | `ProvisionalMap` | The top-level container. `metadata`, `backbone`, `clusters`, `relationships`, `learning_prereqs`, `frameworks`, `domain_mechanics`. |
 | `BackboneItem` | A backbone principle (causal spine of the domain). |
 | `Cluster` | A cluster of related subnodes around a backbone item. |
-| `Subnode` | A leaf concept. |
+| `Subnode` | A leaf concept. `learner_scaffold` is optional on the general model, but required on generated source-less smallest-route subnodes as non-answer task copy and evaluator scope. |
 | `Relationships` | Edges between nodes. |
 | `LearningPrereq` | A directed prerequisite edge. |
 | `Framework` | A reusable analytical lens. |
@@ -23,7 +23,7 @@ Import from `models` directly.
 | `BackboneId`, `ClusterId`, `SubnodeId` | Strongly-typed identifier wrappers (NewType-style). |
 | `IdKind`, `parse_id(s)` | Identifier kind tag + parser that returns the right ID class given a raw string. |
 | `CORE_THESIS` | The reserved identifier for the map's core thesis node. Used by drill routing. |
-| `is_substantive_sketch(text)` | Pure-function gate: does this sketch carry enough learner signal to seed source-less map generation? |
+| `is_substantive_sketch(text)` | Legacy/parity helper: does this sketch pass the older substantive-sketch threshold? Not the current source-less `/api/extract` gate. |
 | `HelpRequestReason`, `infer_help_request_reason(text)` / `has_substantive_attempt(text)` | Cold-attempt intent classifiers (help request vs genuine generative commitment) plus the Literal tag they return. |
 | `RepairRep`, `RepairRepsEvaluation`, `RepairRepsResult` | Repair Reps response contracts; graph-neutral typed micro-practice, not graph-truth mutation. |
 | `parse_repair_reps_response(response)` | Strict parser for provider responses; rejects extra routing/scoring fields before returning the loose Gemini-compatible schema. |
@@ -40,7 +40,7 @@ Import from `models` directly.
 | `provisional_map.py` | Pydantic models for the full map structure. |
 | `identifiers.py` | ID types, `IdKind`, `parse_id`, `CORE_THESIS`. |
 | `drill_attempts.py` | Pure cold-attempt intent classifiers used before drill scoring/routing normalization. |
-| `sketch_validation.py` | `is_substantive_sketch` heuristic (stopwords, min substantive tokens). |
+| `sketch_validation.py` | Legacy/parity `is_substantive_sketch` heuristic (stopwords, min substantive tokens). |
 | `knowledge_map_context.py` | Wire-shape validators and target-local context pruning used by drill and Repair Reps routes. |
 | `repair_reps.py` | Repair Reps response models, strict parsing, and result validation. |
 
@@ -53,11 +53,14 @@ Import from `models` directly.
   and `SubnodeId` look like strings but the type system separates them.
   Use `parse_id()` when you have a raw string of unknown kind; do not
   cast directly.
-- **`is_substantive_sketch` is deliberately simple.** It exists to reject
-  empty/"i don't know" responses, not to grade content quality. Don't
-  make it smarter — the principle ("preserve learner effort, reject only
-  evidence of no effort") is documented in the module docstring and
-  reinforced in feedback memory `feedback_screen_foundation_principles.md`.
+- **`is_substantive_sketch` is not the source-less launch-pad gate.** Current
+  source-less extraction rejects only empty sketches; rough non-empty launch
+  attempts may seed a smallest route but remain non-evidence. Keep this helper
+  parity-stable for legacy/frontend callers instead of making it smarter.
+- **`LearnerScaffold` is non-answer scaffolding.** Source-less smallest-route
+  subnodes must carry plain learner task copy plus `evidence_goal`; the internal
+  `bloom_level` must not be rendered as learner-facing taxonomy or treated as
+  evidence about the learner.
 - **Pydantic v2 semantics.** All models are Pydantic v2 (`BaseModel`,
   `ConfigDict`). v1 patterns (`@validator`, `Config` class) do not work.
 - **There is a current defensive `if text is None` check in
@@ -68,6 +71,9 @@ Import from `models` directly.
 
 ## Related
 
-- Schema producer: `app_prompts/extract-system-v1.txt` declares the shape.
-- Validation: `ai_service.py` parses LLM output into `ProvisionalMap`.
+- Schema producers: `app_prompts/extract-system-v1.txt` declares the base shape;
+  `app_prompts/generate-smallest-route-system-v1.txt` produces the same model
+  and owns the source-less `learner_scaffold` route-task shape.
+- Validation: `ai_service.py` parses LLM output into `ProvisionalMap` and
+  enforces smallest-route-only scaffold requirements in `_validate_smallest_route`.
 - Drill consumer: drill agent reads the map and routes by node kind.

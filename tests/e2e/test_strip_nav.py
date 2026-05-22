@@ -1,10 +1,11 @@
-"""End-to-end smoke for strip-as-navigation on the concept page.
+"""End-to-end smoke for route-margin navigation on the concept page.
 
-Covers: click a primed strip node swaps the work column; click a
-locked node shows the locked silhouette state; keyboard arrow nav
+Covers: click a route item swaps the work column; click a
+locked route item shows the locked silhouette state; keyboard arrow nav
 steps through backbone entries; the first actionable entry enables
-the "Write from memory" CTA; the Route/Graph toggle and
-#graph-content section are absent.
+the inline draft-from-memory surface; the legacy Route/Graph toggle and
+#graph-content section are absent. The live Route/Constellation switch is
+covered in test_smoke.py.
 
 Uses the same seed-via-localStorage + guest-auth pattern as the
 existing e2e suite. The seeded concept has three backbone entries so
@@ -97,10 +98,12 @@ def _seed_concept_with_backbone(page: Page) -> None:
                 backbone: [
                   { id: 'b1', label: 'Light reactions', drill_status: 'locked',
                     purpose: 'The first entry asks for the governing idea.' },
-                  { id: 'b2', label: 'Calvin cycle', drill_status: 'primed',
+                  { id: 'b2', drill_status: 'primed',
                     purpose: 'Carbon fixation via RuBisCO.' },
-                  { id: 'b3', label: 'Electron transport', drill_status: 'locked',
+                  { id: 'b3', drill_status: 'locked',
                     purpose: 'ATP synthesis via the proton gradient.' },
+                  { id: 'b4', drill_status: 'locked',
+                    purpose: 'Oxygen accepts electrons at the end of the chain.' },
                 ],
                 clusters: [],
             });
@@ -124,7 +127,7 @@ def _open_seeded_concept(page: Page, base_url: str) -> None:
     _seed_concept_with_backbone(page)
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("document.querySelector('#concept-list .concept-item')?.click()")
-    expect(page.locator(".concept-strip__inner")).to_be_visible(timeout=8_000)
+    expect(page.locator(".concept-page-b2__route")).to_be_visible(timeout=8_000)
 
 
 # ---------------------------------------------------------------------------
@@ -132,53 +135,64 @@ def _open_seeded_concept(page: Page, base_url: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_strip_click_swaps_work_column(page: Page, base_url: str) -> None:
-    """Clicking a different strip node updates the work column entry title."""
+def test_route_margin_click_swaps_work_column(page: Page, base_url: str) -> None:
+    """Clicking a different route item updates the work column entry title."""
     _open_seeded_concept(page, base_url)
     initial_title = page.locator(".concept-page-b2__entry-title").text_content()
-    nodes = page.locator(".concept-strip__node")
-    count = nodes.count()
+    items = page.locator(".concept-page-b2__route-item")
+    count = items.count()
     if count < 2:
         pytest.skip("concept has fewer than 2 backbone entries")
-    # Click the second node (index 1)
-    nodes.nth(1).click()
+    # Click the second route item (index 1)
+    items.nth(1).click()
     # Wait for the 240ms fade-out + 320ms fade-in to settle
     page.wait_for_timeout(700)
     new_title = page.locator(".concept-page-b2__entry-title").text_content()
-    assert new_title != initial_title, "work column did not swap on strip click"
+    assert new_title != initial_title, "work column did not swap on route-margin click"
+    expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "aria-label", "Explain how, primed, current"
+    )
+    expect(page.locator(".concept-page-b2__route-item.is-active .concept-page-b2__route-title")).to_have_text("Explain how")
+    items = page.locator(".concept-page-b2__route-item")
+    items.nth(3).click()
+    page.wait_for_timeout(700)
+    expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "aria-label", "Test the edge, locked, current"
+    )
+    expect(page.locator(".concept-page-b2__route-item.is-active .concept-page-b2__route-title")).to_have_text("Test the edge")
 
 
-def test_strip_keyboard_nav(page: Page, base_url: str) -> None:
-    """ArrowRight advances the active entry; title changes in the work column."""
+def test_route_margin_keyboard_nav(page: Page, base_url: str) -> None:
+    """ArrowDown advances the active entry; title changes in the work column."""
     _open_seeded_concept(page, base_url)
-    nodes = page.locator(".concept-strip__node")
-    if nodes.count() < 2:
+    items = page.locator(".concept-page-b2__route-item")
+    if items.count() < 2:
         pytest.skip("concept has fewer than 2 backbone entries")
     initial_title = page.locator(".concept-page-b2__entry-title").text_content()
-    # Focus the first node and press ArrowRight
-    nodes.first.focus()
+    # Focus the first item and press ArrowDown
+    items.first.focus()
     page.keyboard.press(" ")
-    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowDown")
     page.wait_for_timeout(700)
     new_title = page.locator(".concept-page-b2__entry-title").text_content()
-    assert new_title != initial_title, "ArrowRight did not advance the active entry"
+    assert new_title != initial_title, "ArrowDown did not advance the active entry"
 
 
 def test_first_actionable_entry_shows_try_from_memory(page: Page, base_url: str) -> None:
     """The first unattempted actionable entry is ready, not blocked locked."""
     _open_seeded_concept(page, base_url)
-    cta = page.locator(".concept-page-b2__entry-cta")
-    expect(cta).not_to_have_attribute("disabled", "")
-    expect(cta).to_have_text("Write from memory")
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(page.locator(".concept-page-b2__attempt-save")).to_have_text("Draft from memory")
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
 
 
 def test_locked_entry_shows_disabled_cta(page: Page, base_url: str) -> None:
-    """Clicking a blocked locked strip node shows a disabled 'Locked' CTA."""
+    """Clicking a blocked locked route item shows a disabled 'Locked' CTA."""
     _open_seeded_concept(page, base_url)
-    locked_nodes = page.locator(".concept-strip__node--locked")
-    if locked_nodes.count() == 0:
+    locked_items = page.locator('.concept-page-b2__route-item[data-route-state="locked"]')
+    if locked_items.count() == 0:
         pytest.skip("no locked entries available to test")
-    locked_nodes.first.click()
+    locked_items.first.click()
     page.wait_for_timeout(700)
     cta = page.locator(".concept-page-b2__entry-cta")
     expect(cta).to_have_attribute("disabled", "")
@@ -199,14 +213,14 @@ def test_no_graph_content_section(page: Page, base_url: str) -> None:
     expect(page.locator("#graph-content")).to_have_count(0)
 
 
-def test_strip_nodes_are_focusable(page: Page, base_url: str) -> None:
-    """All strip nodes have tabindex=0 and role=button (keyboard accessible)."""
+def test_route_items_are_focusable(page: Page, base_url: str) -> None:
+    """All route items have tabindex=0 and role=button (keyboard accessible)."""
     _open_seeded_concept(page, base_url)
-    nodes = page.locator(".concept-strip__node")
-    count = nodes.count()
+    items = page.locator(".concept-page-b2__route-item")
+    count = items.count()
     if count == 0:
-        pytest.skip("no strip nodes found")
+        pytest.skip("no route items found")
     for i in range(count):
-        node = nodes.nth(i)
-        expect(node).to_have_attribute("tabindex", "0")
-        expect(node).to_have_attribute("role", "button")
+        item = items.nth(i)
+        expect(item).to_have_attribute("tabindex", "0")
+        expect(item).to_have_attribute("role", "button")

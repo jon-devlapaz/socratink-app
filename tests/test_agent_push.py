@@ -92,6 +92,76 @@ def test_refresh_publication_refs_updates_origin_dev(monkeypatch):
     ]
 
 
+def test_refresh_publication_refs_updates_no_mistakes_dev_when_configured(monkeypatch):
+    mod = _load_module()
+    calls = []
+
+    def fake_run_git(args, *, check=True):
+        calls.append((args, check))
+        if args == ["remote", "-v"]:
+            return "\n".join(
+                (
+                    "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)",
+                    "no-mistakes\t/tmp/.no-mistakes/repos/review-gate.git (push)",
+                )
+            )
+        return ""
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.refresh_publication_refs()
+
+    assert calls == [
+        (["remote", "-v"], True),
+        (["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], True),
+        (["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"], False),
+    ]
+
+
+def test_explicit_no_mistakes_target_blocks_when_destination_fetch_fails(monkeypatch, capsys):
+    mod = _load_module()
+
+    def fake_run_git(args, *, check=True):
+        if args == ["remote", "-v"]:
+            return "\n".join(
+                (
+                    "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)",
+                    "no-mistakes\t/tmp/.no-mistakes/repos/review-gate.git (push)",
+                )
+            )
+        if args == ["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"]:
+            return ""
+        if args == ["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"]:
+            if check:
+                raise RuntimeError("git fetch no-mistakes failed: gate unavailable")
+            return ""
+        if args == ["symbolic-ref", "--short", "HEAD"]:
+            return "dev"
+        if args == ["rev-parse", "HEAD"]:
+            return "abc1234"
+        if args == ["status", "--porcelain"]:
+            return ""
+        if args in (
+            ["diff", "--name-only", "origin/dev...HEAD"],
+            ["diff", "--name-only", "--cached"],
+            ["diff", "--name-only", "HEAD"],
+            ["ls-files", "--others", "--exclude-standard"],
+        ):
+            return "main.py\n" if args == ["diff", "--name-only", "origin/dev...HEAD"] else ""
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t1"
+        if args == ["rev-parse", "--verify", "refs/remotes/no-mistakes/dev"]:
+            return ""
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    assert mod.main(["--target", "no-mistakes/dev"]) == 2
+    assert "gate unavailable" in capsys.readouterr().err
+
+
 def test_explicit_target_records_override_against_recommendation(tmp_path):
     mod = _load_module()
     state = mod.PushState(
@@ -259,6 +329,92 @@ def test_dev_publication_allows_origin_dev_ancestor(monkeypatch):
     mod.ensure_current_dev_base(state, intent)
 
 
+def test_no_mistakes_publication_blocks_when_destination_is_not_ancestor(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/tmp/.no-mistakes/repos/review-gate.git",
+        },
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "refs/remotes/no-mistakes/dev"]:
+            return "refs/remotes/no-mistakes/dev"
+        if args == [
+            "rev-list",
+            "--left-right",
+            "--count",
+            "refs/remotes/no-mistakes/dev...HEAD",
+        ]:
+            return "14\t2"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+    monkeypatch.setattr(mod, "_git_succeeds", lambda args: False)
+
+    try:
+        mod.ensure_destination_fast_forward(state, intent)
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "destination no-mistakes/dev is not an ancestor of local dev" in message
+        assert "git cherry -v no-mistakes/dev HEAD" in message
+    else:
+        raise AssertionError("non-fast-forward no-mistakes destination was not blocked")
+
+
+def test_publication_allows_destination_ancestor(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={"no-mistakes": "/tmp/.no-mistakes/repos/review-gate.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "refs/remotes/no-mistakes/dev"]:
+            return "refs/remotes/no-mistakes/dev"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+    monkeypatch.setattr(mod, "_git_succeeds", lambda args: True)
+
+    mod.ensure_destination_fast_forward(state, intent)
+
+
+def test_feature_publication_refreshes_destination_ref(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="feat/demo-flow",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["public/js/app.js"],
+        remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="origin/feat/demo-flow")
+    calls = []
+
+    def fake_run_git(args, *, check=True):
+        calls.append(args)
+        return ""
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.ensure_destination_ref_current(state, intent)
+
+    assert calls == [
+        ["fetch", "origin", "+refs/heads/feat/demo-flow:refs/remotes/origin/feat/demo-flow"]
+    ]
+
+
 def test_dev_publication_skips_divergence_check_without_origin(monkeypatch):
     mod = _load_module()
     state = mod.PushState(
@@ -297,3 +453,58 @@ def test_dev_publication_skips_divergence_check_without_origin_dev_ref(monkeypat
     monkeypatch.setattr(mod, "_run_git", fake_run_git)
 
     mod.ensure_current_dev_base(state, intent)
+
+
+def test_print_first_run_json_emits_machine_readable_preview(capsys):
+    mod = _load_module()
+    recommendation = mod.RouteRecommendation(
+        route="no-mistakes/dev",
+        risk_class="confirm",
+        triggers=["main.py"],
+    )
+    intent = mod.PublicationIntent(recommendation=recommendation, chosen_route="origin/dev")
+    payload = mod.AuthorizationPayload(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        route="origin/dev",
+        remote_url="https://github.com/jon-devlapaz/socratink-app.git",
+        refspec="dev",
+        diff_fingerprint="fingerprint-1",
+        risk_class="confirm",
+        nonce="nonce-1",
+        issued_at_epoch=1,
+    )
+
+    mod.print_first_run(payload, intent, json_output=True)
+
+    preview = json.loads(capsys.readouterr().out)
+    assert preview["schema_version"] == 1
+    assert preview["recommended_route"] == "no-mistakes/dev"
+    assert preview["chosen_route"] == "origin/dev"
+    assert preview["override"] is True
+    assert preview["ack_command"].startswith("python3 scripts/agent-push.py --target origin/dev --ack ")
+    assert preview["triggered_rules"] == ["main.py"]
+
+
+def test_json_error_output_is_machine_readable(monkeypatch, capsys):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "refresh_publication_refs", lambda: None)
+    monkeypatch.setattr(
+        mod,
+        "collect_state",
+        lambda: mod.PushState(
+            branch="dev",
+            head_sha="abc1234",
+            dirty=False,
+            changed_paths=[],
+            remote_urls={"origin": "https://github.com/jon-devlapaz/socratink-app.git"},
+        ),
+    )
+
+    result = mod.main(["--target", "unsupported/target", "--json"])
+
+    assert result == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["schema_version"] == 1
+    assert payload["error"]["message"] == "unsupported push target: unsupported/target"

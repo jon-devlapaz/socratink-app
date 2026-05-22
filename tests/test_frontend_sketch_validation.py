@@ -2,7 +2,8 @@
 
 Loads the shared fixture (used by both Python tests and this JS harness),
 shells out to a small node runner, and asserts byte-for-byte verdict parity.
-A divergence is a release-blocker per spec §5.3 / handoff §2.
+A divergence breaks the legacy parity contract for callers that still need the
+older verdict.
 
 Skipped when `node` is unavailable (mirrors tests/test_frontend_syntax.py).
 """

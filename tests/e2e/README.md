@@ -6,9 +6,9 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-The suite spans five files:
+The suite spans six files:
 
-### `test_smoke.py` — 31 tests
+### `test_smoke.py` — 34 tests
 
 Key checks include:
 
@@ -18,9 +18,9 @@ Key checks include:
    `#concept-list`, `.sidebar-brand-mark` all attached after navigation.
 3. **`test_guest_session_is_labeled_as_guest`** — anonymous Supabase sessions
    render as guest, not as signed-in users.
-4. **`test_launch_pad_sketch_gate_matches_substantive_backend_rule`** —
-   launch-pad validation stays aligned with the backend's substantive sketch
-   threshold.
+4. **`test_launch_pad_accepts_any_non_empty_sketch`** —
+   launch-pad validation enables any non-empty learner response and keeps empty
+   sketches blocked.
 5. **`test_drawer_toggle_remains_visible_in_concept_view`** — sidebar toggle
    stays available after opening a library concept (regression gate for the
    drawer-toggle visibility fix).
@@ -61,27 +61,35 @@ training copy, and unrecordable drill results do not mutate graph state.
 
 ### `test_concept_page_b2.py` — 3 tests
 
-B-2 concept page layout gate: strip + page layout renders, the reconstruction
-CTA opens the inline attempt panel while the full-screen drill chamber stays
-hidden, and the Route/Graph segmented toggle is absent (verifies the strip-as-nav
-port).
+B-2 concept page layout gate: route-margin layout renders, the cold-entry
+inline attempt surface appears while the full-screen drill chamber stays
+hidden, and the legacy Route/Graph segmented toggle is absent.
 
 ### `test_strip_nav.py` — 7 tests
 
-Strip-as-nav behavior: click swaps the work column, keyboard navigation
-walks the strip, the first actionable entry exposes "Write from memory",
-locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
-section exists, and strip nodes are focusable.
+Route-margin behavior: click swaps the work column, keyboard navigation
+walks the route, the first actionable entry exposes the inline draft surface,
+locked entries show a disabled CTA, no legacy Route/Graph toggle or
+`#graph-content` section exists, and route items are focusable. The live
+Route/Constellation switch and `#concept-constellation-content` are covered in
+`test_smoke.py`.
 
-### `test_app_helper_modules.py` — 1 test
+### `test_app_helper_modules.py` — 2 tests
 
 Helper-module browser-contract guard: imports the in-app JS modules
 (`html.js`, `app-timer.js`, `app-hero.js`, `phase-b-session.js`,
 `settings-view.js`, `library-view.js`, `source-input-ui.js`,
 `board-grid.js`, `theme-preference.js`, `app-shell-ui.js`,
-`training-store.js`, `training-derive.js`, `concept-page-view.js`) from the live page and exercises their pure
+`training-store.js`, `training-derive.js`, `concept-page-view.js`,
+`concept-constellation-view.js`, `comparison-acknowledgement.js`) from the live page and exercises their pure
 helpers against the real browser DOM/storage so renames or signature
 drift fail the suite.
+
+### `test_gestalt_hybrid_launch_qa.py` — 1 test
+
+End-to-end QA gate for the source-less gestalt hybrid path: Launch Pad,
+learner-goal preservation, first draft, explicit reveal/compare, `Keep working`,
+and route expansion from the same concept surface.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`
@@ -105,8 +113,8 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
-`test_smoke.py` (31 tests). Use the raw pytest invocations below to run the
-full suite (47 tests across the five files).
+`test_smoke.py` (34 tests). Use the raw pytest invocations below to run the
+full suite (52 tests across the six files).
 
 Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
 `SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default,
@@ -127,10 +135,10 @@ bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel
 ```
 
 Raw pytest invocations (when you need flags the wrapper doesn't pass through,
-or want the full five-file suite the wrapper doesn't yet cover):
+or want the full six-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all five files, 47 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all six files, 52 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)
@@ -148,14 +156,14 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 ## Output
 
-Abbreviated pass shape (47 tests across the five files):
+Abbreviated pass shape (52 tests across the six files):
 
 ```text
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
 tests/e2e/test_smoke.py::test_homepage_loads_with_critical_dom PASSED
 tests/e2e/test_smoke.py::test_first_run_guidance_is_inline_not_modal PASSED
 tests/e2e/test_smoke.py::test_guest_session_is_labeled_as_guest PASSED
-tests/e2e/test_smoke.py::test_launch_pad_sketch_gate_matches_substantive_backend_rule PASSED
+tests/e2e/test_smoke.py::test_launch_pad_accepts_any_non_empty_sketch PASSED
 tests/e2e/test_smoke.py::test_drawer_toggle_remains_visible_in_concept_view PASSED
 tests/e2e/test_smoke.py::test_feedback_button_keeps_sidebar_open PASSED
 tests/e2e/test_smoke.py::test_feedback_dialog_has_accessible_escape_close PASSED
@@ -172,16 +180,18 @@ tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_inline_attempt PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_no_route_graph_toggle PASSED
-tests/e2e/test_strip_nav.py::test_strip_click_swaps_work_column PASSED
-tests/e2e/test_strip_nav.py::test_strip_keyboard_nav PASSED
+tests/e2e/test_strip_nav.py::test_route_margin_click_swaps_work_column PASSED
+tests/e2e/test_strip_nav.py::test_route_margin_keyboard_nav PASSED
 tests/e2e/test_strip_nav.py::test_first_actionable_entry_shows_try_from_memory PASSED
 tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
 tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
-tests/e2e/test_strip_nav.py::test_strip_nodes_are_focusable PASSED
+tests/e2e/test_strip_nav.py::test_route_items_are_focusable PASSED
+tests/e2e/test_app_helper_modules.py::test_launch_pad_displays_normalized_concept_and_goal PASSED
 tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
+tests/e2e/test_gestalt_hybrid_launch_qa.py::test_source_less_launch_pad_end_to_end_qa PASSED
 
-============================== 47 passed ==============================
+============================== 52 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,

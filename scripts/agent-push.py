@@ -107,6 +107,19 @@ def _run_git(args: list[str], *, check: bool = True) -> str:
     return result.stdout.strip()
 
 
+def _git_succeeds(args: list[str]) -> bool:
+    return (
+        subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
 def _split_lines(value: str) -> list[str]:
     return [line.strip() for line in value.splitlines() if line.strip()]
 
@@ -124,6 +137,11 @@ def refresh_publication_refs() -> None:
     remotes = _remote_urls()
     if "origin" in remotes:
         _run_git(["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"])
+    if "no-mistakes" in remotes:
+        _run_git(
+            ["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"],
+            check=False,
+        )
 
 
 def _changed_paths() -> list[str]:
@@ -318,6 +336,48 @@ def ensure_current_dev_base(state: PushState, intent: PublicationIntent) -> None
         )
 
 
+def ensure_destination_ref_current(state: PushState, intent: PublicationIntent) -> None:
+    remote, refspec = route_to_remote_refspec(intent.chosen_route)
+    if remote not in state.remote_urls:
+        return
+    if refspec not in {"dev", "main"} and not refspec.startswith("feat/"):
+        return
+    _run_git(["fetch", remote, f"+refs/heads/{refspec}:refs/remotes/{remote}/{refspec}"])
+
+
+def ensure_destination_fast_forward(state: PushState, intent: PublicationIntent) -> None:
+    remote, refspec = route_to_remote_refspec(intent.chosen_route)
+    destination_ref = f"refs/remotes/{remote}/{refspec}"
+    if not _run_git(["rev-parse", "--verify", destination_ref], check=False):
+        return
+    if _git_succeeds(["merge-base", "--is-ancestor", destination_ref, "HEAD"]):
+        return
+
+    counts = _run_git(["rev-list", "--left-right", "--count", f"{destination_ref}...HEAD"])
+    try:
+        remote_only_text, local_only_text = counts.split()
+        remote_only = int(remote_only_text)
+        local_only = int(local_only_text)
+    except ValueError as exc:
+        raise RuntimeError(f"could not parse {intent.chosen_route} divergence: {counts!r}") from exc
+
+    if remote == "no-mistakes" and refspec == "dev" and state.branch == "dev":
+        raise RuntimeError(
+            "destination no-mistakes/dev is not an ancestor of local dev "
+            f"(remote-only={remote_only}, local-only={local_only}). "
+            "A push would be rejected as non-fast-forward. "
+            "This usually means the gate rewrote dev after a previous run. "
+            "Preserve local dev on a safety branch, reset dev to no-mistakes/dev, "
+            "then cherry-pick only the unique local commits shown by "
+            "`git cherry -v no-mistakes/dev HEAD`."
+        )
+
+    raise RuntimeError(
+        f"destination {intent.chosen_route} is not an ancestor of local HEAD "
+        f"(remote-only={remote_only}, local-only={local_only}); fetch and reconcile before pushing."
+    )
+
+
 def encode_ack(payload: AuthorizationPayload) -> str:
     raw = payload.model_dump_json().encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii")
@@ -369,15 +429,47 @@ def append_decision_log(payload: AuthorizationPayload, intent: PublicationIntent
         handle.write(json.dumps(entry, sort_keys=True) + "\n")
 
 
-def _print_first_run(payload: AuthorizationPayload, intent: PublicationIntent) -> None:
+def print_first_run(
+    payload: AuthorizationPayload,
+    intent: PublicationIntent,
+    *,
+    json_output: bool = False,
+) -> None:
     token = encode_ack(payload)
+    ack_command = f"python3 scripts/agent-push.py --target {payload.route} --ack {token}"
+    if json_output:
+        preview = {
+            "schema_version": 1,
+            "recommended_route": intent.recommendation.route,
+            "chosen_route": payload.route,
+            "override": intent.override,
+            "risk_class": payload.risk_class,
+            "triggered_rules": intent.recommendation.triggers,
+            "ack_command": ack_command,
+            "dirty": payload.dirty,
+            "branch": payload.branch,
+            "head_sha": payload.head_sha,
+        }
+        print(json.dumps(preview, sort_keys=True))
+        return
     print(f"Recommended route: {intent.recommendation.route}")
     print(f"Chosen route: {payload.route}")
     print(f"Override: {str(intent.override).lower()}")
     print(f"Risk class: {payload.risk_class}")
     print(f"Triggered rules: {', '.join(intent.recommendation.triggers)}")
     print("No push executed. Re-run with this ack token to publish:")
-    print(f"python3 scripts/agent-push.py --target {payload.route} --ack {token}")
+    print(ack_command)
+
+
+def _print_first_run(payload: AuthorizationPayload, intent: PublicationIntent) -> None:
+    print_first_run(payload, intent)
+
+
+def print_error(message: str, *, json_output: bool = False) -> None:
+    if json_output:
+        print(json.dumps({"schema_version": 1, "error": {"message": message}}, sort_keys=True))
+        return
+    print(f"[agent-push] ERROR: {message}", file=sys.stderr)
 
 
 def _push(payload: AuthorizationPayload) -> int:
@@ -392,30 +484,33 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Authorize and execute one Socratink git publication.")
     parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name, no-mistakes/dev")
     parser.add_argument("--ack", help="ack token printed by the first run")
+    parser.add_argument("--json", action="store_true", help="emit machine-readable preview output")
     args = parser.parse_args(argv)
 
     try:
         refresh_publication_refs()
         state = collect_state()
         intent = resolve_publication_intent(state, explicit_target=args.target)
+        ensure_destination_ref_current(state, intent)
         ensure_current_dev_base(state, intent)
+        ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)
     except Exception as exc:
-        print(f"[agent-push] ERROR: {exc}", file=sys.stderr)
+        print_error(str(exc), json_output=args.json)
         return 2
 
     if not args.ack:
-        _print_first_run(payload, intent)
+        print_first_run(payload, intent, json_output=args.json)
         return 1
 
     try:
         original = decode_ack(args.ack)
     except ValueError as exc:
-        print(f"[agent-push] ERROR: {exc}", file=sys.stderr)
+        print_error(str(exc), json_output=args.json)
         return 2
 
     if not intent_matches(original, payload):
-        print("[agent-push] ERROR: push intent changed since ack was issued", file=sys.stderr)
+        print_error("push intent changed since ack was issued", json_output=args.json)
         return 2
 
     write_authorization(payload)

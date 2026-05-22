@@ -173,6 +173,157 @@ def test_app_timer_preserves_countdown_contract() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_launch_pad_normalizes_goal_shaped_door_input() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { buildPendingShellFromDoorInput } from './public/js/launch-pad.js';
+
+        const goalShell = buildPendingShellFromDoorInput(
+          ' I want to understand why sodium rushing into a neuron starts an electrical signal. '
+        );
+        assert.equal(
+          goalShell.name,
+          'sodium rushing into a neuron starts an electrical signal'
+        );
+        assert.equal(
+          goalShell.goal,
+          'I want to understand why sodium rushing into a neuron starts an electrical signal.'
+        );
+
+        const topicShell = buildPendingShellFromDoorInput(
+          'How sodium channels create an action potential'
+        );
+        assert.equal(topicShell.name, 'How sodium channels create an action potential');
+        assert.equal(topicShell.goal, '');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_submit_concept_create_sends_learner_goal() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { submitConceptCreate } from './public/js/ai_service.js';
+
+        let capturedBody = null;
+        globalThis.fetch = async (_url, options) => {
+          capturedBody = JSON.parse(options.body);
+          return new Response(JSON.stringify({ provisional_map: {} }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        };
+
+        await submitConceptCreate({
+          name: 'Sodium channels',
+          learnerGoal: 'I want to explain why sodium starts the signal.',
+          startingSketch: 'sodium moves into the neuron and starts a signal somehow',
+          source: null,
+          apiKey: undefined,
+        });
+
+        assert.equal(capturedBody.name, 'Sodium channels');
+        assert.equal(capturedBody.learner_goal, 'I want to explain why sodium starts the signal.');
+        assert.equal(capturedBody.starting_sketch, 'sodium moves into the neuron and starts a signal somehow');
+        assert.equal(capturedBody.source, null);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { runLaunchPadAction } from './public/js/launch-pad.js';
+
+        const storage = new Map();
+        globalThis.sessionStorage = {
+          getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+          setItem(key, value) { storage.set(key, String(value)); },
+          removeItem(key) { storage.delete(key); },
+        };
+        globalThis.localStorage = {
+          getItem() { return null; },
+        };
+
+        const elements = {
+          'launch-pad-input': {
+            value: 'Sodium moves into the neuron through channels and that movement starts an electrical signal somehow.',
+          },
+          'launch-pad-submit': {
+            disabled: false,
+            textContent: 'Save sketch',
+          },
+          'launch-pad-validation': {
+            textContent: '',
+          },
+          'launch-pad-form': {
+            dataset: {},
+            setAttribute(name, value) { this[name] = value; },
+            removeAttribute(name) { delete this[name]; },
+          },
+        };
+        globalThis.document = {
+          getElementById(id) { return elements[id] || null; },
+        };
+
+        let capturedBody = null;
+        globalThis.fetch = async (_url, options) => {
+          capturedBody = JSON.parse(options.body);
+          return new Response(JSON.stringify({
+            provisional_map: {
+              metadata: {},
+              backbone: [{ id: 'b1', principle: 'Signal start', dependent_clusters: ['c1'] }],
+              clusters: [{
+                id: 'c1',
+                label: 'Signal start',
+                description: 'Explain the initial movement.',
+                subnodes: [{ id: 'c1_s1', label: 'Signal start', mechanism: 'Sodium influx depolarizes the neuron.' }],
+              }],
+              relationships: { domain_mechanics: [], learning_prerequisites: [] },
+              frameworks: [],
+            },
+          }), {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          });
+        };
+
+        storage.set('socratink:pendingShell', JSON.stringify({
+          name: 'Sodium channels',
+          goal: 'I want to explain why sodium starts the signal.',
+          ts: Date.now(),
+        }));
+
+        const calls = [];
+        const App = {
+          persistCreatedConceptFromLaunchPad(map, shell, threshold) {
+            calls.push({ map, shell, threshold });
+          },
+          navigateToGraphViewFromLaunchPad(options) {
+            calls.push({ options });
+          },
+        };
+
+        const resultValue = await runLaunchPadAction({ preventDefault() {} }, App);
+
+        assert.equal(resultValue, false);
+        assert.equal(capturedBody.name, 'Sodium channels');
+        assert.equal(capturedBody.learner_goal, 'I want to explain why sodium starts the signal.');
+        assert.equal(capturedBody.starting_sketch, elements['launch-pad-input'].value);
+        assert.equal(calls.length, 2);
+        assert.equal(storage.has('socratink:pendingShell'), false);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_phase_b_session_helpers_preserve_storage_contract() -> None:
     result = run_node_module(
         """
@@ -361,6 +512,74 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         assert.ok(!cardHtml.includes('This is the central claim.'));
         assert.ok(cardHtml.includes('2 sections'));
         assert.ok(cardHtml.includes('3 entries'));
+
+        const noEvidenceHtml = buildLibraryHtml([
+          { id: 'legacy-solid', name: 'Legacy Solid', state: 'actualized', graphData: graph },
+        ], {});
+        assert.ok(noEvidenceHtml.includes('data-state=""'));
+        assert.ok(!noEvidenceHtml.includes('actualized'));
+
+        const legacyPrimedGraph = JSON.stringify({
+          metadata: {},
+          backbone: [{ id: 'legacy-primed', drill_status: 'primed' }],
+          clusters: [],
+        });
+        const legacyPrimedHtml = buildLibraryHtml([
+          { id: 'legacy-primed', name: 'Legacy Primed', state: 'growing', graphData: legacyPrimedGraph },
+        ], {});
+        assert.ok(legacyPrimedHtml.includes('data-state="primed"'));
+        assert.ok(legacyPrimedHtml.includes('>primed<'));
+
+        const legacyNeedsRepairGraph = JSON.stringify({
+          metadata: {},
+          backbone: [{ id: 'legacy-drilled', drill_status: 'drilled' }],
+          clusters: [],
+        });
+        const legacyNeedsRepairHtml = buildLibraryHtml([
+          { id: 'legacy-drilled', name: 'Legacy Drilled', state: 'growing', graphData: legacyNeedsRepairGraph },
+        ], {});
+        assert.ok(legacyNeedsRepairHtml.includes('data-state="needs repair"'));
+        assert.ok(legacyNeedsRepairHtml.includes('>needs repair<'));
+
+        const legacySolidGraph = JSON.stringify({
+          metadata: { drill_status: 'solidified' },
+          backbone: [{ id: 'legacy-solid-node', drill_status: 'solidified' }],
+          clusters: [],
+        });
+        const legacySolidHtml = buildLibraryHtml([
+          { id: 'legacy-solid-node', name: 'Legacy Solid Node', state: 'growing', graphData: legacySolidGraph },
+        ], {});
+        assert.ok(legacySolidHtml.includes('data-state="solidified"'));
+        assert.ok(legacySolidHtml.includes('>solidified<'));
+
+        const needsRepairTraining = {
+          node_records: {
+            a: {
+              attempts: [
+                {
+                  id: 'thin-1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Too vague.',
+                  classification: 'thin',
+                  gaps: ['causal trigger missing'],
+                },
+                {
+                  id: 'thin-2',
+                  at: '2026-05-15T11:00:00.000Z',
+                  user_text: 'Still too vague.',
+                  classification: 'thin',
+                  gaps: ['causal trigger missing'],
+                },
+              ],
+            },
+          },
+        };
+        const derivedHtml = buildLibraryHtml([
+          { id: 'c-derived', name: 'Derived', state: 'actualized', graphData: graph },
+        ], { 'c-derived': needsRepairTraining });
+        assert.ok(derivedHtml.includes('data-state="needs repair"'));
+        assert.ok(derivedHtml.includes('>needs repair<'));
+        assert.ok(!derivedHtml.includes('actualized'));
         """
     )
     assert result.returncode == 0, result.stderr
@@ -614,6 +833,11 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.equal(settingsHost.innerHTML, '');
         assert.equal('engaged' in settingsBtn.dataset, false);
 
+        const shellGraph = {
+          clusters: [
+            { subnodes: [{ id: 'n1' }] },
+          ],
+        };
         const html = conceptListItemHtml({ id: 'c1', name: '<Unsafe>', state: 'growing' });
         assert.ok(html.includes('&lt;Unsafe&gt;'));
         assert.ok(html.includes('data-concept-id="c1"'));
@@ -624,6 +848,30 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.ok(html.includes('hidden'));
         assert.ok(html.includes('class="concept-delete concept-action-menu-item"'));
         assert.ok(html.includes('App.deleteConcept(this.dataset.conceptId,this)'));
+        assert.ok(html.includes('data-state=""'));
+        assert.ok(!html.includes('data-state="growing"'));
+
+        const primedTraining = {
+          node_records: {
+            n1: {
+              attempts: [
+                {
+                  id: 'a1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A substantive first reconstruction.',
+                  classification: 'strong',
+                  gaps: [],
+                },
+              ],
+            },
+          },
+        };
+        const primedHtml = conceptListItemHtml(
+          { id: 'c1', name: 'Primed', state: 'actualized', graphData: shellGraph },
+          primedTraining
+        );
+        assert.ok(primedHtml.includes('data-state="primed"'));
+        assert.ok(!primedHtml.includes('actualized'));
 
         class FakeElement {
           constructor() {
@@ -641,10 +889,13 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         const clicked = [];
         renderConceptList({
           concepts: [
-            { id: 'c1', name: 'First', state: 'growing', graphData: true },
+            { id: 'c1', name: 'First', state: 'growing', graphData: shellGraph },
             { id: 'c2', name: 'Second', state: 'hibernating' },
           ],
           activeId: 'c2',
+          trainingByConceptId: {
+            c1: primedTraining,
+          },
           conceptListEl,
           documentRef: { createElement() { return new FakeElement(); } },
           elementCtor: FakeElement,
@@ -654,8 +905,10 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.equal(conceptListEl.children.length, 2);
         assert.equal(conceptListEl.children[0].className, 'concept-item');
         assert.equal(conceptListEl.children[0].dataset.conceptId, 'c1');
+        assert.ok(conceptListEl.children[0].innerHTML.includes('data-state="primed"'));
         assert.equal(conceptListEl.children[1].className, 'concept-item active');
         assert.equal(conceptListEl.children[1].dataset.conceptId, 'c2');
+        assert.ok(conceptListEl.children[1].innerHTML.includes('data-state=""'));
         conceptListEl.children[0].listeners.click({ target: new FakeElement() });
         assert.deepEqual(clicked, ['c1']);
         const menuTarget = new FakeElement();
@@ -699,11 +952,559 @@ def test_static_buttons_declare_type() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_concept_entry_view_state_derives_route_progression_contract() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          deriveConceptEntryViewState,
+          deriveConceptEntries,
+        } from './public/js/concept-page-view.js';
+
+        const data = {
+          clusters: [{
+            id: 'c1',
+            label: 'Mechanism cluster',
+            subnodes: [
+              { id: 'gate', label: 'Sodium gate' },
+              { id: 'spread', label: 'Signal spread' },
+            ],
+          }],
+        };
+
+        const entries = deriveConceptEntries(data);
+        assert.equal(entries.length, 2);
+        assert.equal(entries[0].id, 'gate');
+        assert.equal(entries[1].id, 'spread');
+        assert.deepEqual(deriveConceptEntryViewState(entries, 0, null), {
+          id: 'gate',
+          attempted: false,
+          state: 'ready to reconstruct',
+          nextAction: 'cold_attempt',
+        });
+        assert.deepEqual(deriveConceptEntryViewState(entries, 1, null), {
+          id: 'spread',
+          attempted: false,
+          state: 'locked',
+          nextAction: null,
+        });
+        assert.equal(
+          deriveConceptEntryViewState(entries, 0, {
+            node_records: {
+              gate: {
+                attempts: [{ at: '2026-05-21T00:00:00Z', classification: 'partial' }],
+              },
+            },
+          }).state,
+          'primed'
+        );
+        assert.deepEqual(deriveConceptEntryViewState(null, 0, null), {
+          id: 'entry-0',
+          attempted: false,
+          state: 'locked',
+          nextAction: null,
+        });
+        assert.deepEqual(deriveConceptEntryViewState([], 1, null), {
+          id: 'entry-1',
+          attempted: false,
+          state: 'locked',
+          nextAction: null,
+        });
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { renderConceptConstellationHtml } from './public/js/concept-constellation-view.js';
+
+        const data = {
+          metadata: {
+            source_title: 'How sodium channels create an action potential',
+            core_thesis: 'Sodium channels open at threshold and sodium enters.',
+          },
+          clusters: [{
+            id: 'gate-cluster',
+            title: 'SOURCE TITLE SHOULD NOT APPEAR',
+            description: 'SOURCE PREVIEW SHOULD NOT APPEAR',
+            subnodes: [
+              {
+                id: 'gate',
+                label: 'Sodium gate',
+                mechanism: 'Sodium channels open at threshold.',
+                learner_scaffold: { task_label: 'Sodium gate' },
+              },
+              {
+                id: 'spread',
+                label: 'Signal spread',
+                detail: 'SOURCE DETAIL SHOULD NOT APPEAR',
+                mechanism: 'The depolarization propagates.',
+                learner_scaffold: { task_label: 'Signal spread' },
+              },
+              {
+                id: 'reset',
+                label: 'Reset phase',
+                study_note: 'Potassium channels reset the membrane.',
+                learner_scaffold: { task_label: 'Reset phase' },
+              },
+              {
+                id: 'legacy',
+                label: 'Legacy fallback label',
+                drill_status: 'primed',
+              },
+            ],
+          }],
+        };
+
+        const activeHtml = renderConceptConstellationHtml(data, {
+          activeEntryId: 'gate',
+          training: {
+            node_records: {
+              gate: {
+                attempts: [{ at: '2026-05-21T00:00:00Z', classification: 'partial' }],
+              },
+            },
+          },
+        });
+        assert.match(activeHtml, /concept-constellation__svg/);
+        assert.match(activeHtml, /concept-constellation__shell/);
+        assert.match(activeHtml, /concept-constellation__edge/);
+        assert.doesNotMatch(activeHtml, /concept-constellation__edge[^"]*is-lit/);
+        assert.match(activeHtml, /concept-constellation__selected/);
+        assert.match(activeHtml, /Draft structure only\\./);
+        assert.match(activeHtml, /Overview first\\./);
+        assert.match(activeHtml, /concept-constellation__return/);
+        assert.doesNotMatch(activeHtml, /role="img"/);
+        assert.match(activeHtml, /class="concept-constellation__node[^"]*"\\s+data-entry-id="gate"/);
+        assert.match(activeHtml, /class="concept-constellation__node is-active"/);
+        assert.match(activeHtml, /data-state="primed"/);
+        assert.match(activeHtml, /role="button"/);
+        assert.match(activeHtml, /tabindex="0"/);
+        assert.match(activeHtml, /data-constellation-selected-name>Sodium gate/);
+        assert.match(activeHtml, /data-constellation-selected-purpose>Write the first useful reconstruction before study appears\\./);
+        assert.match(activeHtml, /Sodium gate/);
+        assert.match(activeHtml, /Entry 02/);
+        assert.match(activeHtml, /Legacy fallback label/);
+        assert.doesNotMatch(activeHtml, /Signal spread/);
+        assert.doesNotMatch(activeHtml, /Reset phase/);
+        assert.match(activeHtml, /data-entry-id="legacy"[\\s\\S]*data-state="primed"/);
+
+        const attemptedHtml = renderConceptConstellationHtml(data, {
+          activeEntryId: 'reset',
+          training: {
+            node_records: {
+              gate: {
+                attempts: [{ at: '2026-05-21T00:00:00Z', classification: 'partial' }],
+              },
+              spread: {
+                attempts: [{ at: '2026-05-21T00:05:00Z', classification: 'partial' }],
+              },
+            },
+          },
+        });
+        assert.match(attemptedHtml, /Signal spread/);
+        assert.match(attemptedHtml, /Reset phase/);
+        assert.match(attemptedHtml, /concept-constellation__edge[^"]*is-lit/);
+
+        const coldHtml = renderConceptConstellationHtml(data, {
+          activeEntryId: 'gate',
+          training: null,
+        });
+        assert.match(coldHtml, /data-entry-id="gate"[\\s\\S]*data-state="ready"/);
+        assert.match(coldHtml, /Entry 02/);
+        assert.doesNotMatch(coldHtml, /Signal spread/);
+        assert.match(coldHtml, /data-entry-id="legacy"[\\s\\S]*data-state="primed"/);
+
+        for (const forbidden of [
+          /Sodium channels open at threshold/,
+          /SOURCE TITLE SHOULD NOT APPEAR/,
+          /SOURCE PREVIEW SHOULD NOT APPEAR/,
+          /SOURCE DETAIL SHOULD NOT APPEAR/,
+          /The depolarization propagates/,
+          /Potassium channels reset the membrane/,
+          /How sodium channels create an action potential/,
+          /core_thesis/,
+          /mechanism/,
+          /study_note/,
+          /description/,
+          /detail/,
+          /title=/,
+        ]) {
+          assert.doesNotMatch(activeHtml, forbidden);
+          assert.doesNotMatch(attemptedHtml, forbidden);
+          assert.doesNotMatch(coldHtml, forbidden);
+        }
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_comparison_acknowledgement_is_ui_only_and_reset_scoped() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          clearComparisonAcknowledgement,
+          clearComparisonAcknowledgementsForConcept,
+          hasComparisonAcknowledgement,
+          markComparisonAcknowledged,
+        } from './public/js/comparison-acknowledgement.js';
+
+        const backing = new Map();
+        const storage = {
+          getItem(key) {
+            return backing.has(key) ? backing.get(key) : null;
+          },
+          setItem(key, value) {
+            backing.set(key, String(value));
+          },
+          removeItem(key) {
+            backing.delete(key);
+          },
+          key(index) {
+            return Array.from(backing.keys())[index] || null;
+          },
+          get length() {
+            return backing.size;
+          },
+        };
+
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
+        markComparisonAcknowledged('concept-1', 'entry-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), true);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-2', storage), false);
+        assert.equal(hasComparisonAcknowledgement('concept-2', 'entry-1', storage), false);
+
+        // Later repairs or spaced re-drills change attempts, but the UI-only
+        // acknowledgement remains scoped to the entry, not the latest attempt id.
+        markComparisonAcknowledged('concept-1', 'entry-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), true);
+
+        clearComparisonAcknowledgement('concept-1', 'entry-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
+
+        markComparisonAcknowledged('concept-1', 'entry-1', storage);
+        markComparisonAcknowledged('concept-1', 'entry-2', storage);
+        markComparisonAcknowledged('concept-2', 'entry-1', storage);
+        clearComparisonAcknowledgementsForConcept('concept-1', storage);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', storage), false);
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-2', storage), false);
+        assert.equal(hasComparisonAcknowledgement('concept-2', 'entry-1', storage), true);
+
+        const throwingStorage = {
+          getItem() {
+            throw new Error('get blocked');
+          },
+          setItem() {
+            throw new Error('set blocked');
+          },
+          removeItem() {
+            throw new Error('remove blocked');
+          },
+          key() {
+            throw new Error('key blocked');
+          },
+          get length() {
+            throw new Error('length blocked');
+          },
+        };
+        assert.equal(hasComparisonAcknowledgement('concept-1', 'entry-1', throwingStorage), false);
+        assert.doesNotThrow(() => markComparisonAcknowledged('concept-1', 'entry-1', throwingStorage));
+        assert.doesNotThrow(() => clearComparisonAcknowledgement('concept-1', 'entry-1', throwingStorage));
+        assert.doesNotThrow(() => clearComparisonAcknowledgementsForConcept('concept-1', throwingStorage));
+
+        const partiallyFailingStorage = {
+          removed: [],
+          get length() {
+            return 3;
+          },
+          key(index) {
+            if (index === 0) throw new Error('slot blocked');
+            if (index === 1) return 'socratink:comparison_ack:v1:concept-1:entry-3';
+            return 'socratink:comparison_ack:v1:concept-2:entry-1';
+          },
+          removeItem(key) {
+            this.removed.push(key);
+          },
+        };
+        clearComparisonAcknowledgementsForConcept('concept-1', partiallyFailingStorage);
+        assert.deepEqual(partiallyFailingStorage.removed, ['socratink:comparison_ack:v1:concept-1:entry-3']);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_source_less_gestalt_hybrid_stage_contracts() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          deriveConceptEntries,
+          renderActiveEntryHtml,
+        } from './public/js/concept-page-view.js';
+
+        const graphData = {
+          metadata: {
+            core_thesis: 'AI-generated answer structure must stay hidden.',
+            learner_goal: 'explain sodium channel gating',
+            source_title: 'Learner launch sketch',
+          },
+          clusters: [{
+            id: 'c1',
+            label: 'Generated cluster label should not be a pre-attempt marker',
+            description: 'Generated cluster description should stay hidden.',
+            subnodes: [
+              {
+                id: 'gate',
+                label: 'Voltage threshold opens sodium channels',
+                mechanism: 'Sodium channels open when membrane voltage reaches threshold.',
+                study_note: 'Voltage-gated sodium channels open at threshold, letting sodium rush in.',
+                learner_scaffold: {
+                  learner_move: 'Say it',
+                  task_label: 'Sodium gate',
+                  task_cue: 'Name the trigger without reading the note.',
+                  entry_prompt: 'What do you think makes the sodium channel open?',
+                  expected_shape: 'Write one sentence. Name the trigger, even if you are guessing.',
+                  blank_hint: 'Use voltage, signal, or trigger if one of those feels useful.',
+                },
+              },
+              {
+                id: 'spread',
+                label: 'Sodium influx causes depolarization',
+                mechanism: 'Sodium influx depolarizes the next membrane segment.',
+                study_note: 'Hidden future study note.',
+                learner_scaffold: {
+                  learner_move: 'Explain how',
+                  task_label: 'Signal spread',
+                  task_cue: 'Connect one step to the next.',
+                  entry_prompt: 'How do you think the signal moves?',
+                },
+              },
+            ],
+          }],
+        };
+        const entries = deriveConceptEntries(graphData);
+        const concept = {
+          id: 'sample-customer-sketch',
+          name: 'action potentials',
+          contentType: null,
+          sourceUrl: null,
+          startingMapContext: 'I think nerves send electricity by opening little gates, but I am fuzzy on what starts it.',
+        };
+
+        const coldHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          { source_mode: 'source_less', node_records: {} },
+          { viewMode: 'cold-surface' }
+        );
+        assert.ok(coldHtml.includes('Your starting sketch'));
+        assert.ok(coldHtml.includes('I think nerves send electricity'));
+        assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
+        assert.ok(coldHtml.includes('Sodium gate'));
+        assert.ok(coldHtml.includes('Signal spread'));
+        assert.ok(!coldHtml.includes('AI-generated answer structure must stay hidden.'));
+        assert.ok(!coldHtml.includes('Voltage threshold opens sodium channels'));
+        assert.ok(!coldHtml.includes('Sodium influx causes depolarization'));
+        assert.ok(!coldHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!coldHtml.includes('data-entry-id="spread"'));
+        assert.ok(!coldHtml.includes('concept-page-b2__nearby'));
+
+        const coldWithoutTrainingHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          null
+        );
+        assert.ok(coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
+        assert.ok(coldWithoutTrainingHtml.includes('What do you think makes the sodium channel open?'));
+        assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!coldWithoutTrainingHtml.includes('data-entry-id="spread"'));
+        assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__nearby'));
+
+        const savedDraftTraining = {
+          source_mode: 'source_less',
+          node_records: {
+            gate: {
+              attempts: [{
+                id: 'cold-1',
+                kind: 'cold',
+                at: '2026-05-21T10:00:00.000Z',
+                user_text: 'The gate probably opens when the voltage gets high enough.',
+                classification: 'partial',
+                gaps: [{ mechanism: 'threshold', correction: 'Name threshold as the opening condition.' }],
+                grader_version: 'qa',
+              }],
+              repairs: [],
+            },
+          },
+        };
+        const savedHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          savedDraftTraining,
+          { viewMode: 'saved-draft-study-gate' }
+        );
+        assert.ok(savedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
+        assert.ok(savedHtml.includes('The gate probably opens when the voltage gets high enough.'));
+        assert.ok(savedHtml.includes('Reveal notes and compare'));
+        assert.ok(!savedHtml.includes('Missing piece'));
+        assert.ok(!savedHtml.includes('threshold as the opening condition'));
+        assert.ok(!savedHtml.includes('concept-page-b2__route'));
+        assert.ok(!savedHtml.includes('concept-page-b2__nearby'));
+
+        const cleanRevealedTraining = {
+          source_mode: 'source_less',
+          node_records: {
+            gate: {
+              attempts: [{
+                id: 'cold-2',
+                kind: 'cold',
+                at: '2026-05-21T10:00:00.000Z',
+                user_text: 'The channel opens when voltage reaches threshold.',
+                classification: 'strong',
+                gaps: [],
+                grader_version: 'qa',
+              }],
+              study_revealed_at: '2026-05-21T10:05:00.000Z',
+              repairs: [],
+            },
+          },
+        };
+        const compareHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          cleanRevealedTraining,
+          { viewMode: 'post-reveal-comparison', now: '2026-05-21T11:00:00.000Z' }
+        );
+        assert.ok(compareHtml.includes('The channel opens when voltage reaches threshold.'));
+        assert.ok(compareHtml.includes('Voltage-gated sodium channels open at threshold'));
+        assert.ok(compareHtml.includes('Keep working'));
+        assert.ok(compareHtml.includes('data-active-entry-action="keep-working"'));
+        assert.ok(!compareHtml.includes('No missing piece recorded for this draft.'));
+        assert.ok(!compareHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!compareHtml.includes('data-entry-id="spread"'));
+        assert.ok(!compareHtml.includes('concept-page-b2__nearby'));
+
+        const expandedHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          cleanRevealedTraining,
+          { viewMode: 'expanded-workspace', now: '2026-05-21T11:00:00.000Z' }
+        );
+        assert.ok(expandedHtml.includes('concept-page-b2__route-item'));
+        assert.ok(expandedHtml.includes('data-entry-id="spread"'));
+        assert.ok(!expandedHtml.includes('data-active-entry-action="keep-working"'));
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_source_less_view_mode_derivation_preserves_comparison_seams() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { deriveSourceLessViewMode } from './public/js/concept-page-view.js';
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: false,
+          record: null,
+          next_action: 'cold_attempt',
+        }), 'cold-surface');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'study',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            repairs: [],
+          },
+        }), 'saved-draft-study-gate');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'repair',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: false }), 'post-reveal-comparison');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'review',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: false }), 'expanded-workspace');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'repair',
+          record: {
+            attempts: [{ id: 'a1', at: '2026-05-21T10:00:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: true }), 'expanded-workspace');
+
+        assert.equal(deriveSourceLessViewMode({
+          attempted: true,
+          next_action: 'spaced_attempt',
+          record: {
+            attempts: [{ id: 'legacy-after-study', at: '2026-05-21T10:10:00.000Z' }],
+            study_revealed_at: '2026-05-21T10:05:00.000Z',
+            repairs: [],
+          },
+        }, { comparisonAcknowledged: false }), 'expanded-workspace');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_audio_surfaces_share_versioned_audio_module_instance() -> None:
+    app_js = (REPO_ROOT / "public" / "js" / "app.js").read_text(encoding="utf-8")
+    launch_pad_js = (REPO_ROOT / "public" / "js" / "launch-pad.js").read_text(encoding="utf-8")
+    source_panel_js = (REPO_ROOT / "public" / "js" / "source-panel.js").read_text(encoding="utf-8")
+
+    assert "from './audio.js?v=4'" in app_js
+    assert "from './audio.js?v=4'" in launch_pad_js
+    assert 'from "./audio.js?v=4"' in source_panel_js
+    assert "from './audio.js';" not in launch_pad_js
+    assert 'from "./audio.js";' not in source_panel_js
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_concept_page_view_renders_active_entry_html_contract() -> None:
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
         import {
+          deriveConceptEntries,
           findConceptEntryById,
           getConceptEntryId,
           renderActiveEntryHtml,
@@ -759,10 +1560,10 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           {},
           { metadata: {} }
         );
-        assert.ok(legacyStudyHtml.includes('Study the gap'));
+        assert.ok(legacyStudyHtml.includes('Draft saved'));
         assert.ok(!legacyStudyHtml.includes('study required entry 1 of 1'));
         assert.ok(legacyStudyHtml.includes('data-active-entry-action="study"'));
-        assert.ok(legacyStudyHtml.includes('Compare with notes'));
+        assert.ok(legacyStudyHtml.includes('Reveal notes and compare'));
         const legacyStudyRevealedHtml = renderActiveEntryHtml(
           { id: 'legacy-study', label: 'Legacy study', drill_status: 'primed', drill_phase: 'study', study_note: 'Legacy study note.' },
           0,
@@ -911,10 +1712,15 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           training
         );
         assert.ok(readyHtml.includes('metadata sketch'));
+        assert.ok(readyHtml.includes('concept-page-b2__gestalt'));
+        assert.ok(readyHtml.includes('concept-page-b2__route'));
+        assert.ok(readyHtml.includes('Study material stays hidden until you draft from memory.'));
         assert.ok(readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
-        assert.ok(readyHtml.includes('data-active-entry-id="entry-2"'));
-        assert.ok(readyHtml.includes('Write from memory'));
+        assert.ok(readyHtml.includes('Draft from memory'));
+        assert.ok(readyHtml.includes("I'm blank"));
+        assert.ok(readyHtml.includes('concept-page-b2__attempt'));
+        assert.ok(!readyHtml.includes('concept-page-b2__entry-cta'));
 
         const sourceLessHtml = renderActiveEntryHtml(
           backbone[1],
@@ -952,14 +1758,112 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(readyAttemptHtml.includes('concept-page-b2__attempt'));
         assert.ok(readyAttemptHtml.includes('data-attempt-entry-id="entry-2"'));
-        assert.ok(readyAttemptHtml.includes('Write what you can reconstruct'));
-        assert.ok(readyAttemptHtml.includes('Save what I wrote'));
+        assert.ok(readyAttemptHtml.includes('Draft what you can recall'));
+        assert.ok(readyAttemptHtml.includes('Draft from memory'));
         assert.ok(!readyAttemptHtml.includes('concept-page-b2__entry-cta'));
 
-        const primedHtml = renderActiveEntryHtml(
-          { id: 'primed', label: 'Primed', drill_status: 'primed' },
+        const scaffoldedMap = {
+          metadata: {
+            starting_map_context: 'Hermes Agent is a self-improving autonomous agent.',
+            core_thesis: 'Hermes Agent composes durable agent capabilities into one working system.',
+            learner_goal: 'build a reliable agent system',
+          },
+          backbone: [{ id: 'b1', principle: 'Starting model', dependent_clusters: ['c1'] }],
+          clusters: [{
+            id: 'c1',
+            label: 'Starting model',
+            description: 'State the system in your own words.',
+            subnodes: [{
+              id: 'c1_s1',
+              label: 'Starting model',
+              mechanism: 'Hermes works by composing persistent memory, reusable skills, executable tools, provider routing, deployment environments, and safety boundaries.',
+              learner_scaffold: {
+                bloom_level: 'understand',
+                learner_move: 'Say it',
+                task_label: 'Starting model',
+                task_cue: 'Put the system in your words.',
+                tailoring_anchor: 'You mentioned a self-improving agent, so this starts by naming what parts are working together.',
+                entry_prompt: 'How would you explain Hermes Agent to a classmate right now?',
+                expected_shape: 'Write 1-2 sentences. Name what it does and one fuzzy part.',
+                sentence_starter: 'My current guess is that Hermes Agent works by...',
+                blank_hint: 'Pick one phrase from your sketch and say what role it plays.',
+                evidence_goal: 'Learner states an initial model without reading source content.',
+              },
+            }],
+          }],
+        };
+        const scaffoldEntries = deriveConceptEntries(scaffoldedMap);
+        assert.equal(scaffoldEntries.length, 1);
+        assert.equal(scaffoldEntries[0].id, 'c1_s1');
+        assert.equal(scaffoldEntries[0].learner_scaffold.task_label, 'Starting model');
+        const scaffoldHtml = renderActiveEntryHtml(
+          scaffoldEntries[0],
           0,
-          [{ id: 'primed', label: 'Primed', drill_status: 'primed' }],
+          scaffoldEntries,
+          { startingMapContext: '' },
+          scaffoldedMap,
+          { source_mode: 'source_less', node_records: {} },
+          { attemptEntryId: 'c1_s1' }
+        );
+        assert.ok(scaffoldHtml.includes('Starting model'));
+        assert.ok(scaffoldHtml.includes('Put the system in your words.'));
+        assert.ok(scaffoldHtml.includes('Shaped by your sketch: You mentioned a self-improving agent, so this starts by naming what parts are working together.'));
+        assert.ok(!scaffoldHtml.includes('State the system in your own words.'));
+        assert.ok(scaffoldHtml.includes('How would you explain Hermes Agent to a classmate right now?'));
+        assert.ok(scaffoldHtml.includes('Goal: build a reliable agent system. First make a starting guess for Starting model.'));
+        assert.ok(scaffoldHtml.includes('Write 1-2 sentences. Name what it does and one fuzzy part.'));
+        assert.ok(scaffoldHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
+        assert.ok(scaffoldHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
+        assert.ok(!scaffoldHtml.includes('My current guess is that Hermes Agent works by...'));
+        assert.ok(!scaffoldHtml.includes('Pick one phrase from your sketch and say what role it plays.'));
+        assert.ok(scaffoldHtml.includes('Save starting guess for comparison'));
+        assert.ok(!scaffoldHtml.includes('Bloom'));
+        assert.ok(!scaffoldHtml.includes('bloom_level'));
+        assert.ok(!scaffoldHtml.includes('provider routing, deployment environments'));
+
+        const moveOnlyEntries = deriveConceptEntries({
+          backbone: [],
+          clusters: [{
+            id: 'c1',
+            label: 'Move-only label',
+            description: 'Move-only cue.',
+            subnodes: [{
+              id: 'c1_s1',
+              label: 'Move-only label',
+              mechanism: 'Hidden answer.',
+              learner_scaffold: {
+                bloom_level: 'understand',
+                learner_move: 'Use it',
+                task_label: '',
+                task_cue: '',
+                tailoring_anchor: '',
+                entry_prompt: 'What is your current model?',
+                expected_shape: 'Write one sentence.',
+                sentence_starter: 'My current model is...',
+                blank_hint: 'Use one word from your sketch.',
+                evidence_goal: 'Learner states a current model.',
+              },
+            }],
+          }],
+        });
+        const moveOnlyHtml = renderActiveEntryHtml(
+          moveOnlyEntries[0],
+          0,
+          moveOnlyEntries,
+          {},
+          { metadata: {} },
+          { source_mode: 'source_less', node_records: {} }
+        );
+        assert.ok(moveOnlyHtml.includes('Use it'));
+        assert.ok(moveOnlyHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
+        assert.ok(moveOnlyHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
+        assert.ok(!moveOnlyHtml.includes('Say it'));
+        assert.ok(!moveOnlyHtml.includes('Core Logic'));
+
+        const primedHtml = renderActiveEntryHtml(
+          { id: 'primed', label: 'Primed', drill_status: 'primed', study_note: 'Hidden reference note.' },
+          0,
+          [{ id: 'primed', label: 'Primed', drill_status: 'primed', study_note: 'Hidden reference note.' }],
           {},
           { metadata: {} },
           {
@@ -981,13 +1885,16 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
         assert.ok(primedHtml.includes('add sketch'));
-        assert.ok(primedHtml.includes('Study the gap'));
+        assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));
-        assert.ok(primedHtml.includes('Your draft'));
+        assert.ok(primedHtml.includes('Your memory draft'));
+        assert.ok(primedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
+        assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(primedHtml.includes('A strong first attempt.'));
         assert.ok(!primedHtml.includes('Missing piece'));
+        assert.ok(!primedHtml.includes('Hidden reference note.'));
         assert.ok(primedHtml.includes('data-active-entry-action="study"'));
-        assert.ok(primedHtml.includes('Compare with notes'));
+        assert.ok(primedHtml.includes('Reveal notes and compare'));
 
         const legacyRedrillWithTrainingHtml = renderActiveEntryHtml(
           {
@@ -1058,7 +1965,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(studiedHtml.includes('Your draft'));
         assert.ok(!studiedHtml.includes('learner reconstruction'));
         assert.ok(studiedHtml.includes('A strong first attempt.'));
-        assert.ok(studiedHtml.includes('No missing piece recorded for this draft.'));
+        assert.ok(!studiedHtml.includes('No missing piece recorded for this draft.'));
         assert.ok(studiedHtml.includes('concept-page-b2__study-note'));
         assert.ok(studiedHtml.includes('Study note for this entry.'));
         assert.ok(!studiedHtml.includes('concept-page-b2__entry-cta'));
@@ -1149,6 +2056,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(repairHtml.includes('Needs repair'));
         assert.ok(!repairHtml.includes('repair the gap entry 1 of 1'));
+        assert.ok(!repairHtml.includes('nearby entries  all locked until first reconstruction'));
+        assert.ok(repairHtml.includes('nearby entries'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence'));
         assert.ok(repairHtml.includes('Your draft'));
         assert.ok(repairHtml.includes('Missing piece'));
@@ -1160,6 +2069,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
         assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
         assert.ok(repairHtml.includes('Put it in your words'));
+        assert.ok(repairHtml.includes('1 missing link to repair'));
+        assert.ok(repairHtml.includes('Save this repair before you try from memory again.'));
         assert.ok(repairHtml.includes('Write the missing link'));
         assert.ok(repairHtml.includes('Save repair'));
         const fallbackRepairHtml = renderActiveEntryHtml(
@@ -1236,6 +2147,57 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(stripHtml.includes('r="9"'));
         assert.ok(stripHtml.includes('Second &amp; unsafe · 2 of 3'));
         assert.ok(stripHtml.includes('aria-label="Second &amp; unsafe, ready to reconstruct, current"'));
+
+        const statefulStripHtml = renderConceptStripHtml(
+          [
+            { id: 'repair-node', label: 'Repair node' },
+            { id: 'solid-node', label: 'Solid node' },
+            { id: 'ready-node' },
+          ],
+          { id: 'ready-node' },
+          2,
+          {
+            node_records: {
+              'repair-node': {
+                attempts: [{
+                  id: 'thin-1',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Thin answer.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'missing link', correction: 'Name the missing link.' }],
+                  grader_version: 'qa',
+                }],
+                repairs: [],
+              },
+              'solid-node': {
+                attempts: [
+                  { id: 'solid-1', at: '2026-05-14T10:00:00.000Z', user_text: 'first strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                  { id: 'solid-2', at: '2026-05-15T10:30:00.000Z', user_text: 'second strong', classification: 'strong', gaps: [], grader_version: 'qa' },
+                ],
+                study_revealed_at: '2026-05-14T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          }
+        );
+        assert.ok(statefulStripHtml.includes('concept-strip__node--needs-repair'));
+        assert.ok(statefulStripHtml.includes('concept-strip__node--solidified'));
+        assert.ok(statefulStripHtml.includes('Third entry · 3 of 3'));
+        assert.ok(statefulStripHtml.includes('aria-label="Third entry, ready to reconstruct, current"'));
+
+        const fourthFallbackStripHtml = renderConceptStripHtml(
+          [
+            { id: 'first-node' },
+            { id: 'second-node' },
+            { id: 'third-node' },
+            { id: 'fourth-node' },
+          ],
+          { id: 'fourth-node' },
+          3,
+          {}
+        );
+        assert.ok(fourthFallbackStripHtml.includes('Entry 4 · 4 of 4'));
+        assert.ok(fourthFallbackStripHtml.includes('aria-label="Entry 4, locked, current"'));
 
         const emptyStripHtml = renderConceptStripHtml([], { id: 'core-thesis', label: 'Core thesis' }, 0);
         assert.ok(emptyStripHtml.includes('data-entry-id="core-thesis"'));

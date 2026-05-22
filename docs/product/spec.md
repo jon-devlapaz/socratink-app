@@ -36,7 +36,8 @@ Every drillable node on the graph must move through these three phases. No phase
 ### Phase 1: Cold Attempt (Exploration)
 - **Goal**: Generate a prediction error to prime encoding.
 - **Contract**: Exploratory question ("What do you think this involves?"). Learner-facing surfaces remain unscored; the system may privately classify the attempt to derive repair/study routing.
-- **Generative Commitment**: Cold attempts use drill-evaluation generative commitment to decide whether study unlocks; source-less launch-pad generation uses the shared substantive-sketch gate (8+ substantive non-stopword tokens and no "don't know" pattern) before drafting a provisional map.
+- **Generative Commitment**: Cold attempts use drill-evaluation generative commitment to decide whether study unlocks; source-less launch-pad generation accepts any non-empty learner launch attempt before drafting a provisional map.
+- **Learner Goal**: A learner goal may frame relevance, route emphasis, and local prompt copy. It is not evidence, is not graded, and must not mutate graph truth.
 - **Zero-Schema Detection**: If the learner is completely lost, the AI seeds 2-3 concepts and asks for a micro-generation.
 - **Outcome**: A learner attempt is appended to the training record. Derived state becomes `primed` or `needs repair` depending on the evidence.
 - **Persistence**: The attempt is recorded before study reveal. No downstream mastery unlock evaluation runs from a cold attempt alone.
@@ -109,7 +110,8 @@ surface until every view is rebound to the training derivation.
 Current surface binding status:
 - concept-page entry state, next actions, inline reconstruction, study reveal, and repair panels derive from `socratink:training:v1:<conceptId>`
 - Library reconstruction text binds to learner-written training records
-- Library badges, Desk tiles, Sidebar concept markers, and Map/graph badges still use legacy `concept.state` until the full binding rollout lands
+- Library badges, Desk tiles, and Sidebar concept markers derive concept-level badges from the training record, with legacy graph/status fields as compatibility fallback
+- Map/graph badge surfaces that still exist outside the concept-page route may use legacy graph/status fields until their binding rollout lands
 
 ### Phase Tracking
 
@@ -125,6 +127,21 @@ The frontend uses derived `next_action`, not persisted `drill_phase`, to choose 
 Concept pages render source-less provenance from the training record: when
 `source_mode === "source_less"`, show `Shaped from your launch attempt, not
 verified against a source.` before the active entry block.
+
+Source-less first entries may also render `learner_scaffold.tailoring_anchor`
+inside the cold-attempt panel. This is learner-facing evidence of tailoring
+from the launch attempt, not feedback on correctness: it may name the sketch
+detail that shaped the prompt, but it must not diagnose a gap, reveal the
+mechanism, name the hidden target, or say what the learner missed.
+
+After a source-less learner saves the first draft and explicitly reveals study,
+the concept page renders a post-reveal comparison on the same surface before
+expanding the full route margin. This comparison may show the learner's draft,
+the same-entry study note, and named gaps when recorded. It must not show
+score/tier/band, diagnose the learner, reveal future entries, or count as graph
+truth. The only comparison-exit action is `Keep working`, which writes
+UI-only acknowledgement state so return/reload can restore the expanded
+workspace; it does not append training evidence or imply progress.
 
 ---
 
@@ -234,7 +251,7 @@ The intended happy path is:
 9. system recommends spaced re-drill on the first node
 10. backend returns structured drill result
 11. frontend appends the attempt to the training store
-12. concept page and Library reconstruction body re-render from training evidence; legacy Map/Desk badges continue to reflect `concept.state` until the full binding rollout
+12. concept page, Library reconstruction body, Library badges, Desk tiles, and Sidebar concept markers re-render from training evidence; remaining legacy graph/status fields are compatibility fallback only
 
 ---
 

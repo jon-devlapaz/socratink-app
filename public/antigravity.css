@@ -437,16 +437,18 @@ body.antigravity-theme .library-empty-sub {
 }
 
 /* Library-card state ribbon — quiet color cue per reconstruction phase.
-   Maps to dark-mode-graph palette: instantiated=draft violet,
-   growing=cyan, fractured=amber, hibernating=muted, actualized=lavender halo. */
+   Legacy shell states remain for compatibility; training-derived states
+   (primed / needs repair / solidified) are the truthful badge vocabulary. */
 body.antigravity-theme .library-card-vault[data-state="instantiated"] .library-card-state {
   background: rgba(144, 103, 198, 0.10);
   color: var(--ag-violet);
 }
+body.antigravity-theme .library-card-vault[data-state="primed"] .library-card-state,
 body.antigravity-theme .library-card-vault[data-state="growing"] .library-card-state {
   background: rgba(77, 186, 138, 0.12);
   color: #2F8C6A;
 }
+body.antigravity-theme .library-card-vault[data-state="needs repair"] .library-card-state,
 body.antigravity-theme .library-card-vault[data-state="fractured"] .library-card-state {
   background: rgba(216, 142, 36, 0.14);
   color: #B6741E;
@@ -456,6 +458,7 @@ body.antigravity-theme .library-card-vault[data-state="hibernating"] .library-ca
   color: var(--text-muted);
   font-style: italic;
 }
+body.antigravity-theme .library-card-vault[data-state="solidified"] .library-card-state,
 body.antigravity-theme .library-card-vault[data-state="actualized"] .library-card-state {
   background: rgba(144, 103, 198, 0.14);
   color: var(--ag-violet);
@@ -466,10 +469,12 @@ html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="i
   background: rgba(158, 139, 255, 0.14);
   color: var(--ag-violet);
 }
+html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="primed"] .library-card-state,
 html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="growing"] .library-card-state {
   background: rgba(60, 221, 199, 0.14);
   color: var(--ag-mint);
 }
+html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="needs repair"] .library-card-state,
 html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="fractured"] .library-card-state {
   background: rgba(245, 178, 76, 0.16);
   color: #F1B864;
@@ -478,6 +483,7 @@ html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="h
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.55);
 }
+html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="solidified"] .library-card-state,
 html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="actualized"] .library-card-state {
   background: rgba(158, 139, 255, 0.18);
   color: #C3B3FF;

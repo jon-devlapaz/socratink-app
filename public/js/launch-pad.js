@@ -1,6 +1,6 @@
 // public/js/launch-pad.js
 //
-// Launch pad for source-less concept creation (C-prime spec §3.2).
+// Launch pad for source-less concept creation.
 //
 // Reads the pending shell from sessionStorage, captures the learner's
 // launch attempt (threshold), POSTs to /api/extract via submitConceptCreate
@@ -22,8 +22,7 @@
 
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
-import { AudioFX } from './audio.js';
-import { isSubstantiveSketch } from './sketch-validation.js';
+import { AudioFX } from './audio.js?v=4';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
 // stays consistent: typing fires playKeyClick on visible keys + Backspace +
@@ -35,17 +34,47 @@ const _isPrintableLaunchPadKey = (e) =>
 const PENDING_SHELL_KEY = 'socratink:pendingShell';
 const PENDING_SHELL_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Strategy-framed footer copy shown when the input is non-empty but not substantive.
-// Names the *kind* of words that move the sketch over the line so the learner
-// has something concrete to add, rather than the older "a few words" hand-wave
-// which left users guessing why a 16-word sketch was being rejected.
-const THIN_THRESHOLD_COPY =
-  'Name a few concrete parts, guessed steps, examples, or confusions so socratink has enough signal to draft from.';
+const MISSING_THRESHOLD_COPY =
+  'Write anything you think about the concept before building the draft.';
+
+function normalizeWhitespace(text) {
+  return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+function cleanConceptName(text) {
+  return normalizeWhitespace(text)
+    .replace(/[.?!]+$/g, '')
+    .trim();
+}
+
+export function buildPendingShellFromDoorInput(rawInput) {
+  const raw = normalizeWhitespace(rawInput);
+  const fallback = cleanConceptName(raw);
+  if (!fallback) return { name: '', goal: '' };
+
+  const goalPatterns = [
+    /^(?:i\s+)?(?:want|need|would like)\s+to\s+(?:understand|learn|know|explain|grasp|figure out)\s+/i,
+    /^(?:i\s+am|i'm)\s+trying\s+to\s+(?:understand|learn|know|explain|grasp|figure out)\s+/i,
+  ];
+  const matchedPattern = goalPatterns.find((pattern) => pattern.test(raw));
+  if (!matchedPattern) return { name: fallback, goal: '' };
+
+  const derived = cleanConceptName(
+    raw
+      .replace(matchedPattern, '')
+      .replace(/^(?:why|how|what|whether)\s+/i, ''),
+  );
+
+  return {
+    name: derived || fallback,
+    goal: raw,
+  };
+}
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-function isSubstantiveThreshold(text) {
-  return isSubstantiveSketch(text);
+function hasLaunchAttempt(text) {
+  return normalizeWhitespace(text).length > 0;
 }
 
 function readPendingShell() {
@@ -54,6 +83,7 @@ function readPendingShell() {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed.name !== 'string' || typeof parsed.ts !== 'number') return null;
+    if (typeof parsed.goal !== 'string') parsed.goal = '';
     if (Date.now() - parsed.ts > PENDING_SHELL_MAX_AGE_MS) return null;
     return parsed;
   } catch {
@@ -124,9 +154,15 @@ export function showLaunchPad(App) {
   const form = document.getElementById('launch-pad-form');
   if (form) form.dataset.state = '';
 
-  // Hydrate concept name.
+  // Hydrate concept name and preserve the learner's raw goal when the door
+  // input was phrased as intent rather than a clean topic title.
   const nameEl = document.getElementById('launch-pad-concept-name');
   if (nameEl) nameEl.textContent = shell.name;
+  const goalEl = document.getElementById('launch-pad-concept-goal');
+  if (goalEl) {
+    goalEl.textContent = shell.goal ? `Goal: ${shell.goal}` : '';
+    goalEl.hidden = !shell.goal;
+  }
 
   emitTelemetry('concept_create.launch_pad.entered', {
     age_ms: Date.now() - shell.ts,
@@ -147,13 +183,9 @@ export function showLaunchPad(App) {
     input.parentNode.replaceChild(fresh, input);
 
     fresh.addEventListener('input', () => {
-      const ok = isSubstantiveThreshold(fresh.value);
+      const ok = hasLaunchAttempt(fresh.value);
       if (submit) submit.disabled = !ok;
-      if (validation) {
-        validation.textContent = !ok && (fresh.value || '').trim()
-          ? THIN_THRESHOLD_COPY
-          : '';
-      }
+      if (validation) validation.textContent = '';
     });
 
     // Audio cues mirror the door's concept-input pattern (app.js): focus tap
@@ -190,8 +222,8 @@ export function showLaunchPad(App) {
  * the pending shell ONLY after persistence succeeds.
  *
  * Persistence failures leave the shell in place so the learner can retry.
- * 422 thin-sketch rejections render the strategy-framed footer and leave
- * the shell in place for a retry.
+ * 422 validation rejections render the server message and leave the shell in
+ * place for a retry.
  *
  * @param {Event} event  The form submit event.
  * @param {object} App   The App namespace object (passed by app.js wrapper).
@@ -214,10 +246,10 @@ export async function runLaunchPadAction(event, App) {
   const validation = document.getElementById('launch-pad-validation');
   const threshold = (input ? input.value : '').trim();
 
-  if (!isSubstantiveThreshold(threshold)) {
+  if (!hasLaunchAttempt(threshold)) {
     // Client-side gate: the submit button should already be disabled, but
     // handle direct invocation (assistive tech, test harness) defensively.
-    if (validation) validation.textContent = THIN_THRESHOLD_COPY;
+    if (validation) validation.textContent = MISSING_THRESHOLD_COPY;
     emitTelemetry('concept_create.bypass_rejected', { path: 'client' });
     return false;
   }
@@ -263,25 +295,16 @@ export async function runLaunchPadAction(event, App) {
       undefined;
     data = await submitConceptCreate({
       name: shell.name,
+      learnerGoal: shell.goal,
       startingSketch: threshold,
       source: null,
       apiKey,
     });
   } catch (err) {
     if (err && err.status === 422) {
-      // Server-side thin-sketch rejection (thin_sketch_no_source) or other 422.
-      // For thin_sketch_no_source specifically, override the server message
-      // with THIN_THRESHOLD_COPY because the launch-pad has no source-attach
-      // affordance — the server message names "or attach source material" as
-      // an escape path, but that path only exists at the door / modal. For
-      // other 422 codes, surface the server message verbatim.
-      const code = err.body && err.body.error;
-      const isThinSketch = code === 'thin_sketch_no_source';
-      const validationCopy = isThinSketch
-        ? THIN_THRESHOLD_COPY
-        : ((err.body && err.body.message)
-          ? String(err.body.message)
-          : THIN_THRESHOLD_COPY);
+      const validationCopy = (err.body && err.body.message)
+        ? String(err.body.message)
+        : MISSING_THRESHOLD_COPY;
       if (validation) validation.textContent = validationCopy;
       if (submit) submit.disabled = false;
       clearBuildingState();

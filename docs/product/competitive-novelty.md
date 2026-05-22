@@ -225,10 +225,10 @@ violations break the loop's metacognitive stance in one turn.
 
 ### 8. Generative commitment threshold
 
-**Mechanism**: Cold attempts require generative commitment before study;
-source-less launch-pad generation uses the shared substantive-sketch gate (8+
-substantive non-stopword tokens and no "don't know" pattern). (See `spec.md`
-§2 Phase 1.)
+**Mechanism**: Cold attempts require generative commitment before study.
+Source-less launch-pad generation now accepts any non-empty learner launch
+attempt before drafting a smallest route; the launch attempt shapes relevance
+but is not learning evidence. (See `spec.md` §2 Phase 1.)
 
 **Closest analog**: None visible. Free-text-input apps don't gate on
 substantiveness; flashcard apps gate on self-rated buttons (Again / Hard /
@@ -236,9 +236,10 @@ Good / Easy).
 
 **Novelty**: 3/5 (mechanism is simple). **Defensibility**: Low — easy to copy.
 
-**Implication**: **Commodity-adjacent / table-stakes.** Keep it correct and
-zero-schema-detection robust. Don't over-invest — its value is in not letting
-the learner skip the loop, not in being a defensible moat itself.
+**Implication**: **Commodity-adjacent / table-stakes.** Keep cold-attempt
+zero-schema detection robust and keep the launch-attempt/proof-event boundary
+clear. Don't over-invest — its value is in not letting the learner skip the
+loop, not in being a defensible moat itself.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Shared parity fixture for is_substantive_sketch. Loaded by Python tests (tests/test_sketch_validation.py) and JS tests in Plan B for byte-for-byte parity. Each entry is {text, expected_substantive}.",
+  "description": "Shared legacy parity fixture for is_substantive_sketch. Loaded by Python tests (tests/test_sketch_validation.py) and JS parity tests; this helper no longer gates source-less generation. Each entry is {text, expected_substantive}.",
   "entries": [
     {"text": "Plants take in light and somehow make sugar. Not sure where the water goes.", "expected_substantive": true},
     {"text": "Photosynthesis happens in chloroplasts where light energy converts CO2 and water into glucose and oxygen.", "expected_substantive": true},

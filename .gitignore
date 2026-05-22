@@ -42,6 +42,7 @@ output/
 .codex/
 .cursor/
 .vscode/
+.antigravitycli/
 learnops/
 
 # Track durable repo doctrine and docs.

@@ -64,7 +64,10 @@ The **crystal polygon** is the one distinctive brand illustration. It is the pro
 - Never stylized in a new way. Never recolored.
 
 ### The isometric board
-The in-app surface is an **isometric grid of tiles**. Tiles use the `--tile-top / left / right` tokens; each tile carries a crystal polygon whose live training state is `primed`, `needs repair`, or `solidified`; no-evidence/null state renders quietly. Never draw the graph flat; never use a node-and-edge force-directed diagram. The board is always isometric, always cream.
+The primary in-app map surface is an **isometric grid of tiles**. Tiles use the `--tile-top / left / right` tokens; each tile carries a crystal polygon whose live training state is `primed`, `needs repair`, or `solidified`; no-evidence/null state renders quietly. The board is always isometric, always cream.
+
+### Constellation sibling view
+Constellation is the only scoped graph-view exception: a secondary SVG orientation surface with orbiting crystal nodes and evidence-lit edges. It derives state from training evidence, keeps Route as the reconstruction default, and must not reveal future labels, mechanisms, study content, or source previews before reconstruction evidence exists.
 
 ### Motion
 - Standard easing `cubic-bezier(0.2, 0.8, 0.2, 1)`. Spring `cubic-bezier(0.34, 1.56, 0.64, 1)` **only** on solidified-state celebration.
@@ -75,7 +78,7 @@ The in-app surface is an **isometric grid of tiles**. Tiles use the `--tile-top 
 
 ### Audio
 - Canonical implementation lives in `public/js/audio.js`; retune there rather than creating new helpers.
-- `playKeyClick` (F brush): lowpass noise around 600Hz, about 18ms. Bound to keystrokes in the threshold composer and drill input.
+- `playKeyClick` (F brush): lowpass noise around 600Hz, about 18ms. Bound to printable keystrokes in the Door concept field, source-attach fields, and Launch Pad input (`#launch-pad-input`).
 - `playFocusTap` (I breath): highpass noise around 4kHz, about 10ms. Sidebar, bottom-nav, and primary-control focus.
 - `playTileClick` (D thud): 60Hz square plus bandpass noise. Iso-board tile activation.
 - `playDrawerToggle` (F body): lowpass cloth around 1.1kHz, about 30ms. Open/close of the desk drawer.

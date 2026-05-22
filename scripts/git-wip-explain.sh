@@ -26,7 +26,7 @@ badge() {
 
 usage() {
   cat <<'EOF'
-Usage: scripts/git-wip-explain.sh [--short] [--help]
+Usage: scripts/git-wip-explain.sh [--short] [--json] [--help]
 
 Read-only helper that explains staged, unstaged, and untracked work.
 It does not add, remove, reset, stash, commit, fetch, or push.
@@ -34,11 +34,16 @@ EOF
 }
 
 short_mode="0"
+json_mode="0"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --short)
       short_mode="1"
+      shift
+      ;;
+    --json)
+      json_mode="1"
       shift
       ;;
     --help|-h)
@@ -64,8 +69,11 @@ head_sha="$(git rev-parse --short HEAD)"
 head_subject="$(git log -1 --pretty=%s)"
 behind=0
 ahead=0
+no_mistakes_diverged="0"
+no_mistakes_behind=0
+no_mistakes_ahead=0
 
-if [ "$short_mode" != "1" ]; then
+if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
   echo "[git-wip-explain] repo:   $repo_root"
   echo "[git-wip-explain] branch: $branch"
   echo "[git-wip-explain] head:   $head_sha $head_subject"
@@ -76,17 +84,28 @@ if [ -n "$upstream" ]; then
   if [ -n "$counts" ]; then
     behind="${counts%%[[:space:]]*}"
     ahead="${counts##*[[:space:]]}"
-    if [ "$short_mode" != "1" ]; then
+    if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
       echo "[git-wip-explain] upstream: $upstream (behind=$behind ahead=$ahead)"
     fi
   else
-    if [ "$short_mode" != "1" ]; then
+    if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
       echo "[git-wip-explain] upstream: $upstream"
     fi
   fi
 else
-  if [ "$short_mode" != "1" ]; then
+  if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
     echo "[git-wip-explain] upstream: none"
+  fi
+fi
+
+if [ "$branch" = "dev" ] && git rev-parse --verify refs/remotes/no-mistakes/dev >/dev/null 2>&1; then
+  no_mistakes_counts="$(git rev-list --left-right --count refs/remotes/no-mistakes/dev...HEAD 2>/dev/null || true)"
+  if [ -n "$no_mistakes_counts" ]; then
+    no_mistakes_behind="${no_mistakes_counts%%[[:space:]]*}"
+    no_mistakes_ahead="${no_mistakes_counts##*[[:space:]]}"
+    if [ "$no_mistakes_behind" -gt 0 ]; then
+      no_mistakes_diverged="1"
+    fi
   fi
 fi
 
@@ -106,12 +125,12 @@ print_commit_preview() {
   fi
 }
 
-if [ "$short_mode" != "1" ] && [ -n "$upstream" ]; then
+if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ] && [ -n "$upstream" ]; then
   print_commit_preview "Local commits not on $upstream" "$upstream..HEAD" "$ahead"
   print_commit_preview "Remote commits not in local HEAD" "HEAD..$upstream" "$behind"
 fi
 
-if [ "$short_mode" != "1" ]; then
+if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
   echo
   echo "Known worktrees:"
 fi
@@ -134,7 +153,7 @@ print_worktree_entry() {
     same_branch_count=$((same_branch_count + 1))
     marker="!"
   fi
-  if [ "$short_mode" != "1" ]; then
+  if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
     printf '  %s %-34s %-8s %s\n' "$marker" "$display_branch" "$short_head" "$current_wt"
   fi
 }
@@ -155,7 +174,7 @@ while IFS= read -r line; do
 done < <(git worktree list --porcelain)
 print_worktree_entry
 
-if [ "$short_mode" != "1" ]; then
+if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
   echo "  * current worktree"
   echo "  ! another worktree on the same branch"
   if [ "$same_branch_count" -gt 0 ]; then
@@ -163,7 +182,7 @@ if [ "$short_mode" != "1" ]; then
   fi
 fi
 
-if [ "$short_mode" != "1" ]; then
+if [ "$short_mode" != "1" ] && [ "$json_mode" != "1" ]; then
   echo
   echo "Raw status:"
   git status --short --branch
@@ -206,6 +225,9 @@ upstream_message="aligned with upstream"
 if [ -z "$upstream" ]; then
   upstream_state="WARN"
   upstream_message="no upstream configured"
+elif [ "$no_mistakes_diverged" = "1" ]; then
+  upstream_state="BLOCKED"
+  upstream_message="no-mistakes/dev has ${no_mistakes_behind} commit(s) not in local dev; reconcile before publishing"
 elif [ "${behind:-0}" -gt 0 ] && [ "${ahead:-0}" -gt 0 ]; then
   upstream_state="BLOCKED"
   upstream_message="diverged from $upstream; inspect before reset, merge, or push"
@@ -238,6 +260,10 @@ if [ "$dirty_count" -gt 0 ]; then
   finish_blocked="yes"
   finish_state="BLOCKED"
   finish_message="dirty working tree; review/commit/move files first"
+elif [ "$no_mistakes_diverged" = "1" ]; then
+  finish_blocked="yes"
+  finish_state="BLOCKED"
+  finish_message="no-mistakes/dev is ahead of local dev; reconcile before publishing"
 elif [ -n "$upstream" ] && [ "${ahead:-0}" -gt 0 ]; then
   finish_blocked="yes"
   finish_state="BLOCKED"
@@ -251,6 +277,8 @@ fi
 recommended_next="none; ready for new work"
 if [ "$dirty_count" -gt 0 ]; then
   recommended_next="git diff && git status --short"
+elif [ "$no_mistakes_diverged" = "1" ]; then
+  recommended_next="git cherry -v no-mistakes/dev HEAD"
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
   recommended_next="git fetch && git status --short --branch && git diff @{u}...HEAD"
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ]; then
@@ -269,6 +297,77 @@ elif [ -n "$upstream" ] && [ "$behind" -gt 0 ]; then
   fi
 elif [ "$same_branch_count" -gt 0 ]; then
   recommended_next="scripts/git-worktree-cleanup.sh"
+fi
+
+if [ "$json_mode" = "1" ]; then
+  export GWE_REPO="$repo_root"
+  export GWE_BRANCH="$branch"
+  export GWE_HEAD_SHA="$head_sha"
+  export GWE_HEAD_SUBJECT="$head_subject"
+  export GWE_UPSTREAM="$upstream"
+  export GWE_BEHIND="$behind"
+  export GWE_AHEAD="$ahead"
+  export GWE_UPSTREAM_STATE="$upstream_state"
+  export GWE_UPSTREAM_MESSAGE="$upstream_message"
+  export GWE_WORKTREE_STATE="$worktree_state"
+  export GWE_WORKTREE_MESSAGE="$worktree_message"
+  export GWE_DIRTY_COUNT="$dirty_count"
+  export GWE_STAGED_COUNT="$staged_count"
+  export GWE_UNSTAGED_COUNT="$unstaged_count"
+  export GWE_UNTRACKED_COUNT="$untracked_count"
+  export GWE_SESSION_STATE="$session_state"
+  export GWE_SESSION_MESSAGE="$session_message"
+  export GWE_SAME_BRANCH_COUNT="$same_branch_count"
+  export GWE_FINISH_STATE="$finish_state"
+  export GWE_FINISH_MESSAGE="$finish_message"
+  export GWE_FINISH_BLOCKED="$finish_blocked"
+  export GWE_RECOMMENDED_NEXT="$recommended_next"
+  python3 - <<'PY'
+import json
+import os
+
+
+def integer(name: str) -> int:
+    return int(os.environ[name])
+
+
+upstream_name = os.environ["GWE_UPSTREAM"] or None
+payload = {
+    "schema_version": 1,
+    "repo": os.environ["GWE_REPO"],
+    "branch": os.environ["GWE_BRANCH"],
+    "head_sha": os.environ["GWE_HEAD_SHA"],
+    "head_subject": os.environ["GWE_HEAD_SUBJECT"],
+    "upstream": {
+        "name": upstream_name,
+        "behind": integer("GWE_BEHIND"),
+        "ahead": integer("GWE_AHEAD"),
+        "state": os.environ["GWE_UPSTREAM_STATE"],
+        "message": os.environ["GWE_UPSTREAM_MESSAGE"],
+    },
+    "worktree": {
+        "state": os.environ["GWE_WORKTREE_STATE"],
+        "message": os.environ["GWE_WORKTREE_MESSAGE"],
+        "dirty_count": integer("GWE_DIRTY_COUNT"),
+        "staged_count": integer("GWE_STAGED_COUNT"),
+        "unstaged_count": integer("GWE_UNSTAGED_COUNT"),
+        "untracked_count": integer("GWE_UNTRACKED_COUNT"),
+    },
+    "sessions": {
+        "state": os.environ["GWE_SESSION_STATE"],
+        "message": os.environ["GWE_SESSION_MESSAGE"],
+        "same_branch_worktrees": integer("GWE_SAME_BRANCH_COUNT"),
+    },
+    "finish": {
+        "state": os.environ["GWE_FINISH_STATE"],
+        "message": os.environ["GWE_FINISH_MESSAGE"],
+        "blocked": os.environ["GWE_FINISH_BLOCKED"] == "yes",
+    },
+    "recommended_next": os.environ["GWE_RECOMMENDED_NEXT"],
+}
+print(json.dumps(payload, sort_keys=True))
+PY
+  exit 0
 fi
 
 if [ "$short_mode" = "1" ]; then
