@@ -14,7 +14,7 @@ Import from `models` directly.
 | `ProvisionalMap` | The top-level container. `metadata`, `backbone`, `clusters`, `relationships`, `learning_prereqs`, `frameworks`, `domain_mechanics`. |
 | `BackboneItem` | A backbone principle (causal spine of the domain). |
 | `Cluster` | A cluster of related subnodes around a backbone item. |
-| `Subnode` | A leaf concept. Source-less smallest-route subnodes may carry `learner_scaffold` non-answer task copy and evaluator scope. |
+| `Subnode` | A leaf concept. `learner_scaffold` is optional on the general model, but required on generated source-less smallest-route subnodes as non-answer task copy and evaluator scope. |
 | `Relationships` | Edges between nodes. |
 | `LearningPrereq` | A directed prerequisite edge. |
 | `Framework` | A reusable analytical lens. |
@@ -57,8 +57,8 @@ Import from `models` directly.
   source-less extraction rejects only empty sketches; rough non-empty launch
   attempts may seed a smallest route but remain non-evidence. Keep this helper
   parity-stable for legacy/frontend callers instead of making it smarter.
-- **`LearnerScaffold` is non-answer scaffolding.** Smallest-route subnodes
-  should carry plain learner task copy plus `evidence_goal`; the internal
+- **`LearnerScaffold` is non-answer scaffolding.** Source-less smallest-route
+  subnodes must carry plain learner task copy plus `evidence_goal`; the internal
   `bloom_level` must not be rendered as learner-facing taxonomy or treated as
   evidence about the learner.
 - **Pydantic v2 semantics.** All models are Pydantic v2 (`BaseModel`,

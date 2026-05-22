@@ -83,7 +83,7 @@ Enter concept
 
 ### The seven screens
 
-**1. Concept Threshold — global starting map.** *No graph state mutation.* The learner describes their **global** current model — rough is useful — before recognition-heavy content appears. Prompt asks for **parts, guesses, examples, or confusions** (not a mechanism). Optional paste for notes/syllabus/goal; one "what feels fuzzy" prompt; one confidence selector. Copy explicitly distinguishes: *"This is global context. The first room will ask one smaller question."* Primary action: **Build my starting path.**
+**1. Door + Launch pad — global starting map.** *No graph state mutation.* The Door captures a concept name, optional learner-goal-shaped intent, and optional imported source. Without source, the learner moves to the Launch pad and writes any non-empty **Launch attempt** — rough is useful — before recognition-heavy content appears. Goal text may frame relevance, but it is not evidence or diagnosis. Primary action: **Build the draft route.**
 
 **2. Provisional Graph.** *No state mutation.* A draft route is rendered from the starting map. Copy is explicit that the graph is a **hypothesis**, not a knowledge claim. Legend is limited to: draft route · ready for first attempt · locked. Primary action: **Start first attempt.**
 

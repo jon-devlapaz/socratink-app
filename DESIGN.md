@@ -42,7 +42,7 @@ Quick reference (full list in UBIQUITOUS_LANGUAGE.md):
 ## 3. State / data flow
 
 ```
-Door (concept name [+ optional Imported source])
+Door (concept name [+ optional Learner goal] [+ optional Imported source])
   → if source: extraction pipeline → Provisional map
   → if no source: Launch pad → Launch attempt → Source-less generation → Smallest actionable route
 → Cold attempt (local) → writes learner attempt into `socratink:training:v1:<conceptId>`
@@ -60,6 +60,7 @@ Architectural seams:
 - **Library boundary** — Library shows only the user's own reconstructed work; no built-in samples. ADR-0004.
 
 Internal-only signals (routing hints, source-dependence scores, causal-depth) **never** surface to the learner.
+Learner goal is relevance context for prompts and graph metadata; it is not graph-truth evidence.
 
 ---
 
@@ -99,7 +100,7 @@ For component rules, see [`docs/design/socratink-design-system.md`](docs/design/
 
 **Motif:** Dual-diamond crystal polygon with a vertical axis. Same shape at three scales — favicon, wordmark, isometric tile. Never restylized, never recolored.
 
-**Board:** Always isometric, always cream. Never flat. Never force-directed node-and-edge.
+**Board:** Always isometric, always cream. Never flat. Never force-directed node-and-edge. Constellation is the scoped sibling-view exception: secondary orientation only, with evidence-derived states and no study/source-preview leakage.
 
 **Theme archetypes:** dark = constellation / sky; light = drafting / blueprint. Never invert one into the other.
 

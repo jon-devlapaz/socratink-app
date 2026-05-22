@@ -43,6 +43,7 @@ Use when the question is about what a surface should look or read like.
 - prefer several radically different variants over one polished guess
 - for this repo, default to a single `?v=A|B|C|D` route under `public/_lab/<surface>-variants.html`
 - use `scripts/snap.py` to sweep variants
+- use `scripts/share-lab.sh <surface>` when phone review is needed; it serves only `public/` on loopback and opens a temporary ngrok URL
 - use `scripts/persona.sh` when persona-based review would sharpen the verdict
 - capture the decision in a sibling `<surface>-variants.NOTES.md`
 
@@ -60,6 +61,7 @@ If the question is ambiguous, stop and classify it explicitly before building.
 - the current question is stated clearly at the top of the artifact or in a nearby note
 - for logic prototypes, state changes are visible after every action
 - for UI prototypes, variants are easily switchable and comparable
+- if shared by `scripts/share-lab.sh`, the tunnel is stopped with Ctrl-C after review
 - when the prototype is done, the answer is captured durably before deletion or absorption
 
 ## Stop Rules
