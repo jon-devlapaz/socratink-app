@@ -130,6 +130,7 @@ scripts/local-ai-review.sh pytest -- .venv/bin/pytest tests/path/test_file.py -q
 ```
 
 - This command is advisory only. Verify findings against repo files, tests, browser checks, or deterministic helpers before acting.
+- `publish-preview` still does not push or edit files, but it delegates to `scripts/agent-push.py` and may refresh local remote-tracking refs such as `origin/dev` and `no-mistakes/dev` before printing the preview.
 - It must not replace `scripts/agent-push.py`, `scripts/no-mistakes-finish-dev.sh`, `scripts/git-wip-explain.sh`, `scripts/qa-smoke.sh`, or `./scripts/check-coverage.sh`.
 - Do not pipe its output into shell commands or use it to generate/modify ack tokens.
 - Keep Ollama local-only (`127.0.0.1` / `localhost`). Do not expose the local model server to LAN or public interfaces for this workflow.

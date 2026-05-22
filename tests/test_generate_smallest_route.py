@@ -1,4 +1,4 @@
-"""Tests for the ≤4-node cap on source-less generation per C-prime spec §5.1."""
+"""Tests for the source-less smallest-route generation contract."""
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,6 +1,9 @@
-"""C-prime spec §5.2 acceptance: source-less /api/extract returns a
-smallest ProvisionalMap (≤4 nodes), and name-only/source-null bypasses
-are still rejected."""
+"""Acceptance coverage for source-less /api/extract.
+
+The endpoint rejects empty source-less sketches, accepts any non-empty launch
+attempt, forwards learner_goal as relevance context, and returns a smallest
+ProvisionalMap when generation succeeds.
+"""
 from __future__ import annotations
 
 from unittest.mock import patch
@@ -120,8 +123,8 @@ def test_extract_source_less_forwards_learner_goal(client):
 def test_extract_smallest_route_cap_exceeded_returns_500(client):
     """SmallestRouteCapExceeded must surface as 500, not 422.
 
-    Spec §5.1: the cap exceeded is a server-side generation failure, not a
-    client input failure, so the endpoint must return HTTP 500 with a clear
+    Smallest-route shape failures are server-side generation failures, not
+    client input failures, so the endpoint must return HTTP 500 with a clear
     error field.
     """
     from ai_service import SmallestRouteCapExceeded

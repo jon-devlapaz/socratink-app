@@ -404,7 +404,7 @@ def extract_knowledge_map(
 
 
 SMALLEST_ROUTE_MAX_DRILLABLE_NODES = 4
-"""C-prime spec §5.1: ≤4 drillable nodes total (1 first target + ≤3 hints)."""
+"""Smallest source-less route cap: 1 first target plus up to 3 hints."""
 
 
 class SmallestRouteCapExceeded(ValueError):
@@ -473,12 +473,14 @@ def generate_smallest_provisional_map(
     lc_context: list["LCStandard"] | None = None,
     on_call_complete: Callable[["StructuredLLMResult"], None] | None = None,
 ) -> ProvisionalMap:
-    """Generate a smallest actionable route from {concept, threshold}.
+    """Generate a smallest actionable route from source-less launch context.
 
-    C-prime spec §5.1: returns a ProvisionalMap with ≤4 drillable nodes
-    total (one suggested first target which carries the core thesis,
-    plus up to 3 backbone hints). Raises SmallestRouteCapExceeded if the
-    model returns more.
+    ``concept`` and ``threshold`` are required. ``learner_goal`` may frame
+    relevance, but it is not evidence of learner understanding. Returns a
+    ProvisionalMap with no more than 4 drillable nodes total (one suggested
+    first target plus up to 3 hints). Raises SmallestRouteCapExceeded for
+    generation-side shape failures: over-cap routes, missing routes,
+    multi-subnode clusters, or generated subnodes without learner_scaffold.
 
     Optional ``lc_context`` is grounding-only, never authoritative.
     """

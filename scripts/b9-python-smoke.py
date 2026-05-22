@@ -9,9 +9,10 @@ sketches before smallest-route generation. Use the maintained pytest coverage
 for current behavior before relying on this manual smoke.
 
 Historical scenarios embedded below. Scenario 2 is intentionally stale and
-kept only as migration evidence; do not use it as the current acceptance signal.
-Current pytest coverage expects non-empty source-less attempts like "idk" to
-reach smallest-route generation and only empty sketches to return 422.
+kept only as migration evidence; do not run this whole script as the current
+acceptance signal. Current pytest coverage expects non-empty source-less
+attempts like "idk" to reach smallest-route generation and only empty sketches
+to return 422.
 
 Historical scenarios:
   1. Source-less substantive sketch
@@ -22,7 +23,7 @@ Historical invocation from repo root with the venv active:
   $ . .venv/bin/activate
   $ python scripts/b9-python-smoke.py
 
-Do not treat a full-script failure on Scenario 2 as a product regression; the
+Scenario 2 is printed as an archived example but is no longer executed. The
 active route tests supersede this stale negative-control path.
 """
 from __future__ import annotations
@@ -127,17 +128,9 @@ if __name__ == "__main__":
         expected_status=200,
     ))
 
-    # Historical negative-control only. Current /api/extract accepts "idk" as
-    # a non-empty source-less launch attempt; see tests/test_extract_route_*.
-    results.append(_scenario(
-        "2. Source-less thin sketch (no Gemini call)",
-        {
-            "name": "Photosynthesis",
-            "starting_sketch": "idk",
-            "source": None,
-        },
-        expected_status=422,
-    ))
+    print("\n=== 2. Archived: obsolete thin-sketch rejection path ===")
+    print('request: {"name": "Photosynthesis", "starting_sketch": "idk", "source": null}')
+    print("status:  not executed; current /api/extract accepts any non-empty source-less launch attempt")
 
     results.append(_scenario(
         "3. Legacy text-only payload (real Gemini call, existing extract path)",
