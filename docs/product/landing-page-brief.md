@@ -69,7 +69,8 @@ The chosen voice register is **reading room and field journal**. Scholarly-natur
 | Product | `socratink` | Always lowercase. |
 | Empty-state nav for starting a new concept | `New Entry` | (replaces older "Ignition") |
 | Primary action — the first reconstruction | `Write from memory` | (replaces older first-reconstruction labels) |
-| The smallest viable path the learner is taken into for a source-less concept | `smallest actionable route` | (replaces the older "launch attempt" / "threshold" composer) |
+| The learner's source-less threshold submission | `launch attempt` | Raw learner text before the route exists; not learning evidence. |
+| The smallest viable path the learner is taken into for a source-less concept | `smallest actionable route` | Produced from the launch attempt; do not use it as a synonym for the learner's input. |
 | The act of attempting from memory before any explanation | `cold attempt` / `first cold attempt` | Domain noun. |
 | The learning unit in the graph (learner-facing) | `entry` | (replaces the older internal "room" / "node") |
 | A grouping of entries under a backbone branch | `section` | (replaces the older internal "cluster") |

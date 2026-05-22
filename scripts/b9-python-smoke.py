@@ -1,16 +1,17 @@
-"""B9 Python smoke for source-optional /api/extract.
+"""Legacy B9 Python smoke for source-optional /api/extract.
 
 Spec ref: docs/archive/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
 Plan ref: docs/archive/superpowers/plans/2026-05-03-conversational-concept-creation-backend.md (Task 19)
 
-Runs the three smoke scenarios from Plan A's Task 19 against the real
-FastAPI handler with the real LLM client (real Gemini calls!), bypassing
-auth via a fake AuthService that mirrors what the route tests use.
+This script predates the current source-less launch contract. The runtime now
+accepts any non-empty source-less learner launch attempt and rejects only empty
+sketches before smallest-route generation. Use the maintained pytest coverage
+for current behavior before relying on this manual smoke.
 
-Three scenarios:
-  1. Source-less substantive sketch    → expect 200, real ProvisionalMap
-  2. Source-less thin sketch ("idk")    → expect 422 thin_sketch_no_source
-  3. Legacy text-only payload           → expect 200, real ProvisionalMap
+Historical scenarios embedded below:
+  1. Source-less substantive sketch
+  2. Obsolete thin-sketch rejection path
+  3. Legacy text-only payload
 
 Run from repo root with the venv active:
   $ . .venv/bin/activate

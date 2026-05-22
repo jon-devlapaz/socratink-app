@@ -6,7 +6,6 @@ For supporting context, read:
 
 - [spec.md](spec.md) — binding product contract (three-phase loop, derived training state model)
 - [/DESIGN.md](../../DESIGN.md) — canonical UX doctrine
-- [starting-map-flow-artifact.md](starting-map-flow-artifact.md) — concept-entry storyboard that operationalizes this doctrine
 - [../superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md) — current binding drill data-model canon
 
 ---
@@ -291,9 +290,10 @@ belong in [the drill data-model canon](../superpowers/specs/2026-05-15-drill-dat
 
 ---
 
-## 12. How Starting Map Flow Fits The Doctrine
+## 12. How Concept Entry Fits The Doctrine
 
-[starting-map-flow-artifact.md](starting-map-flow-artifact.md) operationalizes this doctrine at concept entry. Reading it alongside this doctrine, the contract is:
+`spec.md` §2–§3 and the drill data-model canon operationalize this doctrine at
+concept entry. Reading them alongside this doctrine, the contract is:
 
 - **Threshold capture** = hypothesis-shaping input. No graph mutation.
 - **Provisional graph**. No graph mutation.

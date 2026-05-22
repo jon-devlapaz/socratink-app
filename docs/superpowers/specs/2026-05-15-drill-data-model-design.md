@@ -156,9 +156,11 @@ Concept {
   graph: {
     backbone: Node[]
     clusters: Cluster[]
-    metadata: { core_thesis, architecture_type, source_title, … }
+    metadata: { core_thesis, architecture_type, source_title, learner_goal?, … }
     //         core_thesis stays in the blob as a system-internal grader-context
     //         reference. It MUST NOT be rendered as "what you've reconstructed."
+    //         learner_goal may frame relevance and prompt shape. It is not
+    //         learner-capability evidence and cannot derive state.
   }
 
   // The single source of truth for everything stateful.
@@ -171,6 +173,18 @@ Entry {
   node_id: string                       // stable across the concept's lifetime
   label: string
   mechanism?: string                    // canonical mechanism reference (for grader)
+  learner_scaffold?: {                  // source-less smallest-route task shape
+    bloom_level: 'remember' | 'understand' | 'apply' // internal only
+    learner_move: string
+    task_label: string
+    task_cue: string
+    tailoring_anchor: string
+    entry_prompt: string
+    expected_shape: string
+    sentence_starter: string
+    blank_hint: string
+    evidence_goal: string               // evaluator scope, not learner evidence
+  }
 }
 
 Event {

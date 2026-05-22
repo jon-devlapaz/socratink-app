@@ -69,7 +69,7 @@ and the owner explicitly asks the agent to fix it.
 >
 > 1. Enter as guest and open **New concept** / Ignition.
 > 2. Type the concept name and continue to Launch Pad.
-> 3. Confirm Launch Pad shows the concept name and blocks thin sketches.
+> 3. Confirm Launch Pad shows the concept name and blocks only empty sketches.
 > 4. Enter the launch sketch and save it.
 > 5. On the first concept view, verify:
 >    - The first prompt is tailored to the sketch.

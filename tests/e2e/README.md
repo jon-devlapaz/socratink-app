@@ -6,9 +6,9 @@ one shell command, against local dev / Vercel preview / production.
 
 ## What's covered
 
-The suite spans five files:
+The suite spans six files:
 
-### `test_smoke.py` — 31 tests
+### `test_smoke.py` — 34 tests
 
 Key checks include:
 
@@ -72,7 +72,7 @@ walks the route, the first actionable entry exposes the inline draft surface,
 locked entries show a disabled CTA, no Route/Graph toggle or `#graph-content`
 section exists, and route items are focusable.
 
-### `test_app_helper_modules.py` — 1 test
+### `test_app_helper_modules.py` — 2 tests
 
 Helper-module browser-contract guard: imports the in-app JS modules
 (`html.js`, `app-timer.js`, `app-hero.js`, `phase-b-session.js`,
@@ -81,6 +81,12 @@ Helper-module browser-contract guard: imports the in-app JS modules
 `training-store.js`, `training-derive.js`, `concept-page-view.js`) from the live page and exercises their pure
 helpers against the real browser DOM/storage so renames or signature
 drift fail the suite.
+
+### `test_gestalt_hybrid_launch_qa.py` — 1 test
+
+End-to-end QA gate for the source-less gestalt hybrid path: Launch Pad,
+learner-goal preservation, first draft, explicit reveal/compare, `Keep working`,
+and route expansion from the same concept surface.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`
@@ -104,8 +110,8 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
-`test_smoke.py` (31 tests). Use the raw pytest invocations below to run the
-full suite (47 tests across the five files).
+`test_smoke.py` (34 tests). Use the raw pytest invocations below to run the
+full suite (52 tests across the six files).
 
 Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
 `SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default,
@@ -126,10 +132,10 @@ bash scripts/qa-smoke.sh https://socratink-app-git-dev-fresh-jon-devlapaz.vercel
 ```
 
 Raw pytest invocations (when you need flags the wrapper doesn't pass through,
-or want the full five-file suite the wrapper doesn't yet cover):
+or want the full six-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all five files, 47 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all six files, 52 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)
@@ -147,7 +153,7 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 ## Output
 
-Abbreviated pass shape (47 tests across the five files):
+Abbreviated pass shape (52 tests across the six files):
 
 ```text
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
@@ -178,9 +184,11 @@ tests/e2e/test_strip_nav.py::test_locked_entry_shows_disabled_cta PASSED
 tests/e2e/test_strip_nav.py::test_no_route_graph_toggle PASSED
 tests/e2e/test_strip_nav.py::test_no_graph_content_section PASSED
 tests/e2e/test_strip_nav.py::test_route_items_are_focusable PASSED
+tests/e2e/test_app_helper_modules.py::test_launch_pad_displays_normalized_concept_and_goal PASSED
 tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
+tests/e2e/test_gestalt_hybrid_launch_qa.py::test_source_less_launch_pad_end_to_end_qa PASSED
 
-============================== 47 passed ==============================
+============================== 52 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,
