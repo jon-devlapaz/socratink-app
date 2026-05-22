@@ -408,17 +408,20 @@ SMALLEST_ROUTE_MAX_DRILLABLE_NODES = 4
 
 
 class SmallestRouteCapExceeded(ValueError):
-    """Raised when source-less generation returns a ProvisionalMap exceeding
-    the smallest-route cap. Server returns 500 in this case (it's a
-    generation-side failure, not a client-input failure)."""
+    """Raised when source-less generation violates smallest-route shape.
+
+    Server returns 500 in this case because cap, cluster-shape, and scaffold
+    failures are generation-side failures, not client-input failures.
+    """
 
 
 def _validate_smallest_route(pm: ProvisionalMap) -> None:
-    """Enforce C-prime spec §5.1 ≤4-node cap.
+    """Enforce the source-less smallest-route generation contract.
 
     Counts total drillable subnodes across all clusters on the
     ProvisionalMap. Raises SmallestRouteCapExceeded if the count is 0
-    or >4.
+    or >4, if any cluster contains anything other than one subnode, or if
+    any generated subnode lacks learner_scaffold.
 
     Counting subnodes rather than top-level clusters is the actual
     structural defence of the spec invariant: ProvisionalMap permits

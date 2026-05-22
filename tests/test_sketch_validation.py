@@ -1,4 +1,4 @@
-"""Tests for is_substantive_sketch — the shared substantiveness gate."""
+"""Tests for is_substantive_sketch legacy/parity verdicts."""
 from __future__ import annotations
 
 import json
