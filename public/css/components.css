@@ -969,8 +969,8 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 .paste-clipboard-btn:hover { color:var(--primary); opacity:0.8; }
 
 /* ─────────────────────────────────────────────────────────────
- * Conversational concept creation (Plan B, 2026-05-04).
- * Two surfaces: chat (Stage A) and summary card (Stage B).
+ * Conversational concept creation shell.
+ * Door input may capture a concept name, optional learner goal, and optional source.
  * One violet accent at rest = the build CTA. Eyebrows are
  * lavender (--accent-secondary), which is secondary and does
  * not double-count.
@@ -1775,10 +1775,10 @@ html[data-motion="reduced"] .creation-dialog-shell {
   border-color: var(--accent-border-strong);
 }
 
-/* Empty-state voice line (removed in C-prime; rule kept as no-op to avoid merge conflicts) */
+/* Empty-state voice line (retired door copy; rule kept as no-op to avoid merge conflicts) */
 .hero-voice-line { display: none; margin: 0; }
 
-/* Threshold composer. Lives only inside #ignition-view. */
+/* Door composer. Lives only inside #ignition-view. */
 .ignition-view .hero-single-input {
   display: flex;
   flex-direction: column;
@@ -2489,8 +2489,8 @@ body[data-theme="dark"] .hero-source-attach[aria-expanded="true"] {
   display: none;
 }
 
-/* ── Launch Pad (C-prime §3.2) ──────────────────────────────────────────── */
-/* The launch pad captures the learner's threshold for source-less concepts. */
+/* ── Launch Pad ───────────────────────────────────────────────────────────── */
+/* Captures any non-empty source-less launch attempt after Door goal/source parsing. */
 /* Hidden by default via the [hidden] attribute; revealed when showLaunchPad  */
 /* removes that attribute.                                                    */
 
