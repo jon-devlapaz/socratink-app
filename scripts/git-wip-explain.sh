@@ -64,6 +64,9 @@ head_sha="$(git rev-parse --short HEAD)"
 head_subject="$(git log -1 --pretty=%s)"
 behind=0
 ahead=0
+no_mistakes_diverged="0"
+no_mistakes_behind=0
+no_mistakes_ahead=0
 
 if [ "$short_mode" != "1" ]; then
   echo "[git-wip-explain] repo:   $repo_root"
@@ -87,6 +90,17 @@ if [ -n "$upstream" ]; then
 else
   if [ "$short_mode" != "1" ]; then
     echo "[git-wip-explain] upstream: none"
+  fi
+fi
+
+if [ "$branch" = "dev" ] && git rev-parse --verify refs/remotes/no-mistakes/dev >/dev/null 2>&1; then
+  no_mistakes_counts="$(git rev-list --left-right --count refs/remotes/no-mistakes/dev...HEAD 2>/dev/null || true)"
+  if [ -n "$no_mistakes_counts" ]; then
+    no_mistakes_behind="${no_mistakes_counts%%[[:space:]]*}"
+    no_mistakes_ahead="${no_mistakes_counts##*[[:space:]]}"
+    if [ "$no_mistakes_behind" -gt 0 ]; then
+      no_mistakes_diverged="1"
+    fi
   fi
 fi
 
@@ -206,6 +220,9 @@ upstream_message="aligned with upstream"
 if [ -z "$upstream" ]; then
   upstream_state="WARN"
   upstream_message="no upstream configured"
+elif [ "$no_mistakes_diverged" = "1" ]; then
+  upstream_state="BLOCKED"
+  upstream_message="no-mistakes/dev has ${no_mistakes_behind} commit(s) not in local dev; reconcile before publishing"
 elif [ "${behind:-0}" -gt 0 ] && [ "${ahead:-0}" -gt 0 ]; then
   upstream_state="BLOCKED"
   upstream_message="diverged from $upstream; inspect before reset, merge, or push"
@@ -238,6 +255,10 @@ if [ "$dirty_count" -gt 0 ]; then
   finish_blocked="yes"
   finish_state="BLOCKED"
   finish_message="dirty working tree; review/commit/move files first"
+elif [ "$no_mistakes_diverged" = "1" ]; then
+  finish_blocked="yes"
+  finish_state="BLOCKED"
+  finish_message="no-mistakes/dev is ahead of local dev; reconcile before publishing"
 elif [ -n "$upstream" ] && [ "${ahead:-0}" -gt 0 ]; then
   finish_blocked="yes"
   finish_state="BLOCKED"
@@ -251,6 +272,8 @@ fi
 recommended_next="none; ready for new work"
 if [ "$dirty_count" -gt 0 ]; then
   recommended_next="git diff && git status --short"
+elif [ "$no_mistakes_diverged" = "1" ]; then
+  recommended_next="git cherry -v no-mistakes/dev HEAD"
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ] && [ "$behind" -gt 0 ]; then
   recommended_next="git fetch && git status --short --branch && git diff @{u}...HEAD"
 elif [ -n "$upstream" ] && [ "$ahead" -gt 0 ]; then

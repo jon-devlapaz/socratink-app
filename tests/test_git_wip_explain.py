@@ -141,6 +141,38 @@ def test_diverged_branch_recommends_inspection_not_publish(tmp_path: Path) -> No
     assert "agent-push.py" not in result.stdout
 
 
+def test_dev_ahead_blocks_no_mistakes_push_when_gate_ref_is_diverged(tmp_path: Path) -> None:
+    origin = tmp_path / "origin.git"
+    gate = tmp_path / "gate.git"
+    repo = _init_repo(tmp_path)
+    _run(["git", "init", "--bare", str(origin)], tmp_path)
+    _run(["git", "init", "--bare", str(gate)], tmp_path)
+    _git(repo, "remote", "add", "origin", str(origin))
+    _git(repo, "remote", "add", "no-mistakes", str(gate))
+    _git(repo, "push", "-u", "origin", "dev")
+
+    gate_clone = tmp_path / "gate-clone"
+    _run(["git", "clone", "-b", "dev", str(origin), str(gate_clone)], tmp_path)
+    _git(gate_clone, "config", "user.email", "gate@example.com")
+    _git(gate_clone, "config", "user.name", "No Mistakes")
+    (gate_clone / "gate.txt").write_text("gate\n", encoding="utf-8")
+    _git(gate_clone, "add", "gate.txt")
+    _git(gate_clone, "commit", "-m", "gate rewrite")
+    _git(gate_clone, "push", str(gate), "dev")
+    _git(repo, "fetch", "no-mistakes", "dev:refs/remotes/no-mistakes/dev")
+
+    (repo / "local.txt").write_text("local\n", encoding="utf-8")
+    _git(repo, "add", "local.txt")
+    _git(repo, "commit", "-m", "local work")
+
+    result = _run(["bash", str(SCRIPT), "--short"], repo)
+
+    assert result.returncode == 0
+    assert "upstream=behind:0 ahead:1" in result.stdout
+    assert "Next: git cherry -v no-mistakes/dev HEAD" in result.stdout
+    assert "agent-push.py" not in result.stdout
+
+
 def test_behind_feature_branch_recommends_inspection_not_dev_finish(tmp_path: Path) -> None:
     origin = tmp_path / "origin.git"
     repo = _init_repo(tmp_path)

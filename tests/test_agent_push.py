@@ -92,6 +92,32 @@ def test_refresh_publication_refs_updates_origin_dev(monkeypatch):
     ]
 
 
+def test_refresh_publication_refs_updates_no_mistakes_dev_when_configured(monkeypatch):
+    mod = _load_module()
+    calls = []
+
+    def fake_run_git(args, *, check=True):
+        calls.append((args, check))
+        if args == ["remote", "-v"]:
+            return "\n".join(
+                (
+                    "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)",
+                    "no-mistakes\t/tmp/.no-mistakes/repos/review-gate.git (push)",
+                )
+            )
+        return ""
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    mod.refresh_publication_refs()
+
+    assert calls == [
+        (["remote", "-v"], True),
+        (["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], True),
+        (["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"], False),
+    ]
+
+
 def test_explicit_target_records_override_against_recommendation(tmp_path):
     mod = _load_module()
     state = mod.PushState(
@@ -257,6 +283,67 @@ def test_dev_publication_allows_origin_dev_ancestor(monkeypatch):
     monkeypatch.setattr(mod, "_run_git", fake_run_git)
 
     mod.ensure_current_dev_base(state, intent)
+
+
+def test_no_mistakes_publication_blocks_when_destination_is_not_ancestor(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/tmp/.no-mistakes/repos/review-gate.git",
+        },
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "refs/remotes/no-mistakes/dev"]:
+            return "refs/remotes/no-mistakes/dev"
+        if args == [
+            "rev-list",
+            "--left-right",
+            "--count",
+            "refs/remotes/no-mistakes/dev...HEAD",
+        ]:
+            return "14\t2"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+    monkeypatch.setattr(mod, "_git_succeeds", lambda args: False)
+
+    try:
+        mod.ensure_destination_fast_forward(state, intent)
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "destination no-mistakes/dev is not an ancestor of local dev" in message
+        assert "git cherry -v no-mistakes/dev HEAD" in message
+    else:
+        raise AssertionError("non-fast-forward no-mistakes destination was not blocked")
+
+
+def test_publication_allows_destination_ancestor(monkeypatch):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={"no-mistakes": "/tmp/.no-mistakes/repos/review-gate.git"},
+    )
+    intent = mod.resolve_publication_intent(state, explicit_target="no-mistakes/dev")
+
+    def fake_run_git(args, *, check=True):
+        if args == ["rev-parse", "--verify", "refs/remotes/no-mistakes/dev"]:
+            return "refs/remotes/no-mistakes/dev"
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+    monkeypatch.setattr(mod, "_git_succeeds", lambda args: True)
+
+    mod.ensure_destination_fast_forward(state, intent)
 
 
 def test_dev_publication_skips_divergence_check_without_origin(monkeypatch):

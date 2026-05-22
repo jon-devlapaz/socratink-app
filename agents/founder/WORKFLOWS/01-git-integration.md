@@ -56,7 +56,9 @@ scripts/git-worktree-cleanup.sh --remove-clean --apply
 
 - wrapper recommendation is shown
 - wrapper refreshes `origin/dev` before evaluating a `dev` publication
+- wrapper refreshes `no-mistakes/dev` before publishing there and blocks early if the destination is not an ancestor of local `HEAD`
 - publishing `dev` is blocked when local `dev` is behind `origin/dev`
+- a rejected `no-mistakes/dev` push with `fetch first` means the gate ref moved or was rewritten; inspect `git cherry -v no-mistakes/dev HEAD`, preserve local `dev`, then replay only unique local commits on top of the refreshed gate ref
 - a branch that is both behind and ahead of its upstream is diverged; inspect with `git fetch && git status --short --branch && git diff @{u}...HEAD`, not `scripts/agent-push.py`
 - after no-mistakes finishes, use `scripts/no-mistakes-finish-dev.sh` to refuse active runs, dirty trees, or unique local commits before folding local `dev` onto `origin/dev`
 - when a dirty tree blocks finishing, use `scripts/git-wip-explain.sh` to classify staged, unstaged, and untracked work before deciding what to commit or move

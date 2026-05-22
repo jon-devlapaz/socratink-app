@@ -107,6 +107,19 @@ def _run_git(args: list[str], *, check: bool = True) -> str:
     return result.stdout.strip()
 
 
+def _git_succeeds(args: list[str]) -> bool:
+    return (
+        subprocess.run(
+            ["git", *args],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
 def _split_lines(value: str) -> list[str]:
     return [line.strip() for line in value.splitlines() if line.strip()]
 
@@ -124,6 +137,11 @@ def refresh_publication_refs() -> None:
     remotes = _remote_urls()
     if "origin" in remotes:
         _run_git(["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"])
+    if "no-mistakes" in remotes:
+        _run_git(
+            ["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"],
+            check=False,
+        )
 
 
 def _changed_paths() -> list[str]:
@@ -318,6 +336,39 @@ def ensure_current_dev_base(state: PushState, intent: PublicationIntent) -> None
         )
 
 
+def ensure_destination_fast_forward(state: PushState, intent: PublicationIntent) -> None:
+    remote, refspec = route_to_remote_refspec(intent.chosen_route)
+    destination_ref = f"refs/remotes/{remote}/{refspec}"
+    if not _run_git(["rev-parse", "--verify", destination_ref], check=False):
+        return
+    if _git_succeeds(["merge-base", "--is-ancestor", destination_ref, "HEAD"]):
+        return
+
+    counts = _run_git(["rev-list", "--left-right", "--count", f"{destination_ref}...HEAD"])
+    try:
+        remote_only_text, local_only_text = counts.split()
+        remote_only = int(remote_only_text)
+        local_only = int(local_only_text)
+    except ValueError as exc:
+        raise RuntimeError(f"could not parse {intent.chosen_route} divergence: {counts!r}") from exc
+
+    if remote == "no-mistakes" and refspec == "dev" and state.branch == "dev":
+        raise RuntimeError(
+            "destination no-mistakes/dev is not an ancestor of local dev "
+            f"(remote-only={remote_only}, local-only={local_only}). "
+            "A push would be rejected as non-fast-forward. "
+            "This usually means the gate rewrote dev after a previous run. "
+            "Preserve local dev on a safety branch, reset dev to no-mistakes/dev, "
+            "then cherry-pick only the unique local commits shown by "
+            "`git cherry -v no-mistakes/dev HEAD`."
+        )
+
+    raise RuntimeError(
+        f"destination {intent.chosen_route} is not an ancestor of local HEAD "
+        f"(remote-only={remote_only}, local-only={local_only}); fetch and reconcile before pushing."
+    )
+
+
 def encode_ack(payload: AuthorizationPayload) -> str:
     raw = payload.model_dump_json().encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii")
@@ -399,6 +450,7 @@ def main(argv: list[str] | None = None) -> int:
         state = collect_state()
         intent = resolve_publication_intent(state, explicit_target=args.target)
         ensure_current_dev_base(state, intent)
+        ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)
     except Exception as exc:
         print(f"[agent-push] ERROR: {exc}", file=sys.stderr)
