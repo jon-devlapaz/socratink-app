@@ -161,7 +161,17 @@ class LoginRouteTests(unittest.TestCase):
         self.assertIn("Continue with Google", body)
         self.assertIn("continue as guest", body)
 
-    def test_dev_autoguest_login_error_retries_guest_entry(self):
+    def test_dev_autoguest_login_redirects_to_guest_without_error(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+        client = build_client(service)
+
+        response = client.get("/login?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/auth/guest?return_to=%2F")
+
+    def test_dev_autoguest_login_error_renders_login(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
         client = build_client(service)
@@ -171,8 +181,40 @@ class LoginRouteTests(unittest.TestCase):
             follow_redirects=False,
         )
 
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["location"], "/auth/guest?return_to=%2F")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Continue with Google", response.text)
+        self.assertIn("continue as guest", response.text)
+
+    def test_dev_autoguest_return_to_error_renders_login(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+        client = build_client(service)
+
+        response = client.get(
+            "/login?return_to=/login%3Fauth_error%3Dguest_unavailable",
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Continue with Google", response.text)
+        self.assertIn("continue as guest", response.text)
+
+    def test_login_clears_invalid_session_cookie_on_html_response(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=False,
+            should_clear_cookie=True,
+        )
+        client = build_client(service)
+        client.cookies.set(service.cookie_name, "invalid-session")
+
+        response = client.get("/login?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 200)
+        cookies = response.headers.get("set-cookie", "")
+        self.assertIn("sb_session=", cookies)
+        self.assertIn("Max-Age=0", cookies)
 
 
 class GoogleAuthStartTests(unittest.TestCase):
@@ -354,6 +396,23 @@ class ApiMeAndLogoutTests(unittest.TestCase):
             "sb_session=sealed-refreshed-blob",
             response.headers.get("set-cookie", ""),
         )
+
+    def test_api_me_clears_invalid_session_cookie(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=False,
+            should_clear_cookie=True,
+        )
+        client = build_client(service)
+        client.cookies.set(service.cookie_name, "invalid-session")
+
+        response = client.get("/api/me")
+
+        self.assertEqual(response.status_code, 200)
+        cookies = response.headers.get("set-cookie", "")
+        self.assertIn("sb_session=", cookies)
+        self.assertIn("Max-Age=0", cookies)
 
     def test_logout_clears_session_and_guest_cookies(self):
         service = FakeSupabaseAuthService(enabled=True)

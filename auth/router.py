@@ -4,7 +4,7 @@ from pathlib import Path
 import logging
 import os
 from typing import Literal, cast
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -715,6 +715,18 @@ def _build_login_redirect(
     return f"/login?{urlencode(query)}"
 
 
+def _query_has_auth_error(query: str) -> bool:
+    return "auth_error" in parse_qs(query, keep_blank_values=True)
+
+
+def _login_request_has_auth_error(
+    request: Request, sanitized_return_to: str
+) -> bool:
+    return _query_has_auth_error(request.url.query) or _query_has_auth_error(
+        urlsplit(sanitized_return_to).query
+    )
+
+
 def _get_auth_service(request: Request) -> SupabaseAuthService:
     service = cast(
         SupabaseAuthService | None,
@@ -846,7 +858,11 @@ def login(request: Request, return_to: str | None = None) -> Response:
     sanitized_return_to = sanitize_return_to_path(return_to)
     if current.authenticated and not current.guest_mode:
         response: Response = RedirectResponse(url=sanitized_return_to, status_code=302)
-    elif not current.authenticated and _local_dev_guest_bootstrap_enabled(request):
+    elif (
+        not current.authenticated
+        and _local_dev_guest_bootstrap_enabled(request)
+        and not _login_request_has_auth_error(request, sanitized_return_to)
+    ):
         response = RedirectResponse(
             url=f"/auth/guest?{urlencode({'return_to': sanitized_return_to})}",
             status_code=302,
