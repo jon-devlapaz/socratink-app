@@ -519,6 +519,39 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         assert.ok(noEvidenceHtml.includes('data-state=""'));
         assert.ok(!noEvidenceHtml.includes('actualized'));
 
+        const legacyPrimedGraph = JSON.stringify({
+          metadata: {},
+          backbone: [{ id: 'legacy-primed', drill_status: 'primed' }],
+          clusters: [],
+        });
+        const legacyPrimedHtml = buildLibraryHtml([
+          { id: 'legacy-primed', name: 'Legacy Primed', state: 'growing', graphData: legacyPrimedGraph },
+        ], {});
+        assert.ok(legacyPrimedHtml.includes('data-state="primed"'));
+        assert.ok(legacyPrimedHtml.includes('>primed<'));
+
+        const legacyNeedsRepairGraph = JSON.stringify({
+          metadata: {},
+          backbone: [{ id: 'legacy-drilled', drill_status: 'drilled' }],
+          clusters: [],
+        });
+        const legacyNeedsRepairHtml = buildLibraryHtml([
+          { id: 'legacy-drilled', name: 'Legacy Drilled', state: 'growing', graphData: legacyNeedsRepairGraph },
+        ], {});
+        assert.ok(legacyNeedsRepairHtml.includes('data-state="needs repair"'));
+        assert.ok(legacyNeedsRepairHtml.includes('>needs repair<'));
+
+        const legacySolidGraph = JSON.stringify({
+          metadata: { drill_status: 'solidified' },
+          backbone: [{ id: 'legacy-solid-node', drill_status: 'solidified' }],
+          clusters: [],
+        });
+        const legacySolidHtml = buildLibraryHtml([
+          { id: 'legacy-solid-node', name: 'Legacy Solid Node', state: 'growing', graphData: legacySolidGraph },
+        ], {});
+        assert.ok(legacySolidHtml.includes('data-state="solidified"'));
+        assert.ok(legacySolidHtml.includes('>solidified<'));
+
         const needsRepairTraining = {
           node_records: {
             a: {
@@ -1221,6 +1254,8 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         const concept = {
           id: 'sample-customer-sketch',
           name: 'action potentials',
+          contentType: null,
+          sourceUrl: null,
           startingMapContext: 'I think nerves send electricity by opening little gates, but I am fuzzy on what starts it.',
         };
 
@@ -1244,6 +1279,20 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(!coldHtml.includes('concept-page-b2__route-item'));
         assert.ok(!coldHtml.includes('data-entry-id="spread"'));
         assert.ok(!coldHtml.includes('concept-page-b2__nearby'));
+
+        const coldWithoutTrainingHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          null
+        );
+        assert.ok(coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
+        assert.ok(coldWithoutTrainingHtml.includes('What do you think makes the sodium channel open?'));
+        assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!coldWithoutTrainingHtml.includes('data-entry-id="spread"'));
+        assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__nearby'));
 
         const savedDraftTraining = {
           source_mode: 'source_less',
@@ -1396,6 +1445,18 @@ def test_source_less_view_mode_derivation_preserves_comparison_seams() -> None:
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_audio_surfaces_share_versioned_audio_module_instance() -> None:
+    app_js = (REPO_ROOT / "public" / "js" / "app.js").read_text(encoding="utf-8")
+    launch_pad_js = (REPO_ROOT / "public" / "js" / "launch-pad.js").read_text(encoding="utf-8")
+    source_panel_js = (REPO_ROOT / "public" / "js" / "source-panel.js").read_text(encoding="utf-8")
+
+    assert "from './audio.js?v=4'" in app_js
+    assert "from './audio.js?v=4'" in launch_pad_js
+    assert 'from "./audio.js?v=4"' in source_panel_js
+    assert "from './audio.js';" not in launch_pad_js
+    assert 'from "./audio.js";' not in source_panel_js
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")

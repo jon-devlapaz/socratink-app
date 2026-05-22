@@ -22,7 +22,7 @@
 
 import { emitTelemetry } from './telemetry.js';
 import { submitConceptCreate } from './ai_service.js';
-import { AudioFX } from './audio.js';
+import { AudioFX } from './audio.js?v=4';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
 // stays consistent: typing fires playKeyClick on visible keys + Backspace +

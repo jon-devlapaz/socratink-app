@@ -2504,8 +2504,8 @@ def test_desk_iso_board_state_surface_and_room_labels(
         "#tile-2": ("fractured", "fractured"),
         "#tile-3": ("growing", "solidified"),
         "#tile-4": ("hibernating", "locked"),
-        "#tile-6": ("primed", "locked"),
-        "#tile-7": ("growing", "locked"),
+        "#tile-6": ("primed", "primed"),
+        "#tile-7": ("growing", "solidified"),
         "#tile-8": ("actualized", "solidified"),
     }
     for selector, (source_state, board_state) in expected_states.items():
@@ -2517,12 +2517,13 @@ def test_desk_iso_board_state_surface_and_room_labels(
         "#tile-1": "Reconstruction evidence is on record.",
         "#tile-2": "A specific gap is ready to repair.",
         "#tile-3": "Spaced reconstruction is on record.",
+        "#tile-6": "Reconstruction evidence is on record.",
+        "#tile-7": "Spaced reconstruction is on record.",
         "#tile-8": "Spaced reconstruction is on record.",
     }
     for selector, hint in expected_hints.items():
         expect(clean_page.locator(selector)).to_have_attribute("data-evidence-hint", hint)
     expect(clean_page.locator("#tile-0")).not_to_have_attribute("data-evidence-hint", re.compile(r".+"))
-    expect(clean_page.locator("#tile-6")).not_to_have_attribute("data-evidence-hint", re.compile(r".+"))
 
     # Button semantics so screen readers announce tiles as actionable.
     expect(clean_page.locator("#tile-1")).to_have_attribute("role", "button")

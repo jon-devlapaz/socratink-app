@@ -31,9 +31,37 @@ export function collectTrainingNodeIds(graphData, training = null) {
   return ids;
 }
 
+function legacyBadgeForDrillStatus(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'solidified' || normalized === 'solid') return 'solidified';
+  if (normalized === 'drilled') return 'needs repair';
+  if (normalized === 'primed') return 'primed';
+  return null;
+}
+
+function deriveLegacyConceptBadge(graphData) {
+  const badges = [];
+  const addBadge = (status) => {
+    const badge = legacyBadgeForDrillStatus(status);
+    if (badge) badges.push(badge);
+  };
+
+  addBadge(graphData?.metadata?.drill_status);
+  (graphData?.backbone || []).forEach((item) => addBadge(item?.drill_status));
+  (graphData?.clusters || []).forEach((cluster) => {
+    addBadge(cluster?.drill_status);
+    (cluster?.subnodes || []).forEach((subnode) => addBadge(subnode?.drill_status));
+  });
+
+  if (badges.includes('needs repair')) return 'needs repair';
+  if (badges.includes('primed')) return 'primed';
+  if (badges.includes('solidified')) return 'solidified';
+  return null;
+}
+
 export function deriveConceptBadge(concept, training = null, options = {}) {
-  if (!training) return null;
   const graphData = parseConceptGraphData(concept);
   const nodeIds = collectTrainingNodeIds(graphData, training);
-  return deriveConceptStatus(training, nodeIds, options).badge;
+  const badge = training ? deriveConceptStatus(training, nodeIds, options).badge : null;
+  return badge || deriveLegacyConceptBadge(graphData);
 }

@@ -37,7 +37,15 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     if (badge === 'solidified') return 'solidified';
     if (badge === 'needs repair') return 'fractured';
     if (badge === 'primed') return 'primed';
-    return 'locked';
+    return null;
+  }
+
+  function legacyBoardStateFromConceptState(state) {
+    const normalized = String(state || '').toLowerCase();
+    if (normalized === 'actualized') return 'solidified';
+    if (normalized === 'fractured') return 'fractured';
+    if (normalized === 'primed') return 'primed';
+    return null;
   }
 
   function evidenceHintForBoardState(boardState) {
@@ -67,7 +75,7 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
   function deriveBoardState(concept) {
     const training = loadTraining(concept?.id);
     const badge = deriveConceptBadge(concept, training);
-    return boardStateFromBadge(badge);
+    return boardStateFromBadge(badge) || legacyBoardStateFromConceptState(concept?.state) || 'locked';
   }
 
   function crystalMarkup(state) {

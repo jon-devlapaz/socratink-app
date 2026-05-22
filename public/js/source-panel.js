@@ -34,7 +34,7 @@
 //     return shape includes teardown only so future callers that need
 //     explicit cleanup can opt in by replacing the implementation.
 
-import { AudioFX } from "./audio.js";
+import { AudioFX } from "./audio.js?v=4";
 
 // Same printable-key heuristic used by the door (app.js) and launch pad —
 // keeps audio cues consistent across every text-entry surface.

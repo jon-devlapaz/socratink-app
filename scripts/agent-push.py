@@ -336,6 +336,15 @@ def ensure_current_dev_base(state: PushState, intent: PublicationIntent) -> None
         )
 
 
+def ensure_destination_ref_current(state: PushState, intent: PublicationIntent) -> None:
+    remote, refspec = route_to_remote_refspec(intent.chosen_route)
+    if remote not in state.remote_urls:
+        return
+    if refspec not in {"dev", "main"}:
+        return
+    _run_git(["fetch", remote, f"+refs/heads/{refspec}:refs/remotes/{remote}/{refspec}"])
+
+
 def ensure_destination_fast_forward(state: PushState, intent: PublicationIntent) -> None:
     remote, refspec = route_to_remote_refspec(intent.chosen_route)
     destination_ref = f"refs/remotes/{remote}/{refspec}"
@@ -449,6 +458,7 @@ def main(argv: list[str] | None = None) -> int:
         refresh_publication_refs()
         state = collect_state()
         intent = resolve_publication_intent(state, explicit_target=args.target)
+        ensure_destination_ref_current(state, intent)
         ensure_current_dev_base(state, intent)
         ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)

@@ -118,6 +118,50 @@ def test_refresh_publication_refs_updates_no_mistakes_dev_when_configured(monkey
     ]
 
 
+def test_explicit_no_mistakes_target_blocks_when_destination_fetch_fails(monkeypatch, capsys):
+    mod = _load_module()
+
+    def fake_run_git(args, *, check=True):
+        if args == ["remote", "-v"]:
+            return "\n".join(
+                (
+                    "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)",
+                    "no-mistakes\t/tmp/.no-mistakes/repos/review-gate.git (push)",
+                )
+            )
+        if args == ["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"]:
+            return ""
+        if args == ["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"]:
+            if check:
+                raise RuntimeError("git fetch no-mistakes failed: gate unavailable")
+            return ""
+        if args == ["symbolic-ref", "--short", "HEAD"]:
+            return "dev"
+        if args == ["rev-parse", "HEAD"]:
+            return "abc1234"
+        if args == ["status", "--porcelain"]:
+            return ""
+        if args in (
+            ["diff", "--name-only", "origin/dev...HEAD"],
+            ["diff", "--name-only", "--cached"],
+            ["diff", "--name-only", "HEAD"],
+            ["ls-files", "--others", "--exclude-standard"],
+        ):
+            return "main.py\n" if args == ["diff", "--name-only", "origin/dev...HEAD"] else ""
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t1"
+        if args == ["rev-parse", "--verify", "refs/remotes/no-mistakes/dev"]:
+            return ""
+        raise AssertionError(f"unexpected git call: {args}")
+
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    assert mod.main(["--target", "no-mistakes/dev"]) == 2
+    assert "gate unavailable" in capsys.readouterr().err
+
+
 def test_explicit_target_records_override_against_recommendation(tmp_path):
     mod = _load_module()
     state = mod.PushState(

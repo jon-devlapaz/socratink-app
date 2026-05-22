@@ -128,6 +128,31 @@ function cleanScaffoldText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function normalizeSourceMode(value) {
+  const mode = cleanScaffoldText(value);
+  return mode === 'source_less' || mode === 'source_attached' ? mode : '';
+}
+
+function sourceModeForConcept(concept, data, training) {
+  const explicitMode = normalizeSourceMode(training?.source_mode)
+    || normalizeSourceMode(concept?.sourceMode)
+    || normalizeSourceMode(concept?.source_mode)
+    || normalizeSourceMode(data?.metadata?.source_mode);
+  if (explicitMode) return explicitMode;
+  const hasNullContentType = Object.prototype.hasOwnProperty.call(concept || {}, 'contentType')
+    && concept?.contentType === null;
+  const hasNullSourceUrl = Object.prototype.hasOwnProperty.call(concept || {}, 'sourceUrl')
+    && concept?.sourceUrl === null;
+  const hasSourceMarker = Boolean(
+    cleanScaffoldText(concept?.contentType)
+    || cleanScaffoldText(concept?.contentFilename)
+    || cleanScaffoldText(concept?.sourceUrl)
+    || cleanScaffoldText(data?.metadata?.source_title)
+    || cleanScaffoldText(data?.metadata?.source_url)
+  );
+  return hasNullContentType && hasNullSourceUrl && !hasSourceMarker ? 'source_less' : '';
+}
+
 function normalizeLearnerScaffold(scaffold) {
   if (!scaffold || typeof scaffold !== 'object') return null;
   const normalized = {
@@ -625,7 +650,8 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const activeEntryId = getConceptEntryId(activeEntry, activeIdx);
 
   const derived = entryTraining(backbone, activeIdx, training, options);
-  const isSourceLess = training?.source_mode === 'source_less';
+  const sourceMode = sourceModeForConcept(concept, data, training);
+  const isSourceLess = sourceMode === 'source_less';
   const viewMode = isSourceLess ? deriveSourceLessViewMode(derived, options) : (options?.viewMode || 'expanded-workspace');
   const isSavedDraftStudyGate = viewMode === 'saved-draft-study-gate';
   const isPostRevealComparison = viewMode === 'post-reveal-comparison';
@@ -703,7 +729,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
       </p>
     `;
-  const provenanceHtml = training?.source_mode === 'source_less'
+  const provenanceHtml = isSourceLess
     ? `
       <p class="concept-page-b2__provenance">
         Shaped from your launch attempt, not verified against a source.

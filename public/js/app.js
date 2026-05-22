@@ -1171,9 +1171,11 @@ const App = (() => {
       : (source && source.type) ? source.type : 'text';
     const sourceFilename = (source && source.filename) ? source.filename : null;
 
+    /* c8 ignore start -- source-attached creation requires the live extraction path; the store contract is covered directly. */
     const jsonPayload = { ...knowledgeMap, metadata: { ...(knowledgeMap.metadata || {}) } };
     jsonPayload.metadata.starting_map_context = startingMapContext;
     jsonPayload.metadata.map_maturity = 'provisional';
+    jsonPayload.metadata.source_mode = 'source_attached';
 
     const concepts = loadConcepts();
     const concept = {
@@ -1183,10 +1185,10 @@ const App = (() => {
       contentType: sourceType,
       contentFilename: sourceFilename,
       sourceUrl: source?.url || null,
+      sourceMode: 'source_attached',
       startingMapContext,
       graphData: JSON.stringify(jsonPayload)
     };
-    /* c8 ignore start -- source-attached creation requires the live extraction path; the store contract is covered directly. */
     contentStore.set(id, sourceText);
     concepts.push(concept);
     saveConcepts(concepts);
@@ -1253,6 +1255,7 @@ const App = (() => {
     const jsonPayload = { ...map, metadata: { ...(map.metadata || {}) } };
     jsonPayload.metadata.starting_map_context = startingMapContext;
     jsonPayload.metadata.map_maturity = 'provisional';
+    jsonPayload.metadata.source_mode = 'source_less';
     if (shell.goal) {
       jsonPayload.metadata.learner_goal = shell.goal;
     }
@@ -1267,6 +1270,7 @@ const App = (() => {
       contentType: null,
       contentFilename: null,
       sourceUrl: null,
+      sourceMode: 'source_less',
       learnerGoal: shell.goal || '',
       startingMapContext,
       graphData: JSON.stringify(jsonPayload),
