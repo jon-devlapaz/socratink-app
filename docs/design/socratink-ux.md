@@ -48,13 +48,15 @@ Enter concept
 
 ### What each screen does — and refuses to do
 
-**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures only the concept name (and optional source attach). Source-less concepts pass through a **launch pad** that captures the learner's threshold (rough whole-concept model) before any AI generation runs. See `docs/product/spec.md` for the current contract.
+**1. Concept Threshold — Door + Launch Pad (C-prime, 2026-05-07).** The door captures the concept name, optional source attach, and an optional learner goal when the input is phrased as intent. Source-less concepts pass through a **launch pad** that shows the preserved goal and captures the learner's threshold (rough whole-concept model) before any AI generation runs. The learner goal shapes relevance and prompt copy only; it is not learning evidence. See `docs/product/spec.md` for the current contract.
 
 The launch pad replaces the previous in-form "Starting sketch" textarea. The threshold is no longer a field on the door; it is a dedicated post-commit surface. This change preserves the learner-seeded route contract: no graph or thesis is generated from the concept name alone.
 
 *Prior implementation (pre-C-prime):* Threshold was captured as a two-textarea form on Ignition alongside the concept name. Copy distinguished it from the cold attempt: *"This is global context. The first room will ask one smaller question."*
 
 **2. Provisional Graph / Gestalt Canvas.** A draft route, framed as a hypothesis. Legend is constrained to three words: *draft route · ready for first attempt · locked.* No mutation. When the learner opens the concept, the route may remain visible as a quiet vertical margin while the first local reconstruction surface is already inline. This margin is an advance organizer only: it shows phase cues and scope boundaries, not answer summaries or study material.
+
+The Constellation sibling view is secondary orientation, not the primary work surface. Route stays the default reconstruction surface; Constellation may show position, availability, and training-derived state, but must not leak mechanisms, study content, source previews, or answer-shaped labels before reconstruction evidence.
 
 **3. First Cold Attempt.** Narrower than the threshold. **Quotes or paraphrases the learner's threshold input** before asking one causal mechanism question inside the first node. The first writing surface is part of the concept canvas, not a separate mode the learner must enter. A recordable learner answer appends training evidence and derives `primed` or `needs repair`. Non-substantive input writes no attempt and asks for a micro-generation. **Analogical fallback** for low-signal learners: a familiar source analogy, learner predicts a causal relation *inside the analogy*, and no training evidence is recorded until something substantive lands. **The learner is never labeled zero-knowledge.**
 

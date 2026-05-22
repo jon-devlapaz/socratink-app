@@ -9,8 +9,8 @@ the Vercel serverless function deployment.
 | File | Stage | What it does |
 | :--- | :--- | :--- |
 | `extract-system-v1.txt` | Stage 1 — Extract | Turns raw source material into a structured `ProvisionalMap`. The schema this prompt produces matches `models.ProvisionalMap`. |
-| `generate-smallest-route-system-v1.txt` | Stage 2 — Draft | Generates a minimal traversal path through the map for the first drill session. |
-| `drill-system-v1.md` | Stage 3 — Drill | The Socratic drill agent. Forces recall, scaffolds repair, tags Shallow/Deep/Misconception. The drill route runtime-appends a "Target Node (ANSWER KEY)" block and the pruned map context. |
+| `generate-smallest-route-system-v1.txt` | Stage 2 — Draft | Generates a minimal traversal path through the map for the first drill session, including `learner_scaffold` on source-less smallest-route subnodes. |
+| `drill-system-v1.md` | Stage 3 — Drill | The Socratic drill agent. Forces recall, scaffolds repair, tags Shallow/Deep/Misconception. The drill route runtime-appends a "Target Node (ANSWER KEY)" block, a "Learner Scaffold" block when present, and the pruned map context. |
 | `repair-reps-system-v1.md` | Stage 4 — Repair Reps | Post-drill spaced-repetition repair routine for nodes flagged Deep/Misconception. |
 
 ## Loading
@@ -36,9 +36,14 @@ cheap and Vercel's filesystem is read-only at runtime.
   the same commit. The Pydantic validation step in `ai_service.py` will
   reject anything that drifts.
 - **The drill prompt is appended at runtime.** The drill backend
-  dynamically appends the "Target Node (ANSWER KEY)" block to the system
-  prompt before each turn. If you rename anchors inside the prompt that
-  the backend's appender depends on, drill silently breaks.
+  dynamically appends the "Target Node (ANSWER KEY)" block and, when
+  present, a "Learner Scaffold" block to the system prompt before each
+  turn. If you rename anchors inside the prompt that the backend's
+  appender depends on, drill silently breaks.
+- **Source-less smallest routes require `learner_scaffold`.** The runtime
+  rejects smallest-route subnodes that omit it. Scaffold fields shape the
+  task and evaluator scope; they are not learner evidence and must not
+  reveal the mechanism.
 - **EPISTEMIC RULE in `extract-system-v1.txt` is load-bearing.** "Prefer
   omission over invention" is what keeps the graph truthful. Softening
   this language to "Be thorough" produces hallucinated backbone items in

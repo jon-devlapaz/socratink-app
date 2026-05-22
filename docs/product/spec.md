@@ -110,7 +110,8 @@ surface until every view is rebound to the training derivation.
 Current surface binding status:
 - concept-page entry state, next actions, inline reconstruction, study reveal, and repair panels derive from `socratink:training:v1:<conceptId>`
 - Library reconstruction text binds to learner-written training records
-- Library badges, Desk tiles, Sidebar concept markers, and Map/graph badges still use legacy `concept.state` until the full binding rollout lands
+- Library badges, Desk tiles, and Sidebar concept markers derive concept-level badges from the training record, with legacy graph/status fields as compatibility fallback
+- Map/graph badge surfaces that still exist outside the concept-page route may use legacy graph/status fields until their binding rollout lands
 
 ### Phase Tracking
 

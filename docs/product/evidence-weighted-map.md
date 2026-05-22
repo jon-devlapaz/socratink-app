@@ -283,7 +283,8 @@ Current shipped binding status:
 
 - concept-page entry state, CTAs, inline reconstruction, study reveal, and repair panels derive from the training record
 - Library reconstruction copy uses learner-written training records and must not fall back to AI-generated `core_thesis`
-- Map badges, Desk tiles, Sidebar markers, and Library card badges still have legacy `concept.state` bindings until the full target binding lands
+- Library card badges, Desk tiles, and Sidebar markers derive concept-level badges from the training record, with legacy graph/status fields as compatibility fallback
+- Any remaining map/graph badge surfaces outside the concept-page route may still use legacy graph/status fields until their binding rollout lands
 
 Implementation detail, schema shape, exact fold mechanics, and migration rules
 belong in [the drill data-model canon](../superpowers/specs/2026-05-15-drill-data-model-design.md). This doctrine owns the product truth the derivation must preserve.
