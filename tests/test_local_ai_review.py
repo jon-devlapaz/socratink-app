@@ -28,8 +28,8 @@ def _init_repo(tmp_path: Path) -> Path:
     _run(["git", "init", "-b", "dev", str(repo)], tmp_path)
     _git(repo, "config", "user.email", "test@example.com")
     _git(repo, "config", "user.name", "Test User")
-    (repo / "tracked.txt").write_text("base\n", encoding="utf-8")
-    _git(repo, "add", "tracked.txt")
+    (repo / "tracked.py").write_text("base = 1\n", encoding="utf-8")
+    _git(repo, "add", "tracked.py")
     _git(repo, "commit", "-m", "base")
     return repo
 
@@ -68,11 +68,38 @@ def test_check_refuses_broad_ollama_host(tmp_path: Path) -> None:
     assert not capture.exists()
 
 
+def test_check_prepends_http_to_schemeless_host(tmp_path: Path) -> None:
+    capture = tmp_path / "deepseek-capture.txt"
+    fake = tmp_path / "fake-deepseek"
+    fake.write_text(
+        "#!/usr/bin/env bash\n"
+        "printf 'OLLAMA_HOST:%s\\n' \"$OLLAMA_HOST\" > \"$DEEPSEEK_CAPTURE\"\n"
+        "printf 'fake local review\\n'\n",
+        encoding="utf-8",
+    )
+    fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+    repo = _init_repo(tmp_path)
+
+    result = _run(
+        ["bash", str(SCRIPT), "check"],
+        repo,
+        {
+            "DEEPSEEK_LOCAL_BIN": str(fake),
+            "DEEPSEEK_CAPTURE": str(capture),
+            "OLLAMA_HOST": "127.0.0.1:11434",
+        },
+    )
+
+    assert result.returncode == 0
+    captured = capture.read_text(encoding="utf-8")
+    assert "OLLAMA_HOST:http://127.0.0.1:11434" in captured
+
+
 def test_staged_mode_sends_canned_prompt_and_staged_diff(tmp_path: Path) -> None:
     fake, capture = _fake_deepseek(tmp_path)
     repo = _init_repo(tmp_path)
-    (repo / "tracked.txt").write_text("base\nchanged\n", encoding="utf-8")
-    _git(repo, "add", "tracked.txt")
+    (repo / "tracked.py").write_text("base = 1\n# changed\n", encoding="utf-8")
+    _git(repo, "add", "tracked.py")
 
     result = _run(
         ["bash", str(SCRIPT), "staged"],
@@ -86,14 +113,14 @@ def test_staged_mode_sends_canned_prompt_and_staged_diff(tmp_path: Path) -> None
     captured = capture.read_text(encoding="utf-8")
     assert "Review this staged diff for behavior-breaking bugs only" in captured
     assert "diff --git" in captured
-    assert "+changed" in captured
+    assert "+# changed" in captured
 
 
 def test_refuses_secret_like_payload_before_model_call(tmp_path: Path) -> None:
     fake, capture = _fake_deepseek(tmp_path)
     repo = _init_repo(tmp_path)
-    (repo / "leak.txt").write_text("OPENAI_API_KEY=sk-test\n", encoding="utf-8")
-    _git(repo, "add", "leak.txt")
+    (repo / "leak.py").write_text("OPENAI_API_KEY=sk-test\n", encoding="utf-8")
+    _git(repo, "add", "leak.py")
 
     result = _run(
         ["bash", str(SCRIPT), "staged"],
@@ -191,6 +218,68 @@ def test_publish_preview_redacts_ack_token_before_model_call(tmp_path: Path) -> 
     captured = capture.read_text(encoding="utf-8")
     assert "[ACK_TOKEN_REDACTED]" in captured
     assert "live-token-123" not in captured
+
+
+def test_review_fails_open_when_helper_fails(tmp_path: Path) -> None:
+    fake = tmp_path / "fake-deepseek"
+    fake.write_text(
+        "#!/usr/bin/env bash\n"
+        "echo 'Connection refused to Ollama' >&2\n"
+        "exit 2\n",
+        encoding="utf-8",
+    )
+    fake.chmod(fake.stat().st_mode | stat.S_IXUSR)
+
+    repo = _init_repo(tmp_path)
+    (repo / "tracked.py").write_text("changed code\n", encoding="utf-8")
+    _git(repo, "add", "tracked.py")
+
+    result = _run(
+        ["bash", str(SCRIPT), "staged"],
+        repo,
+        {"DEEPSEEK_LOCAL_BIN": str(fake)},
+    )
+
+    assert result.returncode == 0
+    assert "WARNING: local review helper failed" in result.stderr
+    assert "Skipping review (fail-open)" in result.stderr
+
+
+def test_review_skips_when_no_code_changes(tmp_path: Path) -> None:
+    fake, capture = _fake_deepseek(tmp_path)
+    repo = _init_repo(tmp_path)
+    (repo / "README.md").write_text("documentation change\n", encoding="utf-8")
+    _git(repo, "add", "README.md")
+
+    result = _run(
+        ["bash", str(SCRIPT), "staged"],
+        repo,
+        {"DEEPSEEK_LOCAL_BIN": str(fake), "DEEPSEEK_CAPTURE": str(capture)},
+    )
+
+    assert result.returncode == 0
+    assert "No code changes to review. Skipping." in result.stdout
+    assert not capture.exists()
+
+
+def test_publish_diff_reviews_correct_commits(tmp_path: Path) -> None:
+    fake, capture = _fake_deepseek(tmp_path)
+    repo = _init_repo(tmp_path)
+    _git(repo, "branch", "origin/dev")
+    (repo / "tracked.py").write_text("new code lines\n", encoding="utf-8")
+    _git(repo, "add", "tracked.py")
+    _git(repo, "commit", "-m", "added code")
+
+    result = _run(
+        ["bash", str(SCRIPT), "publish-diff", "HEAD~1"],
+        repo,
+        {"DEEPSEEK_LOCAL_BIN": str(fake), "DEEPSEEK_CAPTURE": str(capture)},
+    )
+
+    assert result.returncode == 0
+    captured = capture.read_text(encoding="utf-8")
+    assert "Review this diff of commits about to be published" in captured
+    assert "+new code lines" in captured
 
 
 def test_script_does_not_contain_git_mutation_commands() -> None:

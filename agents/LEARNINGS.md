@@ -53,6 +53,8 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 | `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [LYYYY-2026-05-13-subagent-delegation-too-soft](#lyyyy-2026-05-13-subagent-delegation-too-soft) |
 | `explore-compress-merge` | `promoted` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
 | `verification-gates-not-self-contained` | `promoted` | 2 | 2026-05-18 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
+| `no-mistakes-uncommitted-config-stale` | `observed` | 1 | 2026-05-22 | `none yet` | [LYYYY-2026-05-22-no-mistakes-uncommitted-config-stale](#lyyyy-2026-05-22-no-mistakes-uncommitted-config-stale) |
+
 
 ## Entries
 
@@ -129,3 +131,26 @@ A command documented as a local verification gate must carry its own local-only 
 ## Promotion Notes
 
 Promoted into `agents/QUALITY.md` after the second sighting affected verification integrity. Keep subagent edit-contract guidance unpromoted until it recurs; that pattern remains a delegation prompt habit, not binding quality doctrine.
+
+# LYYYY-2026-05-22-no-mistakes-uncommitted-config-stale
+
+- Status: `observed`
+- Pattern key: `no-mistakes-uncommitted-config-stale`
+- First seen: `2026-05-22`
+- Last seen: `2026-05-22`
+- Evidence count: `1`
+- Affected workflow surface: `agentic configuration`
+- Recommended promotion target: `none yet`
+- Related canonical files: `AGENTS.md`
+
+## Observation
+
+The `no-mistakes` daemon executes its validation and review pipeline within an isolated, clean Git worktree checked out from the pushed commit ref. Because of this, changes to repository-level configuration files (such as `.no-mistakes.yaml`) must be committed to Git to take effect. If changes remain only in the working directory (uncommitted), the daemon will fall back to the stale committed version of the configuration, causing unexpected behaviors or using the wrong agent.
+
+## Evidence
+
+- `2026-05-22`: Changing `.no-mistakes.yaml` to `agent: acp:pool` in the working directory did not stop the daemon from running the review step using the old `codex` agent, because the daemon was running in an isolated worktree based on the older commit that still had `agent: codex`. Committing the change and pushing allowed the daemon to correctly parse the new config.
+
+## Promotion Notes
+
+Keep as observed until it recurs or affects safety. If promoted, document this behavior clearly in `AGENTS.md` under the common development commands section to remind developers to commit `.no-mistakes.yaml` changes before expecting the daemon to reflect them.
