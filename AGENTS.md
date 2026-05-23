@@ -123,6 +123,7 @@ When CC returns sources only, pass `extensionFilter: [".py"]` (or `.js`, `.css`)
 scripts/local-ai-review.sh check
 scripts/local-ai-review.sh staged
 scripts/local-ai-review.sh diff
+scripts/local-ai-review.sh publish-diff origin/dev
 scripts/local-ai-review.sh wip
 scripts/local-ai-review.sh publish-preview
 scripts/local-ai-review.sh smoke-local
@@ -135,6 +136,7 @@ scripts/local-ai-review.sh pytest -- .venv/bin/pytest tests/path/test_file.py -q
 - Do not pipe its output into shell commands or use it to generate/modify ack tokens.
 - Keep Ollama local-only (`127.0.0.1` / `localhost`). Do not expose the local model server to LAN or public interfaces for this workflow.
 - The wrapper refuses likely secrets and oversized payloads; narrow the diff or test output instead of bypassing those checks.
+- `staged`, `diff`, and `publish-diff` modes skip review when only non-code files changed; other modes use fail-open behavior (exit 0 with warning) instead of hard failure.
 
 ### Environment setup
 ```bash
@@ -292,6 +294,7 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
   - **mypy** (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) — config in `mypy.ini`. Canonical invocation: `mypy .`. Honors `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees) plus per-module `ignore_errors` for `tests.*` and `api.*`.
   - **Scope must stay aligned** between the two configs. If you change one exclude list, change the other. `pyrefly.toml` uses positive `project-includes` (`main.py`, `ai_service.py`, `learning_commons.py`, `runtime_env.py`, `auth`, `llm`, `source_intake`, `models`) — add new top-level modules there if you create them, otherwise pyrefly silently skips them.
 - No ruff/flake8 config is checked in. Do not invent new lint frameworks beyond `pyrefly check` and `mypy .`. The no-mistakes gate is the repo-owned wrapper exception: `scripts/no-mistakes-lint.sh` reproduces configured gate lint by bootstrapping Python, running `scripts/doctor.sh`, and running `git diff --check` from the configured compare base.
+- Note: `.no-mistakes.yaml` changes must be committed to Git for the daemon to pick them up; the review runs in an isolated worktree based on the pushed commit ref, not the working directory state.
 - CI gate: `.github/workflows/preflight.yml` runs on every `pull_request` and on pushes to `main`/`dev`. The `preflight` job runs the repo bootstrap (`bash scripts/bootstrap-python.sh`), `bash scripts/doctor.sh`, and `.venv/bin/pytest -q --ignore=tests/e2e`; the `coverage` job installs Node/Chromium, starts a loopback app with `SOCRATINK_E2E_LOCAL_GUEST=1`, selects `COMPARE_BRANCH`, and runs `bash scripts/check-coverage.sh`. It generates a throwaway `SESSION_COOKIE_KEY` Fernet key plus CI-safe dummy auth env so the gates exercise bootstrap/auth paths without real Supabase credentials. This workflow is intentionally narrower than `scripts/preflight-deploy.sh`, which stays local-only because it also runs `vercel build` against real Vercel credentials.
 - Hosting/build behavior is defined by `vercel.json`:
   - all routes rewrite to `api/index.py`

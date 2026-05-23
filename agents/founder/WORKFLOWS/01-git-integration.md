@@ -72,7 +72,7 @@ scripts/git-founder-help.sh doctor      # read-only helper readiness check
 - when stale worktrees create session confusion, use `scripts/git-worktree-cleanup.sh` to list candidates and remove only clean registered worktrees with `--remove <path> --apply`
 - use the `--json` forms only for agents/scripts that need stable fields; founder-facing terminal usage should stay prose-first unless structured output is explicitly useful
 - use `scripts/git-founder-help.sh doctor` when shell shortcuts, hook installation, helper executability, or `no-mistakes` availability is suspect
-- `.no-mistakes.yaml` delegates gate `lint` and `test` to repo-owned wrappers and ignores `agents/superpowers/**`
+- `.no-mistakes.yaml` delegates gate `lint` and `test` to repo-owned wrappers and ignores `agents/superpowers/**`, `docs/superpowers/**`, `docs/archive/**`, and `public/_lab/**`
 - `scripts/no-mistakes-lint.sh` bootstraps Python, sources test-safe auth/env defaults, runs `scripts/doctor.sh`, and runs `git diff --check` from the merge-base of `COMPARE_BRANCH` or `origin/dev`
 - `scripts/no-mistakes-test.sh` bootstraps Python, sources the same test-safe auth/env defaults, installs Node/Chromium coverage prerequisites, defaults `COMPARE_BRANCH` to `origin/dev` when available, and runs `scripts/check-coverage.sh`
 - push intent is revalidated on ack
