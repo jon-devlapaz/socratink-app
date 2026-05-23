@@ -311,6 +311,7 @@ Port the `.concept-page-b2__overview*` styles from the worktree's `public/css/co
    - Create a source-less concept → see cover/work surface with the active cold-attempt writing task visible.
    - Write first draft → see saved draft on the same concept surface with no route preview and an explicit `Reveal notes and compare` action.
    - Reveal notes → see immediate post-reveal comparison on the same concept surface, not the full route-margin workspace yet.
+   - Save a repair → see completed-repair state with composer/helper/save controls hidden and `Try from memory again` available.
    - Click `Keep working` → see the route-margin workspace expand from the same concept surface.
    - After expansion, choose a traversal-allowed route entry → see the existing route-margin workspace change active entry, with no "Enter Concept Board" gate.
    - Return to concept with saved draft but no study reveal → restore one-column saved-draft study gate.
