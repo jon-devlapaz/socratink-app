@@ -89,7 +89,8 @@ drift fail the suite.
 
 End-to-end QA gate for the source-less gestalt hybrid path: Launch Pad,
 learner-goal preservation, first draft, explicit reveal/compare, `Keep working`,
-and route expansion from the same concept surface.
+repair save/completed-repair state, and route expansion from the same concept
+surface.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`

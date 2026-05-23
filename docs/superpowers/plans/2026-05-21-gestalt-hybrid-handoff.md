@@ -45,7 +45,7 @@ Stage 3: EXPANDED WORKSPACE (ongoing concept work after comparison is acknowledg
 2. **The cover is evidence-derived, not arrival-derived.** Use the training record for the active entry to determine whether a cold attempt exists. Do NOT use a one-time first-arrival flag. Resetting progress should naturally restore the cover sheet because the attempt evidence is gone.
 3. **No new overview schema unless proven necessary.** The minimum remarkable loop should derive the cover from existing concept data, `Starting sketch`, training provenance, `deriveConceptEntries()`, and `learner_scaffold`. Do not add `learner_overview` or a compatibility adapter unless a required cover element cannot be derived truthfully from the existing projection.
 4. **The cover/work surface must NOT look like a loading screen, progress bar, or passive overview.** Keep the route dot-track clean, quiet, manual, and secondary to the active cold-attempt writing task.
-5. **Expanded workspace is post-compare, not merely post-attempt.** Restore the expanded workspace only when the selected entry has a real recorded attempt, explicit `study_revealed_at`, and the immediate comparison is no longer the active render target. An unrevealed saved draft restores the one-column saved-draft study gate.
+5. **Expanded workspace is post-compare, not merely post-attempt.** Restore the expanded workspace only when the selected entry has a real recorded attempt, explicit `study_revealed_at`, and either the immediate comparison is no longer the active render target or a repair record exists for the repair branch. An unrevealed saved draft restores the one-column saved-draft study gate.
 6. **Pre-attempt visibility is source-locked.** Before the first Cold attempt, every visible string must come from an allowed source. Do not let fallback chains leak AI-generated answer structure into the cover.
 
 ---
@@ -311,6 +311,7 @@ Port the `.concept-page-b2__overview*` styles from the worktree's `public/css/co
    - Create a source-less concept → see cover/work surface with the active cold-attempt writing task visible.
    - Write first draft → see saved draft on the same concept surface with no route preview and an explicit `Reveal notes and compare` action.
    - Reveal notes → see immediate post-reveal comparison on the same concept surface, not the full route-margin workspace yet.
+   - Save a repair → see completed-repair state with composer/helper/save controls hidden and `Try from memory again` available.
    - Click `Keep working` → see the route-margin workspace expand from the same concept surface.
    - After expansion, choose a traversal-allowed route entry → see the existing route-margin workspace change active entry, with no "Enter Concept Board" gate.
    - Return to concept with saved draft but no study reveal → restore one-column saved-draft study gate.
