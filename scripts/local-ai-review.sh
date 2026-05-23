@@ -236,7 +236,7 @@ case "$mode" in
       "$(collect_diff)"
     ;;
   publish-diff)
-    base="${2:-}"
+    base="${1:-}"
     if [ -z "$base" ]; then
       base="origin/dev"
     fi

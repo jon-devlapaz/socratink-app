@@ -271,7 +271,7 @@ def test_publish_diff_reviews_correct_commits(tmp_path: Path) -> None:
     _git(repo, "commit", "-m", "added code")
 
     result = _run(
-        ["bash", str(SCRIPT), "publish-diff", "origin/dev"],
+        ["bash", str(SCRIPT), "publish-diff", "HEAD~1"],
         repo,
         {"DEEPSEEK_LOCAL_BIN": str(fake), "DEEPSEEK_CAPTURE": str(capture)},
     )
