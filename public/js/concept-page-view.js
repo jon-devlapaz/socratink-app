@@ -484,20 +484,14 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
     : '';
   const gapCount = gaps.length;
   const gapCountText = `${gapCount} missing ${gapCount === 1 ? 'link' : 'links'} to repair`;
-  return `
-    <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
-      <span class="eyebrow concept-page-b2__repair-eyebrow">Put it in your words</span>
-      <h3>Write the missing link</h3>
-      <p class="concept-page-b2__repair-summary">${escHtml(gapCountText)}</p>
-      <p class="concept-page-b2__repair-helper">Save this repair before you try from memory again.</p>
-      <ul class="concept-page-b2__repair-gaps">
-        ${gaps.map((gap, index) => `
-          <li>
-            <strong>${escHtml(repairGapTitle(gap, index))}</strong>
-            <span>${escHtml(repairGapCorrection(gap))}</span>
-          </li>
-        `).join('')}
-      </ul>
+
+  const helperHtml = repairs.length
+    ? ''
+    : `<p class="concept-page-b2__repair-helper">Save this repair before you try from memory again.</p>`;
+
+  const inputFormHtml = repairs.length
+    ? ''
+    : `
       <textarea
         class="concept-page-b2__repair-input"
         data-repair-entry-id="${escHtml(entryId)}"
@@ -508,6 +502,23 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
       ></textarea>
       <p class="concept-page-b2__repair-error" data-repair-error hidden>Write the missing link before saving.</p>
       <button class="concept-page-b2__repair-save" type="button" data-repair-entry-id="${escHtml(entryId)}">Save repair</button>
+    `;
+
+  return `
+    <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
+      <span class="eyebrow concept-page-b2__repair-eyebrow">Put it in your words</span>
+      <h3>Write the missing link</h3>
+      <p class="concept-page-b2__repair-summary">${escHtml(gapCountText)}</p>
+      ${helperHtml}
+      <ul class="concept-page-b2__repair-gaps">
+        ${gaps.map((gap, index) => `
+          <li>
+            <strong>${escHtml(repairGapTitle(gap, index))}</strong>
+            <span>${escHtml(repairGapCorrection(gap))}</span>
+          </li>
+        `).join('')}
+      </ul>
+      ${inputFormHtml}
       ${nextAttemptButton}
     </section>
   `;
@@ -781,8 +792,10 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     `
     : '';
 
+  const gestaltClass = `concept-page-b2__gestalt${hidesRouteAndNearby ? ' concept-page-b2__gestalt--single-column' : ''}`;
+
   return `
-    <section class="concept-page-b2__gestalt" aria-label="Concept gestalt canvas">
+    <section class="${gestaltClass}" aria-label="Concept gestalt canvas">
       ${hidesRouteAndNearby ? '' : renderRouteMarginHtml(backbone, activeIdx, training, {
         ...options,
         interactive: !showsOnlyQuietRoute,
