@@ -43,6 +43,7 @@ output/
 .cursor/
 .vscode/
 .antigravitycli/
+.poolside/
 learnops/
 
 # Track durable repo doctrine and docs.
