@@ -103,3 +103,4 @@ docs/code-graph.html
 create_issues.py
 push_issues.py
 issues_preview.json
+.poolside/settings.local.yaml

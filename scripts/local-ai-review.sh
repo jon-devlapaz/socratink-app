@@ -11,12 +11,55 @@ fail() {
   exit 2
 }
 
+fail_open() {
+  echo "[local-ai-review] WARNING: $*" >&2
+  echo "[local-ai-review] Skipping review (fail-open)." >&2
+  exit 0
+}
+
+has_code_changes() {
+  local files
+  if [ "${mode:-}" = "staged" ]; then
+    files="$(git -C "$repo_root" diff --cached --name-only --no-ext-diff 2>/dev/null || true)"
+  elif [ "${mode:-}" = "diff" ]; then
+    files="$(git -C "$repo_root" diff --name-only --no-ext-diff 2>/dev/null || true)"
+  elif [ "${mode:-}" = "publish-diff" ]; then
+    local base="${1:-origin/dev}"
+    files="$(git -C "$repo_root" diff --name-only "${base}...HEAD" --no-ext-diff 2>/dev/null || true)"
+  else
+    return 0
+  fi
+
+  [ -n "$files" ] || return 1
+
+  local code_file_found=false
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case "$f" in
+      *.md|*.json|*.yml|*.yaml|*.txt|*.png|*.jpg|*.jpeg|*.gif|*.svg|.gitignore|LICENSE|*.ini|pyproject.toml|pyrefly.toml|mypy.ini|vercel.json|*/.gemini/*)
+        # Skip non-code files
+        ;;
+      *)
+        code_file_found=true
+        break
+        ;;
+    esac
+  done <<< "$files"
+
+  if [ "$code_file_found" = "true" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 usage() {
   cat <<'EOF'
 Usage:
   scripts/local-ai-review.sh check
   scripts/local-ai-review.sh staged
   scripts/local-ai-review.sh diff
+  scripts/local-ai-review.sh publish-diff <base-ref>
   scripts/local-ai-review.sh wip
   scripts/local-ai-review.sh publish-preview
   scripts/local-ai-review.sh smoke-local
@@ -50,17 +93,31 @@ ensure_local_ollama_host() {
   local host="${OLLAMA_HOST:-}"
   [ -n "$host" ] || return 0
   case "$host" in
-    http://127.0.0.1:*|https://127.0.0.1:*|127.0.0.1:*|http://localhost:*|https://localhost:*|localhost:*)
+    http://127.0.0.1:*|https://127.0.0.1:*|http://localhost:*|https://localhost:*)
+      return 0
+      ;;
+    127.0.0.1:*|localhost:*)
+      export OLLAMA_HOST="http://${host}"
       return 0
       ;;
     *)
-      fail "refusing broad OLLAMA_HOST=${host}; use 127.0.0.1 or localhost for local AI review"
+      if [ "${mode:-}" = "check" ]; then
+        fail "refusing broad OLLAMA_HOST=${host}; use 127.0.0.1 or localhost for local AI review"
+      else
+        fail_open "refusing broad OLLAMA_HOST=${host}; use 127.0.0.1 or localhost for local AI review"
+      fi
       ;;
   esac
 }
 
 require_helper() {
-  [ -x "$DEEPSEEK_LOCAL_BIN" ] || fail "DeepSeek helper is not executable: $DEEPSEEK_LOCAL_BIN"
+  if [ ! -x "$DEEPSEEK_LOCAL_BIN" ]; then
+    if [ "${mode:-}" = "check" ]; then
+      fail "DeepSeek helper is not executable: $DEEPSEEK_LOCAL_BIN"
+    else
+      fail_open "DeepSeek helper is not executable: $DEEPSEEK_LOCAL_BIN"
+    fi
+  fi
 }
 
 payload_size() {
@@ -97,7 +154,9 @@ review_payload() {
   echo "[local-ai-review] bytes: $bytes"
   echo "[local-ai-review] helper: $DEEPSEEK_LOCAL_BIN"
   echo "[local-ai-review] ADVISORY ONLY: verify findings against repo files, tests, and deterministic helpers."
-  printf '%s' "$payload" | "$DEEPSEEK_LOCAL_BIN"
+  if ! printf '%s' "$payload" | "$DEEPSEEK_LOCAL_BIN"; then
+    fail_open "local review helper failed (check if Ollama is running and the model is installed)"
+  fi
 }
 
 run_check() {
@@ -157,16 +216,38 @@ case "$mode" in
     run_check
     ;;
   staged)
+    if ! has_code_changes; then
+      echo "[local-ai-review] No code changes to review. Skipping."
+      exit 0
+    fi
     review_payload \
       "staged" \
       "Review this staged diff for behavior-breaking bugs only. Ignore style, naming, formatting, and speculative concerns. Report only issues that would break runtime behavior, tests, data safety, or Socratink workflow safety. For each finding, name the evidence that would verify or refute it. Do not recommend persistent repo actions." \
       "$(collect_staged)"
     ;;
   diff)
+    if ! has_code_changes; then
+      echo "[local-ai-review] No code changes to review. Skipping."
+      exit 0
+    fi
     review_payload \
       "diff" \
       "Review this unstaged diff for likely regressions only. Ignore style, naming, formatting, and speculative concerns. Report only issues that would break runtime behavior, tests, data safety, or Socratink workflow safety. For each finding, name the evidence that would verify or refute it. Do not recommend persistent repo actions." \
       "$(collect_diff)"
+    ;;
+  publish-diff)
+    base="${2:-}"
+    if [ -z "$base" ]; then
+      base="origin/dev"
+    fi
+    if ! has_code_changes "$base"; then
+      echo "[local-ai-review] No code changes to review. Skipping."
+      exit 0
+    fi
+    review_payload \
+      "publish-diff" \
+      "Review this diff of commits about to be published for behavior-breaking bugs only. Ignore style, naming, formatting, and speculative concerns. Report only issues that would break runtime behavior, tests, data safety, or Socratink workflow safety. For each finding, name the evidence that would verify or refute it. Do not recommend persistent repo actions." \
+      "$(git -C "$repo_root" diff "$base...HEAD" --no-ext-diff)"
     ;;
   wip)
     review_payload \

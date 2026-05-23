@@ -457,7 +457,30 @@ def print_first_run(
     print(f"Override: {str(intent.override).lower()}")
     print(f"Risk class: {payload.risk_class}")
     print(f"Triggered rules: {', '.join(intent.recommendation.triggers)}")
-    print("No push executed. Re-run with this ack token to publish:")
+
+    try:
+        remote, refspec = route_to_remote_refspec(payload.route)
+        base_ref = f"{remote}/{refspec}"
+        has_base = subprocess.run(
+            ["git", "rev-parse", "--verify", base_ref],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        ).returncode == 0
+        if has_base:
+            print("\n[agent-push] Running local AI review on changes...")
+            result = subprocess.run(
+                ["bash", str(REPO_ROOT / "scripts" / "local-ai-review.sh"), "publish-diff", base_ref],
+                cwd=REPO_ROOT,
+            )
+            if result.returncode != 0:
+                print(f"\n[agent-push] Warning: Local AI review exited with code {result.returncode}")
+        else:
+            print(f"\n[agent-push] Skipping local AI review (base ref {base_ref} not found)")
+    except Exception as e:
+        print(f"\n[agent-push] Warning: Failed to execute local AI review: {e}")
+
+    print("\nNo push executed. Re-run with this ack token to publish:")
     print(ack_command)
 
 
