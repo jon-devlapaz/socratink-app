@@ -154,4 +154,3 @@ The `no-mistakes` daemon executes its validation and review pipeline within an i
 ## Promotion Notes
 
 Keep as observed until it recurs or affects safety. If promoted, document this behavior clearly in `AGENTS.md` under the common development commands section to remind developers to commit `.no-mistakes.yaml` changes before expecting the daemon to reflect them.
-
