@@ -1,4 +1,5 @@
 import os
+import shlex
 import stat
 import subprocess
 from pathlib import Path
@@ -118,6 +119,8 @@ def test_no_mistakes_lint_diff_check_uses_compare_branch_merge_base(
     tmp_path: Path,
 ) -> None:
     repo = _init_repo(tmp_path)
+    spaced_script = tmp_path / "lint wrapper with spaces.sh"
+    spaced_script.symlink_to(LINT_SCRIPT)
     _git(repo, "checkout", "-b", "origin/dev")
     (repo / "remote.txt").write_text("remote\n", encoding="utf-8")
     _git(repo, "add", "remote.txt")
@@ -132,7 +135,7 @@ def test_no_mistakes_lint_diff_check_uses_compare_branch_merge_base(
             "bash",
             "-c",
             (
-                f"source {LINT_SCRIPT}; "
+                f"source {shlex.quote(str(spaced_script))}; "
                 "base=$(resolve_no_mistakes_diff_base); "
                 "run_no_mistakes_diff_check \"$base\""
             ),
