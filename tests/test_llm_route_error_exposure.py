@@ -136,3 +136,93 @@ def test_drill_and_repair_reps_return_safe_llm_error_copy(
     assert "Gemini" not in detail
     assert "GEMINI_API_KEY" not in detail
     assert "HTTP 503" not in detail
+
+
+def test_drill_route_threads_repair_gap_context_to_drill_chat(client):
+    captured = {}
+    repair_context = "\n".join(
+        [
+            "The thermostat compares measured temperature to the setpoint.",
+            "Learner cold draft: It turns on somehow.",
+            "Detected repairable gap: Missing the comparison-to-heater bridge.",
+            "Learner repair text: Below setpoint means heat turns on.",
+        ]
+    )
+
+    def fake_drill_chat(**kwargs):
+        captured.update(kwargs)
+        return {
+            "node_id": kwargs["node_id"],
+            "prompt_version": "drill-system-v1",
+            "agent_response": "Pressure-check prompt.",
+            "generative_commitment": None,
+            "answer_mode": None,
+            "score_eligible": False,
+            "help_request_reason": None,
+            "classification": None,
+            "gap_description": None,
+            "routing": None,
+            "response_tier": None,
+            "response_band": None,
+            "tier_reason": None,
+            "probe_count": 0,
+            "nodes_drilled": 0,
+            "attempt_turn_count": 0,
+            "help_turn_count": 0,
+            "graph_mutated": False,
+            "ux_reward_emitted": False,
+            "session_terminated": False,
+            "termination_reason": None,
+        }
+
+    payload = drill_payload()
+    payload["node_mechanism"] = repair_context
+
+    with patch("main.drill_chat", side_effect=fake_drill_chat):
+        response = client.post("/api/drill", json=payload)
+
+    assert response.status_code == 200
+    assert "compares measured temperature to the setpoint" in captured["node_mechanism"]
+    assert captured["repair_drill_context"] == repair_context
+    assert "Learner repair text" in captured["repair_drill_context"]
+
+
+def test_drill_route_does_not_reclassify_plain_node_mechanism_as_repair_context(client):
+    captured = {}
+
+    def fake_drill_chat(**kwargs):
+        captured.update(kwargs)
+        return {
+            "node_id": kwargs["node_id"],
+            "prompt_version": "drill-system-v1",
+            "agent_response": "Opening prompt.",
+            "generative_commitment": None,
+            "answer_mode": None,
+            "score_eligible": False,
+            "help_request_reason": None,
+            "classification": None,
+            "gap_description": None,
+            "routing": None,
+            "response_tier": None,
+            "response_band": None,
+            "tier_reason": None,
+            "probe_count": 0,
+            "nodes_drilled": 0,
+            "attempt_turn_count": 0,
+            "help_turn_count": 0,
+            "graph_mutated": False,
+            "ux_reward_emitted": False,
+            "session_terminated": False,
+            "termination_reason": None,
+        }
+
+    payload = drill_payload()
+    payload["node_mechanism"] = (
+        "The thermostat compares measured temperature to the setpoint and turns heat on."
+    )
+
+    with patch("main.drill_chat", side_effect=fake_drill_chat):
+        response = client.post("/api/drill", json=payload)
+
+    assert response.status_code == 200
+    assert captured["repair_drill_context"] is None

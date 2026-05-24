@@ -440,6 +440,22 @@ def _resolve_node_mechanism(
     return fallback
 
 
+_DRILL_REPAIR_CONTEXT_MARKERS = (
+    "Learner cold draft:",
+    "Detected repairable gap:",
+    "Learner repair text:",
+)
+
+
+def _resolve_repair_drill_context(candidate: str, resolved_mechanism: str) -> str | None:
+    context = candidate.strip()
+    if not context or context == resolved_mechanism.strip():
+        return None
+    if any(marker in context for marker in _DRILL_REPAIR_CONTEXT_MARKERS):
+        return context
+    return None
+
+
 def _map_intake_error(exc: SourceIntakeError) -> HTTPException:
     """Maps source_intake domain exception → HTTP response.
 
@@ -765,12 +781,17 @@ def drill(req: DrillRequest):
             req.node_id,
             fallback="",
         )
+        repair_drill_context = _resolve_repair_drill_context(
+            req.node_mechanism,
+            node_mechanism,
+        )
         result = drill_chat(
             knowledge_map=knowledge_map,
             concept_id=req.concept_id,
             node_id=req.node_id,
             node_label=req.node_label,
             node_mechanism=node_mechanism,
+            repair_drill_context=repair_drill_context,
             messages=messages_in,
             session_phase=req.session_phase,
             drill_mode=req.drill_mode,

@@ -629,6 +629,7 @@ def drill_chat(
     node_id: str,
     node_label: str,
     node_mechanism: str,
+    repair_drill_context: str | None = None,
     messages: list[dict[str, str]],
     session_phase: str,
     drill_mode: str = "re_drill",
@@ -701,6 +702,13 @@ def drill_chat(
     system_prompt_extras += (
         f"Node ID: {node_id}\nNode Label: {node_label}\nMechanism: {node_mechanism}\n"
     )
+    if repair_drill_context and repair_drill_context.strip():
+        system_prompt_extras += (
+            "\n### Focused Repair Context (SCOPE ONLY — NOT EVIDENCE)\n"
+            f"{repair_drill_context.strip()}\n"
+            "Use this context to focus the repair pressure-check on the saved gap. "
+            "The learner cold draft and repair text are context, not evidence; evaluate only the latest learner message.\n"
+        )
     scaffold_text = _format_learner_scaffold_for_drill(
         (_find_target_subnode_context(pruned_context, node_id) or {}).get("learner_scaffold")
     )

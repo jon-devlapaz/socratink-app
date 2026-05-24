@@ -419,6 +419,54 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
         self.assertIn("evidence_goal: Learner states the comparison", captured["system_instruction"])
         self.assertIn("How would you explain the thermostat loop", captured["contents"])
 
+    def test_repair_drill_context_reaches_prompt_without_replacing_answer_key(self):
+        captured = {}
+        repair_context = "\n".join(
+            [
+                "Learner cold draft: It turns on somehow.",
+                "Detected repairable gap: Missing the comparison-to-heater bridge.",
+                "Learner repair text: Below setpoint means heat turns on.",
+            ]
+        )
+
+        def fake_call(_client, *, model, contents, config):
+            captured["system_instruction"] = getattr(config, "system_instruction", "")
+            return drill_response(routing="PROBE", classification="deep")
+
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch("ai_service._call_gemini_with_retry", side_effect=fake_call),
+        ):
+            ai_service.drill_chat(
+                knowledge_map=sample_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                repair_drill_context=repair_context,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "Below setpoint turns on heat.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="re_drill",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=True,
+            )
+
+        self.assertIn("Mechanism: server-resolved mechanism", captured["system_instruction"])
+        self.assertIn("Focused Repair Context", captured["system_instruction"])
+        self.assertIn("Detected repairable gap: Missing the comparison-to-heater bridge.", captured["system_instruction"])
+        self.assertIn("evaluate only the latest learner message", captured["system_instruction"])
+
     def test_cold_attempt_passes_learner_goal_as_relevance_not_grading(self):
         """Goal may shape the question, but node grading stays local."""
         captured = {}
