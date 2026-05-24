@@ -2451,7 +2451,15 @@ const App = (() => {
       const nextId = getConceptEntryId(nextEntry, nextIdx);
       const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
       if (route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
-      setActiveEntry(nextId, data, concept, training);
+      if (drillState.active) {
+        const nextData = parseConceptGraphData(activeConcept);
+        cancelDrill();
+        if (nextData && activeConcept) {
+          setActiveEntry(nextId, nextData, activeConcept, training);
+        }
+      } else {
+        setActiveEntry(nextId, data, concept, training);
+      }
       setTimeout(() => {
         nextItem?.focus();
       }, 280);

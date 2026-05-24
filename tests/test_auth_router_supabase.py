@@ -172,7 +172,7 @@ class LoginRouteTests(unittest.TestCase):
     def test_dev_autoguest_login_redirects_to_guest_without_error(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/login?return_to=/", follow_redirects=False)
 
@@ -192,7 +192,7 @@ class LoginRouteTests(unittest.TestCase):
     def test_dev_autoguest_login_error_renders_login(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get(
             "/login?return_to=/&auth_error=authentication_failed",
@@ -569,7 +569,7 @@ class AnonymousGuestTests(unittest.TestCase):
             raise RuntimeError("supabase anonymous sign-in disabled")
 
         service.sign_in_anonymously = boom  # type: ignore[assignment]
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
 
@@ -579,6 +579,22 @@ class AnonymousGuestTests(unittest.TestCase):
             "sb_session=sealed-local-dev-guest", response.headers.get("set-cookie", "")
         )
 
+    def test_dev_autoguest_does_not_fallback_to_local_guest_for_remote_host(self):
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
+        service = FakeSupabaseAuthService(enabled=True)
+
+        def boom():
+            raise RuntimeError("supabase anonymous sign-in disabled")
+
+        service.sign_in_anonymously = boom  # type: ignore[assignment]
+        client = build_client(service, base_url="http://192.0.2.10:8000")
+
+        response = client.get("/auth/guest?return_to=/", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("auth_error=authentication_failed", response.headers["location"])
+        self.assertNotIn("sealed-local-dev-guest", response.headers.get("set-cookie", ""))
+
     def test_dev_autoguest_falls_back_to_local_guest_when_guest_config_fails(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
@@ -587,7 +603,7 @@ class AnonymousGuestTests(unittest.TestCase):
             raise AuthConfigurationError("anonymous sign-in unavailable")
 
         service.sign_in_anonymously = boom  # type: ignore[assignment]
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
 
@@ -609,7 +625,7 @@ class AnonymousGuestTests(unittest.TestCase):
 
         service.sign_in_anonymously = boom  # type: ignore[assignment]
         service.build_local_dev_guest_session = local_boom  # type: ignore[method-assign]
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
 
@@ -630,7 +646,7 @@ class AnonymousGuestTests(unittest.TestCase):
             guest_mode=True,
             user=AuthUser(id="local_dev_guest"),
         )
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
 
@@ -645,7 +661,7 @@ class AnonymousGuestTests(unittest.TestCase):
             authenticated=False,
             user=AuthUser(id="anon_uuid_456"),
         )
-        client = build_client(service)
+        client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/auth/guest?return_to=/", follow_redirects=False)
 

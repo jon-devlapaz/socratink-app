@@ -113,8 +113,6 @@ def local_auth_bypass_enabled(
         return False
     if _falsey_env("SOCRATINK_LOCAL_AUTH_BYPASS"):
         return False
-    if dev_autoguest_enabled():
-        return True
     return _is_loopback_host(hostname) and _is_loopback_host(client_host)
 
 

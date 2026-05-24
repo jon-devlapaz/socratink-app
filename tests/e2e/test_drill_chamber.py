@@ -90,6 +90,11 @@ def _seed_concept_with_graph(page: Page, concept_id: str = "drill-test-concept")
                     label: 'Entry A',
                     detail: 'Describe what Entry A means in your own words.',
                     drill_status: null,
+                }}, {{
+                    id: 'entry-b',
+                    label: 'Entry B',
+                    detail: 'Describe what Entry B means in your own words.',
+                    drill_status: null,
                 }}],
                 clusters: [],
             }});
@@ -196,6 +201,25 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
     expect(clean_page.locator("#map-view")).to_be_visible()
     clean_page.wait_for_timeout(100)
+
+    clean_page.evaluate(
+        """(() => {
+            if (typeof App === 'undefined' || typeof App.startDrill !== 'function') return;
+            App.startDrill({
+                id: 'entry-a',
+                label: 'Entry A',
+                fullLabel: 'Entry A',
+                detail: 'Describe what Entry A means in your own words.',
+            });
+        })()"""
+    )
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').focus()
+    clean_page.keyboard.press("ArrowDown")
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "data-entry-id", "entry-b"
+    )
 
 
 def test_drill_start_from_non_map_view_routes_to_inline_concept(
