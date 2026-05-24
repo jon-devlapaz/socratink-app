@@ -32,6 +32,8 @@ Quick reference (full list in UBIQUITOUS_LANGUAGE.md):
 | --- | --- | --- |
 | **Cold attempt** | Unscored first generation on a local node before content appears | Quiz, test, assessment |
 | **Targeted study** | Attempt-scoped corrective study unlocked by a substantive cold attempt | Proof, completion |
+| **Gap drill** | Practice drill initiated via Pressure-check CTA after repair saved; graph-neutral | Retry, practice drill |
+| **Pressure-check** | CTA label to initiate a gap drill from a repaired state | Try again, redo |
 | **Spaced re-drill** | Later reconstruction after spacing; only event that can record `solidified` | Review, retry |
 | **`primed`** | Learner reconstruction evidence on record; next action is derived from training evidence | Learned, partially mastered |
 | **`needs repair`** | Current learner evidence has named gaps to repair | Failed, weak |
