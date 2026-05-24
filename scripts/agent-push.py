@@ -497,7 +497,9 @@ def print_error(message: str, *, json_output: bool = False) -> None:
 
 def _push(payload: AuthorizationPayload) -> int:
     remote, refspec = route_to_remote_refspec(payload.route)
-    result = subprocess.run(["git", "push", remote, refspec], cwd=REPO_ROOT)
+    source_ref = f"refs/heads/{payload.branch}"
+    destination_ref = f"refs/heads/{refspec}"
+    result = subprocess.run(["git", "push", remote, f"{source_ref}:{destination_ref}"], cwd=REPO_ROOT)
     if AUTH_PATH.exists():
         AUTH_PATH.unlink()
     return result.returncode
