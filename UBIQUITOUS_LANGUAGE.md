@@ -10,7 +10,9 @@
 | **Cold attempt** | An unscored first generation attempt on a local node before explanatory content appears. | Quiz, test, assessment |
 | **Targeted study** | Attempt-scoped corrective study unlocked by a substantive cold attempt. | Proof, mastery, completion |
 | **Repair Reps** | Optional typed micro-practice for causal bridges that never mutates graph truth. | Drill shortcut, mastery practice |
+| **Gap drill** | A drill variant initiated via Pressure-check CTA after a repair is saved, used to practice the repaired gap without mutating graph state. | Practice drill, retry |
 | **Spaced re-drill** | A later reconstruction attempt after spacing/interleaving that can record `solidified` if solid. | Review, immediate retry, final test |
+| **Pressure-check** | The CTA label for initiating a gap drill from a repaired state. Appears after a repair is saved to let the learner test their corrected understanding. | Try again, redo, practice |
 
 ## Graph Truth
 
@@ -34,6 +36,7 @@
 | **Routing hint** | Internal signal used to shape the path or prompt emphasis. | Diagnostic label |
 | **Reconstruction evidence** | Evidence from the learner rebuilding a mechanism in their own words. | Real learning, proved it |
 | **Gap** | A missing or incorrect causal bridge in an attempt. | Misconception detected, weakness |
+| **drill-gap** | The `data-active-entry-action` value for the Pressure-check CTA that initiates a gap drill. | retry-action, practice-action |
 
 ## Content Intake
 
