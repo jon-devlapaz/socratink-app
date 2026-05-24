@@ -661,13 +661,14 @@ function renderScopeBoundaryHtml() {
   `;
 }
 
-function renderBlankStartHtml(scaffold = null) {
+function renderBlankStartHtml(scaffold = null, activeEntryId = 'entry') {
   const hint = blankHintForScaffold(scaffold);
+  const hintId = `blank-start-${String(activeEntryId || 'entry').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   return `
-    <details class="concept-page-b2__blank-start">
-      <summary>I'm blank</summary>
-      <p>${escHtml(hint)} The mechanism stays hidden.</p>
-    </details>
+    <div class="concept-page-b2__blank-start">
+      <button class="concept-page-b2__blank-start-button" type="button" data-blank-start aria-expanded="false" aria-controls="${escHtml(hintId)}">Need a starting point</button>
+      <p class="concept-page-b2__blank-start-hint" id="${escHtml(hintId)}" data-blank-start-hint hidden>${escHtml(hint)} The mechanism stays hidden.</p>
+    </div>
   `;
 }
 
@@ -798,7 +799,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     useScaffold: isColdReadyEntry,
     learnerGoal: learnerGoalForConcept(concept, data),
   }) : '';
-  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml(scaffold) : '';
+  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml(scaffold, activeEntryId) : '';
 
   const thresholdHtml = thresholdText
     ? renderSketchWrapperHtml(thresholdText)

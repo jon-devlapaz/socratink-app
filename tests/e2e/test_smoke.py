@@ -1856,6 +1856,21 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
         "Start with the word threshold and say what it might do."
     )
+    attempt_input = canvas.locator(".concept-page-b2__attempt-input")
+    attempt_input.fill("asdasdas")
+    blank_start = canvas.locator("[data-blank-start]")
+    expect(blank_start).to_have_text("Need a starting point")
+    expect(blank_start).to_have_attribute("aria-expanded", "false")
+    blank_start.click()
+    expect(canvas.locator("[data-blank-start-hint]")).to_be_visible()
+    expect(canvas.locator("[data-blank-start-hint]")).to_contain_text(
+        "Start with the word threshold and say what it might do."
+    )
+    expect(attempt_input).to_have_value("asdasdas")
+    assert clean_page.evaluate(
+        "() => document.activeElement === document.querySelector('.concept-page-b2__attempt-input')"
+    )
+    attempt_input.fill("")
     fallback_html = clean_page.evaluate(
         """async () => {
             const mod = await import('/js/concept-page-view.js?v=14');
@@ -2229,6 +2244,12 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
         "Missing link"
     )
+    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
+        "Name that the thermostat compares room temperature with the set point."
+    )
+    expect(clean_page.locator(".concept-page-b2__repair")).not_to_contain_text(
+        "The sketch names current but misses comparison to a target set point."
+    )
     expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
         "Generated description should not leak"
     )
@@ -2263,6 +2284,17 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="c2_s1"]').click()
     clean_page.wait_for_timeout(700)
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Call for heat")
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "Generated future description should not leak"
+    )
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "When measured temperature is below the set point"
+    )
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "Hidden future study note"
+    )
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
 
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="c3_s1"]').click()
     clean_page.wait_for_timeout(700)

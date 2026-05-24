@@ -140,6 +140,22 @@ const App = (() => {
   }
 
   function buildTrainingGapsFromDrillResult(result) {
+    if (Array.isArray(result?.gaps) && result.gaps.length) {
+      return result.gaps
+        .map((gap) => {
+          if (gap && typeof gap === 'object') {
+            return {
+              mechanism: gap.mechanism || gap.label || gap.type || null,
+              correction: gap.correction || gap.description || gap.detail || gap.text || '',
+            };
+          }
+          return {
+            mechanism: null,
+            correction: String(gap || ''),
+          };
+        })
+        .filter((gap) => gap.correction.trim() !== '');
+    }
     if (!result?.gap_description) return [];
     return [{
       classification: result.classification || null,
@@ -1889,6 +1905,16 @@ const App = (() => {
     if (attemptBtn) {
       attemptBtn.addEventListener('click', () => {
         void submitInlineAttemptForEntry(attemptBtn, concept, data);
+      });
+    }
+    const blankStartBtn = docEl.querySelector('[data-blank-start]');
+    if (blankStartBtn) {
+      blankStartBtn.addEventListener('click', () => {
+        const wrapper = blankStartBtn.closest('.concept-page-b2__blank-start');
+        const hint = wrapper?.querySelector?.('[data-blank-start-hint]');
+        if (hint) hint.hidden = false;
+        blankStartBtn.setAttribute('aria-expanded', 'true');
+        docEl.querySelector('.concept-page-b2__attempt-input')?.focus?.();
       });
     }
     const repairBtn = docEl.querySelector('.concept-page-b2__repair-save');

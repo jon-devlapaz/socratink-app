@@ -1775,7 +1775,9 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('Draft from memory'));
-        assert.ok(readyHtml.includes("I'm blank"));
+        assert.ok(readyHtml.includes('Need a starting point'));
+        assert.ok(readyHtml.includes('data-blank-start'));
+        assert.ok(readyHtml.includes('data-blank-start-hint'));
         assert.ok(readyHtml.includes('concept-page-b2__attempt'));
         assert.ok(!readyHtml.includes('concept-page-b2__entry-cta'));
 
