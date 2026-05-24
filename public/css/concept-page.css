@@ -627,7 +627,7 @@
 .concept-page-b2__study-note-hidden { display: none; }
 .concept-page-b2__study-note.is-collapsed [data-study-note-body] { display: none; }
 .concept-page-b2__study-note.is-collapsed .concept-page-b2__study-note-hidden {
-  display: none;
+  display: block;
   color: var(--text-muted);
   font-style: italic;
 }
