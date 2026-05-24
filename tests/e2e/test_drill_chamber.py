@@ -2,9 +2,9 @@
 
 What this covers
 ----------------
-- Chamber view exists in the DOM and is hidden by default after load
-- Starting a drill opens the chamber and hides the map
-- Exiting the chamber (via the exit link) restores the map
+- Chamber view mounts only inside an active concept drill
+- Starting a drill opens the chamber inside Concept View
+- Exiting the chamber (via the exit link) restores the normal concept page
 - Completed cold attempts persist training evidence and update Library copy
 - Unrecordable drill results leave graph state unchanged
 
@@ -107,36 +107,38 @@ def _seed_concept_with_graph(page: Page, concept_id: str = "drill-test-concept")
     )
 
 
+def _click_chamber_send(page: Page) -> None:
+    box = page.locator("#chamber-send").bounding_box()
+    assert box is not None
+    page.mouse.click(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
+
+
 # --- tests -------------------------------------------------------------------
 
 
 def test_drill_chamber_view_hidden_on_load(
     clean_page: Page, base_url: str
 ) -> None:
-    """The chamber view must be present in the DOM but hidden on page load.
+    """The chamber view is mounted only inside an active concept drill.
 
-    This is a structural guard: the element must exist (so the JS module can
-    bind to it) but must not be visible before a drill session starts.
+    The chamber is no longer a root-level overlay. Before a drill starts,
+    Concept View should not carry a stale chamber instance.
     """
     _enter_app_shell_as_guest(clean_page, base_url)
 
-    chamber = clean_page.locator("#drill-chamber-view")
-    # Element must be in the DOM so the JS module can bind on first show().
-    expect(chamber).to_be_attached()
-    # Must not be visible to the user before any drill starts.
-    expect(chamber).to_be_hidden()
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
 
 
-def test_drill_chamber_opens_and_hides_map(
+def test_drill_chamber_opens_inline_inside_concept_view(
     clean_page: Page, base_url: str
 ) -> None:
-    """Starting a drill opens the chamber view and hides the map stage.
+    """Starting a drill opens the chamber inside the active concept entry.
 
     Sequence:
       1. Seed a concept with a graph and navigate to its map view.
       2. Invoke App.startDrill() via the browser to simulate the user
          clicking a drill-ready graph node.
-      3. Assert the chamber is visible and the graph map stage is gone.
+      3. Assert the chamber is visible without hiding the concept context.
 
     Note: this test exercises the JS wiring (startDrill -> DrillChamber.show)
     without making a real network call to the drill API. The typing indicator
@@ -169,8 +171,88 @@ def test_drill_chamber_opens_and_hides_map(
 
     # Chamber must be visible after startDrill.
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
-    # Map stage must be hidden during an active drill.
+    expect(
+        clean_page.locator(
+            ".concept-page-b2__active-entry--drilling #drill-chamber-view"
+        )
+    ).to_be_visible()
+    expect(clean_page.locator("#chamber-composer")).to_be_enabled()
+    expect(clean_page.locator("#chamber-composer")).not_to_have_attribute(
+        "placeholder", "Preparing your first question"
+    )
+    expect(clean_page.locator("#chamber-send")).to_have_text("Submit")
+    clean_page.evaluate("window.DrillChamber.setLoading(true)")
+    expect(clean_page.locator("#chamber-composer")).to_be_enabled()
+    expect(clean_page.locator("#chamber-composer")).to_have_attribute(
+        "placeholder", "Write your reconstruction here. Fragments are fine."
+    )
+    clean_page.evaluate("window.DrillChamber.setLoading(false)")
+    expect(clean_page.locator(".node-strip")).to_be_visible()
+    expect(clean_page.locator(".vd-sketch-wrapper")).to_be_visible()
+    # The concept view remains visible as context during an active drill.
+    expect(clean_page.locator("#map-view")).to_be_visible()
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').focus()
+    clean_page.keyboard.press("Enter")
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
+    expect(clean_page.locator("#map-view")).to_be_visible()
+    clean_page.wait_for_timeout(100)
+
+
+def test_drill_start_from_non_map_view_routes_to_inline_concept(
+    clean_page: Page, base_url: str
+) -> None:
+    """Programmatic drill entry still lands in the inline concept workspace."""
+    _seed_concept_with_graph(clean_page)
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.route(
+        "**/api/drill",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "What causes the thermostat to turn heat on?",
+                    "generative_commitment": None,
+                    "answer_mode": None,
+                    "score_eligible": False,
+                    "help_request_reason": None,
+                    "classification": None,
+                    "gap_description": None,
+                    "routing": None,
+                    "response_tier": None,
+                    "response_band": None,
+                    "tier_reason": None,
+                    "node_id": "entry-a",
+                    "probe_count": 0,
+                    "nodes_drilled": 0,
+                    "attempt_turn_count": 0,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                }
+            ),
+        ),
+    )
+
     expect(clean_page.locator("#map-view")).to_be_hidden()
+    clean_page.evaluate(
+        """App.startDrill({
+            id: 'entry-a',
+            label: 'Entry A',
+            fullLabel: 'Entry A',
+            detail: 'Describe what Entry A means in your own words.',
+        })"""
+    )
+
+    expect(clean_page.locator("#map-view")).to_be_visible()
+    expect(
+        clean_page.locator(
+            ".concept-page-b2__active-entry--drilling #drill-chamber-view"
+        )
+    ).to_be_visible(timeout=8_000)
 
 
 def test_drill_chamber_exit_restores_map(
@@ -209,8 +291,8 @@ def test_drill_chamber_exit_restores_map(
     # Click the exit link; this fires the onExit handler -> cancelDrill().
     clean_page.locator("#chamber-exit").click()
 
-    # Chamber must hide after exit.
-    expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
+    # Chamber unmounts after exit because the concept page re-renders normally.
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
     # Map view must be restored.
     expect(clean_page.locator("#map-view")).to_be_visible()
 
@@ -300,7 +382,7 @@ def test_completed_cold_attempt_updates_training_library_card(
     expect(page.locator("#chamber-composer")).to_be_enabled(timeout=8_000)
     learner_text = "The thermostat compares the room temperature to the setpoint."
     page.locator("#chamber-composer").fill(learner_text)
-    page.locator("#chamber-send").click()
+    _click_chamber_send(page)
 
     expect(page.locator("#chamber-composer")).to_be_disabled(timeout=8_000)
     page.wait_for_function(
@@ -311,7 +393,9 @@ def test_completed_cold_attempt_updates_training_library_card(
     expect(page.locator("#chamber-question")).to_contain_text(
         "Study can target the missing causal step."
     )
-    assert len(drill_calls) == 2
+    assert len(drill_calls) == 1
+    assert drill_calls[0]["session_phase"] == "turn"
+    assert drill_calls[0]["messages"][0]["content"] == learner_text
     page.locator("#chamber-exit").click()
     page.locator("#nav-library").click()
 
@@ -401,14 +485,15 @@ def test_completed_cold_attempt_without_recordable_classification_does_not_mutat
 
     expect(page.locator("#chamber-composer")).to_be_enabled(timeout=8_000)
     page.locator("#chamber-composer").fill("The thermostat compares room temperature to the setpoint.")
-    page.locator("#chamber-send").click()
+    _click_chamber_send(page)
 
     expect(page.locator("#chamber-question")).to_contain_text(
         "The drill service failed to respond. Try again when ready.",
         timeout=8_000,
     )
     expect(page.locator("#chamber-composer")).to_be_enabled()
-    assert len(drill_calls) == 2
+    assert len(drill_calls) == 1
+    assert drill_calls[0]["session_phase"] == "turn"
     assert (
         page.evaluate(
             """localStorage.getItem('socratink:training:v1:drill-unrecordable-concept')"""

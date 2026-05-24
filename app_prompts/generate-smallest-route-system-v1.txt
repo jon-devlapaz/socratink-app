@@ -105,8 +105,16 @@ Rules:
   later transfer or post-solidification surfaces.
 - `bloom_level` is internal. Do not show Bloom, taxonomy, remember,
   understand, apply, evaluate, or create as learner-facing labels.
-- `learner_move`, `task_label`, and `task_cue` are learner-facing route
-  margin copy. Use plain words, not school taxonomy.
+- `learner_move` is the internal cognitive move for the route. It may be
+  one of the plain moves above, but should not be the main route title
+  when a concrete mechanism label is available.
+- `task_label` is the learner-facing route title. Prefer a short
+  mechanism-shaped noun phrase from the concept itself, not a school-task
+  verb. Good: "Prediction error inputs", "ACTH feedback", "Quorum safety".
+  Avoid generic worksheet labels like "Define the failure", "Explain
+  update", "Name the term", or Bloom/taxonomy language.
+- `task_cue` is the short non-answer cue for the active room. Use plain
+  words, not school taxonomy.
 - `tailoring_anchor` is a learner-facing sentence that names the sketch
   detail that shaped this local task. It should make the learner feel
   the route came from their threshold, not from a generic lesson. It

@@ -54,15 +54,16 @@ Key checks include:
 
 ### `test_drill_chamber.py` — 5 tests
 
-Smoke gate for the full-screen drill chamber view (`#drill-chamber-view`) and
-training-evidence persistence: hidden on initial load, opens and hides the map
-when entered, exit restores the map, completed cold attempts update Library
-training copy, and unrecordable drill results do not mutate graph state.
+Smoke gate for the inline drill chamber view (`#drill-chamber-view`) and
+training-evidence persistence: absent before a drill starts, mounts inside the
+active concept entry, exit restores the normal concept page, completed cold
+attempts update Library training copy, and unrecordable drill results do not
+mutate graph state.
 
 ### `test_concept_page_b2.py` — 3 tests
 
 B-2 concept page layout gate: route-margin layout renders, the cold-entry
-inline attempt surface appears while the full-screen drill chamber stays
+inline attempt surface appears while the drill chamber stays
 hidden, and the legacy Route/Graph segmented toggle is absent.
 
 ### `test_strip_nav.py` — 7 tests

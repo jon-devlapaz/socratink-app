@@ -124,15 +124,15 @@ Each node derives its next action within the three-phase loop:
 
 The frontend uses derived `next_action`, not persisted `drill_phase`, to choose the concept-page mode.
 
-Concept pages render source-less provenance from the training record: when
-`source_mode === "source_less"`, show `Shaped from your launch attempt, not
-verified against a source.` before the active entry block.
+Concept pages render source-less provenance from the training record inside the
+compact context dock: when `source_mode === "source_less"`, show `No source
+attached. Treat this route as provisional.` near the write-first boundary.
 
-Source-less first entries may also render `learner_scaffold.tailoring_anchor`
-inside the cold-attempt panel. This is learner-facing evidence of tailoring
-from the launch attempt, not feedback on correctness: it may name the sketch
-detail that shaped the prompt, but it must not diagnose a gap, reveal the
-mechanism, name the hidden target, or say what the learner missed.
+Source-less first entries may use `learner_scaffold.tailoring_anchor` internally
+to shape the cold-attempt prompt. It should not render as learner-facing AI
+self-explanation: the learner sees the reconstruction target, not prompt
+plumbing, feedback on correctness, diagnosis of a gap, a revealed mechanism, a
+hidden target, or what the learner missed.
 
 After a source-less learner saves the first draft and explicitly reveals study,
 the concept page renders a post-reveal comparison on the same surface before
