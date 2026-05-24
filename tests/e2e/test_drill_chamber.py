@@ -220,8 +220,7 @@ def test_drill_chamber_opens_inline_inside_concept_view(
         })()"""
     )
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
-    clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').focus()
-    clean_page.keyboard.press("ArrowDown")
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').press("ArrowDown")
     expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
     expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
         "data-entry-id", "entry-b"
@@ -283,6 +282,79 @@ def test_drill_start_from_non_map_view_routes_to_inline_concept(
             ".concept-page-b2__active-entry--drilling #drill-chamber-view"
         )
     ).to_be_visible(timeout=8_000)
+
+
+def test_start_drill_from_map_targets_visible_route_entry(
+    clean_page: Page, base_url: str
+) -> None:
+    """Map-level drill starts must not evaluate a hidden synthetic core target."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    _seed_concept_with_graph(clean_page)
+
+    clean_page.evaluate("window.App.openLibraryConcept('drill-test-concept')")
+    expect(clean_page.locator("#concept-header-title")).to_contain_text(
+        "Chamber Test Concept"
+    )
+
+    clean_page.evaluate("window.App.startDrillFromMap()")
+
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "data-entry-id", "entry-a"
+    )
+    expect(clean_page.locator("#chamber-question")).to_contain_text("Entry A")
+    expect(clean_page.locator("#drill-chamber-view")).not_to_contain_text("Core Thesis")
+
+
+def test_primary_drill_action_targets_visible_route_entry(
+    clean_page: Page, base_url: str
+) -> None:
+    """The primary drill control shares the same visible-node targeting."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    _seed_concept_with_graph(clean_page)
+
+    clean_page.evaluate("window.App.openLibraryConcept('drill-test-concept')")
+    clean_page.evaluate("window.App.drill()")
+
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "data-entry-id", "entry-a"
+    )
+    expect(clean_page.locator("#chamber-question")).to_contain_text("Entry A")
+    expect(clean_page.locator("#drill-chamber-view")).not_to_contain_text("Core Thesis")
+
+
+def test_graph_neutral_repair_drill_bypasses_study_reopen(
+    clean_page: Page, base_url: str
+) -> None:
+    """Repair-gap pressure checks stay in the chamber even when the node is in study."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    _seed_concept_with_graph(clean_page)
+    clean_page.evaluate(
+        """(() => {
+            const concepts = JSON.parse(localStorage.getItem('learnops_concepts'));
+            const graph = JSON.parse(concepts[0].graphData);
+            graph.backbone[0].drill_status = 'primed';
+            graph.backbone[0].drill_phase = 'study';
+            concepts[0].graphData = JSON.stringify(graph);
+            localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+        })()"""
+    )
+
+    clean_page.evaluate("window.App.openLibraryConcept('drill-test-concept')")
+    clean_page.evaluate(
+        """window.App.startDrill({
+            id: 'entry-a',
+            label: 'Entry A',
+            fullLabel: 'Entry A',
+            prompt: 'Pressure-check the repaired link.',
+            drillMode: 're_drill',
+            graphNeutral: true,
+        })"""
+    )
+
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    expect(clean_page.locator("#chamber-question")).to_contain_text("Pressure-check")
 
 
 def test_drill_chamber_exit_restores_map(

@@ -1772,13 +1772,7 @@ const App = (() => {
     showMapView(concept);
     setMapMode('graph');
     const graphData = parseConceptGraphData(concept) || {};
-    startDrill({
-      id: 'core-thesis',
-      type: 'core',
-      label: 'Core Thesis',
-      fullLabel: 'Core Thesis',
-      detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
-    });
+    startDrill(buildDefaultDrillContext(concept, graphData));
   }
 
   function drillFail() {
@@ -2039,6 +2033,49 @@ const App = (() => {
       drillMode: 're_drill',
       graphNeutral: true,
     };
+  }
+
+  function buildDefaultDrillContext(concept, graphData, training = null) {
+    const backbone = deriveConceptEntries(graphData || {});
+    const activeMatch = _activeEntryId ? findConceptEntryById(backbone, _activeEntryId) : null;
+    const match = activeMatch || (backbone.length ? selectInitialConceptEntry(backbone, training) : null);
+    if (match?.entry && backbone.length) {
+      const entry = match.entry;
+      const id = match.id || getConceptEntryId(entry, match.index);
+      const label = entry.label || entry.task_label || entry.principle || `Entry ${match.index + 1}`;
+      const scaffold = entry.learner_scaffold || {};
+      const prompt = scaffold.entry_prompt || scaffold.task_cue || entry.purpose || '';
+      return {
+        id,
+        type: entry.type || resolveNodeType(graphData, id, 'entry'),
+        label,
+        fullLabel: label,
+        detail: entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || prompt,
+        prompt,
+        learner_scaffold: entry.learner_scaffold,
+        purpose: entry.purpose,
+      };
+    }
+    return {
+      id: 'core-thesis',
+      type: 'core',
+      label: 'Core Thesis',
+      fullLabel: 'Core Thesis',
+      detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
+    };
+  }
+
+  function resolveDrillContextForConcept(nodeContext, concept, graphData, training = null) {
+    if (!nodeContext) return buildDefaultDrillContext(concept, graphData, training);
+    const backbone = deriveConceptEntries(graphData || {});
+    if (
+      backbone.length
+      && nodeContext.id === 'core-thesis'
+      && !findConceptEntryById(backbone, nodeContext.id)
+    ) {
+      return buildDefaultDrillContext(concept, graphData, training);
+    }
+    return nodeContext;
   }
 
   async function revealStudyForEntry(entryId, concept, data) {
@@ -2451,7 +2488,7 @@ const App = (() => {
       if (!nextEntry) return;
       const nextId = getConceptEntryId(nextEntry, nextIdx);
       const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
-      if (route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
+      if (!drillState.active && route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
       if (drillState.active) {
         const activeConcept = getActiveConcept();
         const nextData = parseConceptGraphData(activeConcept);
@@ -2718,6 +2755,34 @@ const App = (() => {
       event.preventDefault();
       constellationNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
+
+    document.addEventListener('keydown', (event) => {
+      if (!drillState.active || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const routeItem = target?.closest('.concept-page-b2__route-item[data-entry-id]') || null;
+      if (!routeItem) return;
+
+      const concept = getActiveConcept();
+      const data = parseConceptGraphData(concept);
+      const backbone = deriveConceptEntries(data || {});
+      if (!concept || !data || !backbone.length) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const dir = event.key === 'ArrowUp' ? -1 : 1;
+      const currentMatch = findConceptEntryById(backbone, _activeEntryId);
+      const currentIdx = currentMatch ? currentMatch.index : 0;
+      const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
+      const nextEntry = backbone[nextIdx];
+      if (!nextEntry) return;
+      const nextId = getConceptEntryId(nextEntry, nextIdx);
+      cancelDrill();
+      setActiveEntry(nextId, data, concept, null);
+      setTimeout(() => {
+        document.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`)?.focus?.();
+      }, 280);
+    }, true);
   }
 
   function setNavActive(id) {
@@ -4025,16 +4090,10 @@ const App = (() => {
     if (!concept) return;
 
     const km = parseConceptGraphData(concept) || {};
-    if (!nodeContext) {
-      nodeContext = { 
-        id: 'core-thesis',
-        type: 'core',
-        fullLabel: 'Core Thesis',
-        detail: km?.metadata?.core_thesis || km?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
-      };
-    }
+    nodeContext = resolveDrillContextForConcept(nodeContext, concept, km);
 
     const nodeData = resolveNodeData(km, nodeContext.id) || {};
+    const graphNeutralDrillRequested = nodeContext.graphNeutral === true;
     if (nodeData.drill_status === 'solidified') {
       currentGraphController?.showBlockedMessage?.(
         'Solid evidence already recorded',
@@ -4043,7 +4102,7 @@ const App = (() => {
       return;
     }
 
-    if (nodeData.drill_status === 'primed' && nodeData.drill_phase === 'study') {
+    if (!graphNeutralDrillRequested && nodeData.drill_status === 'primed' && nodeData.drill_phase === 'study') {
       reopenStudy(nodeContext);
       return;
     }
@@ -4396,13 +4455,7 @@ const App = (() => {
       showMapView(concept);
       setMapMode('route');
       const graphData = parseConceptGraphData(concept) || {};
-      startDrill({
-        id: 'core-thesis',
-        type: 'core',
-        label: 'Core Thesis',
-        fullLabel: 'Core Thesis',
-        detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
-      });
+      startDrill(buildDefaultDrillContext(concept, graphData));
     },
 
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },

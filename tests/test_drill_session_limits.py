@@ -58,13 +58,13 @@ def old_session_start():
     return (datetime.now(timezone.utc) - timedelta(minutes=26)).isoformat()
 
 
-def drill_response(*, routing="PROBE", classification="shallow"):
+def drill_response(*, routing="PROBE", classification="shallow", score_eligible=True):
     return FakeResponse(
         ai_service.DrillEvaluation(
             agent_response="You have part of it. Name the comparison and resulting heater state.",
             generative_commitment=True,
             answer_mode="attempt",
-            score_eligible=True,
+            score_eligible=score_eligible,
             help_request_reason="none",
             classification=classification,
             gap_description="The response is missing the heater state that follows the comparison.",
@@ -337,6 +337,54 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
         self.assertTrue(result["score_eligible"])
         self.assertEqual(result["classification"], "shallow")
         self.assertEqual(result["routing"], "NEXT")
+
+    def test_cold_attempt_preserves_score_ineligible_classified_scaffold_echo(self):
+        """Classified cold turns can still be non-evidence.
+
+        The prompt contract allows a learner to echo scaffolding with enough
+        content to classify the miss while still withholding graph evidence.
+        The normalizer must not upgrade that to a recordable cold attempt.
+        """
+        with (
+            patch.dict(os.environ, {ai_service.DRILL_SESSION_TIME_LIMIT_ENV: "0"}),
+            patch("ai_service._get_client", return_value=object()),
+            patch(
+                "ai_service._call_gemini_with_retry",
+                return_value=drill_response(
+                    routing="SCAFFOLD",
+                    classification="shallow",
+                    score_eligible=False,
+                ),
+            ),
+        ):
+            result = ai_service.drill_chat(
+                knowledge_map=sample_knowledge_map(),
+                concept_id="thermostat",
+                node_id="c1_s1",
+                node_label="Setpoint comparison",
+                node_mechanism="server-resolved mechanism",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": "It is like the hint says: the thermostat compares things.",
+                    }
+                ],
+                session_phase="turn",
+                drill_mode="cold_attempt",
+                re_drill_count=0,
+                probe_count=0,
+                nodes_drilled=0,
+                attempt_turn_count=0,
+                help_turn_count=0,
+                session_start_iso=None,
+                bypass_session_limits=True,
+            )
+
+        self.assertTrue(result["generative_commitment"])
+        self.assertEqual(result["answer_mode"], "attempt")
+        self.assertFalse(result["score_eligible"])
+        self.assertEqual(result["classification"], "shallow")
+        self.assertEqual(result["routing"], "SCAFFOLD")
 
     def test_cold_attempt_help_request_preserves_inferred_reason(self):
         """Non-substantive cold attempts should preserve typed help intent."""

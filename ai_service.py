@@ -319,8 +319,12 @@ def _normalize_drill_evaluation(
                     "Learner produced zero schema; nudge to guess."
                 )
         else:
-            evaluation.score_eligible = has_classification
-            evaluation.routing = "NEXT"
+            if not has_classification:
+                evaluation.score_eligible = False
+            if evaluation.score_eligible:
+                evaluation.routing = "NEXT"
+            elif evaluation.routing not in ("PROBE", "SCAFFOLD"):
+                evaluation.routing = "SCAFFOLD"
             evaluation.help_request_reason = "none"
             if evaluation.classification == "solid":
                 evaluation.gap_description = None

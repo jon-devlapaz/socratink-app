@@ -287,7 +287,7 @@ def test_source_less_launch_pad_end_to_end_qa(
         "The thermostat compares the measured room temperature with the set point before calling for heat."
     )
     clean_page.locator("#chamber-send").click()
-    expect(clean_page.locator("#chamber-composer")).to_be_enabled()
+    expect(clean_page.locator("#chamber-composer")).to_be_disabled()
     expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
     expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
         "data-route-expanded", "true"
