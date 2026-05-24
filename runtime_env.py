@@ -105,13 +105,15 @@ def local_auth_bypass_enabled(
     """Allow localhost development to enter as a sealed local guest.
 
     This is the request-aware replacement for relying solely on
-    SOCRATINK_DEV_AUTOGUEST. Plain `uvicorn main:app` on localhost should not
-    fall through to Google/Supabase auth, but production-shaped runtimes and
-    non-loopback requests must still see the normal auth wall.
+    SOCRATINK_DEV_AUTOGUEST. Repo-owned local launchers opt into this path, but
+    production-shaped runtimes and non-loopback requests must still see the
+    normal auth wall.
     """
     if _production_runtime_detected():
         return False
     if _falsey_env("SOCRATINK_LOCAL_AUTH_BYPASS"):
+        return False
+    if not (dev_autoguest_enabled() or _truthy_env("SOCRATINK_LOCAL_AUTH_BYPASS")):
         return False
     return _is_loopback_host(hostname) and _is_loopback_host(client_host)
 

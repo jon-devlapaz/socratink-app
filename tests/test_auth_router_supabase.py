@@ -179,15 +179,15 @@ class LoginRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/auth/guest?return_to=%2F")
 
-    def test_loopback_login_redirects_to_guest_by_default(self):
+    def test_loopback_login_requires_dev_opt_in(self):
         self._set_env()
         service = FakeSupabaseAuthService(enabled=True)
         client = build_client(service, base_url="http://localhost:8000")
 
         response = client.get("/login?return_to=/", follow_redirects=False)
 
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["location"], "/auth/guest?return_to=%2F")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Continue with Google", response.text)
 
     def test_dev_autoguest_login_error_renders_login(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
@@ -513,7 +513,7 @@ class AnonymousGuestTests(unittest.TestCase):
         )
 
     def test_loopback_guest_uses_local_session_without_supabase_call(self):
-        self._set_env()
+        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
 
         def fail_if_called():

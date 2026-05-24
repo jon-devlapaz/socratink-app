@@ -169,7 +169,7 @@ def test_drill_chamber_opens_inline_inside_concept_view(
                 id: 'entry-a',
                 label: 'Entry A',
                 fullLabel: 'Entry A',
-                detail: 'Describe what Entry A means in your own words.',
+                detail: 'ANSWER KEY SHOULD NOT APPEAR BEFORE THE LEARNER WRITES.',
             });
         })()"""
     )
@@ -186,6 +186,12 @@ def test_drill_chamber_opens_inline_inside_concept_view(
         "placeholder", "Preparing your first question"
     )
     expect(clean_page.locator("#chamber-send")).to_have_text("Submit")
+    expect(clean_page.locator("#drill-chamber-view")).to_contain_text(
+        "Reconstruct Entry A from memory"
+    )
+    expect(clean_page.locator("#drill-chamber-view")).not_to_contain_text(
+        "ANSWER KEY SHOULD NOT APPEAR"
+    )
     clean_page.evaluate("window.DrillChamber.setLoading(true)")
     expect(clean_page.locator("#chamber-composer")).to_be_enabled()
     expect(clean_page.locator("#chamber-composer")).to_have_attribute(
@@ -209,7 +215,7 @@ def test_drill_chamber_opens_inline_inside_concept_view(
                 id: 'entry-a',
                 label: 'Entry A',
                 fullLabel: 'Entry A',
-                detail: 'Describe what Entry A means in your own words.',
+                detail: 'ANSWER KEY SHOULD NOT APPEAR BEFORE THE LEARNER WRITES.',
             });
         })()"""
     )

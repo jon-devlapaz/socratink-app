@@ -2033,6 +2033,7 @@ const App = (() => {
       label,
       fullLabel: label,
       detail: visiblePrompt,
+      prompt: visiblePrompt,
       repairContext,
       trainingSnapshot: training,
       drillMode: 're_drill',
@@ -2452,6 +2453,7 @@ const App = (() => {
       const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
       if (route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
       if (drillState.active) {
+        const activeConcept = getActiveConcept();
         const nextData = parseConceptGraphData(activeConcept);
         cancelDrill();
         if (nextData && activeConcept) {
@@ -2578,14 +2580,14 @@ const App = (() => {
       tagsEl.innerHTML = '';
     }
 
-    renderConceptPageB2(mapContent, data, concept);
+    renderConceptPageB2(mapContent, data, concept, null, opts);
     renderConceptConstellationView(constellationContent, data, concept, null, { activeEntryId: _activeEntryId });
     // Keep first paint synchronous; training evidence re-renders when available.
     void trainingStore.loadTraining(concept.id)
       .then((training) => {
         if (!training) return;
         if (getActiveId() !== concept.id || document.body.dataset.mapOpen !== 'true') return;
-        renderConceptPageB2(mapContent, data, concept, training);
+        renderConceptPageB2(mapContent, data, concept, training, opts);
         renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
       })
       .catch((err) => {
@@ -3993,6 +3995,22 @@ const App = (() => {
     }
   }
 
+  function drillQuestionForNodeContext(nodeContext = {}, concept = {}) {
+    const scaffold = nodeContext.learner_scaffold || nodeContext.learnerScaffold || {};
+    const explicitPrompt = (
+      scaffold.entry_prompt
+      || scaffold.task_cue
+      || nodeContext.prompt
+      || nodeContext.drillPrompt
+      || nodeContext.purpose
+    );
+    if (typeof explicitPrompt === 'string' && explicitPrompt.trim()) {
+      return explicitPrompt.trim();
+    }
+    const label = nodeContext.fullLabel || nodeContext.label || concept?.name || 'this entry';
+    return `Reconstruct ${label} from memory before checking the source.`;
+  }
+
   function startDrill(nodeContext = null) {
     const concept = getActiveConcept();
     if (!concept) return;
@@ -4085,7 +4103,10 @@ const App = (() => {
     const mapView = document.getElementById('map-view');
     const mapContent = document.getElementById('map-content');
     if (!mapView?.classList.contains('visible')) {
-      showMapView(concept);
+      showMapView(concept, {
+        activeEntryId: nodeContext.id,
+        isDrilling: true,
+      });
     }
     if (mapContent) {
       renderConceptPageB2(mapContent, km, concept, nodeContext.trainingSnapshot || null, {
@@ -4119,18 +4140,19 @@ const App = (() => {
     // Show the ironclad chamber view.
     const conceptName = concept?.name || concept?.metadata?.name || 'Concept';
     const entryName = nodeContext.fullLabel || nodeContext.id || 'Entry';
+    const visibleQuestion = drillQuestionForNodeContext(nodeContext, concept);
     if (window.DrillChamber) {
       window.DrillChamber.show({
         conceptName,
         entryName,
-        question: nodeContext.detail || 'Explain this in your own words.',
+        question: visibleQuestion,
       });
       // Seed the last-shown question so the FIRST history pair records
       // the actual question the learner saw (the seed prompt from the
       // node detail). Without this, chamberLastShownQuestion is '' on
       // the first send because appendBubble('ai',...) hasn't run yet
       // (it fires after requestDrillTurn resolves, not before).
-      chamberLastShownQuestion = nodeContext.detail || 'Explain this in your own words.';
+      chamberLastShownQuestion = visibleQuestion;
       // The visible node prompt is the first question. Keep the
       // composer editable immediately; the first API turn should react
       // to the learner's reconstruction, not block them while asking for

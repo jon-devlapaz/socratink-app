@@ -145,8 +145,15 @@ class DevAutoguestGuardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/login?return_to=%2F")
 
-    def test_loopback_localhost_redirects_to_guest_route_by_default(self):
+    def test_loopback_localhost_requires_dev_opt_in(self):
         self._set_env()  # all unset
+        client = self._client(base_url="http://localhost:8000")
+        response = client.get("/", follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["location"], "/login?return_to=%2F")
+
+    def test_explicit_loopback_local_auth_bypass_redirects_to_guest_route(self):
+        self._set_env(SOCRATINK_LOCAL_AUTH_BYPASS="1")
         client = self._client(base_url="http://localhost:8000")
         response = client.get("/", follow_redirects=False)
         self.assertEqual(response.status_code, 302)
@@ -201,12 +208,12 @@ class DevAutoguestGuardTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.json().get("dev_mode"), True)
 
-    def test_api_me_dev_mode_true_on_loopback_localhost_by_default(self):
+    def test_api_me_dev_mode_false_on_loopback_without_opt_in(self):
         self._set_env()  # all unset
         client = self._client(base_url="http://localhost:8000")
         response = client.get("/api/me")
         self.assertEqual(response.status_code, 200)
-        self.assertIs(response.json().get("dev_mode"), True)
+        self.assertIs(response.json().get("dev_mode"), False)
 
     def test_api_me_dev_mode_false_on_non_loopback_default(self):
         self._set_env()  # all unset
