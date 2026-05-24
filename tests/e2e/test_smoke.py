@@ -556,7 +556,10 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     card.click()
     expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
     expect(page.locator("#concept-header-tags .map-badge.state")).to_have_count(0)
-    expect(page.locator(".concept-page-b2__provenance")).to_have_text(
+    context_dock = page.locator(".concept-page-b2__context-dock")
+    expect(context_dock).to_contain_text("Context")
+    expect(context_dock).to_contain_text("Learner rough sketch baseline.")
+    expect(context_dock).not_to_contain_text(
         "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
@@ -1829,7 +1832,11 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas).to_be_visible()
     expect(clean_page.locator("#concept-view-switch")).to_have_text("Constellation")
     expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
-    expect(canvas.locator(".concept-page-b2__scope")).to_contain_text(
+    expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text("Context")
+    expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text(
+        "I think sodium just rushes in."
+    )
+    expect(canvas.locator(".concept-page-b2__context-dock")).not_to_contain_text(
         "Write first. Compare after."
     )
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)

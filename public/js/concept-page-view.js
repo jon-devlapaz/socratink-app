@@ -653,14 +653,6 @@ function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
   `;
 }
 
-function renderScopeBoundaryHtml() {
-  return `
-    <p class="concept-page-b2__scope">
-      Write first. Compare after.
-    </p>
-  `;
-}
-
 function renderBlankStartHtml(scaffold = null, activeEntryId = 'entry') {
   const hint = blankHintForScaffold(scaffold);
   const hintId = `blank-start-${String(activeEntryId || 'entry').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
@@ -804,10 +796,6 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const thresholdHtml = thresholdText
     ? renderSketchWrapperHtml(thresholdText)
     : renderSketchWrapperHtml('');
-  const provenanceHtml = isSourceLess
-    ? '<p class="concept-page-b2__provenance">No source attached. Treat this route as provisional.</p>'
-    : '';
-
   const ctaButton = options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? (isPostRevealComparison
       && derived.next_action !== 'repair'
@@ -870,9 +858,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
       })}
       <div class="concept-page-b2__work">
         <div class="concept-page-b2__context-dock" aria-label="Recall context">
-          ${renderScopeBoundaryHtml()}
           ${thresholdHtml}
-          ${provenanceHtml}
         </div>
         ${activeHtml}
         ${nearbyHtml}
