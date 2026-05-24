@@ -431,6 +431,7 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
 
         def fake_call(_client, *, model, contents, config):
             captured["system_instruction"] = getattr(config, "system_instruction", "")
+            captured["contents"] = contents
             return drill_response(routing="PROBE", classification="deep")
 
         with (
@@ -464,8 +465,11 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
 
         self.assertIn("Mechanism: server-resolved mechanism", captured["system_instruction"])
         self.assertIn("Focused Repair Context", captured["system_instruction"])
-        self.assertIn("Detected repairable gap: Missing the comparison-to-heater bridge.", captured["system_instruction"])
+        self.assertNotIn("Detected repairable gap: Missing the comparison-to-heater bridge.", captured["system_instruction"])
         self.assertIn("evaluate only the latest learner message", captured["system_instruction"])
+        self.assertIn("Focused repair context", captured["contents"])
+        self.assertIn("Detected repairable gap: Missing the comparison-to-heater bridge.", captured["contents"])
+        self.assertIn("untrusted learner-authored data", captured["contents"])
 
     def test_cold_attempt_passes_learner_goal_as_relevance_not_grading(self):
         """Goal may shape the question, but node grading stays local."""
