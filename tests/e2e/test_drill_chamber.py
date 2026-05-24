@@ -221,8 +221,25 @@ def test_drill_chamber_opens_inline_inside_concept_view(
         })()"""
     )
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    clean_page.evaluate(
+        """(() => {
+            localStorage.setItem('socratink:training:v1:drill-test-concept', JSON.stringify({
+                concept_id: 'drill-test-concept',
+                schema_version: 1,
+                source_mode: 'source_attached',
+                grounding: 'fixture',
+                source_ref: null,
+                sketch: null,
+                node_records: {},
+            }));
+        })()"""
+    )
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').press("ArrowDown")
     expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "data-entry-id", "entry-b"
+    )
+    clean_page.wait_for_timeout(700)
     expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
         "data-entry-id", "entry-b"
     )

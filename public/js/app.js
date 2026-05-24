@@ -2773,33 +2773,6 @@ const App = (() => {
       constellationNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
 
-    document.addEventListener('keydown', (event) => {
-      if (!drillState.active || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return;
-      const target = event.target instanceof Element ? event.target : null;
-      const routeItem = target?.closest('.concept-page-b2__route-item[data-entry-id]') || null;
-      if (!routeItem) return;
-
-      const concept = getActiveConcept();
-      const data = parseConceptGraphData(concept);
-      const backbone = deriveConceptEntries(data || {});
-      if (!concept || !data || !backbone.length) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      const dir = event.key === 'ArrowUp' ? -1 : 1;
-      const currentMatch = findConceptEntryById(backbone, _activeEntryId);
-      const currentIdx = currentMatch ? currentMatch.index : 0;
-      const nextIdx = Math.max(0, Math.min(backbone.length - 1, currentIdx + dir));
-      const nextEntry = backbone[nextIdx];
-      if (!nextEntry) return;
-      const nextId = getConceptEntryId(nextEntry, nextIdx);
-      cancelDrill();
-      setActiveEntry(nextId, data, concept, null);
-      setTimeout(() => {
-        document.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`)?.focus?.();
-      }, 280);
-    }, true);
   }
 
   function setNavActive(id) {
