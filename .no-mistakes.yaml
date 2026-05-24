@@ -1,4 +1,4 @@
-agent: acp:pool
+agent: claude
 
 commands:
   test: "bash scripts/no-mistakes-test.sh"
