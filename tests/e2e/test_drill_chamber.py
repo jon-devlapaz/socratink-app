@@ -654,3 +654,86 @@ def test_completed_cold_attempt_without_recordable_classification_does_not_mutat
     )
     assert graph["backbone"][0].get("drill_status") is None
     assert graph["backbone"][0].get("drill_phase") is None
+
+
+def test_score_ineligible_cold_attempt_scaffold_stays_retryable(
+    page: Page, base_url: str
+) -> None:
+    """A non-evidence scaffold echo must not complete the cold attempt."""
+    drill_calls: list[dict[str, Any]] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Make one concrete guess before study appears.",
+                    "generative_commitment": True,
+                    "answer_mode": "attempt",
+                    "score_eligible": False,
+                    "help_request_reason": "scaffold_echo",
+                    "classification": "shallow",
+                    "gap_description": "The learner echoed the prompt instead of reconstructing.",
+                    "routing": "SCAFFOLD",
+                    "response_tier": 1,
+                    "response_band": "fragment",
+                    "tier_reason": "Non-score eligible turn should remain a prompt.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 1,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 0,
+                    "help_turn_count": 1,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_concept_with_graph(page, "drill-score-ineligible-concept")
+
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Chamber Test Concept").click()
+    page.evaluate(
+        """(() => {
+            App.startDrill({
+                id: 'entry-a',
+                label: 'Entry A',
+                fullLabel: 'Entry A',
+                detail: 'Describe what Entry A means in your own words.',
+            });
+        })()"""
+    )
+
+    expect(page.locator("#chamber-composer")).to_be_enabled(timeout=8_000)
+    page.locator("#chamber-composer").fill("It is like the prompt says.")
+    _click_chamber_send(page)
+
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "Make one concrete guess before study appears.",
+        timeout=8_000,
+    )
+    expect(page.locator("#chamber-question")).not_to_contain_text(
+        "The drill service failed to respond."
+    )
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    assert len(drill_calls) == 1
+    assert drill_calls[0]["session_phase"] == "turn"
+    assert (
+        page.evaluate(
+            """localStorage.getItem('socratink:training:v1:drill-score-ineligible-concept')"""
+        )
+        is None
+    )
+    graph = page.evaluate(
+        """() => JSON.parse(JSON.parse(localStorage.getItem('learnops_concepts'))[0].graphData)"""
+    )
+    assert graph["backbone"][0].get("drill_status") is None
+    assert graph["backbone"][0].get("drill_phase") is None

@@ -3759,14 +3759,18 @@ const App = (() => {
     activeDrillNode = null;
   }
 
-  function patchActiveConceptDrillOutcome(result, drillMode) {
-    const resolvedColdAttempt = drillMode === 'cold_attempt' && result?.generative_commitment === true;
+  function patchActiveConceptDrillOutcome(result, drillMode, options = {}) {
+    const resolvedColdAttempt = drillMode === 'cold_attempt' && options.coldAttemptRecorded === true;
     const isResolvedSessionComplete = result?.routing === 'SESSION_COMPLETE'
       && (drillMode === 'cold_attempt'
-        ? result?.generative_commitment === true
+        ? resolvedColdAttempt
         : Boolean(result?.classification));
 
-    if ((!resolvedColdAttempt && result?.routing !== 'NEXT' && !isResolvedSessionComplete) || !result?.node_id) {
+    if (
+      !result?.node_id
+      || (drillMode === 'cold_attempt' && !resolvedColdAttempt)
+      || (drillMode !== 'cold_attempt' && result?.routing !== 'NEXT' && !isResolvedSessionComplete)
+    ) {
       console.log(
         `[drill->graph] no mutation node=${result?.node_id ?? 'n/a'} classification=${result?.classification ?? 'null'} routing=${result?.routing ?? 'null'}`
       );
@@ -3788,7 +3792,7 @@ const App = (() => {
     const activeConceptId = concept.id;
 
     const applyPhaseUpdate = (targetObj) => {
-      if (drillMode === 'cold_attempt' && result.generative_commitment === true) {
+      if (drillMode === 'cold_attempt' && resolvedColdAttempt) {
         targetObj.drill_phase = 'study';
         targetObj.drill_status = 'primed';
         targetObj.cold_attempt_at = drilledAt;
@@ -3965,7 +3969,10 @@ const App = (() => {
         return;
       }
 
-      const completedColdAttempt = !graphNeutralDrill && drillMode === 'cold_attempt' && data.generative_commitment === true;
+      const completedColdAttempt = !graphNeutralDrill
+        && drillMode === 'cold_attempt'
+        && data.generative_commitment === true
+        && isRecordableDrillAttempt(data);
       const terminalReDrillTurn = (
         data.routing === 'NEXT'
         || (data.routing === 'SESSION_COMPLETE' && !!data.classification)
@@ -3985,7 +3992,9 @@ const App = (() => {
         if (!training) throw new Error('attempt-not-recorded');
       }
 
-      const graphMutationConcept = graphNeutralDrill ? null : patchActiveConceptDrillOutcome(data, drillMode);
+      const graphMutationConcept = graphNeutralDrill
+        ? null
+        : patchActiveConceptDrillOutcome(data, drillMode, { coldAttemptRecorded: completedColdAttempt });
       const graphMutated = Boolean(graphMutationConcept);
 
       const handleVisualTransition = async () => {
@@ -4038,7 +4047,7 @@ const App = (() => {
         }
       };
 
-      if (drillMode === 'cold_attempt' && data.generative_commitment === true) {
+      if (completedColdAttempt) {
         const normalizationMessages = [
           'You made the first mark. Now the entry can show the gap.',
           'That guess gives study something to work against.',
