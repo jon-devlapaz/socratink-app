@@ -284,6 +284,53 @@ def test_drill_start_from_non_map_view_routes_to_inline_concept(
     ).to_be_visible(timeout=8_000)
 
 
+def test_drill_start_with_existing_training_survives_training_rerender(
+    clean_page: Page, base_url: str
+) -> None:
+    _seed_concept_with_graph(clean_page, concept_id="drill-trained-concept")
+    clean_page.evaluate(
+        """(() => {
+            localStorage.setItem('socratink:training:v1:drill-trained-concept', JSON.stringify({
+                concept_id: 'drill-trained-concept',
+                schema_version: 1,
+                source_mode: null,
+                grounding: 'ungrounded',
+                source_ref: null,
+                sketch: null,
+                node_records: {
+                    'entry-a': {
+                        attempts: [{
+                            id: 'attempt-1',
+                            at: '2026-05-24T12:00:00.000Z',
+                            user_text: 'Entry A starts the loop.',
+                            classification: 'thin',
+                            grader_version: 'drill-system-v1',
+                            gaps: [],
+                            kind: 'cold'
+                        }],
+                        repairs: []
+                    }
+                }
+            }));
+        })()"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.evaluate(
+        """App.startDrill({
+            id: 'entry-a',
+            label: 'Entry A',
+            fullLabel: 'Entry A',
+            detail: 'Describe what Entry A means in your own words.',
+        })"""
+    )
+
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    clean_page.wait_for_timeout(150)
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    expect(clean_page.locator("#chamber-composer")).to_be_enabled()
+
+
 def test_start_drill_from_map_targets_visible_route_entry(
     clean_page: Page, base_url: str
 ) -> None:

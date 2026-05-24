@@ -2627,6 +2627,14 @@ const App = (() => {
         const renderOptions = { ...opts };
         if (
           renderOptions.isDrilling
+          && drillState.active
+          && drillState.node?.id === renderOptions.activeEntryId
+        ) {
+          renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
+          return;
+        }
+        if (
+          renderOptions.isDrilling
           && (!drillState.active || drillState.node?.id !== renderOptions.activeEntryId)
         ) {
           renderOptions.isDrilling = false;
