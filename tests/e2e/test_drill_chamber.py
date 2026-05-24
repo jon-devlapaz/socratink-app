@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 import pytest
@@ -402,6 +403,127 @@ def test_graph_neutral_repair_drill_bypasses_study_reopen(
 
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
     expect(clean_page.locator("#chamber-question")).to_contain_text("Pressure-check")
+
+
+def test_active_drill_route_switch_preserves_selected_entry_after_training_rerender(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    _seed_concept_with_graph(clean_page)
+    clean_page.evaluate(
+        """(() => {
+            localStorage.setItem('socratink:training:v1:drill-test-concept', JSON.stringify({
+                concept_id: 'drill-test-concept',
+                schema_version: 1,
+                node_records: {
+                    'entry-a': {
+                        attempts: [{
+                            id: 'attempt-entry-a',
+                            at: '2026-05-21T00:00:00.000Z',
+                            user_text: 'A cold attempt',
+                            classification: 'partial',
+                            grader_version: 'fixture',
+                            gaps: [],
+                            kind: 'cold',
+                        }],
+                        repairs: [],
+                    },
+                },
+            }));
+        })()"""
+    )
+
+    clean_page.evaluate("window.App.openLibraryConcept('drill-test-concept')")
+    clean_page.evaluate(
+        """window.App.startDrill({
+            id: 'entry-a',
+            label: 'Entry A',
+            fullLabel: 'Entry A',
+            detail: 'Describe what Entry A means in your own words.',
+        })"""
+    )
+
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-b"]').click()
+    clean_page.wait_for_timeout(400)
+
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
+        "data-entry-id", "entry-b"
+    )
+
+
+def test_repair_drill_context_is_bounded_for_drill_request(
+    page: Page, base_url: str
+) -> None:
+    drill_calls: list[dict[str, Any]] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "Keep probing the repair.",
+                    "generative_commitment": None,
+                    "answer_mode": None,
+                    "score_eligible": False,
+                    "help_request_reason": None,
+                    "classification": None,
+                    "gap_description": None,
+                    "routing": "SCAFFOLD",
+                    "response_tier": None,
+                    "response_band": None,
+                    "tier_reason": None,
+                    "node_id": "entry-a",
+                    "probe_count": 1,
+                    "nodes_drilled": 0,
+                    "attempt_turn_count": 0,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_concept_with_graph(page)
+
+    page.evaluate("window.App.openLibraryConcept('drill-test-concept')")
+    page.evaluate(
+        """(() => {
+            window.App.startDrill({
+                id: 'entry-a',
+                label: 'Entry A',
+                fullLabel: 'Entry A',
+                prompt: 'Pressure-check the repaired link.',
+                repairContext: `Learner cold draft: ${'x'.repeat(12000)}
+Detected repairable gap: missing condition
+Learner repair text: repaired link`,
+                drillMode: 're_drill',
+                graphNeutral: true,
+            });
+        })()"""
+    )
+
+    expect(page.locator("#drill-chamber-view")).to_be_visible()
+    expect(page.locator("#chamber-send")).to_be_enabled()
+    page.locator("#chamber-composer").fill("The repaired link depends on the condition.")
+    assert page.evaluate("window.DrillChamber.getComposerValue()") == "The repaired link depends on the condition."
+    page.evaluate("document.getElementById('chamber-send').click()")
+    deadline = time.monotonic() + 5
+    while not drill_calls and time.monotonic() < deadline:
+        page.wait_for_timeout(100)
+    assert drill_calls
+
+    assert len(drill_calls[0]["node_mechanism"]) <= 10_000
+    assert "Learner repair text: repaired link" in drill_calls[0]["node_mechanism"]
 
 
 def test_drill_chamber_exit_restores_map(

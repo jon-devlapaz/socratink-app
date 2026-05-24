@@ -100,6 +100,7 @@ const App = (() => {
   const LOCAL_QA_NODE_ID = 'qa-node';
   const LOCAL_REPAIR_QA_CONCEPT_ID = 'qa-repair-concept';
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
+  const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
   const trainingStore = createTrainingStore();
   let currentGraphController = null;
   let activeDrillNode = null;
@@ -1996,6 +1997,15 @@ const App = (() => {
     ).trim() || fallback;
   }
 
+  function boundedDrillNodeMechanism(value) {
+    const text = String(value || '');
+    if (text.length <= DRILL_NODE_MECHANISM_MAX_CHARS) return text;
+    const marker = '\n[earlier drill context truncated]\n';
+    const tailBudget = 3000;
+    const headBudget = DRILL_NODE_MECHANISM_MAX_CHARS - marker.length - tailBudget;
+    return `${text.slice(0, headBudget)}${marker}${text.slice(-tailBudget)}`;
+  }
+
   function buildRepairGapDrillContext(entryId, concept, data, training = null) {
     const graphData = parseConceptGraphData(concept) || data || {};
     const backbone = deriveConceptEntries(graphData);
@@ -2446,13 +2456,13 @@ const App = (() => {
     route.addEventListener('click', (e) => {
       const item = e.target.closest('.concept-page-b2__route-item');
       if (!item) return;
-      if (route.dataset.lockedInert === 'true' && item.dataset.routeState === 'locked') return;
+      const routeLockedInert = route.dataset.lockedInert === 'true';
+      if (routeLockedInert && (drillState.active || item.dataset.routeState === 'locked')) return;
       const id = item.getAttribute('data-entry-id');
       if (id && drillState.active) {
         const activeConcept = getActiveConcept();
-        const nextData = parseConceptGraphData(activeConcept);
-        cancelDrill();
-        if (nextData && activeConcept) setActiveEntry(id, nextData, activeConcept, training);
+        cancelDrill({ restoreMap: false });
+        if (activeConcept?.graphData) showMapView(activeConcept, { activeEntryId: id });
         return;
       }
       if (id) setActiveEntry(id, data, concept, training);
@@ -2464,7 +2474,8 @@ const App = (() => {
 
       if (e.key === 'Enter' || e.key === ' ') {
         const id = item.getAttribute('data-entry-id');
-        if (id && !(route.dataset.lockedInert === 'true' && item.dataset.routeState === 'locked')) {
+        const routeLockedInert = route.dataset.lockedInert === 'true';
+        if (id && !(routeLockedInert && (drillState.active || item.dataset.routeState === 'locked'))) {
           e.preventDefault();
           if (drillState.active) {
             item.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -2488,14 +2499,12 @@ const App = (() => {
       if (!nextEntry) return;
       const nextId = getConceptEntryId(nextEntry, nextIdx);
       const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
-      if (!drillState.active && route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
+      const routeLockedInert = route.dataset.lockedInert === 'true';
+      if (routeLockedInert && (drillState.active || nextItem?.dataset?.routeState === 'locked')) return;
       if (drillState.active) {
         const activeConcept = getActiveConcept();
-        const nextData = parseConceptGraphData(activeConcept);
-        cancelDrill();
-        if (nextData && activeConcept) {
-          setActiveEntry(nextId, nextData, activeConcept, training);
-        }
+        cancelDrill({ restoreMap: false });
+        if (activeConcept?.graphData) showMapView(activeConcept, { activeEntryId: nextId });
       } else {
         setActiveEntry(nextId, data, concept, training);
       }
@@ -3942,7 +3951,7 @@ const App = (() => {
         concept_id: concept.id,
         node_id: drillState.node.id,
         node_label: nodeLabel,
-        node_mechanism: drillState.node.repairContext || drillState.node.detail || '',
+        node_mechanism: boundedDrillNodeMechanism(drillState.node.repairContext || drillState.node.detail || ''),
         drill_session_id: drillState.logSessionId,
         client_turn_index: clientTurnIndex,
         knowledge_map: knowledgeMap,
@@ -4273,7 +4282,7 @@ const App = (() => {
     }
   }
 
-  function cancelDrill() {
+  function cancelDrill(options = {}) {
     // Hide the chamber first, before any other state cleanup.
     if (window.DrillChamber) {
       window.DrillChamber.hide();
@@ -4304,7 +4313,7 @@ const App = (() => {
 
     // Restore the concept page view (map + detail).
     const activeConcept = getActiveConcept();
-    if (activeConcept) {
+    if (activeConcept && options.restoreMap !== false) {
       showMapView(activeConcept);
     }
   }
