@@ -214,6 +214,8 @@ def test_smallest_route_prompt_requires_internal_bloom_scaffold_contract():
     assert "<learner_goal>" in prompt
     assert "not evidence" in prompt
     assert "Do not copy any contiguous clause from `mechanism`" in prompt
+    assert "conceptual foothold" in prompt
+    assert "not sentence-writing instructions" in prompt
 
 
 # ---------------------------------------------------------------------------

@@ -277,7 +277,7 @@ def _seed_route_margin_concept(page: Page) -> None:
                                 entry_prompt: 'What do you think makes the sodium channel open?',
                                 expected_shape: 'Write one sentence. Name the trigger, even if you are guessing.',
                                 sentence_starter: 'My current guess is that the sodium channel opens when...',
-                                blank_hint: 'Start with the word threshold and say what it might do.',
+                                blank_hint: 'Think about the point where a small signal becomes enough to matter.',
                                 evidence_goal: 'Learner names a trigger for channel opening before study content appears.',
                             },
                         }],
@@ -1854,17 +1854,20 @@ def test_concept_view_opens_to_route_margin_canvas(
         "Use this draft"
     )
     expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
-        "Start with the word threshold and say what it might do."
+        "Think about the point where a small signal becomes enough to matter."
     )
     attempt_input = canvas.locator(".concept-page-b2__attempt-input")
     attempt_input.fill("asdasdas")
     blank_start = canvas.locator("[data-blank-start]")
-    expect(blank_start).to_have_text("Need a starting point")
+    expect(blank_start).to_have_text("Stuck?")
     expect(blank_start).to_have_attribute("aria-expanded", "false")
     blank_start.click()
     expect(canvas.locator("[data-blank-start-hint]")).to_be_visible()
     expect(canvas.locator("[data-blank-start-hint]")).to_contain_text(
-        "Start with the word threshold and say what it might do."
+        "Think about the point where a small signal becomes enough to matter."
+    )
+    expect(canvas.locator("[data-blank-start-hint]")).not_to_contain_text(
+        "The mechanism stays hidden"
     )
     expect(attempt_input).to_have_value("asdasdas")
     assert clean_page.evaluate(
@@ -1873,7 +1876,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     attempt_input.fill("")
     fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=14');
+            const mod = await import('/js/concept-page-view.js?v=15');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -1909,7 +1912,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     assert "Type one relationship you suspect, even if it feels incomplete." in fallback_html
     empty_fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=14');
+            const mod = await import('/js/concept-page-view.js?v=15');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -2337,7 +2340,7 @@ def test_source_less_defensive_ui_paths_remain_inert(
 
     fallback_mode = clean_page.evaluate(
         """async () => {
-            const view = await import('/js/concept-page-view.js?v=14');
+            const view = await import('/js/concept-page-view.js?v=15');
             return view.deriveSourceLessViewMode({
                 attempted: true,
                 next_action: 'spaced_attempt',

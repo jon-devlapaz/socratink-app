@@ -666,8 +666,8 @@ function renderBlankStartHtml(scaffold = null, activeEntryId = 'entry') {
   const hintId = `blank-start-${String(activeEntryId || 'entry').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   return `
     <div class="concept-page-b2__blank-start">
-      <button class="concept-page-b2__blank-start-button" type="button" data-blank-start aria-expanded="false" aria-controls="${escHtml(hintId)}">Need a starting point</button>
-      <p class="concept-page-b2__blank-start-hint" id="${escHtml(hintId)}" data-blank-start-hint hidden>${escHtml(hint)} The mechanism stays hidden.</p>
+      <button class="concept-page-b2__blank-start-button" type="button" data-blank-start aria-expanded="false" aria-controls="${escHtml(hintId)}">Stuck?</button>
+      <p class="concept-page-b2__blank-start-hint" id="${escHtml(hintId)}" data-blank-start-hint hidden>${escHtml(hint)}</p>
     </div>
   `;
 }
