@@ -8,6 +8,8 @@ from dotenv import dotenv_values, load_dotenv
 
 
 _TRUTHY = {"1", "true", "yes", "on"}
+_FALSEY = {"0", "false", "no", "off"}
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1", "testclient"}
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,20 @@ class EnvLoadReport:
 
 def _truthy_env(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in _TRUTHY
+
+
+def _falsey_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _FALSEY
+
+
+def _production_runtime_detected() -> bool:
+    if _truthy_env("VERCEL"):
+        return True
+    if os.getenv("VERCEL_ENV"):
+        return True
+    if _truthy_env("CI"):
+        return True
+    return False
 
 
 def dev_autoguest_enabled() -> bool:
@@ -70,13 +86,36 @@ def dev_autoguest_enabled() -> bool:
     """
     if not _truthy_env("SOCRATINK_DEV_AUTOGUEST"):
         return False
-    if _truthy_env("VERCEL"):
-        return False
-    if os.getenv("VERCEL_ENV"):
-        return False
-    if _truthy_env("CI"):
+    if _production_runtime_detected():
         return False
     return True
+
+
+def _normalize_host(host: str | None) -> str:
+    return (host or "").strip().lower().strip("[]")
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    return _normalize_host(host) in _LOOPBACK_HOSTS
+
+
+def local_auth_bypass_enabled(
+    *, hostname: str | None = None, client_host: str | None = None
+) -> bool:
+    """Allow localhost development to enter as a sealed local guest.
+
+    This is the request-aware replacement for relying solely on
+    SOCRATINK_DEV_AUTOGUEST. Plain `uvicorn main:app` on localhost should not
+    fall through to Google/Supabase auth, but production-shaped runtimes and
+    non-loopback requests must still see the normal auth wall.
+    """
+    if _production_runtime_detected():
+        return False
+    if _falsey_env("SOCRATINK_LOCAL_AUTH_BYPASS"):
+        return False
+    if dev_autoguest_enabled():
+        return True
+    return _is_loopback_host(hostname) and _is_loopback_host(client_host)
 
 
 def _should_load_dotenv_local() -> tuple[bool, str | None]:

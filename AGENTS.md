@@ -152,7 +152,9 @@ playwright install chromium
 # HOST=0.0.0.0 bash scripts/dev.sh so it's reachable at http://<your-LAN-IP>:8000.
 bash scripts/dev.sh
 
-# Direct fallback if you already ran the preflight:
+# Direct fallback if you already ran the preflight. Loopback localhost requests
+# bypass the login wall by default and enter through /auth/guest as a sealed
+# local dev guest; this path does not call Supabase anonymous auth.
 python scripts/check-local-auth.py
 uvicorn main:app --reload
 
@@ -160,9 +162,9 @@ uvicorn main:app --reload
 SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 
 # Opt out of the auto-guest dev escape hatch (test the /login wall locally).
-# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default. Two effects, both
-# gated on this single env var (and hard-disabled in any VERCEL / VERCEL_ENV
-# / CI runtime):
+# SOCRATINK_LOCAL_AUTH_BYPASS=0 disables the default loopback localhost bypass.
+# scripts/dev.sh also sets SOCRATINK_DEV_AUTOGUEST=1 by default for LAN/mobile
+# local QA. Two effects are hard-disabled in any VERCEL / VERCEL_ENV / CI runtime:
 #   1. The auth gate trampolines protected GETs through /auth/guest instead
 #      of /login, so agents and ad-hoc local browsing skip the wall.
 #   2. /api/me returns dev_mode: true, which lets the frontend allow guest
@@ -173,7 +175,7 @@ SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 # browser tests use /auth/e2e/guest to mint a loopback-only guest cookie
 # without creating real Supabase anonymous users or burning auth rate limits.
 # Restart the server after toggling — uvicorn --reload reloads code, not env.
-SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
+SOCRATINK_LOCAL_AUTH_BYPASS=0 SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 
 # Free localhost:8000–8009 if a previous uvicorn / smoke run left a listener
 # behind. SIGTERM first, then SIGKILL only for survivors.

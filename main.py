@@ -57,7 +57,7 @@ from source_intake import (
     TooLarge,
     UnsupportedContent,
 )
-from runtime_env import dev_autoguest_enabled, load_app_env
+from runtime_env import local_auth_bypass_enabled, load_app_env
 
 load_app_env()
 
@@ -252,7 +252,11 @@ async def require_login_or_guest_entry(request: Request, call_next):
                 },
                 status_code=401,
             )
-        if dev_autoguest_enabled():
+        client_host = request.client.host if request.client else None
+        if local_auth_bypass_enabled(
+            hostname=request.url.hostname,
+            client_host=client_host,
+        ):
             # Local dev: skip the /login wall by trampolining straight through
             # the existing guest sign-in route, which sets the session cookie
             # and redirects to the originally requested path.
