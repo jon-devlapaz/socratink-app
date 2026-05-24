@@ -2587,7 +2587,14 @@ const App = (() => {
       .then((training) => {
         if (!training) return;
         if (getActiveId() !== concept.id || document.body.dataset.mapOpen !== 'true') return;
-        renderConceptPageB2(mapContent, data, concept, training, opts);
+        const renderOptions = { ...opts };
+        if (
+          renderOptions.isDrilling
+          && (!drillState.active || drillState.node?.id !== renderOptions.activeEntryId)
+        ) {
+          renderOptions.isDrilling = false;
+        }
+        renderConceptPageB2(mapContent, data, concept, training, renderOptions);
         renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
       })
       .catch((err) => {
@@ -3886,13 +3893,15 @@ const App = (() => {
       }
 
       const completedColdAttempt = !graphNeutralDrill && drillMode === 'cold_attempt' && data.generative_commitment === true;
-      const completedReDrill = !graphNeutralDrill && (
+      const terminalReDrillTurn = (
         data.routing === 'NEXT'
         || (data.routing === 'SESSION_COMPLETE' && !!data.classification)
       );
-      const completedNodeTurn = completedColdAttempt || completedReDrill;
+      const completedReDrill = !graphNeutralDrill && terminalReDrillTurn;
+      const completedGraphNeutralReDrill = graphNeutralDrill && terminalReDrillTurn;
+      const completedNodeTurn = completedColdAttempt || completedReDrill || completedGraphNeutralReDrill;
 
-      if (completedNodeTurn && userText) {
+      if ((completedColdAttempt || completedReDrill) && userText) {
         const training = await appendTrainingAttemptFromDrillTurn({
           conceptId: concept.id,
           nodeId: drillState.node.id,

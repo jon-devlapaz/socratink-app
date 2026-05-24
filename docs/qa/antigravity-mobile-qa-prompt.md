@@ -18,9 +18,9 @@
 > sleep 4
 > curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/   # expect 302
 > ```
-> `scripts/dev.sh` defaults to loopback-only (`127.0.0.1`). The `HOST=0.0.0.0` override above is required so on-device mobile QA (or a Browser Sub-Agent running on a different host) can reach the server at `http://<your-LAN-IP>:8000`.
+> `scripts/dev.sh` defaults to loopback-only (`127.0.0.1`). The `HOST=0.0.0.0` override above makes the server reachable at `http://<your-LAN-IP>:8000`, but the local auth bypass remains loopback-only. For LAN/on-device QA, sign in through the normal guest/login path or use a loopback tunnel from the testing browser.
 >
-> Default-guest login is auto-minted via `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`); you should land on the empty-state Ignition view without a login wall.
+> Default-guest login is auto-minted only for loopback requests via `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`); LAN requests should expect the login wall.
 >
 > **App map.**
 > - `/` Ignition view (empty-state hero with Concept + Starting-map composer)

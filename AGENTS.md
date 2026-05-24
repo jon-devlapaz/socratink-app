@@ -147,14 +147,13 @@ playwright install chromium
 ### Run locally
 ```bash
 # Preferred: validates local auth env before starting the login-gated app.
-# Binds Uvicorn to 127.0.0.1 by default (loopback-only). For on-device mobile
-# QA (see docs/qa/antigravity-mobile-qa-prompt.md), override with
-# HOST=0.0.0.0 bash scripts/dev.sh so it's reachable at http://<your-LAN-IP>:8000.
+# Binds Uvicorn to 127.0.0.1 by default (loopback-only). HOST=0.0.0.0 makes
+# the server reachable on LAN, but the auth bypass remains loopback-only.
 bash scripts/dev.sh
 
-# Direct fallback if you already ran the preflight. Loopback localhost requests
-# bypass the login wall by default and enter through /auth/guest as a sealed
-# local dev guest; this path does not call Supabase anonymous auth.
+# Direct fallback if you already ran the preflight. Plain uvicorn does not set
+# the explicit local auth-bypass env; use scripts/dev.sh for the localhost
+# guest escape hatch.
 python scripts/check-local-auth.py
 uvicorn main:app --reload
 
@@ -162,9 +161,10 @@ uvicorn main:app --reload
 SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 
 # Opt out of the auto-guest dev escape hatch (test the /login wall locally).
-# SOCRATINK_LOCAL_AUTH_BYPASS=0 disables the default loopback localhost bypass.
-# scripts/dev.sh also sets SOCRATINK_DEV_AUTOGUEST=1 by default for LAN/mobile
-# local QA. Two effects are hard-disabled in any VERCEL / VERCEL_ENV / CI runtime:
+# SOCRATINK_LOCAL_AUTH_BYPASS=0 disables the loopback localhost bypass.
+# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default. Two effects are
+# hard-disabled in any VERCEL / VERCEL_ENV / CI runtime and still require a
+# loopback request host plus loopback client:
 #   1. The auth gate trampolines protected GETs through /auth/guest instead
 #      of /login, so agents and ad-hoc local browsing skip the wall.
 #   2. /api/me returns dev_mode: true, which lets the frontend allow guest
