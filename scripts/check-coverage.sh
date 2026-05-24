@@ -127,4 +127,6 @@ RESOLVED_COMPARE_BRANCH=$(resolve_compare_branch) || {
     echo "check-coverage.sh: no valid compare branch (tried COMPARE_BRANCH, origin/main, main)" >&2
     exit 1
 }
+echo "Checking frontend cache-bust pins..."
+.venv/bin/python scripts/check_frontend_cache_pins.py "$RESOLVED_COMPARE_BRANCH"
 "$DIFF_COVER_BIN" coverage.xml .qa-runs/coverage-reports/cobertura-coverage.xml --compare-branch="$RESOLVED_COMPARE_BRANCH" --fail-under=100
