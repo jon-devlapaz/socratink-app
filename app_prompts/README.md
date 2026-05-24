@@ -6,12 +6,23 @@ the Vercel serverless function deployment.
 
 ## Files
 
-| File | Stage | What it does |
+| File | Runtime role | What it does |
 | :--- | :--- | :--- |
-| `extract-system-v1.txt` | Stage 1 — Extract | Turns raw source material into a structured `ProvisionalMap`. The schema this prompt produces matches `models.ProvisionalMap`. |
-| `generate-smallest-route-system-v1.txt` | Stage 2 — Draft | Generates a minimal traversal path through the map for the first drill session, including `learner_scaffold` on source-less smallest-route subnodes and optional `learner_goal` relevance framing. |
-| `drill-system-v1.md` | Stage 3 — Drill | The Socratic drill agent. Forces recall, scaffolds repair, tags Shallow/Deep/Misconception. The drill route runtime-appends a "Target Node (ANSWER KEY)" block, a "Learner Scaffold" block when present, the learner goal as relevance context, and the pruned map context. |
-| `repair-reps-system-v1.md` | Stage 4 — Repair Reps | Post-drill spaced-repetition repair routine for nodes flagged Deep/Misconception. |
+| `extract-system-v1.txt` | Source extraction | Turns raw source material into a structured `ProvisionalMap`. The schema this prompt produces matches `models.ProvisionalMap`. |
+| `generate-smallest-route-system-v1.txt` | Route drafting | Generates a minimal traversal path through the map for the first drill session, including `learner_scaffold` on source-less smallest-route subnodes and optional `learner_goal` relevance framing. |
+| `drill-system-v1.md` | Reconstruction drill | The Socratic drill agent. It turns material into reconstruction targets, uses learner attempts to expose repairable gaps, and classifies reconstruction attempts for the app to record only from reconstruction under the right conditions. The drill route runtime-appends a "Target Node (ANSWER KEY)" block, a "Learner Scaffold" block when present, the learner goal as relevance context, and the pruned map context. |
+| `repair-reps-system-v1.md` | Repair reps | Post-drill spaced-repetition repair routine for nodes flagged `deep` or `misconception`. |
+
+## Product Contract
+
+Socratink prompts preserve Generation Before Recognition: model-generated
+structure may shape the next task, but it must not replace learner generation.
+Source material, learner goals, learner sketches, and learner scaffolds are context, not evidence.
+Bloom/node-intent grammar stays internal; prompt assets may use it to aim a
+reconstruction task, but learner-facing output should use plain task language.
+Drill prompts classify reconstruction attempts for the app to record only when
+the learner reconstructs from memory under the conditions required by the
+training-state contract.
 
 ## Loading
 
@@ -43,7 +54,11 @@ cheap and Vercel's filesystem is read-only at runtime.
 - **Source-less smallest routes require `learner_scaffold`.** The runtime
   rejects smallest-route subnodes that omit it. Scaffold fields shape the
   task and evaluator scope; they are not learner evidence and must not
-  reveal the mechanism.
+  reveal the mechanism. Learner-facing route titles should be
+  mechanism-shaped labels, not visible Bloom/task verbs.
+- **Learner sketches are context, not evidence.** Sketches may shape prompt
+  wording and repair focus. They must not be graded as reconstruction
+  attempts or mutate graph truth.
 - **Learner goals are relevance context, not evidence.** Smallest-route
   generation may use `<learner_goal>` to shape route emphasis and scaffold
   copy. Drill may use `metadata.learner_goal` to frame why a node matters,

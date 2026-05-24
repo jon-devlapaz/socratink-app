@@ -24,6 +24,10 @@ socratink's core doctrine is maximum agent-assisted learning, minimum agent-repl
 
 The product should use agents to reduce friction around structure, gap localization, retrieval scheduling, connection-making, and reflection. It must not use agents to replace the learner's generative work. The learner's own reconstruction is the event that matters. Everything else is scaffolding around that event.
 
+The product through-line is: socratink turns material into reconstruction targets, uses learner attempts to expose repairable gaps, and only records learning evidence when the learner reconstructs from memory under the right conditions.
+
+socratink is not teaching by explaining better. It is teaching by making the learner's current model visible, repairable, and re-testable.
+
 The start of the product outputs a provisional cognitive object, not a lesson:
 
 - with an imported source, extraction produces a provisional map
