@@ -129,6 +129,9 @@ Rules:
 - `blank_hint` gives one foothold for the "I'm blank" state. It may
   reference the learner's threshold vocabulary, but it must not reveal
   the mechanism.
+- Do not copy any contiguous clause from `mechanism` into
+  `expected_shape`, `sentence_starter`, or `blank_hint`. Those fields
+  shape the learner's move; they are not answer previews.
 - `evidence_goal` is for the evaluator. It describes what learner
   evidence this node is trying to elicit.
 - For c1, derive `entry_prompt` from the learner's threshold. Threshold

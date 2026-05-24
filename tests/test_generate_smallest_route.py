@@ -63,6 +63,44 @@ def test_smallest_route_validator_rejects_missing_learner_scaffold():
         _validate_smallest_route(pm)
 
 
+def test_smallest_route_validator_rejects_scaffold_that_copies_hidden_mechanism():
+    scaffold = _learner_scaffold()
+    scaffold.blank_hint = "Sodium channels open when membrane voltage reaches threshold."
+    pm = ProvisionalMap(
+        metadata={
+            "source_title": "test",
+            "core_thesis": "test thesis",
+            "architecture_type": "causal_chain",
+            "difficulty": "medium",
+            "low_density": True,
+        },
+        backbone=[{"id": "b1", "principle": "Test backbone", "dependent_clusters": ["c1"]}],
+        clusters=[
+            Cluster(
+                id="c1",
+                label="Cluster 1",
+                description="Test cluster 1",
+                subnodes=[
+                    Subnode(
+                        id="c1_s1",
+                        label="Node 1",
+                        mechanism=(
+                            "Sodium channels open when membrane voltage reaches threshold, "
+                            "then sodium enters because the electrochemical gradient favors inward flow."
+                        ),
+                        learner_scaffold=scaffold,
+                    ),
+                ],
+            )
+        ],
+        relationships=Relationships(),
+        frameworks=[],
+    )
+
+    with pytest.raises(SmallestRouteCapExceeded, match="blank_hint.*copies hidden mechanism"):
+        _validate_smallest_route(pm)
+
+
 def test_smallest_route_validator_rejects_multiple_subnodes_per_cluster():
     pm = ProvisionalMap(
         metadata={
@@ -175,6 +213,7 @@ def test_smallest_route_prompt_requires_internal_bloom_scaffold_contract():
     assert "Do not show Bloom" in prompt
     assert "<learner_goal>" in prompt
     assert "not evidence" in prompt
+    assert "Do not copy any contiguous clause from `mechanism`" in prompt
 
 
 # ---------------------------------------------------------------------------
