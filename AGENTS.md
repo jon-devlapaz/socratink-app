@@ -285,12 +285,15 @@ scripts/snap.py --list                                    # what _lab surfaces e
 scripts/share-lab.sh minimal-gestalt-overview
 scripts/share-lab.sh --list
 
-# Pipe a customer-persona prompt through Gemini, filtered and auto-logged
-# to .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable
-# template lives at agents/_templates/customer-persona-prompt.md.
+# Pipe a customer-persona prompt through Gemini, or explicit agy fallback,
+# filtered and auto-logged to PERSONA_LOG_DIR or
+# .playwright-mcp/persona-<timestamp>.txt. Methodology and reusable template
+# lives at agents/_templates/customer-persona-prompt.md.
 scripts/persona.sh <prompt-file>
 cat prompt.txt | scripts/persona.sh
 scripts/persona.sh --template      # print template path
+PERSONA_ALLOW_AGY_FALLBACK=1 scripts/persona.sh <prompt-file>
+PERSONA_LOG_DIR=.qa-runs/personas scripts/persona.sh <prompt-file>
 ```
 
 Capture the local review verdict in a sibling `<surface>-variants.NOTES.md` next

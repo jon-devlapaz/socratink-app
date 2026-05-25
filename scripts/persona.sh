@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# persona.sh — pipe a customer-persona prompt to Gemini and stream the answer.
+# persona.sh — pipe a customer-persona prompt to Gemini, or explicit agy fallback.
 #
 # Usage:
 #   scripts/persona.sh <prompt-file>     # read from a file
@@ -8,8 +8,8 @@
 #   PERSONA_ALLOW_AGY_FALLBACK=1 scripts/persona.sh <prompt-file>
 #
 # Filters Gemini CLI's noisy "Discarding invalid hook definition" startup
-# blocks, and tees the result to a timestamped log under .playwright-mcp/
-# so you don't lose the response if the terminal scrolls.
+# blocks, and tees the result to a timestamped log under PERSONA_LOG_DIR or
+# .playwright-mcp/ so you don't lose the response if the terminal scrolls.
 #
 # Methodology lives in agents/_templates/customer-persona-prompt.md —
 # this script is the runner, not the template.

@@ -96,7 +96,7 @@ What it's **not**:
 
 Four ways to invoke:
 
-1. **`scripts/persona.sh`** *(canonical local runner)* — `scripts/persona.sh prompt.txt` or `cat prompt.txt | scripts/persona.sh`. Wraps `gemini --approval-mode plan`, strips the CLI's startup hook-rejection noise, warns if your prompt is missing a `You are ...` persona block, and auto-tees the response to `.playwright-mcp/persona-<timestamp>.txt` so you don't lose it on terminal scroll. `scripts/persona.sh --template` prints this file's path. Pairs cleanly with `scripts/snap.py` for the variant-screenshot half of the loop.
+1. **`scripts/persona.sh`** *(canonical local runner)* — `scripts/persona.sh prompt.txt` or `cat prompt.txt | scripts/persona.sh`. Wraps `gemini --approval-mode plan`, strips the CLI's startup hook-rejection noise, warns if your prompt is missing a `You are ...` persona block, and auto-tees the response to `${PERSONA_LOG_DIR:-.playwright-mcp}/persona-<timestamp>.txt` so you don't lose it on terminal scroll. If Gemini is unavailable, `PERSONA_ALLOW_AGY_FALLBACK=1 scripts/persona.sh prompt.txt` uses the explicit `agy` fallback. `scripts/persona.sh --template` prints this file's path. Pairs cleanly with `scripts/snap.py` for the variant-screenshot half of the loop.
 2. **CLI to Gemini directly** — `cat prompt.txt | gemini --approval-mode plan`. The `--approval-mode plan` flag keeps Gemini from trying to take actions; it just responds. Use this if `scripts/persona.sh` isn't available (e.g., from a different repo).
 3. **Paste into Claude or GPT chat** — works identically. Both will follow the persona instruction cleanly.
 4. **Embed in a `subagent_type: general-purpose` Agent call** — useful when you want the persona reaction recorded in your conversation log without leaving the session.

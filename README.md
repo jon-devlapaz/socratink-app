@@ -78,8 +78,9 @@ uvicorn on that port and writes its log to `.qa-runs/check-coverage-uvicorn.log`
 Set `SOCRATINK_BASE_URL` to a non-local target when the app should be provided
 externally. The cache-pin check fails when a changed versioned frontend asset
 keeps a stale parent `?v=` reference. The frontend leg requires Node (run
-`npm install` once to fetch `monocart-coverage-reports`). The Python leg adds
-`pytest-cov` and `diff-cover` from `requirements-dev.txt`.
+`npm install` once to fetch the local Node tooling; coverage uses
+`monocart-coverage-reports`). The Python leg adds `pytest-cov` and `diff-cover`
+from `requirements-dev.txt`.
 
 ### Type-check and PR preflight
 
@@ -119,9 +120,9 @@ This repo keeps dependency management intentionally simple:
 - `requirements.txt` is the Vercel runtime install surface.
 - `requirements-dev.txt` is local-only test and tooling surface (includes
   `pytest-cov` and `diff-cover` for the coverage gate).
-- `package.json` / `package-lock.json` carry the local-only Node tooling for
-  the frontend coverage gate (`monocart-coverage-reports`); none of it ships
-  to Vercel.
+- `package.json` / `package-lock.json` carry local-only Node tooling for the
+  frontend coverage gate (`monocart-coverage-reports`) and the repo-pinned
+  Context Hub wrapper (`@aisuite/chub`); none of it ships to Vercel.
 - Keep the Python files flat: one pinned package per line, no `-r` includes,
   no hash blocks.
 

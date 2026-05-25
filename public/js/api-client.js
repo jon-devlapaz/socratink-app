@@ -6,11 +6,10 @@
 // throw-and-show for user-initiated actions like /api/extract-url and /api/drill).
 //
 // This module owns ZERO browser state — it does not read localStorage, cookies,
-// or window. Callers pass any tokens (e.g. api_key) explicitly. Keeping the
-// HTTP layer pure makes Phase 4-style backend changes (typed request/result
-// objects) trivial without rewriting frontend storage logic. Note that
-// ai_service.js (Phase 2.1) still reads localStorage directly — that is
-// tech debt from an earlier phase, not a pattern to perpetuate here.
+// or window. Browser-held Gemini keys are not forwarded by frontend AI calls;
+// backend key selection belongs on the server/env side. Keeping the HTTP layer
+// pure makes Phase 4-style backend changes (typed request/result objects)
+// trivial without rewriting frontend storage logic.
 
 async function getJson(path) {
   const response = await fetch(path);
