@@ -61,7 +61,7 @@ import {
   extractUrl,
   runRepairReps,
   runDrillTurn,
-} from './api-client.js?v=1';
+} from './api-client.js?v=2';
 import {
   bootstrapAuthUi,
   buildLoginHref,
