@@ -190,11 +190,7 @@ const App = (() => {
   function inlineAttemptNudgeFromDrillResult(result) {
     const isScaffold = result?.routing === 'SCAFFOLD' || result?.answer_mode === 'help_request';
     if (!isScaffold) return null;
-    return (
-      result?.agent_response?.trim?.()
-      || result?.gap_description?.trim?.()
-      || 'Make one concrete guess before study appears.'
-    );
+    return 'Make one concrete guess before study appears.';
   }
 
   function isLocalDevHost() {

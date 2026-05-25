@@ -1491,7 +1491,7 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
             content_type="application/json",
             body=json.dumps(
                 {
-                    "agent_response": "Make one concrete guess about the mechanism before reading.",
+                    "agent_response": "No problem at all. Let's think about how the mechanism could work before reading the answer.",
                     "generative_commitment": False,
                     "answer_mode": "help_request",
                     "score_eligible": False,
@@ -1557,7 +1557,10 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
     save_button.click()
 
     expect(page.locator("[data-attempt-error]")).to_have_text(
-        "Make one concrete guess about the mechanism before reading."
+        "Make one concrete guess before study appears."
+    )
+    expect(page.locator(".concept-page-b2__attempt")).not_to_contain_text(
+        "No problem at all"
     )
     expect(save_button).to_be_enabled()
     assert len(drill_calls) == 1
