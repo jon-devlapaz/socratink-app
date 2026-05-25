@@ -556,7 +556,10 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     card.click()
     expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
     expect(page.locator("#concept-header-tags .map-badge.state")).to_have_count(0)
-    expect(page.locator(".concept-page-b2__provenance")).to_have_text(
+    context_dock = page.locator(".concept-page-b2__context-dock")
+    expect(context_dock).to_contain_text("Context")
+    expect(context_dock).to_contain_text("Learner rough sketch baseline.")
+    expect(context_dock).to_contain_text(
         "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
@@ -1491,7 +1494,7 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
             content_type="application/json",
             body=json.dumps(
                 {
-                    "agent_response": "Make one concrete guess about the mechanism before reading.",
+                    "agent_response": "No problem at all. Let's think about how the mechanism could work before reading the answer.",
                     "generative_commitment": False,
                     "answer_mode": "help_request",
                     "score_eligible": False,
@@ -1557,7 +1560,10 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
     save_button.click()
 
     expect(page.locator("[data-attempt-error]")).to_have_text(
-        "Make one concrete guess about the mechanism before reading."
+        "Make one concrete guess before study appears."
+    )
+    expect(page.locator(".concept-page-b2__attempt")).not_to_contain_text(
+        "No problem at all"
     )
     expect(save_button).to_be_enabled()
     assert len(drill_calls) == 1
@@ -1826,7 +1832,11 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas).to_be_visible()
     expect(clean_page.locator("#concept-view-switch")).to_have_text("Constellation")
     expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
-    expect(canvas.locator(".concept-page-b2__scope")).to_contain_text(
+    expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text("Context")
+    expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text(
+        "I think sodium just rushes in."
+    )
+    expect(canvas.locator(".concept-page-b2__context-dock")).not_to_contain_text(
         "Write first. Compare after."
     )
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
@@ -1876,7 +1886,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     attempt_input.fill("")
     fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=15');
+            const mod = await import('/js/concept-page-view.js?v=17');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -1912,7 +1922,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     assert "Type one relationship you suspect, even if it feels incomplete." in fallback_html
     empty_fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=15');
+            const mod = await import('/js/concept-page-view.js?v=17');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -2353,7 +2363,7 @@ def test_source_less_defensive_ui_paths_remain_inert(
 
     fallback_mode = clean_page.evaluate(
         """async () => {
-            const view = await import('/js/concept-page-view.js?v=15');
+            const view = await import('/js/concept-page-view.js?v=17');
             return view.deriveSourceLessViewMode({
                 attempted: true,
                 next_action: 'spaced_attempt',

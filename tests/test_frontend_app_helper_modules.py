@@ -1430,7 +1430,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         );
         assert.ok(coldHtml.includes('Context'));
         assert.ok(coldHtml.includes('I think nerves send electricity'));
-        assert.ok(coldHtml.includes('Write first. Compare after.'));
+        assert.ok(!coldHtml.includes('Write first. Compare after.'));
         assert.ok(coldHtml.includes('No source attached. Treat this route as provisional.'));
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
@@ -1892,7 +1892,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(readyHtml.includes('metadata sketch'));
         assert.ok(readyHtml.includes('concept-page-b2__gestalt'));
         assert.ok(readyHtml.includes('concept-page-b2__route'));
-        assert.ok(readyHtml.includes('Write first. Compare after.'));
+        assert.ok(!readyHtml.includes('Write first. Compare after.'));
         assert.ok(readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('Draft from memory'));

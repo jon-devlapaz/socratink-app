@@ -242,13 +242,13 @@ The aesthetic mirrors the work the product asks of its learners: **quiet, schola
 - **No noise, grain, or film overlays.** Warmth comes from the gradient.
 - **No left-border-accent cards.** Reads as AI-slop trope; clashes with the jeweled palette.
 
-> **In-app exception (Antigravity theme).** The shipping in-app shell deliberately diverges from the cream-paper marketing surface: it is calmer, glassier, and tuned for repeated work inside the app rather than external persuasion. Marketing pages and external surfaces still follow the cream-paper rules verbatim. Technical token values, font exceptions, and file-level implementation details live in `docs/design/socratink-design-system.md` and `docs/design/brand-reference.md`.
+> **In-app exception (Antigravity theme).** The shipping in-app shell deliberately diverges from the cream-paper marketing surface: it is calmer, glassier, and tuned for repeated work inside the app rather than external persuasion. Marketing pages and external surfaces still follow the cream-paper rules verbatim. Technical token values, font exceptions, and file-level implementation details live in `DESIGN.md` and `public/css/tokens.css`.
 
 ### Motion
-Drill surfaces are quiet. Motion should feel like attention moving across paper, not like an app performing for the learner. **Spring motion is reserved for `solidified`** — the one moment that earns celebration. Everything else should be brief, legible, and subordinate to the current cognitive target. No scroll-hijacking, no parallax, no autoplay video. Reduced-motion preferences are binding; implementation details live in the design-system doc.
+Drill surfaces are quiet. Motion should feel like attention moving across paper, not like an app performing for the learner. **Spring motion is reserved for `solidified`** — the one moment that earns celebration. Everything else should be brief, legible, and subordinate to the current cognitive target. No scroll-hijacking, no parallax, no autoplay video. Reduced-motion preferences are binding; implementation details live in the shipping CSS and JS.
 
 ### Audio
-Material, not musical. Audio should read as contact with the surface: brush, breath, thud, cloth, settle. It is feedback for an action the learner just took, never ambience and never a notification layer. On by default, user-controllable in Settings, and respectful of reduced-motion/sensory restraint. The canonical helper names and synthesis details live in the design-system doc.
+Material, not musical. Audio should read as contact with the surface: brush, breath, thud, cloth, settle. It is feedback for an action the learner just took, never ambience and never a notification layer. On by default, user-controllable in Settings, and respectful of reduced-motion/sensory restraint. The canonical helper names and synthesis details live in the shipping audio module.
 
 ### Hover, press, focus
 - **Hover** = the page lifts, it doesn't brighten.

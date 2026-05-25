@@ -88,7 +88,7 @@ Learner goal is relevance context for prompts and graph metadata; it is not grap
 
 ## 5. Design system primitives
 
-For component rules, see [`docs/design/socratink-design-system.md`](docs/design/socratink-design-system.md). For hex values, see [`public/css/tokens.css`](public/css/tokens.css). This section is the agent-readable summary.
+For hex values and implementation tokens, see [`public/css/tokens.css`](public/css/tokens.css). This section is the agent-readable design-system contract.
 
 **Palette (tokens only — never raw hex):**
 
@@ -157,8 +157,6 @@ Design and code-contract boundaries only. For git, deploy, hooks, and other oper
 - Full UX manifesto → [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md)
 - Domain language → [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
 - ADR history → [`docs/adr/`](docs/adr/)
-- Design system component rules → [`docs/design/socratink-design-system.md`](docs/design/socratink-design-system.md)
 - Product spec deep-dive → [`docs/product/spec.md`](docs/product/spec.md)
 - Design tokens (code) → [`public/css/tokens.css`](public/css/tokens.css)
 - Agent workflows → [`agents/`](agents/)
-- Archive → [`docs/archive/`](docs/archive/)

@@ -544,7 +544,7 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
     : 'Put down the part you can explain, even if it is incomplete.';
   return `
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
-      <span class="eyebrow concept-page-b2__attempt-eyebrow">first inquiry</span>
+      <span class="eyebrow concept-page-b2__attempt-eyebrow">cold attempt</span>
       <h3>${escHtml(heading)}</h3>
       ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
       <textarea
@@ -650,14 +650,6 @@ function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
         }).join('')}
       </ol>
     </aside>
-  `;
-}
-
-function renderScopeBoundaryHtml() {
-  return `
-    <p class="concept-page-b2__scope">
-      Write first. Compare after.
-    </p>
   `;
 }
 
@@ -804,10 +796,9 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const thresholdHtml = thresholdText
     ? renderSketchWrapperHtml(thresholdText)
     : renderSketchWrapperHtml('');
-  const provenanceHtml = isSourceLess
-    ? '<p class="concept-page-b2__provenance">No source attached. Treat this route as provisional.</p>'
+  const sourceLessProvenanceHtml = isSourceLess
+    ? '<p class="concept-page-b2__source-note">No source attached. Treat this route as provisional.</p>'
     : '';
-
   const ctaButton = options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? (isPostRevealComparison
       && derived.next_action !== 'repair'
@@ -870,9 +861,8 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
       })}
       <div class="concept-page-b2__work">
         <div class="concept-page-b2__context-dock" aria-label="Recall context">
-          ${renderScopeBoundaryHtml()}
           ${thresholdHtml}
-          ${provenanceHtml}
+          ${sourceLessProvenanceHtml}
         </div>
         ${activeHtml}
         ${nearbyHtml}

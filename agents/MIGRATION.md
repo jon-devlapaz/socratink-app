@@ -1,60 +1,17 @@
-# Agent Canon Migration Ledger
+# Agent Canon Migration
 
-Use this ledger to track migration from tool-specific surfaces into `agents/`.
+The row-by-row migration ledger has served its purpose. Do not rebuild it as a
+second registry of canon surfaces.
 
-## Status vocabulary
+Current rule:
 
-- `promoted`
-- `adapter-only`
-- `tool-specific`
-- `preserved-pending-review`
-- `deprecated`
-- `removed` (file deleted from the tree; row retained for historical ledger continuity)
+- shared workflow canon lives in `agents/`
+- `AGENTS.md` is the root repo entrypoint and still carries binding repo doctrine
+- `CLAUDE.md` and `GEMINI.md` are compatibility adapters only
+- `.claude/`, `.codex/`, `.gemini/`, and other tool-specific directories are runtime/config/wrapper surfaces
+- `.agents/` is local substrate only
+- durable product canon lives in `PRODUCT.md`, `DESIGN.md`, `UBIQUITOUS_LANGUAGE.md`, `AGENTS.md`, and `docs/project/doc-map.md`
 
-## Entry hygiene
-
-For any non-terminal entry (`adapter-only` or `preserved-pending-review`), record in the notes:
-
-- current owner of the migration decision
-- last review date
-- exit condition that would move the surface to `promoted`, `tool-specific`, or `deprecated`
-
-## Initial entries
-
-| Surface | Status | Notes |
-| --- | --- | --- |
-| `AGENTS.md` | `preserved-pending-review` | cross-agent root entrypoint and still-binding repo doctrine surface; owner: founder canon migration, reviewed_at: 2026-05-13, exit: either shrink to a true entrypoint or explicitly retain as the intentional binding root alongside `agents/` |
-| `CLAUDE.md` | `adapter-only` | Claude compatibility pointer into canon |
-| `GEMINI.md` | `adapter-only` | Gemini compatibility pointer into canon |
-| `docs/codex/onboarding.md` | `promoted` | shared bootstrap doctrine moved to `agents/ONBOARDING.md`; old Codex namespace no longer authoritative |
-| `docs/codex/agent-quality.md` | `promoted` | shared quality doctrine moved to `agents/QUALITY.md`; old Codex namespace no longer authoritative |
-| `docs/codex/decision-log.md` | `promoted` | append-only decision record moved to `agents/_logs/decision-log.md` |
-| `docs/codex/agent-review-log.md` | `promoted` | append-only agent review record moved to `agents/_logs/agent-review-log.md` |
-| `docs/codex/customer-persona-prompt-template.md` | `promoted` | reusable agent template moved to `agents/_templates/customer-persona-prompt.md` |
-| `docs/codex/socratink-brain-workflow-architecture.md` | `deprecated` | deleted deprecated stub; authority remains `.socratink-brain/CLAUDE.md` |
-| `.claude/` | `tool-specific` | runtime skills/settings surface |
-| `.claude/friction-log.md` | `preserved-pending-review` | raw sediment log; curate repeated workflow patterns into `agents/LEARNINGS.md`, but do not treat the source log as canon |
-| `.claude/settings.json` | `tool-specific` | Claude runtime hook/config surface; do not migrate into `agents/` |
-| `.claude/settings.local.json` | `tool-specific` | local Claude runtime/config surface; do not migrate |
-| `.claude/settings.example.json` | `removed` | was `tool-specific` (Claude setup example); file deleted 2026-05-14, expected hook wiring now described in `docs/project/code-review-graph-sop.md` §"Layer 1 — Claude hooks" |
-| `.claude/skills/git-order/SKILL.md` | `removed` | was `adapter-only` pointing at `agents/founder/WORKFLOWS/02-git-homeostasis.md`; wrapper deleted 2026-05-14 once canon was the only reader (exit condition fired) |
-| `.claude/skills/prototype/SKILL.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/03-prototyping.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
-| `.claude/skills/prototype/LOGIC.md` | `deprecated` | logic branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
-| `.claude/skills/prototype/UI.md` | `deprecated` | UI branch absorbed into `agents/founder/WORKFLOWS/03-prototyping.md`; keep only for backward compatibility until no references remain |
-| `.claude/skills/verify-deploy.md` | `adapter-only` | workflow doctrine promoted into `agents/founder/WORKFLOWS/04-deploy-verification.md`; owner: founder canon migration, reviewed_at: 2026-05-13, exit: wrapper contains only packaging pointer plus trigger metadata |
-| `.claude/skills/use-context7.md` | `tool-specific` | mostly redundant with current `AGENTS.md` Layer 3 policy; keep as a Claude wrapper |
-| `.claude/skills/review/SKILL.md` | `tool-specific` | Claude-packaged review wrapper, not shared canon |
-| `.claude/skills/debug-issue.md` | `tool-specific` | tool wrapper for graph-based debugging, not shared canon |
-| `.claude/skills/explore-codebase.md` | `tool-specific` | tool wrapper for graph-based exploration, not shared canon |
-| `.claude/skills/refactor-safely.md` | `tool-specific` | tool wrapper for graph-assisted refactoring, not shared canon |
-| `.claude/skills/review-changes.md` | `tool-specific` | tool wrapper for graph-based review, not shared canon |
-| `.claude/skills/socratink-design/SKILL.md` | `tool-specific` | wrapper over already-canonical design docs, not a new canon surface |
-| `.claude/skills/empirical-grill/SKILL.md` | `tool-specific` | slash-command-heavy Claude workflow; not ready for cross-model canon |
-| `.codex/` | `tool-specific` | runtime/config/memory surface |
-| `.gemini/` | `tool-specific` | runtime/config/auth surface |
-| `.poolside/` | `tool-specific` | tracked Poolside tool allowlist/config surface; do not treat as shared workflow canon |
-| `.antigravitycli/` | `tool-specific` | ignored local Antigravity CLI runtime state; do not track or migrate into `agents/` |
-| `.agents/` | `tool-specific` | local substrate only; use only for external install-state under `.agents/skills/` and ignored runtime evidence under `.agents/runtime/` |
-| `.agents/skills/fastapi/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
-| `.agents/skills/gemini-interactions-api/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
-| `.agents/skills/playwright-cli/` | `tool-specific` | external project-local installed skill; keep out of shared canon |
+If a future migration is needed, make it time-boxed: name the owner, review date,
+scope, and exit condition in the owning canonical file instead of accumulating
+historical rows here.

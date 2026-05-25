@@ -1,6 +1,5 @@
 /* concept-page.css
    Production styles for the B-2 "Strip + page" concept page layout.
-   Design-of-record: public/_lab/concept-page-iterations.html?variant=page
    Synthesis from Linear (single-pane work column) + Heptabase
    (constellation as orientation) + Notion (faint nearby list).
    Founder pick. Customer-validated. */
@@ -545,23 +544,6 @@
 .concept-page-b2__work {
   min-width: 0;
 }
-.concept-page-b2__scope {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 28px;
-  padding: 8px 12px;
-  border: 1px solid rgba(var(--violet-600-rgb), 0.18);
-  border-radius: 10px;
-  background: rgba(var(--violet-600-rgb), 0.06);
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.35;
-}
-.concept-page-b2__scope span {
-  color: var(--text-strong);
-  font-weight: 650;
-}
 .concept-page-b2__active-entry {
   max-width: 640px;
 }
@@ -576,13 +558,6 @@
 }
 [data-theme="dark"] .concept-page-b2__threshold { border-left-color: rgba(176, 156, 224, 0.55); }
 .concept-page-b2__threshold--empty { opacity: 0.55; }
-.concept-page-b2__provenance {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-  margin: -18px 0 34px 22px;
-  max-width: 520px;
-}
 .concept-page-b2__threshold-label {
   color: var(--text-strong);
   font-style: normal;
@@ -608,15 +583,36 @@
 }
 .concept-page-b2__study-note-eyebrow { display: block; }
 .concept-page-b2__study-note-toggle {
+  appearance: none;
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-height: 0;
   border: 0;
   border-bottom: 1px dotted currentColor;
+  border-radius: 4px;
   background: transparent;
+  box-shadow: none;
   color: var(--text-muted);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
   font-weight: 600;
-  padding: 0;
+  letter-spacing: 0;
+  line-height: 1.2;
+  padding: 2px 0;
+  transform: none;
+  transition: color 140ms var(--ease-standard), border-color 140ms var(--ease-standard), background 140ms var(--ease-standard);
+}
+.concept-page-b2__study-note-toggle:hover:not(:disabled) {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-strong);
+  opacity: 1;
+  transform: none;
+}
+.concept-page-b2__study-note-toggle:focus-visible {
+  outline: 2px solid rgba(var(--violet-600-rgb), 0.52);
+  outline-offset: 3px;
 }
 .concept-page-b2__study-note p {
   margin: 0;
@@ -1520,16 +1516,20 @@
 }
 
 .concept-page-b2__context-dock {
-  display: grid;
-  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 6px 8px;
-  border: 1px solid rgba(var(--violet-600-rgb), 0.12);
-  border-radius: 999px;
-  background: rgba(var(--white-rgb), 0.38);
+  min-height: 44px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid rgba(var(--ink-900-rgb), 0.10);
+  border-radius: 0;
+  background: transparent;
   color: var(--text-muted);
+}
+
+.concept-page-b2__source-note {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .vd-sketch-wrapper.concept-page-b2__threshold {
@@ -1542,29 +1542,11 @@
   min-width: 0;
 }
 
-.concept-page-b2__context-dock > .concept-page-b2__scope {
-  width: auto;
-  margin: 0;
-  padding: 0 2px 0 8px;
-  border: 0;
-  background: transparent;
-  white-space: nowrap;
-}
-
-.concept-page-b2__context-dock > .concept-page-b2__provenance {
-  grid-column: 1 / -1;
-  margin: -2px 0 2px 8px;
-  max-width: none;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
 .vd-sketch-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  padding-right: 8px;
+  gap: 14px;
 }
 
 .vd-sketch-toggle {
@@ -1573,14 +1555,14 @@
   width: 100%;
   min-height: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   background: transparent;
   box-shadow: none;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
+  gap: 12px;
   align-items: center;
-  padding: 4px 8px;
+  padding: 11px 0;
   color: var(--text-muted);
   text-align: left;
   cursor: pointer;
@@ -1588,7 +1570,7 @@
 
 .vd-sketch-head .concept-page-b2__threshold-edit {
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 650;
   color: var(--accent-primary);
   text-decoration: none;
@@ -1611,8 +1593,15 @@
 }
 
 .vd-sketch-toggle:focus-visible {
-  outline: 2px solid rgba(var(--violet-600-rgb), 0.34);
+  outline: 2px solid rgba(var(--violet-600-rgb), 0.32);
   outline-offset: 2px;
+}
+
+.vd-sketch-toggle .concept-page-b2__threshold-label {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .vd-sketch-preview {
@@ -1620,6 +1609,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.vd-sketch-wrapper[data-sketch-collapsed="false"] .vd-sketch-preview {
+  display: none;
 }
 
 .vd-sketch-body {
@@ -1730,6 +1725,11 @@
   border-color: rgba(176, 156, 224, 0.18);
 }
 
+[data-theme="dark"] .concept-page-b2__context-dock {
+  background: transparent;
+  border-color: rgba(176, 156, 224, 0.18);
+}
+
 @media (max-width: 900px) {
   body[data-map-open="true"] .bottom-nav {
     opacity: 0;
@@ -1761,19 +1761,12 @@
   }
 
   .concept-page-b2__context-dock {
-    grid-template-columns: 1fr;
-    border-radius: 14px;
-    align-items: stretch;
-    gap: 4px;
+    min-height: 0;
   }
 
   .concept-page-b2__active-entry .concept-page-b2__attempt-input {
     min-height: 96px;
     height: 96px;
-  }
-
-  .concept-page-b2__context-dock > .concept-page-b2__scope {
-    white-space: normal;
   }
 
   .vd-sketch-toggle {
@@ -1783,11 +1776,11 @@
 
   .vd-sketch-head {
     grid-template-columns: 1fr;
-    padding-right: 0;
+    gap: 4px;
   }
 
   .vd-sketch-head .concept-page-b2__threshold-edit {
-    padding: 0 14px 12px;
+    padding: 0 0 10px;
   }
 }
 
@@ -1798,7 +1791,6 @@
 
   .concept-page-b2__context-dock {
     min-height: 34px;
-    padding-block: 4px;
   }
 
   .concept-page-b2__active-entry {

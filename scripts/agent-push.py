@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+# Direct Push Override / no-mistakes Bypass:
+# If you need to bypass the no-mistakes gate for direct origin/dev publication:
+# 1. CLI option: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
+# 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1`, then run this script
+#    without --target; it defaults to origin/dev and still requires the normal
+#    preview/ack confirmation.
+# Raw git pushes still require agent-push's one-shot pre-push authorization.
+
 import argparse
 import base64
 import hashlib
@@ -506,20 +514,30 @@ def _push(payload: AuthorizationPayload) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import os
     parser = argparse.ArgumentParser(description="Authorize and execute one Socratink git publication.")
     parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name, no-mistakes/dev")
     parser.add_argument("--ack", help="ack token printed by the first run")
     parser.add_argument("--json", action="store_true", help="emit machine-readable preview output")
+    parser.add_argument("--bypass-no-mistakes", action="store_true", help="preview direct origin/dev publication without the no-mistakes gate")
     args = parser.parse_args(argv)
+
+    bypass_env = os.environ.get("SOCRATINK_BYPASS_NO_MISTAKES") == "1"
+    bypass_no_mistakes = args.bypass_no_mistakes or bypass_env
 
     try:
         refresh_publication_refs()
         state = collect_state()
-        intent = resolve_publication_intent(state, explicit_target=args.target)
+        target = args.target
+        if bypass_no_mistakes and not target:
+            target = "origin/dev"
+        intent = resolve_publication_intent(state, explicit_target=target)
         ensure_destination_ref_current(state, intent)
         ensure_current_dev_base(state, intent)
         ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)
+        if bypass_no_mistakes and payload.route != "origin/dev":
+            raise ValueError("no-mistakes bypass only supports direct pushes to origin/dev")
     except Exception as exc:
         print_error(str(exc), json_output=args.json)
         return 2

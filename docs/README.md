@@ -30,6 +30,7 @@ Valid answers:
 
 - no doc impact
 - update exactly one canonical document: [project/state.md](project/state.md), an ADR, the relevant product/design spec, or [project/doc-map.md](project/doc-map.md)
-- archive or redirect a stale doc
+- delete stale working material after migrating any durable rule into canon
 
-Archive history should remain link-valid, but it is not authoritative unless an active doc says so.
+Git history is the archive for deleted working notes, research prompts, dated QA
+plans, and implementation handoffs.

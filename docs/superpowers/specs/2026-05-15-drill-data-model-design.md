@@ -1,19 +1,18 @@
 ---
 title: Drill Data Model Design — Module 1
 date: 2026-05-15
-status: binding canon (supersedes docs/drill/contract.md)
+status: binding canon
 scope: module 1 of 5 (drill refactor); data shape + state contract only
-audit: agents/_logs/drill-pair-session-2026-05-15.md
 persona: agents/_templates/customer-persona-prompt.md
 ---
 
 # Drill Data Model — Module 1
 
-This is the binding canon for the drill data model. It replaces the prior
-`docs/drill/contract.md` contract on every point of disagreement. The audit log at
-`agents/_logs/drill-pair-session-2026-05-15.md` is the motivating evidence; the
-customer-persona prompt at `agents/_templates/customer-persona-prompt.md` is the
-register against which copy and state decisions are tested.
+This is the binding canon for the drill data model. It replaces the prior drill
+contract on every point of disagreement. The motivating audit evidence was
+absorbed into this spec during consolidation; the customer-persona prompt at
+`agents/_templates/customer-persona-prompt.md` is the register against which copy
+and state decisions are tested.
 
 ## What this document is for
 
@@ -829,7 +828,7 @@ one events table. No destructive migration required when persistence moves.
 
 ## §9 — Relationship to prior canon
 
-This spec supersedes `docs/drill/contract.md` on every point of disagreement.
+This spec supersedes the prior drill contract on every point of disagreement.
 
 Substantive deltas from the prior contract:
 
@@ -863,8 +862,8 @@ Substantive deltas from the prior contract:
   There are no transitions to authorize; there is only the fold and what it
   derives.
 
-Implementation note: `docs/drill/contract.md` now points at this design doc as
-the binding canon and carries only a short compatibility summary.
+Implementation note: the old compatibility redirect was deleted during the docs
+consolidation; this file is the direct binding canon.
 
 ---
 

@@ -297,7 +297,7 @@ cat .gitignore | grep -E '^(node_modules|dist|build|\.venv|__pycache__|\.pytest_
 
 **Measure:**
 ```bash
-ls .code-review-graph/graph.db .code-review-graph/wiki/ 2>/dev/null
+ls .code-review-graph/graph.db 2>/dev/null
 ```
 
 | 0 | 1 | 2 | 3 |

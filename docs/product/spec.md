@@ -126,7 +126,8 @@ The frontend uses derived `next_action`, not persisted `drill_phase`, to choose 
 
 Concept pages render source-less provenance from the training record inside the
 compact context dock: when `source_mode === "source_less"`, show `No source
-attached. Treat this route as provisional.` near the write-first boundary.
+attached. Treat this route as provisional.` as a compact source note below the
+recall context.
 
 Source-less first entries may use `learner_scaffold.tailoring_anchor` internally
 to shape the cold-attempt prompt. It should not render as learner-facing AI

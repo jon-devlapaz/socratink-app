@@ -547,3 +547,163 @@ def test_json_error_output_is_machine_readable(monkeypatch, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["error"]["message"] == "unsupported push target: unsupported/target"
+
+
+def test_bypass_no_mistakes_defaults_to_origin_dev_ack_flow(monkeypatch, tmp_path, capsys):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
+
+    git_calls = []
+    def fake_run_git(args, *, check=True):
+        git_calls.append(args)
+        if args == ["remote", "-v"]:
+            return "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)\n"
+        if args == ["symbolic-ref", "--short", "HEAD"]:
+            return "dev"
+        if args == ["rev-parse", "HEAD"]:
+            return "abc1234"
+        if args == ["status", "--porcelain"]:
+            return ""
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t1"
+        if args == ["rev-parse", "--verify", "refs/remotes/origin/dev"]:
+            return "abc1234"
+        if args in (
+            ["diff", "--name-only", "origin/dev...HEAD"],
+            ["diff", "--name-only", "--cached"],
+            ["diff", "--name-only", "HEAD"],
+            ["ls-files", "--others", "--exclude-standard"],
+        ):
+            return "main.py\n" if args == ["diff", "--name-only", "origin/dev...HEAD"] else ""
+        return ""
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    sub_calls = []
+    def fake_run(args, **kwargs):
+        sub_calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 0)
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    result = mod.main(["--bypass-no-mistakes"])
+    assert result == 1
+
+    push_call = next((c for c in sub_calls if c[0][:3] == ["git", "push", "origin"]), None)
+    assert push_call is None
+    out = capsys.readouterr().out
+    assert "Chosen route: origin/dev" in out
+    assert "python3 scripts/agent-push.py --target origin/dev --ack " in out
+
+
+def test_bypass_no_mistakes_rejects_explicit_non_origin_dev_targets(monkeypatch, capsys):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/Users/example/.no-mistakes/repos/review-gate.git",
+        },
+    )
+    monkeypatch.setattr(mod, "refresh_publication_refs", lambda: None)
+    monkeypatch.setattr(mod, "collect_state", lambda: state)
+    monkeypatch.setattr(mod, "ensure_destination_ref_current", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_current_dev_base", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_destination_fast_forward", lambda state, intent: None)
+
+    sub_calls = []
+    def fake_run(args, **kwargs):
+        sub_calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 0)
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    for target in ("origin/main", "no-mistakes/dev", "origin/feat/demo-flow"):
+        result = mod.main(["--bypass-no-mistakes", "--target", target])
+        assert result == 2
+        assert "no-mistakes bypass only supports direct pushes to origin/dev" in capsys.readouterr().err
+
+    monkeypatch.setenv("SOCRATINK_BYPASS_NO_MISTAKES", "1")
+    result = mod.main(["--target", "origin/main"])
+    assert result == 2
+    assert "no-mistakes bypass only supports direct pushes to origin/dev" in capsys.readouterr().err
+    assert sub_calls == []
+
+
+def test_bypass_no_mistakes_via_env_var_uses_ack_flow(monkeypatch, tmp_path, capsys):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
+    monkeypatch.setenv("SOCRATINK_BYPASS_NO_MISTAKES", "1")
+
+    git_calls = []
+    def fake_run_git(args, *, check=True):
+        git_calls.append(args)
+        if args == ["remote", "-v"]:
+            return "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)\n"
+        if args == ["symbolic-ref", "--short", "HEAD"]:
+            return "dev"
+        if args == ["rev-parse", "HEAD"]:
+            return "abc1234"
+        if args == ["status", "--porcelain"]:
+            return ""
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t1"
+        if args == ["rev-parse", "--verify", "refs/remotes/origin/dev"]:
+            return "abc1234"
+        if args in (
+            ["diff", "--name-only", "origin/dev...HEAD"],
+            ["diff", "--name-only", "--cached"],
+            ["diff", "--name-only", "HEAD"],
+            ["ls-files", "--others", "--exclude-standard"],
+        ):
+            return "main.py\n" if args == ["diff", "--name-only", "origin/dev...HEAD"] else ""
+        return ""
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    sub_calls = []
+    def fake_run(args, **kwargs):
+        sub_calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 0)
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    result = mod.main([])
+    assert result == 1
+
+    push_call = next((c for c in sub_calls if c[0][:3] == ["git", "push", "origin"]), None)
+    assert push_call is None
+    out = capsys.readouterr().out
+    assert "Chosen route: origin/dev" in out
+    assert "python3 scripts/agent-push.py --target origin/dev --ack " in out
+
+
+def test_generic_bypass_no_mistakes_env_var_is_ignored(monkeypatch, capsys):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/Users/example/.no-mistakes/repos/review-gate.git",
+        },
+    )
+    monkeypatch.setenv("BYPASS_NO_MISTAKES", "1")
+    monkeypatch.setattr(mod, "refresh_publication_refs", lambda: None)
+    monkeypatch.setattr(mod, "collect_state", lambda: state)
+    monkeypatch.setattr(mod, "ensure_destination_ref_current", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_current_dev_base", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_destination_fast_forward", lambda state, intent: None)
+
+    result = mod.main([])
+
+    assert result == 1
+    out = capsys.readouterr().out
+    assert "Recommended route: no-mistakes/dev" in out
+    assert "Chosen route: no-mistakes/dev" in out

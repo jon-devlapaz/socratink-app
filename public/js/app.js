@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=15';
+} from './concept-page-view.js?v=17';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -190,11 +190,7 @@ const App = (() => {
   function inlineAttemptNudgeFromDrillResult(result) {
     const isScaffold = result?.routing === 'SCAFFOLD' || result?.answer_mode === 'help_request';
     if (!isScaffold) return null;
-    return (
-      result?.agent_response?.trim?.()
-      || result?.gap_description?.trim?.()
-      || 'Make one concrete guess before study appears.'
-    );
+    return 'Make one concrete guess before study appears.';
   }
 
   function isLocalDevHost() {
@@ -4548,7 +4544,7 @@ const App = (() => {
 // would all become no-ops. Graph-view is the renderer; it never
 // owns truth. SocratinkApp is the intent-bridge that lets Cytoscape
 // interaction events trigger app.js mutations without a circular
-// import. Phase 3 of the lego-ification roadmap formalizes this
-// contract (see docs/superpowers/plans/2026-04-26-lego-ification-roadmap.md).
+// import. Keep this bridge explicit until graph-view owns a typed
+// app-intent boundary.
 window.App = App;
 window.SocratinkApp = App;

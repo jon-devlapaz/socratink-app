@@ -36,7 +36,7 @@ export function conceptListItemHtml(concept, training = null) {
   const safeName = escHtml(concept.name);
   return `
         <div class="concept-dot" data-state="${safeState}"></div>
-        <span class="concept-item-name">${safeName}</span>
+        <span class="concept-item-name" title="${safeName}">${safeName}</span>
         <button class="concept-actions" type="button" data-concept-id="${safeId}" onclick="App.toggleConceptActions(this)" aria-label="Concept actions for ${safeName}" aria-haspopup="menu" aria-expanded="false" title="Concept actions">
           <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
         </button>

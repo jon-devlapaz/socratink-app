@@ -1,7 +1,7 @@
 """Legacy B9 Python smoke for source-optional /api/extract.
 
-Spec ref: docs/archive/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
-Plan ref: docs/archive/superpowers/plans/2026-05-03-conversational-concept-creation-backend.md (Task 19)
+Historical spec/plan refs were removed from docs during consolidation; use git
+history if that old context is needed.
 
 This script predates the current source-less launch contract. The runtime now
 accepts any non-empty source-less learner launch attempt and rejects only empty

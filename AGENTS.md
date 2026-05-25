@@ -9,7 +9,7 @@ The canonical shared workflow truth for repo agents now lives in `agents/`.
 - Use `agents/README.md` for the boundary contract.
 - Use `agents/founder/WORKFLOWS/` for founder workflow cards.
 - Use `agents/LEARNINGS.md` only as the non-binding learning ledger for recurring founder/agent workflow friction; promote repeated patterns into canon before treating them as policy.
-- Treat tool-specific directories (`.claude/`, `.codex/`, `.gemini/`) as runtime/config surfaces unless a migration ledger entry says otherwise.
+- Treat tool-specific directories (`.claude/`, `.codex/`, `.gemini/`) as runtime/config surfaces unless an owning canonical file explicitly scopes a time-boxed migration.
 - Treat `.agents/` as local substrate only: `.agents/skills/` is external install-state, `.agents/runtime/` is ignored runtime evidence, and neither is canonical doctrine.
 
 ### Boil the ocean
@@ -281,12 +281,13 @@ cat prompt.txt | scripts/persona.sh
 scripts/persona.sh --template      # print template path
 ```
 
-Capture the verdict in a sibling `<surface>-variants.NOTES.md` next to the
-prototype HTML so the answer survives the lab being deleted (the shared
-prototype workflow's "delete or absorb when done" rule). When a variant choice is
-load-bearing for the domain — i.e., the meaning of a surface or term
-changes — also update `UBIQUITOUS_LANGUAGE.md` and write an ADR in `docs/adr/`. If
-the decision elevates a non-obvious design principle, surface it in `DESIGN.md` §4.
+Capture the local review verdict in a sibling `<surface>-variants.NOTES.md` next
+to the prototype HTML, but treat `public/_lab/` as ignored scratch. Before the
+lab is deleted or absorbed, promote any durable decision into tracked canon. When
+a variant choice is load-bearing for the domain — i.e., the meaning of a surface
+or term changes — also update `UBIQUITOUS_LANGUAGE.md` and write an ADR in
+`docs/adr/`. If the decision elevates a non-obvious design principle, surface it
+in `DESIGN.md` §4.
 
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
@@ -320,7 +321,7 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
 - Deterministic agent quality rules live in `agents/QUALITY.md`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
 - Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `agents/ONBOARDING.md`.
-- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow in `docs/project/code-review-graph-sop.md` rather than relying on stale point-in-time snapshots.
+- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow described in the Code exploration section above and the founder FAQ at `agents/founder/CODE-REVIEW-GRAPH-FAQ.md` rather than relying on stale point-in-time snapshots.
 
 ## Project-local agent skills (skills.sh marketplace)
 

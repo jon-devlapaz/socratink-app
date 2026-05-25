@@ -1,8 +1,8 @@
 # Code Review Graph — Founder FAQ
 
 A founder-facing guide to using the code-review-graph (CRG) on socratink-app.
-Plain-language. For the agent-facing technical runbook (hooks, tool reference,
-troubleshooting), see [`docs/project/code-review-graph-sop.md`](../../docs/project/code-review-graph-sop.md).
+Plain-language. Agent-facing rules live in `AGENTS.md`; this page is the
+human-facing companion.
 
 ---
 
@@ -175,8 +175,7 @@ Check three things:
 
 1. `cat .mcp.json` — is the `code-review-graph` server registered?
 2. `cat .claude/settings.json` — are the SessionStart + PostToolUse hooks
-   present? (See `docs/project/code-review-graph-sop.md` §"Layer 1 — Claude
-   hooks" for the expected wiring.)
+   present?
 3. Open a fresh session and ask: *"Run `code-review-graph status`."*
    If it errors, the server isn't running. Restart Claude Code.
 
@@ -231,7 +230,7 @@ Generate the wiki and tell me which community page is most out of sync with my m
 | Why I made a decision | git log + commit message; or auto-memory feedback |
 | What we discussed last week | `episodic-memory` |
 | Pending follow-ups | `tink-todo` / `todo.md` |
-| Product or design rationale | `docs/product/`, `docs/design/`, `docs/drill/`, etc. |
+| Product or design rationale | `PRODUCT.md`, `DESIGN.md`, and the canonical docs in `docs/project/doc-map.md` |
 | Customer / market context | not in this repo at all |
 | Anything visual or experiential | screenshots, recordings — graph won't see them |
 
@@ -248,8 +247,8 @@ code-review-graph build          # force a full rebuild (use when something feel
 code-review-graph clean && code-review-graph build  # nuclear reset (rare)
 ```
 
-For everything else (DB locks, stale flows, missing nodes), see the
-[technical SOP](../code-review-graph-sop.md#troubleshooting).
+For everything else (DB locks, stale flows, missing nodes), check the
+Code Review Graph section in `AGENTS.md`.
 
 ---
 

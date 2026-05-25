@@ -135,6 +135,82 @@ def test_drill_chamber_view_hidden_on_load(
     expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
 
 
+def test_drill_chamber_noops_after_partial_rerender(
+    clean_page: Page, base_url: str
+) -> None:
+    """Stale chamber listeners no-op if a rerender leaves required nodes missing."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    result = clean_page.evaluate(
+        """() => {
+            const root = document.createElement('section');
+            root.id = 'drill-chamber-fixture';
+            root.innerHTML = `
+              <section id="drill-chamber-view" hidden>
+                <div id="chamber-concept-name"></div>
+                <div id="chamber-entry-name"></div>
+                <div id="chamber-active">
+                  <div id="chamber-question"></div>
+                  <textarea id="chamber-composer"></textarea>
+                  <button id="chamber-send" type="button">Submit</button>
+                  <button id="chamber-exit" type="button">Exit</button>
+                  <div id="chamber-chat-log"></div>
+                </div>
+              </section>
+            `;
+            document.body.append(root);
+
+            let sends = 0;
+            window.DrillChamber.onSend(() => { sends += 1; });
+            window.DrillChamber.show({
+              conceptName: 'Concept',
+              entryName: 'Entry',
+              question: 'Question?',
+            });
+            const staleComposer = document.getElementById('chamber-composer');
+            staleComposer.value = 'stale answer';
+
+            root.remove();
+            const partialRoot = document.createElement('section');
+            partialRoot.id = 'drill-chamber-partial-fixture';
+            partialRoot.innerHTML = `
+              <section id="drill-chamber-view" hidden>
+                <textarea id="chamber-composer">partial answer</textarea>
+                <button id="chamber-send" type="button">Submit</button>
+                <button id="chamber-exit" type="button">Exit</button>
+                <div id="chamber-chat-log"></div>
+              </section>
+            `;
+            document.body.append(partialRoot);
+
+            const partialComposer = document.getElementById('chamber-composer');
+            window.DrillChamber.clearComposer();
+            const partialValueAfterClear = partialComposer.value;
+
+            const keyEvent = new KeyboardEvent('keydown', {
+              key: 'Enter',
+              metaKey: true,
+              bubbles: true,
+              cancelable: true,
+            });
+            staleComposer.dispatchEvent(keyEvent);
+
+            partialRoot.remove();
+            return {
+              defaultPrevented: keyEvent.defaultPrevented,
+              partialValueAfterClear,
+              sends,
+            };
+        }"""
+    )
+
+    assert result == {
+        "defaultPrevented": False,
+        "partialValueAfterClear": "partial answer",
+        "sends": 0,
+    }
+
+
 def test_drill_chamber_opens_inline_inside_concept_view(
     clean_page: Page, base_url: str
 ) -> None:

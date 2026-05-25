@@ -1,6 +1,5 @@
 /* drill-chamber.css
    Production styles for the ironclad drill chamber view.
-   Design-of-record: public/_lab/drill-chamber-iterations.html?variant=ironclad
    Reads from public/css/variables.css for tokens.
    Light mode is default. Dark mode lives behind [data-theme="dark"]. */
 
@@ -9,7 +8,6 @@
 /* ============================================================
    IRONCLAD chamber
    Synthesized from 3 customer-feedback rounds (Maya/Jordan/Robert).
-   Companion notes: public/_lab/drill-chamber-iterations.NOTES.md
 
    Architecture: position-fixed full-viewport, takes over the screen
    when shown. Independent of any concept-page state.

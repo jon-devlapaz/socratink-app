@@ -2,7 +2,7 @@
 
 This is the non-binding learning ledger for founder and agent workflow usage.
 
-It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `agents/README.md`, workflow cards, `agents/MIGRATION.md`, `agents/ONBOARDING.md`, `agents/QUALITY.md`, and other registered canonical files.
+It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `AGENTS.md`, `agents/README.md`, workflow cards, `agents/ONBOARDING.md`, `agents/QUALITY.md`, and other registered canonical files.
 
 ## Read Rule
 
@@ -27,7 +27,7 @@ Do not log ordinary task details, product doctrine, one-off preferences, specula
 
 - `observed`: seen in real usage, not yet recurring enough to change canon
 - `candidate`: recurring or high-risk enough that promotion should be considered
-- `promoted`: incorporated into a canonical workflow, adapter, migration ledger, or binding doc
+- `promoted`: incorporated into a canonical workflow, adapter, or binding doc
 - `rejected`: reviewed and intentionally not promoted
 - `superseded`: replaced by a newer learning or canonical rule
 
@@ -40,7 +40,7 @@ Mark an entry `candidate` and recommend a promotion target when either condition
 - the same pattern appears in 3 real tasks
 - the same pattern appears in 2 real tasks and affects publication safety, verification integrity, bootstrap correctness, or canon/source-of-truth boundaries
 
-Promotion targets must be explicit: a workflow card under `agents/founder/WORKFLOWS/`, `agents/README.md`, `agents/founder/README.md`, `agents/MIGRATION.md`, `agents/ONBOARDING.md`, `agents/QUALITY.md`, or another registered canonical file.
+Promotion targets must be explicit: a workflow card under `agents/founder/WORKFLOWS/`, `agents/README.md`, `agents/founder/README.md`, `agents/ONBOARDING.md`, `agents/QUALITY.md`, or another registered canonical file.
 
 After promotion, update the ledger entry to `promoted`, link the destination, and keep the evidence count. If the decision is not to promote, mark it `rejected` with the reason.
 
@@ -77,7 +77,7 @@ Small, judgment-heavy repo-doc cleanups can stall when delegated to a subagent w
 
 ## Evidence
 
-- `2026-05-13`: a `GPT-5.5` high-reasoning worker was asked to perform a lean CRG docs cleanup. It returned `NO_CHANGES` after correctly concluding that the docs overstated visualization auto-sync and that `docs/project/code-review-graph-sop.md` and `docs/project/crg-hooks-handoff.md` should be simplified. The cleanup then had to be executed locally with a narrower edit contract.
+- `2026-05-13`: a `GPT-5.5` high-reasoning worker was asked to perform a lean CRG docs cleanup. It returned `NO_CHANGES` after correctly concluding that the old CRG support docs overstated visualization auto-sync and needed simplification. The cleanup then had to be executed locally with a narrower edit contract.
 
 ## Promotion Notes
 
