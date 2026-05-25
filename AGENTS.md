@@ -167,10 +167,9 @@ SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 # loopback request host plus loopback client:
 #   1. The auth gate trampolines protected GETs through /auth/guest instead
 #      of /login, so agents and ad-hoc local browsing skip the wall.
-#   2. /api/me returns dev_mode: true, which lets the frontend allow guest
-#      sessions through the concept-create dialog. Without dev_mode the
-#      dialog shows "Guest mode uses sample maps. Sign in to extract your
-#      own content into a draft map." and blocks the LLM extract path.
+#   2. /api/me returns dev_mode: true as a compatibility signal for local
+#      tooling; the browser auth bypass is enforced by the server-side routes
+#      and loopback request checks.
 # scripts/dev.sh also sets SOCRATINK_E2E_LOCAL_GUEST=1 by default. Local
 # browser tests use /auth/e2e/guest to mint a loopback-only guest cookie
 # without creating real Supabase anonymous users or burning auth rate limits.

@@ -57,9 +57,9 @@ def dev_autoguest_enabled() -> bool:
     Two effects depend on the request-aware local auth bypass:
       1. main.py auth gate trampolines the /login redirect through
          /auth/guest so agents and ad-hoc local browsing skip the wall.
-      2. /api/me returns dev_mode=True so the frontend can let guest
-         sessions through the concept-create flow that's otherwise gated
-         to authenticated users.
+      2. /api/me returns dev_mode=True as a compatibility signal for local
+         tooling; current browser auth behavior is handled by the server-side
+         auth routes and gate.
 
     SECURITY ASSUMPTION (load-bearing — read before changing).
     --------------------------------------------------------
@@ -73,9 +73,8 @@ def dev_autoguest_enabled() -> bool:
     developer's local machine — e.g. a non-Vercel staging box, a
     self-hosted preview, a docker-compose'd integration env — this function
     may return True there, but local_auth_bypass_enabled must continue to
-    reject non-loopback requests before /api/me exposes `dev_mode: true`.
-    That dev_mode flag bypasses the concept-create auth gate for guest
-    sessions. Either:
+    reject non-loopback requests before /api/me exposes `dev_mode: true` or
+    auth routes mint a local guest session. Either:
 
       (a) extend the deny-list with a marker for the new env (preferred:
           a positive `SOCRATINK_LOCAL=1` allow-list signal that
