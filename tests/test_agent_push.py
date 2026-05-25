@@ -595,6 +595,42 @@ def test_bypass_no_mistakes_pushes_directly(monkeypatch, tmp_path):
     assert push_call[0][3] == "refs/heads/dev:refs/heads/dev"
 
 
+def test_bypass_no_mistakes_rejects_explicit_non_origin_dev_targets(monkeypatch, capsys):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/Users/example/.no-mistakes/repos/review-gate.git",
+        },
+    )
+    monkeypatch.setattr(mod, "refresh_publication_refs", lambda: None)
+    monkeypatch.setattr(mod, "collect_state", lambda: state)
+    monkeypatch.setattr(mod, "ensure_destination_ref_current", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_current_dev_base", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_destination_fast_forward", lambda state, intent: None)
+
+    sub_calls = []
+    def fake_run(args, **kwargs):
+        sub_calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 0)
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    for target in ("origin/main", "no-mistakes/dev", "origin/feat/demo-flow"):
+        result = mod.main(["--bypass-no-mistakes", "--target", target])
+        assert result == 2
+        assert "no-mistakes bypass only supports direct pushes to origin/dev" in capsys.readouterr().err
+
+    monkeypatch.setenv("SOCRATINK_BYPASS_NO_MISTAKES", "1")
+    result = mod.main(["--target", "origin/main"])
+    assert result == 2
+    assert "no-mistakes bypass only supports direct pushes to origin/dev" in capsys.readouterr().err
+    assert sub_calls == []
+
+
 def test_bypass_no_mistakes_via_env_var(monkeypatch, tmp_path):
     mod = _load_module()
     monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)

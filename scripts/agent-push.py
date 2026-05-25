@@ -535,6 +535,8 @@ def main(argv: list[str] | None = None) -> int:
         ensure_current_dev_base(state, intent)
         ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)
+        if bypass_no_mistakes and payload.route != "origin/dev":
+            raise ValueError("no-mistakes bypass only supports direct pushes to origin/dev")
     except Exception as exc:
         print_error(str(exc), json_output=args.json)
         return 2
