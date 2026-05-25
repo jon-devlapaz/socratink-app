@@ -1886,7 +1886,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     attempt_input.fill("")
     fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=15');
+            const mod = await import('/js/concept-page-view.js?v=17');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -1922,7 +1922,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     assert "Type one relationship you suspect, even if it feels incomplete." in fallback_html
     empty_fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=15');
+            const mod = await import('/js/concept-page-view.js?v=17');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -2363,7 +2363,7 @@ def test_source_less_defensive_ui_paths_remain_inert(
 
     fallback_mode = clean_page.evaluate(
         """async () => {
-            const view = await import('/js/concept-page-view.js?v=15');
+            const view = await import('/js/concept-page-view.js?v=17');
             return view.deriveSourceLessViewMode({
                 attempted: true,
                 next_action: 'spaced_attempt',
