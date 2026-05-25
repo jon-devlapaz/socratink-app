@@ -60,7 +60,8 @@ Import from `models` directly.
 - **`LearnerScaffold` is non-answer scaffolding.** Source-less smallest-route
   subnodes must carry plain learner task copy plus `evidence_goal`; the internal
   `bloom_level` must not be rendered as learner-facing taxonomy or treated as
-  evidence about the learner.
+  evidence about the learner. `_validate_smallest_route` also rejects scaffold
+  fields that copy a substantial phrase from the hidden mechanism.
 - **Pydantic v2 semantics.** All models are Pydantic v2 (`BaseModel`,
   `ConfigDict`). v1 patterns (`@validator`, `Config` class) do not work.
 - **There is a current defensive `if text is None` check in

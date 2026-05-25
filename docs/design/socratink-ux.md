@@ -37,7 +37,7 @@ The binding seven-screen onboarding into any concept. Every concept-facing surfa
 Enter concept
   → 1. Concept Threshold        (global starting map; no graph mutation)
   → 2. Provisional Graph        (draft route as hypothesis)
-  → 3. First Cold Attempt       (local; quotes the threshold; analogical fallback if signal is thin)
+  → 3. First Cold Attempt       (local; shaped by hidden scaffold; analogical fallback if signal is thin)
   → 4. Locked Study Silhouette  (purpose only — no content)
   → 5. Study Repair Artifact    (the hinge, the causal spine, one diagram)
   → 6. Interleaving Bridge      (2–3 nearby rooms + take a break)
