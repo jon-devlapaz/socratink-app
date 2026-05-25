@@ -74,3 +74,17 @@ def test_pre_push_rejects_mismatched_destination_ref(tmp_path):
     )
     assert result.returncode == 1
     assert "authorized destination" in result.stderr
+
+
+def test_pre_push_accepts_with_bypass_env(tmp_path):
+    for env_var in ["SOCRATINK_BYPASS_NO_MISTAKES", "BYPASS_NO_MISTAKES"]:
+        env = os.environ | {env_var: "1"}
+        result = subprocess.run(
+            ["/bin/bash", str(HOOK), "origin", "https://github.com/jon-devlapaz/socratink-app.git"],
+            cwd=tmp_path,
+            text=True,
+            capture_output=True,
+            env=env,
+        )
+        assert result.returncode == 0
+        assert "Bypassing no-mistakes gate" in result.stderr

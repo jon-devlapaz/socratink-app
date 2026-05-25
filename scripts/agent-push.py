@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+# Direct Push Override / no-mistakes Bypass:
+# If you need to bypass the no-mistakes gate and push straight to origin/dev:
+# 1. CLI option: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
+# 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1` or `BYPASS_NO_MISTAKES=1`
+#    - With agent-push: `python3 scripts/agent-push.py` (pushes directly in 1 step)
+#    - With raw git: `SOCRATINK_BYPASS_NO_MISTAKES=1 git push origin dev` (bypasses pre-push hook validation)
+
 import argparse
 import base64
 import hashlib
@@ -506,16 +513,24 @@ def _push(payload: AuthorizationPayload) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    import os
     parser = argparse.ArgumentParser(description="Authorize and execute one Socratink git publication.")
     parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name, no-mistakes/dev")
     parser.add_argument("--ack", help="ack token printed by the first run")
     parser.add_argument("--json", action="store_true", help="emit machine-readable preview output")
+    parser.add_argument("--bypass-no-mistakes", action="store_true", help="bypass no-mistakes gate and push immediately")
     args = parser.parse_args(argv)
+
+    bypass_env = os.environ.get("SOCRATINK_BYPASS_NO_MISTAKES") == "1" or os.environ.get("BYPASS_NO_MISTAKES") == "1"
+    bypass_no_mistakes = args.bypass_no_mistakes or bypass_env
 
     try:
         refresh_publication_refs()
         state = collect_state()
-        intent = resolve_publication_intent(state, explicit_target=args.target)
+        target = args.target
+        if bypass_no_mistakes and not target:
+            target = "origin/dev"
+        intent = resolve_publication_intent(state, explicit_target=target)
         ensure_destination_ref_current(state, intent)
         ensure_current_dev_base(state, intent)
         ensure_destination_fast_forward(state, intent)
@@ -525,6 +540,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if not args.ack:
+        if bypass_no_mistakes:
+            write_authorization(payload)
+            append_decision_log(payload, intent)
+            if not args.json:
+                print(f"[agent-push] Bypassing no-mistakes gate. Pushing directly to {payload.route}...")
+            return _push(payload)
         print_first_run(payload, intent, json_output=args.json)
         return 1
 

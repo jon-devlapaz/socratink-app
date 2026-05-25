@@ -547,3 +547,95 @@ def test_json_error_output_is_machine_readable(monkeypatch, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["schema_version"] == 1
     assert payload["error"]["message"] == "unsupported push target: unsupported/target"
+
+
+def test_bypass_no_mistakes_pushes_directly(monkeypatch, tmp_path):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
+
+    git_calls = []
+    def fake_run_git(args, *, check=True):
+        git_calls.append(args)
+        if args == ["remote", "-v"]:
+            return "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)\n"
+        if args == ["symbolic-ref", "--short", "HEAD"]:
+            return "dev"
+        if args == ["rev-parse", "HEAD"]:
+            return "abc1234"
+        if args == ["status", "--porcelain"]:
+            return ""
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t1"
+        if args == ["rev-parse", "--verify", "refs/remotes/origin/dev"]:
+            return "abc1234"
+        if args in (
+            ["diff", "--name-only", "origin/dev...HEAD"],
+            ["diff", "--name-only", "--cached"],
+            ["diff", "--name-only", "HEAD"],
+            ["ls-files", "--others", "--exclude-standard"],
+        ):
+            return "main.py\n" if args == ["diff", "--name-only", "origin/dev...HEAD"] else ""
+        return ""
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    sub_calls = []
+    def fake_run(args, **kwargs):
+        sub_calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 0)
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    result = mod.main(["--bypass-no-mistakes"])
+    assert result == 0
+
+    push_call = next((c for c in sub_calls if c[0][:3] == ["git", "push", "origin"]), None)
+    assert push_call is not None
+    assert push_call[0][3] == "refs/heads/dev:refs/heads/dev"
+
+
+def test_bypass_no_mistakes_via_env_var(monkeypatch, tmp_path):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
+    monkeypatch.setenv("SOCRATINK_BYPASS_NO_MISTAKES", "1")
+
+    git_calls = []
+    def fake_run_git(args, *, check=True):
+        git_calls.append(args)
+        if args == ["remote", "-v"]:
+            return "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)\n"
+        if args == ["symbolic-ref", "--short", "HEAD"]:
+            return "dev"
+        if args == ["rev-parse", "HEAD"]:
+            return "abc1234"
+        if args == ["status", "--porcelain"]:
+            return ""
+        if args == ["rev-parse", "--verify", "origin/dev"]:
+            return "origin/dev"
+        if args == ["rev-list", "--left-right", "--count", "origin/dev...HEAD"]:
+            return "0\t1"
+        if args == ["rev-parse", "--verify", "refs/remotes/origin/dev"]:
+            return "abc1234"
+        if args in (
+            ["diff", "--name-only", "origin/dev...HEAD"],
+            ["diff", "--name-only", "--cached"],
+            ["diff", "--name-only", "HEAD"],
+            ["ls-files", "--others", "--exclude-standard"],
+        ):
+            return "main.py\n" if args == ["diff", "--name-only", "origin/dev...HEAD"] else ""
+        return ""
+    monkeypatch.setattr(mod, "_run_git", fake_run_git)
+
+    sub_calls = []
+    def fake_run(args, **kwargs):
+        sub_calls.append((args, kwargs))
+        return subprocess.CompletedProcess(args, 0)
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+
+    result = mod.main([])
+    assert result == 0
+
+    push_call = next((c for c in sub_calls if c[0][:3] == ["git", "push", "origin"]), None)
+    assert push_call is not None
