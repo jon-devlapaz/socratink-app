@@ -255,7 +255,8 @@ The panel must not silently mix these modes.
 - the study note has a manual show/hide toggle
 - focusing or typing in the repair field collapses the study note so the learner writes from memory instead of copying visible mechanism text
 - normalization message visible
-- no drill affordance for this node until spacing is satisfied
+- after a repair is saved, show `Pressure-check this link` as a graph-neutral gap drill
+- the gap drill does not append training evidence, mutate graph state, or count as spaced re-drill evidence
 - the system may recommend the next cold attempt on a different node
 
 ### Re-Drill-Active (Phase 3)
