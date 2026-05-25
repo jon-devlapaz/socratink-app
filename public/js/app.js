@@ -2352,10 +2352,8 @@ const App = (() => {
     const cancelBtn = editorEl.querySelector('.concept-page-b2__threshold-cancel');
     const saveBtn = editorEl.querySelector('.concept-page-b2__threshold-save');
 
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    });
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
     const teardown = () => {
       editorEl.remove();
