@@ -549,7 +549,7 @@ def test_json_error_output_is_machine_readable(monkeypatch, capsys):
     assert payload["error"]["message"] == "unsupported push target: unsupported/target"
 
 
-def test_bypass_no_mistakes_pushes_directly(monkeypatch, tmp_path):
+def test_bypass_no_mistakes_defaults_to_origin_dev_ack_flow(monkeypatch, tmp_path, capsys):
     mod = _load_module()
     monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
@@ -588,11 +588,13 @@ def test_bypass_no_mistakes_pushes_directly(monkeypatch, tmp_path):
     monkeypatch.setattr(mod.subprocess, "run", fake_run)
 
     result = mod.main(["--bypass-no-mistakes"])
-    assert result == 0
+    assert result == 1
 
     push_call = next((c for c in sub_calls if c[0][:3] == ["git", "push", "origin"]), None)
-    assert push_call is not None
-    assert push_call[0][3] == "refs/heads/dev:refs/heads/dev"
+    assert push_call is None
+    out = capsys.readouterr().out
+    assert "Chosen route: origin/dev" in out
+    assert "python3 scripts/agent-push.py --target origin/dev --ack " in out
 
 
 def test_bypass_no_mistakes_rejects_explicit_non_origin_dev_targets(monkeypatch, capsys):
@@ -631,7 +633,7 @@ def test_bypass_no_mistakes_rejects_explicit_non_origin_dev_targets(monkeypatch,
     assert sub_calls == []
 
 
-def test_bypass_no_mistakes_via_env_var(monkeypatch, tmp_path):
+def test_bypass_no_mistakes_via_env_var_uses_ack_flow(monkeypatch, tmp_path, capsys):
     mod = _load_module()
     monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
     monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
@@ -671,7 +673,10 @@ def test_bypass_no_mistakes_via_env_var(monkeypatch, tmp_path):
     monkeypatch.setattr(mod.subprocess, "run", fake_run)
 
     result = mod.main([])
-    assert result == 0
+    assert result == 1
 
     push_call = next((c for c in sub_calls if c[0][:3] == ["git", "push", "origin"]), None)
-    assert push_call is not None
+    assert push_call is None
+    out = capsys.readouterr().out
+    assert "Chosen route: origin/dev" in out
+    assert "python3 scripts/agent-push.py --target origin/dev --ack " in out

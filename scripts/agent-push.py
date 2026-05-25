@@ -4,7 +4,8 @@
 # If you need to bypass the no-mistakes gate and push straight to origin/dev:
 # 1. CLI option: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
 # 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1` or `BYPASS_NO_MISTAKES=1`
-#    then run this script without --target; it defaults to origin/dev.
+#    then run this script without --target; it defaults to origin/dev and still
+#    requires the normal preview/ack confirmation.
 # Raw git pushes still require agent-push's one-shot pre-push authorization.
 
 import argparse
@@ -542,12 +543,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if not args.ack:
-        if bypass_no_mistakes:
-            write_authorization(payload)
-            append_decision_log(payload, intent)
-            if not args.json:
-                print(f"[agent-push] Bypassing no-mistakes gate. Pushing directly to {payload.route}...")
-            return _push(payload)
         print_first_run(payload, intent, json_output=args.json)
         return 1
 
