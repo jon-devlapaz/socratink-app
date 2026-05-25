@@ -1,9 +1,5 @@
 # GEMINI.md
 
-Canonical agent workflow truth for this repo lives in `agents/` and is entered via `AGENTS.md`.
+Canonical shared workflow truth for this repo lives in `AGENTS.md` and `agents/`.
 
-Gemini sessions should:
-
-1. read `AGENTS.md`
-2. load the relevant canon under `agents/`
-3. treat `.claude/`, `.codex/`, and `.gemini/` as runtime/config surfaces, not canonical doctrine
+Gemini sessions should read `AGENTS.md` first, then load the relevant canon in `agents/`. This file exists as a compatibility adapter and should not become a competing doctrine surface.

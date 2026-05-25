@@ -4,7 +4,7 @@
    (antigravity.css) on migrated surfaces. References only tokens
    defined in variables.css plus --rule-line and --rule-step (added in
    Paper Wave 0).
-   See docs/superpowers/specs/2026-05-09-ignition-paper-redesign-design.md
+   Paper redesign context is preserved in git history.
    ════════════════════════════════════════════════════════════════════ */
 
 /* ── Reset of base.css global <button> rule for paper-system buttons.

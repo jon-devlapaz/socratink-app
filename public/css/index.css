@@ -14,11 +14,11 @@
    Cache-busting query strings on @imports preserve the prior link-tag
    versioning behavior. Bump them when shipping a stylesheet update.
 
-   See docs/superpowers/specs/2026-05-09-paper-tokens-cascade-layers-refactor-design.md
+   Cascade-layer migration context is preserved in git history.
    ════════════════════════════════════════════════════════════════════ */
 
 @layer components, legacy, paper;
 
-@import '../styles.css?v=133'     layer(components);
+@import '../styles.css?v=135'     layer(components);
 @import '../antigravity.css?v=28' layer(legacy);
-@import 'paper.css?v=11'          layer(paper);
+@import 'paper.css?v=12'          layer(paper);

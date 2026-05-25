@@ -1,7 +1,4 @@
 /* drill-chamber.js — production view module for the ironclad drill chamber.
-   Design-of-record: public/_lab/drill-chamber-iterations.html?variant=ironclad
-   Companion notes: public/_lab/drill-chamber-iterations.NOTES.md
-
    Public surface:
      - DrillChamber.show({conceptName, entryName, question})
      - DrillChamber.hide()

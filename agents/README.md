@@ -6,7 +6,7 @@ Canonical shared workflow truth for repo agents.
 
 - workflow cards
 - templates
-- migration ledgers
+- migration boundary notes
 - non-binding workflow learnings that may later be promoted
 - founder orchestration doctrine
 - prompt batteries
@@ -29,9 +29,9 @@ Canonical shared workflow truth for repo agents.
 
 ## Authority rule
 
-`agents/` is the shared canon. `AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` are entrypoint adapters into this canon. Tool-specific directories like `.claude/`, `.codex/`, and `.gemini/` are runtime/config/wrapper surfaces, not canonical doctrine.
+`agents/` is the shared workflow canon. `AGENTS.md` is the root repo entrypoint and still carries binding repo doctrine. `CLAUDE.md` and `GEMINI.md` are compatibility adapters into this canon. Tool-specific directories like `.claude/`, `.codex/`, and `.gemini/` are runtime/config/wrapper surfaces, not canonical doctrine.
 
-`agents/LEARNINGS.md` is a special case: it lives in the canon tree so agents can find it, but its entries are non-binding until promoted into a canonical workflow, README, migration ledger, bootstrap doc, or other registered binding file.
+`agents/LEARNINGS.md` is a special case: it lives in the canon tree so agents can find it, but its entries are non-binding until promoted into a canonical workflow, README, bootstrap doc, or other registered binding file.
 
 `agents/superpowers` is a reference-only Git submodule. It is not runtime canon and does not replace this repo's `agents/` workflow docs.
 

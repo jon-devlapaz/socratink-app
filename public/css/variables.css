@@ -59,8 +59,8 @@
   --border-strong:      rgba(var(--ink-900-rgb), 0.16);
 
   /* Paper-system additions (Paper Wave 0/1) — used by ruled-paper composer
-     and disabled-button surface in the Ignition + Launch Pad views. See:
-     docs/superpowers/specs/2026-05-09-ignition-paper-redesign-design.md */
+     and disabled-button surface in the Ignition + Launch Pad views. Paper
+     redesign context is preserved in git history. */
   --rule-line:          rgba(var(--ink-900-rgb), 0.07);
   --rule-step:          32px;
   --surface-disabled:   var(--mauve-200);

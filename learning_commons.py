@@ -1,8 +1,8 @@
 """Learning Commons (LC) Knowledge Graph client.
 
-Spec reference: docs/superpowers/specs/2026-05-02-conversational-concept-creation-design.md
-sections 3.3.2 (the four enrichment gates) and 5.2 (client surface,
-timeout budget, cache).
+The historical design spec that introduced this client was removed during docs
+consolidation. This module owns the current client surface, timeout budget, and
+cache behavior.
 
 This module is best-effort enrichment for source-less provisional-map
 generation. Every failure path returns ``None`` — the calling code

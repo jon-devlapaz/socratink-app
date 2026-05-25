@@ -320,7 +320,7 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
 - Deterministic agent quality rules live in `agents/QUALITY.md`.
 - Do not create parallel agent source-of-truth files. If compatibility is needed, keep a tiny redirect file pointing to `AGENTS.md` or the canonical bootstrap.
 - Before substantive work, read the binding docs for the task. At minimum for cross-agent or product-science work, read `AGENTS.md`, `docs/project/state.md`, and `agents/ONBOARDING.md`.
-- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow in `docs/project/code-review-graph-sop.md` rather than relying on stale point-in-time snapshots.
+- For *structural* orientation — what files are load-bearing, what depends on what, where coverage gaps live — use the live Code Review Graph flow described in the Code exploration section above and the founder FAQ at `agents/founder/CODE-REVIEW-GRAPH-FAQ.md` rather than relying on stale point-in-time snapshots.
 
 ## Project-local agent skills (skills.sh marketplace)
 

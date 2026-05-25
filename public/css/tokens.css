@@ -1,10 +1,9 @@
 /* ============================================================
    socratink — design tokens (login-safe subset)
-   Mirrors docs/design/colors_and_type.css — primitives + semantic
-   tokens + shadows + type scale. Self-hosts brand fonts from
+   Design token source of truth: primitives + semantic tokens + shadows +
+   type scale. Self-hosts brand fonts from
    /fonts/. Omits base element resets so this file can be safely
    layered above page-specific CSS.
-   Source of truth: docs/design/colors_and_type.css
    ============================================================ */
 
 @font-face {

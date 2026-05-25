@@ -52,7 +52,7 @@ Before doing substantive work:
 8. Read docs/product/spec.md.
 9. Scan docs/project/doc-map.md to locate any other binding doc the task touches.
 10. If current runtime evidence matters, inspect `logs/drill-runs.jsonl`.
-11. If the task touches drill/graph behavior, read docs/superpowers/specs/2026-05-15-drill-data-model-design.md and then docs/drill/contract.md.
+11. If the task touches drill/graph behavior, read docs/superpowers/specs/2026-05-15-drill-data-model-design.md.
 12. Decide which agents are actually needed. Prefer a small party.
 13. Make a plan when the task is large, risky, or ambiguous.
 14. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.

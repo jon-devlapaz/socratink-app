@@ -1142,7 +1142,7 @@ html[data-motion="reduced"] #intro-particle-canvas {
    Visibility is driven by the [hidden] attribute, which base.css
    already declares as `display: none !important`. No display:none
    toggle on these IDs.
-   See docs/superpowers/specs/2026-05-09-ignition-paper-redesign-design.md
+   Paper redesign context is preserved in git history.
    ─────────────────────────────────────────────────────────── */
 
 #ignition-view,

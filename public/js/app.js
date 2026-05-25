@@ -4544,7 +4544,7 @@ const App = (() => {
 // would all become no-ops. Graph-view is the renderer; it never
 // owns truth. SocratinkApp is the intent-bridge that lets Cytoscape
 // interaction events trigger app.js mutations without a circular
-// import. Phase 3 of the lego-ification roadmap formalizes this
-// contract (see docs/superpowers/plans/2026-04-26-lego-ification-roadmap.md).
+// import. Keep this bridge explicit until graph-view owns a typed
+// app-intent boundary.
 window.App = App;
 window.SocratinkApp = App;

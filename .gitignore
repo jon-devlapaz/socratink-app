@@ -82,8 +82,8 @@ uv.lock
 .coverage
 coverage.xml
 .playwright-mcp/
+public/_lab/
 *.excalidraw
-!docs/diagrams/*.excalidraw
 c4-mobile-*.png
 map-header-*.png
 b&a/

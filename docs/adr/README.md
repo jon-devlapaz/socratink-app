@@ -14,7 +14,7 @@ Don't write one for:
 
 - Vocabulary — that lives in [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md).
 - Style preferences without an architectural blast radius.
-- Working notes — keep them out of ADRs; if they matter long-term, promote them into active `docs/` surfaces or archive them under `docs/archive/`.
+- Working notes — keep them out of ADRs; if they matter long-term, promote only the durable rule into an active canonical doc.
 
 ## Format
 

@@ -1,68 +1,49 @@
 # Docs Registry
 
-Canonical entry points first; deep specs and ephemera below. For an agent-crawler index see [`/llms.txt`](../../llms.txt).
+This is the intentionally small map of docs that still earn a place in the repo.
+If a file is not listed here or reachable from one listed here, treat it as
+non-canonical working material.
 
-## Entry points
+For an agent-crawler index see [`/llms.txt`](../../llms.txt).
 
-- [`docs/README.md`](../README.md) — docs-vault front door and memory boundary
-- [`/DESIGN.md`](../../DESIGN.md) — canonical product/design hub (intent, decisions, primitives, voice, boundaries)
-- [`/AGENTS.md`](../../AGENTS.md) — agent ops canon (commands, conventions, git workflow)
-- [`/UBIQUITOUS_LANGUAGE.md`](../../UBIQUITOUS_LANGUAGE.md) — canonical domain terms and aliases-to-avoid
-- [`/PRODUCT.md`](../../PRODUCT.md) — strategic product brief (users, purpose, brand posture, non-goals)
+## Entry Points
+
+- [`docs/README.md`](../README.md) - docs-vault front door and memory boundary
+- [`/PRODUCT.md`](../../PRODUCT.md) - strategic product brief
+- [`/DESIGN.md`](../../DESIGN.md) - product/design hub, primitives, voice, and boundaries
+- [`/AGENTS.md`](../../AGENTS.md) - agent ops canon, commands, conventions, git workflow
+- [`/UBIQUITOUS_LANGUAGE.md`](../../UBIQUITOUS_LANGUAGE.md) - canonical terms and aliases to avoid
+- [`docs/project/state.md`](state.md) - current release posture and active risks
 
 ## Precedence
 
-On any claim about **graph truth, evidence, mastery, completion, diagnostic capability, or what the learner knows**, [`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) overrides every other binding doc — including `DESIGN.md`, `spec.md`, and all implementation-tier specs. Legacy knowledge/completion shorthand falls under its §14 Legacy Shorthand Replacement Table.
+On any claim about **graph truth, evidence, mastery, completion, diagnostic
+capability, or what the learner knows**,
+[`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md)
+overrides every other binding doc, including `DESIGN.md`, `spec.md`, and
+implementation-tier specs. Legacy knowledge/completion shorthand falls under
+its §14 Legacy Shorthand Replacement Table.
 
 On all other topics, the doc listed below for that topic is authoritative.
 
-## Canonical deep-dives
+## Canonical Docs
 
 | Topic | Doc |
 | --- | --- |
-| Full UX manifesto (prose source for DESIGN.md §§3–6) | [`docs/design/socratink-ux.md`](../design/socratink-ux.md) |
-| Design system component rules | [`docs/design/socratink-design-system.md`](../design/socratink-design-system.md) |
-| Product spec (three-phase loop, routing, progression layers, inline surface modes, guardrails) | [`docs/product/spec.md`](../product/spec.md) |
-| Evidence-weighted map doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
-| Test-driven learning founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
-| Drill data-model canon | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
-| ADR index (append-only architectural decisions) | [`docs/adr/README.md`](../adr/README.md) |
-
-## Implementation-facing specs
-
-| Topic | Doc |
-| --- | --- |
-| Derived training state and rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
-| Feynman prompt integration proposal (proposal-only, not runtime canon) | [`docs/superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md`](../superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md) |
+| Product contract: loop, routing, progression layers, inline modes, guardrails | [`docs/product/spec.md`](../product/spec.md) |
+| Evidence-weighted graph doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
 | Post-drill result-surface UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
-| Drill contract redirect | [`docs/drill/contract.md`](../drill/contract.md) |
-
-## Release gates
-
-- [`docs/project/state.md`](state.md) — current release gate
-- [`docs/project/mvp-happy-path.md`](mvp-happy-path.md) — narrow MVP ship gate
-- [`docs/project/operations.md`](operations.md) — merge standard and release checks
-- [`docs/qa/antigravity-mobile-qa-prompt.md`](../qa/antigravity-mobile-qa-prompt.md) — mobile regression audit
-- [`docs/qa/gestalt-hybrid-launch-qa-prompt.md`](../qa/gestalt-hybrid-launch-qa-prompt.md) — source-less launch/compare QA prompt
-
-## Agent infra
-
-See [`agents/README.md`](../../agents/README.md) for the canonical workflow hub. Founder workflows in `agents/founder/WORKFLOWS/`.
-
-## Current working plans
-
-- [`docs/superpowers/plans/2026-05-21-constellation-svg-recovery.md`](../superpowers/plans/2026-05-21-constellation-svg-recovery.md) — constellation SVG recovery plan
-- [`docs/superpowers/plans/2026-05-21-gestalt-hybrid-handoff.md`](../superpowers/plans/2026-05-21-gestalt-hybrid-handoff.md) — source-less gestalt hybrid handoff
-- [`docs/superpowers/plans/2026-05-21-learner-goal-thread.md`](../superpowers/plans/2026-05-21-learner-goal-thread.md) — learner-goal threading plan
-- [`docs/superpowers/plans/constellation-ux-goal-log.md`](../superpowers/plans/constellation-ux-goal-log.md) — constellation UX goal log
-
-## Archive
-
-Ephemeral handoffs and dated QA plans live under [`docs/archive/`](../archive/). Older handoffs from 2026-05-01..07 moved during the 2026-05 design-md refactor.
+| Founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
+| Full UX manifesto and voice rationale | [`docs/design/socratink-ux.md`](../design/socratink-ux.md) |
+| Drill data model, training evidence, derivation math, rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
+| Architectural decisions | [`docs/adr/README.md`](../adr/README.md) |
 
 ## Maintenance
 
-- Open `docs/` as an Obsidian vault only as a navigation layer. Git and the docs listed here remain authoritative.
-- When a new doc is added under `docs/`, list it here under the right section.
-- When a doc becomes superseded, `git mv` it under `docs/archive/<date-context>/`. Don't delete.
-- When doctrine shifts, update DESIGN.md §4 first; the registry follows.
+- Open `docs/` as an Obsidian vault only as a navigation layer. Git and this
+  registry remain authoritative.
+- Do not add working plans, QA prompts, research notes, implementation handoffs,
+  generated artifacts, or deprecated redirects under `docs/`.
+- If a temporary note matters long-term, promote only its durable rule into the
+  relevant canonical doc above. Otherwise rely on git history.
+- When doctrine shifts, update the authoritative doc first; this registry follows.
