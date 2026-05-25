@@ -209,7 +209,7 @@ AI support is allowed only if it preserves the three-phase loop, the drill contr
 - scaffolds and feedback may clarify the gap after an attempt, but must not silently change the target
 - AI-generated explanation quality does not itself mutate graph state
 - only persisted learner reconstruction evidence can derive `primed`, `needs repair`, or `solidified`
-- study, Repair Reps, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`
+- study, Repair Reps, Gap drills / `Pressure-check this link`, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`
 - the AI must remain sparse during drill; if the AI talks more than the learner, the passive trap has been triggered
 - the AI must detect zero-schema states and pivot to scaffolded generation
 

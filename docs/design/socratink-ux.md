@@ -100,6 +100,7 @@ The graph's vocabulary is small on purpose. Only these phrases appear as graph-s
 | Study revealed | repair artifact | study reveal recorded; no solidification |
 | Interleaving bridge shown | next-choice set + break | **none** |
 | Repair rep completed | practice history grows | **none** |
+| Gap drill completed | pressure-check of repaired link | **none**; no training evidence append or solidification |
 | Spaced re-drill — strong after spacing | solid spaced reconstruction recorded | derives `solidified` |
 | Spaced re-drill — non-solid | "needs repair" | stores gaps; derives `needs repair` when warranted (warm, never red) |
 

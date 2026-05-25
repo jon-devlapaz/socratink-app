@@ -109,6 +109,7 @@ Enter concept
 | Study revealed | repair artifact | `study_revealed_at`; no mastery signal | stays `primed`; current re-drill readiness derives from attempt timing, not study completion |
 | Interleaving bridge shown | small next-choice set (2–3 rooms + break) | route preference | **none** |
 | Repair rep completed | practice history | self-rating, bridge quality | **none** |
+| Gap drill completed | pressure-check of repaired link | focused repair practice only | **none**; no training evidence append or spacing credit |
 | Spaced re-drill strong | proof through reconstruction | strong classification after spacing | derives `solidified` |
 | Spaced re-drill non-solid | needs repair | gap metadata | derives `needs repair` when warranted |
 

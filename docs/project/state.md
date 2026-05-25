@@ -26,7 +26,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - The graph is an evidence-weighted map. It shows what Socratink has evidence for, not what the learner knows.
 - The map starts as a hypothesis; the starting map is an anchor, not a diagnostic.
 - Cold attempts are learner-facing unscored; private classification may drive repair/study routing.
-- `solidified` can only result from spaced strong reconstruction evidence. Study and Repair Reps must not produce `solidified`.
+- `solidified` can only result from spaced strong reconstruction evidence. Study, Repair Reps, and Gap drills must not produce `solidified`.
 - Clusters are containers in MVP, not primary drill targets.
 - Drill-session caps remain backend/doctrinal guardrails, but the current frontend MVP bypasses duration, node-count, and per-node retrieval enforcement while inline reconstruction is validated.
 

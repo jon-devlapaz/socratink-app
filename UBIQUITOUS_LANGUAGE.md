@@ -61,7 +61,7 @@
 
 - A **Draft map** can become a **Provisional map** without mutating **Graph truth**.
 - A **Cold attempt** can create a **Training record** attempt; the derived state becomes **`primed`** or **`needs repair`** depending on the recorded classification and prior evidence.
-- **Targeted study** and **Repair Reps** may help the learner, but neither directly produces **`solidified`** evidence.
+- **Targeted study**, **Repair Reps**, and **Gap drills** / **`Pressure-check`** may help the learner, but none directly produces **`solidified`** evidence.
 - A spaced strong reconstruction is required before a node can derive **`solidified`**.
 - A **Traversal unlock** can happen before **`solidified`** when the product is creating interleaving, but **Mastery-gated progression** requires **`solidified`**.
 - An **Imported source** is the input to the **Draft map** extraction pipeline.
