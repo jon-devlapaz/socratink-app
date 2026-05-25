@@ -680,3 +680,30 @@ def test_bypass_no_mistakes_via_env_var_uses_ack_flow(monkeypatch, tmp_path, cap
     out = capsys.readouterr().out
     assert "Chosen route: origin/dev" in out
     assert "python3 scripts/agent-push.py --target origin/dev --ack " in out
+
+
+def test_generic_bypass_no_mistakes_env_var_is_ignored(monkeypatch, capsys):
+    mod = _load_module()
+    state = mod.PushState(
+        branch="dev",
+        head_sha="abc1234",
+        dirty=False,
+        changed_paths=["main.py"],
+        remote_urls={
+            "origin": "https://github.com/jon-devlapaz/socratink-app.git",
+            "no-mistakes": "/Users/example/.no-mistakes/repos/review-gate.git",
+        },
+    )
+    monkeypatch.setenv("BYPASS_NO_MISTAKES", "1")
+    monkeypatch.setattr(mod, "refresh_publication_refs", lambda: None)
+    monkeypatch.setattr(mod, "collect_state", lambda: state)
+    monkeypatch.setattr(mod, "ensure_destination_ref_current", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_current_dev_base", lambda state, intent: None)
+    monkeypatch.setattr(mod, "ensure_destination_fast_forward", lambda state, intent: None)
+
+    result = mod.main([])
+
+    assert result == 1
+    out = capsys.readouterr().out
+    assert "Recommended route: no-mistakes/dev" in out
+    assert "Chosen route: no-mistakes/dev" in out

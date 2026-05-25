@@ -3,9 +3,9 @@
 # Direct Push Override / no-mistakes Bypass:
 # If you need to bypass the no-mistakes gate for direct origin/dev publication:
 # 1. CLI option: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
-# 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1` or `BYPASS_NO_MISTAKES=1`
-#    then run this script without --target; it defaults to origin/dev and still
-#    requires the normal preview/ack confirmation.
+# 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1`, then run this script
+#    without --target; it defaults to origin/dev and still requires the normal
+#    preview/ack confirmation.
 # Raw git pushes still require agent-push's one-shot pre-push authorization.
 
 import argparse
@@ -522,7 +522,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bypass-no-mistakes", action="store_true", help="preview direct origin/dev publication without the no-mistakes gate")
     args = parser.parse_args(argv)
 
-    bypass_env = os.environ.get("SOCRATINK_BYPASS_NO_MISTAKES") == "1" or os.environ.get("BYPASS_NO_MISTAKES") == "1"
+    bypass_env = os.environ.get("SOCRATINK_BYPASS_NO_MISTAKES") == "1"
     bypass_no_mistakes = args.bypass_no_mistakes or bypass_env
 
     try:
