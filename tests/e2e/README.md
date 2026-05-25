@@ -90,9 +90,10 @@ drift fail the suite.
 ### `test_gestalt_hybrid_launch_qa.py` — 1 test
 
 End-to-end QA gate for the source-less gestalt hybrid path: Launch Pad,
-learner-goal preservation, first draft, explicit reveal/compare, `Keep working`,
-repair save/completed-repair state, and route expansion from the same concept
-surface.
+learner-goal preservation, first draft, explicit reveal/compare, no `Keep
+working` CTA while repair is pending, repair save/completed-repair state,
+post-repair `Pressure-check this link` gap drill, and route expansion from the
+same concept surface.
 
 What's deliberately out of scope:
 - Non-guest authenticated flows (extension point: `authenticated_page`

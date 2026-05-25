@@ -141,11 +141,11 @@ the same-entry study note, and named gaps when recorded. It must not show
 score/tier/band, diagnose the learner, reveal future entries, or count as graph
 truth. The normal comparison-exit action is `Keep working`, which writes
 UI-only acknowledgement state so return/reload can restore the expanded
-workspace; it does not append training evidence or imply progress. In the repair
-branch only, saving a repair record may also expand the workspace: the completed
-repair state hides the composer/helper/save controls and offers `Pressure-check this link`,
-without treating the repair as graph truth or progress. Gap drills initiated from this CTA
-are graph-neutral practice sessions that do not mutate graph state or record training evidence.
+workspace; it does not append training evidence or imply progress. The repair
+branch is the exception: it suppresses `Keep working`, shows the repair panel,
+and only after a repair is saved offers `Pressure-check this link`. Saving the
+repair may also expand the workspace, but neither the repair nor the gap drill
+mutates graph state or records training evidence.
 
 ---
 
