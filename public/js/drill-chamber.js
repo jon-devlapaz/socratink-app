@@ -89,7 +89,15 @@ function show({ conceptName, entryName, question }) {
   resetHistory();
   els.view.hidden = false;
   document.body.classList.add('chamber-open');
-  requestAnimationFrame(() => els.composer.focus());
+  requestAnimationFrame(() => {
+    if (!hasRequiredElements() || !els.view.isConnected || !els.composer.isConnected) return;
+    const active = document.activeElement;
+    const canClaimFocus = !active
+      || active === document.body
+      || active === document.documentElement
+      || els.view.contains(active);
+    if (canClaimFocus) els.composer.focus();
+  });
 }
 
 function hide() {
