@@ -52,13 +52,14 @@ Key checks include:
     feedback submit/reopen and mobile access, and local guest bootstrap
     behavior.
 
-### `test_drill_chamber.py` — 5 tests
+### `test_drill_chamber.py` — 13 tests
 
 Smoke gate for the inline drill chamber view (`#drill-chamber-view`) and
 training-evidence persistence: absent before a drill starts, mounts inside the
 active concept entry, exit restores the normal concept page, completed cold
-attempts update Library training copy, and unrecordable drill results do not
-mutate graph state.
+attempts update Library training copy, unrecordable drill results do not mutate
+graph state, graph-neutral gap drills avoid training writes, and repair-focused
+drill context is sent without leaking into graph truth.
 
 ### `test_concept_page_b2.py` — 3 tests
 
@@ -116,7 +117,7 @@ Browser binary (~150MB) is downloaded once into `~/.cache/ms-playwright/`.
 The wrapper at `scripts/qa-smoke.sh` does setup + run in one command and is the
 preferred entry point. **Scope note:** the wrapper currently runs only
 `test_smoke.py` (34 tests). Use the raw pytest invocations below to run the
-full suite (52 tests across the six files).
+full suite (60 tests across the six files).
 
 Local runs use the repo-owned `/auth/e2e/guest` bootstrap when
 `SOCRATINK_E2E_LOCAL_GUEST=1` is set. `scripts/dev.sh` enables this by default,
@@ -140,7 +141,7 @@ Raw pytest invocations (when you need flags the wrapper doesn't pass through,
 or want the full six-file suite the wrapper doesn't yet cover):
 
 ```bash
-# Full suite (all six files, 52 tests) — needs `bash scripts/dev.sh` in another shell
+# Full suite (all six files, 60 tests) — needs `bash scripts/dev.sh` in another shell
 pytest tests/e2e/ -v
 
 # Smoke file only (matches what the wrapper runs)
@@ -158,7 +159,7 @@ PWDEBUG=1 pytest tests/e2e/ -v
 
 ## Output
 
-Abbreviated pass shape (52 tests across the six files):
+Abbreviated pass shape (60 tests across the six files):
 
 ```text
 tests/e2e/test_smoke.py::test_health_endpoint_ok PASSED
@@ -177,7 +178,9 @@ tests/e2e/test_smoke.py::test_no_console_errors_on_first_paint PASSED
 tests/e2e/test_smoke.py::test_no_failed_critical_asset_requests PASSED
 tests/e2e/test_smoke.py::test_theme_preloader_resilient_on_blank_localstorage PASSED
 tests/e2e/test_drill_chamber.py::test_drill_chamber_view_hidden_on_load PASSED
-tests/e2e/test_drill_chamber.py::test_drill_chamber_opens_and_hides_map PASSED
+tests/e2e/test_drill_chamber.py::test_drill_chamber_opens_inline_inside_concept_view PASSED
+tests/e2e/test_drill_chamber.py::test_graph_neutral_repair_drill_bypasses_study_reopen PASSED
+tests/e2e/test_drill_chamber.py::test_repair_drill_context_is_bounded_for_drill_request PASSED
 tests/e2e/test_drill_chamber.py::test_drill_chamber_exit_restores_map PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_layout_renders PASSED
 tests/e2e/test_concept_page_b2.py::test_b2_cta_opens_inline_attempt PASSED
@@ -193,7 +196,7 @@ tests/e2e/test_app_helper_modules.py::test_launch_pad_displays_normalized_concep
 tests/e2e/test_app_helper_modules.py::test_app_helper_modules_preserve_browser_contracts PASSED
 tests/e2e/test_gestalt_hybrid_launch_qa.py::test_source_less_launch_pad_end_to_end_qa PASSED
 
-============================== 52 passed ==============================
+============================== 60 passed ==============================
 ```
 
 Fail: pytest prints the offending console errors / failed requests verbatim,

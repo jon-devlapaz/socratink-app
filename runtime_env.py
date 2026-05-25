@@ -49,9 +49,12 @@ def dev_autoguest_enabled() -> bool:
     """Local-only dev mode flag.
 
     When SOCRATINK_DEV_AUTOGUEST is truthy AND no production-shaped env
-    markers are present (VERCEL, VERCEL_ENV, CI), dev mode is on.
+    markers are present (VERCEL, VERCEL_ENV, CI), the launcher has opted
+    into local guest convenience. Request handlers must still call
+    local_auth_bypass_enabled(hostname=..., client_host=...) before bypassing
+    auth or exposing frontend dev_mode.
 
-    Two effects, both gated on this single check:
+    Two effects depend on the request-aware local auth bypass:
       1. main.py auth gate trampolines the /login redirect through
          /auth/guest so agents and ad-hoc local browsing skip the wall.
       2. /api/me returns dev_mode=True so the frontend can let guest
@@ -60,17 +63,19 @@ def dev_autoguest_enabled() -> bool:
 
     SECURITY ASSUMPTION (load-bearing — read before changing).
     --------------------------------------------------------
-    This gate is DENY-LIST shaped: dev mode is on for any environment
-    that does not look like Vercel or CI. Today the assumption is safe
-    because SOCRATINK_DEV_AUTOGUEST is only set by `scripts/dev.sh`,
-    which only runs locally.
+    This launcher flag is DENY-LIST shaped: it is on for any environment
+    that does not look like Vercel or CI. Today the assumption is safe because
+    SOCRATINK_DEV_AUTOGUEST is only set by `scripts/dev.sh`, which only runs
+    locally, and the actual bypass also requires SOCRATINK_LOCAL_AUTH_BYPASS
+    not to be falsey plus loopback hostname/client checks.
 
     If you start setting SOCRATINK_DEV_AUTOGUEST anywhere other than a
     developer's local machine — e.g. a non-Vercel staging box, a
-    self-hosted preview, a docker-compose'd integration env — this
-    function will return True there and /api/me will expose
-    `dev_mode: true` to anyone who can reach the endpoint. That bypasses
-    the concept-create auth gate for guest sessions. Either:
+    self-hosted preview, a docker-compose'd integration env — this function
+    may return True there, but local_auth_bypass_enabled must continue to
+    reject non-loopback requests before /api/me exposes `dev_mode: true`.
+    That dev_mode flag bypasses the concept-create auth gate for guest
+    sessions. Either:
 
       (a) extend the deny-list with a marker for the new env (preferred:
           a positive `SOCRATINK_LOCAL=1` allow-list signal that

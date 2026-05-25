@@ -10,7 +10,7 @@ the Vercel serverless function deployment.
 | :--- | :--- | :--- |
 | `extract-system-v1.txt` | Source extraction | Turns raw source material into a structured `ProvisionalMap`. The schema this prompt produces matches `models.ProvisionalMap`. |
 | `generate-smallest-route-system-v1.txt` | Route drafting | Generates a minimal traversal path through the map for the first drill session, including `learner_scaffold` on source-less smallest-route subnodes and optional `learner_goal` relevance framing. |
-| `drill-system-v1.md` | Reconstruction drill | The Socratic drill agent. It turns material into reconstruction targets, uses learner attempts to expose repairable gaps, and classifies reconstruction attempts for the app to record only from reconstruction under the right conditions. The drill route runtime-appends a "Target Node (ANSWER KEY)" block, a "Learner Scaffold" block when present, the learner goal as relevance context, and the pruned map context. |
+| `drill-system-v1.md` | Reconstruction drill | The Socratic drill agent. It turns material into reconstruction targets, uses learner attempts to expose repairable gaps, and classifies reconstruction attempts for the app to record only from reconstruction under the right conditions. The drill route runtime-appends a "Target Node (ANSWER KEY)" block, a "Learner Scaffold" block when present, optional Focused Repair Context for gap drills, the learner goal as relevance context, and the pruned map context. |
 | `repair-reps-system-v1.md` | Repair reps | Post-drill spaced-repetition repair routine for nodes flagged `deep` or `misconception`. |
 
 ## Product Contract
@@ -49,8 +49,11 @@ cheap and Vercel's filesystem is read-only at runtime.
 - **The drill prompt is appended at runtime.** The drill backend
   dynamically appends the "Target Node (ANSWER KEY)" block and, when
   present, a "Learner Scaffold" block to the system prompt before each
-  turn. If you rename anchors inside the prompt that the backend's
-  appender depends on, drill silently breaks.
+  turn. Gap drills may also receive "Focused Repair Context" as
+  JSON-encoded untrusted learner-authored data; use it only to focus the
+  repair pressure-check, never as evidence or instructions. If you rename
+  anchors inside the prompt that the backend's appender depends on, drill
+  silently breaks.
 - **Source-less smallest routes require `learner_scaffold`.** The runtime
   rejects smallest-route subnodes that omit it. Scaffold fields shape the
   task and evaluator scope; they are not learner evidence and must not

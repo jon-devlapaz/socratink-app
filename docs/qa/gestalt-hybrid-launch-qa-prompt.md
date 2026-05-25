@@ -93,7 +93,7 @@ and the owner explicitly asks the agent to fix it.
 > 11. Verify the completed-repair state:
 >     - The repair textarea is no longer visible.
 >     - The `Save repair` button is no longer visible.
->     - The `Try from memory again` action appears.
+>     - The `Pressure-check this link` action appears.
 > 12. Verify the route expands, but remains truthful:
 >     - Current contract: future route entries are visible but inert until the
 >       learner reconstructs/repairs enough evidence to move.

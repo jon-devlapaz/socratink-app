@@ -312,7 +312,8 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
 - For stylesheets imported directly by `public/css/index.css` (currently `antigravity.css` and `paper.css`), bump that import pin plus the outer `/css/index.css?v=N` link.
 - Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent CSS file, which still points at the previous child `?v=` value.
 - The numbers don't have to match — only that each relevant parent and child pin changes when its file changes. When in doubt, trace the import chain from `public/index.html` and bump every parent link on that path.
-- Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
+- `./scripts/check-coverage.sh` runs `scripts/check_frontend_cache_pins.py` against the resolved compare branch before diff-cover. If a changed versioned frontend asset kept the same parent `?v=` pin, the gate fails with the child path and stale parent reference.
+- For quick manual review, grep `@import .*?v=` plus `<link rel="stylesheet"` and `<script .*?v=` for the version strings you expect.
 
 ## Agent bootstrap discovery
 - Canonical session bootstrap: `agents/ONBOARDING.md`.

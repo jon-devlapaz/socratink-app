@@ -335,8 +335,8 @@ class SupabaseAuthService:
     def build_local_dev_guest_session(self) -> AuthSessionState:
         """Build a loopback-only local dev guest session without Supabase.
 
-        Used only when SOCRATINK_DEV_AUTOGUEST is enabled and the router has
-        already verified the request is local. This keeps cookie-clearing QA
+        Used only after the router's request-aware local auth bypass has
+        accepted a loopback/testclient request. This keeps cookie-clearing QA
         from depending on Supabase anonymous sign-in availability.
         """
         return self.build_local_e2e_guest_session()
