@@ -33,7 +33,7 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 - Do not violate Generation Before Recognition.
 - Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs them.
 - Update durable state after meaningful work. `docs/project/state.md` holds live execution truth; logs and merge notes hold current evidence on this branch.
-- Code-generation tasks that touch a third-party SDK, API, hosted platform, browser API, or test framework: fetch current docs via Context7 before writing code. See `AGENTS.md` → "Layer 3 — Context7". If Context7 is unavailable or lacks coverage, use `bash scripts/chub-docs.sh search "<query>"` then `bash scripts/chub-docs.sh get <doc-id> --lang py`. Local binding docs still win on Socratink behavior.
+- Code-generation tasks that touch a third-party SDK, API, hosted platform, browser API, or test framework: fetch current docs via Context7 before writing code. See `AGENTS.md` → "Layer 3 — Context7". If Context7 is unavailable or lacks coverage, run `bash scripts/chub-docs.sh update`, then `bash scripts/chub-docs.sh search "<query>"` and `bash scripts/chub-docs.sh get <doc-id> --lang py`. Local binding docs still win on Socratink behavior.
 - For founder/agent workflow tasks, use `agents/LEARNINGS.md` as a non-binding ledger: read it only for matching workflow friction, append only reusable observations from real usage, and promote recurring patterns through reviewed canon edits.
 
 ## Session Bootstrap Prompt
