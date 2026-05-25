@@ -50,6 +50,7 @@ Door (concept name [+ optional Learner goal] [+ optional Imported source])
 → Cold attempt (local) → writes learner attempt into `socratink:training:v1:<conceptId>`
 → Targeted study → records study reveal; no solidification
 → Repair Reps (optional) → no graph mutation
+→ Gap drill / Pressure-check this link (optional repair pressure-test) → no graph mutation
 → Interleaving Bridge → routing only, no mutation
 → Spaced re-drill → derives `solidified` only from spaced strong reconstruction; gaps derive `needs repair`
 ```

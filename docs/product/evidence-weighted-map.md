@@ -36,7 +36,7 @@ hypothesis -> attempt -> delta -> repair -> spacing -> proof -> trust
 | hypothesis | Draft map proposed from source + starting-map anchor | routing emphasis, prompt shape | none |
 | attempt | Learner exposes current model on a local node (cold attempt) | learner text, private classification, named gaps | training record append; derived `primed` or `needs repair` |
 | delta | System surfaces where the attempt diverges from mechanism | gap emphasis for study | none |
-| repair | Targeted study; optional Repair Reps practice | encoding opportunity, not mastery | none |
+| repair | Targeted study; optional Repair Reps or Gap drill practice | encoding opportunity, not mastery | none |
 | spacing | Interleaved work on other nodes; elapsed time | re-drill eligibility | none (timers only) |
 | proof | Spaced re-drill; multi-step causal reconstruction | classification of the attempt | `solidified` only from spaced strong reconstruction evidence |
 | trust | Graph accumulates solidified evidence | durable, inspectable record | evidence-weighted map |
@@ -206,7 +206,7 @@ The graph must not say or imply:
 - that reading study content, dismissing study, or closing a panel equals mastery
 - that a starting-map threshold produced a mastery claim
 - that confidence ratings, fuzzy-area prompts, or self-assessed skill sliders are evidence of understanding
-- that Repair Reps, self-ratings, or practice history produced `solidified`
+- that Repair Reps, Gap drills, self-ratings, or practice history produced `solidified`
 - that `solidified` can be reached without a spaced re-drill returning a solid classification
 - that a node can derive `solidified` without spaced strong reconstruction evidence
 - that a rollback from `solidified` occurs without a contradicting re-drill
@@ -238,7 +238,7 @@ Engineering rules carry:
 - the shipped browser store folds `node_records[node_id].attempts` and reads `study_revealed_at` for next-action routing
 - the future Supabase/event-log target must preserve the same derivation over equivalent learner reconstruction and study-reveal events
 
-`solidified` is the only graph-truth mutation that requires spaced reconstruction. Study completion, repair reps, self-ratings, and threshold capture must not mutate graph truth.
+`solidified` is the only graph-truth mutation that requires spaced reconstruction. Study completion, repair reps, Gap drills / `Pressure-check this link` sessions, self-ratings, and threshold capture must not mutate graph truth or append training evidence.
 
 Study may mutate the learner. The study view may not mutate graph truth.
 
@@ -301,6 +301,7 @@ concept entry. Reading them alongside this doctrine, the contract is:
 - **Locked study silhouette** = absence of explanatory content is intentional. No graph mutation.
 - **First cold attempt** = the first evidence event. It appends learner reconstruction evidence and derives `primed` or `needs repair`.
 - **Repair artifact (study)** = targeted corrective feedback. No graph mutation.
+- **Gap drill / `Pressure-check this link`** = graph-neutral repair pressure-test. No training evidence append, no graph mutation, no spacing credit.
 - **Interleaving bridge** = routing hint. No graph mutation.
 - **Spaced re-drill** = the only step that may derive graph truth as `solidified`.
 
@@ -321,6 +322,7 @@ Required in MVP:
 - `solidified` can only result from spaced reconstruction.
 - Study does not mutate graph truth.
 - Repair Reps do not mutate graph truth.
+- Gap drills / `Pressure-check this link` sessions do not mutate graph truth, append training evidence, or count as spaced re-drill proof.
 
 Allowed in MVP, required later:
 

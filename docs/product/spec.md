@@ -215,7 +215,7 @@ AI support is allowed only if it preserves the three-phase loop, the drill contr
 
 ### In-Node Routing (AI to Frontend)
 - `PROBE` / `SCAFFOLD`: Stay on node, provide help, no state mutation.
-- `NEXT`: Resolve node phase, append training evidence, re-render derived state, and offer traversal.
+- `NEXT`: Resolve node phase. For recordable, non-graph-neutral attempts, append training evidence, re-render derived state, and offer traversal. Graph-neutral gap drills and non-recordable turns may end the drill UI without appending training evidence or mutating graph state.
 - `SESSION_COMPLETE`: Trigger guardrails.
 
 Recordable attempts behave as follows:

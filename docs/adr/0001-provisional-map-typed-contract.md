@@ -21,7 +21,7 @@ The model enforces structural integrity at parse time:
 
 The route maps any `ValueError` raised by these validators to HTTP 422 — the structural shape is wrong, retrying won't help.
 
-Smallest-route generation adds a stricter profile outside the general model: `learner_scaffold` is optional on `Subnode` so extracted source-backed maps remain valid, but `_validate_smallest_route` rejects generated source-less routes whose subnodes omit it.
+Smallest-route generation adds a stricter profile outside the general model: `learner_scaffold` is optional on `Subnode` so extracted source-backed maps remain valid, but `_validate_smallest_route` rejects generated source-less routes whose subnodes omit it or whose scaffold fields copy a substantial hidden mechanism phrase.
 
 `extra="forbid"` is intentionally **not** set. Pydantic emits `additionalProperties: false` in the JSON Schema when `extra="forbid"` is configured, and Gemini's `response_schema` parameter rejects schemas containing it. Field-level correctness is governed by the prompt + the closure validators above. See `parse_repair_reps_response` in `models/repair_reps.py` for the same precedent.
 

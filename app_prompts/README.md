@@ -55,9 +55,10 @@ cheap and Vercel's filesystem is read-only at runtime.
   anchors inside the prompt that the backend's appender depends on, drill
   silently breaks.
 - **Source-less smallest routes require `learner_scaffold`.** The runtime
-  rejects smallest-route subnodes that omit it. Scaffold fields shape the
-  task and evaluator scope; they are not learner evidence and must not
-  reveal the mechanism. Learner-facing route titles should be
+  rejects smallest-route subnodes that omit it or copy a substantial hidden
+  mechanism phrase into scaffold fields. Scaffold fields shape the task and
+  evaluator scope; they are not learner evidence and must not reveal the
+  mechanism. Learner-facing route titles should be
   mechanism-shaped labels, not visible Bloom/task verbs.
 - **Learner sketches are context, not evidence.** Sketches may shape prompt
   wording and repair focus. They must not be graded as reconstruction
