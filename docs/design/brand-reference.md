@@ -105,7 +105,8 @@ Enter concept
 |---|---|---|---|
 | Threshold submitted | starting map captured | routing signal, source dependence, causal depth | **none** |
 | Provisional graph generated | draft route | first-node priority, prompt emphasis | **none** |
-| Local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
+| Recordable local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
+| Non-recordable cold/help turn | learner-facing unscored support turn | practice context only | **none**; no training evidence append |
 | Study revealed | repair artifact | `study_revealed_at`; no mastery signal | stays `primed`; current re-drill readiness derives from attempt timing, not study completion |
 | Interleaving bridge shown | small next-choice set (2–3 rooms + break) | route preference | **none** |
 | Repair rep completed | practice history | self-rating, bridge quality | **none** |

@@ -124,7 +124,7 @@ Expected:
 Ship if all are true:
 - no graph crash
 - no CTA offers an impossible action
-- no stale drill panel remains mounted after returning to map
+- no stale inline drill chamber remains mounted after drill exit, route switch, or active-entry changes
 - no cold attempt leaks a score, tier, ability label, or raw classifier
 - graph and side panel agree on node truth
 - cluster unlock and child-room selection work

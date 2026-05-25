@@ -20,7 +20,7 @@
 > ```
 > `scripts/dev.sh` defaults to loopback-only (`127.0.0.1`). The `HOST=0.0.0.0` override above makes the server reachable at `http://<your-LAN-IP>:8000`, but the local auth bypass remains loopback-only. For LAN/on-device QA, sign in through the normal guest/login path or use a loopback tunnel from the testing browser.
 >
-> Default-guest login is auto-minted only for loopback requests via `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`); LAN requests should expect the login wall.
+> Default-guest login is auto-minted only for loopback/testclient requests when `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`) or `SOCRATINK_LOCAL_AUTH_BYPASS=1`; `SOCRATINK_LOCAL_AUTH_BYPASS=0` opts out. LAN requests should expect the login wall.
 >
 > **App map.**
 > - `/` Ignition view (empty-state hero with Concept + Starting-map composer)
@@ -131,7 +131,7 @@
 > 1. Capture all console messages during every pass. **Fail on any unhandled error** other than the known `_vercel/speed-insights/script.js` 404 in local dev.
 > 2. Capture all failed network requests (`fetch`/`XHR` non-2xx, image 404, missing fonts, missing CSS). Report each.
 > 3. Capture any `Cross-Origin Read Blocking` warnings, mixed-content warnings, or `Refused to apply style` errors.
-> 4. Verify CSS cache-busters across the full chain. If `public/css/*.css` changed, confirm its pin moved in `public/styles.css`, the `../styles.css?v=...` pin moved in `public/css/index.css`, and the outer `/css/index.css?v=...` link moved in `public/index.html`. If `antigravity.css` or `paper.css` changed, confirm its direct `public/css/index.css` import pin and the outer `public/index.html` link moved.
+> 4. Verify versioned frontend cache-busters across the full chain. Prefer `scripts/check_frontend_cache_pins.py <compare-ref>`; it covers CSS and JS parents such as `public/index.html`, `public/css/index.css`, `public/styles.css`, and `public/js/app.js`. If checking manually, confirm any changed versioned child moved every parent `?v=` reference, including script pins for `app.js`/`drill-chamber.js` and JS imports such as `concept-page-view.js`.
 >
 > ---
 >
