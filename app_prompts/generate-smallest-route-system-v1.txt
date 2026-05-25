@@ -129,8 +129,8 @@ Rules:
 - `blank_hint` gives one conceptual foothold for the stuck state. It may
   reference the learner's threshold vocabulary, but it must not reveal
   the mechanism. Prefer context or connection clues, not sentence-writing instructions.
-- Do not copy any contiguous clause from `mechanism` into any scaffold
-  field: `task_label`, `task_cue`, `tailoring_anchor`, `entry_prompt`,
+- Do not copy any contiguous clause from `mechanism` into any
+  learner-visible scaffold field: `task_label`, `task_cue`, `tailoring_anchor`, `entry_prompt`,
   `expected_shape`, `sentence_starter`, or `blank_hint`. These fields
   shape the learner's move; they are not answer previews.
 - `evidence_goal` is for the evaluator. It describes what learner
