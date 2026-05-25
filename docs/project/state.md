@@ -37,7 +37,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 
 ## Use These Docs
 - [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md): binding doctrine for what the graph may/must not claim
-- [docs/product/spec.md](../product/spec.md): binding product contract for the three-phase loop, routing, progression layers, panel modes, and guardrails
+- [docs/product/spec.md](../product/spec.md): binding product contract for the three-phase loop, routing, progression layers, inline concept-entry/result-surface modes, and guardrails
 - [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md): binding drill data-model canon for training evidence, derivation math, and rendering fields
 - [docs/drill/contract.md](../drill/contract.md): compatibility redirect and runtime summary
 - [docs/project/doc-map.md](doc-map.md): curated index of canonical entry points and deep-dives, with precedence rules at the top

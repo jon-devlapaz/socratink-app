@@ -77,8 +77,9 @@ depends on engagement-per-session won't add friction that delays the dopamine
 hit.
 
 **Implication**: **Invest.** This is the load-bearing mechanism. Investments
-that improve the *feel* of the loop (phase clarity in the side panel, the
-ADHD-beat delay in `spec.md` §2 Phase 2, the buffer-flush nudge) compound.
+that improve the *feel* of the loop (phase clarity in the inline concept-entry
+surfaces, the ADHD-beat delay in `spec.md` §2 Phase 2, the buffer-flush nudge)
+compound.
 Investments that blur phases (e.g., "let users skip to study," "preview the
 mechanism before cold attempt") destroy the moat in exchange for a comfort
 metric.

@@ -127,7 +127,7 @@ Ship if all are true:
 - no CTA offers an impossible action
 - no stale inline drill chamber remains mounted after drill exit, route switch, or active-entry changes
 - no cold attempt leaks a score, tier, ability label, or raw classifier
-- graph and side panel agree on node truth
+- graph, concept entry, and inline chamber agree on node truth
 - cluster unlock and child-room selection work
 
 Do not ship if any occur:
