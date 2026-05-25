@@ -73,7 +73,7 @@ and the owner explicitly asks the agent to fix it.
 > 4. Enter the launch sketch and save it.
 > 5. On the first concept view, verify:
 >    - The first prompt is tailored to the sketch.
->    - A visible line like `Shaped by your sketch: ...` appears.
+>    - No learner-facing line like `Shaped by your sketch: ...` appears; sketch tailoring stays internal to the prompt/scaffold.
 >    - The prompt asks for the learner's guess before study content appears.
 >    - The mechanism answer is not visible before the draft.
 >    - Generated descriptions do not leak before the draft.

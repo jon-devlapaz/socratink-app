@@ -470,8 +470,9 @@ def _validate_smallest_route(pm: ProvisionalMap) -> None:
 
     Counts total drillable subnodes across all clusters on the
     ProvisionalMap. Raises SmallestRouteCapExceeded if the count is 0
-    or >4, if any cluster contains anything other than one subnode, or if
-    any generated subnode lacks learner_scaffold.
+    or >4, if any cluster contains anything other than one subnode, if
+    any generated subnode lacks learner_scaffold, or if scaffold fields
+    copy a substantial hidden mechanism phrase.
 
     Counting subnodes rather than top-level clusters is the actual
     structural defence of the spec invariant: ProvisionalMap permits
@@ -531,7 +532,8 @@ def generate_smallest_provisional_map(
     ProvisionalMap with no more than 4 drillable nodes total (one suggested
     first target plus up to 3 hints). Raises SmallestRouteCapExceeded for
     generation-side shape failures: over-cap routes, missing routes,
-    multi-subnode clusters, or generated subnodes without learner_scaffold.
+    multi-subnode clusters, generated subnodes without learner_scaffold,
+    or scaffold fields that copy a substantial hidden mechanism phrase.
 
     Optional ``lc_context`` is grounding-only, never authoritative.
     """

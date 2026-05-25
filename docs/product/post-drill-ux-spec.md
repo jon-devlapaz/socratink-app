@@ -51,7 +51,7 @@ What it means:
 Required visual treatment:
 
 - node appears `primed` (warm, open, distinct from no-evidence and needs-repair states)
-- concept page offers an explicit `Compare with notes` action; study material is not recorded as revealed until the learner takes it
+- concept page offers an explicit `Reveal notes and compare` action; study material is not recorded as revealed until the learner takes it
 - concept page preserves the latest learner attempt as `Your draft` before study reveal
 - `Missing piece` details remain hidden until `study_revealed_at` exists
 - future side-panel treatment may add the 2-3 second transition beat after that explicit reveal
@@ -61,7 +61,7 @@ Required visual treatment:
 
 Required copy:
 
-- headline: `Compare with notes` CTA before study material appears
+- headline: `Reveal notes and compare` CTA before study material appears
 - evidence artifact: `Your draft` with the learner's exact attempt text; no `Missing piece` list until study is revealed
 - normalization message (one of): "Your guess just primed your brain. Now let's see what's really going on." / "Most learners get this wrong the first time. That's by design." / "This is how your brain prepares to learn." / "That attempt just activated your semantic networks. The study material will land harder now."
 
