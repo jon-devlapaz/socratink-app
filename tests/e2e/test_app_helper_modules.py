@@ -1336,16 +1336,20 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPageRepairHtml.includes('Needs repair'), 'concept page repair eyebrow');
             assert(conceptPageRepairHtml.includes('concept-page-b2__evidence'), 'concept page repair evidence artifact renders');
+            assert(conceptPageRepairHtml.includes('concept-page-b2__evidence--compact'), 'concept page repair evidence compacts the draft');
             assert(conceptPageRepairHtml.includes('Your draft'), 'concept page repair uses learner-owned draft label');
-            assert(conceptPageRepairHtml.includes('Missing piece'), 'concept page repair uses human missing-piece label');
+            assert(!conceptPageRepairHtml.includes('Missing piece'), 'concept page repair avoids duplicating the missing-piece label in evidence');
             assert(!conceptPageRepairHtml.includes('repair hinge'), 'concept page repair hides rubric hinge language');
             assert(conceptPageRepairHtml.includes('Sodium just rushes in.'), 'concept page repair preserves learner words');
             assert(conceptPageRepairHtml.includes('Name that voltage-gated sodium channels open at threshold.'), 'concept page repair surfaces hinge');
             assert(conceptPageRepairHtml.includes('concept-page-b2__repair'), 'concept page repair panel');
             assert(conceptPageRepairHtml.includes('data-repair-entry-id="repair"'), 'concept page repair save target');
-            assert(conceptPageRepairHtml.includes('Put it in your words'), 'concept page repair panel uses generation language');
-            assert(conceptPageRepairHtml.includes('1 missing link to repair'), 'concept page repair shows missing link count');
-            assert(conceptPageRepairHtml.includes('Save this repair before you try from memory again.'), 'concept page repair explains retry order');
+            assert(conceptPageRepairHtml.includes('Missing link'), 'concept page repair keeps one focused target');
+            assert(conceptPageRepairHtml.includes('Write the missing link.'), 'concept page repair panel uses concise generation language');
+            assert(conceptPageRepairHtml.includes('Use your words. One or two sentences is enough.'), 'concept page repair gives brief scope');
+            assert(!conceptPageRepairHtml.includes('1 missing link to repair'), 'concept page repair removes count chip noise');
+            assert(!conceptPageRepairHtml.includes('Save this repair before you try from memory again.'), 'concept page repair removes order explanation');
+            assert(conceptPageRepairHtml.includes('Show study note'), 'concept page repair starts with study note tucked away');
             assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
             const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
               { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },

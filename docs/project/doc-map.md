@@ -22,7 +22,7 @@ On all other topics, the doc listed below for that topic is authoritative.
 | --- | --- |
 | Full UX manifesto (prose source for DESIGN.md §§3–6) | [`docs/design/socratink-ux.md`](../design/socratink-ux.md) |
 | Design system component rules | [`docs/design/socratink-design-system.md`](../design/socratink-design-system.md) |
-| Product spec (three-phase loop, routing, progression layers, panel modes, guardrails) | [`docs/product/spec.md`](../product/spec.md) |
+| Product spec (three-phase loop, routing, progression layers, inline surface modes, guardrails) | [`docs/product/spec.md`](../product/spec.md) |
 | Evidence-weighted map doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
 | Test-driven learning founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
 | Drill data-model canon | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
@@ -34,7 +34,7 @@ On all other topics, the doc listed below for that topic is authoritative.
 | --- | --- |
 | Derived training state and rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
 | Feynman prompt integration proposal (proposal-only, not runtime canon) | [`docs/superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md`](../superpowers/specs/2026-05-18-nanny-feynman-prompt-integration.md) |
-| Post-drill panel UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
+| Post-drill result-surface UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
 | Drill contract redirect | [`docs/drill/contract.md`](../drill/contract.md) |
 
 ## Release gates

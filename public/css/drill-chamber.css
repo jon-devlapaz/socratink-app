@@ -413,3 +413,111 @@
 [data-theme="dark"] .drill-chamber__creed li { color: rgba(247, 236, 225, 0.72); }
 [data-theme="dark"] .drill-chamber__creed strong { color: rgba(247, 236, 225, 0.96); }
 [data-theme="dark"] .drill-chamber__creed-diamond { background: rgba(176, 156, 224, 0.85); }
+
+/* ------- Inline chamber mode inside Concept View ------- */
+.concept-page-b2__active-entry .drill-chamber-view {
+  position: relative;
+  inset: auto;
+  z-index: auto;
+  overflow: visible;
+  background: transparent;
+  color: inherit;
+}
+
+.concept-page-b2__active-entry .drill-chamber-view::before {
+  position: absolute;
+  inset: 12px 0 auto;
+  height: 220px;
+  opacity: 0.72;
+}
+
+.concept-page-b2__active-entry .drill-chamber__inner {
+  max-width: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.concept-page-b2__active-entry .drill-chamber__crumb {
+  padding: 0 0 10px;
+  font-size: 12px;
+  opacity: 0.68;
+}
+
+.drill-chamber__chat-log {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 20px;
+}
+
+.drill-chamber__chat-log[hidden] {
+  display: none;
+}
+
+.concept-page-b2__active-entry .drill-chamber__history-turn {
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--violet-600-rgb), 0.10);
+  border-radius: 8px;
+  background: rgba(var(--white-rgb), 0.34);
+  opacity: 0.46;
+}
+
+.concept-page-b2__active-entry .drill-chamber__active {
+  min-height: clamp(220px, 32vh, 360px);
+  justify-content: flex-start;
+  max-width: none;
+  margin: 0;
+  padding-left: 0;
+  border-left: 0;
+}
+
+.concept-page-b2__active-entry .drill-chamber__question {
+  font-size: clamp(22px, 3vw, 28px);
+  line-height: 1.36;
+  margin-bottom: 16px;
+}
+
+.concept-page-b2__active-entry .drill-chamber__composer textarea {
+  min-height: clamp(84px, 14vh, 170px);
+  resize: vertical;
+  border: 1px solid rgba(var(--violet-600-rgb), 0.18);
+  border-radius: 10px;
+  background: rgba(var(--white-rgb), 0.52);
+  padding: 16px 18px;
+}
+
+.concept-page-b2__active-entry .drill-chamber__send:active {
+  transform: scale(0.98);
+}
+
+[data-theme="dark"] .concept-page-b2__active-entry .drill-chamber__history-turn {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(176, 156, 224, 0.14);
+}
+
+[data-theme="dark"] .concept-page-b2__active-entry .drill-chamber__composer textarea {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(176, 156, 224, 0.18);
+}
+
+@media (max-width: 720px) {
+  .concept-page-b2__active-entry .drill-chamber__crumb {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .concept-page-b2__active-entry .drill-chamber__active {
+    min-height: 220px;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 721px) {
+  .concept-page-b2__active-entry .drill-chamber__active {
+    min-height: 250px;
+  }
+
+  .concept-page-b2__active-entry .drill-chamber__composer textarea {
+    min-height: 138px;
+  }
+}

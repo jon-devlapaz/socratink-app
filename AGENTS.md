@@ -147,12 +147,13 @@ playwright install chromium
 ### Run locally
 ```bash
 # Preferred: validates local auth env before starting the login-gated app.
-# Binds Uvicorn to 127.0.0.1 by default (loopback-only). For on-device mobile
-# QA (see docs/qa/antigravity-mobile-qa-prompt.md), override with
-# HOST=0.0.0.0 bash scripts/dev.sh so it's reachable at http://<your-LAN-IP>:8000.
+# Binds Uvicorn to 127.0.0.1 by default (loopback-only). HOST=0.0.0.0 makes
+# the server reachable on LAN, but the auth bypass remains loopback-only.
 bash scripts/dev.sh
 
-# Direct fallback if you already ran the preflight:
+# Direct fallback if you already ran the preflight. Plain uvicorn does not set
+# the explicit local auth-bypass env; use scripts/dev.sh for the localhost
+# guest escape hatch.
 python scripts/check-local-auth.py
 uvicorn main:app --reload
 
@@ -160,20 +161,20 @@ uvicorn main:app --reload
 SOCRATINK_DISABLE_DOTENV_LOCAL=1 uvicorn main:app --reload
 
 # Opt out of the auto-guest dev escape hatch (test the /login wall locally).
-# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default. Two effects, both
-# gated on this single env var (and hard-disabled in any VERCEL / VERCEL_ENV
-# / CI runtime):
+# SOCRATINK_LOCAL_AUTH_BYPASS=0 disables the loopback localhost bypass.
+# scripts/dev.sh sets SOCRATINK_DEV_AUTOGUEST=1 by default. Two effects are
+# hard-disabled in any VERCEL / VERCEL_ENV / CI runtime and still require a
+# loopback request host plus loopback client:
 #   1. The auth gate trampolines protected GETs through /auth/guest instead
 #      of /login, so agents and ad-hoc local browsing skip the wall.
-#   2. /api/me returns dev_mode: true, which lets the frontend allow guest
-#      sessions through the concept-create dialog. Without dev_mode the
-#      dialog shows "Guest mode uses sample maps. Sign in to extract your
-#      own content into a draft map." and blocks the LLM extract path.
+#   2. /api/me returns dev_mode: true as a compatibility signal for local
+#      tooling; the browser auth bypass is enforced by the server-side routes
+#      and loopback request checks.
 # scripts/dev.sh also sets SOCRATINK_E2E_LOCAL_GUEST=1 by default. Local
 # browser tests use /auth/e2e/guest to mint a loopback-only guest cookie
 # without creating real Supabase anonymous users or burning auth rate limits.
 # Restart the server after toggling — uvicorn --reload reloads code, not env.
-SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
+SOCRATINK_LOCAL_AUTH_BYPASS=0 SOCRATINK_DEV_AUTOGUEST=0 bash scripts/dev.sh
 
 # Free localhost:8000–8009 if a previous uvicorn / smoke run left a listener
 # behind. SIGTERM first, then SIGKILL only for survivors.
@@ -235,7 +236,7 @@ python scripts/run_tasting_fixture.py
 - Threshold is on the diff, not the project total. Brand-new code without coverage fails; existing legacy gaps are not scored.
 - Pure-deletion diffs, doc-only diffs, and config-only diffs are correctly no-ops — diff-cover only scores added/modified executable lines.
 - Backend scope is `api auth db llm models source_intake` (see `scripts/test-cov.sh`). Frontend scope is `public/js/**` (see the URL filter in `scripts/generate-frontend-coverage.js`).
-- With the default `SOCRATINK_BASE_URL` (`http://localhost:8000`) or `http://127.0.0.1:8000`, the script reuses a healthy local app if one is already running; otherwise it starts loopback uvicorn and writes `.qa-runs/check-coverage-uvicorn.log`. Non-local `SOCRATINK_BASE_URL` values are used as-is and are not auto-started.
+- For any `http://localhost:<port>` or `http://127.0.0.1:<port>` `SOCRATINK_BASE_URL`, the script reuses a healthy local app if one is already running; otherwise it starts loopback uvicorn on that port and writes `.qa-runs/check-coverage-uvicorn.log`. Non-local `SOCRATINK_BASE_URL` values are used as-is and are not auto-started.
 - If the script crashes outside of a coverage failure (missing V8 data, missing `coverage.xml`), inspect `.qa-runs/v8-coverage/*.json` and `.qa-runs/coverage-reports/cobertura-coverage.xml` before reaching for `--no-verify`-style escapes. The gate is the brake; do not bypass it silently.
 
 ### Deploy verification
@@ -301,16 +302,18 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
   - serverless function explicitly includes `public/**` and `app_prompts/**`
   - serverless function excludes everything else (tests, docs, scripts, db, agents, node_modules, dotfiles, and root-level config/docs like `*.md`, `*.yaml`, `*.json`, `*.ini`); see `vercel.json` for the canonical glob
 
-### Stylesheet cache-bust discipline
-- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `public/css/index.css` → `public/styles.css` → `public/css/*.css`, with `antigravity.css` and `paper.css` still imported directly by `public/css/index.css`.
+### Frontend cache-bust discipline
+- Versioned frontend assets in `public/` are loaded through parent references. Stylesheets use `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `public/css/index.css` → `public/styles.css` → `public/css/*.css`, with `antigravity.css` and `paper.css` still imported directly by `public/css/index.css`. JavaScript uses `public/index.html` script pins plus versioned imports such as `public/js/app.js` → `public/js/concept-page-view.js`.
 - **When editing a stylesheet imported by `public/styles.css`, bump all THREE version pins:**
   1. The component import in `public/styles.css` (e.g., `./css/concept-page.css?v=9` → `?v=10`).
   2. The `../styles.css?v=M` import in `public/css/index.css`.
   3. The outer `/css/index.css?v=N` link in `public/index.html`.
 - For stylesheets imported directly by `public/css/index.css` (currently `antigravity.css` and `paper.css`), bump that import pin plus the outer `/css/index.css?v=N` link.
-- Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent CSS file, which still points at the previous child `?v=` value.
+- For JavaScript loaded from `public/index.html`, bump that script pin when the child changes; for JavaScript imported by another module, bump the parent import pin as well.
+- Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent file, which still points at the previous child `?v=` value.
 - The numbers don't have to match — only that each relevant parent and child pin changes when its file changes. When in doubt, trace the import chain from `public/index.html` and bump every parent link on that path.
-- Catch missed bumps in pre-commit by grepping `@import url(.*\?v=` and `<link rel="stylesheet"` for the version strings you expect.
+- `./scripts/check-coverage.sh` runs `scripts/check_frontend_cache_pins.py` against the resolved compare branch before diff-cover. If a changed versioned frontend asset kept the same parent `?v=` pin, the gate fails with the child path and stale parent reference.
+- For quick manual review, grep `@import .*?v=` plus `<link rel="stylesheet"` and `<script .*?v=` for the version strings you expect.
 
 ## Agent bootstrap discovery
 - Canonical session bootstrap: `agents/ONBOARDING.md`.

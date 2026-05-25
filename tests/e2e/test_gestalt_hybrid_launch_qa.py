@@ -160,6 +160,7 @@ def test_source_less_launch_pad_end_to_end_qa(
     page_errors = _page_errors(clean_page)
     bad_responses = _same_origin_response_failures(clean_page, same_origin)
     requests_seen: list[str] = []
+    drill_payloads: list[dict] = []
 
     def fulfill_extract(route) -> None:
         payload = route.request.post_data_json
@@ -175,6 +176,7 @@ def test_source_less_launch_pad_end_to_end_qa(
 
     def fulfill_drill(route) -> None:
         payload = route.request.post_data_json
+        drill_payloads.append(payload)
         requests_seen.append(f"POST /api/drill {payload['node_id']}")
         route.fulfill(
             status=200,
@@ -233,9 +235,7 @@ def test_source_less_launch_pad_end_to_end_qa(
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=10_000)
-    expect(canvas).to_contain_text(
-        "Shaped by your sketch: You mentioned a clinic room feeling cold"
-    )
+    expect(canvas).not_to_contain_text("Shaped by your sketch")
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "What do you think the thermostat checks before it calls for heat?"
     )
@@ -264,21 +264,30 @@ def test_source_less_launch_pad_end_to_end_qa(
     expect(clean_page.locator(".concept-page-b2__study-note")).to_contain_text(
         "measured room temperature with the set point"
     )
-    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text(
+    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "Missing piece"
     )
     expect(clean_page.locator(".concept-page-b2__repair")).to_be_visible()
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
 
     clean_page.locator(".concept-page-b2__repair-input").fill(
         "The thermostat compares the room temperature to the set point before it asks for heat."
     )
     clean_page.locator(".concept-page-b2__repair-save").click()
     expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
-        "Try from memory again"
+        "Pressure-check this link"
     )
 
     clean_page.locator(".concept-page-b2__entry-cta").click()
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    expect(
+        clean_page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
+    ).to_be_visible()
+    clean_page.locator("#chamber-composer").fill(
+        "The thermostat compares the measured room temperature with the set point before calling for heat."
+    )
+    clean_page.locator("#chamber-send").click()
+    expect(clean_page.locator("#chamber-composer")).to_be_disabled()
     expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
     expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
         "data-route-expanded", "true"
@@ -292,6 +301,16 @@ def test_source_less_launch_pad_end_to_end_qa(
 
     assert "POST /api/extract Thermostat feedback loop" in requests_seen
     assert "POST /api/drill c1_s1" in requests_seen
+    repair_gap_payloads = [
+        payload for payload in drill_payloads
+        if "Learner repair text:" in (payload.get("node_mechanism") or "")
+    ]
+    assert repair_gap_payloads
+    assert repair_gap_payloads[-1]["drill_mode"] == "re_drill"
+    assert (
+        "The thermostat compares the room temperature to the set point before it asks for heat."
+        in repair_gap_payloads[-1]["node_mechanism"]
+    )
 
     if page_errors:
         pytest.fail("pageerror events:\n" + "\n".join(f"  - {err}" for err in page_errors))

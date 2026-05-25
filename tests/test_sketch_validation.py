@@ -49,3 +49,16 @@ def test_case_insensitive_dont_know_patterns():
 def test_empty_string_is_non_substantive():
     assert is_substantive_sketch("") is False
     assert is_substantive_sketch("   ") is False
+
+
+def test_is_dont_know_empty_string():
+    from models.sketch_validation import _is_dont_know
+
+    assert _is_dont_know("") is True
+
+
+def test_dont_know_pattern_with_short_followup():
+    assert is_substantive_sketch("idk really") is False
+    assert is_substantive_sketch("no idea about plants") is False
+    assert is_substantive_sketch("idk really how plants") is False
+    assert is_substantive_sketch("idk really maybe something with light water sugar growth") is True

@@ -277,7 +277,7 @@ def _seed_route_margin_concept(page: Page) -> None:
                                 entry_prompt: 'What do you think makes the sodium channel open?',
                                 expected_shape: 'Write one sentence. Name the trigger, even if you are guessing.',
                                 sentence_starter: 'My current guess is that the sodium channel opens when...',
-                                blank_hint: 'Start with the word threshold and say what it might do.',
+                                blank_hint: 'Think about the point where a small signal becomes enough to matter.',
                                 evidence_goal: 'Learner names a trigger for channel opening before study content appears.',
                             },
                         }],
@@ -557,7 +557,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
     expect(page.locator("#concept-header-tags .map-badge.state")).to_have_count(0)
     expect(page.locator(".concept-page-b2__provenance")).to_have_text(
-        "Shaped from your launch attempt, not verified against a source."
+        "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Draft saved"
@@ -740,9 +740,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.locator(".library-card-vault", has_text="Repair Truth QA").click()
     expect(page.locator("#concept-header-title")).to_contain_text("Repair QA source")
     expect(page.locator("#concept-header-tags")).not_to_contain_text("thin sketch")
-    expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
-        "Your starting sketch:"
-    )
+    expect(page.locator(".concept-page-b2__threshold")).to_contain_text("Context")
     expect(page.locator(".concept-page-b2__threshold")).not_to_contain_text(
         "Learner thinks"
     )
@@ -760,13 +758,16 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Needs repair"
     )
-    expect(page.locator(".concept-page-b2__evidence")).to_contain_text("Missing piece")
+    expect(page.locator(".concept-page-b2__evidence")).not_to_contain_text(
+        "Missing piece"
+    )
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
-        "voltage-gated sodium channels"
+        "Missing link"
     )
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "Name that threshold opens the channel"
     )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
 
     page.locator(".concept-page-b2__repair-save").click()
     expect(page.locator("[data-repair-error]")).to_be_visible()
@@ -809,12 +810,15 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Needs repair"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Try from memory again"
+        "Pressure-check this link"
     )
     expect(page.locator(".concept-page-b2__repair")).to_be_visible()
     page.locator(".concept-page-b2__entry-cta").click()
-    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
-    expect(page.locator(".concept-page-b2__repair")).to_have_count(0)
+    expect(page.locator("#drill-chamber-view")).to_be_visible()
+    expect(
+        page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
+    ).to_be_visible()
+    expect(page.locator(".concept-page-b2__attempt-input")).to_have_count(0)
     repaired_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
     )
@@ -1823,7 +1827,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(clean_page.locator("#concept-view-switch")).to_have_text("Constellation")
     expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
     expect(canvas.locator(".concept-page-b2__scope")).to_contain_text(
-        "Study material stays hidden until you draft from memory."
+        "Write first. Compare after."
     )
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
     expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(4)
@@ -1838,7 +1842,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__attempt-input")).to_be_visible()
     expect(canvas.locator(".concept-page-b2__attempt-input")).to_have_attribute(
         "placeholder",
-        "Draft your starting guess: what it does, what it connects to, or why it matters.",
+        "My current guess is that the sodium channel opens when...",
     )
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "What do you think makes the sodium channel open?"
@@ -1847,11 +1851,100 @@ def test_concept_view_opens_to_route_margin_canvas(
         "Write one sentence. Name the trigger, even if you are guessing."
     )
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text(
-        "Save starting guess for comparison"
+        "Use this draft"
     )
     expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
-        "Not sure yet? Type what you think it might do, or list a few terms you recognize."
+        "Think about the point where a small signal becomes enough to matter."
     )
+    attempt_input = canvas.locator(".concept-page-b2__attempt-input")
+    attempt_input.fill("asdasdas")
+    blank_start = canvas.locator("[data-blank-start]")
+    expect(blank_start).to_have_text("Stuck?")
+    expect(blank_start).to_have_attribute("aria-expanded", "false")
+    blank_start.click()
+    expect(canvas.locator("[data-blank-start-hint]")).to_be_visible()
+    expect(canvas.locator("[data-blank-start-hint]")).to_contain_text(
+        "Think about the point where a small signal becomes enough to matter."
+    )
+    expect(canvas.locator("[data-blank-start-hint]")).not_to_contain_text(
+        "The mechanism stays hidden"
+    )
+    expect(attempt_input).to_have_value("asdasdas")
+    assert clean_page.evaluate(
+        "() => document.activeElement === document.querySelector('.concept-page-b2__attempt-input')"
+    )
+    attempt_input.fill("")
+    fallback_html = clean_page.evaluate(
+        """async () => {
+            const mod = await import('/js/concept-page-view.js?v=15');
+            const entries = mod.deriveConceptEntries({
+                clusters: [{
+                    id: 'c1',
+                    subnodes: [{
+                        id: 'c1_s1',
+                        label: 'Fallback route',
+                        learner_scaffold: {
+                            bloom_level: 'understand',
+                            learner_move: 'Say it',
+                            task_label: 'Fallback route',
+                            task_cue: 'Name the relationship.',
+                            tailoring_anchor: '',
+                            entry_prompt: 'What relationship do you think matters here?',
+                            expected_shape: 'Write one relationship you suspect.',
+                            sentence_starter: '',
+                            blank_hint: '',
+                            evidence_goal: 'Learner names a suspected relationship.',
+                        },
+                    }],
+                }],
+            });
+            return mod.renderActiveEntryHtml(
+                entries[0],
+                0,
+                entries,
+                {},
+                { metadata: {} },
+                { source_mode: 'source_less', node_records: {} }
+            );
+        }"""
+    )
+    assert "Write one relationship you suspect." in fallback_html
+    assert "Type one relationship you suspect, even if it feels incomplete." in fallback_html
+    empty_fallback_html = clean_page.evaluate(
+        """async () => {
+            const mod = await import('/js/concept-page-view.js?v=15');
+            const entries = mod.deriveConceptEntries({
+                clusters: [{
+                    id: 'c1',
+                    subnodes: [{
+                        id: 'c1_s1',
+                        label: 'Empty scaffold',
+                        learner_scaffold: {
+                            bloom_level: 'understand',
+                            learner_move: 'Say it',
+                            task_label: 'Empty scaffold',
+                            task_cue: 'Name the relationship.',
+                            tailoring_anchor: '',
+                            entry_prompt: 'What relationship do you think matters here?',
+                            expected_shape: '',
+                            sentence_starter: '',
+                            blank_hint: '',
+                            evidence_goal: 'Learner names a suspected relationship.',
+                        },
+                    }],
+                }],
+            });
+            return mod.renderActiveEntryHtml(
+                entries[0],
+                0,
+                entries,
+                {},
+                { metadata: {} },
+                { source_mode: 'source_less', node_records: {} }
+            );
+        }"""
+    )
+    assert "Write the first useful version of your current model." in empty_fallback_html
     canvas.locator(".concept-page-b2__attempt-input").fill(
         "Sodium channels probably open when voltage reaches a trigger."
     )
@@ -2122,9 +2215,7 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "What do you think the thermostat checks before it calls for heat?"
     )
-    expect(canvas).to_contain_text(
-        "Shaped by your sketch: You mentioned a clinic room feeling cold"
-    )
+    expect(canvas).not_to_contain_text("Shaped by your sketch")
     expect(canvas).to_contain_text("Compare target")
     expect(canvas).to_contain_text("Call for heat")
     expect(canvas).not_to_contain_text("compares measured room temperature")
@@ -2150,18 +2241,33 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     expect(clean_page.locator(".concept-page-b2__study-note")).to_contain_text(
         "measured room temperature with the set point"
     )
-    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text("Missing piece")
+    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
+        "Missing piece"
+    )
+    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
+        "Missing link"
+    )
+    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
+        "Name that the thermostat compares room temperature with the set point."
+    )
+    expect(clean_page.locator(".concept-page-b2__repair")).not_to_contain_text(
+        "The sketch names current but misses comparison to a target set point."
+    )
     expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
         "Generated description should not leak"
     )
     expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
 
     clean_page.reload()
     reopen_created_concept()
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
 
+    clean_page.locator(".concept-page-b2__repair-input").fill(
+        "The thermostat compares the room temperature to the set point before it asks for heat."
+    )
+    clean_page.locator(".concept-page-b2__repair-save").click()
     clean_page.locator(".concept-page-b2__entry-cta").click()
     expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
     expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
@@ -2174,11 +2280,24 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     clean_page.reload()
     reopen_created_concept()
     expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Pressure-check this link"
+    )
 
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="c2_s1"]').click()
     clean_page.wait_for_timeout(700)
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Call for heat")
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "Generated future description should not leak"
+    )
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "When measured temperature is below the set point"
+    )
+    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
+        "Hidden future study note"
+    )
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
 
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="c3_s1"]').click()
     clean_page.wait_for_timeout(700)
@@ -2218,10 +2337,23 @@ def test_source_less_defensive_ui_paths_remain_inert(
     expect(clean_page.locator("body")).to_have_class(re.compile(r"\bis-drilling\b"))
     clean_page.evaluate("App.hideMapView()")
     expect(clean_page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
+    clean_page.evaluate(
+        """async () => {
+            App.hideMapView();
+            App.startDrill({
+                id: 'c2_s1',
+                type: 'subnode',
+                label: 'Opening rule',
+                detail: 'Explain the opening rule.',
+            });
+            App.cancelDrill({ restoreMap: false });
+            await Promise.resolve();
+        }"""
+    )
 
     fallback_mode = clean_page.evaluate(
         """async () => {
-            const view = await import('/js/concept-page-view.js?v=10');
+            const view = await import('/js/concept-page-view.js?v=15');
             return view.deriveSourceLessViewMode({
                 attempted: true,
                 next_action: 'spaced_attempt',

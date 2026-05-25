@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 
@@ -485,6 +486,44 @@ def test_print_first_run_json_emits_machine_readable_preview(capsys):
     assert preview["override"] is True
     assert preview["ack_command"].startswith("python3 scripts/agent-push.py --target origin/dev --ack ")
     assert preview["triggered_rules"] == ["main.py"]
+
+
+def test_push_sends_current_branch_head_to_target_ref(monkeypatch, tmp_path):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(mod, "AUTH_PATH", tmp_path / "push-auth.json")
+    calls = []
+
+    def fake_run(args, *, cwd):
+        calls.append((args, cwd))
+        return subprocess.CompletedProcess(args, 0)
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    payload = mod.AuthorizationPayload(
+        branch="codex/goal-run-20260524",
+        head_sha="abc1234",
+        dirty=False,
+        route="no-mistakes/dev",
+        remote_url="/tmp/.no-mistakes/repos/review-gate.git",
+        refspec="dev",
+        diff_fingerprint="fingerprint-1",
+        risk_class="confirm",
+        nonce="nonce-1",
+        issued_at_epoch=1,
+    )
+
+    assert mod._push(payload) == 0
+    assert calls == [
+        (
+            [
+                "git",
+                "push",
+                "no-mistakes",
+                "refs/heads/codex/goal-run-20260524:refs/heads/dev",
+            ],
+            tmp_path,
+        )
+    ]
 
 
 def test_json_error_output_is_machine_readable(monkeypatch, capsys):

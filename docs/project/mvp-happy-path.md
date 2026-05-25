@@ -17,10 +17,10 @@ Read first:
 
 For this branch, a workable MVP means a freshly created concept with a clear causal structure supports this loop without obvious breaks:
 
-1. Core Thesis cold attempt
-2. Core Thesis study and return to map
-3. Backbone cold attempt
-4. Backbone study unlocks the cluster
+1. First visible route entry cold attempt
+2. First visible route entry study inside the concept workspace
+3. Next reachable route entry cold attempt
+4. Next reachable route entry study unlocks the cluster
 5. Cluster exposes child drill rooms
 6. Child cold attempt resolves cleanly
 7. Original node can later re-drill after the shipped spacing timer
@@ -58,12 +58,13 @@ Create a concept from source material that should extract into a Core Thesis, ba
 
 Expected:
 - graph loads without crashing
-- Core Thesis is the first reachable room
+- the first visible route entry is the first reachable drill target
+- the hidden synthetic Core Thesis fallback is not offered when route entries exist
 - unreachable nodes are visibly ghosted, not deceptively clickable
 
-### 4. Cold Attempt On Core Thesis
+### 4. Cold Attempt On The First Visible Entry
 
-Start Core Thesis and give a real answer.
+Start the selected route entry and give a real answer.
 
 Expected:
 - exactly one active drill target
@@ -71,18 +72,18 @@ Expected:
 - recordable attempt creates training evidence and derives `primed` or `needs repair`
 - Targeted Study opens
 
-### 5. Return From Core Thesis Study
+### 5. Return From First Entry Study
 
-Complete study and return to the graph.
+Complete study in the inline concept workspace.
 
 Expected:
 - stale drill transcript is gone
 - next reachable branch is visible
-- graph does not still offer Core Thesis as a fresh start
+- graph does not still offer the completed entry as a fresh start
 
-### 6. Cold Attempt On Backbone
+### 6. Cold Attempt On The Next Reachable Entry
 
-Start the reachable backbone room and complete the cold attempt and study.
+Start the next reachable route entry and complete the cold attempt and study.
 
 Expected:
 - backbone records learner reconstruction evidence
@@ -124,9 +125,9 @@ Expected:
 Ship if all are true:
 - no graph crash
 - no CTA offers an impossible action
-- no stale drill panel remains mounted after returning to map
+- no stale inline drill chamber remains mounted after drill exit, route switch, or active-entry changes
 - no cold attempt leaks a score, tier, ability label, or raw classifier
-- graph and side panel agree on node truth
+- graph, concept entry, and inline chamber agree on node truth
 - cluster unlock and child-room selection work
 
 Do not ship if any occur:

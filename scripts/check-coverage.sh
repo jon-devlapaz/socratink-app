@@ -41,13 +41,17 @@ PY
 
 ensure_local_server() {
     local base_url="${SOCRATINK_BASE_URL:-http://localhost:8000}"
-    case "$base_url" in
-        http://localhost:8000|http://127.0.0.1:8000)
-            ;;
-        *)
-            return 0
-            ;;
-    esac
+    local local_port
+    local_port=$(.venv/bin/python - "$base_url" <<'PY'
+import sys
+from urllib.parse import urlparse
+
+parsed = urlparse(sys.argv[1])
+if parsed.scheme != "http" or parsed.hostname not in {"localhost", "127.0.0.1"}:
+    raise SystemExit(1)
+print(parsed.port or 80)
+PY
+    ) || return 0
 
     local health_url="${base_url%/}/api/health"
     if .venv/bin/python - "$health_url" <<'PY'
@@ -74,7 +78,7 @@ PY
     mkdir -p .qa-runs
     SOCRATINK_DEV_AUTOGUEST="${SOCRATINK_DEV_AUTOGUEST:-1}" \
     SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}" \
-    .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 >.qa-runs/check-coverage-uvicorn.log 2>&1 &
+    .venv/bin/uvicorn main:app --host 127.0.0.1 --port "$local_port" >.qa-runs/check-coverage-uvicorn.log 2>&1 &
     LOCAL_SERVER_PID="$!"
     wait_for_health "$health_url"
 }
@@ -127,4 +131,6 @@ RESOLVED_COMPARE_BRANCH=$(resolve_compare_branch) || {
     echo "check-coverage.sh: no valid compare branch (tried COMPARE_BRANCH, origin/main, main)" >&2
     exit 1
 }
+echo "Checking frontend cache-bust pins..."
+.venv/bin/python scripts/check_frontend_cache_pins.py "$RESOLVED_COMPARE_BRANCH"
 "$DIFF_COVER_BIN" coverage.xml .qa-runs/coverage-reports/cobertura-coverage.xml --compare-branch="$RESOLVED_COMPARE_BRANCH" --fail-under=100

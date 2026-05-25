@@ -73,7 +73,7 @@ and the owner explicitly asks the agent to fix it.
 > 4. Enter the launch sketch and save it.
 > 5. On the first concept view, verify:
 >    - The first prompt is tailored to the sketch.
->    - A visible line like `Shaped by your sketch: ...` appears.
+>    - No learner-facing line like `Shaped by your sketch: ...` appears; sketch tailoring stays internal to the prompt/scaffold.
 >    - The prompt asks for the learner's guess before study content appears.
 >    - The mechanism answer is not visible before the draft.
 >    - Generated descriptions do not leak before the draft.
@@ -88,13 +88,14 @@ and the owner explicitly asks the agent to fix it.
 >    - Study note appears.
 >    - One missing link appears.
 >    - The learner is not scored or diagnosed.
->    - The `Keep working` action appears.
+>    - No entry CTA appears while the repair is pending.
 > 10. Save a repair in the learner's own words.
 > 11. Verify the completed-repair state:
 >     - The repair textarea is no longer visible.
 >     - The `Save repair` button is no longer visible.
->     - The `Try from memory again` action appears.
-> 12. Verify the route expands, but remains truthful:
+>     - The `Pressure-check this link` action appears.
+> 12. Click `Pressure-check this link`, complete the gap drill, and verify the
+>     route expands but remains truthful:
 >     - Current contract: future route entries are visible but inert until the
 >       learner reconstructs/repairs enough evidence to move.
 >     - Do not report inert future entries as a bug unless product ownership has

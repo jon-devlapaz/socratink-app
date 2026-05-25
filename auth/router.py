@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
-from runtime_env import dev_autoguest_enabled
+from runtime_env import dev_autoguest_enabled, local_auth_bypass_enabled
 
 from .service import AuthConfigurationError, AuthSessionState, SupabaseAuthService
 
@@ -802,10 +802,11 @@ def _local_e2e_guest_bootstrap_enabled(request: Request) -> bool:
 
 
 def _local_dev_guest_bootstrap_enabled(request: Request) -> bool:
-    if not dev_autoguest_enabled():
-        return False
     client_host = request.client.host if request.client else ""
-    return client_host in {"127.0.0.1", "::1", "testclient"}
+    return local_auth_bypass_enabled(
+        hostname=request.url.hostname,
+        client_host=client_host,
+    )
 
 
 def load_current_session_state(request: Request) -> AuthSessionState:
@@ -836,14 +837,11 @@ def load_current_session_state(request: Request) -> AuthSessionState:
 def get_current_user(request: Request) -> Response:
     state = load_current_session_state(request)
     payload = state.to_public_dict()
-    # Expose dev-mode to the frontend so guest sessions can pass through
-    # the concept-create gate locally. The deny-list gate inside
-    # `runtime_env.dev_autoguest_enabled()` is LOAD-BEARING — read its
-    # SECURITY ASSUMPTION docstring before altering this line. Setting
-    # SOCRATINK_DEV_AUTOGUEST on any non-local env without first
-    # tightening the gate exposes guest-bypass to anyone who can reach
-    # /api/me.
-    payload["dev_mode"] = dev_autoguest_enabled()
+    client_host = request.client.host if request.client else None
+    payload["dev_mode"] = local_auth_bypass_enabled(
+        hostname=request.url.hostname,
+        client_host=client_host,
+    )
     response = JSONResponse(payload)
     if state.sealed_session:
         _apply_session_cookie(response, request, state.sealed_session)
@@ -894,6 +892,10 @@ def auth_guest(request: Request, return_to: str | None = None) -> Response:
         _apply_session_cookie(response, request, local_state.sealed_session)
         response.delete_cookie(GUEST_COOKIE_NAME, path="/")
         return response
+
+    local_response = local_dev_guest_response()
+    if local_response is not None:
+        return local_response
 
     try:
         auth_state = service.sign_in_anonymously()

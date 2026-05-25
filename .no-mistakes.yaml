@@ -1,4 +1,4 @@
-agent: acp:pool
+agent: codex
 
 commands:
   test: "bash scripts/no-mistakes-test.sh"

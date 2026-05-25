@@ -8,6 +8,8 @@ from dotenv import dotenv_values, load_dotenv
 
 
 _TRUTHY = {"1", "true", "yes", "on"}
+_FALSEY = {"0", "false", "no", "off"}
+_LOOPBACK_HOSTS = {"localhost", "127.0.0.1", "::1", "testclient"}
 
 
 @dataclass(frozen=True)
@@ -29,32 +31,50 @@ def _truthy_env(name: str) -> bool:
     return os.getenv(name, "").strip().lower() in _TRUTHY
 
 
+def _falsey_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _FALSEY
+
+
+def _production_runtime_detected() -> bool:
+    if _truthy_env("VERCEL"):
+        return True
+    if os.getenv("VERCEL_ENV"):
+        return True
+    if _truthy_env("CI"):
+        return True
+    return False
+
+
 def dev_autoguest_enabled() -> bool:
     """Local-only dev mode flag.
 
     When SOCRATINK_DEV_AUTOGUEST is truthy AND no production-shaped env
-    markers are present (VERCEL, VERCEL_ENV, CI), dev mode is on.
+    markers are present (VERCEL, VERCEL_ENV, CI), the launcher has opted
+    into local guest convenience. Request handlers must still call
+    local_auth_bypass_enabled(hostname=..., client_host=...) before bypassing
+    auth or exposing frontend dev_mode.
 
-    Two effects, both gated on this single check:
+    Two effects depend on the request-aware local auth bypass:
       1. main.py auth gate trampolines the /login redirect through
          /auth/guest so agents and ad-hoc local browsing skip the wall.
-      2. /api/me returns dev_mode=True so the frontend can let guest
-         sessions through the concept-create flow that's otherwise gated
-         to authenticated users.
+      2. /api/me returns dev_mode=True as a compatibility signal for local
+         tooling; current browser auth behavior is handled by the server-side
+         auth routes and gate.
 
     SECURITY ASSUMPTION (load-bearing — read before changing).
     --------------------------------------------------------
-    This gate is DENY-LIST shaped: dev mode is on for any environment
-    that does not look like Vercel or CI. Today the assumption is safe
-    because SOCRATINK_DEV_AUTOGUEST is only set by `scripts/dev.sh`,
-    which only runs locally.
+    This launcher flag is DENY-LIST shaped: it is on for any environment
+    that does not look like Vercel or CI. Today the assumption is safe because
+    SOCRATINK_DEV_AUTOGUEST is only set by `scripts/dev.sh`, which only runs
+    locally, and the actual bypass also requires SOCRATINK_LOCAL_AUTH_BYPASS
+    not to be falsey plus loopback hostname/client checks.
 
     If you start setting SOCRATINK_DEV_AUTOGUEST anywhere other than a
     developer's local machine — e.g. a non-Vercel staging box, a
-    self-hosted preview, a docker-compose'd integration env — this
-    function will return True there and /api/me will expose
-    `dev_mode: true` to anyone who can reach the endpoint. That bypasses
-    the concept-create auth gate for guest sessions. Either:
+    self-hosted preview, a docker-compose'd integration env — this function
+    may return True there, but local_auth_bypass_enabled must continue to
+    reject non-loopback requests before /api/me exposes `dev_mode: true` or
+    auth routes mint a local guest session. Either:
 
       (a) extend the deny-list with a marker for the new env (preferred:
           a positive `SOCRATINK_LOCAL=1` allow-list signal that
@@ -70,13 +90,36 @@ def dev_autoguest_enabled() -> bool:
     """
     if not _truthy_env("SOCRATINK_DEV_AUTOGUEST"):
         return False
-    if _truthy_env("VERCEL"):
-        return False
-    if os.getenv("VERCEL_ENV"):
-        return False
-    if _truthy_env("CI"):
+    if _production_runtime_detected():
         return False
     return True
+
+
+def _normalize_host(host: str | None) -> str:
+    return (host or "").strip().lower().strip("[]")
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    return _normalize_host(host) in _LOOPBACK_HOSTS
+
+
+def local_auth_bypass_enabled(
+    *, hostname: str | None = None, client_host: str | None = None
+) -> bool:
+    """Allow localhost development to enter as a sealed local guest.
+
+    This is the request-aware replacement for relying solely on
+    SOCRATINK_DEV_AUTOGUEST. Repo-owned local launchers opt into this path, but
+    production-shaped runtimes and non-loopback requests must still see the
+    normal auth wall.
+    """
+    if _production_runtime_detected():
+        return False
+    if _falsey_env("SOCRATINK_LOCAL_AUTH_BYPASS"):
+        return False
+    if not (dev_autoguest_enabled() or _truthy_env("SOCRATINK_LOCAL_AUTH_BYPASS")):
+        return False
+    return _is_loopback_host(hostname) and _is_loopback_host(client_host)
 
 
 def _should_load_dotenv_local() -> tuple[bool, str | None]:

@@ -37,7 +37,9 @@ Then open [http://localhost:8000](http://localhost:8000).
 `scripts/dev.sh` binds Uvicorn to `127.0.0.1` by default (loopback-only).
 For on-device mobile testing (see `docs/qa/antigravity-mobile-qa-prompt.md`),
 override with `HOST=0.0.0.0 bash scripts/dev.sh` so the dev server is also
-reachable at `http://<your-LAN-IP>:8000`.
+reachable at `http://<your-LAN-IP>:8000`. The localhost auto-guest bypass stays
+loopback-only: LAN/on-device requests use the normal login path unless routed
+through a loopback tunnel.
 
 `scripts/dev.sh` refuses to run without `.venv/` (to avoid accidentally using
 global/pyenv site-packages). It runs `scripts/check-local-auth.py` before
@@ -66,15 +68,18 @@ bash scripts/check-coverage.sh  # collect full-stack coverage and enforce 100% d
 ```
 
 `scripts/check-coverage.sh` calls the backend Python leg, generates frontend V8
-coverage via `scripts/generate-frontend-coverage.js`, then runs diff-cover
-against `COMPARE_BRANCH` when set or `origin/main` / `main` locally. The
-default browser target is `http://localhost:8000`; for that target or
-`http://127.0.0.1:8000`, the script reuses a healthy app if one is already
-running, otherwise starts loopback uvicorn and writes its log to
-`.qa-runs/check-coverage-uvicorn.log`. Set `SOCRATINK_BASE_URL` to a non-local
-target when the app should be provided externally. The frontend leg requires
-Node (run `npm install` once to fetch `monocart-coverage-reports`). The Python
-leg adds `pytest-cov` and `diff-cover` from `requirements-dev.txt`.
+coverage via `scripts/generate-frontend-coverage.js`, checks changed versioned
+frontend assets with `scripts/check_frontend_cache_pins.py`, then runs
+diff-cover against `COMPARE_BRANCH` when set or `origin/main` / `main` locally.
+The default browser target is `http://localhost:8000`; for any
+`http://localhost:<port>` or `http://127.0.0.1:<port>` target, the script
+reuses a healthy app if one is already running, otherwise starts loopback
+uvicorn on that port and writes its log to `.qa-runs/check-coverage-uvicorn.log`.
+Set `SOCRATINK_BASE_URL` to a non-local target when the app should be provided
+externally. The cache-pin check fails when a changed versioned frontend asset
+keeps a stale parent `?v=` reference. The frontend leg requires Node (run
+`npm install` once to fetch `monocart-coverage-reports`). The Python leg adds
+`pytest-cov` and `diff-cover` from `requirements-dev.txt`.
 
 ### Type-check and PR preflight
 

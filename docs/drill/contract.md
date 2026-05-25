@@ -22,6 +22,10 @@ rendering. It supersedes this file on every point of disagreement.
   reveal study with `attempts: []` as a compatibility path; that preserves the
   absence of evidence and must not be treated as learner reconstruction.
 - `needs repair` means the current evidence has named gaps that require repair.
+- Gap drills launched by `Pressure-check this link` after a saved repair are
+  graph-neutral practice. They may use the saved repair context to focus the
+  drill, but they must not append training evidence, mutate graph state, or
+  produce `solidified`.
 - `solidified` requires spaced strong reconstruction evidence; study or reading
   alone cannot produce it.
 - Library renders learner-authored reconstruction text only. It must not fall

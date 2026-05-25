@@ -105,29 +105,41 @@ Rules:
   later transfer or post-solidification surfaces.
 - `bloom_level` is internal. Do not show Bloom, taxonomy, remember,
   understand, apply, evaluate, or create as learner-facing labels.
-- `learner_move`, `task_label`, and `task_cue` are learner-facing route
-  margin copy. Use plain words, not school taxonomy.
-- `tailoring_anchor` is a learner-facing sentence that names the sketch
-  detail that shaped this local task. It should make the learner feel
-  the route came from their threshold, not from a generic lesson. It
-  MUST NOT diagnose a gap, reveal the mechanism, name the hidden target,
-  or say what the learner missed.
+- `learner_move` is the internal cognitive move for the route. It may be
+  one of the plain moves above, but should not be the main route title
+  when a concrete mechanism label is available.
+- `task_label` is the learner-facing route title. Prefer a short
+  mechanism-shaped noun phrase from the concept itself, not a school-task
+  verb. Good: "Prediction error inputs", "ACTH feedback", "Quorum safety".
+  Avoid generic worksheet labels like "Define the failure", "Explain
+  update", "Name the term", or Bloom/taxonomy language.
+- `task_cue` is the short non-answer cue for the active room. Use plain
+  words, not school taxonomy.
+- `tailoring_anchor` is internal prompt context that names the sketch
+  detail that shaped this local task. It may help the runtime aim the
+  entry prompt, but it should not render as learner-facing AI
+  self-explanation. It MUST NOT diagnose a gap, reveal the mechanism,
+  name the hidden target, or say what the learner missed.
 - `entry_prompt` is the text above the draft box. It should name the
   exact local task for this node.
 - `expected_shape` tells the learner what kind and amount of answer to
   write, usually one or two sentences.
 - `sentence_starter` is a non-revealing first phrase that lowers blank
   page friction. It must not contain the mechanism answer.
-- `blank_hint` gives one foothold for the "I'm blank" state. It may
+- `blank_hint` gives one conceptual foothold for the stuck state. It may
   reference the learner's threshold vocabulary, but it must not reveal
-  the mechanism.
+  the mechanism. Prefer context or connection clues, not sentence-writing instructions.
+- Do not copy any contiguous clause from `mechanism` into any
+  learner-visible scaffold field: `task_label`, `task_cue`, `tailoring_anchor`, `entry_prompt`,
+  `expected_shape`, `sentence_starter`, or `blank_hint`. These fields
+  shape the learner's move; they are not answer previews.
 - `evidence_goal` is for the evaluator. It describes what learner
   evidence this node is trying to elicit.
 - For c1, derive `entry_prompt` from the learner's threshold. Threshold
   is global context; this prompt is one smaller local task.
-- For c1, derive `tailoring_anchor` directly from the learner's threshold.
-  It should use one concrete phrase or relationship the learner supplied
-  and explain why this first task starts there.
+- For c1, derive `tailoring_anchor` directly from the learner's threshold as
+  internal context. It should use one concrete phrase or relationship the
+  learner supplied to explain why this first task starts there.
 
 OUTPUT SHAPE (the full schema, restated):
 

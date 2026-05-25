@@ -18,16 +18,16 @@
 > sleep 4
 > curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/   # expect 302
 > ```
-> `scripts/dev.sh` defaults to loopback-only (`127.0.0.1`). The `HOST=0.0.0.0` override above is required so on-device mobile QA (or a Browser Sub-Agent running on a different host) can reach the server at `http://<your-LAN-IP>:8000`.
+> `scripts/dev.sh` defaults to loopback-only (`127.0.0.1`). The `HOST=0.0.0.0` override above makes the server reachable at `http://<your-LAN-IP>:8000`, but the local auth bypass remains loopback-only. For LAN/on-device QA, sign in through the normal guest/login path or use a loopback tunnel from the testing browser.
 >
-> Default-guest login is auto-minted via `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`); you should land on the empty-state Ignition view without a login wall.
+> Default-guest login is auto-minted only for loopback/testclient requests when `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`) or `SOCRATINK_LOCAL_AUTH_BYPASS=1`; `SOCRATINK_LOCAL_AUTH_BYPASS=0` opts out. LAN requests should expect the login wall.
 >
 > **App map.**
-> - `/` Ignition view (empty-state hero with Concept + Starting-map composer)
+> - `/` Ignition view (empty-state hero with Concept field plus optional source attach; source-less starting-map capture happens later on Launch pad)
 > - Bottom nav: Ignition / Desk / Library / Settings (mobile only, `<900px`)
 > - Top chrome: floating hamburger button only (fixed, translucent blur scrim on mobile)
 > - On localhost only, Library exposes QA seed buttons (`Seed QA concept`, `Seed repair QA`) for creating a real concept fixture before opening the concept view
-> - Concept view chrome (mobile): strip + concept-page B-2 layout with primary action text derived from training state, usually "Write from memory" for a fresh first entry
+> - Concept view chrome (mobile): strip + concept-page B-2 layout with primary action text derived from training state, usually "Draft from memory" for a fresh first entry
 > - Legacy map drilling activates `body.is-drilling`. The concept-page reconstruction path is inline and does not hide chrome; verify it with the dedicated inline reconstruction flow below.
 >
 > **Tooling fallbacks.** If your Browser Sub-Agent cannot natively resize the viewport or inject CDN scripts, use these escape hatches BEFORE skipping a pass:
@@ -73,15 +73,15 @@
 > ### Pass 1 — Layout integrity
 >
 > 1. Compute `document.documentElement.scrollWidth - window.innerWidth` on every view. **Fail if > 0** (horizontal overflow).
-> 2. Snapshot bounding rects of: `.main-header`, `.bottom-nav`, `#ignition-view`, `.library-view`, `.settings-view`, `.map-view`, `.hero-card`, `.map-action-bar`. **Fail if any element overlaps another fixed element** (chrome ↔ content, action-bar ↔ bottom-nav). Allow ≤2px sub-pixel touching. (Note: the `.map-mode-switch` Route/Graph segmented control was removed in the strip-as-nav port; skip the related overlap and accessibility checks below.)
-> 3. Verify each view's `padding-top` ≥ chrome height (64px + safe-area-inset-top) and `padding-bottom` ≥ bottom-nav height + (action-bar height if Map view) + safe-area. Use `getBoundingClientRect` to measure both fixed strips and confirm content's first/last children are not occluded.
+> 2. Snapshot bounding rects of: `.main-header`, `.bottom-nav`, `#ignition-view`, `.library-view`, `.settings-view`, `.map-view`, `.hero-card`, `.concept-page-b2__active-entry`, `#drill-chamber-view` when present. **Fail if any element overlaps another fixed element** (chrome ↔ content, inline drill/chrome ↔ bottom-nav). Allow ≤2px sub-pixel touching. (Note: the `.map-mode-switch` Route/Graph segmented control was removed in the strip-as-nav port; skip the related overlap and accessibility checks below.)
+> 3. Verify each view's `padding-top` ≥ chrome height (64px + safe-area-inset-top) and `padding-bottom` ≥ bottom-nav height + safe-area. Use `getBoundingClientRect` to measure both fixed strips and confirm content's first/last children are not occluded.
 > 4. Top chrome (`.main-header`) must have `position: fixed` and a non-empty `backdrop-filter` at `<900px`. **Fail otherwise.**
 >
 > ### Pass 2 — Touch targets and tap density
 >
 > 1. For every interactive element (`button`, `a`, `[role="button"]`, `[onclick]`, `[role="tab"]`, `input[type="checkbox"]`, segmented buttons), measure `getBoundingClientRect`. **Flag (warning, not fail) any element below 36×36 px**, **fail any below 28×28 px** unless it is part of an explicit segmented-control group sized as a unit.
 > 2. (Removed) The `.map-mode-switch` Route/Graph segmented control no longer exists after the strip-as-nav port; skip this check.
-> 3. The primary action `.btn-start-drill` inside `.map-action-bar` MUST be ≥44×44.
+> 3. Concept-entry primary controls (`.concept-page-b2__entry-cta`, `.concept-page-b2__attempt-save`, `.drill-chamber__send` when present) MUST be ≥44×44.
 > 4. Bottom-nav items (`.bottom-nav-item`) MUST be ≥48 px min-height.
 >
 > ### Pass 3 — iOS auto-zoom prevention
@@ -107,9 +107,9 @@
 > Run each flow and assert at every step. Capture a Walkthrough for each.
 >
 > 1. **Door → Launch pad submit gate.** Type "Photosynthesis" in Concept and submit through the door. Verify `App.runHeroAction` hands off to `App.showLaunchPad` and the Launch pad appears. With the sketch empty, Save sketch must stay disabled. Type any non-empty launch attempt, including a short phrase like "parts guesses confusion"; Save sketch must enable. Do not follow the enabled submit.
-> 2. **Library → concept view.** From Library, open a concept. Verify the primary button text reflects the derived training state: "Write from memory", "Compare with notes", "Try from memory again", or a disabled "Locked" for blocked successors. After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
-> 3. **Inline reconstruction.** From the concept view, click the first-reconstruction primary action ("Write from memory"). Verify the inline reconstruction textarea appears, focuses, and saves through "Save what I wrote". The map-mode segmented switch no longer exists.
-> 4. **Inline validation.** Click "Save what I wrote" with an empty reconstruction. Verify the inline error appears, focus stays in the textarea, and chrome remains visible.
+> 2. **Library → concept view.** From Library, open a concept. Verify the primary button text reflects the derived training state: "Draft from memory", "Reveal notes and compare", "Pressure-check this link", or a disabled "Locked" for blocked successors. After the strip-as-nav port there is no Route/Graph segmented switch — verify the concept page renders the strip + concept-page B-2 layout (`public/css/concept-page.css`) and that no `#graph-content` section exists.
+> 3. **Inline reconstruction.** From the concept view, click the first-reconstruction primary action ("Draft from memory"). Verify the inline reconstruction textarea appears, focuses, and saves through "Draft from memory". For scaffolded cold-ready entries, verify the inline surface is already visible and saves through "Use this draft". The map-mode segmented switch no longer exists.
+> 4. **Inline validation.** Click the visible draft save button with an empty reconstruction. Verify the inline error appears, focus stays in the textarea, and chrome remains visible.
 > 5. **Empty-tile click in Desk.** From Desk view (after creating a concept), click a blank tile. Verify `AudioFX.playTileClick()` fires (assert via `console.log` instrumentation OR by listening for the underlying `<audio>` start event), then verify the add-concept drawer opens.
 > 6. **Bottom-nav cycling.** Tap each nav item; verify the corresponding view becomes `.visible` and others lose `.visible` within 400ms. Verify URL or in-memory route updates.
 > 7. **Drawer toggle.** Tap hamburger; verify `body[data-drawer-open="true"]` and `aria-expanded="true"`. Tap again; verify cleanup.
@@ -119,8 +119,8 @@
 > For each (viewport × theme × motion × view) cell, take a full-page screenshot. Run a vision pass with these prompts and report findings:
 >
 > 1. *"Is there any visible color seam, hard edge, or banding between the top floating chrome and the page background? Describe the gradient transition. The intended look is a soft translucent blur with no hard edge."*
-> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended first-reconstruction action is 'Write from memory'."*
-> 3. *"Describe the segmented control labeled 'Route / Graph' (if present). Is its visual weight peripheral (subtle, ≤30px tall, content-width) or primary (heavy, full-width, deep saturation)? Intended: peripheral."*
+> 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended first-reconstruction action is 'Draft from memory' or, for a scaffolded cold-ready entry, 'Use this draft'."*
+> 3. *"Verify the legacy segmented control labeled 'Route / Graph' is absent. Describe the current node strip / draft route surface and whether its visual weight stays peripheral to the active concept entry."*
 > 4. *"Are any controls or text clipped, cut off, or overlapped by other UI? List positions."*
 > 5. *"Does the bottom nav have any element overlapping it? Describe the gap between the bottom nav and the closest non-nav element above."*
 > 6. *"In the dark theme, list any element whose color reads as out-of-system (off-brand). socratink's palette is graphite (#18181b, Pattern A) backgrounds with violet (#9067C6) accents and warm cream paper (#F2F0F5) for the light theme."*
@@ -131,7 +131,7 @@
 > 1. Capture all console messages during every pass. **Fail on any unhandled error** other than the known `_vercel/speed-insights/script.js` 404 in local dev.
 > 2. Capture all failed network requests (`fetch`/`XHR` non-2xx, image 404, missing fonts, missing CSS). Report each.
 > 3. Capture any `Cross-Origin Read Blocking` warnings, mixed-content warnings, or `Refused to apply style` errors.
-> 4. Verify CSS cache-busters across the full chain. If `public/css/*.css` changed, confirm its pin moved in `public/styles.css`, the `../styles.css?v=...` pin moved in `public/css/index.css`, and the outer `/css/index.css?v=...` link moved in `public/index.html`. If `antigravity.css` or `paper.css` changed, confirm its direct `public/css/index.css` import pin and the outer `public/index.html` link moved.
+> 4. Verify versioned frontend cache-busters across the full chain. Prefer `scripts/check_frontend_cache_pins.py <compare-ref>`; it covers CSS and JS parents such as `public/index.html`, `public/css/index.css`, `public/styles.css`, and `public/js/app.js`. If checking manually, confirm any changed versioned child moved every parent `?v=` reference, including script pins for `app.js`/`drill-chamber.js` and JS imports such as `concept-page-view.js`.
 >
 > ---
 >

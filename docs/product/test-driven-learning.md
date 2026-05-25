@@ -86,7 +86,7 @@ The analogy should not become literal UI copy.
 
 Learners should not see a developer metaphor unless the surface is explicitly
 for technical users. The product should still sound like a quiet study room:
-"What can you reconstruct?", "Compare with notes", "Repair the missing link",
+"What can you reconstruct?", "Reveal notes and compare", "Repair the missing link",
 and "Ready to reconstruct again."
 
 The analogy is for product judgment. It helps the founder and agents decide

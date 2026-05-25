@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=10';
+} from './concept-page-view.js?v=15';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -100,6 +100,7 @@ const App = (() => {
   const LOCAL_QA_NODE_ID = 'qa-node';
   const LOCAL_REPAIR_QA_CONCEPT_ID = 'qa-repair-concept';
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
+  const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
   const trainingStore = createTrainingStore();
   let currentGraphController = null;
   let activeDrillNode = null;
@@ -139,6 +140,22 @@ const App = (() => {
   }
 
   function buildTrainingGapsFromDrillResult(result) {
+    if (Array.isArray(result?.gaps) && result.gaps.length) {
+      return result.gaps
+        .map((gap) => {
+          if (gap && typeof gap === 'object') {
+            return {
+              mechanism: gap.mechanism || gap.label || gap.type || null,
+              correction: gap.correction || gap.description || gap.detail || gap.text || '',
+            };
+          }
+          return {
+            mechanism: null,
+            correction: String(gap || ''),
+          };
+        })
+        .filter((gap) => gap.correction.trim() !== '');
+    }
     if (!result?.gap_description) return [];
     return [{
       classification: result.classification || null,
@@ -1772,13 +1789,7 @@ const App = (() => {
     showMapView(concept);
     setMapMode('graph');
     const graphData = parseConceptGraphData(concept) || {};
-    startDrill({
-      id: 'core-thesis',
-      type: 'core',
-      label: 'Core Thesis',
-      fullLabel: 'Core Thesis',
-      detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
-    });
+    startDrill(buildDefaultDrillContext(concept, graphData));
   }
 
   function drillFail() {
@@ -1876,6 +1887,11 @@ const App = (() => {
           }
           return;
         }
+        if (ctaBtn.dataset.activeEntryAction === 'drill-gap') {
+          const entryId = ctaBtn.dataset.activeEntryId;
+          startDrill(buildRepairGapDrillContext(entryId, concept, data, training));
+          return;
+        }
         const inlineAttempt = docEl.querySelector('.concept-page-b2__attempt-input');
         if (inlineAttempt) {
           /* c8 ignore next 2 -- defensive: CTA is not rendered while the inline attempt is present */
@@ -1889,6 +1905,16 @@ const App = (() => {
     if (attemptBtn) {
       attemptBtn.addEventListener('click', () => {
         void submitInlineAttemptForEntry(attemptBtn, concept, data);
+      });
+    }
+    const blankStartBtn = docEl.querySelector('[data-blank-start]');
+    if (blankStartBtn) {
+      blankStartBtn.addEventListener('click', () => {
+        const wrapper = blankStartBtn.closest('.concept-page-b2__blank-start');
+        const hint = wrapper?.querySelector?.('[data-blank-start-hint]');
+        if (hint) hint.hidden = false;
+        blankStartBtn.setAttribute('aria-expanded', 'true');
+        docEl.querySelector('.concept-page-b2__attempt-input')?.focus?.();
       });
     }
     const repairBtn = docEl.querySelector('.concept-page-b2__repair-save');
@@ -1928,6 +1954,22 @@ const App = (() => {
         enterThresholdEditMode(docEl, concept, data, training);
       });
     });
+    docEl.querySelectorAll('[data-action="toggle-sketch"]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const wrapper = button.closest('.vd-sketch-wrapper');
+        const body = wrapper?.querySelector?.('.vd-sketch-body');
+        if (!wrapper || !body) return;
+        const expanded = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+        wrapper.dataset.sketchCollapsed = expanded ? 'true' : 'false';
+        body.hidden = expanded;
+      });
+      button.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        button.click();
+      });
+    });
   }
 
   function renderActiveEntryWorkColumn(entryId, concept, data, training = null, options = {}) {
@@ -1958,6 +2000,118 @@ const App = (() => {
     requestAnimationFrame(() => {
       document.querySelector('.concept-page-b2__attempt-input')?.focus?.();
     });
+  }
+
+  function textFromRepairGap(gap) {
+    if (!gap || typeof gap !== 'object') return '';
+    return String(
+      gap.correction
+        || gap.description
+        || gap.gap_description
+        || gap.detail
+        || ''
+    ).trim();
+  }
+
+  function titleFromRepairGap(gap, fallback = 'the repaired link') {
+    if (!gap || typeof gap !== 'object') return fallback;
+    return String(
+      gap.mechanism
+        || gap.type
+        || gap.label
+        || fallback
+    ).trim() || fallback;
+  }
+
+  function boundedDrillNodeMechanism(value) {
+    const text = String(value || '');
+    if (text.length <= DRILL_NODE_MECHANISM_MAX_CHARS) return text;
+    const marker = '\n[earlier drill context truncated]\n';
+    const tailBudget = 3000;
+    const headBudget = DRILL_NODE_MECHANISM_MAX_CHARS - marker.length - tailBudget;
+    return `${text.slice(0, headBudget)}${marker}${text.slice(-tailBudget)}`;
+  }
+
+  function buildRepairGapDrillContext(entryId, concept, data, training = null) {
+    const graphData = parseConceptGraphData(concept) || data || {};
+    const backbone = deriveConceptEntries(graphData);
+    const match = findConceptEntryById(backbone, entryId);
+    const entry = match?.entry || {};
+    const record = training?.node_records?.[entryId] || {};
+    const attempts = Array.isArray(record.attempts) ? record.attempts : [];
+    const latestAttempt = attempts[attempts.length - 1] || {};
+    const gaps = Array.isArray(latestAttempt.gaps) ? latestAttempt.gaps : [];
+    const gap = gaps[0] || null;
+    const repairs = Array.isArray(record.repairs) ? record.repairs : [];
+    const latestRepair = repairs[repairs.length - 1] || null;
+    const gapCorrection = textFromRepairGap(gap);
+    const label = entry.label || entry.principle || entry.task_label || concept?.name || 'Entry';
+    const gapTitle = titleFromRepairGap(gap, label);
+    const visiblePrompt = gap
+      ? `Close the note. Rebuild the repaired link for ${gapTitle}: name the condition, the action, and what changes next.`
+      : `Close the note. Reconstruct this entry from memory.`;
+    const repairContext = [
+      entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || '',
+      latestAttempt.user_text ? `Learner cold draft: ${latestAttempt.user_text}` : '',
+      gapCorrection ? `Detected repairable gap: ${gapCorrection}` : '',
+      latestRepair?.text ? `Learner repair text: ${latestRepair.text}` : '',
+      'Probe this gap with short Socratic turns. Do not lecture or treat the repair as solid evidence.',
+    ].filter(Boolean).join('\n');
+    return {
+      id: entryId,
+      type: entry.type || 'entry',
+      label,
+      fullLabel: label,
+      detail: visiblePrompt,
+      prompt: visiblePrompt,
+      repairContext,
+      trainingSnapshot: training,
+      drillMode: 're_drill',
+      graphNeutral: true,
+    };
+  }
+
+  function buildDefaultDrillContext(concept, graphData, training = null) {
+    const backbone = deriveConceptEntries(graphData || {});
+    const activeMatch = _activeEntryId ? findConceptEntryById(backbone, _activeEntryId) : null;
+    const match = activeMatch || (backbone.length ? selectInitialConceptEntry(backbone, training) : null);
+    if (match?.entry && backbone.length) {
+      const entry = match.entry;
+      const id = match.id || getConceptEntryId(entry, match.index);
+      const label = entry.label || entry.task_label || entry.principle || `Entry ${match.index + 1}`;
+      const scaffold = entry.learner_scaffold || {};
+      const prompt = scaffold.entry_prompt || scaffold.task_cue || entry.purpose || '';
+      return {
+        id,
+        type: entry.type || resolveNodeType(graphData, id, 'entry'),
+        label,
+        fullLabel: label,
+        detail: entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || prompt,
+        prompt,
+        learner_scaffold: entry.learner_scaffold,
+        purpose: entry.purpose,
+      };
+    }
+    return {
+      id: 'core-thesis',
+      type: 'core',
+      label: 'Core Thesis',
+      fullLabel: 'Core Thesis',
+      detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
+    };
+  }
+
+  function resolveDrillContextForConcept(nodeContext, concept, graphData, training = null) {
+    if (!nodeContext) return buildDefaultDrillContext(concept, graphData, training);
+    const backbone = deriveConceptEntries(graphData || {});
+    if (
+      backbone.length
+      && nodeContext.id === 'core-thesis'
+      && !findConceptEntryById(backbone, nodeContext.id)
+    ) {
+      return buildDefaultDrillContext(concept, graphData, training);
+    }
+    return nodeContext;
   }
 
   async function revealStudyForEntry(entryId, concept, data) {
@@ -2328,8 +2482,15 @@ const App = (() => {
     route.addEventListener('click', (e) => {
       const item = e.target.closest('.concept-page-b2__route-item');
       if (!item) return;
-      if (route.dataset.lockedInert === 'true' && item.dataset.routeState === 'locked') return;
+      const routeLockedInert = route.dataset.lockedInert === 'true';
+      if (routeLockedInert && (drillState.active || item.dataset.routeState === 'locked')) return;
       const id = item.getAttribute('data-entry-id');
+      if (id && drillState.active) {
+        const activeConcept = getActiveConcept();
+        cancelDrill({ restoreMap: false });
+        if (activeConcept?.graphData) showMapView(activeConcept, { activeEntryId: id });
+        return;
+      }
       if (id) setActiveEntry(id, data, concept, training);
     });
 
@@ -2339,8 +2500,13 @@ const App = (() => {
 
       if (e.key === 'Enter' || e.key === ' ') {
         const id = item.getAttribute('data-entry-id');
-        if (id && !(route.dataset.lockedInert === 'true' && item.dataset.routeState === 'locked')) {
+        const routeLockedInert = route.dataset.lockedInert === 'true';
+        if (id && !(routeLockedInert && (drillState.active || item.dataset.routeState === 'locked'))) {
           e.preventDefault();
+          if (drillState.active) {
+            item.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            return;
+          }
           setActiveEntry(id, data, concept, training);
         }
         return;
@@ -2359,8 +2525,15 @@ const App = (() => {
       if (!nextEntry) return;
       const nextId = getConceptEntryId(nextEntry, nextIdx);
       const nextItem = mountEl.querySelector(`.concept-page-b2__route-item[data-entry-id="${nextId}"]`);
-      if (route.dataset.lockedInert === 'true' && nextItem?.dataset?.routeState === 'locked') return;
-      setActiveEntry(nextId, data, concept, training);
+      const routeLockedInert = route.dataset.lockedInert === 'true';
+      if (routeLockedInert && (drillState.active || nextItem?.dataset?.routeState === 'locked')) return;
+      if (drillState.active) {
+        const activeConcept = getActiveConcept();
+        cancelDrill({ restoreMap: false });
+        if (activeConcept?.graphData) showMapView(activeConcept, { activeEntryId: nextId });
+      } else {
+        setActiveEntry(nextId, data, concept, training);
+      }
       setTimeout(() => {
         nextItem?.focus();
       }, 280);
@@ -2479,14 +2652,29 @@ const App = (() => {
       tagsEl.innerHTML = '';
     }
 
-    renderConceptPageB2(mapContent, data, concept);
+    renderConceptPageB2(mapContent, data, concept, null, opts);
     renderConceptConstellationView(constellationContent, data, concept, null, { activeEntryId: _activeEntryId });
     // Keep first paint synchronous; training evidence re-renders when available.
     void trainingStore.loadTraining(concept.id)
       .then((training) => {
         if (!training) return;
         if (getActiveId() !== concept.id || document.body.dataset.mapOpen !== 'true') return;
-        renderConceptPageB2(mapContent, data, concept, training);
+        const renderOptions = { ...opts };
+        if (
+          renderOptions.isDrilling
+          && drillState.active
+          && drillState.node?.id === renderOptions.activeEntryId
+        ) {
+          renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
+          return;
+        }
+        if (
+          renderOptions.isDrilling
+          && (!drillState.active || drillState.node?.id !== renderOptions.activeEntryId)
+        ) {
+          renderOptions.isDrilling = false;
+        }
+        renderConceptPageB2(mapContent, data, concept, training, renderOptions);
         renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
       })
       .catch((err) => {
@@ -2610,6 +2798,7 @@ const App = (() => {
       event.preventDefault();
       constellationNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     });
+
   }
 
   function setNavActive(id) {
@@ -3578,14 +3767,18 @@ const App = (() => {
     activeDrillNode = null;
   }
 
-  function patchActiveConceptDrillOutcome(result, drillMode) {
-    const resolvedColdAttempt = drillMode === 'cold_attempt' && result?.generative_commitment === true;
+  function patchActiveConceptDrillOutcome(result, drillMode, options = {}) {
+    const resolvedColdAttempt = drillMode === 'cold_attempt' && options.coldAttemptRecorded === true;
     const isResolvedSessionComplete = result?.routing === 'SESSION_COMPLETE'
       && (drillMode === 'cold_attempt'
-        ? result?.generative_commitment === true
+        ? resolvedColdAttempt
         : Boolean(result?.classification));
 
-    if ((!resolvedColdAttempt && result?.routing !== 'NEXT' && !isResolvedSessionComplete) || !result?.node_id) {
+    if (
+      !result?.node_id
+      || (drillMode === 'cold_attempt' && !resolvedColdAttempt)
+      || (drillMode !== 'cold_attempt' && result?.routing !== 'NEXT' && !isResolvedSessionComplete)
+    ) {
       console.log(
         `[drill->graph] no mutation node=${result?.node_id ?? 'n/a'} classification=${result?.classification ?? 'null'} routing=${result?.routing ?? 'null'}`
       );
@@ -3607,7 +3800,7 @@ const App = (() => {
     const activeConceptId = concept.id;
 
     const applyPhaseUpdate = (targetObj) => {
-      if (drillMode === 'cold_attempt' && result.generative_commitment === true) {
+      if (drillMode === 'cold_attempt' && resolvedColdAttempt) {
         targetObj.drill_phase = 'study';
         targetObj.drill_status = 'primed';
         targetObj.cold_attempt_at = drilledAt;
@@ -3739,11 +3932,15 @@ const App = (() => {
 
     const apiKey = localStorage.getItem('gemini_key') || undefined;
     const nodeData = resolveNodeData(knowledgeMap, drillState.node.id) || {};
-    let drillMode = 'cold_attempt';
+    const graphNeutralDrill = drillState.node.graphNeutral === true;
+    let drillMode = drillState.node.drillMode || 'cold_attempt';
     let reDrillCount = nodeData.re_drill_count || 0;
     if (
+      !drillState.node.drillMode
+      && (
       nodeData.drill_status === 'drilled'
       || (nodeData.drill_status === 'primed' && nodeData.drill_phase === 're_drill')
+      )
     ) {
       drillMode = 're_drill';
     }
@@ -3753,7 +3950,7 @@ const App = (() => {
         concept_id: concept.id,
         node_id: drillState.node.id,
         node_label: nodeLabel,
-        node_mechanism: drillState.node.detail || '',
+        node_mechanism: boundedDrillNodeMechanism(drillState.node.repairContext || drillState.node.detail || ''),
         drill_session_id: drillState.logSessionId,
         client_turn_index: clientTurnIndex,
         knowledge_map: knowledgeMap,
@@ -3780,12 +3977,19 @@ const App = (() => {
         return;
       }
 
-      const completedColdAttempt = drillMode === 'cold_attempt' && data.generative_commitment === true;
-      const completedReDrill = data.routing === 'NEXT'
-        || (data.routing === 'SESSION_COMPLETE' && !!data.classification);
-      const completedNodeTurn = completedColdAttempt || completedReDrill;
+      const completedColdAttempt = !graphNeutralDrill
+        && drillMode === 'cold_attempt'
+        && data.generative_commitment === true
+        && isRecordableDrillAttempt(data);
+      const terminalReDrillTurn = (
+        data.routing === 'NEXT'
+        || (data.routing === 'SESSION_COMPLETE' && !!data.classification)
+      );
+      const completedReDrill = !graphNeutralDrill && terminalReDrillTurn;
+      const completedGraphNeutralReDrill = graphNeutralDrill && terminalReDrillTurn;
+      const completedNodeTurn = completedColdAttempt || completedReDrill || completedGraphNeutralReDrill;
 
-      if (completedNodeTurn && userText) {
+      if ((completedColdAttempt || completedReDrill) && userText) {
         const training = await appendTrainingAttemptFromDrillTurn({
           conceptId: concept.id,
           nodeId: drillState.node.id,
@@ -3796,7 +4000,9 @@ const App = (() => {
         if (!training) throw new Error('attempt-not-recorded');
       }
 
-      const graphMutationConcept = patchActiveConceptDrillOutcome(data, drillMode);
+      const graphMutationConcept = graphNeutralDrill
+        ? null
+        : patchActiveConceptDrillOutcome(data, drillMode, { coldAttemptRecorded: completedColdAttempt });
       const graphMutated = Boolean(graphMutationConcept);
 
       const handleVisualTransition = async () => {
@@ -3828,9 +4034,9 @@ const App = (() => {
             chatInput.focus();
           }
         }
-        // Mirror disabled state to the chamber composer. The first AI
-        // response also tears down the "preparing your first question"
-        // loading placeholder.
+        // Mirror disabled state to the chamber composer. The local node
+        // prompt is already visible, so loading cleanup must keep the
+        // writing surface available until the turn actually resolves.
         if (window.DrillChamber) {
           window.DrillChamber.setLoading?.(false);
           window.DrillChamber.setComposerEnabled(!(completedNodeTurn || !!data.session_terminated));
@@ -3849,7 +4055,7 @@ const App = (() => {
         }
       };
 
-      if (drillMode === 'cold_attempt' && data.generative_commitment === true) {
+      if (completedColdAttempt) {
         const normalizationMessages = [
           'You made the first mark. Now the entry can show the gap.',
           'That guess gives study something to work against.',
@@ -3888,21 +4094,31 @@ const App = (() => {
     }
   }
 
+  function drillQuestionForNodeContext(nodeContext = {}, concept = {}) {
+    const scaffold = nodeContext.learner_scaffold || nodeContext.learnerScaffold || {};
+    const explicitPrompt = (
+      scaffold.entry_prompt
+      || scaffold.task_cue
+      || nodeContext.prompt
+      || nodeContext.drillPrompt
+      || nodeContext.purpose
+    );
+    if (typeof explicitPrompt === 'string' && explicitPrompt.trim()) {
+      return explicitPrompt.trim();
+    }
+    const label = nodeContext.fullLabel || nodeContext.label || concept?.name || 'this entry';
+    return `Reconstruct ${label} from memory before checking the source.`;
+  }
+
   function startDrill(nodeContext = null) {
     const concept = getActiveConcept();
     if (!concept) return;
 
     const km = parseConceptGraphData(concept) || {};
-    if (!nodeContext) {
-      nodeContext = { 
-        id: 'core-thesis',
-        type: 'core',
-        fullLabel: 'Core Thesis',
-        detail: km?.metadata?.core_thesis || km?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
-      };
-    }
+    nodeContext = resolveDrillContextForConcept(nodeContext, concept, km);
 
     const nodeData = resolveNodeData(km, nodeContext.id) || {};
+    const graphNeutralDrillRequested = nodeContext.graphNeutral === true;
     if (nodeData.drill_status === 'solidified') {
       currentGraphController?.showBlockedMessage?.(
         'Solid evidence already recorded',
@@ -3911,7 +4127,7 @@ const App = (() => {
       return;
     }
 
-    if (nodeData.drill_status === 'primed' && nodeData.drill_phase === 'study') {
+    if (!graphNeutralDrillRequested && nodeData.drill_status === 'primed' && nodeData.drill_phase === 'study') {
       reopenStudy(nodeContext);
       return;
     }
@@ -3977,6 +4193,22 @@ const App = (() => {
     drillState.sessionToken += 1;
     activeDrillNode = nodeContext?.id || null;
 
+    const mapView = document.getElementById('map-view');
+    const mapContent = document.getElementById('map-content');
+    if (!mapView?.classList.contains('visible')) {
+      showMapView(concept, {
+        activeEntryId: nodeContext.id,
+        isDrilling: true,
+      });
+    }
+    if (mapContent) {
+      renderConceptPageB2(mapContent, km, concept, nodeContext.trainingSnapshot || null, {
+        activeEntryId: nodeContext.id,
+        isDrilling: true,
+      });
+    }
+    setMapMode('route');
+
     if (drillUi) drillUi.style.display = 'flex';
     if (chatHistory) chatHistory.innerHTML = '';
     if (chatInput) {
@@ -3996,29 +4228,28 @@ const App = (() => {
 
     currentGraphController?.setActiveDrillNode?.(activeDrillNode);
     currentGraphController?.setInteractionMode?.(initialMode, activeDrillNode);
-    setMapMode('graph');
     document.body.classList.add('is-drilling');
 
     // Show the ironclad chamber view.
     const conceptName = concept?.name || concept?.metadata?.name || 'Concept';
     const entryName = nodeContext.fullLabel || nodeContext.id || 'Entry';
+    const visibleQuestion = drillQuestionForNodeContext(nodeContext, concept);
     if (window.DrillChamber) {
       window.DrillChamber.show({
         conceptName,
         entryName,
-        question: nodeContext.detail || 'Explain this in your own words.',
+        question: visibleQuestion,
       });
       // Seed the last-shown question so the FIRST history pair records
       // the actual question the learner saw (the seed prompt from the
       // node detail). Without this, chamberLastShownQuestion is '' on
       // the first send because appendBubble('ai',...) hasn't run yet
       // (it fires after requestDrillTurn resolves, not before).
-      chamberLastShownQuestion = nodeContext.detail || 'Explain this in your own words.';
-      // Show "preparing your first question" placeholder while the
-      // initial /api/drill round trip lands. The Gemini cold-start can
-      // be 5-10s; without a visible state, the disabled composer reads
-      // as broken. setLoading flips the placeholder + disables input.
-      window.DrillChamber.setLoading?.(true);
+      chamberLastShownQuestion = visibleQuestion;
+      // The visible node prompt is the first question. Keep the
+      // composer editable immediately; the first API turn should react
+      // to the learner's reconstruction, not block them while asking for
+      // a redundant generated question.
 
       window.DrillChamber.onSend(async (text) => {
         if (!text || drillState.pending) {
@@ -4048,24 +4279,9 @@ const App = (() => {
         cancelDrill();
       });
     }
-
-    requestDrillTurn().catch((err) => {
-      console.error(err);
-      hideTypingIndicator();
-      if (window.DrillChamber) {
-        window.DrillChamber.setLoading?.(false);
-        window.DrillChamber.swapQuestion('The drill service failed to respond. Try again when ready.');
-        window.DrillChamber.setComposerEnabled(true);
-      } else {
-        appendBubble('ai', 'The drill service failed to respond. Try again when ready.');
-      }
-      drillState.pending = false;
-      if (chatInput) chatInput.disabled = false;
-      currentGraphController?.setInteractionMode?.('inspect');
-    });
   }
 
-  function cancelDrill() {
+  function cancelDrill(options = {}) {
     // Hide the chamber first, before any other state cleanup.
     if (window.DrillChamber) {
       window.DrillChamber.hide();
@@ -4096,7 +4312,7 @@ const App = (() => {
 
     // Restore the concept page view (map + detail).
     const activeConcept = getActiveConcept();
-    if (activeConcept) {
+    if (activeConcept && options.restoreMap !== false) {
       showMapView(activeConcept);
     }
   }
@@ -4262,15 +4478,9 @@ const App = (() => {
       const concept = getActiveConcept();
       if (!concept?.graphData) return;
       showMapView(concept);
-      setMapMode('graph');
+      setMapMode('route');
       const graphData = parseConceptGraphData(concept) || {};
-      startDrill({
-        id: 'core-thesis',
-        type: 'core',
-        label: 'Core Thesis',
-        fullLabel: 'Core Thesis',
-        detail: graphData?.metadata?.core_thesis || graphData?.metadata?.thesis || concept.contentPreview || 'Explain this core idea in your own words.',
-      });
+      startDrill(buildDefaultDrillContext(concept, graphData));
     },
 
     selectTile, selectConcept: (id) => { selectConcept(id); closeDrawer(); },

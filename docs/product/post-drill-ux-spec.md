@@ -1,15 +1,15 @@
 # socratink — Post-Drill UX Spec
 
-> Binding under [evidence-weighted-map.md](evidence-weighted-map.md). This spec uses UI shorthand ("Solidified", "Needs repair", "cleared") for learner-facing panel copy. Those labels are display artifacts — they describe what Socratink has recorded, not claims about the learner's mind. When agent-reading this doc, translate:
+> Binding under [evidence-weighted-map.md](evidence-weighted-map.md). This spec uses UI shorthand ("Solidified", "Needs repair", "cleared") for learner-facing result-surface copy. Those labels are display artifacts — they describe what Socratink has recorded, not claims about the learner's mind. When agent-reading this doc, translate:
 > - "Solidified" headline = Socratink recorded a solid spaced reconstruction for this node.
 > - "Needs repair" = Socratink recorded learner reconstruction evidence with named gaps to repair.
 > - "Cleared" (if used in copy) = visual shorthand for `solidified` state; not a knowledge claim.
 
 ## Agent Summary
 
-> **What this document is**: The spec for what the learner sees after each phase of the three-phase node loop resolves. It governs panel copy, result-state visual treatment, sensory feedback, transcript visibility, tier/band trajectory display, and the handoff from drill mode back to graph navigation. This is the document you read before changing anything the learner sees after a cold attempt, study, re-drill, or session ending.
+> **What this document is**: The spec for what the learner sees after each phase of the three-phase node loop resolves. It governs result-surface copy, result-state visual treatment, sensory feedback, transcript visibility, tier/band trajectory display, and the handoff from drill mode back to graph navigation. This is the document you read before changing anything the learner sees after a cold attempt, study, re-drill, or session ending.
 >
-> **When to read it**: Before changing post-phase panel copy, result-state visuals, transcript policy, attribution framing on non-solid results, sensory celebration behavior, or session-ending UX.
+> **When to read it**: Before changing post-phase result copy, result-state visuals, transcript policy, attribution framing on non-solid results, sensory celebration behavior, or session-ending UX.
 >
 > **What it is NOT**: It is not the routing/state implementation spec (read `spec.md` for product routing and `../superpowers/specs/2026-05-15-drill-data-model-design.md` for derivation/rendering fields), the binding drill data-model canon, or the full UX doctrine (read `/DESIGN.md`).
 >
@@ -18,7 +18,7 @@
 > - Cold attempts show NO score, NO tier/band, and no ability label. Private classification may produce learner-facing gap repair, but not a grade.
 > - Solidified gets the strongest sensory celebration, calibrated to cognitive load. Needs Repair gets NO celebration.
 > - All non-solid copy uses wise feedback (strategy-focused, never ability-focused). No raw classifier labels in any learner-facing surface.
-> - Side panel has six modes. Modes must be pure — no content bleed.
+> - The current inline concept-entry/chamber surface has six modes. Modes must be pure — no content bleed.
 
 ---
 
@@ -51,7 +51,7 @@ What it means:
 Required visual treatment:
 
 - node appears `primed` (warm, open, distinct from no-evidence and needs-repair states)
-- concept page offers an explicit `Compare with notes` action; study material is not recorded as revealed until the learner takes it
+- concept page offers an explicit `Reveal notes and compare` action; study material is not recorded as revealed until the learner takes it
 - concept page preserves the latest learner attempt as `Your draft` before study reveal
 - `Missing piece` details remain hidden until `study_revealed_at` exists
 - future side-panel treatment may add the 2-3 second transition beat after that explicit reveal
@@ -61,7 +61,7 @@ Required visual treatment:
 
 Required copy:
 
-- headline: `Compare with notes` CTA before study material appears
+- headline: `Reveal notes and compare` CTA before study material appears
 - evidence artifact: `Your draft` with the learner's exact attempt text; no `Missing piece` list until study is revealed
 - normalization message (one of): "Your guess just primed your brain. Now let's see what's really going on." / "Most learners get this wrong the first time. That's by design." / "This is how your brain prepares to learn." / "That attempt just activated your semantic networks. The study material will land harder now."
 
@@ -87,7 +87,7 @@ What it means (agent-readable):
 Required visual treatment:
 
 - node appears `solidified`
-- side panel headline marks the recorded evidence
+- result surface headline marks the recorded evidence
 - copy acknowledges the reconstruction event — Socratink saw the mechanism rebuilt from long-term memory under spacing
 - result state remains visible until the learner presses `Continue`
 - trajectory contrast is shown as evidence delta: "Cold attempt: [band]. Re-drill: [band]. Stronger reconstruction evidence on record."
@@ -124,8 +124,8 @@ What it means:
 Required visual treatment:
 
 - node appears `needs repair`
-- side panel must explicitly say the room is not yet cleared
-- panel should include one concise diagnosis framed as strategy data, not ability verdict
+- result surface must explicitly say the room is not yet cleared
+- result surface should include one concise diagnosis framed as strategy data, not ability verdict
 - result state remains visible until `Continue`
 
 Required copy:
@@ -216,9 +216,9 @@ The learner-facing graph should keep these meanings stable:
 - at least one solid spaced reconstruction is on record for this node
 - evidence event, not a mastery claim about the learner
 
-## Side Panel Rules
+## Inline Surface Rules
 
-The side panel should be mode-pure.
+The current runtime keeps the concept route visible and mounts `#drill-chamber-view` inline inside the active concept entry during drills. The inline concept-entry/chamber surface should be mode-pure.
 
 At any given moment it should be in one of these modes:
 
@@ -229,7 +229,7 @@ At any given moment it should be in one of these modes:
 - post-re-drill
 - session-complete
 
-The panel must not silently mix these modes.
+The surface must not silently mix these modes.
 
 ### Inspect
 
@@ -242,7 +242,8 @@ The panel must not silently mix these modes.
 ### Cold-Attempt-Active (Phase 1)
 
 - one active target
-- the AI's exploratory question is visible
+- the local node/scaffold prompt is visible as the first question
+- the first `/api/drill` call normally happens only after the learner submits that first reconstruction, as `session_phase = "turn"`
 - no mechanism text is shown
 - no score or performance metrics
 - transcript visible as conversation progresses
@@ -255,7 +256,8 @@ The panel must not silently mix these modes.
 - the study note has a manual show/hide toggle
 - focusing or typing in the repair field collapses the study note so the learner writes from memory instead of copying visible mechanism text
 - normalization message visible
-- no drill affordance for this node until spacing is satisfied
+- after a repair is saved, show `Pressure-check this link` as a graph-neutral gap drill
+- the gap drill does not append training evidence, mutate graph state, or count as spaced re-drill evidence
 - the system may recommend the next cold attempt on a different node
 
 ### Re-Drill-Active (Phase 3)
@@ -285,7 +287,7 @@ The panel must not silently mix these modes.
 MVP-safe rule:
 
 - unresolved and solid results may keep the transcript visible below the result card
-- the result card must dominate the top of the panel
+- the result card must dominate the top of the inline surface
 
 Recommended refinement:
 
@@ -324,7 +326,7 @@ Rules:
 `Continue` should mean:
 
 - close the resolved session state
-- return the panel to normal graph navigation
+- return the concept route to normal graph navigation
 - preserve the truthful graph node state
 - the system may now recommend the next interleaving step
 
@@ -343,7 +345,7 @@ Do not ship:
 - a `needs repair` node that reads like completion or learner failure
 - a `primed` node that reads like failure
 - a graph click that silently erases the result state before `Continue`
-- a post-re-drill panel dominated by transcript rather than outcome
+- a post-re-drill surface dominated by transcript rather than outcome
 - classifier jargon exposed as if it were a user-facing pedagogy model
 - celebration or consolation animation on unresolved outcomes
 - ability-framed copy on any non-solid result

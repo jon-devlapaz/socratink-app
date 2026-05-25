@@ -26,7 +26,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - The graph is an evidence-weighted map. It shows what Socratink has evidence for, not what the learner knows.
 - The map starts as a hypothesis; the starting map is an anchor, not a diagnostic.
 - Cold attempts are learner-facing unscored; private classification may drive repair/study routing.
-- `solidified` can only result from spaced strong reconstruction evidence. Study and Repair Reps must not produce `solidified`.
+- `solidified` can only result from spaced strong reconstruction evidence. Study, Repair Reps, and Gap drills must not produce `solidified`.
 - Clusters are containers in MVP, not primary drill targets.
 - Drill-session caps remain backend/doctrinal guardrails, but the current frontend MVP bypasses duration, node-count, and per-node retrieval enforcement while inline reconstruction is validated.
 
@@ -37,7 +37,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 
 ## Use These Docs
 - [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md): binding doctrine for what the graph may/must not claim
-- [docs/product/spec.md](../product/spec.md): binding product contract for the three-phase loop, routing, progression layers, panel modes, and guardrails
+- [docs/product/spec.md](../product/spec.md): binding product contract for the three-phase loop, routing, progression layers, inline concept-entry/result-surface modes, and guardrails
 - [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md): binding drill data-model canon for training evidence, derivation math, and rendering fields
 - [docs/drill/contract.md](../drill/contract.md): compatibility redirect and runtime summary
 - [docs/project/doc-map.md](doc-map.md): curated index of canonical entry points and deep-dives, with precedence rules at the top

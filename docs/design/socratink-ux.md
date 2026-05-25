@@ -37,7 +37,7 @@ The binding seven-screen onboarding into any concept. Every concept-facing surfa
 Enter concept
   → 1. Concept Threshold        (global starting map; no graph mutation)
   → 2. Provisional Graph        (draft route as hypothesis)
-  → 3. First Cold Attempt       (local; quotes the threshold; analogical fallback if signal is thin)
+  → 3. First Cold Attempt       (local; shaped by hidden scaffold; analogical fallback if signal is thin)
   → 4. Locked Study Silhouette  (purpose only — no content)
   → 5. Study Repair Artifact    (the hinge, the causal spine, one diagram)
   → 6. Interleaving Bridge      (2–3 nearby rooms + take a break)
@@ -58,11 +58,11 @@ The launch pad replaces the previous in-form "Starting sketch" textarea. The thr
 
 The Constellation sibling view is secondary orientation, not the primary work surface. Route stays the default reconstruction surface; Constellation may show position, availability, and training-derived state, but must not leak mechanisms, study content, source previews, or answer-shaped labels before reconstruction evidence.
 
-**3. First Cold Attempt.** Narrower than the threshold. **Quotes or paraphrases the learner's threshold input** before asking one causal mechanism question inside the first node. The first writing surface is part of the concept canvas, not a separate mode the learner must enter. A recordable learner answer appends training evidence and derives `primed` or `needs repair`. Non-substantive input writes no attempt and asks for a micro-generation. **Analogical fallback** for low-signal learners: a familiar source analogy, learner predicts a causal relation *inside the analogy*, and no training evidence is recorded until something substantive lands. **The learner is never labeled zero-knowledge.**
+**3. First Cold Attempt.** Narrower than the threshold. The learner's launch attempt is preserved in the collapsed **Context** control, while internal tailoring/scaffold fields shape the visible prompt without quoting the hidden target as answer text. The first writing surface is part of the concept canvas, not a separate mode the learner must enter. A recordable learner answer appends training evidence and derives `primed` or `needs repair`. Non-substantive input writes no attempt and asks for a micro-generation. **Analogical fallback** for low-signal learners: a familiar source analogy, learner predicts a causal relation *inside the analogy*, and no training evidence is recorded until something substantive lands. **The learner is never labeled zero-knowledge.**
 
 **4. Locked Study Silhouette.** Pre-attempt. Title + one-line purpose + locked state + first-attempt CTA. **No explanation, no definitions, no solved diagram.** The absence of content is intentional — peeking at the room before entering would defeat the cold attempt.
 
-**5. Study Repair Artifact.** Scoped to the attempted node only. Five parts in order: (a) the learner's exact words preserved, (b) **the hinge** — one specific correction, (c) **causal spine** — a compact arrow chain, (d) one clarifying diagram, (e) 1–2 connection cues. Never claims mastery. Target flow routes the primary CTA to *Choose next room* and the bridge; the current POC also exposes an inline repair retry after saved repair text, with no mastery or spacing credit.
+**5. Study Repair Artifact.** Scoped to the attempted node only. Five parts in order: (a) the learner's exact words preserved, (b) **the hinge** — one specific correction, (c) **causal spine** — a compact arrow chain, (d) one clarifying diagram, (e) 1–2 connection cues. Never claims mastery. Target flow routes the primary CTA to *Choose next room* and the bridge; the current POC also exposes `Pressure-check this link` after saved repair text as a graph-neutral Gap drill, with no mastery or spacing credit.
 
 **6. Interleaving Bridge.** Names *why* the learner is leaving the just-repaired node ("the repair is fresh, so re-drilling now would mostly test short-term echo"). Offers 2–3 nearby rooms with one-line purposes (no mechanism reveal). A non-punitive **"Take a short break instead"** is always present. Spacing is a valid choice. Interleaving is **never framed as reward or completion**. *Current runtime uses an 18-hour elapsed spacing placeholder; the 10-15 minute cognitively demanding buffer is future scheduler intent, not shipped enforcement.*
 
@@ -100,6 +100,7 @@ The graph's vocabulary is small on purpose. Only these phrases appear as graph-s
 | Study revealed | repair artifact | study reveal recorded; no solidification |
 | Interleaving bridge shown | next-choice set + break | **none** |
 | Repair rep completed | practice history grows | **none** |
+| Gap drill completed | pressure-check of repaired link | **none**; no training evidence append or solidification |
 | Spaced re-drill — strong after spacing | solid spaced reconstruction recorded | derives `solidified` |
 | Spaced re-drill — non-solid | "needs repair" | stores gaps; derives `needs repair` when warranted (warm, never red) |
 

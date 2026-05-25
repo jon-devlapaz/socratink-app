@@ -148,6 +148,11 @@ def test_b2_layout_renders(clean_page: Page, base_url: str) -> None:
     expect(clean_page.locator(".concept-page-b2__threshold")).to_be_visible()
     # 3-entry backbone: 1 active + 2 nearby
     expect(clean_page.locator(".concept-page-b2__nearby-list")).to_be_visible()
+    expect(clean_page.locator(".vd-sketch-body")).to_be_hidden()
+    clean_page.locator('[data-action="toggle-sketch"]').press("Enter")
+    expect(clean_page.locator(".vd-sketch-body")).to_be_visible()
+    clean_page.locator('[data-action="toggle-sketch"]').press(" ")
+    expect(clean_page.locator(".vd-sketch-body")).to_be_hidden()
 
 
 def test_b2_cta_opens_inline_attempt(clean_page: Page, base_url: str) -> None:
@@ -156,7 +161,7 @@ def test_b2_cta_opens_inline_attempt(clean_page: Page, base_url: str) -> None:
     expect(clean_page.locator(".concept-page-b2__attempt")).to_be_visible(timeout=8_000)
     clean_page.locator(".concept-page-b2__attempt-input").focus()
     expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_focused()
-    expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
+    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
 
 
 def test_b2_no_route_graph_toggle(clean_page: Page, base_url: str) -> None:

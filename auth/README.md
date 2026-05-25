@@ -33,8 +33,8 @@ Import from `auth` directly. Submodule paths are implementation detail.
 ## Footguns
 
 - **`AUTH_ENABLED=false` is real.** When disabled, the service still returns a coherent `AuthSessionState` with `auth_enabled=False`. Routes branch on this, not on whether `service is None`. Don't add `if service:` guards.
-- **`SOCRATINK_DEV_AUTOGUEST` is gated against deployed environments.** It is hard-disabled when `VERCEL`, `VERCEL_ENV`, or `CI` env vars are present. Read the SECURITY ASSUMPTION docstring in `runtime_env.dev_autoguest_enabled` before touching the guard.
-- **Local dev guest fallback is intentional and loopback-only.** With `SOCRATINK_DEV_AUTOGUEST=1`, unauthenticated `/login` requests from loopback/testclient redirect through `/auth/guest`; if Supabase anonymous sign-in is unavailable, `/auth/guest` may mint a sealed local guest session via `build_local_dev_guest_session()`. This is distinct from `/auth/e2e/guest` and must stay disabled outside local dev.
+- **Local auth bypass is gated against deployed environments and non-loopback requests.** `runtime_env.local_auth_bypass_enabled()` is hard-disabled when `VERCEL`, `VERCEL_ENV`, or `CI` env vars are present, honors `SOCRATINK_LOCAL_AUTH_BYPASS=0`, and requires both request hostname and client host to be loopback/testclient before `/api/me` may expose `dev_mode`.
+- **Local dev guest bootstrap is intentional and loopback-only.** With `SOCRATINK_DEV_AUTOGUEST=1` or `SOCRATINK_LOCAL_AUTH_BYPASS=1`, unauthenticated protected GETs from loopback/testclient redirect through `/auth/guest`, where the local bypass mints a sealed local guest session via `build_local_dev_guest_session()` before any Supabase anonymous sign-in attempt. Non-bypass `/auth/guest` requests still use Supabase anonymous sign-in. This is distinct from `/auth/e2e/guest` and must stay disabled outside local dev.
 - **`/auth/e2e/guest` is test bootstrap only.** It requires `SOCRATINK_E2E_LOCAL_GUEST=1` and a loopback/testclient request. GitHub Actions may use it without `SOCRATINK_DEV_AUTOGUEST` when Vercel markers are absent; deployed environments must continue to receive 404.
 - **JWT signing mode varies by Supabase project.** New projects sign with ES256 (JWKS); older projects use HS256 with `SUPABASE_JWT_SECRET`. `jwt_verify.py` handles both. `SUPABASE_JWT_SECRET` must be a non-empty placeholder even on ES256-only projects (env var presence is checked, value is not).
 - **Cookie key rotation requires a deploy.** `SESSION_COOKIE_KEY` is a Fernet key; rotating it invalidates all outstanding sessions. There is no graceful old-key fallback.
@@ -43,6 +43,6 @@ Import from `auth` directly. Submodule paths are implementation detail.
 
 ## Related
 
-- Env contract: see `.env.example` (lines 1–22).
+- Env contract: see `.env.example`.
 - Cookie sealing tests: `tests/test_supabase_load_session.py`.
 - Anti-pattern guard: don't import from `auth.<submodule>` outside `auth/` — go through the package surface.

@@ -57,7 +57,7 @@ from source_intake import (
     TooLarge,
     UnsupportedContent,
 )
-from runtime_env import dev_autoguest_enabled, load_app_env
+from runtime_env import local_auth_bypass_enabled, load_app_env
 
 load_app_env()
 
@@ -252,7 +252,11 @@ async def require_login_or_guest_entry(request: Request, call_next):
                 },
                 status_code=401,
             )
-        if dev_autoguest_enabled():
+        client_host = request.client.host if request.client else None
+        if local_auth_bypass_enabled(
+            hostname=request.url.hostname,
+            client_host=client_host,
+        ):
             # Local dev: skip the /login wall by trampolining straight through
             # the existing guest sign-in route, which sets the session cookie
             # and redirects to the originally requested path.
@@ -434,6 +438,22 @@ def _resolve_node_mechanism(
                 return str(subnode.get("mechanism") or subnode.get("label") or fallback)
 
     return fallback
+
+
+_DRILL_REPAIR_CONTEXT_MARKERS = (
+    "Learner cold draft:",
+    "Detected repairable gap:",
+    "Learner repair text:",
+)
+
+
+def _resolve_repair_drill_context(candidate: str, resolved_mechanism: str) -> str | None:
+    context = candidate.strip()
+    if not context or context == resolved_mechanism.strip():
+        return None
+    if any(marker in context for marker in _DRILL_REPAIR_CONTEXT_MARKERS):
+        return context
+    return None
 
 
 def _map_intake_error(exc: SourceIntakeError) -> HTTPException:
@@ -648,7 +668,8 @@ def extract(req: ExtractRequest):
     except SmallestRouteCapExceeded as err:
         # Malformed source-less route generation is a server-side generation
         # failure, not a client input failure -> 500 (not 422). This includes
-        # over-cap output, invalid cluster shape, and missing learner_scaffold.
+        # over-cap output, invalid cluster shape, missing learner_scaffold, and
+        # scaffold text that copies hidden mechanism clauses.
         # Must be caught BEFORE the generic ValueError handler below because
         # SmallestRouteCapExceeded subclasses ValueError.
         logger.error("extract: smallest_route_cap_exceeded: %s", err)
@@ -761,12 +782,17 @@ def drill(req: DrillRequest):
             req.node_id,
             fallback="",
         )
+        repair_drill_context = _resolve_repair_drill_context(
+            req.node_mechanism,
+            node_mechanism,
+        )
         result = drill_chat(
             knowledge_map=knowledge_map,
             concept_id=req.concept_id,
             node_id=req.node_id,
             node_label=req.node_label,
             node_mechanism=node_mechanism,
+            repair_drill_context=repair_drill_context,
             messages=messages_in,
             session_phase=req.session_phase,
             drill_mode=req.drill_mode,

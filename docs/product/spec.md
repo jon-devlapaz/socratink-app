@@ -36,10 +36,10 @@ Every drillable node on the graph must move through these three phases. No phase
 ### Phase 1: Cold Attempt (Exploration)
 - **Goal**: Generate a prediction error to prime encoding.
 - **Contract**: Exploratory question ("What do you think this involves?"). Learner-facing surfaces remain unscored; the system may privately classify the attempt to derive repair/study routing.
-- **Generative Commitment**: Cold attempts use drill-evaluation generative commitment to decide whether study unlocks; source-less launch-pad generation accepts any non-empty learner launch attempt before drafting a provisional map.
+- **Generative Commitment**: Cold attempts unlock study only when the latest turn is a recordable learner attempt (`answer_mode === "attempt"`, `score_eligible === true`, usable classification) and drill-evaluation generative commitment is true. Non-recordable help/scaffold turns stay support turns and do not append evidence.
 - **Learner Goal**: A learner goal may frame relevance, route emphasis, and local prompt copy. It is not evidence, is not graded, and must not mutate graph truth.
 - **Zero-Schema Detection**: If the learner is completely lost, the AI seeds 2-3 concepts and asks for a micro-generation.
-- **Outcome**: A learner attempt is appended to the training record. Derived state becomes `primed` or `needs repair` depending on the evidence.
+- **Outcome**: A recordable learner attempt is appended to the training record. Derived state becomes `primed` or `needs repair` depending on the evidence.
 - **Persistence**: The attempt is recorded before study reveal. No downstream mastery unlock evaluation runs from a cold attempt alone.
 
 ### Phase 2: Targeted Study (Correction)
@@ -124,15 +124,15 @@ Each node derives its next action within the three-phase loop:
 
 The frontend uses derived `next_action`, not persisted `drill_phase`, to choose the concept-page mode.
 
-Concept pages render source-less provenance from the training record: when
-`source_mode === "source_less"`, show `Shaped from your launch attempt, not
-verified against a source.` before the active entry block.
+Concept pages render source-less provenance from the training record inside the
+compact context dock: when `source_mode === "source_less"`, show `No source
+attached. Treat this route as provisional.` near the write-first boundary.
 
-Source-less first entries may also render `learner_scaffold.tailoring_anchor`
-inside the cold-attempt panel. This is learner-facing evidence of tailoring
-from the launch attempt, not feedback on correctness: it may name the sketch
-detail that shaped the prompt, but it must not diagnose a gap, reveal the
-mechanism, name the hidden target, or say what the learner missed.
+Source-less first entries may use `learner_scaffold.tailoring_anchor` internally
+to shape the cold-attempt prompt. It should not render as learner-facing AI
+self-explanation: the learner sees the reconstruction target, not prompt
+plumbing, feedback on correctness, diagnosis of a gap, a revealed mechanism, a
+hidden target, or what the learner missed.
 
 After a source-less learner saves the first draft and explicitly reveals study,
 the concept page renders a post-reveal comparison on the same surface before
@@ -141,22 +141,23 @@ the same-entry study note, and named gaps when recorded. It must not show
 score/tier/band, diagnose the learner, reveal future entries, or count as graph
 truth. The normal comparison-exit action is `Keep working`, which writes
 UI-only acknowledgement state so return/reload can restore the expanded
-workspace; it does not append training evidence or imply progress. In the repair
-branch only, saving a repair record may also expand the workspace: the completed
-repair state hides the composer/helper/save controls and offers `Try from memory
-again`, without treating the repair as graph truth or progress.
+workspace; it does not append training evidence or imply progress. The repair
+branch is the exception: it suppresses `Keep working`, shows the repair panel,
+and only after a repair is saved offers `Pressure-check this link`. Saving the
+repair may also expand the workspace, but neither the repair nor the gap drill
+mutates graph state or records training evidence.
 
 ---
 
-## 4. Side Panel & Result States
+## 4. Inline Concept Entry & Result States
 
-The panel must be mode-pure with no content bleed.
+The current runtime does not use a standalone side-panel DOM for these states. The concept route stays visible, `#drill-chamber-view` mounts inline inside the active concept entry during drills, and study, repair, comparison, and result surfaces live in the same concept-entry work column. Any future side-panel treatment must preserve the same mode purity with no content bleed.
 
-### Seven Panel Modes
+### Surface Modes
 1. **Inspect**: Orientation. Shows prerequisites, study access, or re-drill readiness.
-2. **Cold-Attempt-Active**: exploratory question + transcript. No scores.
+2. **Cold-Attempt-Active**: local node/scaffold prompt + inline chamber. No scores.
 3. **Study**: Mechanism text + normalization message.
-4. **Re-Drill-Active**: Reconstruction demand + transcript.
+4. **Re-Drill-Active**: reconstruction demand + inline chamber transcript.
 5. **Post-Re-Drill**: Result card (`solidified` / `needs repair`) + Trajectory Contrast. Sticky until `Continue`.
 6. **Session-Complete**: Session guardrail reached. Save-point copy.
 7. **Repair-Reps**: Optional typed causal micro-practice after study completion or non-solid re-drill. No scores, no graph mutation, no interleaving credit, no mastery unlock.
@@ -168,7 +169,7 @@ The panel must be mode-pure with no content bleed.
 - **No Training Evidence**: Low-information, reduced-contrast state. Available only when predecessor evidence allows it; otherwise clearly unavailable.
 - **Primed**: Warm, open state. Signals "entered but not yet challenged" and stays visually distinct from both unavailable/no-evidence and needs-repair states.
 
-Show next-horizon nodes (3-5 adjacent available items) rather than the entire remaining graph. Detailed gap taxonomy belongs in the side panel.
+Show next-horizon nodes (3-5 adjacent available items) rather than the entire remaining graph. Detailed gap taxonomy belongs in the active concept-entry repair/result surface.
 
 ---
 
@@ -208,13 +209,13 @@ AI support is allowed only if it preserves the three-phase loop, the drill contr
 - scaffolds and feedback may clarify the gap after an attempt, but must not silently change the target
 - AI-generated explanation quality does not itself mutate graph state
 - only persisted learner reconstruction evidence can derive `primed`, `needs repair`, or `solidified`
-- study, Repair Reps, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`
+- study, Repair Reps, Gap drills / `Pressure-check this link`, starting-map capture, confidence ratings, and AI scaffolding must not produce `solidified`
 - the AI must remain sparse during drill; if the AI talks more than the learner, the passive trap has been triggered
 - the AI must detect zero-schema states and pivot to scaffolded generation
 
 ### In-Node Routing (AI to Frontend)
 - `PROBE` / `SCAFFOLD`: Stay on node, provide help, no state mutation.
-- `NEXT`: Resolve node phase, append training evidence, re-render derived state, and offer traversal.
+- `NEXT`: Resolve node phase. For recordable, non-graph-neutral attempts, append training evidence, re-render derived state, and offer traversal. Graph-neutral gap drills and non-recordable turns may end the drill UI without appending training evidence or mutating graph state.
 - `SESSION_COMPLETE`: Trigger guardrails.
 
 Recordable attempts behave as follows:

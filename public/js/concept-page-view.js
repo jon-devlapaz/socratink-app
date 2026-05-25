@@ -180,12 +180,18 @@ function learnerGoalForConcept(concept, data) {
 
 function attemptPlaceholderForScaffold(scaffold) {
   if (!scaffold) return 'Draft what you can recall. Messy is useful.';
-  return 'Draft your starting guess: what it does, what it connects to, or why it matters.';
+  const starter = cleanScaffoldText(scaffold.sentence_starter);
+  if (starter) return starter;
+  const expected = cleanScaffoldText(scaffold.expected_shape);
+  if (expected) return expected;
+  return 'Write the first useful version of your current model.';
 }
 
 function blankHintForScaffold(scaffold) {
   if (!scaffold) return 'Start with a word, a rough picture, or the part that feels fuzzy.';
-  return 'Not sure yet? Type what you think it might do, or list a few terms you recognize.';
+  const hint = cleanScaffoldText(scaffold.blank_hint);
+  if (hint) return hint;
+  return 'Type one relationship you suspect, even if it feels incomplete.';
 }
 
 export function deriveConceptEntries(data = {}) {
@@ -436,6 +442,7 @@ function renderEvidenceArtifactHtml(derived) {
   if (!attempt?.user_text) return '';
   const hasStudyReveal = Boolean(derived.record?.study_revealed_at);
   const isStudyGate = derived.next_action === 'study' && !hasStudyReveal;
+  const isRepairing = derived.next_action === 'repair';
   const gaps = Array.isArray(attempt.gaps) && attempt.gaps.length
     ? attempt.gaps
     : (Array.isArray(derived.gaps) ? derived.gaps : []);
@@ -446,7 +453,7 @@ function renderEvidenceArtifactHtml(derived) {
       </p>
     `
     : '';
-  const hingeHtml = hasStudyReveal && gaps.length
+  const hingeHtml = hasStudyReveal && !isRepairing && gaps.length
     ? `
       <div class="concept-page-b2__evidence-hinge">
         <span class="concept-page-b2__evidence-label">Missing piece</span>
@@ -463,7 +470,7 @@ function renderEvidenceArtifactHtml(derived) {
     : '';
 
   return `
-    <section class="concept-page-b2__evidence" aria-label="Learner draft evidence">
+    <section class="concept-page-b2__evidence${isRepairing ? ' concept-page-b2__evidence--compact' : ''}" aria-label="Learner draft evidence">
       <span class="eyebrow concept-page-b2__evidence-eyebrow">${isStudyGate ? 'Your memory draft' : 'Your draft'}</span>
       <blockquote>${escHtml(attempt.user_text)}</blockquote>
       ${bridgeHtml}
@@ -480,14 +487,13 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   const entryId = activeEntryId || activeEntry.id || 'core-thesis';
   const repairs = Array.isArray(derived.record?.repairs) ? derived.record.repairs : [];
   const nextAttemptButton = repairs.length
-    ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}">Try from memory again</button>`
+    ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}" data-active-entry-action="drill-gap">Pressure-check this link</button>`
     : '';
-  const gapCount = gaps.length;
-  const gapCountText = `${gapCount} missing ${gapCount === 1 ? 'link' : 'links'} to repair`;
+  const repairTarget = repairGapCorrection(gaps[0]) || 'Write the part that was missing from your first attempt.';
 
   const helperHtml = repairs.length
     ? ''
-    : `<p class="concept-page-b2__repair-helper">Save this repair before you try from memory again.</p>`;
+    : `<p class="concept-page-b2__repair-helper">Use your words. One or two sentences is enough.</p>`;
 
   const inputFormHtml = repairs.length
     ? ''
@@ -498,26 +504,21 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
         aria-label="Write the missing link"
         rows="4"
         maxlength="1200"
-        placeholder="Name the corrected link in your own words."
+        placeholder="Write the corrected link here."
       ></textarea>
       <p class="concept-page-b2__repair-error" data-repair-error hidden>Write the missing link before saving.</p>
       <button class="concept-page-b2__repair-save" type="button" data-repair-entry-id="${escHtml(entryId)}">Save repair</button>
     `;
 
   return `
-    <section class="concept-page-b2__repair" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
-      <span class="eyebrow concept-page-b2__repair-eyebrow">Put it in your words</span>
-      <h3>Write the missing link</h3>
-      <p class="concept-page-b2__repair-summary">${escHtml(gapCountText)}</p>
+    <section class="concept-page-b2__repair${repairs.length ? ' concept-page-b2__repair--saved' : ''}" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
+      <span class="eyebrow concept-page-b2__repair-eyebrow">${repairs.length ? 'Repair saved' : 'Repair'}</span>
+      <h3>${repairs.length ? 'Try this entry again from memory.' : 'Write the missing link.'}</h3>
+      <div class="concept-page-b2__repair-target">
+        <span>Missing link</span>
+        <p>${escHtml(repairTarget)}</p>
+      </div>
       ${helperHtml}
-      <ul class="concept-page-b2__repair-gaps">
-        ${gaps.map((gap, index) => `
-          <li>
-            <strong>${escHtml(repairGapTitle(gap, index))}</strong>
-            <span>${escHtml(repairGapCorrection(gap))}</span>
-          </li>
-        `).join('')}
-      </ul>
       ${inputFormHtml}
       ${nextAttemptButton}
     </section>
@@ -536,11 +537,8 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
     scaffold?.expected_shape || '',
   ].filter(Boolean);
   const helper = helperParts.join(' ');
-  const tailoringAnchor = scaffold?.tailoring_anchor
-    ? `Shaped by your sketch: ${scaffold.tailoring_anchor}`
-    : '';
   const placeholder = attemptPlaceholderForScaffold(scaffold);
-  const buttonLabel = scaffold ? 'Save starting guess for comparison' : 'Draft from memory';
+  const buttonLabel = scaffold ? 'Use this draft' : 'Draft from memory';
   const errorText = scaffold
     ? 'Write the smallest useful guess before study appears.'
     : 'Put down the part you can explain, even if it is incomplete.';
@@ -548,7 +546,6 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
       <span class="eyebrow concept-page-b2__attempt-eyebrow">first inquiry</span>
       <h3>${escHtml(heading)}</h3>
-      ${tailoringAnchor ? `<p class="concept-page-b2__attempt-helper">${escHtml(tailoringAnchor)}</p>` : ''}
       ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
       <textarea
         class="concept-page-b2__attempt-input"
@@ -581,6 +578,26 @@ function routeMarginPhase(entry, index) {
   return phases[index] || { title: `Entry ${index + 1}`, cue: 'continue the route' };
 }
 
+function getCrystalSvg(state) {
+  const normalized = String(state || '').toLowerCase().replace(/\s+/g, '-');
+  const stateClass = [
+    'solidified',
+    'needs-repair',
+    'primed',
+    'attempted',
+    'ready-to-reconstruct',
+    'locked',
+  ].includes(normalized) ? normalized : 'locked';
+  return `
+    <svg class="node-strip-crystal node-strip-crystal--${stateClass}" viewBox="0 0 28 38" aria-hidden="true" focusable="false">
+      <path class="node-strip-crystal__facet node-strip-crystal__facet--top" d="M14 1 26 10 14 17 2 10Z"></path>
+      <path class="node-strip-crystal__facet node-strip-crystal__facet--left" d="M2 10 14 17 14 37 3 23Z"></path>
+      <path class="node-strip-crystal__facet node-strip-crystal__facet--right" d="M26 10 14 17 14 37 25 23Z"></path>
+      <path class="node-strip-crystal__axis" d="M14 1v36"></path>
+    </svg>
+  `;
+}
+
 function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
   const nodes = backbone.length ? backbone : [FALLBACK_ACTIVE_ENTRY];
   const interactive = options.interactive !== false;
@@ -590,9 +607,11 @@ function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
     options.lockedInert ? 'data-locked-inert="true"' : '',
   ].filter(Boolean).join(' ');
   return `
-    <aside class="concept-page-b2__route" aria-label="Concept route"${routeAttrs ? ` ${routeAttrs}` : ''}>
-      <span class="eyebrow concept-page-b2__route-eyebrow">route margin</span>
-      <ol class="concept-page-b2__route-list">
+    <aside class="concept-page-b2__route node-strip" aria-label="Concept route"${routeAttrs ? ` ${routeAttrs}` : ''}>
+      <div class="node-strip__header">
+        <span class="eyebrow concept-page-b2__route-eyebrow">draft route</span>
+      </div>
+      <ol class="concept-page-b2__route-list node-strip__list">
         ${nodes.map((entry, index) => {
           const scaffold = entryScaffold(entry);
           const phase = quiet
@@ -605,26 +624,26 @@ function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
           const isActive = index === activeIdx;
           const entryId = getConceptEntryId(entry, index);
           const currentAttr = isActive ? ' aria-current="step"' : '';
+          const stateToken = state.toLowerCase().replace(/\s+/g, '-');
           if (!interactive) {
             return `
-              <li class="concept-page-b2__route-marker-item${isActive ? ' is-active' : ''}" aria-label="${escHtml(`${phase.title || `Entry ${index + 1}`}${isActive ? ', current' : ''}`)}"${currentAttr}>
-                <span class="concept-page-b2__route-index">${String(index + 1).padStart(2, '0')}</span>
-                <span class="concept-page-b2__route-marker" aria-hidden="true"></span>
+              <li class="node-strip-item concept-page-b2__route-marker-item${isActive ? ' is-active' : ''}" data-route-state="${escHtml(state)}" data-node-state="${escHtml(stateToken)}" aria-label="${escHtml(`${phase.title || `Entry ${index + 1}`}${isActive ? ', current' : ''}`)}"${currentAttr}>
+                <span class="concept-page-b2__route-index node-strip-num">${String(index + 1).padStart(2, '0')}</span>
+                <span class="concept-page-b2__route-marker node-strip-marker" aria-hidden="true">${getCrystalSvg(state)}</span>
                 ${phase.title ? `
-                  <span class="concept-page-b2__route-copy">
-                    <span class="concept-page-b2__route-title">${escHtml(phase.title)}</span>
+                  <span class="concept-page-b2__route-copy node-strip-text">
+                    <span class="concept-page-b2__route-title node-strip-title">${escHtml(phase.title)}</span>
                   </span>
                 ` : ''}
               </li>
             `;
           }
           return `
-            <li class="concept-page-b2__route-item${isActive ? ' is-active' : ''}" role="button" tabindex="0" data-entry-id="${escHtml(entryId)}" data-entry-index="${index}" data-route-state="${escHtml(state)}" aria-label="${escHtml(`${phase.title}, ${state}${isActive ? ', current' : ''}`)}"${currentAttr}>
-              <span class="concept-page-b2__route-index">${String(index + 1).padStart(2, '0')}</span>
-              <span class="concept-page-b2__route-marker" aria-hidden="true"></span>
-              <span class="concept-page-b2__route-copy">
-                <span class="concept-page-b2__route-title">${escHtml(phase.title)}</span>
-                <span class="concept-page-b2__route-cue">${escHtml(phase.cue)}</span>
+            <li class="node-strip-item concept-page-b2__route-item${isActive ? ' is-active' : ''}" role="button" tabindex="0" data-entry-id="${escHtml(entryId)}" data-entry-index="${index}" data-route-state="${escHtml(state)}" data-node-state="${escHtml(stateToken)}" aria-label="${escHtml(`${phase.title}, ${state}${isActive ? ', current' : ''}`)}"${currentAttr}>
+              <span class="concept-page-b2__route-index node-strip-num">${String(index + 1).padStart(2, '0')}</span>
+              <span class="concept-page-b2__route-marker node-strip-marker" aria-hidden="true">${getCrystalSvg(state)}</span>
+              <span class="concept-page-b2__route-copy node-strip-text">
+                <span class="concept-page-b2__route-title node-strip-title">${escHtml(phase.title)}</span>
               </span>
             </li>
           `;
@@ -637,19 +656,72 @@ function renderRouteMarginHtml(backbone, activeIdx, training, options = {}) {
 function renderScopeBoundaryHtml() {
   return `
     <p class="concept-page-b2__scope">
-      <span>Scope:</span>
-      Study material stays hidden until you draft from memory.
+      Write first. Compare after.
     </p>
   `;
 }
 
-function renderBlankStartHtml(scaffold = null) {
+function renderBlankStartHtml(scaffold = null, activeEntryId = 'entry') {
   const hint = blankHintForScaffold(scaffold);
+  const hintId = `blank-start-${String(activeEntryId || 'entry').replace(/[^a-zA-Z0-9_-]/g, '-')}`;
   return `
-    <details class="concept-page-b2__blank-start">
-      <summary>I'm blank</summary>
-      <p>${escHtml(hint)} The mechanism stays hidden.</p>
-    </details>
+    <div class="concept-page-b2__blank-start">
+      <button class="concept-page-b2__blank-start-button" type="button" data-blank-start aria-expanded="false" aria-controls="${escHtml(hintId)}">Stuck?</button>
+      <p class="concept-page-b2__blank-start-hint" id="${escHtml(hintId)}" data-blank-start-hint hidden>${escHtml(hint)}</p>
+    </div>
+  `;
+}
+
+function renderSketchWrapperHtml(thresholdText) {
+  const hasSketch = Boolean(thresholdText);
+  const preview = hasSketch
+    ? thresholdText
+    : 'You have not yet sketched what you think is inside this concept.';
+  return `
+    <section class="vd-sketch-wrapper concept-page-b2__threshold${hasSketch ? '' : ' concept-page-b2__threshold--empty'}" data-sketch-collapsed="true" aria-label="Concept context">
+      <div class="vd-sketch-head">
+        <button class="vd-sketch-toggle" type="button" data-action="toggle-sketch" aria-expanded="false" aria-controls="vd-sketch-body">
+          <span class="concept-page-b2__threshold-label">Context</span>
+          <span class="vd-sketch-preview">${escHtml(preview)}</span>
+        </button>
+        <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>${hasSketch ? 'edit' : 'add sketch'}</a>
+      </div>
+      <div class="vd-sketch-body" id="vd-sketch-body" hidden>
+        <p>${escHtml(preview)}</p>
+      </div>
+    </section>
+  `;
+}
+
+function renderDrillChamberHtml() {
+  return `
+    <section id="drill-chamber-view" class="drill-chamber-view" hidden aria-label="Drill chamber">
+      <div class="drill-chamber__inner">
+        <nav class="drill-chamber__crumb" aria-label="Drill location">
+          <a href="javascript:void(0)" id="chamber-exit" aria-label="Return to concept">
+            <svg class="drill-chamber__back" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            Return to concept
+          </a>
+          <span class="drill-chamber__sep" aria-hidden="true">·</span>
+          <span id="chamber-concept-name">—</span>
+          <span class="drill-chamber__sep" aria-hidden="true">·</span>
+          <span class="drill-chamber__here" id="chamber-entry-name">—</span>
+        </nav>
+
+        <div class="drill-chamber__chat-log" id="chamber-chat-log" hidden></div>
+
+        <div class="drill-chamber__active" id="chamber-active">
+          <p class="drill-chamber__question" id="chamber-question">—</p>
+          <div class="drill-chamber__composer">
+            <textarea id="chamber-composer" placeholder="Write your reconstruction here. Fragments are fine." aria-label="Your reply" rows="3"></textarea>
+            <div class="drill-chamber__composer-foot">
+              <span class="drill-chamber__hint">A sentence is enough. Cmd+Return submits.</span>
+              <button class="drill-chamber__send" id="chamber-send" type="button">Submit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -693,27 +765,31 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     ? 'Your draft gives the notes something specific to work against. Study stays hidden until you choose to compare.'
     : '';
   const scaffold = entryScaffold(activeEntry);
-  const entryPurpose = studyGatePurpose
-    || scaffold?.task_cue
-    || activeEntry.purpose
-    || (isBlocked
-      ? 'Locked until you write from memory on the entry above. The mechanism stays hidden until you have put your current model into words.'
-      : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
+  const suppressPurposeForScaffoldAttempt = isAttempting && isColdReadyEntry && Boolean(scaffold?.entry_prompt);
+  const entryPurpose = suppressPurposeForScaffoldAttempt
+    ? ''
+    : studyGatePurpose
+      || scaffold?.task_cue
+      || activeEntry.purpose
+      || (isBlocked
+        ? 'Locked until you write from memory on the entry above. The mechanism stays hidden until you have put your current model into words.'
+        : 'The first entry asks for the governing idea, not the whole source. No study material yet. Write what you can reconstruct from memory.');
   const ctaLabel = activeEntryCtaLabel({
     attempted: derived.attempted,
     state: derived.state,
     nextAction: derived.next_action,
   });
   const ctaAction = derived.next_action === 'study' ? 'study' : 'drill';
+  const collapseStudyNote = derived.next_action === 'repair';
   const studyNoteHtml = derived.record?.study_revealed_at && !isAttempting
     ? `
-      <section class="concept-page-b2__study-note" aria-label="Study note">
+      <section class="concept-page-b2__study-note${collapseStudyNote ? ' is-collapsed' : ''}" aria-label="Study note">
         <div class="concept-page-b2__study-note-header">
           <span class="eyebrow concept-page-b2__study-note-eyebrow">Study note</span>
-          <button class="concept-page-b2__study-note-toggle" type="button" data-study-note-toggle aria-expanded="true">Hide study note</button>
+          <button class="concept-page-b2__study-note-toggle" type="button" data-study-note-toggle aria-expanded="${collapseStudyNote ? 'false' : 'true'}">${collapseStudyNote ? 'Show study note' : 'Hide study note'}</button>
         </div>
         <p data-study-note-body>${escHtml(studyNoteForEntry(activeEntry, concept, data))}</p>
-        <p class="concept-page-b2__study-note-hidden" data-study-note-hidden>Hidden while you write from memory.</p>
+        <p class="concept-page-b2__study-note-hidden" data-study-note-hidden>Study note tucked away while you repair.</p>
       </section>
     `
     : '';
@@ -723,49 +799,38 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     useScaffold: isColdReadyEntry,
     learnerGoal: learnerGoalForConcept(concept, data),
   }) : '';
-  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml(scaffold) : '';
+  const blankStartHtml = isColdReadyEntry ? renderBlankStartHtml(scaffold, activeEntryId) : '';
 
   const thresholdHtml = thresholdText
-    ? `
-      <p class="concept-page-b2__threshold">
-        <span class="concept-page-b2__threshold-label">Your starting sketch:</span>
-        ${escHtml(thresholdText)}
-        <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>edit</a>
-      </p>
-    `
-    : `
-      <p class="concept-page-b2__threshold concept-page-b2__threshold--empty">
-        You have not yet sketched what you think is inside this concept.
-        <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>add sketch</a>
-      </p>
-    `;
+    ? renderSketchWrapperHtml(thresholdText)
+    : renderSketchWrapperHtml('');
   const provenanceHtml = isSourceLess
-    ? `
-      <p class="concept-page-b2__provenance">
-        Shaped from your launch attempt, not verified against a source.
-      </p>
-    `
+    ? '<p class="concept-page-b2__provenance">No source attached. Treat this route as provisional.</p>'
     : '';
 
-  const ctaButton = isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
+  const ctaButton = options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? (isPostRevealComparison
+      && derived.next_action !== 'repair'
       ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="keep-working">Keep working</button>`
       : '')
     : isBlocked
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Write from memory on the entry above first">Locked</button>`
     : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="${escHtml(ctaAction)}">${ctaLabel}</button>`;
 
+  const activeEntryClass = `concept-page-b2__active-entry${options?.isDrilling ? ' concept-page-b2__active-entry--drilling' : ''}`;
   const activeHtml = `
-    <section class="concept-page-b2__active-entry" aria-label="Active concept entry">
+    <section class="${activeEntryClass}" aria-label="Active concept entry">
       <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(entryEyebrow)}</span>
       <h2 class="concept-page-b2__entry-title">${escHtml(activeEntry.label || 'Core thesis')}</h2>
-      <p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>
-      ${evidenceArtifactHtml}
-      ${studyNoteHtml}
-      ${repairPanelHtml}
-      ${attemptPanelHtml}
-      ${blankStartHtml}
-      ${ctaButton}
+      ${entryPurpose ? `<p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>` : ''}
+      ${options?.isDrilling ? renderDrillChamberHtml() : `
+        ${evidenceArtifactHtml}
+        ${studyNoteHtml}
+        ${repairPanelHtml}
+        ${attemptPanelHtml}
+        ${blankStartHtml}
+        ${ctaButton}
+      `}
     </section>
   `;
 
@@ -804,9 +869,11 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         lockedInert: isSourceLess && isExpandedWorkspace,
       })}
       <div class="concept-page-b2__work">
-        ${renderScopeBoundaryHtml()}
-        ${thresholdHtml}
-        ${provenanceHtml}
+        <div class="concept-page-b2__context-dock" aria-label="Recall context">
+          ${renderScopeBoundaryHtml()}
+          ${thresholdHtml}
+          ${provenanceHtml}
+        </div>
         ${activeHtml}
         ${nearbyHtml}
         <p class="concept-page-b2__truth-note">Your words shape the path. They do not grade you.</p>

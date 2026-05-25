@@ -85,17 +85,17 @@ Enter concept
 
 **1. Door + Launch pad — global starting map.** *No graph state mutation.* The Door captures a concept name, optional learner-goal-shaped intent, and optional imported source. Without source, the learner moves to the Launch pad and writes any non-empty **Launch attempt** — rough is useful — before recognition-heavy content appears. Goal text may frame relevance, but it is not evidence or diagnosis. Primary action: **Build the draft route.**
 
-**2. Provisional Graph.** *No state mutation.* A draft route is rendered from the starting map. Copy is explicit that the graph is a **hypothesis**, not a knowledge claim. Legend is limited to: draft route · ready for first attempt · locked. Primary action: **Start first attempt.**
+**2. Provisional Graph.** *No state mutation.* A draft route is rendered from the starting map. Copy is explicit that the graph is a **hypothesis**, not a knowledge claim. Legend is limited to: draft route · ready for first attempt · locked. Opening the first route entry renders the reconstruction surface inline; current primary copy is **Draft from memory** or scaffolded **Use this draft**.
 
-**3. First Cold Attempt — local mechanism question.** *Still learner-facing unscored.* The prompt is **narrower** than the threshold, and should **quote or paraphrase the learner's threshold input** before asking a single causal question inside the first node. Example: *"You said LLMs are built from lots of text and training. Narrow that into one causal guess: what do you think the training is trying to predict at each step?"* On submit, recordable learner evidence derives `primed` or `needs repair`. Non-substantive input writes no attempt; ask for a micro-generation.
+**3. First Cold Attempt — local mechanism question.** *Still learner-facing unscored.* The prompt is **narrower** than the threshold. The learner's launch attempt stays available in the collapsed **Context** control, while internal tailoring/scaffold fields shape the visible prompt without quoting the hidden target as answer text. On submit, recordable learner evidence derives `primed` or `needs repair`. Non-substantive input writes no attempt; ask for a micro-generation.
 
    **Analogical fallback — when signal is too thin.** Pivot to an analogy-led generation *instead of* a blind guess. Rules: (a) give a familiar source analogy, never the target mechanism as the answer; (b) ask the learner to predict a causal relationship *inside the analogy*; (c) the node stays `locked` until a substantive micro-generation lands; (d) the learner is never labeled zero-knowledge.
 
 **4. Locked Study Silhouette.** *Pre-attempt.* Node title + one-line purpose + locked state + first-attempt CTA. **No explanation, no definitions list, no solved diagram, no revealing examples.** The absence of content is intentional.
 
-**5. Study Repair Artifact.** *Node is `primed`; content scoped to the attempted node only.* Five parts, in order: (a) the learner's exact words, preserved; (b) **the hinge** — one specific correction; (c) **causal spine** — a compact arrow chain; (d) **one clarifying diagram**; (e) 1–2 connection cues to nearby nodes, only after the local repair is readable. Do not claim mastery here. Primary action: **Choose next room** (which leads into the bridge, not directly into another cold attempt).
+**5. Study Repair Artifact.** *Node is `primed`; content scoped to the attempted node only.* Five parts, in order: (a) the learner's exact words, preserved; (b) **the hinge** — one specific correction; (c) **causal spine** — a compact arrow chain; (d) **one clarifying diagram**; (e) 1–2 connection cues to nearby nodes, only after the local repair is readable. Do not claim mastery here. Target primary action: **Choose next room** (which leads into the bridge, not directly into another cold attempt). Current completed-repair state may also offer **Pressure-check this link** as a graph-neutral Gap drill.
 
-**6. Interleaving Bridge.** *Node remains `primed`; re-drill is not yet offered.* A short screen that names *why* the learner is leaving the just-repaired node ("the repair is fresh, so re-drilling Core Thesis right now would mostly test short-term echo") and offers **2–3 nearby rooms**, each with a **one-line purpose, not a mechanism reveal**. A non-punitive **"Take a short break instead"** is always present — spacing is a valid choice. Interleaving is **never framed as reward or completion**.
+**6. Interleaving Bridge.** *Node remains `primed`; spaced re-drill is not yet offered.* A short screen that names *why* the learner is leaving the just-repaired node ("the repair is fresh, so re-drilling Core Thesis right now would mostly test short-term echo") and offers **2–3 nearby rooms**, each with a **one-line purpose, not a mechanism reveal**. A non-punitive **"Take a short break instead"** is always present — spacing is a valid choice. Interleaving is **never framed as reward or completion**.
 
 **7. Repair History.** *Accumulates from attempts, feedback, repair reps, and re-drills only — never from reading.* A growing field journal: repaired misconceptions, recurring gaps, alternate explanations, learner-authored summaries, causal bridges. The learner's own voice is the organizing unit, not the system's.
 
@@ -105,10 +105,12 @@ Enter concept
 |---|---|---|---|
 | Threshold submitted | starting map captured | routing signal, source dependence, causal depth | **none** |
 | Provisional graph generated | draft route | first-node priority, prompt emphasis | **none** |
-| Local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
+| Recordable local cold attempt submitted | learner-facing unscored node attempt | private classification and gaps | training evidence appended; derives `primed` or `needs repair` |
+| Non-recordable cold/help turn | learner-facing unscored support turn | practice context only | **none**; no training evidence append |
 | Study revealed | repair artifact | `study_revealed_at`; no mastery signal | stays `primed`; current re-drill readiness derives from attempt timing, not study completion |
 | Interleaving bridge shown | small next-choice set (2–3 rooms + break) | route preference | **none** |
 | Repair rep completed | practice history | self-rating, bridge quality | **none** |
+| Gap drill completed | pressure-check of repaired link | focused repair practice only | **none**; no training evidence append or spacing credit |
 | Spaced re-drill strong | proof through reconstruction | strong classification after spacing | derives `solidified` |
 | Spaced re-drill non-solid | needs repair | gap metadata | derives `needs repair` when warranted |
 

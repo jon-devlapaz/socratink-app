@@ -43,6 +43,127 @@ def run_node_module(script: str) -> subprocess.CompletedProcess[str]:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+
+        const nodes = new Map();
+
+        function makeNode(id) {
+          return {
+            id,
+            hidden: true,
+            disabled: false,
+            value: '',
+            textContent: '',
+            innerHTML: '',
+            placeholder: '',
+            listeners: {},
+            classList: {
+              add() {},
+              remove() {},
+            },
+            appendChild(child) {
+              this.lastChild = child;
+            },
+            addEventListener(type, handler) {
+              this.listeners[type] = handler;
+            },
+            click() {
+              this.listeners.click?.({});
+            },
+            focus() {
+              this.focused = true;
+            },
+            insertAdjacentHTML(_position, html) {
+              this.insertedHtml = html;
+            },
+            querySelectorAll() {
+              return [];
+            },
+            removeAttribute(name) {
+              delete this[name];
+            },
+            scrollIntoView() {
+              this.scrolled = true;
+            },
+            setAttribute(name, value) {
+              this[name] = value;
+            },
+          };
+        }
+
+        globalThis.window = {};
+        globalThis.document = {
+          body: {
+            classList: {
+              add() {},
+              remove() {},
+            },
+          },
+          createElement(tagName) {
+            return makeNode(tagName);
+          },
+          getElementById(id) {
+            return nodes.get(id) || null;
+          },
+        };
+        globalThis.requestAnimationFrame = (callback) => callback();
+        globalThis.setTimeout = (callback) => {
+          callback();
+          return 0;
+        };
+
+        await import('./public/js/drill-chamber.js');
+
+        for (const id of [
+          'drill-chamber-view',
+          'chamber-concept-name',
+          'chamber-entry-name',
+          'chamber-question',
+          'chamber-composer',
+          'chamber-send',
+          'chamber-exit',
+          'chamber-chat-log',
+        ]) {
+          nodes.set(id, makeNode(id));
+        }
+
+        assert.doesNotThrow(() => window.DrillChamber.show({
+          conceptName: 'Concept',
+          entryName: 'Entry',
+          question: 'Question?',
+        }));
+        assert.doesNotThrow(() => window.DrillChamber.setComposerEnabled(true));
+        assert.doesNotThrow(() => window.DrillChamber.clearComposer());
+        assert.doesNotThrow(() => window.DrillChamber.swapQuestion('Next?'));
+        assert.doesNotThrow(() => window.DrillChamber.appendHistoryTurn('ai', 'Hello'));
+        assert.doesNotThrow(() => window.DrillChamber.appendCreed());
+        assert.equal(window.DrillChamber.getComposerValue(), '');
+
+        nodes.set('chamber-active', makeNode('chamber-active'));
+        window.DrillChamber.show({
+          conceptName: 'Concept',
+          entryName: 'Entry',
+          question: 'Question?',
+        });
+        assert.equal(nodes.get('drill-chamber-view').hidden, false);
+        assert.equal(nodes.get('chamber-question').textContent, 'Question?');
+
+        const sent = [];
+        window.DrillChamber.onSend((text) => sent.push(text));
+        nodes.get('chamber-composer').value = '  learner answer  ';
+        nodes.get('chamber-send').click();
+        assert.deepEqual(sent, ['learner answer']);
+        assert.equal(nodes.get('chamber-composer').disabled, true);
+        assert.equal(nodes.get('chamber-send').disabled, true);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_html_escape_helper_matches_app_contract() -> None:
     result = run_node_module(
         """
@@ -1307,11 +1428,16 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           { source_mode: 'source_less', node_records: {} },
           { viewMode: 'cold-surface' }
         );
-        assert.ok(coldHtml.includes('Your starting sketch'));
+        assert.ok(coldHtml.includes('Context'));
         assert.ok(coldHtml.includes('I think nerves send electricity'));
+        assert.ok(coldHtml.includes('Write first. Compare after.'));
+        assert.ok(coldHtml.includes('No source attached. Treat this route as provisional.'));
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
         assert.ok(coldHtml.includes('Signal spread'));
+        assert.ok(coldHtml.includes('Use this draft'));
+        assert.ok(!coldHtml.includes('Shaped by your sketch'));
+        assert.ok(!coldHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(!coldHtml.includes('AI-generated answer structure must stay hidden.'));
         assert.ok(!coldHtml.includes('Voltage threshold opens sodium channels'));
         assert.ok(!coldHtml.includes('Sodium influx causes depolarization'));
@@ -1327,7 +1453,8 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           graphData,
           null
         );
-        assert.ok(coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
+        assert.ok(coldWithoutTrainingHtml.includes('No source attached. Treat this route as provisional.'));
+        assert.ok(!coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(coldWithoutTrainingHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-item'));
         assert.ok(!coldWithoutTrainingHtml.includes('data-entry-id="spread"'));
@@ -1418,6 +1545,55 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(expandedHtml.includes('data-entry-id="spread"'));
         assert.ok(!expandedHtml.includes('data-active-entry-action="keep-working"'));
         """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_concept_page_inline_drill_mount_preserves_context() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          deriveConceptEntries,
+          renderActiveEntryHtml,
+        } from './public/js/concept-page-view.js';
+
+        const graphData = {
+          metadata: {
+            starting_map_context: 'I think voltage opens a gate, then sodium moves.',
+          },
+          clusters: [{
+            id: 'c1',
+            subnodes: [
+              { id: 'gate', label: 'Sodium gate', purpose: 'Name the trigger.' },
+              { id: 'spread', label: 'Signal spread', purpose: 'Connect the next step.' },
+            ],
+          }],
+        };
+        const entries = deriveConceptEntries(graphData);
+        const html = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          { id: 'concept-1', name: 'Action potentials' },
+          graphData,
+          { node_records: {} },
+          { isDrilling: true }
+        );
+
+        assert.match(html, /node-strip/);
+        assert.match(html, /node-strip-item/);
+        assert.match(html, /concept-page-b2__route-item/);
+        assert.match(html, /vd-sketch-wrapper/);
+        assert.match(html, /data-action="toggle-sketch"/);
+        assert.match(html, /I think voltage opens a gate/);
+        assert.match(html, /concept-page-b2__active-entry--drilling/);
+        assert.match(html, /id="drill-chamber-view"/);
+        assert.match(html, /id="chamber-chat-log"/);
+        assert.doesNotMatch(html, /id="chamber-history-toggle"/);
+        assert.doesNotMatch(html, /data-active-entry-action="drill"/);
+      """
     )
     assert result.returncode == 0, result.stderr
 
@@ -1716,11 +1892,14 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(readyHtml.includes('metadata sketch'));
         assert.ok(readyHtml.includes('concept-page-b2__gestalt'));
         assert.ok(readyHtml.includes('concept-page-b2__route'));
-        assert.ok(readyHtml.includes('Study material stays hidden until you draft from memory.'));
+        assert.ok(readyHtml.includes('Write first. Compare after.'));
         assert.ok(readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('Draft from memory'));
-        assert.ok(readyHtml.includes("I'm blank"));
+        assert.ok(readyHtml.includes('Stuck?'));
+        assert.ok(readyHtml.includes('data-blank-start'));
+        assert.ok(readyHtml.includes('data-blank-start-hint'));
+        assert.ok(!readyHtml.includes('The mechanism stays hidden.'));
         assert.ok(readyHtml.includes('concept-page-b2__attempt'));
         assert.ok(!readyHtml.includes('concept-page-b2__entry-cta'));
 
@@ -1735,7 +1914,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(sourceLessHtml.includes('Shaped from your launch attempt, not verified against a source.'));
+        assert.ok(sourceLessHtml.includes('No source attached. Treat this route as provisional.'));
+        assert.ok(!sourceLessHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         const sourceAttachedHtml = renderActiveEntryHtml(
           backbone[1],
           1,
@@ -1747,7 +1927,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(!sourceAttachedHtml.includes('not verified against a source'));
+        assert.ok(!sourceAttachedHtml.includes('No source attached. Treat this route as provisional.'));
 
         const readyAttemptHtml = renderActiveEntryHtml(
           backbone[1],
@@ -1808,17 +1988,17 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { attemptEntryId: 'c1_s1' }
         );
         assert.ok(scaffoldHtml.includes('Starting model'));
-        assert.ok(scaffoldHtml.includes('Put the system in your words.'));
-        assert.ok(scaffoldHtml.includes('Shaped by your sketch: You mentioned a self-improving agent, so this starts by naming what parts are working together.'));
+        assert.ok(!scaffoldHtml.includes('Put the system in your words.'));
+        assert.ok(!scaffoldHtml.includes('Shaped by your sketch'));
         assert.ok(!scaffoldHtml.includes('State the system in your own words.'));
         assert.ok(scaffoldHtml.includes('How would you explain Hermes Agent to a classmate right now?'));
         assert.ok(scaffoldHtml.includes('Goal: build a reliable agent system. First make a starting guess for Starting model.'));
         assert.ok(scaffoldHtml.includes('Write 1-2 sentences. Name what it does and one fuzzy part.'));
-        assert.ok(scaffoldHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
-        assert.ok(scaffoldHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
-        assert.ok(!scaffoldHtml.includes('My current guess is that Hermes Agent works by...'));
-        assert.ok(!scaffoldHtml.includes('Pick one phrase from your sketch and say what role it plays.'));
-        assert.ok(scaffoldHtml.includes('Save starting guess for comparison'));
+        assert.ok(scaffoldHtml.includes('My current guess is that Hermes Agent works by...'));
+        assert.ok(scaffoldHtml.includes('Pick one phrase from your sketch and say what role it plays.'));
+        assert.ok(!scaffoldHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
+        assert.ok(!scaffoldHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
+        assert.ok(scaffoldHtml.includes('Use this draft'));
         assert.ok(!scaffoldHtml.includes('Bloom'));
         assert.ok(!scaffoldHtml.includes('bloom_level'));
         assert.ok(!scaffoldHtml.includes('provider routing, deployment environments'));
@@ -1857,10 +2037,44 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { source_mode: 'source_less', node_records: {} }
         );
         assert.ok(moveOnlyHtml.includes('Use it'));
-        assert.ok(moveOnlyHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
-        assert.ok(moveOnlyHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
+        assert.ok(moveOnlyHtml.includes('My current model is...'));
+        assert.ok(moveOnlyHtml.includes('Use one word from your sketch.'));
+        assert.ok(!moveOnlyHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
+        assert.ok(!moveOnlyHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
         assert.ok(!moveOnlyHtml.includes('Say it'));
         assert.ok(!moveOnlyHtml.includes('Core Logic'));
+
+        const fallbackScaffoldEntries = deriveConceptEntries({
+          clusters: [{
+            id: 'c1',
+            subnodes: [{
+              id: 'c1_s1',
+              label: 'Fallback label',
+              learner_scaffold: {
+                bloom_level: 'understand',
+                learner_move: 'Say it',
+                task_label: 'Fallback label',
+                task_cue: 'Name the working relationship.',
+                tailoring_anchor: '',
+                entry_prompt: 'What relationship do you think matters here?',
+                expected_shape: 'Write one relationship you suspect.',
+                sentence_starter: '',
+                blank_hint: '',
+                evidence_goal: 'Learner states a suspected relationship.',
+              },
+            }],
+          }],
+        });
+        const fallbackScaffoldHtml = renderActiveEntryHtml(
+          fallbackScaffoldEntries[0],
+          0,
+          fallbackScaffoldEntries,
+          {},
+          { metadata: {} },
+          { source_mode: 'source_less', node_records: {} }
+        );
+        assert.ok(fallbackScaffoldHtml.includes('Write one relationship you suspect.'));
+        assert.ok(fallbackScaffoldHtml.includes('Type one relationship you suspect, even if it feels incomplete.'));
 
         const primedHtml = renderActiveEntryHtml(
           { id: 'primed', label: 'Primed', drill_status: 'primed', study_note: 'Hidden reference note.' },
@@ -2062,19 +2276,24 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('nearby entries'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence'));
         assert.ok(repairHtml.includes('Your draft'));
-        assert.ok(repairHtml.includes('Missing piece'));
+        assert.ok(repairHtml.includes('concept-page-b2__evidence--compact'));
+        assert.ok(!repairHtml.includes('Missing piece'));
         assert.ok(!repairHtml.includes('repair hinge'));
         assert.ok(repairHtml.includes('Sodium just rushes in.'));
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
         assert.ok(repairHtml.includes('concept-page-b2__repair'));
-        assert.ok(repairHtml.includes('channel gate'));
+        assert.ok(repairHtml.includes('Repair'));
+        assert.ok(repairHtml.includes('Missing link'));
         assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
         assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
-        assert.ok(repairHtml.includes('Put it in your words'));
-        assert.ok(repairHtml.includes('1 missing link to repair'));
-        assert.ok(repairHtml.includes('Save this repair before you try from memory again.'));
-        assert.ok(repairHtml.includes('Write the missing link'));
+        assert.ok(!repairHtml.includes('Put it in your words'));
+        assert.ok(!repairHtml.includes('1 missing link to repair'));
+        assert.ok(!repairHtml.includes('Save this repair before you try from memory again.'));
+        assert.ok(repairHtml.includes('Write the missing link.'));
+        assert.ok(repairHtml.includes('Use your words. One or two sentences is enough.'));
         assert.ok(repairHtml.includes('Save repair'));
+        assert.ok(repairHtml.includes('Study note tucked away while you repair.'));
+        assert.ok(repairHtml.includes('Show study note'));
         const fallbackRepairHtml = renderActiveEntryHtml(
           { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
           1,
@@ -2133,8 +2352,11 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairedHtml.includes('Needs repair'));
         assert.ok(!repairedHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(!repairedHtml.includes('Write it again'));
+        assert.ok(repairedHtml.includes('Repair saved'));
+        assert.ok(repairedHtml.includes('Try this entry again from memory.'));
         assert.ok(repairedHtml.includes('concept-page-b2__repair'));
-        assert.ok(repairedHtml.includes('Try from memory again'));
+        assert.ok(repairedHtml.includes('Pressure-check this link'));
+        assert.ok(repairedHtml.includes('data-active-entry-action="drill-gap"'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-input'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-save'));
         assert.ok(!repairedHtml.includes('Save this repair before you try from memory again.'));

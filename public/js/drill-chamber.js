@@ -19,9 +19,27 @@ let sendHandler = null;
 let exitHandler = null;
 let historyTurns = 0;
 
+const REQUIRED_ELEMENT_KEYS = [
+  'view',
+  'conceptName',
+  'entryName',
+  'question',
+  'active',
+  'composer',
+  'send',
+  'exit',
+  'chatLog',
+];
+
+function hasRequiredElements() {
+  return REQUIRED_ELEMENT_KEYS.every((key) => Boolean(els[key]));
+}
+
 function bind() {
-  if (els.bound) return;
-  els.view = document.getElementById('drill-chamber-view');
+  const view = document.getElementById('drill-chamber-view');
+  if (els.bound && els.view === view) return hasRequiredElements();
+  els.bound = false;
+  els.view = view;
   els.conceptName = document.getElementById('chamber-concept-name');
   els.entryName = document.getElementById('chamber-entry-name');
   els.question = document.getElementById('chamber-question');
@@ -29,14 +47,12 @@ function bind() {
   els.composer = document.getElementById('chamber-composer');
   els.send = document.getElementById('chamber-send');
   els.exit = document.getElementById('chamber-exit');
-  els.historyWidget = document.getElementById('chamber-history-widget');
-  els.historyCount = document.getElementById('chamber-history-count');
-  els.historyToggle = document.getElementById('chamber-history-toggle');
-  els.historyExpanded = document.getElementById('chamber-history-expanded');
+  els.chatLog = document.getElementById('chamber-chat-log');
 
-  if (!els.view) return;
+  if (!hasRequiredElements()) return false;
 
   els.send.addEventListener('click', () => {
+    if (!hasRequiredElements()) return;
     if (typeof sendHandler !== 'function') return;
     if (els.send.disabled) return;        // hard guard against spam
     // Validate BEFORE locking the UI. Without this, an empty-composer
@@ -50,37 +66,23 @@ function bind() {
     sendHandler(text);
   });
   els.composer.addEventListener('keydown', (e) => {
+    if (!hasRequiredElements()) return;
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       els.send.click();
     }
   });
   els.exit.addEventListener('click', () => {
+    if (!hasRequiredElements()) return;
     if (typeof exitHandler === 'function') exitHandler();
-  });
-  els.historyToggle.addEventListener('click', () => {
-    const expanded = els.historyWidget.classList.toggle('is-expanded');
-    els.historyToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-    els.historyToggle.textContent = expanded ? 'hide' : 'show';
   });
 
   els.bound = true;
+  return true;
 }
 
-// Track which primary view we hid so we can restore it on exit.
-let hiddenPrimaryView = null;
-
 function show({ conceptName, entryName, question }) {
-  bind();
-  if (!els.view) return;
-  // Hide whichever primary view is currently visible. The app uses a
-  // `.visible` class to mark the active primary view (map / library /
-  // settings / ignition). The chamber takes over the screen, so the
-  // current primary view must drop its `.visible` class while we're
-  // open. cancelDrill() restores it via showMapView().
-  hiddenPrimaryView = document.querySelector('.primary-view.visible, #map-view.visible');
-  if (hiddenPrimaryView) hiddenPrimaryView.classList.remove('visible');
-
+  if (!bind()) return;
   els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
@@ -94,28 +96,20 @@ function show({ conceptName, entryName, question }) {
 }
 
 function hide() {
-  bind();
-  if (!els.view) return;
+  if (!bind()) return;
   els.view.hidden = true;
   document.body.classList.remove('chamber-open');
-  // Note: cancelDrill() restores the proper primary view via showMapView();
-  // we do not re-add `.visible` here to avoid stale-state restores.
-  hiddenPrimaryView = null;
 }
 
 function resetHistory() {
-  bind();
+  if (!bind()) return;
   historyTurns = 0;
-  els.historyCount.textContent = '0';
-  els.historyExpanded.innerHTML = '';
-  els.historyWidget.hidden = true;
-  els.historyWidget.classList.remove('is-expanded');
-  els.historyToggle.setAttribute('aria-expanded', 'false');
-  els.historyToggle.textContent = 'show';
+  els.chatLog.innerHTML = '';
+  els.chatLog.hidden = true;
 }
 
 function appendHistoryTurn(role, text) {
-  bind();
+  if (!bind()) return;
   const turn = document.createElement('div');
   turn.className = 'drill-chamber__history-turn' + (role === 'learner' ? ' drill-chamber__history-turn--learner' : '');
   const meta = document.createElement('div');
@@ -126,51 +120,49 @@ function appendHistoryTurn(role, text) {
   body.textContent = text;
   turn.appendChild(meta);
   turn.appendChild(body);
-  els.historyExpanded.appendChild(turn);
+  els.chatLog.appendChild(turn);
   historyTurns += 1;
-  els.historyCount.textContent = String(historyTurns);
-  els.historyWidget.hidden = false;
+  els.chatLog.hidden = false;
+  els.view.scrollIntoView({ block: 'end', behavior: 'smooth' });
 }
 
 function swapQuestion(nextText) {
-  bind();
+  if (!bind()) return;
   els.active.classList.add('is-fading-out');
   setTimeout(() => {
+    if (!hasRequiredElements()) return;
     els.question.textContent = nextText;
     els.composer.value = '';
     els.active.classList.remove('is-fading-out');
     void els.active.offsetWidth;
     els.active.classList.add('is-fading-in');
-    setTimeout(() => els.active.classList.remove('is-fading-in'), 360);
+    setTimeout(() => {
+      els.active.classList.remove('is-fading-in');
+      els.view?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }, 360);
     els.composer.focus();
   }, 240);
 }
 
 function setComposerEnabled(enabled) {
-  bind();
+  if (!bind()) return;
   els.composer.disabled = !enabled;
   els.send.disabled = !enabled;
 }
 
 // Original placeholder, captured once so setLoading(false) can restore it.
-const _originalPlaceholder = 'Write what comes to mind. Fragments are fine.';
+const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine.';
 
 /**
- * Toggle a "preparing the prompt" state on the composer. Used while
- * waiting for the AI's first turn after the chamber opens (5-10s
- * Gemini latency). NOT a chat-typing indicator -- this is page-load
- * state, not mid-conversation theatre.
- *
- * Sets the composer placeholder to a status string and disables input.
- * Adds data-loading on the active block for any optional CSS hooks.
+ * Toggle a quiet pending state without taking the writing surface away.
+ * The node prompt is already the first question, so loading must never
+ * prevent the learner from starting their reconstruction.
  */
 function setLoading(loading) {
-  bind();
-  if (!els.composer) return;
+  if (!bind()) return;
   if (loading) {
-    els.composer.placeholder = 'Preparing your first question';
+    els.composer.placeholder = _originalPlaceholder;
     els.active?.setAttribute('data-loading', 'true');
-    setComposerEnabled(false);
   } else {
     els.composer.placeholder = _originalPlaceholder;
     els.active?.removeAttribute('data-loading');
@@ -178,12 +170,12 @@ function setLoading(loading) {
 }
 
 function getComposerValue() {
-  bind();
+  if (!bind()) return '';
   return (els.composer.value || '').trim();
 }
 
 function clearComposer() {
-  bind();
+  if (!bind()) return;
   els.composer.value = '';
 }
 
@@ -194,8 +186,7 @@ function clearComposer() {
  * the creed is a completion beat, not a prompt for more input.
  */
 function appendCreed() {
-  bind();
-  if (!els.view) return;
+  if (!bind()) return;
   const creedHtml = `
     <ul class="drill-chamber__creed">
       <li><span class="drill-chamber__creed-diamond" aria-hidden="true"></span><span><strong>You tried first.</strong> The entry stayed quiet until your guess existed.</span></li>

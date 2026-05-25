@@ -63,9 +63,9 @@ similar marketing claim.
 ### 1. Three-phase loop with hard separation
 
 **Mechanism**: Cold Attempt → Targeted Study → Spaced Re-Drill, with no skip
-allowed. Only a spaced re-drill can stamp `solidified`. Study and Repair Reps
-explicitly cannot mutate graph truth. (See `spec.md` §2, §3, and §6 "Moat
-Constraint".)
+allowed. Only a spaced re-drill can stamp `solidified`. Study, Gap drills
+(`Pressure-check`), and Repair Reps explicitly cannot mutate graph truth. (See
+`spec.md` §2, §3, and §6 "Moat Constraint".)
 
 **Closest analog**: None. Anki/FSRS collapse "exposure," "study," and "proof"
 into a single review event judged by self-reported confidence. NotebookLM has
@@ -77,8 +77,9 @@ depends on engagement-per-session won't add friction that delays the dopamine
 hit.
 
 **Implication**: **Invest.** This is the load-bearing mechanism. Investments
-that improve the *feel* of the loop (phase clarity in the side panel, the
-ADHD-beat delay in `spec.md` §2 Phase 2, the buffer-flush nudge) compound.
+that improve the *feel* of the loop (phase clarity in the inline concept-entry
+surfaces, the ADHD-beat delay in `spec.md` §2 Phase 2, the buffer-flush nudge)
+compound.
 Investments that blur phases (e.g., "let users skip to study," "preview the
 mechanism before cold attempt") destroy the moat in exchange for a comfort
 metric.
@@ -164,7 +165,7 @@ defensible mechanism into a churn driver.
 **Mechanism**: After a re-drill, surface the contrast between the learner's
 prior cold attempt and the current reconstruction, framed as evidence about
 their own metacognitive predictions. (See `spec.md` §1 Metacognitive UX table
-and §4 Post-Re-Drill panel.)
+and §4 Surface Modes, `Post-Re-Drill`.)
 
 **Closest analog**: None. Competitors show *outcome metrics* (streaks, decks
 completed, ease factor). Trajectory Contrast shows *belief updating* — "your
@@ -185,7 +186,7 @@ promise becomes felt experience rather than marketing. If the learner doesn't
 **Mechanism**: Optional typed causal micro-practice after study completion or
 non-solid re-drill. Strict structured-output validation. **No scores, no
 graph mutation, no interleaving credit, no mastery unlock.** (See `spec.md`
-§4 panel mode 7.)
+§4 Surface Modes, `Repair-Reps`.)
 
 **Closest analog**: None at this contract. Anki/RemNote re-show the same
 card (recognition repeat). Khanmigo will re-explain, but doesn't structure a

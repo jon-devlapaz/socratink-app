@@ -317,3 +317,58 @@ def test_duplicate_cluster_ids_rejected():
     bad["clusters"][1] = {**bad["clusters"][0]}
     with pytest.raises(ValueError, match="duplicate cluster ids"):
         ProvisionalMap.model_validate(bad)
+
+
+def test_duplicate_backbone_ids_rejected():
+    bad = _two_cluster_map()
+    bad["backbone"].append({**bad["backbone"][0]})  # duplicate b1
+    with pytest.raises(ValueError, match="duplicate backbone ids"):
+        ProvisionalMap.model_validate(bad)
+
+
+def test_cluster_id_rejects_non_cluster_kind():
+    bad = _two_cluster_map()
+    bad["clusters"][0]["id"] = "b1"  # backbone id, not cluster
+    with pytest.raises(ValueError, match="cluster id must match c<N>"):
+        ProvisionalMap.model_validate(bad)
+
+
+def test_backbone_id_rejects_non_backbone_kind():
+    bad = _two_cluster_map()
+    bad["backbone"][0]["id"] = "c1"  # cluster id, not backbone
+    with pytest.raises(ValueError, match="backbone id must match b<N>"):
+        ProvisionalMap.model_validate(bad)
+
+
+def test_domain_mechanic_references_unknown_cluster():
+    bad = _two_cluster_map()
+    bad["relationships"]["domain_mechanics"] = [
+        {"from": "c9", "to": "c1", "type": "causal", "mechanism": "x"}
+    ]
+    with pytest.raises(ValueError, match="unknown cluster"):
+        ProvisionalMap.model_validate(bad)
+
+
+def test_learning_prerequisite_references_unknown_cluster():
+    bad = _two_cluster_map()
+    bad["relationships"]["learning_prerequisites"] = [
+        {"from": "c9", "to": "c1", "rationale": "x"}
+    ]
+    with pytest.raises(ValueError, match="unknown cluster"):
+        ProvisionalMap.model_validate(bad)
+
+
+def test_learning_prerequisite_cycle_visit_finishes():
+    m = _two_cluster_map()
+    m["relationships"]["learning_prerequisites"] = [
+        {"from": "c1", "to": "c2", "rationale": "x"}
+    ]
+    result = ProvisionalMap.model_validate(m)
+    assert len(result.relationships.learning_prerequisites) == 1
+
+
+def test_subnode_id_rejects_non_subnode_kind():
+    bad = _two_cluster_map()
+    bad["clusters"][0]["subnodes"][0]["id"] = "b1"  # backbone id, not subnode
+    with pytest.raises(ValueError, match="subnode id must match c<N>_s<M>"):
+        ProvisionalMap.model_validate(bad)

@@ -32,6 +32,8 @@ Quick reference (full list in UBIQUITOUS_LANGUAGE.md):
 | --- | --- | --- |
 | **Cold attempt** | Unscored first generation on a local node before content appears | Quiz, test, assessment |
 | **Targeted study** | Attempt-scoped corrective study unlocked by a substantive cold attempt | Proof, completion |
+| **Gap drill** | Practice drill initiated via Pressure-check CTA after repair saved; graph-neutral | Retry, practice drill |
+| **Pressure-check** | CTA label to initiate a gap drill from a repaired state | Try again, redo |
 | **Spaced re-drill** | Later reconstruction after spacing; only event that can record `solidified` | Review, retry |
 | **`primed`** | Learner reconstruction evidence on record; next action is derived from training evidence | Learned, partially mastered |
 | **`needs repair`** | Current learner evidence has named gaps to repair | Failed, weak |
@@ -48,6 +50,7 @@ Door (concept name [+ optional Learner goal] [+ optional Imported source])
 → Cold attempt (local) → writes learner attempt into `socratink:training:v1:<conceptId>`
 → Targeted study → records study reveal; no solidification
 → Repair Reps (optional) → no graph mutation
+→ Gap drill / Pressure-check this link (optional repair pressure-test) → no graph mutation
 → Interleaving Bridge → routing only, no mutation
 → Spaced re-drill → derives `solidified` only from spaced strong reconstruction; gaps derive `needs repair`
 ```
@@ -74,7 +77,7 @@ Learner goal is relevance context for prompts and graph metadata; it is not grap
 | Library is users' work only | The trust signal of Library is the user's own reconstructed work; samples dilute it | Add `BUILT_IN_LIBRARY_CONCEPTS`, "Saved articles", side-by-side curated cards | ADR-0004 |
 | Threshold is global; cold attempt is local | Different scope, different prompt, different surface — protects against generation fatigue | Re-ask the threshold question at the first cold attempt | manifesto |
 | No content before the cold attempt | The Locked Study Silhouette's absence of content is intentional — peeking defeats the cold attempt | Show definitions, solved diagrams, or examples on the locked node | manifesto |
-| Interleaving Bridge is the target after repair | A fresh repair re-drilled immediately tests short-term echo, not reconstruction; current POC still exposes an inline repair retry so the learner can close a `needs repair` loop | Present repair retry as mastery, spacing, or interleaving credit | manifesto |
+| Interleaving Bridge is the target after repair | A fresh repair re-drilled immediately tests short-term echo, not reconstruction; current POC exposes a graph-neutral Gap drill via `Pressure-check this link` so the learner can pressure-test a repaired link | Present Gap drill as mastery, spacing, or interleaving credit | manifesto |
 | Training evidence is separate from the provisional graph | The graph proposes structure; `socratink:training:v1:<conceptId>` records learner evidence and derives state so Library cannot confuse AI summaries with reconstruction | Write learner evidence into `graphData.metadata.core_thesis` or persist mastery/completion as mutable graph fields | memory |
 | Concepts seed without a source | "Add X to concepts" is a valid first move; raw text flows through the same extraction pipeline | Require a citation up-front; refuse source-less generation | memory |
 | Silent surface default | Every visible element earns its keep; additive bias produces debt | Ship eyebrows, helper lines, decorative arrows "because it looks empty" | memory |

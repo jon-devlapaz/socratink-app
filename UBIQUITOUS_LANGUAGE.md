@@ -10,7 +10,9 @@
 | **Cold attempt** | An unscored first generation attempt on a local node before explanatory content appears. | Quiz, test, assessment |
 | **Targeted study** | Attempt-scoped corrective study unlocked by a substantive cold attempt. | Proof, mastery, completion |
 | **Repair Reps** | Optional typed micro-practice for causal bridges that never mutates graph truth. | Drill shortcut, mastery practice |
+| **Gap drill** | A drill variant initiated via Pressure-check CTA after a repair is saved, used to practice the repaired gap without mutating graph state. | Practice drill, retry |
 | **Spaced re-drill** | A later reconstruction attempt after spacing/interleaving that can record `solidified` if solid. | Review, immediate retry, final test |
+| **Pressure-check** | The CTA label for initiating a gap drill from a repaired state. Appears after a repair is saved to let the learner test their corrected understanding. | Try again, redo, practice |
 
 ## Graph Truth
 
@@ -34,6 +36,7 @@
 | **Routing hint** | Internal signal used to shape the path or prompt emphasis. | Diagnostic label |
 | **Reconstruction evidence** | Evidence from the learner rebuilding a mechanism in their own words. | Real learning, proved it |
 | **Gap** | A missing or incorrect causal bridge in an attempt. | Misconception detected, weakness |
+| **drill-gap** | The `data-active-entry-action` value for the Pressure-check CTA that initiates a gap drill. | retry-action, practice-action |
 
 ## Content Intake
 
@@ -48,7 +51,7 @@
 | **Pending shell** | An in-flight concept name, plus optional **Learner goal**, committed at the door but not yet built. Lives only in `sessionStorage`. Evaporates on tab close or after successful **Launch attempt** → route build. (C-prime, 2026-05-07.) | "In-flight concept", "unsaved entry" |
 | **Smallest actionable route** | A **ProvisionalMap** with ≤4 drillable nodes (1 suggested first target carrying the core thesis + ≤3 backbone hints). The output of **Source-less generation** in C-prime. (C-prime, 2026-05-07.) | "Minimal map", "skeleton route" |
 | **Source-less generation** | Generation of a **Provisional map** from `{concept name, learner goal?, launch attempt}`, without an **Imported source**. The optional **Learner goal** shapes relevance only; the resulting graph is hypothesis (per the **Provisional map** definition) — the absence of source raises, not lowers, the hypothesis weighting. In C-prime, returns a **Smallest actionable route** (≤4 drillable nodes). | "AI-generated graph", "auto-graph", "source-free extraction" |
-| **Starting sketch** | The concept-page display label for the preserved learner **Launch attempt** ("Your starting sketch:"). The original "starting sketch" form field on the door is deprecated (2026-05-07) and replaced by **Launch attempt** captured on the **Launch pad** post-door. See `docs/product/spec.md` for the current contract. | "Threshold input", "rough model" |
+| **Starting sketch** | *Retired concept-page label.* The preserved learner **Launch attempt** now appears inside the collapsed `Context` control (`aria-label="Concept context"`), not as "Your starting sketch:". The original "starting sketch" form field on the door is deprecated (2026-05-07) and replaced by **Launch attempt** captured on the **Launch pad** post-door. See `docs/product/spec.md` for the current contract. | "Threshold input", "rough model" |
 | **Threshold composer** | *Deprecated (2026-05-07).* Under C-prime, split into: (a) the **Door** (captures a concept name, optional **Learner goal**, and optional **Imported source**), and (b) the **Launch pad** (captures **Launch attempt** for source-less concepts). The original two-field form on **Ignition** no longer exists. See `docs/product/spec.md` for the current contract. | "AI tutor", "onboarding chat", "threshold chat", "knowledge interview", "intake conversation" |
 | **Confusion artifact** | A concrete piece of material the user already has in hand that represents their own confusion or incompleteness — a textbook paragraph re-read three times, a practice question missed, a lecture note that didn't land, a code snippet they couldn't write. socratink extracts the principle the confusion is pointing at; the user cold-attempts that principle. *Internal-team term*: user-facing copy should use the concrete form ("paste something that confused you", "a question you missed"), not the abstract noun. Resolved 2026-05-10. | "Content to consume", "study material", "the material" |
 | **Library** | The surface where a user sees their **own** reconstructed work — concepts they have authored (or imported) and put their own evidence into through the reconstruction loop. The visible record of what this user can reconstruct from memory under spacing. Not a content catalog, sample shelf, or browseable archive of pre-made material. The trust signal of Library is preserved by deletion, not relocation, of curated content. See [ADR-0004](docs/adr/0004-library-is-users-work-only.md). | "Saved articles", "content shelf", "concept catalog", "browseable archive" |
@@ -58,7 +61,7 @@
 
 - A **Draft map** can become a **Provisional map** without mutating **Graph truth**.
 - A **Cold attempt** can create a **Training record** attempt; the derived state becomes **`primed`** or **`needs repair`** depending on the recorded classification and prior evidence.
-- **Targeted study** and **Repair Reps** may help the learner, but neither directly produces **`solidified`** evidence.
+- **Targeted study**, **Repair Reps**, and **Gap drills** / **`Pressure-check`** may help the learner, but none directly produces **`solidified`** evidence.
 - A spaced strong reconstruction is required before a node can derive **`solidified`**.
 - A **Traversal unlock** can happen before **`solidified`** when the product is creating interleaving, but **Mastery-gated progression** requires **`solidified`**.
 - An **Imported source** is the input to the **Draft map** extraction pipeline.

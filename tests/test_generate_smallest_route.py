@@ -30,6 +30,38 @@ def _learner_scaffold() -> LearnerScaffold:
     )
 
 
+def _map_with_scaffold(scaffold: LearnerScaffold, mechanism: str) -> ProvisionalMap:
+    return ProvisionalMap(
+        metadata={
+            "source_title": "test",
+            "core_thesis": "test thesis",
+            "architecture_type": "causal_chain",
+            "difficulty": "medium",
+            "low_density": True,
+        },
+        backbone=[
+            {"id": "b1", "principle": "Test backbone", "dependent_clusters": ["c1"]}
+        ],
+        clusters=[
+            Cluster(
+                id="c1",
+                label="Cluster 1",
+                description="Test cluster 1",
+                subnodes=[
+                    Subnode(
+                        id="c1_s1",
+                        label="Node 1",
+                        mechanism=mechanism,
+                        learner_scaffold=scaffold,
+                    ),
+                ],
+            )
+        ],
+        relationships=Relationships(),
+        frameworks=[],
+    )
+
+
 def test_smallest_route_validator_accepts_one_node():
     """Suggested first target alone is allowed (n=1)."""
     pm = _provisional_map_with_node_count(1)
@@ -60,6 +92,51 @@ def test_smallest_route_validator_rejects_missing_learner_scaffold():
     pm = _provisional_map_with_node_count(1, include_learner_scaffold=False)
 
     with pytest.raises(SmallestRouteCapExceeded, match="learner_scaffold"):
+        _validate_smallest_route(pm)
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    (
+        "task_label",
+        "task_cue",
+        "tailoring_anchor",
+        "entry_prompt",
+        "expected_shape",
+        "sentence_starter",
+        "blank_hint",
+    ),
+)
+def test_smallest_route_validator_rejects_visible_scaffold_that_copies_hidden_mechanism(
+    field_name,
+):
+    scaffold = _learner_scaffold()
+    setattr(
+        scaffold,
+        field_name,
+        "Sodium channels open when membrane voltage reaches threshold.",
+    )
+    pm = _map_with_scaffold(
+        scaffold,
+        (
+            "Sodium channels open when membrane voltage reaches threshold, "
+            "then sodium enters because the electrochemical gradient favors inward flow."
+        ),
+    )
+
+    with pytest.raises(
+        SmallestRouteCapExceeded,
+        match=f"{field_name}.*copies hidden mechanism",
+    ):
+        _validate_smallest_route(pm)
+
+
+def test_smallest_route_validator_rejects_short_hidden_mechanism_copy():
+    scaffold = _learner_scaffold()
+    scaffold.entry_prompt = "What does voltage threshold do here?"
+    pm = _map_with_scaffold(scaffold, "voltage threshold")
+
+    with pytest.raises(SmallestRouteCapExceeded, match="entry_prompt.*copies hidden mechanism"):
         _validate_smallest_route(pm)
 
 
@@ -175,6 +252,10 @@ def test_smallest_route_prompt_requires_internal_bloom_scaffold_contract():
     assert "Do not show Bloom" in prompt
     assert "<learner_goal>" in prompt
     assert "not evidence" in prompt
+    assert "Do not copy any contiguous clause from `mechanism`" in prompt
+    assert "learner-visible scaffold field" in prompt
+    assert "conceptual foothold" in prompt
+    assert "not sentence-writing instructions" in prompt
 
 
 # ---------------------------------------------------------------------------
