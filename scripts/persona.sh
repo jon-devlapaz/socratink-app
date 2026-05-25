@@ -17,7 +17,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMPLATE="$ROOT/agents/_templates/customer-persona-prompt.md"
-LOG_DIR="$ROOT/.playwright-mcp"
+LOG_DIR="${PERSONA_LOG_DIR:-$ROOT/.playwright-mcp}"
 
 if [[ "${1:-}" == "--template" ]]; then
   echo "$TEMPLATE"
@@ -28,12 +28,19 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
+RUNNER="gemini"
 if ! command -v gemini >/dev/null 2>&1; then
-  echo "persona.sh: gemini CLI not found in PATH." >&2
-  echo "  install via your package manager or:" >&2
-  echo "    npm install -g @google/gemini-cli" >&2
-  echo "  then run:  gemini auth login" >&2
-  exit 127
+  if command -v agy >/dev/null 2>&1; then
+    RUNNER="agy"
+    echo "persona.sh: gemini CLI not found in PATH; using agy fallback." >&2
+  else
+    echo "persona.sh: gemini CLI not found in PATH." >&2
+    echo "  install via your package manager or:" >&2
+    echo "    npm install -g @google/gemini-cli" >&2
+    echo "  then run:  gemini auth login" >&2
+    echo "  fallback also unavailable: agy" >&2
+    exit 127
+  fi
 fi
 
 # Resolve input source.
@@ -83,14 +90,19 @@ LOG_PATH="$LOG_DIR/persona-$TS.txt"
 {
   echo "# persona.sh run $TS"
   echo "# input: ${INPUT_SRC/-/<stdin>}"
+  echo "# runner: $RUNNER"
   echo "# ---"
-  printf '%s\n' "$PROMPT_TEXT" | gemini --approval-mode plan 2>&1 | awk '
-    /^Discarding invalid hook/ { skip = 1; next }
-    skip && /^}/               { skip = 0; next }
-    skip                       { next }
-    /^Ripgrep is not available/ { next }
-    { print }
-  '
+  if [[ "$RUNNER" == "gemini" ]]; then
+    printf '%s\n' "$PROMPT_TEXT" | gemini --approval-mode plan 2>&1 | awk '
+      /^Discarding invalid hook/ { skip = 1; next }
+      skip && /^}/               { skip = 0; next }
+      skip                       { next }
+      /^Ripgrep is not available/ { next }
+      { print }
+    '
+  else
+    agy --print "$PROMPT_TEXT"
+  fi
 } | tee "$LOG_PATH"
 
 echo "" >&2
