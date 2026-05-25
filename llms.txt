@@ -11,7 +11,7 @@
 ## Deep-dive
 - [Full UX manifesto](/docs/design/socratink-ux.md): the prose source for DESIGN.md voice/state-model sections
 - [Design system component rules](/docs/design/socratink-design-system.md): palette, typography, motif, motion vocabulary
-- [Product spec](/docs/product/spec.md): three-phase loop, side panel modes, guardrails
+- [Product spec](/docs/product/spec.md): three-phase loop, inline concept-entry/result-surface modes, guardrails
 
 ## Code-adjacent
 - [Design tokens](/public/css/tokens.css)
