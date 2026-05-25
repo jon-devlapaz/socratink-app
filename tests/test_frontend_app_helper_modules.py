@@ -43,6 +43,127 @@ def run_node_module(script: str) -> subprocess.CompletedProcess[str]:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+
+        const nodes = new Map();
+
+        function makeNode(id) {
+          return {
+            id,
+            hidden: true,
+            disabled: false,
+            value: '',
+            textContent: '',
+            innerHTML: '',
+            placeholder: '',
+            listeners: {},
+            classList: {
+              add() {},
+              remove() {},
+            },
+            appendChild(child) {
+              this.lastChild = child;
+            },
+            addEventListener(type, handler) {
+              this.listeners[type] = handler;
+            },
+            click() {
+              this.listeners.click?.({});
+            },
+            focus() {
+              this.focused = true;
+            },
+            insertAdjacentHTML(_position, html) {
+              this.insertedHtml = html;
+            },
+            querySelectorAll() {
+              return [];
+            },
+            removeAttribute(name) {
+              delete this[name];
+            },
+            scrollIntoView() {
+              this.scrolled = true;
+            },
+            setAttribute(name, value) {
+              this[name] = value;
+            },
+          };
+        }
+
+        globalThis.window = {};
+        globalThis.document = {
+          body: {
+            classList: {
+              add() {},
+              remove() {},
+            },
+          },
+          createElement(tagName) {
+            return makeNode(tagName);
+          },
+          getElementById(id) {
+            return nodes.get(id) || null;
+          },
+        };
+        globalThis.requestAnimationFrame = (callback) => callback();
+        globalThis.setTimeout = (callback) => {
+          callback();
+          return 0;
+        };
+
+        await import('./public/js/drill-chamber.js');
+
+        for (const id of [
+          'drill-chamber-view',
+          'chamber-concept-name',
+          'chamber-entry-name',
+          'chamber-question',
+          'chamber-composer',
+          'chamber-send',
+          'chamber-exit',
+          'chamber-chat-log',
+        ]) {
+          nodes.set(id, makeNode(id));
+        }
+
+        assert.doesNotThrow(() => window.DrillChamber.show({
+          conceptName: 'Concept',
+          entryName: 'Entry',
+          question: 'Question?',
+        }));
+        assert.doesNotThrow(() => window.DrillChamber.setComposerEnabled(true));
+        assert.doesNotThrow(() => window.DrillChamber.clearComposer());
+        assert.doesNotThrow(() => window.DrillChamber.swapQuestion('Next?'));
+        assert.doesNotThrow(() => window.DrillChamber.appendHistoryTurn('ai', 'Hello'));
+        assert.doesNotThrow(() => window.DrillChamber.appendCreed());
+        assert.equal(window.DrillChamber.getComposerValue(), '');
+
+        nodes.set('chamber-active', makeNode('chamber-active'));
+        window.DrillChamber.show({
+          conceptName: 'Concept',
+          entryName: 'Entry',
+          question: 'Question?',
+        });
+        assert.equal(nodes.get('drill-chamber-view').hidden, false);
+        assert.equal(nodes.get('chamber-question').textContent, 'Question?');
+
+        const sent = [];
+        window.DrillChamber.onSend((text) => sent.push(text));
+        nodes.get('chamber-composer').value = '  learner answer  ';
+        nodes.get('chamber-send').click();
+        assert.deepEqual(sent, ['learner answer']);
+        assert.equal(nodes.get('chamber-composer').disabled, true);
+        assert.equal(nodes.get('chamber-send').disabled, true);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_html_escape_helper_matches_app_contract() -> None:
     result = run_node_module(
         """

@@ -19,9 +19,25 @@ let sendHandler = null;
 let exitHandler = null;
 let historyTurns = 0;
 
+const REQUIRED_ELEMENT_KEYS = [
+  'view',
+  'conceptName',
+  'entryName',
+  'question',
+  'active',
+  'composer',
+  'send',
+  'exit',
+  'chatLog',
+];
+
+function hasRequiredElements() {
+  return REQUIRED_ELEMENT_KEYS.every((key) => Boolean(els[key]));
+}
+
 function bind() {
   const view = document.getElementById('drill-chamber-view');
-  if (els.bound && els.view === view) return;
+  if (els.bound && els.view === view) return hasRequiredElements();
   els.bound = false;
   els.view = view;
   els.conceptName = document.getElementById('chamber-concept-name');
@@ -33,9 +49,10 @@ function bind() {
   els.exit = document.getElementById('chamber-exit');
   els.chatLog = document.getElementById('chamber-chat-log');
 
-  if (!els.view || !els.send || !els.composer || !els.exit) return;
+  if (!hasRequiredElements()) return false;
 
   els.send.addEventListener('click', () => {
+    if (!hasRequiredElements()) return;
     if (typeof sendHandler !== 'function') return;
     if (els.send.disabled) return;        // hard guard against spam
     // Validate BEFORE locking the UI. Without this, an empty-composer
@@ -49,21 +66,23 @@ function bind() {
     sendHandler(text);
   });
   els.composer.addEventListener('keydown', (e) => {
+    if (!hasRequiredElements()) return;
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
       e.preventDefault();
       els.send.click();
     }
   });
   els.exit.addEventListener('click', () => {
+    if (!hasRequiredElements()) return;
     if (typeof exitHandler === 'function') exitHandler();
   });
 
   els.bound = true;
+  return true;
 }
 
 function show({ conceptName, entryName, question }) {
-  bind();
-  if (!els.view) return;
+  if (!bind()) return;
   els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
@@ -77,23 +96,20 @@ function show({ conceptName, entryName, question }) {
 }
 
 function hide() {
-  bind();
-  if (!els.view) return;
+  if (!bind()) return;
   els.view.hidden = true;
   document.body.classList.remove('chamber-open');
 }
 
 function resetHistory() {
-  bind();
+  if (!bind()) return;
   historyTurns = 0;
-  if (!els.chatLog) return;
   els.chatLog.innerHTML = '';
   els.chatLog.hidden = true;
 }
 
 function appendHistoryTurn(role, text) {
-  bind();
-  if (!els.chatLog) return;
+  if (!bind()) return;
   const turn = document.createElement('div');
   turn.className = 'drill-chamber__history-turn' + (role === 'learner' ? ' drill-chamber__history-turn--learner' : '');
   const meta = document.createElement('div');
@@ -111,9 +127,10 @@ function appendHistoryTurn(role, text) {
 }
 
 function swapQuestion(nextText) {
-  bind();
+  if (!bind()) return;
   els.active.classList.add('is-fading-out');
   setTimeout(() => {
+    if (!hasRequiredElements()) return;
     els.question.textContent = nextText;
     els.composer.value = '';
     els.active.classList.remove('is-fading-out');
@@ -128,7 +145,7 @@ function swapQuestion(nextText) {
 }
 
 function setComposerEnabled(enabled) {
-  bind();
+  if (!bind()) return;
   els.composer.disabled = !enabled;
   els.send.disabled = !enabled;
 }
@@ -142,8 +159,7 @@ const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine
  * prevent the learner from starting their reconstruction.
  */
 function setLoading(loading) {
-  bind();
-  if (!els.composer) return;
+  if (!bind()) return;
   if (loading) {
     els.composer.placeholder = _originalPlaceholder;
     els.active?.setAttribute('data-loading', 'true');
@@ -154,12 +170,12 @@ function setLoading(loading) {
 }
 
 function getComposerValue() {
-  bind();
+  if (!bind()) return '';
   return (els.composer.value || '').trim();
 }
 
 function clearComposer() {
-  bind();
+  if (!bind()) return;
   els.composer.value = '';
 }
 
@@ -170,8 +186,7 @@ function clearComposer() {
  * the creed is a completion beat, not a prompt for more input.
  */
 function appendCreed() {
-  bind();
-  if (!els.view) return;
+  if (!bind()) return;
   const creedHtml = `
     <ul class="drill-chamber__creed">
       <li><span class="drill-chamber__creed-diamond" aria-hidden="true"></span><span><strong>You tried first.</strong> The entry stayed quiet until your guess existed.</span></li>
