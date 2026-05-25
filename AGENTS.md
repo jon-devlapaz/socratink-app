@@ -303,14 +303,15 @@ the decision elevates a non-obvious design principle, surface it in `DESIGN.md` 
   - serverless function explicitly includes `public/**` and `app_prompts/**`
   - serverless function excludes everything else (tests, docs, scripts, db, agents, node_modules, dotfiles, and root-level config/docs like `*.md`, `*.yaml`, `*.json`, `*.ini`); see `vercel.json` for the canonical glob
 
-### Stylesheet cache-bust discipline
-- Stylesheets in `public/` are loaded via a chain: `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `public/css/index.css` → `public/styles.css` → `public/css/*.css`, with `antigravity.css` and `paper.css` still imported directly by `public/css/index.css`.
+### Frontend cache-bust discipline
+- Versioned frontend assets in `public/` are loaded through parent references. Stylesheets use `<link rel="stylesheet" href="/css/index.css?v=N">` in `public/index.html` → `public/css/index.css` → `public/styles.css` → `public/css/*.css`, with `antigravity.css` and `paper.css` still imported directly by `public/css/index.css`. JavaScript uses `public/index.html` script pins plus versioned imports such as `public/js/app.js` → `public/js/concept-page-view.js`.
 - **When editing a stylesheet imported by `public/styles.css`, bump all THREE version pins:**
   1. The component import in `public/styles.css` (e.g., `./css/concept-page.css?v=9` → `?v=10`).
   2. The `../styles.css?v=M` import in `public/css/index.css`.
   3. The outer `/css/index.css?v=N` link in `public/index.html`.
 - For stylesheets imported directly by `public/css/index.css` (currently `antigravity.css` and `paper.css`), bump that import pin plus the outer `/css/index.css?v=N` link.
-- Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent CSS file, which still points at the previous child `?v=` value.
+- For JavaScript loaded from `public/index.html`, bump that script pin when the child changes; for JavaScript imported by another module, bump the parent import pin as well.
+- Bumping only the inner pin is **not enough** — the browser keeps serving the cached parent file, which still points at the previous child `?v=` value.
 - The numbers don't have to match — only that each relevant parent and child pin changes when its file changes. When in doubt, trace the import chain from `public/index.html` and bump every parent link on that path.
 - `./scripts/check-coverage.sh` runs `scripts/check_frontend_cache_pins.py` against the resolved compare branch before diff-cover. If a changed versioned frontend asset kept the same parent `?v=` pin, the gate fails with the child path and stale parent reference.
 - For quick manual review, grep `@import .*?v=` plus `<link rel="stylesheet"` and `<script .*?v=` for the version strings you expect.

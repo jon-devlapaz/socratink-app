@@ -120,7 +120,7 @@
 >
 > 1. *"Is there any visible color seam, hard edge, or banding between the top floating chrome and the page background? Describe the gradient transition. The intended look is a soft translucent blur with no hard edge."*
 > 2. *"Identify the primary call-to-action on this view. Describe its position, weight, and contrast vs. surrounding content. The intended first-reconstruction action is 'Draft from memory' or, for a scaffolded cold-ready entry, 'Use this draft'."*
-> 3. *"Describe the segmented control labeled 'Route / Graph' (if present). Is its visual weight peripheral (subtle, ≤30px tall, content-width) or primary (heavy, full-width, deep saturation)? Intended: peripheral."*
+> 3. *"Verify the legacy segmented control labeled 'Route / Graph' is absent. Describe the current node strip / draft route surface and whether its visual weight stays peripheral to the active concept entry."*
 > 4. *"Are any controls or text clipped, cut off, or overlapped by other UI? List positions."*
 > 5. *"Does the bottom nav have any element overlapping it? Describe the gap between the bottom nav and the closest non-nav element above."*
 > 6. *"In the dark theme, list any element whose color reads as out-of-system (off-brand). socratink's palette is graphite (#18181b, Pattern A) backgrounds with violet (#9067C6) accents and warm cream paper (#F2F0F5) for the light theme."*
