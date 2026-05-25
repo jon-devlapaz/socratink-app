@@ -54,18 +54,84 @@ def test_app_bundle_change_requires_index_script_pin_bump() -> None:
     ]
 
 
+def test_direct_drill_assets_require_index_pin_bumps() -> None:
+    checker = _load_checker()
+
+    failures = checker.validate_changed_cache_pins(
+        changed_paths={"public/js/drill-chamber.js", "public/css/drill-chamber.css"},
+        old_files={
+            "public/index.html": """
+                <link rel="stylesheet" href="css/drill-chamber.css?v=8">
+                <script src="js/drill-chamber.js?v=8"></script>
+            """,
+        },
+        new_files={
+            "public/index.html": """
+                <link rel="stylesheet" href="css/drill-chamber.css?v=8">
+                <script src="js/drill-chamber.js?v=8"></script>
+            """,
+        },
+    )
+
+    assert failures == [
+        "public/css/drill-chamber.css changed but public/index.html still loads drill-chamber.css?v=8",
+        "public/js/drill-chamber.js changed but public/index.html still loads drill-chamber.js?v=8",
+    ]
+
+
+def test_imported_stylesheet_changes_require_parent_chain_pin_bumps() -> None:
+    checker = _load_checker()
+
+    failures = checker.validate_changed_cache_pins(
+        changed_paths={
+            "public/css/concept-page.css",
+            "public/styles.css",
+            "public/css/index.css",
+        },
+        old_files={
+            "public/styles.css": "@import './css/concept-page.css?v=35';",
+            "public/css/index.css": "@import '../styles.css?v=132' layer(components);",
+            "public/index.html": '<link rel="stylesheet" href="/css/index.css?v=134">',
+        },
+        new_files={
+            "public/styles.css": "@import './css/concept-page.css?v=35';",
+            "public/css/index.css": "@import '../styles.css?v=132' layer(components);",
+            "public/index.html": '<link rel="stylesheet" href="/css/index.css?v=134">',
+        },
+    )
+
+    assert failures == [
+        "public/css/concept-page.css changed but public/styles.css still imports concept-page.css?v=35",
+        "public/css/index.css changed but public/index.html still loads index.css?v=134",
+        "public/styles.css changed but public/css/index.css still imports styles.css?v=132",
+    ]
+
+
 def test_cache_pin_checker_accepts_bumped_pins() -> None:
     checker = _load_checker()
 
     failures = checker.validate_changed_cache_pins(
-        changed_paths={"public/js/concept-page-view.js", "public/js/app.js"},
+        changed_paths={
+            "public/js/concept-page-view.js",
+            "public/js/app.js",
+            "public/css/concept-page.css",
+            "public/styles.css",
+            "public/css/index.css",
+        },
         old_files={
             "public/js/app.js": "import './concept-page-view.js?v=14';",
             "public/index.html": '<script type="module" src="js/app.js?v=139"></script>',
+            "public/styles.css": "@import './css/concept-page.css?v=35';",
+            "public/css/index.css": "@import '../styles.css?v=132' layer(components);",
         },
         new_files={
             "public/js/app.js": "import './concept-page-view.js?v=15';",
-            "public/index.html": '<script type="module" src="js/app.js?v=140"></script>',
+            "public/index.html": """
+                <link rel="stylesheet" href="/css/index.css?v=135">
+                <script type="module" src="js/app.js?v=140"></script>
+            """,
+            "public/styles.css": "@import './css/concept-page.css?v=36';",
+            "public/css/index.css": "@import '../styles.css?v=133' layer(components);",
         },
     )
 

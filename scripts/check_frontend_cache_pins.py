@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Check JS cache-bust pins for frontend modules with parent imports."""
+"""Check cache-bust pins for versioned frontend references."""
 from __future__ import annotations
 
+import posixpath
 import re
 import subprocess
 import sys
@@ -9,35 +10,46 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-CONCEPT_PAGE_VIEW = "public/js/concept-page-view.js"
 APP_JS = "public/js/app.js"
+CSS_INDEX = "public/css/index.css"
 INDEX_HTML = "public/index.html"
+STYLES_CSS = "public/styles.css"
+VERSIONED_PARENT_PATHS = (APP_JS, CSS_INDEX, INDEX_HTML, STYLES_CSS)
+_VERSIONED_REFERENCE_RE = re.compile(
+    r"(?P<quote>['\"])(?P<asset>[^'\"]+?)\?v=(?P<pin>[0-9]+)(?:[&#][^'\"]*)?(?P=quote)"
+)
 
 
-def _first_pin(pattern: str, text: str) -> str | None:
-    match = re.search(pattern, text)
-    return match.group(1) if match else None
+def _resolve_public_path(parent_path: str, asset: str) -> str | None:
+    if re.match(r"^[a-z][a-z0-9+.-]*:", asset, re.IGNORECASE):
+        return None
+    if asset.startswith("//"):
+        return None
+    if asset.startswith("/"):
+        normalized = posixpath.normpath(asset.lstrip("/"))
+        return f"public/{normalized}" if normalized != "." else None
+    parent_dir = posixpath.dirname(parent_path)
+    normalized = posixpath.normpath(posixpath.join(parent_dir, asset))
+    return normalized if normalized.startswith("public/") else None
 
 
-def _unchanged_pin_failure(
-    *,
-    changed_path: str,
-    parent_path: str,
-    asset_name: str,
-    pattern: str,
-    old_files: dict[str, str],
-    new_files: dict[str, str],
-) -> str | None:
-    old_pin = _first_pin(pattern, old_files.get(parent_path, ""))
-    new_pin = _first_pin(pattern, new_files.get(parent_path, ""))
-    if new_pin is None:
-        return f"{changed_path} changed but {parent_path} does not reference {asset_name}?v="
-    if old_pin == new_pin:
-        return (
-            f"{changed_path} changed but {parent_path} still "
-            f"{'imports' if parent_path.endswith('.js') else 'loads'} {asset_name}?v={new_pin}"
-        )
-    return None
+def _versioned_references(files: dict[str, str]) -> dict[tuple[str, str], tuple[str, str]]:
+    references: dict[tuple[str, str], tuple[str, str]] = {}
+    for parent_path in VERSIONED_PARENT_PATHS:
+        for match in _VERSIONED_REFERENCE_RE.finditer(files.get(parent_path, "")):
+            asset = match.group("asset")
+            child_path = _resolve_public_path(parent_path, asset)
+            if child_path is None:
+                continue
+            references[(child_path, parent_path)] = (
+                posixpath.basename(asset),
+                match.group("pin"),
+            )
+    return references
+
+
+def _reference_verb(parent_path: str) -> str:
+    return "imports" if parent_path.endswith((".css", ".js")) else "loads"
 
 
 def validate_changed_cache_pins(
@@ -46,30 +58,22 @@ def validate_changed_cache_pins(
     old_files: dict[str, str],
     new_files: dict[str, str],
 ) -> list[str]:
-    """Return cache-bust failures for changed frontend modules."""
+    """Return cache-bust failures for changed versioned frontend assets."""
     failures: list[str] = []
-    if CONCEPT_PAGE_VIEW in changed_paths:
-        failure = _unchanged_pin_failure(
-            changed_path=CONCEPT_PAGE_VIEW,
-            parent_path=APP_JS,
-            asset_name="concept-page-view.js",
-            pattern=r"concept-page-view\.js\?v=([0-9]+)",
-            old_files=old_files,
-            new_files=new_files,
-        )
-        if failure:
-            failures.append(failure)
-    if APP_JS in changed_paths:
-        failure = _unchanged_pin_failure(
-            changed_path=APP_JS,
-            parent_path=INDEX_HTML,
-            asset_name="app.js",
-            pattern=r"app\.js\?v=([0-9]+)",
-            old_files=old_files,
-            new_files=new_files,
-        )
-        if failure:
-            failures.append(failure)
+    old_references = _versioned_references(old_files)
+    new_references = _versioned_references(new_files)
+    for (child_path, parent_path), (asset_name, new_pin) in sorted(new_references.items()):
+        if child_path not in changed_paths:
+            continue
+        old_reference = old_references.get((child_path, parent_path))
+        if old_reference is None:
+            continue
+        _old_asset_name, old_pin = old_reference
+        if old_pin == new_pin:
+            failures.append(
+                f"{child_path} changed but {parent_path} still "
+                f"{_reference_verb(parent_path)} {asset_name}?v={new_pin}"
+            )
     return failures
 
 
@@ -97,12 +101,10 @@ def main(argv: list[str]) -> int:
         if line.strip()
     }
     old_files = {
-        APP_JS: _read_old(APP_JS, compare_ref),
-        INDEX_HTML: _read_old(INDEX_HTML, compare_ref),
+        path: _read_old(path, compare_ref) for path in VERSIONED_PARENT_PATHS
     }
     new_files = {
-        APP_JS: _read_new(APP_JS),
-        INDEX_HTML: _read_new(INDEX_HTML),
+        path: _read_new(path) for path in VERSIONED_PARENT_PATHS
     }
     failures = validate_changed_cache_pins(
         changed_paths=changed,
