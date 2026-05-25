@@ -1802,6 +1802,18 @@ def test_mobile_drawer_keeps_feedback_accessible(
     assert drawer.get_attribute("data-open") == "true"
     expect(drawer).to_have_attribute("aria-hidden", "false")
     expect(toggle).to_have_attribute("aria-expanded", "true")
+    page.wait_for_function(
+        """() => {
+            const drawer = document.querySelector("#drawer");
+            if (!drawer) return false;
+            const rect = drawer.getBoundingClientRect();
+            return rect.left >= 0 && rect.right <= window.innerWidth;
+        }"""
+    )
+    drawer_box = drawer.bounding_box()
+    assert drawer_box is not None
+    assert drawer_box["x"] >= 0
+    assert drawer_box["x"] + drawer_box["width"] <= 390
     expect(page.locator("#nav-feedback")).to_be_visible()
 
     page.locator("#nav-feedback").click()
