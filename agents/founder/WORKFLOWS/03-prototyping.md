@@ -45,7 +45,7 @@ Use when the question is about what a surface should look or read like.
 - use `scripts/snap.py` to sweep variants
 - use `scripts/share-lab.sh <surface>` when phone review is needed; it serves only `public/` on loopback and opens a temporary ngrok URL
 - use `scripts/persona.sh` when persona-based review would sharpen the verdict
-- capture the decision in a sibling `<surface>-variants.NOTES.md`
+- capture the local review verdict in a sibling `<surface>-variants.NOTES.md`; promote durable decisions into tracked canon before deleting or absorbing the lab
 
 If the question is ambiguous, stop and classify it explicitly before building.
 
@@ -74,5 +74,5 @@ If the question is ambiguous, stop and classify it explicitly before building.
 ## Artifact Destination
 
 - shared workflow truth: this file
-- UI prototype artifacts: `public/_lab/<surface>-variants.html` plus sibling `<surface>-variants.NOTES.md`
+- UI prototype artifacts: ignored local scratch in `public/_lab/<surface>-variants.html` plus sibling `<surface>-variants.NOTES.md`
 - durable follow-up when load-bearing: `UBIQUITOUS_LANGUAGE.md` for term-meaning changes, `DESIGN.md` §4 for design principles, an ADR for architectural decisions

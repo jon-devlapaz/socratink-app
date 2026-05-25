@@ -281,12 +281,13 @@ cat prompt.txt | scripts/persona.sh
 scripts/persona.sh --template      # print template path
 ```
 
-Capture the verdict in a sibling `<surface>-variants.NOTES.md` next to the
-prototype HTML so the answer survives the lab being deleted (the shared
-prototype workflow's "delete or absorb when done" rule). When a variant choice is
-load-bearing for the domain — i.e., the meaning of a surface or term
-changes — also update `UBIQUITOUS_LANGUAGE.md` and write an ADR in `docs/adr/`. If
-the decision elevates a non-obvious design principle, surface it in `DESIGN.md` §4.
+Capture the local review verdict in a sibling `<surface>-variants.NOTES.md` next
+to the prototype HTML, but treat `public/_lab/` as ignored scratch. Before the
+lab is deleted or absorbed, promote any durable decision into tracked canon. When
+a variant choice is load-bearing for the domain — i.e., the meaning of a surface
+or term changes — also update `UBIQUITOUS_LANGUAGE.md` and write an ADR in
+`docs/adr/`. If the decision elevates a non-obvious design principle, surface it
+in `DESIGN.md` §4.
 
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
