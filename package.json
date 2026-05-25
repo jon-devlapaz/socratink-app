@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/jon-devlapaz/socratink-app#readme",
   "devDependencies": {
+    "@aisuite/chub": "0.1.4",
     "monocart-coverage-reports": "^2.12.11"
   }
 }

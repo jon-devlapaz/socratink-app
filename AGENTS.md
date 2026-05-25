@@ -61,6 +61,16 @@ Once a candidate file or symbol is in hand, switch to the code-review graph for 
 ### Layer 3 — Context7 (external API documentation, biased liberal)
 Local layers cover code that lives in this repo. They do not know what a third-party SDK, platform, framework, or CLI does today. Reach for Context7 liberally — **prefer fetching current docs over relying on model memory whenever the answer hinges on a third-party surface**. Use it even when you think you know the answer; training data lags behind real APIs by months, and silent staleness is the failure mode.
 
+If Context7 tools are not callable in the current agent runtime, or Context7 has no useful coverage for the target surface, use the repo-pinned Context Hub wrapper instead:
+
+```bash
+bash scripts/chub-docs.sh update
+bash scripts/chub-docs.sh search "<library or task>"
+bash scripts/chub-docs.sh get <doc-id> --lang py
+```
+
+Do not call a global `chub` binary from this repo. The wrapper uses the locked `@aisuite/chub` dependency, isolates cache under ignored `.agents/runtime/chub/`, and disables Context Hub telemetry/feedback. Context Hub is external evidence only; it never overrides local Socratink product doctrine, graph truth, or verification policy.
+
 Trigger Context7 for any of:
 - **Research questions** about a library/framework/SDK/CLI/platform, even without a pending edit ("how does Supabase RLS work?", "what's the FastAPI lifespan API?", "Playwright trace viewer options").
 - **Code generation** that imports or calls a third-party surface — including writing new code from scratch, not just edits to existing code.
@@ -80,11 +90,12 @@ How to query well:
 2. Inspect the installed version first (`requirements.txt`, `requirements-dev.txt`, `package.json`, `vercel.json`) and prefer a version-pinned library ID where available.
 3. Pass the user's full question to `query-docs`, not a single keyword.
 4. If Context7 docs do not obviously match the installed version, state the uncertainty before editing or generating code.
+5. When falling back to Context Hub, search first, fetch the exact doc id, and cite uncertainty if the fetched doc does not clearly match the installed version.
 
 Out of scope for Context7:
 - Socratink product doctrine, graph truth, drill behavior, source ownership, architecture decisions, verification policy. Local binding docs (`AGENTS.md`, `docs/product/evidence-weighted-map.md`, `docs/product/spec.md`, the rest of the canonical doc set) remain authoritative on what Socratink should build.
 - Refactoring local code, writing scripts from scratch with no third-party dependency, debugging business logic, code review, general programming concepts.
-- Never send secrets, private source, customer data, or internal implementation details to Context7.
+- Never send secrets, private source, customer data, or internal implementation details to Context7 or Context Hub.
 
 ### Handoff rule
 Discover with Claude Context → confirm structure with the graph → fetch external API docs with Context7 when the edit touches a third-party surface → only then read source. Skipping the graph step on a non-trivial change is how unsafe edits ship. Skipping the Context7 step on a third-party-SDK edit is how stale-API breakage ships. Reading source files top-to-bottom without these layers is the worst of all worlds: high context cost, no structural guarantee, no current-API guarantee.
@@ -141,6 +152,7 @@ scripts/local-ai-review.sh pytest -- .venv/bin/pytest tests/path/test_file.py -q
 ### Environment setup
 ```bash
 bash scripts/bootstrap-python.sh
+npm install
 playwright install chromium
 ```
 
@@ -292,8 +304,8 @@ in `DESIGN.md` §4.
 ## Build / lint status
 - There is no dedicated build step for local development; app runs directly via Uvicorn.
 - Type-check baseline is two-tool: **pyrefly is the primary gate**, **mypy is the cross-check**. Both must be green. They run side-by-side in `scripts/doctor.sh` and in CI; agents/humans must run both before pushing.
-  - **pyrefly** (Python 3.13, `preset = "legacy"`, `check-unannotated-defs = true`) — config in `pyrefly.toml`. Canonical invocation: `.venv/bin/pyrefly check` (no positional arg — `pyrefly check .` would override `project-includes` and pick up `tests/` and `api/`, both of which we intentionally exclude to mirror mypy's `[mypy-tests.*]` / `[mypy-api.*]` posture). Version is pinned in `scripts/doctor.sh` (`PYREFLY_VERSION`) — keep it there, not in `requirements-dev.txt`, so the gate auto-bootstraps the exact version.
-  - **mypy** (Python 3.13, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) — config in `mypy.ini`. Canonical invocation: `mypy .`. Honors `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees) plus per-module `ignore_errors` for `tests.*` and `api.*`.
+  - **pyrefly** (Python 3.14, `preset = "legacy"`, `check-unannotated-defs = true`) — config in `pyrefly.toml`. Canonical invocation: `.venv/bin/pyrefly check` (no positional arg — `pyrefly check .` would override `project-includes` and pick up `tests/` and `api/`, both of which we intentionally exclude to mirror mypy's `[mypy-tests.*]` / `[mypy-api.*]` posture). Version is pinned in `scripts/doctor.sh` (`PYREFLY_VERSION`) — keep it there, not in `requirements-dev.txt`, so the gate auto-bootstraps the exact version.
+  - **mypy** (Python 3.14, `warn_unreachable`, `strict_optional`, `check_untyped_defs`, `warn_return_any`) — config in `mypy.ini`. Canonical invocation: `mypy .`. Honors `mypy.ini` exclude list (`.venv/`, `tests/e2e/`, `public/`, `scripts/`, generated trees) plus per-module `ignore_errors` for `tests.*` and `api.*`.
   - **Scope must stay aligned** between the two configs. If you change one exclude list, change the other. `pyrefly.toml` uses positive `project-includes` (`main.py`, `ai_service.py`, `learning_commons.py`, `runtime_env.py`, `auth`, `llm`, `source_intake`, `models`) — add new top-level modules there if you create them, otherwise pyrefly silently skips them.
 - No ruff/flake8 config is checked in. Do not invent new lint frameworks beyond `pyrefly check` and `mypy .`. The no-mistakes gate is the repo-owned wrapper exception: `scripts/no-mistakes-lint.sh` reproduces configured gate lint by bootstrapping Python, running `scripts/doctor.sh`, and running `git diff --check` from the configured compare base.
 - Note: `.no-mistakes.yaml` changes must be committed to Git for the daemon to pick them up; the review runs in an isolated worktree based on the pushed commit ref, not the working directory state.

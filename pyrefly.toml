@@ -34,7 +34,7 @@ project-excludes = [
     "**/agents/superpowers/",
     "**/__pycache__/",
 ]
-python-version = "3.13.0"
+python-version = "3.14.0"
 # The "legacy" preset approximates mypy 1.x defaults — keep us close to the
 # mypy baseline so we don't ship two different strictness floors.
 preset = "legacy"

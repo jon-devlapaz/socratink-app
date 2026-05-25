@@ -92,14 +92,14 @@ in CI. Run both from the repo root before pushing:
 mypy .                    # honors mypy.ini exclude list (.venv/, tests/e2e/, public/, scripts/, …)
 ```
 
-- `pyrefly.toml` (Python 3.13, `preset = "legacy"`, `check-unannotated-defs = true`)
+- `pyrefly.toml` (Python 3.14, `preset = "legacy"`, `check-unannotated-defs = true`)
   uses positive `project-includes` to mirror mypy's effective scope. Passing
   `pyrefly check .` would override that scope and pull in `tests/` and `api/`,
   both of which are intentionally excluded.
 - The pyrefly version is pinned in `scripts/doctor.sh` (`PYREFLY_VERSION`),
   not in `requirements-dev.txt`, so the gate auto-bootstraps the exact
   version it was authored against.
-- `mypy.ini` (Python 3.13, `warn_unreachable`, `strict_optional`,
+- `mypy.ini` (Python 3.14, `warn_unreachable`, `strict_optional`,
   `check_untyped_defs`, `warn_return_any`) stays the cross-check.
 
 `.github/workflows/preflight.yml` runs two CI jobs on every `pull_request` and
