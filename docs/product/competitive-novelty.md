@@ -165,7 +165,7 @@ defensible mechanism into a churn driver.
 **Mechanism**: After a re-drill, surface the contrast between the learner's
 prior cold attempt and the current reconstruction, framed as evidence about
 their own metacognitive predictions. (See `spec.md` §1 Metacognitive UX table
-and §4 Post-Re-Drill panel.)
+and §4 Surface Modes, `Post-Re-Drill`.)
 
 **Closest analog**: None. Competitors show *outcome metrics* (streaks, decks
 completed, ease factor). Trajectory Contrast shows *belief updating* — "your
@@ -186,7 +186,7 @@ promise becomes felt experience rather than marketing. If the learner doesn't
 **Mechanism**: Optional typed causal micro-practice after study completion or
 non-solid re-drill. Strict structured-output validation. **No scores, no
 graph mutation, no interleaving credit, no mastery unlock.** (See `spec.md`
-§4 panel mode 7.)
+§4 Surface Modes, `Repair-Reps`.)
 
 **Closest analog**: None at this contract. Anki/RemNote re-show the same
 card (recognition repeat). Khanmigo will re-explain, but doesn't structure a
