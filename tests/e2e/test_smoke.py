@@ -838,6 +838,7 @@ def test_launch_pad_accepts_any_non_empty_sketch(
     page: Page, base_url: str
 ) -> None:
     """The launch-pad affordance should enable any non-empty learner response."""
+    page.set_viewport_size({"width": 390, "height": 844})
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate(
         """(() => {
@@ -849,6 +850,11 @@ def test_launch_pad_accepts_any_non_empty_sketch(
         })()"""
     )
 
+    expect(page.locator("#bottom-nav")).not_to_be_visible()
+    expect(page.locator("#drawer-toggle")).to_be_visible()
+    launch_pad_box = page.locator("#launch-pad-view").bounding_box()
+    assert launch_pad_box is not None
+    assert launch_pad_box["height"] >= 844
     expect(page.locator("#launch-pad-input")).to_have_attribute(
         "placeholder",
         "Name parts, guesses, examples, or confusions. Concrete words help most.",
@@ -1078,14 +1084,15 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
     expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     expect(page.locator(".concept-page-b2__study-note")).to_have_count(0)
-    page.locator(".concept-page-b2__attempt-save").click()
-    expect(page.locator("[data-attempt-error]")).to_have_text(
-        "Put down the part you can explain, even if it is incomplete."
-    )
+    save_button = page.locator(".concept-page-b2__attempt-save")
+    expect(save_button).to_be_disabled()
+    expect(save_button).to_have_attribute("aria-disabled", "true")
 
     learner_text = "  Sodium flows in because there is more outside.  "
     page.locator(".concept-page-b2__attempt-input").fill(learner_text)
-    page.locator(".concept-page-b2__attempt-save").click()
+    expect(save_button).to_be_enabled()
+    expect(save_button).to_have_attribute("aria-disabled", "false")
+    save_button.click()
     expect(page.locator("[data-attempt-error]")).to_have_text(
         "The system could not record this yet. Try again."
     )
@@ -1678,12 +1685,18 @@ def test_drawer_toggle_remains_visible_in_concept_view(
 
     toggle = clean_page.locator("#drawer-toggle")
     expect(toggle).to_be_visible()
-    assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
+    drawer = clean_page.locator("#drawer")
+    assert drawer.get_attribute("data-open") == "true"
+    drawer_box = drawer.bounding_box()
+    toggle_box = toggle.bounding_box()
+    assert drawer_box is not None
+    assert toggle_box is not None
+    assert toggle_box["x"] + toggle_box["width"] <= drawer_box["x"] + drawer_box["width"]
 
     clean_page.locator(".concept-item", has_text="Test Concept").click()
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")
     expect(toggle).to_be_visible()
-    assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
+    assert drawer.get_attribute("data-open") == "true"
     assert clean_page.locator("body").get_attribute("data-drawer-open") == "true"
 
     clean_page.locator("#nav-library").click()
@@ -1777,15 +1790,64 @@ def test_mobile_drawer_keeps_feedback_accessible(
     page.set_viewport_size({"width": 390, "height": 844})
     _enter_app_shell_as_guest(page, base_url)
 
-    page.locator("#drawer-toggle").click()
-    expect(page.locator("#drawer")).to_be_visible()
-    assert page.locator("#drawer").get_attribute("data-open") == "true"
+    drawer = page.locator("#drawer")
+    toggle = page.locator("#drawer-toggle")
+    expect(drawer).not_to_be_visible()
+    assert drawer.get_attribute("data-open") == "false"
+    expect(drawer).to_have_attribute("aria-hidden", "true")
+    expect(toggle).to_have_attribute("aria-expanded", "false")
+
+    toggle.click()
+    expect(drawer).to_be_visible()
+    assert drawer.get_attribute("data-open") == "true"
+    expect(drawer).to_have_attribute("aria-hidden", "false")
+    expect(toggle).to_have_attribute("aria-expanded", "true")
+    page.wait_for_function(
+        """() => {
+            const drawer = document.querySelector("#drawer");
+            if (!drawer) return false;
+            const rect = drawer.getBoundingClientRect();
+            return rect.left >= 0 && rect.right <= window.innerWidth;
+        }"""
+    )
+    drawer_box = drawer.bounding_box()
+    assert drawer_box is not None
+    assert drawer_box["x"] >= 0
+    assert drawer_box["x"] + drawer_box["width"] <= 390
     expect(page.locator("#nav-feedback")).to_be_visible()
 
     page.locator("#nav-feedback").click()
 
     expect(page.locator("#feedback-overlay")).to_be_visible()
     assert page.locator("#drawer").get_attribute("data-open") == "true"
+
+
+def test_mobile_concept_attempt_has_writing_width(
+    page: Page, base_url: str
+) -> None:
+    """Mobile concept page keeps the cold-attempt writing surface usable."""
+    page.set_viewport_size({"width": 390, "height": 844})
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_route_margin_concept(page)
+
+    page.evaluate("window.App.showLibrary()")
+    page.locator(".library-card-vault", has_text="How sodium channels").click()
+    expect(page.locator("#concept-header-title")).to_contain_text(
+        "How sodium channels create an action potential"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(page.locator("#drawer-toggle")).to_be_visible()
+    expect(page.locator("#bottom-nav")).not_to_be_visible()
+
+    toggle_box = page.locator("#drawer-toggle").bounding_box()
+    assert toggle_box is not None
+    assert toggle_box["width"] >= 44
+    assert toggle_box["height"] >= 44
+
+    attempt_box = page.locator(".concept-page-b2__attempt-input").bounding_box()
+    assert attempt_box is not None
+    assert attempt_box["width"] >= 300
 
 
 def test_saved_library_concept_reopens_map_view(
@@ -1863,11 +1925,19 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text(
         "Use this draft"
     )
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_be_disabled()
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_attribute(
+        "aria-disabled", "true"
+    )
     expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
         "Think about the point where a small signal becomes enough to matter."
     )
     attempt_input = canvas.locator(".concept-page-b2__attempt-input")
     attempt_input.fill("asdasdas")
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_be_enabled()
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_attribute(
+        "aria-disabled", "false"
+    )
     blank_start = canvas.locator("[data-blank-start]")
     expect(blank_start).to_have_text("Stuck?")
     expect(blank_start).to_have_attribute("aria-expanded", "false")
@@ -2005,10 +2075,11 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(clean_page.locator(".concept-page-b2__attempt-input")).to_have_value(
         "Sodium channels probably open when voltage reaches a trigger."
     )
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_be_enabled()
     clean_page.locator(".concept-page-b2__attempt-input").fill("")
-    canvas.locator(".concept-page-b2__attempt-save").click()
-    expect(canvas.locator(".concept-page-b2__attempt-error")).to_have_text(
-        "Write the smallest useful guess before study appears."
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_be_disabled()
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_attribute(
+        "aria-disabled", "true"
     )
 
 

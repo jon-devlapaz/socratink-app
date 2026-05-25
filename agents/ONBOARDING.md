@@ -33,7 +33,7 @@ Shared workflow canon: `agents/README.md`, `agents/WORKFLOWS/`, and `agents/foun
 - Do not violate Generation Before Recognition.
 - Prefer a small party. Pull in `theta`, `elliot`, `sherlock`, or `thurman` only when the task actually needs them.
 - Update durable state after meaningful work. `docs/project/state.md` holds live execution truth; logs and merge notes hold current evidence on this branch.
-- Code-generation tasks that touch a third-party SDK, API, hosted platform, browser API, or test framework: fetch current docs via Context7 before writing code. See `AGENTS.md` → "Layer 3 — Context7". Local binding docs still win on Socratink behavior.
+- Code-generation tasks that touch a third-party SDK, API, hosted platform, browser API, or test framework: fetch current docs via Context7 before writing code. See `AGENTS.md` → "Layer 3 — Context7". If Context7 is unavailable or lacks coverage, run `bash scripts/chub-docs.sh update`, then `bash scripts/chub-docs.sh search "<query>"` and `bash scripts/chub-docs.sh get <doc-id> --lang py`. Local binding docs still win on Socratink behavior.
 - For founder/agent workflow tasks, use `agents/LEARNINGS.md` as a non-binding ledger: read it only for matching workflow friction, append only reusable observations from real usage, and promote recurring patterns through reviewed canon edits.
 
 ## Session Bootstrap Prompt
@@ -55,7 +55,7 @@ Before doing substantive work:
 11. If the task touches drill/graph behavior, read docs/superpowers/specs/2026-05-15-drill-data-model-design.md.
 12. Decide which agents are actually needed. Prefer a small party.
 13. Make a plan when the task is large, risky, or ambiguous.
-14. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
+14. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). If Context7 is unavailable or lacks coverage, use `bash scripts/chub-docs.sh`. Do not rely on model memory for external API behavior.
 
 Operating rules:
 - Keep read-only agents read-only unless implementation is explicitly required.
@@ -90,7 +90,7 @@ Before doing substantive work:
 12. Decide which agents are actually needed
 13. Make a plan when the task is large or ambiguous
 14. Use agents/WORKFLOWS/README.md for shared hot-fix and drill workflows
-15. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). Do not rely on model memory for external API behavior.
+15. Before writing code that calls a third-party SDK, API, hosted platform, browser API, or test framework, fetch current docs via Context7 (Layer 3 in AGENTS.md). If Context7 is unavailable or lacks coverage, use `bash scripts/chub-docs.sh`. Do not rely on model memory for external API behavior.
 
 The product is an evidence-weighted map: the graph records what Socratink has evidence for, not what the learner knows. It implements a three-phase node loop (cold attempt → targeted study → spaced re-drill) with derived training states (`null | primed | needs repair | solidified`). Training evidence is browser-local in the MVP and must stay derivable from learner reconstruction records. Only spaced strong reconstruction evidence derives `solidified`. All changes to drill, graph, routing, or state must be evaluated against this architecture and against evidence-weighted-map.md.
 

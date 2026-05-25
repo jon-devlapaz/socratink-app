@@ -78,8 +78,9 @@ uvicorn on that port and writes its log to `.qa-runs/check-coverage-uvicorn.log`
 Set `SOCRATINK_BASE_URL` to a non-local target when the app should be provided
 externally. The cache-pin check fails when a changed versioned frontend asset
 keeps a stale parent `?v=` reference. The frontend leg requires Node (run
-`npm install` once to fetch `monocart-coverage-reports`). The Python leg adds
-`pytest-cov` and `diff-cover` from `requirements-dev.txt`.
+`npm install` once to fetch the local Node tooling; coverage uses
+`monocart-coverage-reports`). The Python leg adds `pytest-cov` and `diff-cover`
+from `requirements-dev.txt`.
 
 ### Type-check and PR preflight
 
@@ -92,14 +93,14 @@ in CI. Run both from the repo root before pushing:
 mypy .                    # honors mypy.ini exclude list (.venv/, tests/e2e/, public/, scripts/, …)
 ```
 
-- `pyrefly.toml` (Python 3.13, `preset = "legacy"`, `check-unannotated-defs = true`)
+- `pyrefly.toml` (Python 3.14, `preset = "legacy"`, `check-unannotated-defs = true`)
   uses positive `project-includes` to mirror mypy's effective scope. Passing
   `pyrefly check .` would override that scope and pull in `tests/` and `api/`,
   both of which are intentionally excluded.
 - The pyrefly version is pinned in `scripts/doctor.sh` (`PYREFLY_VERSION`),
   not in `requirements-dev.txt`, so the gate auto-bootstraps the exact
   version it was authored against.
-- `mypy.ini` (Python 3.13, `warn_unreachable`, `strict_optional`,
+- `mypy.ini` (Python 3.14, `warn_unreachable`, `strict_optional`,
   `check_untyped_defs`, `warn_return_any`) stays the cross-check.
 
 `.github/workflows/preflight.yml` runs two CI jobs on every `pull_request` and
@@ -119,9 +120,9 @@ This repo keeps dependency management intentionally simple:
 - `requirements.txt` is the Vercel runtime install surface.
 - `requirements-dev.txt` is local-only test and tooling surface (includes
   `pytest-cov` and `diff-cover` for the coverage gate).
-- `package.json` / `package-lock.json` carry the local-only Node tooling for
-  the frontend coverage gate (`monocart-coverage-reports`); none of it ships
-  to Vercel.
+- `package.json` / `package-lock.json` carry local-only Node tooling for the
+  frontend coverage gate (`monocart-coverage-reports`) and the repo-pinned
+  Context Hub wrapper (`@aisuite/chub`); none of it ships to Vercel.
 - Keep the Python files flat: one pinned package per line, no `-r` includes,
   no hash blocks.
 

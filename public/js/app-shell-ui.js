@@ -3,12 +3,14 @@ import { deriveConceptBadge } from './concept-status.js';
 
 export function openDrawer({ drawer, drawerToggle, documentRef = document }) {
   drawer.dataset.open = 'true';
+  drawer.setAttribute?.('aria-hidden', 'false');
   documentRef.body.dataset.drawerOpen = 'true';
   if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'true');
 }
 
 export function closeDrawer({ drawer, drawerToggle, documentRef = document }) {
   drawer.dataset.open = 'false';
+  drawer.setAttribute?.('aria-hidden', 'true');
   documentRef.body.dataset.drawerOpen = 'false';
   if (drawerToggle) drawerToggle.setAttribute('aria-expanded', 'false');
 }

@@ -20,6 +20,9 @@ required_files=(
   "requirements.txt"
   "requirements-dev.txt"
   "vercel.json"
+  "package.json"
+  "package-lock.json"
+  "scripts/chub-docs.sh"
 )
 for required_file in "${required_files[@]}"; do
   if [ ! -f "$required_file" ]; then
@@ -42,6 +45,23 @@ fi
 
 if [ ! -x ".venv/bin/python" ]; then
   echo "[doctor] FAIL: missing .venv. Run: bash scripts/bootstrap-python.sh" >&2
+  exit 1
+fi
+
+echo "[doctor] context-hub wrapper..."
+if [ ! -x "scripts/chub-docs.sh" ]; then
+  echo "[doctor] FAIL: scripts/chub-docs.sh missing or not executable" >&2
+  exit 1
+fi
+if ! .venv/bin/python - <<'PY' >/dev/null 2>&1
+import json
+from pathlib import Path
+
+pkg = json.loads(Path("package.json").read_text())
+raise SystemExit(0 if pkg.get("devDependencies", {}).get("@aisuite/chub") == "0.1.4" else 1)
+PY
+then
+  echo "[doctor] FAIL: package.json must pin @aisuite/chub to 0.1.4" >&2
   exit 1
 fi
 

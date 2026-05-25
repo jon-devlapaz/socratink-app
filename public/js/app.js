@@ -1,5 +1,5 @@
 import { Bus } from './bus.js';
-import { generateKnowledgeMap } from './ai_service.js';
+import { generateKnowledgeMap, submitConceptCreate } from './ai_service.js?v=1';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -10,7 +10,7 @@ import {
   openDrawer as openShellDrawer,
   renderConceptList as renderShellConceptList,
   toggleDrawer as toggleShellDrawer,
-} from './app-shell-ui.js';
+} from './app-shell-ui.js?v=1';
 import { escHtml } from './html.js';
 import {
   describeDoorSource,
@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=17';
+} from './concept-page-view.js?v=19';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -61,7 +61,7 @@ import {
   extractUrl,
   runRepairReps,
   runDrillTurn,
-} from './api-client.js?v=1';
+} from './api-client.js?v=2';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -82,7 +82,7 @@ import {
   buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js';
+} from './launch-pad.js?v=1';
 import { emitTelemetry } from './telemetry.js';
 
 import {
@@ -1419,15 +1419,10 @@ const App = (() => {
     }
 
     try {
-      const { submitConceptCreate } = await import('./ai_service.js');
-      const apiKey =
-        (typeof localStorage !== 'undefined' && localStorage.getItem('gemini_key')) ||
-        undefined;
       const data = await submitConceptCreate({
         name,
         startingSketch: '',
         source: resolvedSource,
-        apiKey,
       });
       const provisionalMap = data.provisional_map || data.knowledge_map || null;
       // Same shape gate the (now-retired) modal handleSubmit applied. Without
@@ -1847,11 +1842,25 @@ const App = (() => {
     routeAttemptDrafts.set(routeAttemptDraftKey(_activeEntryId), input.value || '');
   }
 
+  function syncInlineAttemptSaveButton(panel, options = {}) {
+    const input = panel?.querySelector?.('.concept-page-b2__attempt-input');
+    const button = panel?.querySelector?.('.concept-page-b2__attempt-save');
+    if (!input || !button) return;
+    const hasDraft = Boolean((input.value || '').trim());
+    button.disabled = !hasDraft;
+    button.setAttribute('aria-disabled', hasDraft ? 'false' : 'true');
+    if (hasDraft && options.clearError) {
+      const errorEl = panel.querySelector?.('[data-attempt-error]');
+      if (errorEl) errorEl.hidden = true;
+    }
+  }
+
   function restoreActiveEntryDraft(entryId) {
     const input = document.querySelector('.concept-page-b2__attempt-input');
     const key = routeAttemptDraftKey(entryId);
     if (!input || !routeAttemptDrafts.has(key)) return;
     input.value = routeAttemptDrafts.get(key) || '';
+    syncInlineAttemptSaveButton(input.closest('.concept-page-b2__attempt'));
   }
 
   /**
@@ -1899,6 +1908,12 @@ const App = (() => {
     }
     const attemptBtn = docEl.querySelector('.concept-page-b2__attempt-save');
     if (attemptBtn) {
+      const attemptPanel = attemptBtn.closest('.concept-page-b2__attempt');
+      const attemptInput = attemptPanel?.querySelector?.('.concept-page-b2__attempt-input');
+      syncInlineAttemptSaveButton(attemptPanel);
+      attemptInput?.addEventListener('input', () => {
+        syncInlineAttemptSaveButton(attemptPanel, { clearError: true });
+      });
       attemptBtn.addEventListener('click', () => {
         void submitInlineAttemptForEntry(attemptBtn, concept, data);
       });
@@ -2182,6 +2197,7 @@ const App = (() => {
     }
     if (errorEl) errorEl.hidden = true;
     button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
 
     const graphData = parseConceptGraphData(concept) || data || {};
     const backbone = deriveConceptEntries(graphData);
@@ -2221,7 +2237,6 @@ const App = (() => {
         help_turn_count: 0,
         session_start_iso: at,
         bypass_session_limits: true,
-        api_key: localStorage.getItem('gemini_key') || undefined,
       });
       if (getActiveId() !== concept.id) return;
       const training = await appendTrainingAttemptFromDrillTurn({
@@ -2235,6 +2250,7 @@ const App = (() => {
         const nudge = inlineAttemptNudgeFromDrillResult(result);
         if (nudge) {
           button.disabled = false;
+          button.setAttribute('aria-disabled', 'false');
           if (errorEl) {
             errorEl.textContent = nudge;
             errorEl.hidden = false;
@@ -2257,6 +2273,7 @@ const App = (() => {
     } catch (err) {
       console.warn('Memory attempt failed.', err);
       button.disabled = false;
+      button.setAttribute('aria-disabled', 'false');
       if (errorEl) {
         errorEl.textContent = 'The system could not record this yet. Try again.';
         errorEl.hidden = false;
@@ -2335,10 +2352,8 @@ const App = (() => {
     const cancelBtn = editorEl.querySelector('.concept-page-b2__threshold-cancel');
     const saveBtn = editorEl.querySelector('.concept-page-b2__threshold-save');
 
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    });
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
     const teardown = () => {
       editorEl.remove();
@@ -3513,7 +3528,6 @@ const App = (() => {
         gap_type: nodeData.gap_type || null,
         gap_description: nodeData.gap_description || null,
         count: 3,
-        api_key: localStorage.getItem('gemini_key') || undefined,
       });
       const reps = Array.isArray(payload?.reps) ? payload.reps : [];
       if (reps.length !== 3) {
@@ -3926,7 +3940,6 @@ const App = (() => {
     // reached" blocks. Re-introduce as soft suggestions, not hard gates.
     const bypassSessionLimits = true;
 
-    const apiKey = localStorage.getItem('gemini_key') || undefined;
     const nodeData = resolveNodeData(knowledgeMap, drillState.node.id) || {};
     const graphNeutralDrill = drillState.node.graphNeutral === true;
     let drillMode = drillState.node.drillMode || 'cold_attempt';
@@ -3960,7 +3973,6 @@ const App = (() => {
         help_turn_count: drillState.helpTurnCount,
         session_start_iso: sessionState.startedAt,
         bypass_session_limits: bypassSessionLimits,
-        api_key: apiKey,
       });
       console.log(
         `[drill] answer_mode=${data?.answer_mode ?? 'null'} classification=${data?.classification ?? 'null'} routing=${data?.routing ?? 'null'} terminated=${Boolean(data?.session_terminated)}`

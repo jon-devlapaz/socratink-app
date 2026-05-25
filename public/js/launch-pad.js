@@ -21,7 +21,7 @@
 // can retry without re-typing the threshold.
 
 import { emitTelemetry } from './telemetry.js';
-import { submitConceptCreate } from './ai_service.js';
+import { submitConceptCreate } from './ai_service.js?v=1';
 import { AudioFX } from './audio.js?v=4';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
@@ -290,15 +290,11 @@ export async function runLaunchPadAction(event, App) {
   //   5xx / network / persistence → NO submit event (request didn't complete)
   let data;
   try {
-    const apiKey =
-      (typeof localStorage !== 'undefined' && localStorage.getItem('gemini_key')) ||
-      undefined;
     data = await submitConceptCreate({
       name: shell.name,
       learnerGoal: shell.goal,
       startingSketch: threshold,
       source: null,
-      apiKey,
     });
   } catch (err) {
     if (err && err.status === 422) {
