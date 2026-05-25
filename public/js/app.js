@@ -4034,9 +4034,9 @@ const App = (() => {
             chatInput.focus();
           }
         }
-        // Mirror disabled state to the chamber composer. The first AI
-        // response also tears down the "preparing your first question"
-        // loading placeholder.
+        // Mirror disabled state to the chamber composer. The local node
+        // prompt is already visible, so loading cleanup must keep the
+        // writing surface available until the turn actually resolves.
         if (window.DrillChamber) {
           window.DrillChamber.setLoading?.(false);
           window.DrillChamber.setComposerEnabled(!(completedNodeTurn || !!data.session_terminated));

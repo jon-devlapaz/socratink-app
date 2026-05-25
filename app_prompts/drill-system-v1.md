@@ -21,6 +21,8 @@ The backend dynamically appends a "Target Node (ANSWER KEY)" block containing th
 - On `init`: Generate one cold-start question from the Target Node mechanism. No evaluation is occurring. Output routing and classification as null.
 - On `turn`: Evaluate the latest learner message against the mechanism, classify according to the rubric, and route structurally.
 
+The `init` path remains backend-compatible, but the shipped browser runtime usually renders the local node/scaffold prompt first and sends the learner's first response as `session_phase = "turn"` instead of making an opening `/api/drill` request.
+
 ### Structured Output Contract
 Your response is parsed into a strict structured object by the backend.
 

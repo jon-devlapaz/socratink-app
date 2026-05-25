@@ -36,10 +36,10 @@ Every drillable node on the graph must move through these three phases. No phase
 ### Phase 1: Cold Attempt (Exploration)
 - **Goal**: Generate a prediction error to prime encoding.
 - **Contract**: Exploratory question ("What do you think this involves?"). Learner-facing surfaces remain unscored; the system may privately classify the attempt to derive repair/study routing.
-- **Generative Commitment**: Cold attempts use drill-evaluation generative commitment to decide whether study unlocks; source-less launch-pad generation accepts any non-empty learner launch attempt before drafting a provisional map.
+- **Generative Commitment**: Cold attempts unlock study only when the latest turn is a recordable learner attempt (`answer_mode === "attempt"`, `score_eligible === true`, usable classification) and drill-evaluation generative commitment is true. Non-recordable help/scaffold turns stay support turns and do not append evidence.
 - **Learner Goal**: A learner goal may frame relevance, route emphasis, and local prompt copy. It is not evidence, is not graded, and must not mutate graph truth.
 - **Zero-Schema Detection**: If the learner is completely lost, the AI seeds 2-3 concepts and asks for a micro-generation.
-- **Outcome**: A learner attempt is appended to the training record. Derived state becomes `primed` or `needs repair` depending on the evidence.
+- **Outcome**: A recordable learner attempt is appended to the training record. Derived state becomes `primed` or `needs repair` depending on the evidence.
 - **Persistence**: The attempt is recorded before study reveal. No downstream mastery unlock evaluation runs from a cold attempt alone.
 
 ### Phase 2: Targeted Study (Correction)
@@ -149,15 +149,15 @@ mutates graph state or records training evidence.
 
 ---
 
-## 4. Side Panel & Result States
+## 4. Inline Concept Entry & Result States
 
-The panel must be mode-pure with no content bleed.
+The current runtime does not use a standalone side-panel DOM for these states. The concept route stays visible, `#drill-chamber-view` mounts inline inside the active concept entry during drills, and study, repair, comparison, and result surfaces live in the same concept-entry work column. Any future side-panel treatment must preserve the same mode purity with no content bleed.
 
-### Seven Panel Modes
+### Surface Modes
 1. **Inspect**: Orientation. Shows prerequisites, study access, or re-drill readiness.
-2. **Cold-Attempt-Active**: exploratory question + transcript. No scores.
+2. **Cold-Attempt-Active**: local node/scaffold prompt + inline chamber. No scores.
 3. **Study**: Mechanism text + normalization message.
-4. **Re-Drill-Active**: Reconstruction demand + transcript.
+4. **Re-Drill-Active**: reconstruction demand + inline chamber transcript.
 5. **Post-Re-Drill**: Result card (`solidified` / `needs repair`) + Trajectory Contrast. Sticky until `Continue`.
 6. **Session-Complete**: Session guardrail reached. Save-point copy.
 7. **Repair-Reps**: Optional typed causal micro-practice after study completion or non-solid re-drill. No scores, no graph mutation, no interleaving credit, no mastery unlock.
@@ -169,7 +169,7 @@ The panel must be mode-pure with no content bleed.
 - **No Training Evidence**: Low-information, reduced-contrast state. Available only when predecessor evidence allows it; otherwise clearly unavailable.
 - **Primed**: Warm, open state. Signals "entered but not yet challenged" and stays visually distinct from both unavailable/no-evidence and needs-repair states.
 
-Show next-horizon nodes (3-5 adjacent available items) rather than the entire remaining graph. Detailed gap taxonomy belongs in the side panel.
+Show next-horizon nodes (3-5 adjacent available items) rather than the entire remaining graph. Detailed gap taxonomy belongs in the active concept-entry repair/result surface.
 
 ---
 

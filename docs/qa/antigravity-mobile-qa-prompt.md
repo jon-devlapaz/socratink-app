@@ -23,7 +23,7 @@
 > Default-guest login is auto-minted only for loopback/testclient requests when `SOCRATINK_DEV_AUTOGUEST=1` (set by `scripts/dev.sh`) or `SOCRATINK_LOCAL_AUTH_BYPASS=1`; `SOCRATINK_LOCAL_AUTH_BYPASS=0` opts out. LAN requests should expect the login wall.
 >
 > **App map.**
-> - `/` Ignition view (empty-state hero with Concept + Starting-map composer)
+> - `/` Ignition view (empty-state hero with Concept field plus optional source attach; source-less starting-map capture happens later on Launch pad)
 > - Bottom nav: Ignition / Desk / Library / Settings (mobile only, `<900px`)
 > - Top chrome: floating hamburger button only (fixed, translucent blur scrim on mobile)
 > - On localhost only, Library exposes QA seed buttons (`Seed QA concept`, `Seed repair QA`) for creating a real concept fixture before opening the concept view
@@ -73,15 +73,15 @@
 > ### Pass 1 — Layout integrity
 >
 > 1. Compute `document.documentElement.scrollWidth - window.innerWidth` on every view. **Fail if > 0** (horizontal overflow).
-> 2. Snapshot bounding rects of: `.main-header`, `.bottom-nav`, `#ignition-view`, `.library-view`, `.settings-view`, `.map-view`, `.hero-card`, `.map-action-bar`. **Fail if any element overlaps another fixed element** (chrome ↔ content, action-bar ↔ bottom-nav). Allow ≤2px sub-pixel touching. (Note: the `.map-mode-switch` Route/Graph segmented control was removed in the strip-as-nav port; skip the related overlap and accessibility checks below.)
-> 3. Verify each view's `padding-top` ≥ chrome height (64px + safe-area-inset-top) and `padding-bottom` ≥ bottom-nav height + (action-bar height if Map view) + safe-area. Use `getBoundingClientRect` to measure both fixed strips and confirm content's first/last children are not occluded.
+> 2. Snapshot bounding rects of: `.main-header`, `.bottom-nav`, `#ignition-view`, `.library-view`, `.settings-view`, `.map-view`, `.hero-card`, `.concept-page-b2__active-entry`, `#drill-chamber-view` when present. **Fail if any element overlaps another fixed element** (chrome ↔ content, inline drill/chrome ↔ bottom-nav). Allow ≤2px sub-pixel touching. (Note: the `.map-mode-switch` Route/Graph segmented control was removed in the strip-as-nav port; skip the related overlap and accessibility checks below.)
+> 3. Verify each view's `padding-top` ≥ chrome height (64px + safe-area-inset-top) and `padding-bottom` ≥ bottom-nav height + safe-area. Use `getBoundingClientRect` to measure both fixed strips and confirm content's first/last children are not occluded.
 > 4. Top chrome (`.main-header`) must have `position: fixed` and a non-empty `backdrop-filter` at `<900px`. **Fail otherwise.**
 >
 > ### Pass 2 — Touch targets and tap density
 >
 > 1. For every interactive element (`button`, `a`, `[role="button"]`, `[onclick]`, `[role="tab"]`, `input[type="checkbox"]`, segmented buttons), measure `getBoundingClientRect`. **Flag (warning, not fail) any element below 36×36 px**, **fail any below 28×28 px** unless it is part of an explicit segmented-control group sized as a unit.
 > 2. (Removed) The `.map-mode-switch` Route/Graph segmented control no longer exists after the strip-as-nav port; skip this check.
-> 3. The primary action `.btn-start-drill` inside `.map-action-bar` MUST be ≥44×44.
+> 3. Concept-entry primary controls (`.concept-page-b2__entry-cta`, `.concept-page-b2__attempt-save`, `.drill-chamber__send` when present) MUST be ≥44×44.
 > 4. Bottom-nav items (`.bottom-nav-item`) MUST be ≥48 px min-height.
 >
 > ### Pass 3 — iOS auto-zoom prevention

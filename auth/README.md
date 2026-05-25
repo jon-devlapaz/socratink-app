@@ -43,6 +43,6 @@ Import from `auth` directly. Submodule paths are implementation detail.
 
 ## Related
 
-- Env contract: see `.env.example` (lines 1–22).
+- Env contract: see `.env.example`.
 - Cookie sealing tests: `tests/test_supabase_load_session.py`.
 - Anti-pattern guard: don't import from `auth.<submodule>` outside `auth/` — go through the package surface.

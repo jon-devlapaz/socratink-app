@@ -299,7 +299,7 @@ concept entry. Reading them alongside this doctrine, the contract is:
 - **Threshold capture** = hypothesis-shaping input. No graph mutation.
 - **Provisional graph**. No graph mutation.
 - **Locked study silhouette** = absence of explanatory content is intentional. No graph mutation.
-- **First cold attempt** = the first evidence event. It appends learner reconstruction evidence and derives `primed` or `needs repair`.
+- **First cold attempt** = the first recordable evidence event. It appends learner reconstruction evidence and derives `primed` or `needs repair`; non-recordable help/scaffold turns append no training evidence.
 - **Repair artifact (study)** = targeted corrective feedback. No graph mutation.
 - **Gap drill / `Pressure-check this link`** = graph-neutral repair pressure-test. No training evidence append, no graph mutation, no spacing credit.
 - **Interleaving bridge** = routing hint. No graph mutation.
