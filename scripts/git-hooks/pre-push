@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Direct Push Override / no-mistakes Bypass:
-# If you need to bypass the no-mistakes gate and push straight to origin/dev,
-# run `python3 scripts/agent-push.py --bypass-no-mistakes`. Raw `git push`
-# still requires the one-shot authorization payload written by agent-push.
+# If you need to bypass the no-mistakes gate for direct origin/dev publication,
+# run `python3 scripts/agent-push.py --bypass-no-mistakes` and complete its
+# preview/ack flow. Raw `git push` still requires the one-shot authorization
+# payload written by agent-push.
 
 set -euo pipefail
 

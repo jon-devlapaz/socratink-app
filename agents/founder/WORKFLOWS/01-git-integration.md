@@ -31,6 +31,7 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 - use `origin/dev` for ordinary narrow `dev` publication
 - use `origin/feat/*` for feature-branch publication intended for PR flow
 - use `no-mistakes/dev` for larger, higher-blast-radius, or higher-risk publication
+- use `python3 scripts/agent-push.py --bypass-no-mistakes` or `SOCRATINK_BYPASS_NO_MISTAKES=1 python3 scripts/agent-push.py` only when intentionally skipping the no-mistakes gate for `origin/dev`; the bypass still uses the normal preview/ack authorization flow
 
 ## Helper Commands
 
@@ -40,6 +41,7 @@ scripts/git-wip-explain.sh --short      # compact terminal-start summary
 scripts/git-wip-explain.sh --json       # stable machine-readable orientation
 python3 scripts/agent-push.py --target no-mistakes/dev
 python3 scripts/agent-push.py --target no-mistakes/dev --json
+python3 scripts/agent-push.py --bypass-no-mistakes
 no-mistakes attach
 scripts/no-mistakes-finish-dev.sh       # after no-mistakes finishes
 scripts/git-worktree-cleanup.sh         # list stale worktrees
@@ -75,6 +77,7 @@ scripts/git-founder-help.sh doctor      # read-only helper readiness check
 - `.no-mistakes.yaml` runs the Codex no-mistakes agent, delegates gate `lint` and `test` to repo-owned wrappers, and ignores `agents/superpowers/**` and `public/_lab/**`
 - `scripts/no-mistakes-lint.sh` bootstraps Python, sources test-safe auth/env defaults, runs `scripts/doctor.sh`, and runs `git diff --check` from the merge-base of `COMPARE_BRANCH` or `origin/dev`
 - `scripts/no-mistakes-test.sh` bootstraps Python, sources the same test-safe auth/env defaults, installs Node/Chromium coverage prerequisites, defaults `COMPARE_BRANCH` to `origin/dev` when available, and runs `scripts/check-coverage.sh`; when neither `SOCRATINK_BASE_URL` nor `APP_BASE_URL` was provided by the caller, it chooses a free loopback port and points both vars at that temporary local app
+- no-mistakes bypass is limited to `origin/dev`; explicit non-`origin/dev` bypass targets fail before publication
 - push intent is revalidated on ack
 - raw `git push` is blocked without authorization artifact
 

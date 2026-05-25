@@ -49,6 +49,16 @@ Publishing through no-mistakes
     Use when: you have read the gpub preview and intentionally want to publish.
     After this, run: no-mistakes attach
 
+Direct origin/dev bypass
+  python3 scripts/agent-push.py --bypass-no-mistakes
+    Use when: you intentionally want to skip the no-mistakes gate and publish
+    directly to origin/dev. Safe: first run is still a preview only and prints
+    an ack command; raw git push remains blocked without agent-push authorization.
+
+  SOCRATINK_BYPASS_NO_MISTAKES=1 python3 scripts/agent-push.py
+    Use when: an environment-driven caller needs the same direct origin/dev
+    preview/ack route.
+
 After no-mistakes finishes
   gfinish
     Use when: the no-mistakes run is done and origin/dev has the daemon output.
@@ -112,6 +122,13 @@ commands = [
         "safe": "preview-first publish",
         "uses": ["publication-preview", "acknowledged-publish"],
         "json": "gpub --json",
+    },
+    {
+        "name": "agent-push --bypass-no-mistakes",
+        "script": "scripts/agent-push.py --bypass-no-mistakes",
+        "safe": "preview-first direct origin/dev publish",
+        "uses": ["publication-preview", "acknowledged-publish", "skip-no-mistakes"],
+        "json": "python3 scripts/agent-push.py --bypass-no-mistakes --json",
     },
     {
         "name": "gfinish",

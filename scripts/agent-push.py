@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Direct Push Override / no-mistakes Bypass:
-# If you need to bypass the no-mistakes gate and push straight to origin/dev:
+# If you need to bypass the no-mistakes gate for direct origin/dev publication:
 # 1. CLI option: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
 # 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1` or `BYPASS_NO_MISTAKES=1`
 #    then run this script without --target; it defaults to origin/dev and still
@@ -519,7 +519,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name, no-mistakes/dev")
     parser.add_argument("--ack", help="ack token printed by the first run")
     parser.add_argument("--json", action="store_true", help="emit machine-readable preview output")
-    parser.add_argument("--bypass-no-mistakes", action="store_true", help="bypass no-mistakes gate and push immediately")
+    parser.add_argument("--bypass-no-mistakes", action="store_true", help="preview direct origin/dev publication without the no-mistakes gate")
     args = parser.parse_args(argv)
 
     bypass_env = os.environ.get("SOCRATINK_BYPASS_NO_MISTAKES") == "1" or os.environ.get("BYPASS_NO_MISTAKES") == "1"
