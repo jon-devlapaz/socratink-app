@@ -1,5 +1,5 @@
 import { Bus } from './bus.js';
-import { generateKnowledgeMap } from './ai_service.js';
+import { generateKnowledgeMap, submitConceptCreate } from './ai_service.js?v=1';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -82,7 +82,7 @@ import {
   buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js';
+} from './launch-pad.js?v=1';
 import { emitTelemetry } from './telemetry.js';
 
 import {
@@ -1419,7 +1419,6 @@ const App = (() => {
     }
 
     try {
-      const { submitConceptCreate } = await import('./ai_service.js');
       const data = await submitConceptCreate({
         name,
         startingSketch: '',

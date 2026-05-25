@@ -5,6 +5,7 @@
 #   scripts/persona.sh <prompt-file>     # read from a file
 #   cat prompt.txt | scripts/persona.sh  # read from stdin
 #   scripts/persona.sh --template        # print the template path and exit
+#   PERSONA_ALLOW_AGY_FALLBACK=1 scripts/persona.sh <prompt-file>
 #
 # Filters Gemini CLI's noisy "Discarding invalid hook definition" startup
 # blocks, and tees the result to a timestamped log under .playwright-mcp/
@@ -30,15 +31,16 @@ fi
 
 RUNNER="gemini"
 if ! command -v gemini >/dev/null 2>&1; then
-  if command -v agy >/dev/null 2>&1; then
+  if [[ "${PERSONA_ALLOW_AGY_FALLBACK:-0}" == "1" ]] && command -v agy >/dev/null 2>&1; then
     RUNNER="agy"
-    echo "persona.sh: gemini CLI not found in PATH; using agy fallback." >&2
+    echo "persona.sh: gemini CLI not found in PATH; using explicit agy fallback." >&2
   else
     echo "persona.sh: gemini CLI not found in PATH." >&2
     echo "  install via your package manager or:" >&2
     echo "    npm install -g @google/gemini-cli" >&2
     echo "  then run:  gemini auth login" >&2
-    echo "  fallback also unavailable: agy" >&2
+    echo "  or explicitly allow agy fallback:" >&2
+    echo "    PERSONA_ALLOW_AGY_FALLBACK=1 scripts/persona.sh <prompt-file>" >&2
     exit 127
   fi
 fi

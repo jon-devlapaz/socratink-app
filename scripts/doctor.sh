@@ -53,16 +53,15 @@ if [ ! -x "scripts/chub-docs.sh" ]; then
   echo "[doctor] FAIL: scripts/chub-docs.sh missing or not executable" >&2
   exit 1
 fi
-if ! command -v node >/dev/null 2>&1; then
-  echo "[doctor] FAIL: Node.js is required for the repo-pinned Context Hub CLI" >&2
-  exit 1
-fi
-if ! node -e "const pkg=require('./package.json'); process.exit(pkg.devDependencies?.['@aisuite/chub']==='0.1.4' ? 0 : 1)" >/dev/null 2>&1; then
+if ! .venv/bin/python - <<'PY' >/dev/null 2>&1
+import json
+from pathlib import Path
+
+pkg = json.loads(Path("package.json").read_text())
+raise SystemExit(0 if pkg.get("devDependencies", {}).get("@aisuite/chub") == "0.1.4" else 1)
+PY
+then
   echo "[doctor] FAIL: package.json must pin @aisuite/chub to 0.1.4" >&2
-  exit 1
-fi
-if [ ! -x "node_modules/.bin/chub" ]; then
-  echo "[doctor] FAIL: @aisuite/chub is missing from node_modules. Run: npm install" >&2
   exit 1
 fi
 
