@@ -61,4 +61,3 @@ Use direct `bash scripts/qa-smoke.sh live` only when the question is generic pro
 - shared workflow truth: this file
 - executable enforcement and polling logic: `scripts/verify-deploy.sh`
 - runtime evidence: production smoke output and wrapper stdout
-- migration status: `agents/MIGRATION.md`

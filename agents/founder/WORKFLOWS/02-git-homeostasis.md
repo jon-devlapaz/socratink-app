@@ -80,5 +80,4 @@ Use a fixed three-phase route:
 ## Artifact Destination
 
 - shared workflow truth: this file
-- migration status: `agents/MIGRATION.md`
 - raw sediment or repeated branch-friction observations: `agents/LEARNINGS.md`
