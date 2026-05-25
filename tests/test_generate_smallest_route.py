@@ -30,6 +30,38 @@ def _learner_scaffold() -> LearnerScaffold:
     )
 
 
+def _map_with_scaffold(scaffold: LearnerScaffold, mechanism: str) -> ProvisionalMap:
+    return ProvisionalMap(
+        metadata={
+            "source_title": "test",
+            "core_thesis": "test thesis",
+            "architecture_type": "causal_chain",
+            "difficulty": "medium",
+            "low_density": True,
+        },
+        backbone=[
+            {"id": "b1", "principle": "Test backbone", "dependent_clusters": ["c1"]}
+        ],
+        clusters=[
+            Cluster(
+                id="c1",
+                label="Cluster 1",
+                description="Test cluster 1",
+                subnodes=[
+                    Subnode(
+                        id="c1_s1",
+                        label="Node 1",
+                        mechanism=mechanism,
+                        learner_scaffold=scaffold,
+                    ),
+                ],
+            )
+        ],
+        relationships=Relationships(),
+        frameworks=[],
+    )
+
+
 def test_smallest_route_validator_accepts_one_node():
     """Suggested first target alone is allowed (n=1)."""
     pm = _provisional_map_with_node_count(1)
@@ -63,41 +95,48 @@ def test_smallest_route_validator_rejects_missing_learner_scaffold():
         _validate_smallest_route(pm)
 
 
-def test_smallest_route_validator_rejects_scaffold_that_copies_hidden_mechanism():
+@pytest.mark.parametrize(
+    "field_name",
+    (
+        "task_label",
+        "task_cue",
+        "tailoring_anchor",
+        "entry_prompt",
+        "expected_shape",
+        "sentence_starter",
+        "blank_hint",
+    ),
+)
+def test_smallest_route_validator_rejects_visible_scaffold_that_copies_hidden_mechanism(
+    field_name,
+):
     scaffold = _learner_scaffold()
-    scaffold.blank_hint = "Sodium channels open when membrane voltage reaches threshold."
-    pm = ProvisionalMap(
-        metadata={
-            "source_title": "test",
-            "core_thesis": "test thesis",
-            "architecture_type": "causal_chain",
-            "difficulty": "medium",
-            "low_density": True,
-        },
-        backbone=[{"id": "b1", "principle": "Test backbone", "dependent_clusters": ["c1"]}],
-        clusters=[
-            Cluster(
-                id="c1",
-                label="Cluster 1",
-                description="Test cluster 1",
-                subnodes=[
-                    Subnode(
-                        id="c1_s1",
-                        label="Node 1",
-                        mechanism=(
-                            "Sodium channels open when membrane voltage reaches threshold, "
-                            "then sodium enters because the electrochemical gradient favors inward flow."
-                        ),
-                        learner_scaffold=scaffold,
-                    ),
-                ],
-            )
-        ],
-        relationships=Relationships(),
-        frameworks=[],
+    setattr(
+        scaffold,
+        field_name,
+        "Sodium channels open when membrane voltage reaches threshold.",
+    )
+    pm = _map_with_scaffold(
+        scaffold,
+        (
+            "Sodium channels open when membrane voltage reaches threshold, "
+            "then sodium enters because the electrochemical gradient favors inward flow."
+        ),
     )
 
-    with pytest.raises(SmallestRouteCapExceeded, match="blank_hint.*copies hidden mechanism"):
+    with pytest.raises(
+        SmallestRouteCapExceeded,
+        match=f"{field_name}.*copies hidden mechanism",
+    ):
+        _validate_smallest_route(pm)
+
+
+def test_smallest_route_validator_rejects_short_hidden_mechanism_copy():
+    scaffold = _learner_scaffold()
+    scaffold.entry_prompt = "What does voltage threshold do here?"
+    pm = _map_with_scaffold(scaffold, "voltage threshold")
+
+    with pytest.raises(SmallestRouteCapExceeded, match="entry_prompt.*copies hidden mechanism"):
         _validate_smallest_route(pm)
 
 

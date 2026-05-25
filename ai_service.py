@@ -420,7 +420,15 @@ class SmallestRouteCapExceeded(ValueError):
     """
 
 
-_SCAFFOLD_MECHANISM_FIELDS = ("expected_shape", "sentence_starter", "blank_hint")
+_SCAFFOLD_MECHANISM_FIELDS = (
+    "task_label",
+    "task_cue",
+    "tailoring_anchor",
+    "entry_prompt",
+    "expected_shape",
+    "sentence_starter",
+    "blank_hint",
+)
 _MECHANISM_CLAUSE_MIN_WORDS = 5
 
 
@@ -432,13 +440,12 @@ def _copies_hidden_mechanism_clause(scaffold_text: str, mechanism: str) -> bool:
     """Return True when scaffold text copies a substantial hidden answer phrase."""
     scaffold_words = _normalize_clause_words(scaffold_text)
     mechanism_words = _normalize_clause_words(mechanism)
-    if len(scaffold_words) < _MECHANISM_CLAUSE_MIN_WORDS:
+    phrase_word_count = min(len(mechanism_words), _MECHANISM_CLAUSE_MIN_WORDS)
+    if not scaffold_words or not mechanism_words or len(scaffold_words) < phrase_word_count:
         return False
     scaffold_blob = " ".join(scaffold_words)
-    for start in range(0, len(mechanism_words) - _MECHANISM_CLAUSE_MIN_WORDS + 1):
-        phrase = " ".join(
-            mechanism_words[start : start + _MECHANISM_CLAUSE_MIN_WORDS]
-        )
+    for start in range(0, len(mechanism_words) - phrase_word_count + 1):
+        phrase = " ".join(mechanism_words[start : start + phrase_word_count])
         if phrase in scaffold_blob:
             return True
     return False

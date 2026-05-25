@@ -2337,6 +2337,19 @@ def test_source_less_defensive_ui_paths_remain_inert(
     expect(clean_page.locator("body")).to_have_class(re.compile(r"\bis-drilling\b"))
     clean_page.evaluate("App.hideMapView()")
     expect(clean_page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
+    clean_page.evaluate(
+        """async () => {
+            App.hideMapView();
+            App.startDrill({
+                id: 'c2_s1',
+                type: 'subnode',
+                label: 'Opening rule',
+                detail: 'Explain the opening rule.',
+            });
+            App.cancelDrill({ restoreMap: false });
+            await Promise.resolve();
+        }"""
+    )
 
     fallback_mode = clean_page.evaluate(
         """async () => {
