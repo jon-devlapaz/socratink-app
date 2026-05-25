@@ -33,7 +33,15 @@ def test_help_json_lists_command_contracts() -> None:
     assert payload["schema_version"] == 1
     assert payload["workflow"] == "socratink-founder-git"
     names = [command["name"] for command in payload["commands"]]
-    assert names == ["gwip", "gpub", "gfinish", "gwt", "ghelp", "snm"]
+    assert names == [
+        "gwip",
+        "gpub",
+        "agent-push --bypass-no-mistakes",
+        "gfinish",
+        "gwt",
+        "ghelp",
+        "snm",
+    ]
     assert payload["commands"][0]["safe"] == "read-only"
 
 
