@@ -5,7 +5,7 @@
 
 ## Context
 
-The MVP path produces a **Provisional map** (per [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md): "a map shaped by starting-map input but still carrying no graph-truth mutation"). Every downstream stage — Cold attempt, Targeted study, Repair Reps, Spaced re-drill — consumes the map as a graph of mechanisms, identifiers, and relationships. If the map's structural integrity is broken, the brittleness propagates invisibly and surfaces as bad UX much later (a Cold attempt on a node that doesn't exist; a Repair Rep referencing a missing cluster).
+The MVP path produces a **Provisional map** (per [UBIQUITOUS_LANGUAGE.md](../../UBIQUITOUS_LANGUAGE.md): "a map shaped by starting-map input but still carrying no graph-truth mutation"). Every downstream stage — Cold attempt, Targeted study, Gap drills, Repair Reps, Spaced re-drill — consumes the map as a graph of mechanisms, identifiers, and relationships. If the map's structural integrity is broken, the brittleness propagates invisibly and surfaces as bad UX much later (a Cold attempt on a node that doesn't exist; a Repair Rep referencing a missing cluster).
 
 Before this PR, `extract_knowledge_map` returned a `dict` and validated only that `metadata`/`backbone`/`clusters` were the right top-level types. There were no checks that subnodes lived in their declared cluster, that backbone references resolved, that learning-prerequisite edges formed a DAG, or that identifiers matched the grammar the prompt asked for. Pre-PR there were also zero unit tests for the function.
 
@@ -19,9 +19,9 @@ The model enforces structural integrity at parse time:
 - Reference closure: every backbone `dependent_clusters` references an existing cluster; every cluster is covered by ≥ 1 backbone (BACKBONE COVERAGE RULE); every cluster has ≥ 1 subnode (MINIMUM DRILLABILITY RULE); every subnode lives in its declared cluster; relationship endpoints exist; framework `source_clusters` resolve.
 - Acyclicity: learning prerequisites form a DAG (no self-loops, no reciprocals, DFS cycle check).
 
-The route maps any `ValueError` raised by these validators to HTTP 422 — the structural shape is wrong, retrying won't help.
+The route maps any `ValueError` raised by these general validators to HTTP 422 — the structural shape is wrong, retrying won't help.
 
-Smallest-route generation adds a stricter profile outside the general model: `learner_scaffold` is optional on `Subnode` so extracted source-backed maps remain valid, but `_validate_smallest_route` rejects generated source-less routes whose subnodes omit it or whose scaffold fields copy a substantial hidden mechanism phrase.
+Smallest-route generation adds a stricter profile outside the general model: `learner_scaffold` is optional on `Subnode` so extracted source-backed maps remain valid, but `_validate_smallest_route` rejects generated source-less routes whose subnodes omit it or whose scaffold fields copy a substantial hidden mechanism phrase. Those `SmallestRouteCapExceeded` failures are generation-side shape failures returned as HTTP 500 with `smallest_route_cap_exceeded`, not client-input 422s.
 
 `extra="forbid"` is intentionally **not** set. Pydantic emits `additionalProperties: false` in the JSON Schema when `extra="forbid"` is configured, and Gemini's `response_schema` parameter rejects schemas containing it. Field-level correctness is governed by the prompt + the closure validators above. See `parse_repair_reps_response` in `models/repair_reps.py` for the same precedent.
 

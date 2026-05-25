@@ -668,7 +668,8 @@ def extract(req: ExtractRequest):
     except SmallestRouteCapExceeded as err:
         # Malformed source-less route generation is a server-side generation
         # failure, not a client input failure -> 500 (not 422). This includes
-        # over-cap output, invalid cluster shape, and missing learner_scaffold.
+        # over-cap output, invalid cluster shape, missing learner_scaffold, and
+        # scaffold text that copies hidden mechanism clauses.
         # Must be caught BEFORE the generic ValueError handler below because
         # SmallestRouteCapExceeded subclasses ValueError.
         logger.error("extract: smallest_route_cap_exceeded: %s", err)

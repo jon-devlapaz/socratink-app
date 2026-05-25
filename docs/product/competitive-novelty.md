@@ -63,9 +63,9 @@ similar marketing claim.
 ### 1. Three-phase loop with hard separation
 
 **Mechanism**: Cold Attempt → Targeted Study → Spaced Re-Drill, with no skip
-allowed. Only a spaced re-drill can stamp `solidified`. Study and Repair Reps
-explicitly cannot mutate graph truth. (See `spec.md` §2, §3, and §6 "Moat
-Constraint".)
+allowed. Only a spaced re-drill can stamp `solidified`. Study, Gap drills
+(`Pressure-check`), and Repair Reps explicitly cannot mutate graph truth. (See
+`spec.md` §2, §3, and §6 "Moat Constraint".)
 
 **Closest analog**: None. Anki/FSRS collapse "exposure," "study," and "proof"
 into a single review event judged by self-reported confidence. NotebookLM has
