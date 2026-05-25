@@ -76,7 +76,7 @@ def test_pre_push_rejects_mismatched_destination_ref(tmp_path):
     assert "authorized destination" in result.stderr
 
 
-def test_pre_push_accepts_with_bypass_env(tmp_path):
+def test_pre_push_rejects_raw_git_bypass_env_without_authorization(tmp_path):
     for env_var in ["SOCRATINK_BYPASS_NO_MISTAKES", "BYPASS_NO_MISTAKES"]:
         env = os.environ | {env_var: "1"}
         result = subprocess.run(
@@ -86,5 +86,5 @@ def test_pre_push_accepts_with_bypass_env(tmp_path):
             capture_output=True,
             env=env,
         )
-        assert result.returncode == 0
-        assert "Bypassing no-mistakes gate" in result.stderr
+        assert result.returncode == 1
+        assert "agent-push.py" in result.stderr

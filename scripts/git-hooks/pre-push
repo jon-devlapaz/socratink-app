@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 # Direct Push Override / no-mistakes Bypass:
-# If you need to bypass the no-mistakes gate and push straight to origin/dev:
-# 1. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1` or `BYPASS_NO_MISTAKES=1`
-#    - E.g. `SOCRATINK_BYPASS_NO_MISTAKES=1 git push origin dev`
-# 2. CLI tool: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
+# If you need to bypass the no-mistakes gate and push straight to origin/dev,
+# run `python3 scripts/agent-push.py --bypass-no-mistakes`. Raw `git push`
+# still requires the one-shot authorization payload written by agent-push.
 
 set -euo pipefail
 
@@ -12,11 +11,6 @@ auth_path="${SOCRATINK_PUSH_AUTH_PATH:-$repo_root/.agents/runtime/push-auth.json
 remote_name="${1:-}"
 remote_url="${2:-}"
 pre_push_updates="$(cat)"
-
-if [ "${SOCRATINK_BYPASS_NO_MISTAKES:-0}" = "1" ] || [ "${BYPASS_NO_MISTAKES:-0}" = "1" ]; then
-  echo "[pre-push] WARNING: Bypassing no-mistakes gate via bypass environment variable." >&2
-  exit 0
-fi
 
 if [ ! -f "$auth_path" ]; then
   echo "[pre-push] ERROR: push not authorized. Use scripts/agent-push.py." >&2

@@ -1525,6 +1525,13 @@
   color: var(--text-muted);
 }
 
+.concept-page-b2__source-note {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .vd-sketch-wrapper.concept-page-b2__threshold {
   margin: 0;
   padding: 0;

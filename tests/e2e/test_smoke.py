@@ -559,7 +559,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     context_dock = page.locator(".concept-page-b2__context-dock")
     expect(context_dock).to_contain_text("Context")
     expect(context_dock).to_contain_text("Learner rough sketch baseline.")
-    expect(context_dock).not_to_contain_text(
+    expect(context_dock).to_contain_text(
         "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(

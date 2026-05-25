@@ -796,6 +796,9 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const thresholdHtml = thresholdText
     ? renderSketchWrapperHtml(thresholdText)
     : renderSketchWrapperHtml('');
+  const sourceLessProvenanceHtml = isSourceLess
+    ? '<p class="concept-page-b2__source-note">No source attached. Treat this route as provisional.</p>'
+    : '';
   const ctaButton = options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? (isPostRevealComparison
       && derived.next_action !== 'repair'
@@ -859,6 +862,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
       <div class="concept-page-b2__work">
         <div class="concept-page-b2__context-dock" aria-label="Recall context">
           ${thresholdHtml}
+          ${sourceLessProvenanceHtml}
         </div>
         ${activeHtml}
         ${nearbyHtml}

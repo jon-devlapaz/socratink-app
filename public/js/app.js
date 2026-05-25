@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=16';
+} from './concept-page-view.js?v=17';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
