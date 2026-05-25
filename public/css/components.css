@@ -481,8 +481,8 @@ body[data-theme="dark"] .hero-primary-action:disabled {
 
 .sidebar-section-label {
   font-family:var(--font-display);
-  font-size:10px; font-weight:700; letter-spacing:0.8px;
-  text-transform:uppercase; color:var(--text-sub);
+  font-size:10px; font-weight:700; letter-spacing:0.04em;
+  text-transform:none; color:var(--text-sub);
   padding:8px 20px 4px; flex-shrink:0; display:block;
 }
 

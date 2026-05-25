@@ -290,15 +290,11 @@ export async function runLaunchPadAction(event, App) {
   //   5xx / network / persistence → NO submit event (request didn't complete)
   let data;
   try {
-    const apiKey =
-      (typeof localStorage !== 'undefined' && localStorage.getItem('gemini_key')) ||
-      undefined;
     data = await submitConceptCreate({
       name: shell.name,
       learnerGoal: shell.goal,
       startingSketch: threshold,
       source: null,
-      apiKey,
     });
   } catch (err) {
     if (err && err.status === 422) {

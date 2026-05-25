@@ -343,7 +343,6 @@ def test_submit_concept_create_sends_learner_goal() -> None:
           learnerGoal: 'I want to explain why sodium starts the signal.',
           startingSketch: 'sodium moves into the neuron and starts a signal somehow',
           source: null,
-          apiKey: undefined,
         });
 
         assert.equal(capturedBody.name, 'Sodium channels');
@@ -369,7 +368,9 @@ def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
           removeItem(key) { storage.delete(key); },
         };
         globalThis.localStorage = {
-          getItem() { return null; },
+          getItem(key) {
+            return key === 'gemini_key' ? 'stale-browser-key' : null;
+          },
         };
 
         const elements = {
@@ -437,11 +438,22 @@ def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
         assert.equal(capturedBody.name, 'Sodium channels');
         assert.equal(capturedBody.learner_goal, 'I want to explain why sodium starts the signal.');
         assert.equal(capturedBody.starting_sketch, elements['launch-pad-input'].value);
+        assert.equal(Object.hasOwn(capturedBody, 'api_key'), false);
         assert.equal(calls.length, 2);
         assert.equal(storage.has('socratink:pendingShell'), false);
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_frontend_ai_calls_do_not_forward_browser_gemini_key() -> None:
+    for rel_path in [
+        "public/js/ai_service.js",
+        "public/js/app.js",
+        "public/js/launch-pad.js",
+    ]:
+        text = (REPO_ROOT / rel_path).read_text(encoding="utf-8")
+        assert "gemini_key" not in text, rel_path
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")

@@ -556,7 +556,7 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
         placeholder="${escHtml(placeholder)}"
       ></textarea>
       <p class="concept-page-b2__attempt-error" data-attempt-error hidden>${escHtml(errorText)}</p>
-      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}">${escHtml(buttonLabel)}</button>
+      <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}" disabled aria-disabled="true">${escHtml(buttonLabel)}</button>
     </section>
   `;
 }

@@ -3,11 +3,10 @@
 
 export async function generateKnowledgeMap(rawText, onProgress) {
   if (onProgress) onProgress("Drafting map...");
-  const apiKey = localStorage.getItem("gemini_key") || undefined;
   const response = await fetch("/api/extract", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: rawText, api_key: apiKey }),
+    body: JSON.stringify({ text: rawText }),
   });
   if (!response.ok) {
     const err = await response.text().catch(() => "");
@@ -19,7 +18,7 @@ export async function generateKnowledgeMap(rawText, onProgress) {
 
 /**
  * Conversational concept-create submit. Posts the `/api/extract` payload
- * `{name, learner_goal?, starting_sketch, source, api_key?}` and returns the
+ * `{name, learner_goal?, starting_sketch, source}` and returns the
  * parsed `provisional_map` (no source) or `knowledge_map` (source attached).
  *
  * On any non-OK JSON response, throws an Error with `.status` and `.body`
@@ -31,17 +30,15 @@ export async function generateKnowledgeMap(rawText, onProgress) {
  * `Server error <status>: <text>` message with `.status` set.
  *
  * @param {{ name: string, learnerGoal?: string, startingSketch: string,
- *           source: null | { type: 'text'|'url'|'file', text?: string, url?: string, filename?: string },
- *           apiKey?: string }} args
+ *           source: null | { type: 'text'|'url'|'file', text?: string, url?: string, filename?: string } }} args
  * @returns {Promise<{ provisional_map?: object, knowledge_map?: object }>}
  */
-export async function submitConceptCreate({ name, learnerGoal, startingSketch, source, apiKey }) {
+export async function submitConceptCreate({ name, learnerGoal, startingSketch, source }) {
   const body = {
     name,
     learner_goal: learnerGoal || undefined,
     starting_sketch: startingSketch,
     source,
-    api_key: apiKey,
   };
   const response = await fetch("/api/extract", {
     method: "POST",
