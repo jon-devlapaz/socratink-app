@@ -1622,6 +1622,10 @@
   white-space: nowrap;
 }
 
+.vd-sketch-wrapper[data-sketch-collapsed="false"] .vd-sketch-preview {
+  display: none;
+}
+
 .vd-sketch-body {
   grid-column: 1 / -1;
   padding: 8px 12px 10px;

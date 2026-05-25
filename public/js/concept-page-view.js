@@ -544,7 +544,7 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
     : 'Put down the part you can explain, even if it is incomplete.';
   return `
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
-      <span class="eyebrow concept-page-b2__attempt-eyebrow">first inquiry</span>
+      <span class="eyebrow concept-page-b2__attempt-eyebrow">cold attempt</span>
       <h3>${escHtml(heading)}</h3>
       ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
       <textarea
