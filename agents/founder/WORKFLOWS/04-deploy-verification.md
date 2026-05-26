@@ -14,6 +14,7 @@ Wait for the intended production deployment to finish, then run the browser smok
 - whether the target should default to `origin/main` or `HEAD`
 - production base URL
 - GitHub repo slug used by the deployment poller
+- PR checks, main preflight, Vercel deployment status, and any unrelated red GitHub workflows that could confuse the release verdict
 - wrapper exit code
 - smoke test output when a failure occurs
 
@@ -39,13 +40,16 @@ Use direct `bash scripts/qa-smoke.sh live` only when the question is generic pro
 
 - do not claim a deploy is live based only on `git push`
 - do not substitute a local or pre-deploy smoke result for production verification
+- do not conflate Vercel production deploy status with unrelated GitHub workflows; inspect red signals, label their scope, and state whether they are part of the production app path
 - if the wrapper reports failure, timeout, or smoke regression, treat that as a blocker until explicitly reframed
 
 ## Verification
 
 - target SHA is stated explicitly
+- if the verification follows a PR merge, the merge SHA is stated separately from the pre-merge branch head
 - Vercel result is one of `success`, `failure`, or `timeout`
 - production smoke is run only after deploy success
+- unrelated red workflows, such as GitHub Pages/Jekyll, are reported separately from the Vercel app verdict after inspection
 - failure reports include either the offending pytest output or the Vercel inspect URL
 - the final summary clearly distinguishes deploy status from smoke status
 

@@ -54,6 +54,7 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 | `explore-compress-merge` | `promoted` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
 | `verification-gates-not-self-contained` | `promoted` | 2 | 2026-05-18 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
 | `no-mistakes-uncommitted-config-stale` | `observed` | 1 | 2026-05-22 | `none yet` | [LYYYY-2026-05-22-no-mistakes-uncommitted-config-stale](#lyyyy-2026-05-22-no-mistakes-uncommitted-config-stale) |
+| `no-mistakes-release-ledger` | `promoted` | 1 | 2026-05-25 | `agents/founder/WORKFLOWS/01-git-integration.md`, `agents/founder/WORKFLOWS/04-deploy-verification.md` | [L0004-2026-05-25-no-mistakes-release-ledger](#l0004-2026-05-25-no-mistakes-release-ledger) |
 
 
 ## Entries
@@ -154,3 +155,29 @@ The `no-mistakes` daemon executes its validation and review pipeline within an i
 ## Promotion Notes
 
 Keep as observed until it recurs or affects safety. If promoted, document this behavior clearly in `AGENTS.md` under the common development commands section to remind developers to commit `.no-mistakes.yaml` changes before expecting the daemon to reflect them.
+
+# L0004-2026-05-25-no-mistakes-release-ledger
+
+- Status: `promoted`
+- Pattern key: `no-mistakes-release-ledger`
+- First seen: `2026-05-25`
+- Last seen: `2026-05-25`
+- Evidence count: `1`
+- Affected workflow surface: `publication`
+- Recommended promotion target: `agents/founder/WORKFLOWS/01-git-integration.md`, `agents/founder/WORKFLOWS/04-deploy-verification.md`
+- Related canonical files: `scripts/agent-push.py`, `scripts/no-mistakes-finish-dev.sh`, `scripts/verify-deploy.sh`
+
+## Observation
+
+A final production-bound no-mistakes run creates several truth surfaces at once: local pre-gate commits, daemon-published `origin/dev` commits, the no-mistakes run id, PR checks, Vercel preview, merge commit, main preflight, production deployment, and local cleanup state. If the agent does not maintain a compact release ledger, the run stays correct but accumulates avoidable entropy: repeated log polling, unclear SHA names, and delayed cleanup of temporary worktrees.
+
+The clean pattern is to track exactly one ledger through the run: no-mistakes run id, gate head, PR URL, `origin/dev` head, merge SHA, production verifier result, and final local branch/worktree status. Treat gate success, PR merge, and production smoke as separate milestones. Cleanup belongs after production verification, not after local or preview success.
+
+## Evidence
+
+- `2026-05-25`: PR #257 required a no-mistakes rerun after Vercel rejected an exact `.python-version` patch pin and the frontend cache-pin gate caught a stale parent JS import. The daemon then added a mobile drawer smoke hardening commit after evidence review. The final release succeeded only after tracking no-mistakes run `01KSG9ME2W11C7W5Z0S49595QG`, PR #257, `origin/dev` head `af851b1`, merge commit `1b5f6b6`, main preflight success, and `scripts/verify-deploy.sh 1b5f6b603d9555b4d527cbd364299c5ecc907da2` production smoke success (`33 passed, 2 skipped`).
+- `2026-05-25`: GitHub Pages failed separately because Jekyll tried to render `agents/superpowers/**` Liquid-looking markdown. That signal was real and inspected, but it was not the Vercel production app path. Future release summaries should label such red signals explicitly instead of allowing them to blur the deploy verdict.
+
+## Promotion Notes
+
+Promoted immediately on founder request after a production-bound release because the pattern affects publication safety and verification integrity. The ledger requirement belongs in `agents/founder/WORKFLOWS/01-git-integration.md`; the deploy-signal separation belongs in `agents/founder/WORKFLOWS/04-deploy-verification.md`.
