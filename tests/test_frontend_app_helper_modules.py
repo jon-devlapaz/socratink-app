@@ -2198,6 +2198,39 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(studiedHtml.includes('Study note for this entry.'));
         assert.ok(!studiedHtml.includes('concept-page-b2__entry-cta'));
 
+        const studiedRouteHtml = renderActiveEntryHtml(
+          { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
+          0,
+          [
+            { id: 'studied', label: 'Studied', purpose: 'Study note for this entry.' },
+            { id: 'next-entry', label: 'Next entry', purpose: 'Write the next link from memory.' },
+          ],
+          { contentType: 'text' },
+          { metadata: {} },
+          {
+            node_records: {
+              studied: {
+                attempts: [{
+                  id: 'st1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'A strong first attempt.',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [],
+              },
+            },
+          },
+          { now: '2026-05-15T11:00:00.000Z' }
+        );
+        assert.ok(studiedRouteHtml.includes('review pending'));
+        assert.ok(studiedRouteHtml.includes('Continue route'));
+        assert.ok(studiedRouteHtml.includes('data-active-entry-id="next-entry"'));
+        assert.ok(studiedRouteHtml.includes('data-active-entry-action="next-entry"'));
+
         const principleHtml = renderActiveEntryHtml(
           { id: 'principle', label: 'Principle', principle: 'Entry-specific generated principle.' },
           0,

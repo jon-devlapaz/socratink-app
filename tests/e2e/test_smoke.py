@@ -2083,6 +2083,93 @@ def test_concept_view_opens_to_route_margin_canvas(
     )
 
 
+def test_source_concept_review_can_continue_to_next_entry(
+    clean_page: Page, base_url: str
+) -> None:
+    """A source-backed concept must not dead-end after a strong first reveal."""
+    clean_page.evaluate(
+        """(() => {
+            const now = new Date().toISOString();
+            const graphData = JSON.stringify({
+                metadata: {
+                    core_thesis: 'A thermostat compares a room reading to a target before calling for heat.',
+                    source_title: 'Thermostat source',
+                },
+                clusters: [
+                    {
+                        id: 'c1',
+                        label: 'Thermostat comparison',
+                        description: 'First source-backed entry.',
+                        subnodes: [{
+                            id: 'c1_s1',
+                            label: 'Thermostat comparison',
+                            mechanism: 'The thermostat compares measured room temperature with the set point.',
+                        }],
+                    },
+                    {
+                        id: 'c2',
+                        label: 'Heat call',
+                        description: 'Second source-backed entry.',
+                        subnodes: [{
+                            id: 'c2_s1',
+                            label: 'Heat call',
+                            mechanism: 'Below-target readings cause a heat call.',
+                        }],
+                    },
+                ],
+                relationships: { domain_mechanics: [], learning_prerequisites: [] },
+                frameworks: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'source-review-continue',
+                name: 'Source Review Continue QA',
+                createdAt: new Date().toISOString(),
+                state: 'growing',
+                contentPreview: 'Source summary.',
+                contentType: 'text',
+                contentFilename: 'thermostat.txt',
+                graphData,
+            }]));
+            localStorage.setItem('socratink:training:v1:source-review-continue', JSON.stringify({
+                concept_id: 'source-review-continue',
+                schema_version: 1,
+                source_mode: 'source_attached',
+                grounding: 'source',
+                source_ref: { type: 'text', filename: 'thermostat.txt' },
+                node_records: {
+                    c1_s1: {
+                        attempts: [{
+                            id: 'attempt-1',
+                            kind: 'cold',
+                            at: now,
+                            user_text: 'It compares room temperature with the target.',
+                            classification: 'strong',
+                            gaps: [],
+                            grader_version: 'qa',
+                        }],
+                        study_revealed_at: now,
+                        repairs: [],
+                    },
+                },
+            }));
+        })()"""
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.locator(".concept-item", has_text="Source Review Continue QA").click()
+    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "review pending"
+    )
+    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Continue route"
+    )
+    clean_page.locator(".concept-page-b2__entry-cta").click()
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Heat call"
+    )
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+
+
 def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     clean_page: Page, base_url: str
 ) -> None:

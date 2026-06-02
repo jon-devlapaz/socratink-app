@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=19';
+} from './concept-page-view.js?v=20';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -1897,6 +1897,10 @@ const App = (() => {
           startDrill(buildRepairGapDrillContext(entryId, concept, data, training));
           return;
         }
+        if (ctaBtn.dataset.activeEntryAction === 'next-entry') {
+          setActiveEntry(ctaBtn.dataset.activeEntryId, data, concept, training);
+          return;
+        }
         const inlineAttempt = docEl.querySelector('.concept-page-b2__attempt-input');
         if (inlineAttempt) {
           /* c8 ignore next 2 -- defensive: CTA is not rendered while the inline attempt is present */
@@ -2814,7 +2818,7 @@ const App = (() => {
 
   function setNavActive(id) {
     currentPrimaryNav = id;
-    ['nav-dashboard', 'nav-ignition', 'nav-library', 'nav-settings'].forEach((navId) => {
+    ['nav-dashboard', 'nav-ignition', 'nav-library', 'nav-loop', 'nav-settings'].forEach((navId) => {
       const el = document.getElementById(navId);
       if (el) el.classList.toggle('active', navId === currentPrimaryNav);
       

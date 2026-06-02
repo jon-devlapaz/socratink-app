@@ -285,12 +285,13 @@ html[data-theme="dark"] #intro-particle-canvas {
     pointer-events: auto;
   }
 
-  /* Mobile bottom nav owns the primary destinations. Keep Feedback in the
-     drawer because it has no bottom-nav equivalent. */
+  /* Mobile bottom nav owns the primary destinations. Keep Feedback and the
+     learning-loop entry in the drawer because they have no bottom-nav
+     equivalents. */
   #drawer .sidebar-nav {
     display: flex;
   }
-  #drawer .sidebar-nav .sidebar-nav-item:not(#nav-feedback) {
+  #drawer .sidebar-nav .sidebar-nav-item:not(#nav-feedback):not(#nav-loop) {
     display: none;
   }
 

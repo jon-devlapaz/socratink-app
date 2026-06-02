@@ -15,6 +15,7 @@ Route publication safely while keeping the founder in the loop for meaningful pe
 - destination remote/refspec
 - touched files
 - unpublished publication diff against the relevant remote/base
+- no-mistakes run id, PR URL, gate head, `origin/dev` head, and eventual merge SHA for production-bound runs
 - trusted remote patterns in `agents/founder/trusted-remotes.json`
 - whether the path is `dev`, `feat/*`, `main`, or `no-mistakes`
 
@@ -32,6 +33,7 @@ V1 note: only push publication is deterministically enforced in code. Commit sha
 - use `origin/feat/*` for feature-branch publication intended for PR flow
 - use `no-mistakes/dev` for larger, higher-blast-radius, or higher-risk publication
 - use `python3 scripts/agent-push.py --bypass-no-mistakes` or `SOCRATINK_BYPASS_NO_MISTAKES=1 python3 scripts/agent-push.py` only when intentionally skipping the no-mistakes gate for `origin/dev`; the bypass still uses the normal preview/ack authorization flow
+- for final production-bound `dev` publication, treat the route as one continuous release ledger: push through no-mistakes, babysit the gate to completion, verify the PR checks, merge to `main`, run deploy verification for the merge SHA, then clean local branch/worktree state
 
 ## Helper Commands
 
@@ -78,6 +80,10 @@ scripts/git-founder-help.sh doctor      # read-only helper readiness check
 - `scripts/no-mistakes-lint.sh` bootstraps Python, sources test-safe auth/env defaults, runs `scripts/doctor.sh`, and runs `git diff --check` from the merge-base of `COMPARE_BRANCH` or `origin/dev`
 - `scripts/no-mistakes-test.sh` bootstraps Python, sources the same test-safe auth/env defaults, installs Node/Chromium coverage prerequisites, defaults `COMPARE_BRANCH` to `origin/dev` when available, and runs `scripts/check-coverage.sh`; when neither `SOCRATINK_BASE_URL` nor `APP_BASE_URL` was provided by the caller, it chooses a free loopback port and points both vars at that temporary local app
 - no-mistakes bypass is limited to `origin/dev`; explicit non-`origin/dev` bypass targets fail before publication
+- for long no-mistakes runs, keep a compact release ledger: no-mistakes run id, gate head, PR URL, `origin/dev` head, merge SHA, production verifier result, and final local branch/worktree status
+- while no-mistakes is running, treat review/test/document/lint findings as gate rounds; use `no-mistakes attach` and the TUI fix/approve loop before pushing a replacement commit, unless the current run is intentionally being superseded
+- no-mistakes success is not production success; PR checks, merge state, main preflight, and `scripts/verify-deploy.sh <merge-sha>` remain separate verification milestones
+- after production verification succeeds, reconcile local `dev` onto `origin/dev`, confirm default push still routes through `no-mistakes`, and remove only clean temporary worktrees or branches with no unique commits
 - push intent is revalidated on ack
 - raw `git push` is blocked without authorization artifact
 

@@ -48,6 +48,7 @@ from llm.errors import (
     LLMValidationError,
 )
 import source_intake
+from loop_backend_proxy import proxy_loop_backend
 from source_intake import (
     BlockedSource,
     FetchFailed,
@@ -892,6 +893,34 @@ def repair_reps(req: RepairRepsRequest):
 
 
 app.include_router(auth_router)
+
+_LOOP_PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+
+
+@app.api_route("/loop", methods=_LOOP_PROXY_METHODS)
+async def proxy_loop_root(request: Request) -> Response:
+    return await proxy_loop_backend(request, "/loop")
+
+
+@app.api_route("/loop/{path:path}", methods=_LOOP_PROXY_METHODS)
+async def proxy_loop_path(request: Request, path: str) -> Response:
+    return await proxy_loop_backend(request, f"/loop/{path}")
+
+
+@app.api_route("/health", methods=_LOOP_PROXY_METHODS)
+async def proxy_loop_health(request: Request) -> Response:
+    return await proxy_loop_backend(request, "/health")
+
+
+@app.api_route("/api/session", methods=_LOOP_PROXY_METHODS)
+async def proxy_loop_session_root(request: Request) -> Response:
+    return await proxy_loop_backend(request, "/api/session")
+
+
+@app.api_route("/api/session/{path:path}", methods=_LOOP_PROXY_METHODS)
+async def proxy_loop_session_path(request: Request, path: str) -> Response:
+    return await proxy_loop_backend(request, f"/api/session/{path}")
+
 
 # Serve the frontend locally. On Vercel, static files are served by the CDN.
 _public_dir = Path(__file__).parent / "public"
