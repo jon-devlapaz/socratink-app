@@ -73,8 +73,15 @@ async def proxy_loop_backend(request: Request, upstream_path: str) -> Response:
             status_code=502,
             detail="Loop backend request failed.",
         ) from err
-    payload = upstream.read()
-    upstream.release_conn()
+    try:
+        payload = upstream.read()
+    except urllib3.exceptions.HTTPError as err:
+        raise HTTPException(
+            status_code=502,
+            detail="Loop backend response read failed.",
+        ) from err
+    finally:
+        upstream.release_conn()
     return Response(
         content=payload,
         status_code=upstream.status,

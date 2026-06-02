@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+import urllib3
 from fastapi.testclient import TestClient
 
 import main
@@ -42,3 +43,20 @@ def test_loop_proxy_forwards_to_configured_backend(client: TestClient) -> None:
     assert response.text == "<p>loop</p>"
     request.assert_called_once()
     assert request.call_args[0][1] == "https://loop.example/loop?q=1"
+    upstream.release_conn.assert_called_once()
+
+
+def test_loop_proxy_releases_connection_when_read_fails(client: TestClient) -> None:
+    upstream = MagicMock()
+    upstream.read.side_effect = urllib3.exceptions.ProtocolError("broken pipe")
+    upstream.release_conn = MagicMock()
+
+    with (
+        patch.dict("os.environ", {"LOOP_BACKEND_URL": "https://loop.example"}, clear=False),
+        patch("loop_backend_proxy._POOL.request", return_value=upstream),
+    ):
+        response = client.get("/loop")
+
+    assert response.status_code == 502
+    assert "read failed" in response.json()["detail"]
+    upstream.release_conn.assert_called_once()
