@@ -9,26 +9,6 @@
   },
   "rewrites": [
     {
-      "source": "/loop",
-      "destination": "https://loop-production-07a3.up.railway.app/loop"
-    },
-    {
-      "source": "/loop/:path*",
-      "destination": "https://loop-production-07a3.up.railway.app/loop/:path*"
-    },
-    {
-      "source": "/health",
-      "destination": "https://loop-production-07a3.up.railway.app/health"
-    },
-    {
-      "source": "/api/session",
-      "destination": "https://loop-production-07a3.up.railway.app/api/session"
-    },
-    {
-      "source": "/api/session/:path*",
-      "destination": "https://loop-production-07a3.up.railway.app/api/session/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/api/index.py"
     }
