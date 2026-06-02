@@ -15,6 +15,7 @@
 
 project-includes = [
     "main.py",
+    "loop_backend_proxy.py",
     "ai_service.py",
     "learning_commons.py",
     "runtime_env.py",

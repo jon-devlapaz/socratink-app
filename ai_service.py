@@ -520,6 +520,7 @@ def generate_smallest_provisional_map(
     threshold: str,
     *,
     learner_goal: str | None = None,
+    retry_guidance: str | None = None,
     llm: LLMClient | None = None,
     api_key: str | None = None,
     lc_context: list["LCStandard"] | None = None,
@@ -547,6 +548,16 @@ def generate_smallest_provisional_map(
     clean_learner_goal = (learner_goal or "").strip()
     if clean_learner_goal:
         user_prompt_parts.append(f"<learner_goal>{clean_learner_goal}</learner_goal>")
+    clean_retry_guidance = (retry_guidance or "").strip()
+    if clean_retry_guidance:
+        user_prompt_parts.append(
+            "<retry_guardrail>\n"
+            "Previous generation failed validation. Regenerate the route without "
+            "copying hidden mechanism answer phrases into learner-facing scaffold "
+            "fields. Keep the learner scaffold as prompts, not answers.\n"
+            f"Failure: {clean_retry_guidance}\n"
+            "</retry_guardrail>"
+        )
     if lc_context:
         lc_block_lines = ["<lc_context>"]
         for std in lc_context:

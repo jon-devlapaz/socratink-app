@@ -1,0 +1,75 @@
+{
+  "concept": {
+    "id": "source-backed-action-potential",
+    "graph": {
+      "nodes": [
+        { "id": "threshold-gating", "label": "Threshold gating" }
+      ]
+    }
+  },
+  "training": {
+    "concept_id": "source-backed-action-potential",
+    "schema_version": 1,
+    "source_mode": "source_attached",
+    "grounding": "source",
+    "source_ref": { "type": "fixture", "id": "action-potential-note" },
+    "sketch": null,
+    "node_records": {}
+  },
+  "now": "2026-05-16T06:10:00.000Z",
+  "events": [
+    {
+      "type": "cold_attempt",
+      "node_id": "threshold-gating",
+      "attempt": {
+        "id": "a1",
+        "at": "2026-05-15T10:00:00.000Z",
+        "user_text": "Sodium rushes in because there is more sodium outside.",
+        "classification": "wrong_direction",
+        "gaps": [
+          {
+            "mechanism": "voltage-gated sodium channels",
+            "correction": "Threshold opens the channels; the gradient does not open them."
+          }
+        ],
+        "grader_version": "fixture"
+      }
+    },
+    {
+      "type": "study_reveal",
+      "node_id": "threshold-gating",
+      "at": "2026-05-15T10:05:00.000Z"
+    },
+    {
+      "type": "repair",
+      "node_id": "threshold-gating",
+      "repair": {
+        "id": "r1",
+        "at": "2026-05-15T10:10:00.000Z",
+        "text": "Threshold opens voltage-gated sodium channels, then sodium flows down its gradient."
+      }
+    },
+    {
+      "type": "gap_drill_noop",
+      "node_id": "threshold-gating",
+      "at": "2026-05-15T10:15:00.000Z"
+    },
+    {
+      "type": "spaced_redrill",
+      "node_id": "threshold-gating",
+      "attempt": {
+        "id": "a2",
+        "at": "2026-05-16T06:00:00.000Z",
+        "user_text": "Sodium comes in and then potassium leaves.",
+        "classification": "partial",
+        "gaps": [
+          {
+            "mechanism": "threshold opens channels",
+            "correction": "Name threshold opening voltage-gated channels before ion flow."
+          }
+        ],
+        "grader_version": "fixture"
+      }
+    }
+  ]
+}

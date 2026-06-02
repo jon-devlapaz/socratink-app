@@ -525,6 +525,19 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId) {
   `;
 }
 
+function nextReadyEntry(backbone, activeIdx, training, options = {}) {
+  for (let index = activeIdx + 1; index < backbone.length; index += 1) {
+    const derived = entryTraining(backbone, index, training, options);
+    if (!derived.attempted && predecessorsAttempted(backbone, index, training, options)) {
+      const entry = backbone[index];
+      return {
+        id: getConceptEntryId(entry, index),
+      };
+    }
+  }
+  return null;
+}
+
 function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
   const scaffold = options.useScaffold ? entryScaffold(activeEntry) : null;
   const learnerGoal = cleanScaffoldText(options.learnerGoal);
@@ -799,11 +812,17 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const sourceLessProvenanceHtml = isSourceLess
     ? '<p class="concept-page-b2__source-note">No source attached. Treat this route as provisional.</p>'
     : '';
+  const nextReady = derived.next_action === 'review'
+    ? nextReadyEntry(backbone, activeIdx, training, options)
+    : null;
+  const nextReadyButton = nextReady
+    ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(nextReady.id)}" data-active-entry-action="next-entry">Continue route</button>`
+    : '';
   const ctaButton = options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? (isPostRevealComparison
       && derived.next_action !== 'repair'
       ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="keep-working">Keep working</button>`
-      : '')
+      : nextReadyButton)
     : isBlocked
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Write from memory on the entry above first">Locked</button>`
     : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="${escHtml(ctaAction)}">${ctaLabel}</button>`;

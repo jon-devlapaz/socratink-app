@@ -1,0 +1,68 @@
+{
+  "concept": {
+    "id": "source-less-vaccine-memory",
+    "graph": {
+      "nodes": [
+        { "id": "immune-memory", "label": "Immune memory" }
+      ]
+    }
+  },
+  "training": {
+    "concept_id": "source-less-vaccine-memory",
+    "schema_version": 1,
+    "source_mode": "source_less",
+    "grounding": "learner_sketch",
+    "source_ref": null,
+    "sketch": {
+      "text": "I think vaccines train the immune system before the real infection.",
+      "at": "2026-05-15T09:00:00.000Z"
+    },
+    "node_records": {}
+  },
+  "now": "2026-05-16T06:10:00.000Z",
+  "events": [
+    {
+      "type": "cold_attempt",
+      "node_id": "immune-memory",
+      "attempt": {
+        "id": "a1",
+        "at": "2026-05-15T10:00:00.000Z",
+        "user_text": "A vaccine shows antigens so immune cells form memory without full disease.",
+        "classification": "strong",
+        "gaps": [],
+        "grader_version": "fixture"
+      }
+    },
+    {
+      "type": "study_reveal",
+      "node_id": "immune-memory",
+      "at": "2026-05-15T10:05:00.000Z"
+    },
+    {
+      "type": "repair",
+      "node_id": "immune-memory",
+      "repair": {
+        "id": "r1",
+        "at": "2026-05-15T10:10:00.000Z",
+        "text": "Memory cells are the bridge between safe antigen exposure and faster later response."
+      }
+    },
+    {
+      "type": "gap_drill_noop",
+      "node_id": "immune-memory",
+      "at": "2026-05-15T10:15:00.000Z"
+    },
+    {
+      "type": "spaced_redrill",
+      "node_id": "immune-memory",
+      "attempt": {
+        "id": "a2",
+        "at": "2026-05-16T06:00:00.000Z",
+        "user_text": "A vaccine presents antigen safely, selects immune cells, leaves memory cells, and those cells respond faster later.",
+        "classification": "strong",
+        "gaps": [],
+        "grader_version": "fixture"
+      }
+    }
+  ]
+}
