@@ -23,6 +23,9 @@ _HOP_BY_HOP = frozenset(
     }
 )
 
+_REQUEST_HEADER_DENYLIST = _HOP_BY_HOP | {"accept-encoding"}
+_RESPONSE_HEADER_DENYLIST = _HOP_BY_HOP | {"content-encoding"}
+
 _POOL = urllib3.PoolManager()
 
 
@@ -40,7 +43,7 @@ def _forward_headers(request: Request) -> dict[str, str]:
     headers: dict[str, str] = {}
     for key, value in request.headers.items():
         lowered = key.lower()
-        if lowered in _HOP_BY_HOP:
+        if lowered in _REQUEST_HEADER_DENYLIST:
             continue
         headers[key] = value
     return headers
@@ -50,7 +53,7 @@ def _response_headers(upstream: Mapping[str, str]) -> dict[str, str]:
     return {
         key: value
         for key, value in upstream.items()
-        if key.lower() not in _HOP_BY_HOP
+        if key.lower() not in _RESPONSE_HEADER_DENYLIST
     }
 
 

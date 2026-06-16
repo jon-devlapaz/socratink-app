@@ -29,7 +29,7 @@ def test_loop_proxy_returns_503_when_backend_unconfigured(client: TestClient) ->
 def test_loop_proxy_forwards_to_configured_backend(client: TestClient) -> None:
     upstream = MagicMock()
     upstream.status = 200
-    upstream.headers = {"content-type": "text/html"}
+    upstream.headers = {"content-type": "text/html", "content-encoding": "gzip"}
     upstream.read.return_value = b"<p>loop</p>"
     upstream.release_conn = MagicMock()
 
@@ -41,9 +41,30 @@ def test_loop_proxy_forwards_to_configured_backend(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.text == "<p>loop</p>"
+    assert "content-encoding" not in response.headers
     request.assert_called_once()
     assert request.call_args[0][1] == "https://loop.example/loop?q=1"
     upstream.release_conn.assert_called_once()
+
+
+def test_loop_proxy_does_not_forward_accept_encoding(client: TestClient) -> None:
+    upstream = MagicMock()
+    upstream.status = 200
+    upstream.headers = {"content-type": "application/json"}
+    upstream.read.return_value = b'{"status":"ok"}'
+    upstream.release_conn = MagicMock()
+
+    with (
+        patch.dict("os.environ", {"LOOP_BACKEND_URL": "https://loop.example"}, clear=False),
+        patch("loop_backend_proxy._POOL.request", return_value=upstream) as request,
+    ):
+        response = client.get("/health", headers={"Accept-Encoding": "gzip, deflate, br"})
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    headers = request.call_args.kwargs["headers"]
+    assert "Accept-Encoding" not in headers
+    assert "accept-encoding" not in {key.lower() for key in headers}
 
 
 def test_loop_proxy_releases_connection_when_read_fails(client: TestClient) -> None:
