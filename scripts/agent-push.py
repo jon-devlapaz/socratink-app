@@ -350,7 +350,8 @@ def ensure_destination_ref_current(state: PushState, intent: PublicationIntent) 
         return
     if refspec not in {"dev", "main"} and not refspec.startswith("feat/"):
         return
-    _run_git(["fetch", remote, f"+refs/heads/{refspec}:refs/remotes/{remote}/{refspec}"])
+    check = not refspec.startswith("feat/")
+    _run_git(["fetch", remote, f"+refs/heads/{refspec}:refs/remotes/{remote}/{refspec}"], check=check)
 
 
 def ensure_destination_fast_forward(state: PushState, intent: PublicationIntent) -> None:

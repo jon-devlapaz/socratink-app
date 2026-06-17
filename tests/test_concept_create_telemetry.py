@@ -214,7 +214,12 @@ def test_ai_call_emitted_for_extract_path(client, caplog):
     fake_llm.generate_structured.return_value = fake_result
     with patch("ai_service.build_llm_client", return_value=fake_llm):
         client.post("/api/extract", json={
-            "text": "Photosynthesis is the process by which plants convert light energy from the sun into chemical energy stored in glucose.",
+            "name": "Photosynthesis",
+            "starting_sketch": "Plants use light to make sugar.",
+            "source": {
+                "type": "text",
+                "text": "Photosynthesis is the process by which plants convert light energy from the sun into chemical energy stored in glucose.",
+            },
         })
     ai_calls = _records_for(caplog, "concept_create.ai_call")
     assert ai_calls, "must emit ai_call for source-attached path"

@@ -719,16 +719,18 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_source_input_helpers_preserve_blocking_and_text_contracts() -> None:
+def test_source_panel_preserves_blocking_and_tab_contracts() -> None:
+    source_panel_js = (REPO_ROOT / "public" / "js" / "source-panel.js").read_text(encoding="utf-8")
+    assert 'data-tab="paste"' in source_panel_js
+    assert 'data-tab="url"' in source_panel_js
+    assert 'data-tab="upload"' in source_panel_js
+    assert "creation-source-panel-cancel" in source_panel_js
+    assert "creation-source-panel-attach" in source_panel_js
+
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
-        import {
-          SOURCE_INPUT_HTML,
-          hasStudyEvidence,
-          isBlockedVideoUrl,
-          shortOnboardingText,
-        } from './public/js/source-input-ui.js';
+        import { isBlockedVideoUrl } from './public/js/source-panel.js';
 
         for (const blocked of [
           'https://youtu.be/abc',
@@ -741,21 +743,6 @@ def test_source_input_helpers_preserve_blocking_and_text_contracts() -> None:
         }
         assert.equal(isBlockedVideoUrl('https://example.com/watch?v=abc'), false);
         assert.equal(isBlockedVideoUrl('not a url'), false);
-
-        assert.equal(shortOnboardingText('  a   b\\n c  ', 20), 'a b c');
-        assert.equal(shortOnboardingText('abcdefghij', 8), 'abcde...');
-        assert.equal(shortOnboardingText(null), '');
-
-        assert.equal(hasStudyEvidence({ drill_status: 'primed' }), true);
-        assert.equal(hasStudyEvidence({ drill_status: 'solid' }), true);
-        assert.equal(hasStudyEvidence({ gap_type: 'misread' }), true);
-        assert.equal(hasStudyEvidence({ drill_status: 'new' }), false);
-
-        assert.ok(SOURCE_INPUT_HTML(false).includes('type="button" data-tab="paste"'));
-        assert.ok(SOURCE_INPUT_HTML(false).includes('type="button" data-tab="url"'));
-        assert.ok(SOURCE_INPUT_HTML(false).includes('type="button" data-tab="upload"'));
-        assert.ok(!SOURCE_INPUT_HTML(false).includes('paste-clipboard-btn'));
-        assert.ok(SOURCE_INPUT_HTML(true).includes('paste-clipboard-btn'));
         """
     )
     assert result.returncode == 0, result.stderr

@@ -74,7 +74,11 @@ def test_extract_characterization(client):
     """Characterize /api/extract with a successful LLM return."""
     mock_map = _build_minimal_valid_map()
     with patch("main.extract_knowledge_map", return_value=mock_map):
-        response = client.post("/api/extract", json={"text": "How do plants eat?"})
+        response = client.post("/api/extract", json={
+            "name": "Plant nutrition",
+            "starting_sketch": "Plants use light to make food.",
+            "source": {"type": "text", "text": "How do plants eat?"},
+        })
     
     assert response.status_code == 200
     data = response.json()

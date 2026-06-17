@@ -404,7 +404,7 @@ def test_feature_publication_refreshes_destination_ref(monkeypatch):
     calls = []
 
     def fake_run_git(args, *, check=True):
-        calls.append(args)
+        calls.append((args, check))
         return ""
 
     monkeypatch.setattr(mod, "_run_git", fake_run_git)
@@ -412,7 +412,7 @@ def test_feature_publication_refreshes_destination_ref(monkeypatch):
     mod.ensure_destination_ref_current(state, intent)
 
     assert calls == [
-        ["fetch", "origin", "+refs/heads/feat/demo-flow:refs/remotes/origin/feat/demo-flow"]
+        (["fetch", "origin", "+refs/heads/feat/demo-flow:refs/remotes/origin/feat/demo-flow"], False)
     ]
 
 
