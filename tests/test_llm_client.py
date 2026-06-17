@@ -43,7 +43,7 @@ def _request() -> StructuredLLMRequest:
 
 
 class _CountingAdapter:
-    """Minimal LLMAdapter — counts calls; can be primed to raise or return."""
+    """Minimal call-once object — counts calls; can be primed to raise or return."""
 
     def __init__(self, *, raises=None, returns=None):
         self.calls = 0

@@ -1651,10 +1651,10 @@ html[data-motion="reduced"] .creation-dialog-shell.anim-antigravity-enter {
 }
 .creation-dialog-banner-slot {
   /* Empty until guest/error banner injected. Separate from content so
-     buildContentInputUI's container.innerHTML writes don't wipe banner. */
+     source-panel writes don't wipe banner. */
 }
 .creation-dialog-content {
-  /* buildContentInputUI renders its form here; or guest message. */
+  /* source-panel renders its form here; or guest message. */
 }
 .creation-dialog-meta {
   font-size: 0.75rem;

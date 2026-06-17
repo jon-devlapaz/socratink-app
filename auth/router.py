@@ -7,7 +7,7 @@ from typing import Literal, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from runtime_env import dev_autoguest_enabled, local_auth_bypass_enabled
@@ -683,16 +683,6 @@ def _render_login_html() -> str:
 </html>"""
 
 
-class MagicAuthSendRequest(BaseModel):
-    email: str = Field(..., max_length=320)
-
-
-class MagicAuthVerifyRequest(BaseModel):
-    email: str = Field(..., max_length=320)
-    code: str = Field(..., min_length=6, max_length=12)
-    return_to: str | None = Field(default="/", max_length=500)
-
-
 def sanitize_return_to_path(return_to: str | None) -> str:
     if not return_to:
         return "/"
@@ -1096,17 +1086,3 @@ def logout(request: Request) -> Response:
     _clear_session_cookie(response, request)
     response.delete_cookie(GUEST_COOKIE_NAME, path="/")
     return response
-
-
-@auth_router.post("/api/auth/magic-auth/send")
-def send_magic_auth(request: Request, body: MagicAuthSendRequest):
-    raise HTTPException(
-        status_code=503, detail="Email sign-in is not enabled in this release."
-    )
-
-
-@auth_router.post("/api/auth/magic-auth/verify")
-def verify_magic_auth(request: Request, body: MagicAuthVerifyRequest):
-    raise HTTPException(
-        status_code=503, detail="Email sign-in is not enabled in this release."
-    )

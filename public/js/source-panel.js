@@ -42,9 +42,24 @@ const _isPrintableSourceKey = (e) =>
   !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
   (e.key.length === 1 || e.key === "Backspace" || e.key === "Enter");
 
+export function isBlockedVideoUrl(value) {
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.toLowerCase();
+    return host === "youtu.be"
+      || host === "youtube.com"
+      || host.endsWith(".youtube.com")
+      || host === "youtube-nocookie.com"
+      || host.endsWith(".youtube-nocookie.com");
+  } catch {
+    return false;
+  }
+}
+
 export function mountSourcePanel(targetEl, opts = {}) {
   const onAttach = opts.onAttach || (() => {});
   const onCancel = opts.onCancel || (() => {});
+  const readFile = opts.readFile || null;
 
   targetEl.innerHTML = `
     <div class="creation-source-panel">
@@ -98,7 +113,7 @@ export function mountSourcePanel(targetEl, opts = {}) {
     if (!trimmed) return false;
     try {
       const u = new URL(trimmed);
-      return u.protocol === "http:" || u.protocol === "https:";
+      return (u.protocol === "http:" || u.protocol === "https:") && !isBlockedVideoUrl(trimmed);
     } catch (_e) {
       return false;
     }
@@ -208,9 +223,9 @@ export function mountSourcePanel(targetEl, opts = {}) {
     // Prefer the app-level _readFile helper (handles PDFs via pdf.js, txt/md via
     // readAsText). Falls back to readAsText for text files only when the helper
     // isn't available (e.g., test harness loading source-panel in isolation).
-    const appReadFile = (typeof window !== "undefined" && window.App && typeof window.App._readFile === "function")
+    const appReadFile = readFile || ((typeof window !== "undefined" && window.App && typeof window.App._readFile === "function")
       ? window.App._readFile
-      : null;
+      : null);
     if (appReadFile) {
       appReadFile(file, onReadOk, onReadError);
       return;

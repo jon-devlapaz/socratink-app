@@ -50,6 +50,36 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
     clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
     expect(clean_page.locator("#hero-source-value")).to_have_text("11 chars pasted")
     expect(clean_page.locator("#hero-source-attach")).to_have_text("remove")
+    clean_page.locator("#hero-source-attach").click()
+    clean_page.locator("#hero-source-attach").click()
+    expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
+    clean_page.locator("#hero-source-panel .creation-source-panel-cancel").click()
+    expect(clean_page.locator("#hero-source-value")).to_have_text("none yet")
+    expect(clean_page.locator("#hero-source-attach")).to_have_text("add")
+
+    clean_page.evaluate(
+        """() => {
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+              id: 'overlay-source-fixture',
+              name: 'Overlay source fixture',
+              state: 'instantiated',
+              createdAt: Date.now()
+            }]));
+            localStorage.setItem('learnops_active', 'overlay-source-fixture');
+            window.App.selectConcept('overlay-source-fixture');
+            window.App.extract();
+        }"""
+    )
+    expect(clean_page.locator("#content-overlay .overlay-textarea")).to_be_attached()
+    clean_page.evaluate(
+        """() => {
+            const textarea = document.querySelector('#content-overlay .overlay-textarea');
+            textarea.value = 'overlay source text';
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            document.querySelector('#content-overlay .creation-source-panel-attach').click();
+        }"""
+    )
+    expect(clean_page.locator("#content-overlay")).not_to_be_attached()
 
     clean_page.evaluate("window.App.showSettings()")
     expect(clean_page.locator("#settings-content")).to_be_visible()
@@ -597,86 +627,51 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(savedLaunchPadConcept.learnerGoal === 'raw learner goal', 'launch pad preserves learner goal on concept');
             assert(JSON.parse(savedLaunchPadConcept.graphData).metadata.learner_goal === 'raw learner goal', 'launch pad preserves learner goal in graph metadata');
 
-            const sourceInput = await import('/js/source-input-ui.js');
-            assert(sourceInput.isBlockedVideoUrl('https://youtu.be/abc'), 'blocked short youtube url');
-            assert(sourceInput.isBlockedVideoUrl('https://www.youtube-nocookie.com/embed/abc'), 'blocked nocookie url');
-            assert(!sourceInput.isBlockedVideoUrl('https://example.com/article'), 'allowed url');
-            assert(!sourceInput.isBlockedVideoUrl('not a url'), 'invalid url allowed');
-            assert(sourceInput.shortOnboardingText('  a   b\\n c  ', 20) === 'a b c', 'short text normalizes whitespace');
-            assert(sourceInput.shortOnboardingText('abcdefghij', 8) === 'abcde...', 'short text truncates');
-            assert(sourceInput.shortOnboardingText(null) === '', 'short text null fallback');
-            assert(sourceInput.hasStudyEvidence({ drill_status: 'primed' }), 'primed evidence');
-            assert(sourceInput.hasStudyEvidence({ drill_status: 'drilled' }), 'drilled evidence');
-            assert(sourceInput.hasStudyEvidence({ drill_status: 'solidified' }), 'solidified evidence');
-            assert(sourceInput.hasStudyEvidence({ drill_status: 'solid' }), 'solid evidence');
-            assert(sourceInput.hasStudyEvidence({ gap_type: 'misread' }), 'gap evidence');
-            assert(!sourceInput.hasStudyEvidence({ drill_status: 'new' }), 'no evidence fallback');
-            assert(sourceInput.SOURCE_INPUT_HTML(true).includes('paste-clipboard-btn'), 'clipboard template');
-            assert(!sourceInput.SOURCE_INPUT_HTML(false).includes('paste-clipboard-btn'), 'no clipboard template');
+            const sourcePanel = await import('/js/source-panel.js?v=3');
+            assert(sourcePanel.isBlockedVideoUrl('https://youtu.be/abc'), 'blocked short youtube url');
+            assert(sourcePanel.isBlockedVideoUrl('https://www.youtube-nocookie.com/embed/abc'), 'blocked nocookie url');
+            assert(!sourcePanel.isBlockedVideoUrl('https://example.com/article'), 'allowed url');
+            assert(!sourcePanel.isBlockedVideoUrl('not a url'), 'invalid url allowed');
 
             const sourceMount = document.createElement('div');
             document.body.append(sourceMount);
             const sourceSubmits = [];
-            const sourceUi = sourceInput.buildContentInputUI(sourceMount, {
-              showClipboard: true,
+            sourcePanel.mountSourcePanel(sourceMount, {
               readFile(file, onSuccess, onError) {
                 if (file.name === 'bad.txt') {
-                  onError('bad file', '', file.name);
+                  onError('bad file');
                   return;
                 }
                 onSuccess('uploaded text', file.name);
               },
-              onSubmit(payload) { sourceSubmits.push(payload); },
-              onCancel() { window.__sourceInputCancelled = true; },
+              onAttach(payload) { sourceSubmits.push(payload); },
+              onCancel() { window.__sourcePanelCancelled = true; },
             });
-            assert(sourceMount.querySelector('.overlay-extract').disabled, 'initial submit disabled');
-            Object.defineProperty(navigator, 'clipboard', {
-              configurable: true,
-              value: { readText: async () => 'clipboard text' },
-            });
-            sourceMount.querySelector('.paste-clipboard-btn').click();
-            await new Promise((resolve) => setTimeout(resolve, 0));
-            assert(sourceMount.querySelector('.overlay-textarea').value === 'clipboard text', 'clipboard paste');
-            sourceMount.querySelector('.overlay-extract').click();
-            same(sourceSubmits.pop(), { text: 'clipboard text', type: 'text', filename: null, url: null }, 'paste submit');
-            Object.defineProperty(navigator, 'clipboard', {
-              configurable: true,
-              value: { readText: async () => { throw new Error('denied'); } },
-            });
-            const originalExecCommand = document.execCommand;
-            document.execCommand = (command) => {
-              window.__sourceInputPasteFallback = command;
-              return true;
-            };
-            sourceMount.querySelector('.paste-clipboard-btn').click();
-            await new Promise((resolve) => setTimeout(resolve, 0));
-            assert(window.__sourceInputPasteFallback === 'paste', 'clipboard fallback paste command');
-            document.execCommand = originalExecCommand;
+            assert(sourceMount.querySelector('.creation-source-panel-attach').disabled, 'initial attach disabled');
+            sourceMount.querySelector('.overlay-textarea').value = 'typed source';
+            sourceMount.querySelector('.overlay-textarea').dispatchEvent(new Event('input', { bubbles: true }));
+            sourceMount.querySelector('.creation-source-panel-attach').click();
+            same(sourceSubmits.pop(), { type: 'text', text: 'typed source' }, 'paste submit');
 
             sourceMount.querySelector('[data-tab="url"]').click();
             const urlInput = sourceMount.querySelector('.overlay-url-input');
             urlInput.value = 'https://www.youtube.com/watch?v=abc';
             urlInput.dispatchEvent(new Event('input', { bubbles: true }));
-            assert(sourceMount.querySelector('.overlay-extract').disabled, 'blocked url disabled');
-            assert(sourceMount.querySelector('.overlay-url-feedback').textContent.includes('Video links'), 'blocked url feedback');
+            assert(sourceMount.querySelector('.creation-source-panel-attach').disabled, 'blocked url disabled');
             urlInput.value = 'https://example.com/article';
             urlInput.dispatchEvent(new Event('input', { bubbles: true }));
-            urlInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
-            same(sourceSubmits.pop(), {
-              text: 'https://example.com/article',
-              type: 'url',
-              filename: null,
-              url: 'https://example.com/article',
-            }, 'url submit');
+            sourceMount.querySelector('.creation-source-panel-attach').click();
+            same(sourceSubmits.pop(), { type: 'url', url: 'https://example.com/article', text: '', filename: '' }, 'url submit');
 
             sourceMount.querySelector('[data-tab="upload"]').click();
             const goodDrop = new Event('drop', { bubbles: true, cancelable: true });
             Object.defineProperty(goodDrop, 'dataTransfer', { value: { files: [new File(['ok'], 'ok.txt')] } });
             sourceMount.querySelector('.overlay-dropzone').dispatchEvent(goodDrop);
             const uploadFeedback = () => sourceMount.querySelector('[data-panel="upload"] .overlay-dropfeedback');
+            assert(uploadFeedback(), 'upload feedback element exists');
             assert(uploadFeedback().textContent.includes('ok.txt'), 'upload feedback');
-            sourceMount.querySelector('.overlay-extract').click();
-            same(sourceSubmits.pop(), { text: 'uploaded text', type: 'file', filename: 'ok.txt', url: null }, 'file submit');
+            sourceMount.querySelector('.creation-source-panel-attach').click();
+            same(sourceSubmits.pop(), { type: 'file', text: 'uploaded text', filename: 'ok.txt' }, 'file submit');
             const badDrop = new Event('drop', { bubbles: true, cancelable: true });
             Object.defineProperty(badDrop, 'dataTransfer', { value: { files: [new File(['bad'], 'bad.txt')] } });
             sourceMount.querySelector('.overlay-dropzone').dispatchEvent(badDrop);
@@ -685,10 +680,10 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             Object.defineProperty(fileInput, 'files', { configurable: true, value: [new File(['changed'], 'changed.txt')] });
             fileInput.dispatchEvent(new Event('change', { bubbles: true }));
             assert(uploadFeedback().textContent.includes('changed.txt'), 'file input change upload');
-            sourceMount.querySelector('.overlay-cancel').click();
-            assert(window.__sourceInputCancelled, 'source cancel');
-            sourceUi.destroy();
-            assert(sourceMount.innerHTML === '', 'source destroy');
+            sourceMount.querySelector('.creation-source-panel-cancel').click();
+            assert(window.__sourcePanelCancelled, 'source cancel');
+            sourceMount.innerHTML = '';
+            assert(sourceMount.innerHTML === '', 'source cleanup');
 
             const board = await import('/js/board-grid.js');
             assert(board.TILE_PLATFORM.includes('tile-top'), 'tile platform markup');

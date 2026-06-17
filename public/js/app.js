@@ -43,12 +43,7 @@ import {
 } from './phase-b-session.js';
 import { buildLibraryHtml } from './library-view.js';
 import { createTrainingStore, TRAINING_SCHEMA_VERSION } from './training-store.js';
-import {
-  buildContentInputUI,
-  hasStudyEvidence,
-  isBlockedVideoUrl,
-  shortOnboardingText,
-} from './source-input-ui.js';
+import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js';
 import {
   applyThemePreference as applyStoredThemePreference,
@@ -664,46 +659,36 @@ const App = (() => {
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else {
-        // Panel is closed and no source — expand and mount the source panel
-        // module (extracted in Round B).
-        const myGen = ++_sourcePanelGen;
+        // Panel is closed and no source — expand and mount the source panel.
+        ++_sourcePanelGen;
         panel.hidden = false;
         btn.setAttribute('aria-expanded', 'true');
-        import('./source-panel.js').then(({ mountSourcePanel }) => {
-          // If the user collapsed before the import resolved, bail out.
-          if (myGen !== _sourcePanelGen) return;
-          mountSourcePanel(panel, {
-            onAttach(payload) {
-              // Collapse the panel on attach (chip-style); the button label
-              // becomes the persistent affordance for clearing.
-              App._pendingDoorSource = payload;
-              panel.hidden = true;
-              panel.innerHTML = '';
-              btn.setAttribute('aria-expanded', 'false');
-              // Paper-style source-meta line: value span shows source ID,
-              // button toggles to "remove" (matches the "add" ↔ "remove"
-              // affordance pattern persona-validated in Paper Wave 1).
-              btn.textContent = 'remove';
-              const v = document.getElementById('hero-source-value');
-              if (v) v.textContent = describeDoorSource(payload);
-              _doorUpdateSubmitState();
-            },
-            onCancel() {
-              panel.hidden = true;
-              panel.innerHTML = '';
-              btn.setAttribute('aria-expanded', 'false');
-              btn.textContent = 'add';
-              const v = document.getElementById('hero-source-value');
-              if (v) v.textContent = 'none yet';
-              App._pendingDoorSource = null;
-              _doorUpdateSubmitState();
-            },
-          });
-        }).catch((err) => {
-          // If the module fails to load, collapse gracefully.
-          console.error('socratink: failed to load source-panel.js', err);
-          panel.hidden = true;
-          btn.setAttribute('aria-expanded', 'false');
+        mountSourcePanel(panel, {
+          onAttach(payload) {
+            // Collapse the panel on attach (chip-style); the button label
+            // becomes the persistent affordance for clearing.
+            App._pendingDoorSource = payload;
+            panel.hidden = true;
+            panel.innerHTML = '';
+            btn.setAttribute('aria-expanded', 'false');
+            // Paper-style source-meta line: value span shows source ID,
+            // button toggles to "remove" (matches the "add" ↔ "remove"
+            // affordance pattern persona-validated in Paper Wave 1).
+            btn.textContent = 'remove';
+            const v = document.getElementById('hero-source-value');
+            if (v) v.textContent = describeDoorSource(payload);
+            _doorUpdateSubmitState();
+          },
+          onCancel() {
+            panel.hidden = true;
+            panel.innerHTML = '';
+            btn.setAttribute('aria-expanded', 'false');
+            btn.textContent = 'add';
+            const v = document.getElementById('hero-source-value');
+            if (v) v.textContent = 'none yet';
+            App._pendingDoorSource = null;
+            _doorUpdateSubmitState();
+          },
         });
       }
     });
@@ -1733,14 +1718,14 @@ const App = (() => {
       document.querySelector('.hero-info').appendChild(overlay);
     }
 
-    buildContentInputUI(overlay, {
-      showClipboard: false,
+    mountSourcePanel(overlay, {
       readFile: _readFile,
-      onSubmit: ({ text, type, filename }) => {
-        if (!text) return;
-        contentStore.set(conceptId, text);
+      onAttach: ({ text, type, filename, url }) => {
+        const content = type === 'url' ? url : text;
+        if (!content) return;
+        contentStore.set(conceptId, content);
         updateActiveConcept({
-          contentPreview: text.slice(0, 500),
+          contentPreview: content.slice(0, 500),
           contentType: type,
           contentFilename: filename,
         });
@@ -2980,22 +2965,6 @@ const App = (() => {
 
 
 
-
-
-  // Migrate legacy single-concept storage
-  const legacyState = localStorage.getItem('learnops-state');
-  if (legacyState && STATES[legacyState]) {
-    const c = {
-      id: generateId(), name: 'My First Concept', state: legacyState,
-      createdAt: Date.now(),
-      timerStart: legacyState === 'hibernating'
-        ? parseInt(localStorage.getItem('learnops-timer-start') || '0', 10) || null : null,
-    };
-    saveConcepts([c]);
-    setActiveId(c.id);
-    localStorage.removeItem('learnops-state');
-    localStorage.removeItem('learnops-timer-start');
-  }
 
   // Tile hover labels are owned by floating-room-label.js
   // (Floating-UI anchored to each <g class="tile-group">). The legacy
