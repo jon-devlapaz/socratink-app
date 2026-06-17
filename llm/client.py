@@ -15,8 +15,8 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, replace
+from typing import Any, cast
 
-from .adapter import LLMAdapter
 from .errors import RetriableLLMError
 from .types import StructuredLLMRequest, StructuredLLMResult
 
@@ -27,14 +27,14 @@ logger = logging.getLogger(__name__)
 class LLMClient:
     """Application-facing client. Owns retry policy and telemetry."""
 
-    adapter: LLMAdapter
+    adapter: Any
 
     def generate_structured(self, request: StructuredLLMRequest) -> StructuredLLMResult:
         last_exc: Exception | None = None
         for attempt in range(request.max_retries + 1):
             start = time.perf_counter()
             try:
-                result = self.adapter.call_once(request)
+                result = cast(StructuredLLMResult, self.adapter.call_once(request))
             except RetriableLLMError as exc:
                 latency_ms = (time.perf_counter() - start) * 1000.0
                 self._log_failure(request, exc, attempt=attempt, latency_ms=latency_ms)

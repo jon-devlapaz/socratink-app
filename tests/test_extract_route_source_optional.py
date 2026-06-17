@@ -180,20 +180,6 @@ def test_whitespace_only_concept_returns_422_missing_concept(client):
     assert (detail.get("error") if isinstance(detail, dict) else None) == "missing_concept"
 
 
-def test_legacy_text_only_payload_still_works(client):
-    """Back-compat: the old {text, api_key} payload still hits extract path.
-
-    Keep this until the legacy text-only caller path is intentionally removed.
-    """
-    fake_map = _minimal_map()
-    with patch("main.extract_knowledge_map", return_value=fake_map) as fake_extract:
-        response = client.post("/api/extract", json={
-            "text": "Photosynthesis is the process by which...",
-        })
-    assert response.status_code == 200
-    assert fake_extract.called
-
-
 def test_lc_enrichment_is_attempted_for_source_less_path(client):
     """When source-less, LC search is attempted and result feeds into generation."""
     fake_map = _minimal_map()

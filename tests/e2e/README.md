@@ -80,7 +80,7 @@ Route/Constellation switch and `#concept-constellation-content` are covered in
 
 Helper-module browser-contract guard: imports the in-app JS modules
 (`html.js`, `app-timer.js`, `app-hero.js`, `phase-b-session.js`,
-`settings-view.js`, `library-view.js`, `source-input-ui.js`,
+`settings-view.js`, `library-view.js`, `source-panel.js`,
 `board-grid.js`, `theme-preference.js`, `app-shell-ui.js`,
 `training-store.js`, `training-derive.js`, `concept-page-view.js`,
 `concept-constellation-view.js`, `comparison-acknowledgement.js`) from the live page and exercises their pure

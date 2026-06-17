@@ -1,4 +1,4 @@
-"""Smoke tests for /api/extract (text route).
+"""Smoke tests for /api/extract source-backed route.
 
 Most extraction behavior is tested at the source_intake unit level. These
 are wiring tests for the route's exception mapping — particularly that
@@ -13,6 +13,14 @@ from fastapi.testclient import TestClient
 import main
 from auth.service import AuthSessionState
 from source_intake.errors import ParseEmpty
+
+
+def _source_payload(text: str) -> dict:
+    return {
+        "name": "Photosynthesis",
+        "starting_sketch": "Plants use light to make sugar.",
+        "source": {"type": "text", "text": text},
+    }
 
 
 class _FakeAuthService:
@@ -54,7 +62,7 @@ def test_extract_parse_empty_does_not_leak_internal_message(client):
     """
     leaky = ParseEmpty("raw text 0 chars (min 1)")
     with patch("main.source_intake.from_text", side_effect=leaky):
-        response = client.post("/api/extract", json={"text": "abc"})
+        response = client.post("/api/extract", json=_source_payload("abc"))
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert "raw text" not in detail.lower()
@@ -65,7 +73,7 @@ def test_extract_parse_empty_does_not_leak_internal_message(client):
 def test_extract_parse_empty_returns_user_facing_message(client):
     """The route should return a stable, helpful message for the user."""
     with patch("main.source_intake.from_text", side_effect=ParseEmpty("internal")):
-        response = client.post("/api/extract", json={"text": "abc"})
+        response = client.post("/api/extract", json=_source_payload("abc"))
     assert response.status_code == 422
     detail = response.json()["detail"]
     # Stable user-facing phrasing.

@@ -57,7 +57,11 @@ def client():
 def _post(client):
     # ParseEmpty floor for from_text is 1 char in default; a non-empty
     # short string is enough to reach extract_knowledge_map.
-    return client.post("/api/extract", json={"text": "x" * 250})
+    return client.post("/api/extract", json={
+        "name": "Photosynthesis",
+        "starting_sketch": "Plants use light to make sugar.",
+        "source": {"type": "text", "text": "x" * 250},
+    })
 
 
 @pytest.mark.parametrize(

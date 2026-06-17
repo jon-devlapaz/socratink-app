@@ -286,14 +286,6 @@ class SourceAttachment(BaseModel):
 class ExtractRequest(BaseModel):
     """Concept-creation submission.
 
-    Two payload shapes are accepted:
-
-    CURRENT (conversational concept creation):
-      {name, learner_goal?, starting_sketch, source, api_key?}
-
-    LEGACY (back-compat for text-only callers):
-      {text, api_key?}
-
     Server-side validation in /api/extract enforces the current source-less
     launch contract: source-less submits require a non-empty learner sketch.
     learner_goal may frame route generation, but it is not
@@ -304,9 +296,6 @@ class ExtractRequest(BaseModel):
     learner_goal: str | None = Field(None, max_length=1_000)
     starting_sketch: str | None = Field(None, max_length=10_000)
     source: SourceAttachment | None = None
-    # Legacy back-compat
-    text: str | None = Field(None, max_length=500_000)
-    # Common
     api_key: str | None = Field(None, max_length=200)
 
 
@@ -322,14 +311,6 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
     learner_goal is forwarded only as relevance/scaffold context; it never
     proves understanding.
     """
-    # Legacy {text} payload — back-compat path. Bypasses the new shape entirely.
-    if req.text is not None and req.name is None and req.source is None:
-        if not req.text.strip():
-            return {"path": "error", "status": 422,
-                    "error": "missing_text", "message": "Source text required."}
-        return {"path": "extract", "text": req.text}
-
-    # New shape: name is mandatory
     name = (req.name or "").strip()
     if not name:
         return {"path": "error", "status": 422,

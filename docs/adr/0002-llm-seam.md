@@ -39,7 +39,7 @@ The application **never** sees a Gemini `response`, a `dict`, a JSON string, or 
 | Structured telemetry log per call | `llm/client.py` |
 | Token-usage extraction (normalized shape) | `llm/gemini_adapter.py` (raw) → `llm/client.py` (consumed) |
 
-`LLMAdapter` is a `runtime_checkable` Protocol with a single primitive: `call_once(request) -> StructuredLLMResult` or raises a normalized error. `LLMClient` is the concrete wrapper that owns retry + telemetry. Adding a second provider is one new file (e.g., `llm/anthropic_adapter.py`) plus updating `llm/factory.py`.
+`LLMClient` is the concrete wrapper that owns retry + telemetry around the Gemini call-once implementation. A second provider should introduce its own concrete runtime only when the product actually ships one; there is no one-implementation protocol layer kept alive for speculation.
 
 ### The architectural invariant
 
@@ -60,6 +60,6 @@ Across the entire `LLMError` hierarchy, the route returns **stable copy** to the
 ## Consequences
 
 - **The product-quality test from the design spec — *"no socratink application code should import Gemini directly"* — is now an automated assertion**, not a hope. It enforces itself on every commit.
-- **Switching providers is a one-file addition.** Once a second adapter exists (e.g., Anthropic), `LLM_PROVIDER=anthropic` flips the entire stack — including the `/api/extract` route — without touching application code.
+- **Provider switching before a second provider existed.** Rejected after the Ponytail cleanup: provider-selection env advertised an app contract the product did not support.
 - **One legacy exception remains** for `ai_service.py` until `drill_chat` and `generate_repair_reps` migrate. That exception is annotated in the test and removed in the next sweep. Until then, contributors writing new logic in `ai_service.py` should prefer the seam path over the legacy one (the test won't catch this — judgment matters).
 - **Tests no longer patch private names.** The migration test for `extract_knowledge_map` injects a fake `LLMClient` instead of monkeypatching `_get_client` and `_call_gemini_with_retry`. Future LLM-touching tests follow the same pattern.

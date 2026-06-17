@@ -446,21 +446,6 @@ class ApiMeAndLogoutTests(unittest.TestCase):
         self.assertIn(f"{GUEST_COOKIE_NAME}=", cookies)
         self.assertIn("Max-Age=0", cookies)
 
-    def test_magic_auth_endpoints_remain_disabled(self):
-        service = FakeSupabaseAuthService(enabled=True)
-        client = build_client(service)
-
-        send = client.post(
-            "/api/auth/magic-auth/send", json={"email": "x@y.z"}
-        )
-        verify = client.post(
-            "/api/auth/magic-auth/verify",
-            json={"email": "x@y.z", "code": "123456", "return_to": "/"},
-        )
-        self.assertEqual(send.status_code, 503)
-        self.assertEqual(verify.status_code, 503)
-
-
 class AnonymousGuestTests(unittest.TestCase):
     def setUp(self):
         self._env_keys = (

@@ -4,8 +4,6 @@ pydantic==2.13.3
 uvicorn==0.46.0
 google-genai==1.74.0
 python-dotenv==1.2.2
-aiofiles==25.1.0
-youtube-transcript-api==1.2.4
 supabase==2.29.0
 pyjwt[crypto]==2.12.1
 cryptography==47.0.0
