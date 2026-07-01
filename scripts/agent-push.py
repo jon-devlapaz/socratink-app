@@ -142,7 +142,7 @@ def _remote_urls() -> dict[str, str]:
 def refresh_publication_refs() -> None:
     remotes = _remote_urls()
     if "origin" in remotes:
-        _run_git(["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"])
+        _run_git(["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], check=False)
     if "no-mistakes" in remotes:
         _run_git(
             ["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"],

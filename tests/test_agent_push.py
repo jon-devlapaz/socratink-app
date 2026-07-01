@@ -78,7 +78,7 @@ def test_refresh_publication_refs_updates_origin_dev(monkeypatch):
     calls = []
 
     def fake_run_git(args, *, check=True):
-        calls.append(args)
+        calls.append((args, check))
         if args == ["remote", "-v"]:
             return "origin\thttps://github.com/jon-devlapaz/socratink-app.git (push)"
         return ""
@@ -88,8 +88,8 @@ def test_refresh_publication_refs_updates_origin_dev(monkeypatch):
     mod.refresh_publication_refs()
 
     assert calls == [
-        ["remote", "-v"],
-        ["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"],
+        (["remote", "-v"], True),
+        (["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], False),
     ]
 
 
@@ -114,7 +114,7 @@ def test_refresh_publication_refs_updates_no_mistakes_dev_when_configured(monkey
 
     assert calls == [
         (["remote", "-v"], True),
-        (["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], True),
+        (["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], False),
         (["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"], False),
     ]
 
