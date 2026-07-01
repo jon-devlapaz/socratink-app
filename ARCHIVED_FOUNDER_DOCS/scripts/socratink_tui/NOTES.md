@@ -451,7 +451,7 @@ Validation evidence:
 
 Run evidence:
 
-- Local helper: `/Users/jondev/bin/deepseek-local`
+- Local helper: removed local-model wrapper.
 - Required env: `OLLAMA_HOST=http://127.0.0.1:11434`
 - Model check: `ok: deepseek-r1:14b at http://127.0.0.1:11434`
 
@@ -486,8 +486,7 @@ Goal:
 
 Attempted path:
 
-- Checked local helper with
-  `OLLAMA_HOST=http://127.0.0.1:11434 /Users/jondev/bin/deepseek-local --check`.
+- Checked the former local helper wrapper.
 - Result: `ok: deepseek-r1:14b at http://127.0.0.1:11434`.
 - Asked DeepSeek for an agentic-engineering learner launch attempt.
 - First response was a question, not a generative attempt:
