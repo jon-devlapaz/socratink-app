@@ -13,7 +13,6 @@ echo "[doctor] required agent/deploy files..."
 required_files=(
   "AGENTS.md"
   "docs/project/state.md"
-  "agents/ONBOARDING.md"
   "agents/QUALITY.md"
   "docs/product/evidence-weighted-map.md"
   "docs/product/spec.md"

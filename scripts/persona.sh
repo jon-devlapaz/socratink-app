@@ -11,13 +11,13 @@
 # blocks, and tees the result to a timestamped log under PERSONA_LOG_DIR or
 # .playwright-mcp/ so you don't lose the response if the terminal scrolls.
 #
-# Methodology lives in agents/_templates/customer-persona-prompt.md —
+# Methodology lives in ARCHIVED_FOUNDER_DOCS/agents/_templates/customer-persona-prompt.md —
 # this script is the runner, not the template.
 
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TEMPLATE="$ROOT/agents/_templates/customer-persona-prompt.md"
+TEMPLATE="$ROOT/ARCHIVED_FOUNDER_DOCS/agents/_templates/customer-persona-prompt.md"
 LOG_DIR="${PERSONA_LOG_DIR:-$ROOT/.playwright-mcp}"
 
 if [[ "${1:-}" == "--template" ]]; then

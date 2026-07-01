@@ -423,7 +423,7 @@ Product boundary:
 
 What changed:
 
-- Added `scripts/socratink_tui/BLOOM_DRILL_SPEC.md`.
+- Captured the hidden Bloom drill-shape rationale; the standalone spec file was later pruned after the behavior landed.
 - Added hidden `internal_bloom_lens` metadata to `gap_identified`.
 - Kept Bloom labels out of learner-facing TUI output.
 - Added deterministic rejection for answer-shaped repair scaffolds before they

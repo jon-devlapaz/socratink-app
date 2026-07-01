@@ -5,5 +5,4 @@ commands:
   lint: "bash scripts/no-mistakes-lint.sh"
 
 ignore_patterns:
-  - "agents/superpowers/**"
   - "public/_lab/**"

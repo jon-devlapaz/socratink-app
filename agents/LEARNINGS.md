@@ -2,7 +2,7 @@
 
 This is the non-binding learning ledger for founder and agent workflow usage.
 
-It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `AGENTS.md`, `agents/README.md`, workflow cards, `agents/ONBOARDING.md`, `agents/QUALITY.md`, and other registered canonical files.
+It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `AGENTS.md`, `CLAUDE.md`, `agents/README.md`, `agents/QUALITY.md`, and product canon.
 
 ## Read Rule
 
@@ -40,7 +40,7 @@ Mark an entry `candidate` and recommend a promotion target when either condition
 - the same pattern appears in 3 real tasks
 - the same pattern appears in 2 real tasks and affects publication safety, verification integrity, bootstrap correctness, or canon/source-of-truth boundaries
 
-Promotion targets must be explicit: a workflow card under `agents/founder/WORKFLOWS/`, `agents/README.md`, `agents/founder/README.md`, `agents/ONBOARDING.md`, `agents/QUALITY.md`, or another registered canonical file.
+Promotion targets must be explicit: `agents/README.md`, `agents/QUALITY.md`, `docs/project/state.md`, or another active canonical file.
 
 After promotion, update the ledger entry to `promoted`, link the destination, and keep the evidence count. If the decision is not to promote, mark it `rejected` with the reason.
 
@@ -59,7 +59,7 @@ Keep this table short. It exists so future agents can spot recurrence without lo
 
 ## Entries
 
-Use [agents/_templates/learning-entry.md](./_templates/learning-entry.md) for new entries.
+Add new entries inline using the existing table and entry shape.
 
 # LYYYY-2026-05-13-subagent-delegation-too-soft
 
@@ -176,7 +176,7 @@ The clean pattern is to track exactly one ledger through the run: no-mistakes ru
 ## Evidence
 
 - `2026-05-25`: PR #257 required a no-mistakes rerun after Vercel rejected an exact `.python-version` patch pin and the frontend cache-pin gate caught a stale parent JS import. The daemon then added a mobile drawer smoke hardening commit after evidence review. The final release succeeded only after tracking no-mistakes run `01KSG9ME2W11C7W5Z0S49595QG`, PR #257, `origin/dev` head `af851b1`, merge commit `1b5f6b6`, main preflight success, and `scripts/verify-deploy.sh 1b5f6b603d9555b4d527cbd364299c5ecc907da2` production smoke success (`33 passed, 2 skipped`).
-- `2026-05-25`: GitHub Pages failed separately because Jekyll tried to render `agents/superpowers/**` Liquid-looking markdown. That signal was real and inspected, but it was not the Vercel production app path. Future release summaries should label such red signals explicitly instead of allowing them to blur the deploy verdict.
+- `2026-05-25`: GitHub Pages failed separately because Jekyll tried to render the former embedded Superpowers reference markdown. That signal was real and inspected, but it was not the Vercel production app path. Future release summaries should label such red signals explicitly instead of allowing them to blur the deploy verdict.
 
 ## Promotion Notes
 

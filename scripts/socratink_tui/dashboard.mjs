@@ -8,7 +8,6 @@ const REPO_ROOT = process.cwd();
 const TUI_DIR = path.join(REPO_ROOT, 'scripts/socratink_tui');
 const CASES_PATH = path.join(TUI_DIR, 'learning_cases/cases.jsonl');
 const CONTRACTS_PATH = path.join(TUI_DIR, 'pedagogical_agents/contracts.json');
-const NOTES_PATH = path.join(TUI_DIR, 'NOTES.md');
 
 function parseArgs(argv) {
   const options = { json: false, color: 'auto' };
@@ -96,29 +95,13 @@ async function loadTrace(caseRecord) {
   };
 }
 
-function notesContain(notes, text) {
-  return notes.toLowerCase().includes(text.toLowerCase());
-}
-
 async function buildDashboard() {
-  const [cases, contracts, notes] = await Promise.all([
+  const [cases, contracts] = await Promise.all([
     loadCases(),
     readJson(CONTRACTS_PATH),
-    fs.readFile(NOTES_PATH, 'utf8'),
   ]);
   const traces = await Promise.all(cases.map(loadTrace));
   const latestTrace = traces.at(-1) || null;
-  const routeRetryNeeded = notesContain(notes, 'route-generation retry')
-    || notesContain(notes, 'route generator needs a recoverable retry path')
-    || notesContain(notes, 'SmallestRouteCapExceeded');
-  const routeRetryImplemented = notesContain(notes, 'Route Retry Implementation')
-    || notesContain(notes, 'route retry/rewrite handling is implemented');
-  const deepseekRerunComplete = notesContain(notes, 'DeepSeek Retry Rerun');
-  const deepseekSignal = notesContain(notes, 'DeepSeek Simulated Learner Attempt')
-    ? deepseekRerunComplete
-      ? 'DeepSeek rerun completed; simulated learner still needs output-shape guardrails.'
-      : 'DeepSeek simulated learner exposed learner-shape drift and route validation crashes.'
-    : 'No DeepSeek simulated learner run logged yet.';
 
   return {
     title: 'Socratink Founder Dashboard',
@@ -133,16 +116,7 @@ async function buildDashboard() {
     case_summary: summarizeCases(cases),
     case_ids: cases.map((c) => c.case_id),
     latest_trace: latestTrace,
-    route_retry_status: routeRetryImplemented ? 'implemented' : 'needed',
-    deepseek_rerun_status: deepseekRerunComplete ? 'complete' : 'pending',
-    simulated_learner_status: deepseekSignal,
-    next_product_target: deepseekRerunComplete
-      ? 'Add simulated learner output-shape guardrails, then promote over-complete tutor answers into a harness case.'
-      : routeRetryImplemented
-        ? 'Rerun DeepSeek simulated learner against real route/evaluator seam and promote any new failure.'
-      : routeRetryNeeded
-        ? 'Add route retry/rewrite handling for SmallestRouteCapExceeded, then rerun DeepSeek simulated learner.'
-      : 'Promote the next failed dogfood run into a replay case.',
+    next_product_target: 'Promote the next failed dogfood run into a replay case.',
     commands: {
       live_tui: 'scripts/socratink-tui',
       replay: 'scripts/socratink-harness replay',
@@ -176,12 +150,6 @@ function printDashboard(data, paint) {
   } else {
     console.log(paint.warn('No replay traces found.'));
   }
-  console.log('');
-
-  console.log(paint.section('DeepSeek Simulated Learner'));
-  console.log(data.simulated_learner_status);
-  console.log(`Route retry: ${data.route_retry_status}`);
-  console.log(`Rerun: ${data.deepseek_rerun_status}`);
   console.log('');
 
   console.log(paint.section('Next Product Target'));

@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-DEEPSEEK_LOCAL_BIN="${DEEPSEEK_LOCAL_BIN:-/Users/jondev/bin/deepseek-local}"
+DEEPSEEK_LOCAL_BIN="${DEEPSEEK_LOCAL_BIN:-$(command -v deepseek-local || printf '%s/bin/deepseek-local' "${HOME}")}"
 MAX_BYTES="${LOCAL_AI_REVIEW_MAX_BYTES:-81920}"
 
 fail() {
@@ -65,7 +65,7 @@ Usage:
   scripts/local-ai-review.sh smoke-local
   scripts/local-ai-review.sh pytest -- <pytest command>
 
-Advisory wrapper around /Users/jondev/bin/deepseek-local.
+Advisory wrapper around the local DeepSeek helper binary.
 It uses canned prompts, refuses likely secrets, caps payload size, and never
 edits files or pushes. publish-preview runs agent-push.py in preview mode,
 which may fetch/refresh local remote-tracking refs before producing redacted
@@ -126,10 +126,11 @@ payload_size() {
 
 refuse_secret_payload() {
   local payload="$1"
-  if printf '%s' "$payload" | grep -Eiq '(^|[^A-Z0-9_])(OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_API_KEY|SUPABASE_SERVICE_ROLE|[A-Z0-9_]*(KEY|TOKEN|SECRET))='; then
+  if printf '%s' "$payload" | grep -Eiq '(^|[^A-Za-z0-9_])([A-Za-z0-9_]*(TOKEN|SECRET|KEY)|OPENAI_API_KEY|ANTHROPIC_API_KEY|GOOGLE_API_KEY|SUPABASE_SERVICE_ROLE)='; then
     fail "refusing to send possible secret to local model"
   fi
-  if printf '%s' "$payload" | grep -Eq -- '-----BEGIN [A-Z ]*PRIVATE KEY-----'; then
+  local private_key_re='-----BEGIN [A-Z ]*PRIVATE ''KEY-----'
+  if printf '%s' "$payload" | grep -Eq -- "$private_key_re"; then
     fail "refusing to send possible private key to local model"
   fi
   if printf '%s' "$payload" | grep -Eq '(^|[[:space:]])\.env(\.local)?($|[[:space:]:])'; then

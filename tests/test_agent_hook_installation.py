@@ -7,34 +7,28 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 def test_agents_canon_scaffold_exists() -> None:
     required = [
         REPO_ROOT / "agents" / "README.md",
-        REPO_ROOT / "agents" / "MIGRATION.md",
-        REPO_ROOT / "agents" / "_templates" / "workflow-card.md",
+        REPO_ROOT / "agents" / "LEARNINGS.md",
+        REPO_ROOT / "agents" / "QUALITY.md",
     ]
     missing = [str(path.relative_to(REPO_ROOT)) for path in required if not path.exists()]
     assert not missing, f"missing agent canon scaffold: {missing}"
 
 
-def test_git_integration_workflow_exists_and_mentions_v1_scope() -> None:
-    path = REPO_ROOT / "agents" / "founder" / "WORKFLOWS" / "01-git-integration.md"
-    assert path.exists(), "missing git-integration workflow card"
-    text = path.read_text(encoding="utf-8")
-    assert "origin/dev" in text
-    assert "origin/feat/*" in text
-    assert "no-mistakes/dev" in text
-    assert "push publication" in text
+def test_archived_founder_docs_exist_outside_active_canon() -> None:
+    path = REPO_ROOT / "ARCHIVED_FOUNDER_DOCS" / "agents" / "founder" / "WORKFLOWS" / "01-git-integration.md"
+    assert path.exists(), "missing archived git-integration workflow card"
 
 
 def test_root_adapters_point_to_agents_canon() -> None:
-    for rel in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
+    for rel in ("AGENTS.md", "CLAUDE.md"):
         text = (REPO_ROOT / rel).read_text(encoding="utf-8")
-        assert "agents/" in text, f"{rel} must point to canonical agents/ path"
+        assert "agents/" in text or "docs/project/doc-map.md" in text
 
 
-def test_bootstrap_docs_acknowledge_agents_canon() -> None:
-    onboarding = (REPO_ROOT / "agents" / "ONBOARDING.md").read_text(encoding="utf-8")
+def test_quality_doc_acknowledges_active_canon() -> None:
     quality = (REPO_ROOT / "agents" / "QUALITY.md").read_text(encoding="utf-8")
-    assert "agents/" in onboarding
-    assert "agents/" in quality
+    assert "AGENTS.md" in quality
+    assert "docs/project/doc-map.md" in quality
 
 
 def test_bootstrap_script_wires_repo_hook_path() -> None:

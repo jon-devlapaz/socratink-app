@@ -3,16 +3,15 @@ title: Drill Data Model Design — Module 1
 date: 2026-05-15
 status: binding canon
 scope: module 1 of 5 (drill refactor); data shape + state contract only
-persona: agents/_templates/customer-persona-prompt.md
+persona: ARCHIVED_FOUNDER_DOCS/agents/_templates/customer-persona-prompt.md
 ---
 
 # Drill Data Model — Module 1
 
 This is the binding canon for the drill data model. It replaces the prior drill
 contract on every point of disagreement. The motivating audit evidence was
-absorbed into this spec during consolidation; the customer-persona prompt at
-`agents/_templates/customer-persona-prompt.md` is the register against which copy
-and state decisions are tested.
+absorbed into this spec during consolidation; the archived customer-persona prompt
+is provenance for the copy and state decisions tested here.
 
 ## What this document is for
 
@@ -790,7 +789,7 @@ satisfy each:
 
 ## §7 — Persona-soundness summary
 
-The persona at `agents/_templates/customer-persona-prompt.md` is a college
+The archived persona prompt is a college
 sophomore: anti-cramming, anti-flashcard-only, anti-cheat-with-AI,
 anti-streaks/XP/badges, attracted to "write your own explanation before answer,"
 "treats your guesses as data, not as right/wrong," "shows what you can

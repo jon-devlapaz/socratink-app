@@ -21,7 +21,7 @@ If any answer is unclear, inspect `docs/project/doc-map.md` before changing code
 - Current product/deploy state: `docs/project/state.md`.
 - Graph truth and mastery claims: `docs/product/evidence-weighted-map.md`.
 - Cold attempt, study, and re-drill contract: `docs/product/spec.md`.
-- Agent bootstrap: `agents/ONBOARDING.md`.
+- Agent bootstrap: `AGENTS.md` and `CLAUDE.md`.
 - Non-binding founder/agent workflow learnings: `agents/LEARNINGS.md`. Read only for matching workflow tasks or recurring friction; do not treat ledger entries as policy until promoted.
 - External API/SDK/platform behavior: Context7 (see `AGENTS.md` "Layer 3 — Context7"). If Context7 is unavailable or lacks coverage, use the repo-pinned Context Hub wrapper (`bash scripts/chub-docs.sh`). Treat both as external evidence, not Socratink doctrine; local binding docs win on conflicts about Socratink behavior.
 

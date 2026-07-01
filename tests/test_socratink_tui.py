@@ -441,10 +441,7 @@ def test_socratink_dashboard_summarizes_founder_harness_state() -> None:
     ]
     assert payload["latest_trace"]["case_id"] == "inner-repair-dialogue-gates-model-bridge-2026-05-26"
     assert payload["latest_trace"]["final_state"] == "primed"
-    assert "simulated learner output-shape guardrails" in payload["next_product_target"].lower()
-    assert "deepseek" in payload["simulated_learner_status"].lower()
-    assert payload["route_retry_status"] == "implemented"
-    assert payload["deepseek_rerun_status"] == "complete"
+    assert "failed dogfood run" in payload["next_product_target"].lower()
     assert "training_derivation" in payload["guardrails"]
 
 
@@ -456,7 +453,6 @@ def test_socratink_dashboard_terminal_output_is_founder_facing() -> None:
     assert "Socratink Founder Dashboard" in result.stdout
     assert "Harness Cases" in result.stdout
     assert "Truth Contract" in result.stdout
-    assert "DeepSeek Simulated Learner" in result.stdout
     assert "Next Product Target" in result.stdout
     assert "Bloom level" not in result.stdout
 
@@ -817,13 +813,3 @@ def test_socratink_tui_blocks_model_bridge_when_repair_is_uncertain(tmp_path: Pa
     assert "model_bridge" not in {event["type"] for event in session["events"]}
     assert session["training"]["node_records"]["c1_s1"]["repairs"] == []
     assert "model_bridge" not in {call["stage"] for call in session["llm_calls"]}
-
-
-def test_socratink_tui_notes_log_science_iteration() -> None:
-    notes = (TUI_DIR / "NOTES.md").read_text()
-    normalized_notes = notes.lower()
-
-    assert "## Iteration Log" in notes
-    assert "2026-05-26" in notes
-    assert "own-words repair before model bridge" in normalized_notes
-    assert "study, repair, and pressure-checks do not produce `solidified`" in normalized_notes
