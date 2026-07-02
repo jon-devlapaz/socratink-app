@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from starlette.responses import JSONResponse, RedirectResponse, Response
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 from auth import (
     AuthConfigurationError,
@@ -186,6 +186,8 @@ def _is_protected_html_request(request: Request) -> bool:
         return False
     path = request.url.path
     if path in PROTECTED_HTML_PATHS:
+        return True
+    if path.startswith("/session/"):
         return True
     return path.endswith(".html") and path != "/login.html"
 
@@ -988,4 +990,9 @@ async def proxy_loop_session_path(request: Request, path: str) -> Response:
 # Serve the frontend locally. On Vercel, static files are served by the CDN.
 _public_dir = Path(__file__).parent / "public"
 if _public_dir.is_dir():
+
+    @app.get("/session/{session_id}")
+    async def session_shell(session_id: str) -> FileResponse:
+        return FileResponse(_public_dir / "index.html")
+
     app.mount("/", StaticFiles(directory=str(_public_dir), html=True), name="static")

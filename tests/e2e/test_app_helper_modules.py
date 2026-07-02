@@ -54,8 +54,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
     clean_page.locator("#hero-source-attach").click()
     expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
     clean_page.locator("#hero-source-panel .creation-source-panel-cancel").click()
-    expect(clean_page.locator("#hero-source-value")).to_have_text("none yet")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("add")
+    expect(clean_page.locator("#hero-source-value")).to_have_text("optional")
+    expect(clean_page.locator("#hero-source-attach")).to_have_text("attach")
 
     clean_page.evaluate(
         """() => {
@@ -201,11 +201,11 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             const hero = await import('/js/app-hero.js');
             for (const [state, label] of [
               ['instantiated', 'source captured'],
-              ['growing', 'concept'],
+              ['growing', 'session'],
               ['fractured', 'worth revisiting'],
               ['hibernating', 'spacing'],
               ['actualized', 'spaced evidence'],
-              ['missing', 'no concepts yet'],
+              ['missing', 'no sessions yet'],
             ]) {
               assert(hero.getHeroStateLabel(state) === label, `label ${state}`);
             }
@@ -219,10 +219,10 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(hero.getHeroGuidance({ state: 'actualized' }).includes('Spaced evidence'), 'actualized guidance');
             assert(hero.getHeroGuidance({ state: 'unknown' }).includes('Pick a tile'), 'fallback guidance');
             same(hero.getHeroActionConfig(null), { label: 'Begin', action: 'add', disabled: false }, 'empty action');
-            same(hero.getHeroActionConfig({ state: 'instantiated', graphData: {} }), { label: 'Open Concept', action: 'open-map', disabled: false }, 'instantiated graph action');
-            same(hero.getHeroActionConfig({ state: 'instantiated', graphData: null }), { label: 'Draft Map', action: 'extract', disabled: false }, 'instantiated draft action');
-            same(hero.getHeroActionConfig({ state: 'growing', graphData: {} }), { label: 'Open Concept', action: 'open-map', disabled: false }, 'growing graph action');
-            same(hero.getHeroActionConfig({ state: 'growing', graphData: null }), { label: 'Draft Map', action: 'extract', disabled: false }, 'growing draft action');
+            same(hero.getHeroActionConfig({ state: 'instantiated', graphData: {} }), { label: 'Resume session', action: 'open-map', disabled: false }, 'instantiated graph action');
+            same(hero.getHeroActionConfig({ state: 'instantiated', graphData: null }), { label: 'Build map', action: 'extract', disabled: false }, 'instantiated draft action');
+            same(hero.getHeroActionConfig({ state: 'growing', graphData: {} }), { label: 'Resume session', action: 'open-map', disabled: false }, 'growing graph action');
+            same(hero.getHeroActionConfig({ state: 'growing', graphData: null }), { label: 'Build map', action: 'extract', disabled: false }, 'growing draft action');
             same(hero.getHeroActionConfig({ state: 'fractured' }), { label: 'Repair Gap', action: 'drill', disabled: false }, 'fractured action');
             same(hero.getHeroActionConfig({ state: 'hibernating', graphData: {} }), { label: 'Open Evidence Map', action: 'open-map', disabled: false }, 'hibernating graph action');
             same(hero.getHeroActionConfig({ state: 'hibernating', graphData: null }), { label: 'Return Later', action: 'wait', disabled: true }, 'hibernating wait action');
@@ -418,7 +418,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             };
             assert(library.getLibraryConceptMeta({ graphData: '{' }).thesis.includes('first reconstruction'), 'library malformed fallback');
             assert(library.getLibraryConceptMeta({ graphData: graph }, training).thesis === 'Learner-owned reconstruction.', 'library learner evidence');
-            assert(library.buildLibraryHtml([]).includes('Begin a reconstruction.'), 'library empty state');
+            assert(library.buildLibraryHtml([]).includes('Start a learning session.'), 'library empty state');
             const libraryHtml = library.buildLibraryHtml([
               { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
             ], { 'c-1': training });
@@ -431,7 +431,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(libraryHtml.includes('3 entries'), 'library entry count');
             window.App.showLibrary();
             assert(document.getElementById('library-view').classList.contains('visible'), 'library view visible');
-            assert(document.getElementById('library-content').textContent.includes('Begin a reconstruction.'), 'library app path');
+            assert(document.getElementById('library-content').textContent.includes('Start a learning session.'), 'library app path');
 
             const trainingStoreModule = await import('/js/training-store.js');
             assert(trainingStoreModule.TRAINING_SCHEMA_VERSION === 1, 'training schema version');
@@ -558,11 +558,14 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               at: '2026-05-15T10:10:00.000Z',
               text: 'repair text',
             });
+            await rejects(() => trainingStore.markRepairChecked('concept-training', 'n1', ''), /repair-checked-at-required/, 'training checked repair requires time');
+            await trainingStore.markRepairChecked('concept-training', 'n1', '2026-05-15T10:20:00.000Z');
             const storedTraining = await trainingStore.loadTraining('concept-training');
             assert(storedTraining.node_records.n1.attempts[0].kind === 'cold', 'training derives first attempt kind');
             assert(storedTraining.node_records.n1.attempts[1].kind === 'spaced', 'training derives spaced attempt kind');
             assert(storedTraining.node_records.n1.attempts[0].user_text === '  first learner answer  ', 'training preserves verbatim text');
             assert(storedTraining.node_records.n1.repairs[0].text === 'repair text', 'training appends repair');
+            assert(storedTraining.node_records.n1.repair_checked_at === '2026-05-15T10:20:00.000Z', 'training persists checked repair');
             await trainingStore.saveTraining({
               concept_id: 'corrupt-node-record',
               node_records: { n1: { attempts: null, repairs: null } },
@@ -701,10 +704,10 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(tileA.getAttribute('class') === 'tile-group selected', 'selected tile class');
             assert(tileA.getAttribute('role') === 'button', 'tile role');
             assert(tileA.getAttribute('tabindex') === '0', 'tile tabindex');
-            assert(tileA.getAttribute('aria-label') === 'Open First', 'tile label');
+            assert(tileA.getAttribute('aria-label') === 'Resume First', 'tile label');
             assert(tileA.innerHTML.includes('concept-pin-0'), 'tile pin');
             assert(tileB.getAttribute('class') === 'tile-group empty', 'empty tile class');
-            assert(tileB.getAttribute('aria-label') === 'New concept', 'empty tile label');
+            assert(tileB.getAttribute('aria-label') === 'Start learning', 'empty tile label');
             same(boardEvents, ['grid:rendered'], 'board event');
             const animEl = document.createElement('div');
             animEl.id = 'concept-marker-anim-7';

@@ -10,7 +10,7 @@ import {
   openDrawer as openShellDrawer,
   renderConceptList as renderShellConceptList,
   toggleDrawer as toggleShellDrawer,
-} from './app-shell-ui.js?v=1';
+} from './app-shell-ui.js?v=2';
 import { escHtml } from './html.js';
 import {
   describeDoorSource,
@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=22';
+} from './concept-page-view.js?v=23';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -77,7 +77,7 @@ import {
   buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=1';
+} from './launch-pad.js?v=2';
 import { emitTelemetry } from './telemetry.js';
 
 import {
@@ -525,7 +525,7 @@ const App = (() => {
 
   function renderHero(concept) {
     if (!concept) {
-      titleEl.textContent = 'What do you want to understand?';
+      titleEl.textContent = 'What are you trying to understand?';
       // Empty-state desc dropped per silent-surface principle: the iso
       // board's nine empty slots make the affordance obvious; a
       // narrator line "Pick a tile to enter…" is unearned chrome.
@@ -533,7 +533,7 @@ const App = (() => {
       // branch below still calls getHeroGuidance(concept)).
       descEl.textContent = '';
       if (heroStateChipEl) {
-        heroStateChipEl.textContent = 'no concepts yet';
+        heroStateChipEl.textContent = 'no sessions yet';
         heroStateChipEl.dataset.state = 'empty';
       }
     } else {
@@ -573,9 +573,9 @@ const App = (() => {
     const sourceValue = document.getElementById('hero-source-value');
     if (sourceAttachBtn) {
       sourceAttachBtn.setAttribute('aria-expanded', 'false');
-      sourceAttachBtn.textContent = 'add';
+      sourceAttachBtn.textContent = 'attach';
     }
-    if (sourceValue) sourceValue.textContent = 'none yet';
+    if (sourceValue) sourceValue.textContent = 'optional';
     if (sourcePanel) {
       sourcePanel.hidden = true;
       sourcePanel.innerHTML = '';
@@ -652,10 +652,8 @@ const App = (() => {
     const concept = getActiveConcept();
     const action = heroPrimaryActionEl?.dataset.action || (!concept ? 'add' : '');
     if (action === 'add') {
-      // The conversational creation modal is retired. The Begin button's
-      // "add" action lands the learner on the New-concept (ignition) view —
-      // the same single canonical entry that the sidebar's New concept link
-      // and empty desk tiles use.
+      // The conversational creation modal is retired; this is the single
+      // start-learning surface.
       showIgnition();
       return;
     }
@@ -713,15 +711,15 @@ const App = (() => {
         panel.hidden = true;
         panel.innerHTML = '';
         btn.setAttribute('aria-expanded', 'false');
-        btn.textContent = 'add';
-        if (valueEl) valueEl.textContent = 'none yet';
+        btn.textContent = 'attach';
+        if (valueEl) valueEl.textContent = 'optional';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else if (hasSource) {
         // Panel is closed and a source is attached — the button is the
         // "remove" affordance. Click clears the source without re-opening.
-        btn.textContent = 'add';
-        if (valueEl) valueEl.textContent = 'none yet';
+        btn.textContent = 'attach';
+        if (valueEl) valueEl.textContent = 'optional';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else {
@@ -738,7 +736,7 @@ const App = (() => {
             panel.innerHTML = '';
             btn.setAttribute('aria-expanded', 'false');
             // Paper-style source-meta line: value span shows source ID,
-            // button toggles to "remove" (matches the "add" ↔ "remove"
+            // button toggles to "remove" (matches the "attach" ↔ "remove"
             // affordance pattern persona-validated in Paper Wave 1).
             btn.textContent = 'remove';
             const v = document.getElementById('hero-source-value');
@@ -749,9 +747,9 @@ const App = (() => {
             panel.hidden = true;
             panel.innerHTML = '';
             btn.setAttribute('aria-expanded', 'false');
-            btn.textContent = 'add';
+            btn.textContent = 'attach';
             const v = document.getElementById('hero-source-value');
-            if (v) v.textContent = 'none yet';
+            if (v) v.textContent = 'optional';
             App._pendingDoorSource = null;
             _doorUpdateSubmitState();
           },
@@ -1433,7 +1431,7 @@ const App = (() => {
 
     if (loadConcepts().length >= BOARD_SLOT_COUNT) {
       // Library is at the visible board cap. Don't pay for an LLM call.
-      setDoorError('The board holds nine concepts. Retire one to start another.');
+      setDoorError('The board holds nine sessions. Retire one to start another.');
       return;
     }
 
@@ -1575,10 +1573,7 @@ const App = (() => {
       selectConcept(concept.id);
       if (concept.graphData) showMapView(concept);
     } else {
-      // Empty tile → route straight to the New-concept (ignition) view
-      // rather than opening the conversational creation modal. Same surface
-      // the sidebar's "New concept" link uses; keeps a single canonical
-      // entry into concept creation and avoids the modal layer entirely.
+      // Empty tile → route straight to the start-learning surface.
       AudioFX.playTileClick();
       showIgnition();
     }
@@ -1647,8 +1642,8 @@ const App = (() => {
     if (btnDrill) btnDrill.textContent = 'Start entry';
     if (consolidateBtn) {
       consolidateBtn.disabled = true;
-      consolidateBtn.textContent = 'Spacing gate unavailable';
-      consolidateBtn.title = 'Spacing gate is not active in this MVP';
+      consolidateBtn.textContent = 'Review later';
+      consolidateBtn.title = 'Review opens after spacing.';
     }
     showControls(false, false, false, false, false);
 
@@ -1877,15 +1872,22 @@ const App = (() => {
     return `${conceptId || 'concept'}:${entryId || 'entry'}`;
   }
 
-  function conceptPageRenderOptionsForEntry(concept, entryId, options = {}) {
+  function conceptPageRenderOptionsForEntry(concept, entryId, training = null, options = {}) {
     if (!concept?.id || !entryId) return options;
-    const repairCheckedEntryIds = [...repairChecksThisSession]
+    const persistedCheckedEntryIds = Object.entries(training?.node_records || {})
+      .filter(([, record]) => Boolean(record?.repair_checked_at))
+      .map(([id]) => id);
+    const sessionCheckedEntryIds = [...repairChecksThisSession]
       .filter((key) => key.startsWith(`${concept.id}:`))
       .map((key) => key.slice(concept.id.length + 1));
+    const repairCheckedEntryIds = [...new Set([
+      ...persistedCheckedEntryIds,
+      ...sessionCheckedEntryIds,
+    ])];
     return {
       ...options,
       repairCheckedEntryIds,
-      repairCheckedThisSession: repairChecksThisSession.has(entrySessionKey(concept.id, entryId)),
+      repairCheckedThisSession: repairCheckedEntryIds.includes(entryId),
       comparisonAcknowledged: options?.justRevealedEntryId === entryId
         ? false
         : hasComparisonAcknowledgement(concept.id, entryId),
@@ -2066,7 +2068,7 @@ const App = (() => {
     const match = findConceptEntryById(backbone, entryId) || fallbackMatch;
     if (!docEl || !match) return;
     const renderBackbone = backbone.length ? backbone : [match.entry];
-    const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, options);
+    const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, training, options);
     docEl.innerHTML = renderActiveEntryHtml(
       match.entry,
       match.index,
@@ -2410,14 +2412,14 @@ const App = (() => {
       <div class="concept-page-b2__threshold-editor">
         <textarea
           class="concept-page-b2__threshold-input"
-          aria-label="Edit your concept sketch"
+          aria-label="Edit your context"
           rows="4"
           maxlength="1200"
           placeholder="Name the parts, guesses, examples, or confusions you have."
         >${escHtml(currentText)}</textarea>
         <div class="concept-page-b2__threshold-actions">
           <button type="button" class="concept-page-b2__threshold-cancel">Cancel</button>
-          <button type="button" class="concept-page-b2__threshold-save">Save sketch</button>
+          <button type="button" class="concept-page-b2__threshold-save">Save context</button>
         </div>
       </div>
     `;
@@ -2505,7 +2507,7 @@ const App = (() => {
         backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
       );
       const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
-      const renderOptions = conceptPageRenderOptionsForEntry(liveConcept, _activeEntryId, {});
+      const renderOptions = conceptPageRenderOptionsForEntry(liveConcept, _activeEntryId, training, {});
       docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
       rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
       bindConceptRouteMarginHandlers(document.getElementById('map-content'), freshData, liveConcept, training);
@@ -2543,7 +2545,7 @@ const App = (() => {
     captureActiveEntryDraft();
     doc.classList.add('is-fading-out');
     const routeExpanded = mountEl.querySelector('.concept-page-b2__route')?.dataset?.routeExpanded === 'true';
-    const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, routeExpanded ? {
+    const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, training, routeExpanded ? {
       viewMode: 'expanded-workspace',
       comparisonAcknowledged: true,
     } : {});
@@ -2690,7 +2692,7 @@ const App = (() => {
     } = preferredEntry || selectInitialConceptEntry(backbone, training);
     const renderBackbone = backbone.length ? backbone : [activeEntry];
 
-    const renderOptions = conceptPageRenderOptionsForEntry(concept, activeEntryId, options);
+    const renderOptions = conceptPageRenderOptionsForEntry(concept, activeEntryId, training, options);
     const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training, renderOptions);
 
     // Mount the whole thing
@@ -2720,6 +2722,7 @@ const App = (() => {
     const libraryView = document.getElementById('library-view');
 
     if (!concept || !concept.graphData) return;
+    showSessionRoute(concept.id, { replace: Boolean(opts.fromBoot) });
 
     let data;
     try {
@@ -2914,6 +2917,7 @@ const App = (() => {
   }
 
   function showDashboard() {
+    clearSessionRoute();
     setNavActive('nav-dashboard');
     const heroCard = document.querySelector('.hero-card');
 
@@ -2934,7 +2938,26 @@ const App = (() => {
     el.dateTime = d.toISOString().slice(0, 10);
   }
 
+  function sessionRouteConceptId() {
+    const match = window.location.pathname.match(/^\/session\/([^/?#]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  function showSessionRoute(conceptId, { replace = false } = {}) {
+    if (!conceptId || !window.history?.pushState) return;
+    const target = `/session/${encodeURIComponent(conceptId)}`;
+    if (window.location.pathname === target) return;
+    const method = replace ? 'replaceState' : 'pushState';
+    window.history[method]({}, '', target);
+  }
+
+  function clearSessionRoute() {
+    if (!window.history?.pushState || !window.location.pathname.startsWith('/session/')) return;
+    window.history.pushState({}, '', '/');
+  }
+
   function showIgnition() {
+    clearSessionRoute();
     setNavActive('nav-ignition');
     clearSettingsPanel();
     teardownMapView();
@@ -2987,11 +3010,12 @@ const App = (() => {
       const el = document.getElementById(id);
       if (!el) return;
       el.classList.toggle('at-cap', atCap);
-      el.title = atCap ? 'Library full. Retire a concept to add another.' : '';
+      el.title = atCap ? 'Library full. Retire a session to add another.' : '';
     });
   }
 
   function showLibrary() {
+    clearSessionRoute();
     setNavActive('nav-library');
     const libraryView = document.getElementById('library-view');
     const content = document.getElementById('library-content');
@@ -3110,11 +3134,15 @@ const App = (() => {
 
   // Restore selected concept
   const concepts = loadConcepts();
+  const routeConceptId = sessionRouteConceptId();
+  const routeConcept = routeConceptId
+    ? concepts.find((concept) => concept.id === routeConceptId && concept.graphData)
+    : null;
   const pendingResumeState = loadPhaseBResumeState();
   const resumeConcept = pendingResumeState
     ? concepts.find((concept) => concept.id === pendingResumeState.conceptId && concept.graphData)
     : null;
-  const toLoad = resumeConcept || concepts.find(c => c.id === getActiveId()) || concepts[0] || null;
+  const toLoad = routeConcept || resumeConcept || concepts.find(c => c.id === getActiveId()) || concepts[0] || null;
 
   if (pendingResumeState && !resumeConcept) {
     persistPhaseBResumeState(null);
@@ -3142,12 +3170,19 @@ const App = (() => {
 
   // Boot routing runs AFTER drillState is initialized because showIgnition()
   // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
-  if (!toLoad) {
+  if (routeConceptId && !routeConcept) {
+    showIgnition();
+    const errEl = document.getElementById('hero-door-error');
+    if (errEl) {
+      errEl.textContent = 'That session is not saved in this browser.';
+      errEl.hidden = false;
+    }
+  } else if (!toLoad) {
     showIgnition();
   } else {
     activateConceptSelection(toLoad.id);
-    if (resumeConcept && resumeConcept.id === toLoad.id) {
-      showMapView(toLoad);
+    if (routeConcept || (resumeConcept && resumeConcept.id === toLoad.id)) {
+      showMapView(toLoad, { fromBoot: Boolean(routeConcept) });
     }
   }
 
@@ -4098,6 +4133,7 @@ const App = (() => {
         drillState.helpTurnCount = data.help_turn_count ?? drillState.helpTurnCount;
         if (completedGraphNeutralReDrill) {
           repairChecksThisSession.add(entrySessionKey(concept.id, drillState.node.id));
+          await trainingStore.markRepairChecked(concept.id, drillState.node.id, turnStartedAt);
         }
         handleDrillAssistantMessage(data.agent_response || '');
         if (data.agent_response?.trim()) {
@@ -4533,6 +4569,7 @@ const App = (() => {
   }
 
   function showSettings() {
+    clearSessionRoute();
     setNavActive('nav-settings');
     teardownMapView();
     hidePrimaryViews();

@@ -183,7 +183,7 @@ def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str)
     expect(clean_page.locator(".first-run-welcome")).to_have_count(0)
     clean_page.locator("#nav-ignition").click()
     expect(clean_page.locator("#ignition-first-use")).to_have_text(
-        "Name the concept first. socratink will ask for your starting map before study content appears."
+        "Name what you want to understand. Socratink will ask for your first model, then start the loop."
     )
 
 
@@ -949,6 +949,15 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.keyboard.press("Escape")
     expect(page.locator("#feedback-overlay")).not_to_be_visible()
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    assert "/session/qa-repair-concept" in page.url
+    page.reload()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "Repair checked"
+    )
+    expect(page.locator(".concept-page-b2__repair")).to_contain_text(
+        "Repair checked for now."
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     assert drill_calls[0]["drill_mode"] == "re_drill"
     repaired_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
@@ -956,6 +965,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     assert repaired_training["node_records"]["repair-node"]["repairs"][0]["text"] == (
         "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
     )
+    assert repaired_training["node_records"]["repair-node"]["repair_checked_at"]
     assert (
         repaired_training["node_records"]["repair-node"]["attempts"][0]["classification"]
         == "thin"
@@ -2109,6 +2119,23 @@ def test_saved_library_concept_reopens_map_view(
     expect(clean_page.locator(".concept-item.active")).to_have_count(0)
 
 
+def test_session_url_opens_saved_learning_surface(
+    clean_page: Page, base_url: str
+) -> None:
+    """A saved learning object has a resumable /session/:id URL."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_route_margin_concept(clean_page)
+
+    clean_page.goto(f"{base_url}/session/route-margin-concept")
+
+    expect(clean_page.locator("#map-view")).to_have_class(re.compile(r"visible"))
+    expect(clean_page.locator("#concept-header-title")).to_contain_text(
+        "How sodium channels create an action potential"
+    )
+    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+
+
 def test_concept_view_opens_to_route_margin_canvas(
     clean_page: Page, base_url: str
 ) -> None:
@@ -2900,7 +2927,7 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
     clean_page.once("dialog", accept_delete)
     concept_actions.click()
     delete_button.click()
-    expect(clean_page.locator("#title")).to_have_text("What do you want to understand?")
+    expect(clean_page.locator("#title")).to_have_text("What are you trying to understand?")
     expect(clean_page.locator(".concept-item")).to_have_count(0)
     expect(clean_page.locator("#concept-header-title")).not_to_be_visible()
     assert clean_page.locator("body").get_attribute("data-map-open") != "true"
@@ -3083,7 +3110,7 @@ def test_desk_iso_board_state_surface_and_room_labels(
     expect(clean_page.locator("#tile-1")).to_have_attribute("role", "button")
     expect(clean_page.locator("#tile-1")).to_have_attribute("tabindex", "0")
     expect(clean_page.locator("#tile-1")).to_have_attribute(
-        "aria-label", "Open Primed Board Tile"
+        "aria-label", "Resume Primed Board Tile"
     )
 
     # Populated tiles must not carry the empty "+" affordance from a prior
@@ -3096,7 +3123,7 @@ def test_desk_iso_board_state_surface_and_room_labels(
 
     clean_page.locator("#tile-1").focus()
     expect(clean_page.locator(".room-label")).to_contain_text("Primed Board Tile")
-    expect(clean_page.locator(".room-label")).to_contain_text("Open entry")
+    expect(clean_page.locator(".room-label")).to_contain_text("Resume")
 
     # Keyboard activation: SVG <g> doesn't fire click on Enter natively,
     # so app.js binds a keydown handler explicitly.
@@ -3111,11 +3138,11 @@ def test_desk_iso_board_state_surface_and_room_labels(
     clean_page.locator("#nav-dashboard").click()
     expect(clean_page.locator("#tile-8")).to_have_class(re.compile(r"\bempty\b"))
     expect(clean_page.locator("#tile-8")).to_have_attribute(
-        "aria-label", "New concept"
+        "aria-label", "Start learning"
     )
 
     clean_page.locator("#tile-8").focus()
-    expect(clean_page.locator(".room-label")).to_contain_text("New concept")
+    expect(clean_page.locator(".room-label")).to_contain_text("Start learning")
     assert captured["console_errors"] == []
     assert captured["failed_requests"] == []
 

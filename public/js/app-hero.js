@@ -1,25 +1,25 @@
 export function getHeroStateLabel(state) {
   switch (state) {
     case 'instantiated': return 'source captured';
-    case 'growing': return 'concept';
+    case 'growing': return 'session';
     case 'fractured': return 'worth revisiting';
     case 'hibernating': return 'spacing';
     case 'actualized': return 'spaced evidence';
-    default: return 'no concepts yet';
+    default: return 'no sessions yet';
   }
 }
 
 export function getHeroGuidance(concept) {
-  if (!concept) return 'Pick a tile to enter, or start a new concept.';
+  if (!concept) return 'Pick a tile to resume, or start a new loop.';
   switch (concept.state) {
     case 'instantiated':
       return concept.graphData
-        ? 'Open the concept. It is a hypothesis, not evidence yet.'
-        : 'Map this source into a concept. The map is not learner evidence.';
+        ? 'Resume the session. The map is a hypothesis, not evidence yet.'
+        : 'Turn the material into a learning session. The map is not learner evidence.';
     case 'growing':
       return concept.graphData
-        ? 'Open the concept. Start with one cold attempt before study appears.'
-        : 'Continue by mapping this source into a concept.';
+        ? 'Resume the session. Start with one cold attempt before study appears.'
+        : 'Continue by turning this material into a session.';
     case 'fractured':
       return 'A spaced re-drill found a gap worth repairing. Revisit the mechanism, then return under spacing.';
     case 'hibernating':
@@ -27,7 +27,7 @@ export function getHeroGuidance(concept) {
     case 'actualized':
       return 'Spaced evidence is on record. Re-drill later if you want another reconstruction pass.';
     default:
-      return 'Pick a tile to enter, or start a new concept.';
+      return 'Pick a tile to resume, or start a new loop.';
   }
 }
 
@@ -38,12 +38,12 @@ export function getHeroActionConfig(concept) {
   switch (concept.state) {
     case 'instantiated':
       return concept.graphData
-        ? { label: 'Open Concept', action: 'open-map', disabled: false }
-        : { label: 'Draft Map', action: 'extract', disabled: false };
+        ? { label: 'Resume session', action: 'open-map', disabled: false }
+        : { label: 'Build map', action: 'extract', disabled: false };
     case 'growing':
       return concept.graphData
-        ? { label: 'Open Concept', action: 'open-map', disabled: false }
-        : { label: 'Draft Map', action: 'extract', disabled: false };
+        ? { label: 'Resume session', action: 'open-map', disabled: false }
+        : { label: 'Build map', action: 'extract', disabled: false };
     case 'fractured':
       return { label: 'Repair Gap', action: 'drill', disabled: false };
     case 'hibernating':
