@@ -5,7 +5,9 @@ requests; otherwise the next request 401s.
 """
 
 import os
+import tempfile
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -128,6 +130,19 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("socratink", response.text)
+
+    def test_public_index_resolver_uses_first_existing_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing-public"
+            present = Path(tmp) / "public"
+            present.mkdir()
+            index_file = present / "index.html"
+            index_file.write_text("shell", encoding="utf-8")
+
+            self.assertEqual(
+                main._public_index_file((missing, present)),
+                index_file,
+            )
 
 
 class DevAutoguestGuardTests(unittest.TestCase):

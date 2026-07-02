@@ -987,12 +987,32 @@ async def proxy_loop_session_path(request: Request, path: str) -> Response:
     return await proxy_loop_backend(request, f"/api/session/{path}")
 
 
-# Serve the frontend locally. On Vercel, static files are served by the CDN.
-_public_dir = Path(__file__).parent / "public"
-if _public_dir.is_dir():
+# Serve the frontend locally. On Vercel, static files are served by the CDN, but
+# deep app URLs still need the serverless FastAPI app to return the shell.
+_PUBLIC_DIR_CANDIDATES: tuple[Path, ...] = (
+    Path(__file__).resolve().parent / "public",
+    Path.cwd() / "public",
+    Path(__file__).resolve().parent.parent / "public",
+)
 
-    @app.get("/session/{session_id}")
-    async def session_shell(session_id: str) -> FileResponse:
-        return FileResponse(_public_dir / "index.html")
 
+def _public_index_file(candidates: tuple[Path, ...] = _PUBLIC_DIR_CANDIDATES) -> Path | None:
+    for directory in candidates:
+        index_file = directory / "index.html"
+        if index_file.is_file():
+            return index_file
+    return None
+
+
+@app.get("/session/{session_id}")
+async def session_shell(session_id: str) -> FileResponse:
+    index_file = _public_index_file()
+    if index_file is None:
+        raise HTTPException(status_code=404, detail="app shell not found")
+    return FileResponse(index_file)
+
+
+_public_index = _public_index_file()
+if _public_index is not None:
+    _public_dir = _public_index.parent
     app.mount("/", StaticFiles(directory=str(_public_dir), html=True), name="static")
