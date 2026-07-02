@@ -532,8 +532,20 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     """Localhost QA can seed a concept with learner-owned training evidence."""
     if not _is_loopback_base_url(base_url):
         pytest.skip("local QA seed controls are intentionally loopback-only")
+    feedback_payloads = []
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.route(
+        "**/api/feedback",
+        lambda route: (
+            feedback_payloads.append(route.request.post_data_json),
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body='{"ok": true}',
+            ),
+        ),
+    )
 
     page.locator("#nav-library").click()
     page.locator("[data-local-qa-seed]").click()
@@ -559,7 +571,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     context_dock = page.locator(".concept-page-b2__context-dock")
     expect(context_dock).to_contain_text("Context")
     expect(context_dock).to_contain_text("Learner rough sketch baseline.")
-    expect(context_dock).to_contain_text(
+    expect(context_dock).not_to_contain_text(
         "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
@@ -582,9 +594,28 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "The revealed study note names the comparison target after the cold attempt: identify the mechanism, then mark any missing link for repair."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "review pending"
+        "Compare notes"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
+    expect(page.locator("[data-feedback-rating]")).to_have_text("Rate this moment")
+    page.locator("[data-feedback-rating]").click()
+    expect(page.locator("#feedback-overlay")).to_be_visible()
+    expect(page.locator("#feedback-title")).to_have_text("Rate this moment")
+    expect(page.locator("#feedback-desc")).to_have_text(
+        "How did comparing your answer to the notes feel? A 9 or 10 means the UX feels ready for a new customer."
+    )
+    expect(page.locator("#feedback-submit")).to_have_text("Send Rating")
+    expect(page.locator("#feedback-ux-rating")).to_be_focused()
+    page.locator("#feedback-ux-rating").select_option("9")
+    page.locator("#feedback-submit").click()
+    expect(page.locator("#feedback-status")).to_have_text(
+        "Thank you! Feedback captured."
+    )
+    assert feedback_payloads == [
+        {"message": "UX feel: 9/10\nUX moment: compare notes"}
+    ]
+    page.locator(".modal-close").click()
+    expect(page.locator("#feedback-overlay")).not_to_be_visible()
     revealed_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
     )
@@ -605,7 +636,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "Updated learner sketch."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "review pending"
+        "Compare notes"
     )
     edited_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
@@ -735,6 +766,41 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     """A studied thin attempt can append repair text without faking mastery."""
     if not _is_loopback_base_url(base_url):
         pytest.skip("local QA seed controls are intentionally loopback-only")
+    drill_calls: list[dict] = []
+
+    def fulfill_drill(route):
+        payload = route.request.post_data_json
+        drill_calls.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "agent_response": "That repair is coherent enough to move on. The entry is still evidence-neutral until spaced reconstruction.",
+                    "generative_commitment": False,
+                    "answer_mode": "attempt",
+                    "score_eligible": True,
+                    "classification": "solid",
+                    "gap_description": None,
+                    "routing": "NEXT",
+                    "response_tier": 3,
+                    "response_band": "mechanism",
+                    "tier_reason": "The answer names the condition, action, and downstream change.",
+                    "node_id": payload["node_id"],
+                    "probe_count": 1,
+                    "nodes_drilled": 1,
+                    "attempt_turn_count": 1,
+                    "help_turn_count": 0,
+                    "graph_mutated": False,
+                    "ux_reward_emitted": False,
+                    "session_terminated": False,
+                    "termination_reason": None,
+                    "prompt_version": "qa-pressure-check-terminal",
+                }
+            ),
+        )
+
+    page.route("**/api/drill", fulfill_drill)
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
 
@@ -759,7 +825,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
 
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Needs repair"
+        "Compare notes"
     )
     expect(page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "Missing piece"
@@ -770,6 +836,29 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "Name that threshold opens the channel"
     )
+    repair_surface_style = page.locator(".concept-page-b2__repair").evaluate(
+        """(el) => {
+            const style = window.getComputedStyle(el);
+            const labelStyle = window.getComputedStyle(el.querySelector('.concept-page-b2__repair-target span'));
+            const saveStyle = window.getComputedStyle(el.querySelector('.concept-page-b2__repair-save'));
+            return {
+                backgroundColor: style.backgroundColor,
+                borderLeftWidth: style.borderLeftWidth,
+                borderTopWidth: style.borderTopWidth,
+                labelTextTransform: labelStyle.textTransform,
+                labelLetterSpacing: labelStyle.letterSpacing,
+                saveMinHeight: saveStyle.minHeight,
+            };
+        }"""
+    )
+    assert repair_surface_style == {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderLeftWidth": "2px",
+        "borderTopWidth": "0px",
+        "labelTextTransform": "none",
+        "labelLetterSpacing": "normal",
+        "saveMinHeight": "44px",
+    }
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
 
     page.locator(".concept-page-b2__repair-save").click()
@@ -816,12 +905,51 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Pressure-check this link"
     )
     expect(page.locator(".concept-page-b2__repair")).to_be_visible()
+    assert page.evaluate("window.scrollY") == 0
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator("#drill-chamber-view")).to_be_visible()
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "Pressure check"
+    )
+    expect(page.locator("#chamber-send")).to_have_text("Check reconstruction")
+    expect(page.locator(".drill-chamber__hint")).to_have_text("A sentence is enough.")
     expect(
         page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
     ).to_be_visible()
     expect(page.locator(".concept-page-b2__attempt-input")).to_have_count(0)
+    page.locator("#chamber-composer").fill(
+        "Threshold opens the channel, then sodium moves through because the gradient can act."
+    )
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-send")).to_have_text("Return to concept")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
+        "Repair checked"
+    )
+    expect(page.locator(".concept-page-b2__repair")).to_contain_text(
+        "Repair checked for now."
+    )
+    expect(page.locator(".concept-page-b2__repair")).to_contain_text(
+        "A strong later answer can update the record."
+    )
+    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
+        "Study note stays hidden for later reconstruction."
+    )
+    expect(page.locator(".concept-page-b2__study-note")).not_to_contain_text(
+        "while you repair"
+    )
+    expect(page.locator("[data-feedback-rating]")).to_have_text("Rate this moment")
+    page.locator("[data-feedback-rating]").click()
+    expect(page.locator("#feedback-overlay")).to_be_visible()
+    expect(page.locator("#feedback-desc")).to_have_text(
+        "How did checking your repair feel? A 9 or 10 means the UX feels ready for a new customer."
+    )
+    expect(page.locator("#feedback-ux-rating")).to_be_focused()
+    page.keyboard.press("Escape")
+    expect(page.locator("#feedback-overlay")).not_to_be_visible()
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    assert drill_calls[0]["drill_mode"] == "re_drill"
     repaired_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
     )
@@ -1354,8 +1482,9 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Re-drill Truth QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Ready to reconstruct again"
+        "Compare notes"
     )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Reconstruct from memory")
     page.locator(".concept-page-b2__entry-cta").click()
     page.locator(".concept-page-b2__attempt-input").fill(
         "The mechanism opens first, then the downstream flow follows."
@@ -1717,6 +1846,14 @@ def test_feedback_button_keeps_sidebar_open(
     clean_page.locator("#nav-feedback").click()
 
     expect(clean_page.locator("#feedback-overlay")).to_be_visible()
+    expect(clean_page.locator("#feedback-desc")).to_have_text(
+        "Share a bug, rough edge, or idea. A 9 or 10 means the UX feels ready for a new customer."
+    )
+    expect(clean_page.locator("#feedback-submit")).to_have_text("Send Feedback")
+    clean_page.locator("#feedback-submit").click()
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Message must be at least 10 characters."
+    )
     assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
     assert clean_page.locator("body").get_attribute("data-drawer-open") == "true"
 
@@ -1725,29 +1862,75 @@ def test_feedback_submit_reenables_on_reopen(
     clean_page: Page, base_url: str
 ) -> None:
     """A successful feedback send must not leave the next feedback modal disabled."""
+    feedback_payloads = []
     _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.route(
         "**/api/feedback",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body='{"ok": true}',
+        lambda route: (
+            feedback_payloads.append(route.request.post_data_json),
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body='{"ok": true}',
+            ),
         ),
     )
 
     clean_page.locator("#nav-feedback").click()
-    clean_page.locator("#feedback-message").fill("This feedback should submit cleanly.")
+    clean_page.locator("#feedback-ux-rating").select_option("9")
     clean_page.locator("#feedback-submit").click()
 
     expect(clean_page.locator("#feedback-status")).to_have_text(
         "Thank you! Feedback captured."
     )
+    assert feedback_payloads == [{"message": "UX feel: 9/10"}]
     clean_page.locator(".modal-close").click()
 
     clean_page.locator("#nav-feedback").click()
 
     expect(clean_page.locator("#feedback-submit")).to_be_enabled()
     expect(clean_page.locator("#feedback-message")).to_have_value("")
+    expect(clean_page.locator("#feedback-ux-rating")).to_have_value("")
+
+
+def test_feedback_custom_moment_rejects_invalid_rating(
+    clean_page: Page, base_url: str
+) -> None:
+    """Moment feedback should explain the moment and reject invalid scores."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.evaluate("window.Feedback.show({ focus: 'rating', moment: 'focus mode' })")
+
+    expect(clean_page.locator("#feedback-overlay")).to_be_visible()
+    expect(clean_page.locator("#feedback-desc")).to_have_text(
+        "How did the focus mode step feel? A 9 or 10 means the UX feels ready for a new customer."
+    )
+    clean_page.locator("#feedback-submit").click()
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Please rate this moment 1-10."
+    )
+    expect(clean_page.locator("#feedback-ux-rating")).to_be_focused()
+
+    clean_page.evaluate(
+        """() => {
+            const rating = document.getElementById('feedback-ux-rating');
+            rating.insertAdjacentHTML('beforeend', '<option value="11">11</option>');
+            rating.value = '11';
+        }"""
+    )
+    clean_page.locator("#feedback-submit").click()
+
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "UX feel must be 1-10."
+    )
+    expect(clean_page.locator("#feedback-ux-rating")).to_be_focused()
+    clean_page.locator("#feedback-ux-rating").select_option("9")
+    clean_page.locator("#feedback-message").fill("x" * 1000)
+    clean_page.locator("#feedback-submit").click()
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Feedback must be 1000 characters or fewer after rating details."
+    )
+    expect(clean_page.locator("#feedback-message")).to_be_focused()
 
 
 def test_feedback_dialog_has_accessible_escape_close(
@@ -1761,7 +1944,10 @@ def test_feedback_dialog_has_accessible_escape_close(
     expect(clean_page.locator("#feedback-overlay")).to_have_attribute("role", "dialog")
     expect(clean_page.locator("#feedback-overlay")).to_have_attribute("aria-modal", "true")
     expect(clean_page.locator("#feedback-overlay")).to_have_attribute("aria-labelledby", "feedback-title")
+    expect(clean_page.locator("#feedback-overlay")).to_have_attribute("aria-describedby", "feedback-desc")
     expect(clean_page.locator("#feedback-title")).to_have_text("Feedback")
+    expect(clean_page.locator("#feedback-status")).to_have_attribute("role", "status")
+    expect(clean_page.locator("#feedback-status")).to_have_attribute("aria-live", "polite")
 
     clean_page.keyboard.press("Escape")
 
@@ -1814,6 +2000,8 @@ def test_mobile_drawer_keeps_feedback_accessible(
     assert drawer_box is not None
     assert drawer_box["x"] >= 0
     assert drawer_box["x"] + drawer_box["width"] <= 390
+    page.evaluate("document.querySelector('#nav-loop').hidden = false")
+    expect(page.locator("#nav-loop")).to_be_visible()
     expect(page.locator("#nav-feedback")).to_be_visible()
 
     page.locator("#nav-feedback").click()
@@ -1839,15 +2027,58 @@ def test_mobile_concept_attempt_has_writing_width(
     expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
     expect(page.locator("#drawer-toggle")).to_be_visible()
     expect(page.locator("#bottom-nav")).not_to_be_visible()
+    disabled_save_style = page.locator(".concept-page-b2__attempt-save").evaluate(
+        """(el) => {
+            const style = window.getComputedStyle(el);
+            return {
+                backgroundColor: style.backgroundColor,
+                borderStyle: style.borderStyle,
+            };
+        }"""
+    )
+    assert disabled_save_style == {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderStyle": "dashed",
+    }
+    page.locator(".concept-page-b2__attempt-input").fill(
+        "Sodium channels probably open when voltage reaches a trigger."
+    )
+    expect(page.locator("#concept-view-switch")).to_be_hidden()
 
     toggle_box = page.locator("#drawer-toggle").bounding_box()
     assert toggle_box is not None
     assert toggle_box["width"] >= 44
     assert toggle_box["height"] >= 44
+    title_box = page.locator("#concept-header-title").bounding_box()
+    assert title_box is not None
+    assert title_box["y"] > toggle_box["y"] + toggle_box["height"]
+    context_label_box = page.locator(".concept-page-b2__threshold-label").bounding_box()
+    context_edit_box = page.locator("[data-edit-threshold]").bounding_box()
+    assert context_label_box is not None
+    assert context_edit_box is not None
+    context_label_center = context_label_box["y"] + (context_label_box["height"] / 2)
+    context_edit_center = context_edit_box["y"] + (context_edit_box["height"] / 2)
+    assert abs(context_edit_center - context_label_center) <= 6
+    assert context_edit_box["x"] > context_label_box["x"]
+    assert context_edit_box["height"] >= 43.9
+    expect(page.locator(".concept-page-b2__route")).to_have_count(0)
 
     attempt_box = page.locator(".concept-page-b2__attempt-input").bounding_box()
     assert attempt_box is not None
     assert attempt_box["width"] >= 300
+    assert attempt_box["height"] >= 140
+    save_box = page.locator(".concept-page-b2__attempt-save").bounding_box()
+    cue_box = page.locator(".concept-page-b2__blank-start-button").bounding_box()
+    truth_note_box = page.locator(".concept-page-b2__truth-note").bounding_box()
+    assert save_box is not None
+    assert cue_box is not None
+    assert truth_note_box is not None
+    save_center = save_box["y"] + (save_box["height"] / 2)
+    cue_center = cue_box["y"] + (cue_box["height"] / 2)
+    assert abs(save_center - cue_center) <= 6
+    assert cue_box["x"] > save_box["x"]
+    assert save_box["width"] >= 132
+    assert truth_note_box["y"] <= cue_box["y"] + cue_box["height"] + 36
 
 
 def test_saved_library_concept_reopens_map_view(
@@ -1881,7 +2112,7 @@ def test_saved_library_concept_reopens_map_view(
 def test_concept_view_opens_to_route_margin_canvas(
     clean_page: Page, base_url: str
 ) -> None:
-    """A cold concept opens on a gestalt route margin with inline generation."""
+    """A cold source-less concept opens on one writing surface."""
     _seed_route_margin_concept(clean_page)
     _enter_app_shell_as_guest(clean_page, base_url)
 
@@ -1892,7 +2123,7 @@ def test_concept_view_opens_to_route_margin_canvas(
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible()
-    expect(clean_page.locator("#concept-view-switch")).to_have_text("Constellation")
+    expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
     expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
     expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text("Context")
     expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text(
@@ -1902,11 +2133,7 @@ def test_concept_view_opens_to_route_margin_canvas(
         "Write first. Compare after."
     )
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
-    expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(4)
-    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(0)).to_contain_text("Sodium gate")
-    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(1)).to_contain_text("Opening rule")
-    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(2)).to_contain_text("Signal spread")
-    expect(canvas.locator(".concept-page-b2__route-marker-item").nth(3)).to_contain_text("Blocked gate")
+    expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(0)
     expect(canvas).not_to_contain_text("Sodium channels open at threshold")
     expect(canvas).not_to_contain_text("This generated summary must not")
     expect(canvas).not_to_contain_text("bloom")
@@ -1922,9 +2149,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "Write one sentence. Name the trigger, even if you are guessing."
     )
-    expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text(
-        "Use this draft"
-    )
+    expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text("Save draft")
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_be_disabled()
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_attribute(
         "aria-disabled", "true"
@@ -1939,9 +2164,10 @@ def test_concept_view_opens_to_route_margin_canvas(
         "aria-disabled", "false"
     )
     blank_start = canvas.locator("[data-blank-start]")
-    expect(blank_start).to_have_text("Stuck?")
+    expect(blank_start).to_have_text("Need a cue?")
     expect(blank_start).to_have_attribute("aria-expanded", "false")
     blank_start.click()
+    expect(blank_start).to_be_hidden()
     expect(canvas.locator("[data-blank-start-hint]")).to_be_visible()
     expect(canvas.locator("[data-blank-start-hint]")).to_contain_text(
         "Think about the point where a small signal becomes enough to matter."
@@ -1956,7 +2182,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     attempt_input.fill("")
     fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=17');
+            const mod = await import('/js/concept-page-view.js?v=22');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -1992,7 +2218,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     assert "Type one relationship you suspect, even if it feels incomplete." in fallback_html
     empty_fallback_html = clean_page.evaluate(
         """async () => {
-            const mod = await import('/js/concept-page-view.js?v=17');
+            const mod = await import('/js/concept-page-view.js?v=22');
             const entries = mod.deriveConceptEntries({
                 clusters: [{
                     id: 'c1',
@@ -2024,46 +2250,13 @@ def test_concept_view_opens_to_route_margin_canvas(
             );
         }"""
     )
-    assert "Write the first useful version of your current model." in empty_fallback_html
+    assert "Write what you can explain right now." in empty_fallback_html
     canvas.locator(".concept-page-b2__attempt-input").fill(
         "Sodium channels probably open when voltage reaches a trigger."
     )
-    clean_page.locator("#concept-view-switch").click()
-    expect(clean_page.locator("#map-content")).to_be_hidden()
-    constellation = clean_page.locator("#concept-constellation-content")
-    expect(constellation).to_be_visible()
-    expect(clean_page.locator("#concept-view-switch")).to_have_text("Return to route")
-    expect(constellation).to_contain_text("Draft structure only.")
-    expect(constellation).to_contain_text("Overview first.")
-    expect(constellation.locator(".concept-constellation__selected")).to_be_visible()
-    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
-        "Sodium gate"
-    )
-    expect(constellation.locator(".concept-constellation__node")).to_have_count(4)
-    expect(constellation.locator(".concept-constellation__node").nth(0)).to_have_attribute(
-        "role", "button"
-    )
-    expect(constellation.locator(".concept-constellation__node").nth(0)).to_have_attribute(
-        "tabindex", "0"
-    )
-    expect(constellation).to_contain_text("Sodium gate")
-    expect(constellation).to_contain_text("Opening rule")
-    expect(constellation).not_to_contain_text("Sodium channels open at threshold")
-    expect(constellation).not_to_contain_text("This generated summary must not")
-    expect(constellation).not_to_contain_text("Voltage threshold changes")
-    expect(constellation).not_to_contain_text("Name what has to happen before flow.")
-    second_constellation_node = constellation.locator(".concept-constellation__node").nth(1)
-    second_constellation_node.click()
-    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
-        "Opening rule"
-    )
-    first_constellation_node = constellation.locator(".concept-constellation__node").nth(0)
-    first_constellation_node.press("Enter")
-    expect(constellation.locator("[data-constellation-selected-name]")).to_have_text(
-        "Sodium gate"
-    )
-    constellation.locator(".concept-constellation__return").click()
+    expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
     expect(clean_page.locator("#map-content")).to_be_visible()
+    expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_contain_text(
         "Sodium gate"
     )
@@ -2158,16 +2351,45 @@ def test_source_concept_review_can_continue_to_next_entry(
 
     clean_page.locator(".concept-item", has_text="Source Review Continue QA").click()
     expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "review pending"
+        "Review later"
     )
     expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Continue route"
     )
+    continue_cta_style = clean_page.locator(".concept-page-b2__entry-cta").evaluate(
+        """(el) => {
+            const style = window.getComputedStyle(el);
+            return {
+                backgroundColor: style.backgroundColor,
+                borderStyle: style.borderStyle,
+                minHeight: style.minHeight,
+            };
+        }"""
+    )
+    assert continue_cta_style["backgroundColor"] != "rgba(0, 0, 0, 0)"
+    assert continue_cta_style["borderStyle"] == "solid"
+    assert continue_cta_style["minHeight"] == "44px"
     clean_page.locator(".concept-page-b2__entry-cta").click()
+    assert clean_page.evaluate(
+        "localStorage.getItem('socratink:comparison_ack:v1:source-review-continue:c1_s1')"
+    ) == "1"
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text(
         "Heat call"
     )
-    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    attempt_input = clean_page.locator(".concept-page-b2__attempt-input")
+    expect(attempt_input).to_be_visible()
+    expect(attempt_input).to_be_focused()
+    prompt_box = clean_page.locator(".concept-page-b2__attempt h3").bounding_box()
+    drawer_box = clean_page.locator("#drawer-toggle").bounding_box()
+    attempt_box = attempt_input.bounding_box()
+    viewport = clean_page.viewport_size
+    assert prompt_box is not None
+    assert drawer_box is not None
+    assert attempt_box is not None
+    assert viewport is not None
+    assert clean_page.evaluate("window.scrollY") == 0
+    assert prompt_box["y"] > drawer_box["y"] + drawer_box["height"]
+    assert 0 <= attempt_box["y"] < viewport["height"]
 
 
 def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
@@ -2385,10 +2607,11 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     )
     expect(canvas).not_to_contain_text("Shaped by your sketch")
     expect(canvas).to_contain_text("Compare target")
-    expect(canvas).to_contain_text("Call for heat")
+    expect(canvas).not_to_contain_text("Call for heat")
     expect(canvas).not_to_contain_text("compares measured room temperature")
     expect(canvas).not_to_contain_text("Generated description should not leak")
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
+    expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(0)
     expect(canvas.locator(".concept-page-b2__nearby")).to_have_count(0)
 
     clean_page.locator(".concept-page-b2__attempt-input").fill(
@@ -2399,16 +2622,55 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text(
         "It checks if the room is colder than what we wanted and then starts heat."
     )
-    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text("Draft recorded.")
+    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text("Draft recorded.")
+    expect(clean_page.locator(".concept-page-b2__evidence")).to_have_class(
+        re.compile(r"\bconcept-page-b2__evidence--study-gate\b")
+    )
     expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
     expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reveal notes and compare"
     )
 
     clean_page.locator(".concept-page-b2__entry-cta").click()
+    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Compare notes")
+    entry_label_style = clean_page.locator(".concept-page-b2__entry-eyebrow").evaluate(
+        """(el) => {
+            const style = window.getComputedStyle(el);
+            return {
+                letterSpacing: style.letterSpacing,
+                textTransform: style.textTransform,
+            };
+        }"""
+    )
+    assert entry_label_style == {"letterSpacing": "normal", "textTransform": "none"}
     expect(clean_page.locator(".concept-page-b2__study-note")).to_contain_text(
         "measured room temperature with the set point"
     )
+    expect(clean_page.locator(".concept-page-b2__study-note")).not_to_have_class(
+        re.compile(r"is-collapsed")
+    )
+    expect(clean_page.locator("[data-study-note-toggle]")).to_have_text("Hide study note")
+    compare_surface_style = clean_page.locator(".concept-page-b2__study-note").evaluate(
+        """(el) => {
+            const style = window.getComputedStyle(el);
+            const bodyStyle = window.getComputedStyle(el.querySelector('[data-study-note-body]'));
+            return {
+                backgroundColor: style.backgroundColor,
+                borderLeftWidth: style.borderLeftWidth,
+                borderTopWidth: style.borderTopWidth,
+                bodyFontWeight: bodyStyle.fontWeight,
+            };
+        }"""
+    )
+    assert compare_surface_style == {
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "borderLeftWidth": "2px",
+        "borderTopWidth": "0px",
+        "bodyFontWeight": "500",
+    }
+    study_toggle_box = clean_page.locator("[data-study-note-toggle]").bounding_box()
+    assert study_toggle_box is not None
+    assert study_toggle_box["height"] >= 44
     expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "Missing piece"
     )
@@ -2437,25 +2699,21 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     )
     clean_page.locator(".concept-page-b2__repair-save").click()
     clean_page.locator(".concept-page-b2__entry-cta").click()
-    expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
-        "data-route-expanded", "true"
-    )
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
-        "data-locked-inert", "true"
-    )
+    clean_page.set_viewport_size({"width": 390, "height": 844})
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Compare target")
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
+    clean_page.set_viewport_size({"width": 1280, "height": 720})
 
     clean_page.reload()
     reopen_created_concept()
-    expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
+    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Compare target")
+    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
         "Pressure-check this link"
     )
-
-    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c2_s1"]').click()
-    clean_page.wait_for_timeout(700)
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Call for heat")
-    expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__nearby")).to_have_count(0)
     expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
         "Generated future description should not leak"
     )
@@ -2466,10 +2724,6 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
         "Hidden future study note"
     )
     expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
-
-    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c3_s1"]').click()
-    clean_page.wait_for_timeout(700)
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Call for heat")
 
 
 def test_source_less_defensive_ui_paths_remain_inert(
@@ -2521,7 +2775,7 @@ def test_source_less_defensive_ui_paths_remain_inert(
 
     fallback_mode = clean_page.evaluate(
         """async () => {
-            const view = await import('/js/concept-page-view.js?v=17');
+            const view = await import('/js/concept-page-view.js?v=22');
             return view.deriveSourceLessViewMode({
                 attempted: true,
                 next_action: 'spaced_attempt',

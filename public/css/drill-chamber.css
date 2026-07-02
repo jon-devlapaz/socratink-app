@@ -104,8 +104,8 @@
 .drill-chamber__history-turn-meta {
   font-family: ui-monospace, monospace;
   font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   margin-bottom: 4px;
 }
 
@@ -156,7 +156,7 @@
   display: flex; justify-content: space-between; align-items: center;
   margin-top: 14px;
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 .drill-chamber__send {
   /* Opt out of base.css's `button { flex: 1 }` global. Without this
@@ -170,7 +170,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   cursor: pointer;
   /* Defeat the base.css button hover transform / box-shadow so the
      chamber's send stays a quiet ghost pill, not a brand-default CTA. */
@@ -184,6 +184,16 @@
   box-shadow: none;
 }
 .drill-chamber__send[disabled] { opacity: 0.40; cursor: not-allowed; }
+
+.drill-chamber__active[data-complete="true"] .drill-chamber__composer textarea,
+.drill-chamber__active[data-complete="true"] .drill-chamber__hint {
+  display: none;
+}
+
+.drill-chamber__active[data-complete="true"] .drill-chamber__composer-foot {
+  justify-content: flex-end;
+  margin-top: 20px;
+}
 
 /* History toggle is also a button -- same flex-grow opt-out. */
 .drill-chamber__history-toggle {
@@ -457,7 +467,7 @@
   border: 1px solid rgba(var(--violet-600-rgb), 0.10);
   border-radius: 8px;
   background: rgba(var(--white-rgb), 0.34);
-  opacity: 0.46;
+  opacity: 0.74;
 }
 
 .concept-page-b2__active-entry .drill-chamber__active {

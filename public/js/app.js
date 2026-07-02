@@ -25,7 +25,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=20';
+} from './concept-page-view.js?v=22';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -65,7 +65,7 @@ import {
   isIdentifiedUserSession,
   logout,
   redirectToLogin,
-} from './auth.js?v=3';
+} from './auth.js?v=4';
 import { prefersReducedMotion } from './motion.js';
 import {
   STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
@@ -455,6 +455,72 @@ const App = (() => {
 
   function conceptViewSwitchButton() {
     return document.getElementById('concept-view-switch');
+  }
+
+  function hasActiveEntryReconstructionEvidence(training) {
+    const records = training?.node_records && typeof training.node_records === 'object'
+      ? training.node_records
+      : {};
+    const record = _activeEntryId ? records[_activeEntryId] : null;
+    if (!record || typeof record !== 'object') return false;
+    if (Array.isArray(record.attempts) && record.attempts.length > 0) return true;
+    return Boolean(record.attempt_text || record.latest_attempt || record.study_revealed_at);
+  }
+
+  function hasActiveAttemptDraft() {
+    const input = document.querySelector('.concept-page-b2__attempt-input');
+    return Boolean((input?.value || '').trim());
+  }
+
+  function normalizeSourceModeToken(value) {
+    const mode = typeof value === 'string' ? value.trim() : '';
+    return mode === 'source_less' || mode === 'source_attached' ? mode : '';
+  }
+
+  function isSourceLessConcept(concept, data, training = null) {
+    const explicitMode = normalizeSourceModeToken(training?.source_mode)
+      || normalizeSourceModeToken(concept?.sourceMode)
+      || normalizeSourceModeToken(concept?.source_mode)
+      || normalizeSourceModeToken(data?.metadata?.source_mode);
+    if (explicitMode) return explicitMode === 'source_less';
+
+    const hasNullContentType = Object.prototype.hasOwnProperty.call(concept || {}, 'contentType')
+      && concept?.contentType === null;
+    const hasNullSourceUrl = Object.prototype.hasOwnProperty.call(concept || {}, 'sourceUrl')
+      && concept?.sourceUrl === null;
+    const hasSourceMarker = Boolean(
+      (concept?.contentType || '').trim?.()
+      || (concept?.contentFilename || '').trim?.()
+      || (concept?.sourceUrl || '').trim?.()
+      || (data?.metadata?.source_url || '').trim?.()
+    );
+    return hasNullContentType && hasNullSourceUrl && !hasSourceMarker;
+  }
+
+  function setActiveConceptSourceMode(concept, data, training = null) {
+    document.body.dataset.conceptSourceMode = isSourceLessConcept(concept, data, training)
+      ? 'source_less'
+      : '';
+  }
+
+  function setConstellationAvailable(available) {
+    const switchBtn = conceptViewSwitchButton();
+    if (!switchBtn) return;
+    switchBtn.hidden = !available;
+    switchBtn.disabled = !available;
+    switchBtn.setAttribute('aria-disabled', available ? 'false' : 'true');
+    if (!available && currentMapMode === 'constellation') {
+      /* c8 ignore next -- defensive recovery if constellation becomes unavailable while selected */
+      setMapMode('route');
+    }
+  }
+
+  function refreshConstellationAvailability(training = null) {
+    if (document.body.dataset.conceptSourceMode === 'source_less') {
+      setConstellationAvailable(false);
+      return;
+    }
+    setConstellationAvailable(hasActiveEntryReconstructionEvidence(training) || hasActiveAttemptDraft());
   }
 
   function renderHero(concept) {
@@ -1319,12 +1385,8 @@ const App = (() => {
   function renderSkeletonLineIfFresh(opts) {
     const banner = document.getElementById("graph-skeleton-line");
     if (!banner) return;
-    if (opts && opts.fromLaunchPad) {
-      banner.textContent = "This is the skeleton. It will grow as you reconstruct.";
-      banner.hidden = false;
-    } else {
-      banner.hidden = true;
-    }
+    banner.textContent = '';
+    banner.hidden = true;
   }
 
   function navigateToGraphViewFromLaunchPad(opts) {
@@ -1805,15 +1867,25 @@ const App = (() => {
   // work column. Set on initial mount and updated by setActiveEntry.
   let _activeEntryId = null;
   const routeAttemptDrafts = new Map();
+  const repairChecksThisSession = new Set();
 
   function routeAttemptDraftKey(entryId) {
     return `${getActiveId() || 'concept'}:${entryId}`;
   }
 
+  function entrySessionKey(conceptId, entryId) {
+    return `${conceptId || 'concept'}:${entryId || 'entry'}`;
+  }
+
   function conceptPageRenderOptionsForEntry(concept, entryId, options = {}) {
     if (!concept?.id || !entryId) return options;
+    const repairCheckedEntryIds = [...repairChecksThisSession]
+      .filter((key) => key.startsWith(`${concept.id}:`))
+      .map((key) => key.slice(concept.id.length + 1));
     return {
       ...options,
+      repairCheckedEntryIds,
+      repairCheckedThisSession: repairChecksThisSession.has(entrySessionKey(concept.id, entryId)),
       comparisonAcknowledged: options?.justRevealedEntryId === entryId
         ? false
         : hasComparisonAcknowledgement(concept.id, entryId),
@@ -1834,6 +1906,7 @@ const App = (() => {
     const hasDraft = Boolean((input.value || '').trim());
     button.disabled = !hasDraft;
     button.setAttribute('aria-disabled', hasDraft ? 'false' : 'true');
+    refreshConstellationAvailability(options.training || null);
     if (hasDraft && options.clearError) {
       const errorEl = panel.querySelector?.('[data-attempt-error]');
       if (errorEl) errorEl.hidden = true;
@@ -1883,7 +1956,10 @@ const App = (() => {
           return;
         }
         if (ctaBtn.dataset.activeEntryAction === 'next-entry') {
-          setActiveEntry(ctaBtn.dataset.activeEntryId, data, concept, training);
+          if (_activeEntryId) {
+            markComparisonAcknowledged(concept.id, _activeEntryId);
+          }
+          setActiveEntry(ctaBtn.dataset.activeEntryId, data, concept, training, { focusAttempt: true });
           return;
         }
         const inlineAttempt = docEl.querySelector('.concept-page-b2__attempt-input');
@@ -1899,9 +1975,9 @@ const App = (() => {
     if (attemptBtn) {
       const attemptPanel = attemptBtn.closest('.concept-page-b2__attempt');
       const attemptInput = attemptPanel?.querySelector?.('.concept-page-b2__attempt-input');
-      syncInlineAttemptSaveButton(attemptPanel);
+      syncInlineAttemptSaveButton(attemptPanel, { training });
       attemptInput?.addEventListener('input', () => {
-        syncInlineAttemptSaveButton(attemptPanel, { clearError: true });
+        syncInlineAttemptSaveButton(attemptPanel, { clearError: true, training });
       });
       attemptBtn.addEventListener('click', () => {
         void submitInlineAttemptForEntry(attemptBtn, concept, data);
@@ -1914,6 +1990,7 @@ const App = (() => {
         const hint = wrapper?.querySelector?.('[data-blank-start-hint]');
         if (hint) hint.hidden = false;
         blankStartBtn.setAttribute('aria-expanded', 'true');
+        blankStartBtn.hidden = true;
         docEl.querySelector('.concept-page-b2__attempt-input')?.focus?.();
       });
     }
@@ -1948,6 +2025,14 @@ const App = (() => {
         setStudyNoteCollapsed(Boolean(repairInput.value.trim()));
       });
     }
+    docEl.querySelectorAll('[data-feedback-rating]').forEach((button) => {
+      button.addEventListener('click', () => {
+        window.Feedback?.show?.({
+          focus: 'rating',
+          moment: button.getAttribute('data-feedback-moment') || '',
+        });
+      });
+    });
     docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
       link.addEventListener('click', (e) => {
         e.preventDefault();
@@ -2291,7 +2376,10 @@ const App = (() => {
         text,
       });
       const mountEl = document.getElementById('map-content');
-      if (mountEl) renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
+      if (mountEl) {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
+      }
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
       console.warn('Repair save failed.', err);
@@ -2436,7 +2524,7 @@ const App = (() => {
    * @param {Object} data - Parsed graphData
    * @param {Object} concept - The full concept object
    */
-  function setActiveEntry(entryId, data, concept, training = null) {
+  function setActiveEntry(entryId, data, concept, training = null, options = {}) {
     if (!data || !entryId) return;
     if (entryId === _activeEntryId) return;
 
@@ -2464,9 +2552,15 @@ const App = (() => {
       rebindActiveEntryHandlers(doc, concept, data, training);
       bindConceptRouteMarginHandlers(mountEl, data, concept, training);
       restoreActiveEntryDraft(entryId);
+      refreshConstellationAvailability(training);
       doc.classList.remove('is-fading-out');
       void doc.offsetWidth; // force reflow so the fade-in animates
       doc.classList.add('is-fading-in');
+      if (options?.focusAttempt) {
+        const attemptInput = doc.querySelector('.concept-page-b2__attempt-input');
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        attemptInput?.focus?.({ preventScroll: true });
+      }
       setTimeout(() => doc.classList.remove('is-fading-in'), 360);
     }, 240);
 
@@ -2582,6 +2676,7 @@ const App = (() => {
    */
   function renderConceptPageB2(mountEl, data, concept, training = null, options = {}) {
     if (!mountEl || !data) return;
+    setActiveConceptSourceMode(concept, data, training);
     const backbone = deriveConceptEntries(data);
     const preferredEntryId = options?.activeEntryId || null;
     const preferredEntry = preferredEntryId === 'core-thesis' && !backbone.length
@@ -2654,6 +2749,7 @@ const App = (() => {
 
     renderConceptPageB2(mapContent, data, concept, null, opts);
     renderConceptConstellationView(constellationContent, data, concept, null, { activeEntryId: _activeEntryId });
+    refreshConstellationAvailability(null);
     // Keep first paint synchronous; training evidence re-renders when available.
     void trainingStore.loadTraining(concept.id)
       .then((training) => {
@@ -2666,6 +2762,7 @@ const App = (() => {
           && drillState.node?.id === renderOptions.activeEntryId
         ) {
           renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
+          refreshConstellationAvailability(training);
           return;
         }
         if (
@@ -2676,6 +2773,7 @@ const App = (() => {
         }
         renderConceptPageB2(mapContent, data, concept, training, renderOptions);
         renderConceptConstellationView(constellationContent, data, concept, training, { activeEntryId: _activeEntryId });
+        refreshConstellationAvailability(training);
       })
       .catch((err) => {
         /* c8 ignore next -- defensive localStorage failure branch */
@@ -2786,6 +2884,7 @@ const App = (() => {
       const mode = button.getAttribute('data-map-mode');
       if (mode === 'route' || mode === 'constellation') {
         event.preventDefault();
+        if (button.disabled || button.hidden || button.getAttribute('aria-disabled') === 'true') return;
         setMapMode(mode);
       }
     });
@@ -3997,6 +4096,9 @@ const App = (() => {
         persistSessionState();
         drillState.attemptTurnCount = data.attempt_turn_count ?? drillState.attemptTurnCount;
         drillState.helpTurnCount = data.help_turn_count ?? drillState.helpTurnCount;
+        if (completedGraphNeutralReDrill) {
+          repairChecksThisSession.add(entrySessionKey(concept.id, drillState.node.id));
+        }
         handleDrillAssistantMessage(data.agent_response || '');
         if (data.agent_response?.trim()) {
           drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
@@ -4020,7 +4122,11 @@ const App = (() => {
         // writing surface available until the turn actually resolves.
         if (window.DrillChamber) {
           window.DrillChamber.setLoading?.(false);
-          window.DrillChamber.setComposerEnabled(!(completedNodeTurn || !!data.session_terminated));
+          if (completedNodeTurn || data.session_terminated) {
+            window.DrillChamber.setCompletionAction?.('Return to concept', () => cancelDrill());
+          } else {
+            window.DrillChamber.setComposerEnabled(true);
+          }
         }
         if (completedNodeTurn) {
           currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'study' : 'post-drill', activeDrillNode);
@@ -4295,6 +4401,7 @@ const App = (() => {
     const activeConcept = getActiveConcept();
     if (activeConcept && options.restoreMap !== false) {
       showMapView(activeConcept);
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     }
   }
 

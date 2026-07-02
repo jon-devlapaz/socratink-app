@@ -47,6 +47,15 @@ from llm.errors import (
     LLMServiceError,
     LLMValidationError,
 )
+from models.provisional_map import (
+    BackboneItem,
+    Cluster,
+    LearnerScaffold,
+    Metadata,
+    ProvisionalMap,
+    Relationships,
+    Subnode,
+)
 import source_intake
 from loop_backend_proxy import proxy_loop_backend
 from source_intake import (
@@ -358,6 +367,74 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
     }
 
 
+def _fallback_smallest_route_from_sketch(
+    *, concept: str, threshold: str, learner_goal: str | None = None
+) -> ProvisionalMap:
+    sketch_excerpt = threshold.strip()[:160] or concept
+    anchor = "You named parts in your sketch; start by connecting two of them."
+    if learner_goal:
+        anchor = "Use your goal and sketch, then connect two named parts."
+    entry_prompt = (
+        f'You wrote: "{sketch_excerpt}". '
+        "What do you think connects those parts?"
+    )
+    return ProvisionalMap(
+        metadata=Metadata(
+            source_title=concept,
+            core_thesis=concept,
+            architecture_type="causal_chain",
+            difficulty="medium",
+            governing_assumptions=[
+                "This fallback route is grounded only in the learner's sketch.",
+                "Study content should stay hidden until the learner reconstructs first.",
+            ],
+            low_density=True,
+        ),
+        backbone=[
+            BackboneItem(
+                id="b1",
+                principle="Starting model",
+                dependent_clusters=["c1"],
+            )
+        ],
+        clusters=[
+            Cluster(
+                id="c1",
+                label="Starting model",
+                description="The learner's first explanation target from their sketch.",
+                subnodes=[
+                    Subnode(
+                        id="c1_s1",
+                        label="Starting model",
+                        mechanism=(
+                            f'Use the learner sketch "{sketch_excerpt}" as the '
+                            "only source. Name what changes, what responds, and "
+                            "what relationship the learner currently thinks connects them."
+                        ),
+                        learner_scaffold=LearnerScaffold(
+                            bloom_level="understand",
+                            learner_move="Explain",
+                            task_label="Starting model",
+                            task_cue="Put one relationship in your own words.",
+                            tailoring_anchor=anchor,
+                            entry_prompt=entry_prompt,
+                            expected_shape="Write one or two sentences.",
+                            sentence_starter="My current guess is that...",
+                            blank_hint="Pick two words from your sketch and connect them.",
+                            evidence_goal=(
+                                "The learner writes an initial causal model without "
+                                "reading source content."
+                            ),
+                        ),
+                    )
+                ],
+            )
+        ],
+        relationships=Relationships(),
+        frameworks=[],
+    )
+
+
 class UrlExtractRequest(BaseModel):
     url: str = Field(..., max_length=2_000)
 
@@ -648,12 +725,17 @@ def extract(req: ExtractRequest):
             detail="The AI service is temporarily unavailable. Please try again shortly.",
         )
     except SmallestRouteCapExceeded as err:
-        # Malformed source-less route generation is a server-side generation
-        # failure, not a client input failure -> 500 (not 422). This includes
-        # over-cap output, invalid cluster shape, missing learner_scaffold, and
-        # scaffold text that copies hidden mechanism clauses.
-        # Must be caught BEFORE the generic ValueError handler below because
-        # SmallestRouteCapExceeded subclasses ValueError.
+        # Source-less generation overbuilt or produced an invalid smallest-route
+        # shape. Keep the learner moving with a one-entry route grounded only in
+        # their sketch; source-backed extraction still uses its normal errors.
+        if decision["path"] == "from_threshold":
+            logger.warning("extract: smallest_route_fallback: %s", err)
+            fallback_map = _fallback_smallest_route_from_sketch(
+                concept=decision["name"],
+                threshold=decision["threshold"],
+                learner_goal=decision.get("learner_goal"),
+            )
+            return {"provisional_map": fallback_map.model_dump()}
         logger.error("extract: smallest_route_cap_exceeded: %s", err)
         raise HTTPException(
             status_code=500,

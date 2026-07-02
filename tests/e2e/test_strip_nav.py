@@ -182,7 +182,8 @@ def test_first_actionable_entry_shows_try_from_memory(page: Page, base_url: str)
     """The first unattempted actionable entry is ready, not blocked locked."""
     _open_seeded_concept(page, base_url)
     expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
-    expect(page.locator(".concept-page-b2__attempt-save")).to_have_text("Draft from memory")
+    expect(page.locator(".concept-page-b2__attempt-save")).to_have_text("Save draft")
+    expect(page.locator(".concept-page-b2__attempt-save")).to_be_disabled()
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
 
 

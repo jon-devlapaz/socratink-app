@@ -120,13 +120,8 @@ def test_extract_source_less_forwards_learner_goal(client):
     assert kwargs.get("learner_goal") == "I want to explain why leaves make sugar."
 
 
-def test_extract_smallest_route_cap_exceeded_returns_500(client):
-    """SmallestRouteCapExceeded must surface as 500, not 422.
-
-    Smallest-route shape failures are server-side generation failures, not
-    client input failures, so the endpoint must return HTTP 500 with a clear
-    error field.
-    """
+def test_extract_smallest_route_cap_exceeded_returns_fallback_route(client):
+    """Source-less generation shape failures should not strand a new learner."""
     from ai_service import SmallestRouteCapExceeded
 
     with patch(
@@ -139,12 +134,18 @@ def test_extract_smallest_route_cap_exceeded_returns_500(client):
             "source": None,
         })
 
-    assert r.status_code == 500, (
-        f"Expected 500 (server-side generation failure) but got {r.status_code}. "
-        "SmallestRouteCapExceeded must not be swallowed by the generic 422 ValueError handler."
-    )
+    assert r.status_code == 200
     body = r.json()
-    detail = body.get("detail", {})
-    assert detail.get("error") == "smallest_route_cap_exceeded", (
-        f"Expected error='smallest_route_cap_exceeded' in detail, got: {detail}"
-    )
+    route = body["provisional_map"]
+    assert route["metadata"]["source_title"] == "Photosynthesis"
+    assert route["metadata"]["core_thesis"] == "Photosynthesis"
+    assert route["backbone"] == [{
+        "id": "b1",
+        "principle": "Starting model",
+        "dependent_clusters": ["c1"],
+    }]
+    assert "plants take in light" in route["clusters"][0]["subnodes"][0]["mechanism"]
+    scaffold = route["clusters"][0]["subnodes"][0]["learner_scaffold"]
+    assert "plants take in light" in scaffold["entry_prompt"]
+    assert scaffold["entry_prompt"].endswith("What do you think connects those parts?")
+    assert "photosynthesis" not in scaffold["entry_prompt"].lower()

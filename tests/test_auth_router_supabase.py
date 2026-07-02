@@ -5,6 +5,7 @@ Uses a fake service matching the SupabaseAuthService interface.
 
 import unittest
 import os
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from cryptography.fernet import Fernet
@@ -398,6 +399,25 @@ class ApiMeAndLogoutTests(unittest.TestCase):
         body = response.json()
         self.assertTrue(body["authenticated"])
         self.assertEqual(body["user"]["email"], "learner@example.com")
+
+    def test_api_me_reports_loop_availability(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            guest_mode=True,
+        )
+        client = build_client(service)
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("LOOP_BACKEND_URL", None)
+            unavailable = client.get("/api/me")
+
+        with patch.dict(os.environ, {"LOOP_BACKEND_URL": "https://loop.example"}, clear=False):
+            available = client.get("/api/me")
+
+        self.assertIs(unavailable.json()["loop_available"], False)
+        self.assertIs(available.json()["loop_available"], True)
 
     def test_api_me_writes_back_refreshed_cookie(self):
         service = FakeSupabaseAuthService(enabled=True)
