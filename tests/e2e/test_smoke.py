@@ -111,6 +111,7 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
         session = _fetch_browser_session(page)
         if session.get("authenticated") or session.get("guest_mode"):
             _cached_guest_cookies = page.context.cookies()
+            page.goto(base_url)
             return
 
     page.goto(base_url)
