@@ -1956,6 +1956,9 @@ const App = (() => {
           return;
         }
         if (ctaBtn.dataset.activeEntryAction === 'next-entry') {
+          if (_activeEntryId) {
+            markComparisonAcknowledged(concept.id, _activeEntryId);
+          }
           setActiveEntry(ctaBtn.dataset.activeEntryId, data, concept, training, { focusAttempt: true });
           return;
         }

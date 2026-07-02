@@ -370,9 +370,14 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 def _fallback_smallest_route_from_sketch(
     *, concept: str, threshold: str, learner_goal: str | None = None
 ) -> ProvisionalMap:
+    sketch_excerpt = threshold.strip()[:160] or concept
     anchor = "You named parts in your sketch; start by connecting two of them."
     if learner_goal:
         anchor = "Use your goal and sketch, then connect two named parts."
+    entry_prompt = (
+        f'You wrote: "{sketch_excerpt}". '
+        "What do you think connects those parts?"
+    )
     return ProvisionalMap(
         metadata=Metadata(
             source_title=concept,
@@ -402,10 +407,9 @@ def _fallback_smallest_route_from_sketch(
                         id="c1_s1",
                         label="Starting model",
                         mechanism=(
-                            "A signal moves forward when one small change makes "
-                            "the neighboring part more ready to change too. Use "
-                            "your sketch to name what changes, what responds, and "
-                            "how the next step gets triggered."
+                            f'Use the learner sketch "{sketch_excerpt}" as the '
+                            "only source. Name what changes, what responds, and "
+                            "what relationship the learner currently thinks connects them."
                         ),
                         learner_scaffold=LearnerScaffold(
                             bloom_level="understand",
@@ -413,7 +417,7 @@ def _fallback_smallest_route_from_sketch(
                             task_label="Starting model",
                             task_cue="Put one relationship in your own words.",
                             tailoring_anchor=anchor,
-                            entry_prompt="What do you think makes one part trigger the next?",
+                            entry_prompt=entry_prompt,
                             expected_shape="Write one or two sentences.",
                             sentence_starter="My current guess is that...",
                             blank_hint="Pick two words from your sketch and connect them.",

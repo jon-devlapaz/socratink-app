@@ -56,6 +56,11 @@ export const Feedback = (() => {
     if (event) event.preventDefault();
     const message = textarea.value.trim();
     const rating = ratingInput ? Number.parseInt(ratingInput.value, 10) : NaN;
+    if (currentMoment && !ratingInput?.value) {
+      setStatus('Please rate this moment 1-10.', 'err');
+      ratingInput?.focus();
+      return false;
+    }
     if (ratingInput?.value && (!Number.isInteger(rating) || rating < 1 || rating > 10)) {
       setStatus('UX feel must be 1-10.', 'err');
       ratingInput.focus();
@@ -68,6 +73,11 @@ export const Feedback = (() => {
     const payloadMessage = Number.isInteger(rating)
       ? [`UX feel: ${rating}/10`, currentMoment ? `UX moment: ${currentMoment}` : '', message].filter(Boolean).join('\n')
       : message;
+    if (payloadMessage.length > 1000) {
+      setStatus('Feedback must be 1000 characters or fewer after rating details.', 'err');
+      textarea.focus();
+      return false;
+    }
 
     submitBtn.disabled = true;
     setStatus('Sending...', '');

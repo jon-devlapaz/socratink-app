@@ -595,7 +595,7 @@
   inline-size: auto;
   min-height: 44px;
   border: 0;
-  border-bottom: 1px dotted currentColor;
+  border-bottom: 1px dotted currentcolor;
   border-radius: 4px;
   background: transparent;
   box-shadow: none;
@@ -990,7 +990,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  border-bottom: 1px dotted currentColor;
+  border-bottom: 1px dotted currentcolor;
   border-radius: 0;
   background: transparent;
   box-shadow: none;

@@ -1850,6 +1850,10 @@ def test_feedback_button_keeps_sidebar_open(
         "Share a bug, rough edge, or idea. A 9 or 10 means the UX feels ready for a new customer."
     )
     expect(clean_page.locator("#feedback-submit")).to_have_text("Send Feedback")
+    clean_page.locator("#feedback-submit").click()
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Message must be at least 10 characters."
+    )
     assert clean_page.locator("#drawer").get_attribute("data-open") == "true"
     assert clean_page.locator("body").get_attribute("data-drawer-open") == "true"
 
@@ -1901,6 +1905,12 @@ def test_feedback_custom_moment_rejects_invalid_rating(
     expect(clean_page.locator("#feedback-desc")).to_have_text(
         "How did the focus mode step feel? A 9 or 10 means the UX feels ready for a new customer."
     )
+    clean_page.locator("#feedback-submit").click()
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Please rate this moment 1-10."
+    )
+    expect(clean_page.locator("#feedback-ux-rating")).to_be_focused()
+
     clean_page.evaluate(
         """() => {
             const rating = document.getElementById('feedback-ux-rating');
@@ -1914,6 +1924,13 @@ def test_feedback_custom_moment_rejects_invalid_rating(
         "UX feel must be 1-10."
     )
     expect(clean_page.locator("#feedback-ux-rating")).to_be_focused()
+    clean_page.locator("#feedback-ux-rating").select_option("9")
+    clean_page.locator("#feedback-message").fill("x" * 1000)
+    clean_page.locator("#feedback-submit").click()
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "Feedback must be 1000 characters or fewer after rating details."
+    )
+    expect(clean_page.locator("#feedback-message")).to_be_focused()
 
 
 def test_feedback_dialog_has_accessible_escape_close(
@@ -1983,6 +2000,8 @@ def test_mobile_drawer_keeps_feedback_accessible(
     assert drawer_box is not None
     assert drawer_box["x"] >= 0
     assert drawer_box["x"] + drawer_box["width"] <= 390
+    page.evaluate("document.querySelector('#nav-loop').hidden = false")
+    expect(page.locator("#nav-loop")).to_be_visible()
     expect(page.locator("#nav-feedback")).to_be_visible()
 
     page.locator("#nav-feedback").click()
@@ -2351,6 +2370,9 @@ def test_source_concept_review_can_continue_to_next_entry(
     assert continue_cta_style["borderStyle"] == "solid"
     assert continue_cta_style["minHeight"] == "44px"
     clean_page.locator(".concept-page-b2__entry-cta").click()
+    assert clean_page.evaluate(
+        "localStorage.getItem('socratink:comparison_ack:v1:source-review-continue:c1_s1')"
+    ) == "1"
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text(
         "Heat call"
     )

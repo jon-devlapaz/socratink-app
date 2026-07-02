@@ -909,8 +909,6 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         ...options,
         interactive: !showsOnlyQuietRoute,
         quiet: showsOnlyQuietRoute,
-        expandedRoute: isSourceLess && isExpandedWorkspace,
-        lockedInert: isSourceLess && isExpandedWorkspace,
       })}
       <div class="concept-page-b2__work">
         <div class="concept-page-b2__context-dock" aria-label="${escHtml(contextDockLabel)}">
