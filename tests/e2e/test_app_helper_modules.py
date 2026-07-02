@@ -1077,7 +1077,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               null,
               { now: '2026-05-15T20:00:00.000Z' },
             );
-            assert(legacyPrimedWaitingHtml.includes('review pending'), 'legacy primed spacing lock renders review state');
+            assert(legacyPrimedWaitingHtml.includes('Review later'), 'legacy primed spacing lock renders review state');
             assert(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy primed spacing lock suppresses reattempt cta');
             const legacyPrimedReadyHtml = conceptPage.renderActiveEntryHtml(
               {
@@ -1119,7 +1119,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               null,
               { now: '2026-05-15T20:00:00.000Z' },
             );
-            assert(legacyDrilledWaitingHtml.includes('review pending'), 'legacy drilled spacing lock renders review state');
+            assert(legacyDrilledWaitingHtml.includes('Review later'), 'legacy drilled spacing lock renders review state');
             assert(!legacyDrilledWaitingHtml.includes('concept-page-b2__entry-cta'), 'legacy drilled spacing lock suppresses reattempt cta');
             const initialEntry = conceptPage.selectInitialConceptEntry([
               { id: 'done', label: 'Done', drill_status: 'solidified' },
@@ -1197,7 +1197,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageHtml.includes('locked'), 'concept page blocked eyebrow');
             assert(conceptPageHtml.includes('aria-disabled="true"'), 'concept page blocked cta');
             assert(conceptPageHtml.includes('Second &amp; unsafe'), 'concept page nearby escapes');
-            assert(conceptPageHtml.includes('READY TO RECONSTRUCT'), 'concept page derives nearby readiness from training');
+            assert(conceptPageHtml.includes('ready to reconstruct'), 'concept page derives nearby readiness from training');
             const conceptPageAttemptHtml = conceptPage.renderActiveEntryHtml(
               conceptBackbone[1],
               1,
@@ -1209,7 +1209,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             assert(conceptPageAttemptHtml.includes('concept-page-b2__attempt'), 'concept page inline attempt form');
             assert(conceptPageAttemptHtml.includes('data-attempt-entry-id="entry-2"'), 'concept page inline attempt target');
-            assert(conceptPageAttemptHtml.includes('Draft from memory'), 'concept page inline attempt save');
+            assert(conceptPageAttemptHtml.includes('Save draft'), 'concept page inline attempt save');
             const conceptPagePrimedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'primed', label: 'Primed', drill_status: 'primed' },
               0,
@@ -1266,7 +1266,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               },
               { now: '2026-05-15T11:00:00.000Z' },
             );
-            assert(conceptPageStudiedHtml.includes('review pending'), 'concept page studied review eyebrow');
+            assert(conceptPageStudiedHtml.includes('Review later'), 'concept page studied review eyebrow');
             assert(conceptPageStudiedHtml.includes('concept-page-b2__evidence'), 'concept page studied evidence artifact renders');
             assert(conceptPageStudiedHtml.includes('Your draft'), 'concept page studied evidence label');
             assert(!conceptPageStudiedHtml.includes('learner reconstruction'), 'concept page hides internal reconstruction language');
@@ -1388,7 +1388,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               },
               { now: '2026-05-15T11:00:00.000Z' },
             );
-            assert(conceptPageReviewHtml.includes('review pending'), 'concept page review pending eyebrow');
+            assert(conceptPageReviewHtml.includes('Review later'), 'concept page review-later eyebrow');
             assert(!conceptPageReviewHtml.includes('concept-page-b2__entry-cta'), 'concept page review has no cta');
             const conceptPageSpacedHtml = conceptPage.renderActiveEntryHtml(
               { id: 'spaced', label: 'Spaced' },

@@ -85,7 +85,7 @@
         onclick="App.showDashboard()"><span class="material-symbols-outlined">view_quilt</span> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showLibrary()"><span class="material-symbols-outlined">auto_stories</span> Library</a>
-      <a id="nav-loop" class="sidebar-nav-item" href="/loop"><span class="material-symbols-outlined">chat</span> Source-less loop (beta)</a>
+      <a id="nav-loop" class="sidebar-nav-item" href="/loop" hidden><span class="material-symbols-outlined">chat</span> Learning loop</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
         onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
       <a id="nav-feedback" class="sidebar-nav-item" href="javascript:void(0)"
@@ -325,7 +325,7 @@
           <textarea class="composer-card__field" id="hero-single-input-field"
                     rows="2" maxlength="200"
                     placeholder=""
-                    aria-label="What do you want to explain?"></textarea>
+                    aria-label="Concept name"></textarea>
 
           <div class="journal-meta">
             <span class="journal-meta__key">source</span>
@@ -445,15 +445,15 @@
   <div id="tooltip-root" aria-hidden="true"></div>
 
   <script src="js/drill-chamber.js?v=11"></script>
-  <script type="module" src="js/app.js?v=155"></script>
+  <script type="module" src="js/app.js?v=157"></script>
   <script src="js/intro-particles.js?v=8"></script>
   <script type="module" src="js/tooltips.js?v=4"></script>
   <script type="module" src="js/floating-room-label.js?v=5"></script>
   <script type="module" src="js/iso-board-state-surface.js?v=5"></script>
-  <script type="module" src="js/feedback.js?v=4"></script>
+  <script type="module" src="js/feedback.js?v=5"></script>
 
   <!-- Feedback Modal -->
-  <div id="feedback-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="feedback-title" hidden onclick="Feedback.hide()">
+  <div id="feedback-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="feedback-title" aria-describedby="feedback-desc" hidden onclick="Feedback.hide()">
     <div class="modal-card feedback-modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2 class="modal-title" id="feedback-title">Feedback</h2>
@@ -465,12 +465,29 @@
         </button>
       </div>
       <form id="feedback-form" onsubmit="return Feedback.submit(event)">
-        <p class="modal-desc">Share a bug, rough edge, or idea. It helps shape what gets sharpened next.</p>
+        <p class="modal-desc" id="feedback-desc">Share a bug, rough edge, or idea. A 9 or 10 means the UX feels ready for a new customer.</p>
+        <label class="feedback-rating-label" for="feedback-ux-rating">UX feel</label>
+        <div class="feedback-rating-row">
+          <select id="feedback-ux-rating" class="feedback-rating-input">
+            <option value="">Score</option>
+            <option value="1">1 / 10</option>
+            <option value="2">2 / 10</option>
+            <option value="3">3 / 10</option>
+            <option value="4">4 / 10</option>
+            <option value="5">5 / 10</option>
+            <option value="6">6 / 10</option>
+            <option value="7">7 / 10</option>
+            <option value="8">8 / 10</option>
+            <option value="9">9 / 10</option>
+            <option value="10">10 / 10</option>
+          </select>
+          <span class="feedback-rating-copy">How did this feel?</span>
+        </div>
         <textarea id="feedback-message" class="modal-textarea"
-                  placeholder="Tell me what's on your mind"
-                  minlength="10" maxlength="1000" required></textarea>
+                  placeholder="Optional: what made it feel that way?"
+                  maxlength="1000"></textarea>
         <div class="modal-footer">
-          <span id="feedback-status" class="modal-status"></span>
+          <span id="feedback-status" class="modal-status" role="status" aria-live="polite"></span>
           <button type="submit" id="feedback-submit" class="btn-primary">Send Feedback</button>
         </div>
       </form>

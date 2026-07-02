@@ -827,6 +827,7 @@ def load_current_session_state(request: Request) -> AuthSessionState:
 def get_current_user(request: Request) -> Response:
     state = load_current_session_state(request)
     payload = state.to_public_dict()
+    payload["loop_available"] = bool(os.environ.get("LOOP_BACKEND_URL", "").strip())
     client_host = request.client.host if request.client else None
     payload["dev_mode"] = local_auth_bypass_enabled(
         hostname=request.url.hostname,

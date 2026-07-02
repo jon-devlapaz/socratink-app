@@ -1046,9 +1046,21 @@ def test_app_shell_uses_organic_icon_contract() -> None:
     assert "edit_note</span> New concept" in index_html
     assert "view_quilt</span> Desk" in index_html
     assert "auto_stories</span> Library" in index_html
+    assert "chat</span> Learning loop" in index_html
+    assert "Source-less loop" not in index_html
     assert "rate_review</span> Send Feedback" in index_html
     for icon_name in ("edit_note", "view_quilt", "auto_stories", "rate_review", "cloud_sync", "more_vert"):
         assert icon_name in index_html
+
+
+def test_new_concept_field_has_unique_accessible_label() -> None:
+    index_html = (REPO_ROOT / "public" / "index.html").read_text()
+
+    assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
+    assert "What do you want to explain?" in index_html
+    assert 'id="hero-single-input-field"' in index_html
+    assert 'aria-label="Concept name"' in index_html
+    assert 'aria-label="What do you want to explain?"' not in index_html
 
 
 def test_feedback_modal_copy_and_button_contract() -> None:
@@ -1057,10 +1069,65 @@ def test_feedback_modal_copy_and_button_contract() -> None:
     assert 'role="dialog"' in index_html
     assert 'aria-modal="true"' in index_html
     assert 'aria-labelledby="feedback-title"' in index_html
+    assert 'aria-describedby="feedback-desc"' in index_html
     assert '<h2 class="modal-title" id="feedback-title">Feedback</h2>' in index_html
     assert "my local TODO list" not in index_html
-    assert "Share a bug, rough edge, or idea. It helps shape what gets sharpened next." in index_html
+    assert 'id="feedback-desc"' in index_html
+    assert "A 9 or 10 means the UX feels ready for a new customer." in index_html
+    assert '<select id="feedback-ux-rating" class="feedback-rating-input">' in index_html
+    assert '<option value="9">9 / 10</option>' in index_html
+    assert 'placeholder="Optional: what made it feel that way?"' in index_html
+    feedback_textarea = index_html[index_html.index('id="feedback-message"'):index_html.index("</textarea>", index_html.index('id="feedback-message"'))]
+    assert "required" not in feedback_textarea
+    assert "minlength" not in feedback_textarea
+    assert 'id="feedback-status" class="modal-status" role="status" aria-live="polite"' in index_html
     assert '<button class="modal-close" type="button" onclick="Feedback.hide()" aria-label="Close feedback">' in index_html
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_auth_bootstrap_reveals_loop_nav_only_when_available() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+
+        const nodes = new Map([
+          ['auth-controls', { hidden: true }],
+          ['auth-login-link', { hidden: true, href: '', textContent: '' }],
+          ['auth-logout-btn', {
+            hidden: true,
+            disabled: false,
+            textContent: '',
+            dataset: {},
+            addEventListener(type, handler) { this[type] = handler; },
+          }],
+          ['auth-status', { hidden: true, textContent: '' }],
+          ['nav-loop', { hidden: true }],
+        ]);
+        globalThis.window = {
+          location: { pathname: '/', search: '', hash: '', assign() {} },
+        };
+        globalThis.document = {
+          getElementById(id) { return nodes.get(id) || null; },
+        };
+
+        const auth = await import('./public/js/auth.js');
+        globalThis.fetch = async () => ({
+          ok: true,
+          json: async () => ({ guest_mode: true, auth_enabled: true, loop_available: false }),
+        });
+        await auth.bootstrapAuthUi();
+        assert.equal(nodes.get('nav-loop').hidden, true);
+
+        auth.invalidateAuthSession();
+        globalThis.fetch = async () => ({
+          ok: true,
+          json: async () => ({ guest_mode: true, auth_enabled: true, loop_available: true }),
+        });
+        await auth.bootstrapAuthUi();
+        assert.equal(nodes.get('nav-loop').hidden, false);
+        """
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_static_buttons_declare_type() -> None:
@@ -1430,17 +1497,17 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(coldHtml.includes('Context'));
         assert.ok(coldHtml.includes('I think nerves send electricity'));
         assert.ok(!coldHtml.includes('Write first. Compare after.'));
-        assert.ok(coldHtml.includes('No source attached. Treat this route as provisional.'));
+        assert.ok(coldHtml.includes('aria-label="Recall context"'));
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
-        assert.ok(coldHtml.includes('Signal spread'));
-        assert.ok(coldHtml.includes('Use this draft'));
+        assert.ok(coldHtml.includes('Save draft'));
         assert.ok(!coldHtml.includes('Shaped by your sketch'));
         assert.ok(!coldHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(!coldHtml.includes('AI-generated answer structure must stay hidden.'));
         assert.ok(!coldHtml.includes('Voltage threshold opens sodium channels'));
         assert.ok(!coldHtml.includes('Sodium influx causes depolarization'));
         assert.ok(!coldHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!coldHtml.includes('concept-page-b2__route-marker-item'));
         assert.ok(!coldHtml.includes('data-entry-id="spread"'));
         assert.ok(!coldHtml.includes('concept-page-b2__nearby'));
 
@@ -1452,10 +1519,11 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           graphData,
           null
         );
-        assert.ok(coldWithoutTrainingHtml.includes('No source attached. Treat this route as provisional.'));
+        assert.ok(coldWithoutTrainingHtml.includes('aria-label="Recall context"'));
         assert.ok(!coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(coldWithoutTrainingHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-marker-item'));
         assert.ok(!coldWithoutTrainingHtml.includes('data-entry-id="spread"'));
         assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__nearby'));
 
@@ -1485,7 +1553,8 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           savedDraftTraining,
           { viewMode: 'saved-draft-study-gate' }
         );
-        assert.ok(savedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
+        assert.ok(savedHtml.includes('concept-page-b2__evidence--study-gate'));
+        assert.ok(!savedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
         assert.ok(savedHtml.includes('The gate probably opens when the voltage gets high enough.'));
         assert.ok(savedHtml.includes('Reveal notes and compare'));
         assert.ok(!savedHtml.includes('Missing piece'));
@@ -1521,15 +1590,40 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           cleanRevealedTraining,
           { viewMode: 'post-reveal-comparison', now: '2026-05-21T11:00:00.000Z' }
         );
+        assert.ok(compareHtml.includes('Compare notes'));
         assert.ok(compareHtml.includes('The channel opens when voltage reaches threshold.'));
         assert.ok(compareHtml.includes('Voltage-gated sodium channels open at threshold'));
-        assert.ok(compareHtml.includes('Keep working'));
-        assert.ok(compareHtml.includes('data-active-entry-action="keep-working"'));
+        assert.ok(compareHtml.includes('Continue'));
+        assert.ok(compareHtml.includes('data-active-entry-action="next-entry"'));
+        assert.ok(compareHtml.includes('data-active-entry-id="spread"'));
+        assert.ok(compareHtml.includes('Rate this moment'));
+        assert.ok(compareHtml.includes('data-feedback-rating'));
+        assert.ok(compareHtml.includes('data-feedback-moment="compare notes"'));
         assert.ok(!compareHtml.includes('No missing piece recorded for this draft.'));
         assert.ok(!compareHtml.includes('concept-page-b2__route-item'));
         assert.ok(compareHtml.includes('concept-page-b2__gestalt--single-column'));
         assert.ok(!compareHtml.includes('data-entry-id="spread"'));
         assert.ok(!compareHtml.includes('concept-page-b2__nearby'));
+
+        const autoCompareHtml = renderActiveEntryHtml(
+          entries[0],
+          0,
+          entries,
+          concept,
+          graphData,
+          cleanRevealedTraining,
+          { comparisonAcknowledged: false, now: '2026-05-21T11:00:00.000Z' }
+        );
+        assert.ok(autoCompareHtml.includes('Compare notes'));
+        assert.ok(autoCompareHtml.includes('Continue'));
+        assert.ok(autoCompareHtml.includes('data-active-entry-action="next-entry"'));
+        assert.ok(autoCompareHtml.includes('data-active-entry-id="spread"'));
+        assert.ok(autoCompareHtml.includes('Rate this moment'));
+        assert.ok(autoCompareHtml.includes('data-feedback-rating'));
+        assert.ok(autoCompareHtml.includes('data-feedback-moment="compare notes"'));
+        assert.ok(autoCompareHtml.includes('concept-page-b2__gestalt--single-column'));
+        assert.ok(!autoCompareHtml.includes('concept-page-b2__nearby'));
+        assert.ok(!autoCompareHtml.includes('concept-page-b2__route-item'));
 
         const expandedHtml = renderActiveEntryHtml(
           entries[0],
@@ -1540,8 +1634,9 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           cleanRevealedTraining,
           { viewMode: 'expanded-workspace', now: '2026-05-21T11:00:00.000Z' }
         );
-        assert.ok(expandedHtml.includes('concept-page-b2__route-item'));
-        assert.ok(expandedHtml.includes('data-entry-id="spread"'));
+        assert.ok(!expandedHtml.includes('concept-page-b2__route-item'));
+        assert.ok(!expandedHtml.includes('concept-page-b2__route-marker-item'));
+        assert.ok(!expandedHtml.includes('data-entry-id="spread"'));
         assert.ok(!expandedHtml.includes('data-active-entry-action="keep-working"'));
         """
     )
@@ -1637,7 +1732,7 @@ def test_source_less_view_mode_derivation_preserves_comparison_seams() -> None:
             study_revealed_at: '2026-05-21T10:05:00.000Z',
             repairs: [],
           },
-        }, { comparisonAcknowledged: false }), 'expanded-workspace');
+        }, { comparisonAcknowledged: false }), 'post-reveal-comparison');
 
         assert.equal(deriveSourceLessViewMode({
           attempted: true,
@@ -1770,8 +1865,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           null,
           { now: '2026-05-15T20:00:00.000Z' }
         );
-        assert.ok(legacyPrimedWaitingHtml.includes('review pending'));
-        assert.ok(!legacyPrimedWaitingHtml.includes('review pending entry 1 of 1'));
+        assert.ok(legacyPrimedWaitingHtml.includes('Review later'));
+        assert.ok(!legacyPrimedWaitingHtml.includes('Review later entry 1 of 1'));
         assert.ok(!legacyPrimedWaitingHtml.includes('concept-page-b2__entry-cta'));
         const legacyPrimedReadyHtml = renderActiveEntryHtml(
           {
@@ -1878,7 +1973,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(blockedHtml.includes('>Locked</button>'));
         assert.ok(blockedHtml.includes('&lt;Core&gt;'));
         assert.ok(blockedHtml.includes('Second &amp; unsafe'));
-        assert.ok(blockedHtml.includes('READY TO RECONSTRUCT'));
+        assert.ok(blockedHtml.includes('ready to reconstruct'));
 
         const readyHtml = renderActiveEntryHtml(
           backbone[1],
@@ -1894,8 +1989,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(!readyHtml.includes('Write first. Compare after.'));
         assert.ok(readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
-        assert.ok(readyHtml.includes('Draft from memory'));
-        assert.ok(readyHtml.includes('Stuck?'));
+        assert.ok(readyHtml.includes('Save draft'));
+        assert.ok(readyHtml.includes('Need a cue?'));
         assert.ok(readyHtml.includes('data-blank-start'));
         assert.ok(readyHtml.includes('data-blank-start-hint'));
         assert.ok(!readyHtml.includes('The mechanism stays hidden.'));
@@ -1913,7 +2008,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(sourceLessHtml.includes('No source attached. Treat this route as provisional.'));
+        assert.ok(sourceLessHtml.includes('aria-label="Recall context"'));
         assert.ok(!sourceLessHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         const sourceAttachedHtml = renderActiveEntryHtml(
           backbone[1],
@@ -1926,7 +2021,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(!sourceAttachedHtml.includes('No source attached. Treat this route as provisional.'));
+        assert.ok(sourceAttachedHtml.includes('aria-label="Recall context"'));
 
         const readyAttemptHtml = renderActiveEntryHtml(
           backbone[1],
@@ -1940,7 +2035,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(readyAttemptHtml.includes('concept-page-b2__attempt'));
         assert.ok(readyAttemptHtml.includes('data-attempt-entry-id="entry-2"'));
         assert.ok(readyAttemptHtml.includes('Draft what you can recall'));
-        assert.ok(readyAttemptHtml.includes('Draft from memory'));
+        assert.ok(readyAttemptHtml.includes('Save draft'));
         assert.ok(!readyAttemptHtml.includes('concept-page-b2__entry-cta'));
 
         const scaffoldedMap = {
@@ -1997,7 +2092,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(scaffoldHtml.includes('Pick one phrase from your sketch and say what role it plays.'));
         assert.ok(!scaffoldHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
         assert.ok(!scaffoldHtml.includes('Not sure yet? Type what you think it might do, or list a few terms you recognize.'));
-        assert.ok(scaffoldHtml.includes('Use this draft'));
+        assert.ok(scaffoldHtml.includes('Save draft'));
         assert.ok(!scaffoldHtml.includes('Bloom'));
         assert.ok(!scaffoldHtml.includes('bloom_level'));
         assert.ok(!scaffoldHtml.includes('provider routing, deployment environments'));
@@ -2073,6 +2168,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { source_mode: 'source_less', node_records: {} }
         );
         assert.ok(fallbackScaffoldHtml.includes('Write one relationship you suspect.'));
+        assert.ok(fallbackScaffoldHtml.includes('placeholder="Write what you can explain right now."'));
+        assert.ok(!fallbackScaffoldHtml.includes('placeholder="Write one relationship you suspect."'));
         assert.ok(fallbackScaffoldHtml.includes('Type one relationship you suspect, even if it feels incomplete.'));
 
         const primedHtml = renderActiveEntryHtml(
@@ -2103,7 +2200,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));
         assert.ok(primedHtml.includes('Your memory draft'));
-        assert.ok(primedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
+        assert.ok(primedHtml.includes('concept-page-b2__evidence--study-gate'));
+        assert.ok(!primedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
         assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(primedHtml.includes('A strong first attempt.'));
         assert.ok(!primedHtml.includes('Missing piece'));
@@ -2174,8 +2272,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           },
           { now: '2026-05-15T11:00:00.000Z' }
         );
-        assert.ok(studiedHtml.includes('review pending'));
-        assert.ok(!studiedHtml.includes('review pending entry 1 of 1'));
+        assert.ok(studiedHtml.includes('Review later'));
+        assert.ok(!studiedHtml.includes('Review later entry 1 of 1'));
         assert.ok(studiedHtml.includes('concept-page-b2__evidence'));
         assert.ok(studiedHtml.includes('Your draft'));
         assert.ok(!studiedHtml.includes('learner reconstruction'));
@@ -2213,7 +2311,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           },
           { now: '2026-05-15T11:00:00.000Z' }
         );
-        assert.ok(studiedRouteHtml.includes('review pending'));
+        assert.ok(studiedRouteHtml.includes('Review later'));
         assert.ok(studiedRouteHtml.includes('Continue route'));
         assert.ok(studiedRouteHtml.includes('data-active-entry-id="next-entry"'));
         assert.ok(studiedRouteHtml.includes('data-active-entry-action="next-entry"'));
@@ -2292,7 +2390,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
                   classification: 'thin',
                   gaps: [{
                     mechanism: 'channel gate',
-                    correction: 'Name that voltage-gated sodium channels open at threshold.',
+                    correction: 'The learner correctly identifies sodium flow but does not name the voltage-gated channel opening.',
                   }],
                   grader_version: 'qa',
                 }],
@@ -2305,18 +2403,19 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Needs repair'));
         assert.ok(!repairHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(!repairHtml.includes('nearby entries  all locked until first reconstruction'));
-        assert.ok(repairHtml.includes('nearby entries'));
+        assert.ok(repairHtml.includes('Nearby entries'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence'));
         assert.ok(repairHtml.includes('Your draft'));
         assert.ok(repairHtml.includes('concept-page-b2__evidence--compact'));
         assert.ok(!repairHtml.includes('Missing piece'));
         assert.ok(!repairHtml.includes('repair hinge'));
         assert.ok(repairHtml.includes('Sodium just rushes in.'));
-        assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
+        assert.ok(repairHtml.includes('Your draft names sodium flow but does not name the voltage-gated channel opening.'));
+        assert.ok(!repairHtml.includes('The learner correctly identifies'));
         assert.ok(repairHtml.includes('concept-page-b2__repair'));
         assert.ok(repairHtml.includes('Repair'));
         assert.ok(repairHtml.includes('Missing link'));
-        assert.ok(repairHtml.includes('Name that voltage-gated sodium channels open at threshold.'));
+        assert.ok(repairHtml.includes('Your draft names sodium flow but does not name the voltage-gated channel opening.'));
         assert.ok(repairHtml.includes('data-repair-entry-id="repair"'));
         assert.ok(!repairHtml.includes('Put it in your words'));
         assert.ok(!repairHtml.includes('1 missing link to repair'));
@@ -2324,7 +2423,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Write the missing link.'));
         assert.ok(repairHtml.includes('Use your words. One or two sentences is enough.'));
         assert.ok(repairHtml.includes('Save repair'));
-        assert.ok(repairHtml.includes('Study note tucked away while you repair.'));
+        assert.ok(repairHtml.includes('Study note stays hidden while you repair.'));
         assert.ok(repairHtml.includes('Show study note'));
         const fallbackRepairHtml = renderActiveEntryHtml(
           { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
@@ -2385,13 +2484,131 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(!repairedHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(!repairedHtml.includes('Write it again'));
         assert.ok(repairedHtml.includes('Repair saved'));
-        assert.ok(repairedHtml.includes('Try this entry again from memory.'));
+        assert.ok(repairedHtml.includes('Pressure-check the repaired link.'));
         assert.ok(repairedHtml.includes('concept-page-b2__repair'));
         assert.ok(repairedHtml.includes('Pressure-check this link'));
         assert.ok(repairedHtml.includes('data-active-entry-action="drill-gap"'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-input'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-save'));
         assert.ok(!repairedHtml.includes('Save this repair before you try from memory again.'));
+
+        const checkedRepairHtml = renderActiveEntryHtml(
+          { id: 'repair', label: 'Repair' },
+          0,
+          [{ id: 'repair', label: 'Repair' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              repair: {
+                attempts: [{
+                  id: 'rp1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Sodium just rushes in.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'channel gate', correction: 'Name the gate.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [{
+                  id: 'rr1',
+                  at: '2026-05-15T10:10:00.000Z',
+                  text: 'Voltage-gated channels open at threshold.',
+                }],
+              },
+            },
+          },
+          { repairCheckedThisSession: true }
+        );
+        assert.ok(checkedRepairHtml.includes('Repair checked'));
+        assert.ok(checkedRepairHtml.includes('Repair checked for now.'));
+        assert.ok(checkedRepairHtml.includes('Study note stays hidden for later reconstruction.'));
+        assert.ok(checkedRepairHtml.includes('Rate this moment'));
+        assert.ok(checkedRepairHtml.includes('data-feedback-rating'));
+        assert.ok(checkedRepairHtml.includes('data-feedback-moment="repair checked"'));
+        assert.ok(!checkedRepairHtml.includes('Pressure-check this link'));
+        assert.ok(!checkedRepairHtml.includes('Study note stays hidden while you repair.'));
+
+        const checkedRepairWithNextHtml = renderActiveEntryHtml(
+          { id: 'repair', label: 'Repair' },
+          0,
+          [{ id: 'repair', label: 'Repair' }, { id: 'next-entry', label: 'Next entry' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              repair: {
+                attempts: [{
+                  id: 'rp1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Sodium just rushes in.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'channel gate', correction: 'Name the gate.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [{
+                  id: 'rr1',
+                  at: '2026-05-15T10:10:00.000Z',
+                  text: 'Voltage-gated channels open at threshold.',
+                }],
+              },
+            },
+          },
+          { repairCheckedThisSession: true }
+        );
+        assert.ok(checkedRepairWithNextHtml.includes('Continue route'));
+        assert.ok(checkedRepairWithNextHtml.includes('data-active-entry-id="next-entry"'));
+        assert.ok(checkedRepairWithNextHtml.includes('data-active-entry-action="next-entry"'));
+        assert.ok(!checkedRepairWithNextHtml.includes('Nearby entries'));
+
+        const checkedNearbyHtml = renderActiveEntryHtml(
+          { id: 'next-entry', label: 'Next entry' },
+          1,
+          [{ id: 'repair', label: 'Repair' }, { id: 'next-entry', label: 'Next entry' }],
+          {},
+          { metadata: {} },
+          {
+            node_records: {
+              repair: {
+                attempts: [{
+                  id: 'rp1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:00:00.000Z',
+                  user_text: 'Sodium just rushes in.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'channel gate', correction: 'Name the gate.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:05:00.000Z',
+                repairs: [{
+                  id: 'rr1',
+                  at: '2026-05-15T10:10:00.000Z',
+                  text: 'Voltage-gated channels open at threshold.',
+                }],
+              },
+              'next-entry': {
+                attempts: [{
+                  id: 'np1',
+                  kind: 'cold',
+                  at: '2026-05-15T10:20:00.000Z',
+                  user_text: 'Next draft.',
+                  classification: 'thin',
+                  gaps: [{ mechanism: 'next gap', correction: 'Repair next.' }],
+                  grader_version: 'qa',
+                }],
+                study_revealed_at: '2026-05-15T10:25:00.000Z',
+              },
+            },
+          },
+          { repairCheckedEntryIds: ['repair'] }
+        );
+        assert.ok(checkedNearbyHtml.includes('Nearby entries'));
+        const checkedNearbyCompactHtml = checkedNearbyHtml.split(/\\s+/).join(' ');
+        assert.ok(checkedNearbyCompactHtml.includes('<span>Repair</span> <span class="concept-page-b2__nearby-status">repair checked</span>'));
+        assert.ok(!checkedNearbyCompactHtml.includes('<span>Repair</span> <span class="concept-page-b2__nearby-status">needs repair</span>'));
 
         const stripHtml = renderConceptStripHtml(backbone, backbone[1], 1, training);
         assert.ok(stripHtml.includes('class="concept-strip"'));

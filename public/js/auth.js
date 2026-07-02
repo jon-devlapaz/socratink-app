@@ -97,6 +97,11 @@ function applyAuthUi(session) {
     logoutBtn.hidden = true;
     loginLink.hidden = false;
   }
+
+  const loopLink = document.getElementById('nav-loop');
+  if (loopLink) {
+    loopLink.hidden = !session?.loop_available;
+  }
 }
 
 export async function bootstrapAuthUi() {

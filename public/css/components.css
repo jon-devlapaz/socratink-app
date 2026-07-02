@@ -2293,6 +2293,20 @@ html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
   animation: modalIn 220ms var(--ease-standard);
 }
 
+.feedback-modal {
+  background: var(--surface-page-theme, #fbf5ee);
+}
+
+.feedback-modal .btn-primary {
+  background: var(--accent-primary);
+  color: var(--cream-50, #f7ece1);
+}
+
+.feedback-modal .modal-desc,
+.feedback-modal .feedback-rating-copy {
+  color: var(--text-muted);
+}
+
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
@@ -2356,6 +2370,37 @@ html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
   margin: 0;
 }
 
+.feedback-rating-label {
+  display: block;
+  margin: 0 28px 8px;
+  color: var(--text-strong);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.feedback-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 28px 14px;
+}
+
+.feedback-rating-input {
+  width: 112px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: rgba(var(--white-rgb), 0.78);
+  color: var(--text-strong);
+  font: inherit;
+}
+
+.feedback-rating-copy {
+  color: var(--text-sub);
+  font-size: 0.88rem;
+}
+
 .modal-textarea {
   display: block;
   width: calc(100% - 56px);
@@ -2364,7 +2409,7 @@ html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
   padding: 14px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle);
-  background: var(--surface-nested);
+  background: rgba(var(--white-rgb), 0.78);
   color: var(--text-strong);
   font-family: var(--font-body);
   font-size: 0.95rem;

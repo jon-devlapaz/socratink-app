@@ -262,7 +262,8 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     expect(clean_page.locator("#chamber-composer")).not_to_have_attribute(
         "placeholder", "Preparing your first question"
     )
-    expect(clean_page.locator("#chamber-send")).to_have_text("Submit")
+    expect(clean_page.locator("#chamber-send")).to_have_text("Check reconstruction")
+    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Pressure check")
     expect(clean_page.locator("#drill-chamber-view")).to_contain_text(
         "Reconstruct Entry A from memory"
     )
@@ -566,7 +567,7 @@ def test_repair_drill_context_is_bounded_for_drill_request(
                     "help_request_reason": None,
                     "classification": None,
                     "gap_description": None,
-                    "routing": "SCAFFOLD",
+                    "routing": "NEXT",
                     "response_tier": None,
                     "response_band": None,
                     "tier_reason": None,
@@ -614,6 +615,13 @@ Learner repair text: repaired link`,
     while not drill_calls and time.monotonic() < deadline:
         page.wait_for_timeout(100)
     assert drill_calls
+    expect(page.locator(".drill-chamber__history-turn-meta").nth(0)).to_have_text("Prompt")
+    expect(page.locator(".drill-chamber__history-turn-meta").nth(1)).to_have_text("Your answer")
+    expect(page.locator("#chamber-send")).to_have_text("Return to concept")
+    expect(page.locator("#chamber-send")).to_be_enabled()
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_count(0)
+    assert page.evaluate("window.scrollY") <= 1
 
     assert len(drill_calls[0]["node_mechanism"]) <= 10_000
     assert "Learner repair text: repaired link" in drill_calls[0]["node_mechanism"]

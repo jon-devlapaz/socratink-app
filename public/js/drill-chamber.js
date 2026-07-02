@@ -14,7 +14,10 @@
 const els = {};
 let sendHandler = null;
 let exitHandler = null;
+let completionHandler = null;
 let historyTurns = 0;
+const DEFAULT_SEND_LABEL = 'Check reconstruction';
+const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine.';
 
 const REQUIRED_ELEMENT_KEYS = [
   'view',
@@ -50,6 +53,10 @@ function bind() {
 
   els.send.addEventListener('click', () => {
     if (!hasRequiredElements()) return;
+    if (completionHandler) {
+      completionHandler();
+      return;
+    }
     if (typeof sendHandler !== 'function') return;
     if (els.send.disabled) return;        // hard guard against spam
     // Validate BEFORE locking the UI. Without this, an empty-composer
@@ -81,6 +88,7 @@ function bind() {
 function show({ conceptName, entryName, question }) {
   if (!bind()) return;
   els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
+  clearCompletionAction();
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
   els.question.textContent = question || '—';
@@ -102,6 +110,7 @@ function show({ conceptName, entryName, question }) {
 
 function hide() {
   if (!bind()) return;
+  clearCompletionAction();
   els.view.hidden = true;
   document.body.classList.remove('chamber-open');
 }
@@ -119,7 +128,7 @@ function appendHistoryTurn(role, text) {
   turn.className = 'drill-chamber__history-turn' + (role === 'learner' ? ' drill-chamber__history-turn--learner' : '');
   const meta = document.createElement('div');
   meta.className = 'drill-chamber__history-turn-meta';
-  meta.textContent = role === 'learner' ? 'you' : 'socratink';
+  meta.textContent = role === 'learner' ? 'Your answer' : 'Prompt';
   const body = document.createElement('div');
   body.className = 'drill-chamber__history-body';
   body.textContent = text;
@@ -133,6 +142,7 @@ function appendHistoryTurn(role, text) {
 
 function swapQuestion(nextText) {
   if (!bind()) return;
+  clearCompletionAction();
   els.active.classList.add('is-fading-out');
   setTimeout(() => {
     if (!hasRequiredElements()) return;
@@ -151,12 +161,10 @@ function swapQuestion(nextText) {
 
 function setComposerEnabled(enabled) {
   if (!bind()) return;
+  if (enabled) clearCompletionAction();
   els.composer.disabled = !enabled;
   els.send.disabled = !enabled;
 }
-
-// Original placeholder, captured once so setLoading(false) can restore it.
-const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine.';
 
 /**
  * Toggle a quiet pending state without taking the writing surface away.
@@ -184,6 +192,24 @@ function clearComposer() {
   els.composer.value = '';
 }
 
+function clearCompletionAction() {
+  if (!hasRequiredElements()) return;
+  completionHandler = null;
+  els.active?.removeAttribute('data-complete');
+  els.send.textContent = DEFAULT_SEND_LABEL;
+  els.composer.placeholder = _originalPlaceholder;
+}
+
+function setCompletionAction(label = 'Return to concept', handler = null) {
+  if (!bind()) return;
+  completionHandler = typeof handler === 'function' ? handler : exitHandler;
+  els.active?.setAttribute('data-complete', 'true');
+  els.composer.value = '';
+  els.composer.disabled = true;
+  els.send.disabled = false;
+  els.send.textContent = label;
+}
+
 /**
  * Show the doctrinal first-cold-attempt creed in the chamber after
  * generative_commitment === true. Three lines, diamond bullets,
@@ -208,7 +234,7 @@ function onExit(handler) { exitHandler = handler; }
 
 window.DrillChamber = {
   show, hide, appendHistoryTurn, swapQuestion,
-  setComposerEnabled, setLoading,
+  setComposerEnabled, setLoading, setCompletionAction,
   getComposerValue, clearComposer,
   appendCreed,
   onSend, onExit,

@@ -240,7 +240,7 @@ def test_source_less_launch_pad_end_to_end_qa(
         "What do you think the thermostat checks before it calls for heat?"
     )
     expect(canvas).to_contain_text("Compare target")
-    expect(canvas).to_contain_text("Call for heat")
+    expect(canvas).not_to_contain_text("Call for heat")
     expect(canvas).not_to_contain_text("compares measured room temperature")
     expect(canvas).not_to_contain_text("Generated description should not leak")
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
@@ -254,6 +254,9 @@ def test_source_less_launch_pad_end_to_end_qa(
         "Reveal notes and compare"
     )
     expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "Your memory draft"
+    )
+    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "Draft recorded."
     )
     expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
@@ -288,16 +291,8 @@ def test_source_less_launch_pad_end_to_end_qa(
     )
     clean_page.locator("#chamber-send").click()
     expect(clean_page.locator("#chamber-composer")).to_be_disabled()
-    expect(clean_page.locator(".concept-page-b2__route-item")).to_have_count(3)
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
-        "data-route-expanded", "true"
-    )
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_attribute(
-        "data-locked-inert", "true"
-    )
-    clean_page.locator('.concept-page-b2__route-item[data-entry-id="c2_s1"]').click()
-    clean_page.wait_for_timeout(700)
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Compare target")
+    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
+    expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
 
     assert "POST /api/extract Thermostat feedback loop" in requests_seen
     assert "POST /api/drill c1_s1" in requests_seen
