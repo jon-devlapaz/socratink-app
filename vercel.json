@@ -9,6 +9,10 @@
   },
   "rewrites": [
     {
+      "source": "/session/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/api/index.py"
     }
