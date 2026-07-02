@@ -783,7 +783,7 @@ def test_board_grid_helpers_preserve_tile_markup_and_events() -> None:
         assert.equal(tiles[0].attrs.class, 'tile-group selected');
         assert.equal(tiles[0].attrs.role, 'button');
         assert.equal(tiles[0].attrs.tabindex, '0');
-        assert.equal(tiles[0].attrs['aria-label'], 'Open First');
+        assert.equal(tiles[0].attrs['aria-label'], 'Resume First');
         assert.ok(tiles[0].innerHTML.includes('concept-pin-0'));
         assert.equal(tiles[1].attrs.class, 'tile-group empty');
         assert.equal(tiles[1].attrs['aria-label'], 'Start learning');
