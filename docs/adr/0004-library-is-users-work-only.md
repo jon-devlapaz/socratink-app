@@ -1,7 +1,7 @@
 # ADR-0004 — Library shows only the user's own reconstructed work
 
 **Status:** Accepted (2026-05-09)
-**Driver:** Customer-persona test on the library landing surface (round 2, dark mode, full surface) — see `agents/_templates/customer-persona-prompt.md` for the methodology.
+**Driver:** Customer-persona test on the library landing surface (round 2, dark mode, full surface) — see `../../agents/_templates/customer-persona-prompt.md` for the methodology.
 
 ## Context
 
@@ -48,4 +48,4 @@ A first-run user with no source of their own currently has no built-in sandbox c
 
 - `UBIQUITOUS_LANGUAGE.md` — "Library" glossary entry (resolved 2026-05-09; migrated from the former `CONTEXT.md`).
 - Round-2 persona test results and partial-surface frictions for the library-empty variants; prototype notes were removed during docs/prototype consolidation and remain available in git history.
-- `agents/_templates/customer-persona-prompt.md` — persona methodology and reusable template.
+- `../../agents/_templates/customer-persona-prompt.md` — persona methodology and reusable template.

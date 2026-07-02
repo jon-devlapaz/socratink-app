@@ -6,3 +6,4 @@ commands:
 
 ignore_patterns:
   - "public/_lab/**"
+  - "agents/superpowers/**"

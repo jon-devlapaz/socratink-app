@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": ".venv/bin/pytest -q --ignore=tests/e2e"
   },
   "repository": {
     "type": "git",

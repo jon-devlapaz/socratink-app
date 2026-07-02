@@ -16,17 +16,13 @@ This repository is the primary source for AI-agent routing and safe editing inst
 - If test runs are unavailable, document blocked checks in the task summary.
 
 ## Build commands
-- `npm run bootstrap`
-- `npm install`
-- `npm run dev`
-- `.venv/bin/python -m pytest -q`
 - `bash scripts/bootstrap-python.sh`
+- `bash scripts/dev.sh`
 
 ## Test commands
 - `npm test`
-- `npm run lint`
-- `.venv/bin/pytest -q`
 - `.venv/bin/pytest -q --strict-markers`
+- `bash scripts/doctor.sh`
 
 ## Local test
 ```bash
@@ -36,7 +32,6 @@ This repository is the primary source for AI-agent routing and safe editing inst
 
 ## How to start
 - If you need reproducible local smoke checks, run `bash scripts/qa-smoke.sh`.
-- For AI-review tooling, run `scripts/local-ai-review.sh check`.
 
 ## Routing commands
 - Confirm working directory with `pwd` and repository root with `git rev-parse --show-toplevel`.
@@ -59,9 +54,9 @@ This repository is the primary source for AI-agent routing and safe editing inst
   Because: environment files are runtime secrets policy.
 
 ## Work commands
-- Build path: `npm install` then `npm run build`.
-- Server start: `bash scripts/bootstrap-python.sh` then `bash scripts/preflight-deploy.sh` when needed.
-- Frontend smoke: `npm run dev` for local iteration.
+- Server start: `bash scripts/bootstrap-python.sh` then `bash scripts/dev.sh`.
+- Deploy preflight: `bash scripts/preflight-deploy.sh` when needed.
+- Frontend smoke: `bash scripts/qa-smoke.sh local` with the dev server running.
 
 ## Development constraints
 - Keep changes minimal and reversible when possible.
