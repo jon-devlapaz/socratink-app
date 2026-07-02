@@ -1889,6 +1889,33 @@ def test_feedback_submit_reenables_on_reopen(
     expect(clean_page.locator("#feedback-ux-rating")).to_have_value("")
 
 
+def test_feedback_custom_moment_rejects_invalid_rating(
+    clean_page: Page, base_url: str
+) -> None:
+    """Moment feedback should explain the moment and reject invalid scores."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    clean_page.evaluate("window.Feedback.show({ focus: 'rating', moment: 'focus mode' })")
+
+    expect(clean_page.locator("#feedback-overlay")).to_be_visible()
+    expect(clean_page.locator("#feedback-desc")).to_have_text(
+        "How did the focus mode step feel? A 9 or 10 means the UX feels ready for a new customer."
+    )
+    clean_page.evaluate(
+        """() => {
+            const rating = document.getElementById('feedback-ux-rating');
+            rating.insertAdjacentHTML('beforeend', '<option value="11">11</option>');
+            rating.value = '11';
+        }"""
+    )
+    clean_page.locator("#feedback-submit").click()
+
+    expect(clean_page.locator("#feedback-status")).to_have_text(
+        "UX feel must be 1-10."
+    )
+    expect(clean_page.locator("#feedback-ux-rating")).to_be_focused()
+
+
 def test_feedback_dialog_has_accessible_escape_close(
     clean_page: Page, base_url: str
 ) -> None:

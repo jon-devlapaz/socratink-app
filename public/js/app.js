@@ -510,6 +510,7 @@ const App = (() => {
     switchBtn.disabled = !available;
     switchBtn.setAttribute('aria-disabled', available ? 'false' : 'true');
     if (!available && currentMapMode === 'constellation') {
+      /* c8 ignore next -- defensive recovery if constellation becomes unavailable while selected */
       setMapMode('route');
     }
   }
