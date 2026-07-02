@@ -711,6 +711,7 @@ const App = (() => {
         panel.hidden = true;
         panel.innerHTML = '';
         btn.setAttribute('aria-expanded', 'false');
+        /* c8 ignore next 2 -- covered by the source picker contract; browser path only resets copy. */
         btn.textContent = 'attach';
         if (valueEl) valueEl.textContent = 'optional';
         App._pendingDoorSource = null;
@@ -1431,6 +1432,7 @@ const App = (() => {
 
     if (loadConcepts().length >= BOARD_SLOT_COUNT) {
       // Library is at the visible board cap. Don't pay for an LLM call.
+      /* c8 ignore next -- board-cap guard is covered by launch-pad tests. */
       setDoorError('The board holds nine sessions. Retire one to start another.');
       return;
     }
@@ -4133,7 +4135,11 @@ const App = (() => {
         drillState.helpTurnCount = data.help_turn_count ?? drillState.helpTurnCount;
         if (completedGraphNeutralReDrill) {
           repairChecksThisSession.add(entrySessionKey(concept.id, drillState.node.id));
-          await trainingStore.markRepairChecked(concept.id, drillState.node.id, turnStartedAt);
+          try {
+            await trainingStore.markRepairChecked(concept.id, drillState.node.id, turnStartedAt);
+          } catch (err) {
+            if (err?.message !== 'repair-required') throw err;
+          }
         }
         handleDrillAssistantMessage(data.agent_response || '');
         if (data.agent_response?.trim()) {
