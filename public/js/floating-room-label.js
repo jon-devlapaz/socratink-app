@@ -44,7 +44,7 @@ import { Bus } from './bus.js';
     el.dataset.show = 'false';
     el.innerHTML = `
       <span class="room-label__name"></span>
-      <span class="room-label__action">Open entry</span>
+      <span class="room-label__action">Resume</span>
     `;
     document.body.appendChild(el);
     return el;
@@ -110,8 +110,8 @@ import { Bus } from './bus.js';
       const concepts = loadConcepts();
       const concept = concepts[conceptIdx];
       show(tileGroup, concept
-        ? { name: concept.name, action: 'Open entry', kind: 'room' }
-        : { name: 'New concept', action: '', kind: 'empty' });
+        ? { name: concept.name, action: 'Resume', kind: 'room' }
+        : { name: 'Start learning', action: '', kind: 'empty' });
     };
 
     tileGroup.addEventListener('mouseenter', showForTile);

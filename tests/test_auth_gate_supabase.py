@@ -5,7 +5,9 @@ requests; otherwise the next request 401s.
 """
 
 import os
+import tempfile
 import unittest
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -87,6 +89,18 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/login?return_to=%2F")
 
+    def test_session_route_is_protected_html_entry(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        client = self.build_client(service)
+
+        response = client.get("/session/local-session-1", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response.headers["location"],
+            "/login?return_to=%2Fsession%2Flocal-session-1",
+        )
+
     def test_anonymous_session_unlocks_gate(self):
         service = FakeSupabaseAuthService(enabled=True)
         service.current_state = AuthSessionState(
@@ -100,6 +114,35 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
 
         response = client.get("/", follow_redirects=False)
         self.assertEqual(response.status_code, 200)
+
+    def test_session_route_serves_app_shell_for_guest(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        service.current_state = AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            guest_mode=True,
+            user=AuthUser(id="anon_uuid_456"),
+        )
+        client = self.build_client(service)
+        client.cookies.set(service.cookie_name, "sealed-anon-blob")
+
+        response = client.get("/session/local-session-1", follow_redirects=False)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("socratink", response.text)
+
+    def test_public_index_resolver_uses_first_existing_candidate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            missing = Path(tmp) / "missing-public"
+            present = Path(tmp) / "public"
+            present.mkdir()
+            index_file = present / "index.html"
+            index_file.write_text("shell", encoding="utf-8")
+
+            self.assertEqual(
+                main._public_index_file((missing, present)),
+                index_file,
+            )
 
 
 class DevAutoguestGuardTests(unittest.TestCase):

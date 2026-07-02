@@ -39,13 +39,13 @@ export function conceptListItemHtml(concept, training = null) {
   return `
         <div class="concept-dot" data-state="${safeState}"></div>
         <span class="concept-item-name" title="${safeName}">${safeName}</span>
-        <button class="concept-actions" type="button" data-concept-id="${safeId}" onclick="App.toggleConceptActions(this)" aria-label="Concept actions for ${safeName}" aria-haspopup="menu" aria-expanded="false" title="Concept actions">
+        <button class="concept-actions" type="button" data-concept-id="${safeId}" onclick="App.toggleConceptActions(this)" aria-label="Session actions for ${safeName}" aria-haspopup="menu" aria-expanded="false" title="Session actions">
           <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
         </button>
         <div class="concept-action-menu" role="menu" hidden>
-          <button class="concept-delete concept-action-menu-item" type="button" role="menuitem" data-concept-id="${safeId}" onclick="App.deleteConcept(this.dataset.conceptId,this)" aria-label="Delete concept ${safeName}">
+          <button class="concept-delete concept-action-menu-item" type="button" role="menuitem" data-concept-id="${safeId}" onclick="App.deleteConcept(this.dataset.conceptId,this)" aria-label="Delete session ${safeName}">
             <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-            <span>Delete concept</span>
+            <span>Delete session</span>
           </button>
         </div>`;
 }

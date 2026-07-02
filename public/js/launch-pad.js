@@ -259,7 +259,7 @@ export async function runLaunchPadAction(event, App) {
   if (validation) validation.textContent = '';
 
   // Swap the submit label to a quiet status word during the ~10-20s extract.
-  // Persona QA on the busy state flagged the unchanged "Save sketch" label
+  // Persona QA on the busy state flagged the unchanged submit label
   // + opacity dim alone as too quiet for a 15-second wait. A single-word
   // swap to "Drafting…" communicates progress without adding chrome.
   // (Restored to the original label on any error path so the user can retry.)

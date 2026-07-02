@@ -694,7 +694,7 @@ function renderSketchWrapperHtml(thresholdText) {
   const hasSketch = Boolean(thresholdText);
   const preview = hasSketch
     ? thresholdText
-    : 'You have not yet sketched what you think is inside this concept.';
+    : 'You have not written a first model yet.';
   return `
     <section class="vd-sketch-wrapper concept-page-b2__threshold${hasSketch ? '' : ' concept-page-b2__threshold--empty'}" data-sketch-collapsed="true" aria-label="Concept context">
       <div class="vd-sketch-head">
@@ -702,7 +702,7 @@ function renderSketchWrapperHtml(thresholdText) {
           <span class="concept-page-b2__threshold-label">Context</span>
           <span class="vd-sketch-preview">${escHtml(preview)}</span>
         </button>
-        <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>${hasSketch ? 'edit' : 'add sketch'}</a>
+        <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>${hasSketch ? 'edit' : 'add context'}</a>
       </div>
       <div class="vd-sketch-body" id="vd-sketch-body" hidden>
         <p>${escHtml(preview)}</p>

@@ -85,9 +85,9 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
               <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
             </svg>
           </div>
-          <h3 class="library-empty-headline">Begin a reconstruction.</h3>
-          <p class="library-empty-sub">Drop a topic. The drill makes the gap inspectable.</p>
-          <button type="button" class="ig-button" onclick="App.showIgnition()">New concept</button>
+          <h3 class="library-empty-headline">Start a learning session.</h3>
+          <p class="library-empty-sub">Drop a topic. The loop makes the gap inspectable.</p>
+          <button type="button" class="ig-button" onclick="App.showIgnition()">Start learning</button>
         </div>`;
   } else {
     html += `<div class="library-vault-grid">` + concepts.map(c => {

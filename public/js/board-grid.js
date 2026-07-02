@@ -64,7 +64,7 @@ export function renderGrid({ concepts, tileEls, activeId, bus }) {
     tileEl.setAttribute('tabindex', '0');
     tileEl.setAttribute(
       'aria-label',
-      isEmpty ? 'New concept' : `Open ${concept.name}`
+      isEmpty ? 'Start learning' : `Resume ${concept.name}`
     );
 
     if (isEmpty) {

@@ -194,7 +194,7 @@ def test_hero_helpers_preserve_state_labels_and_actions() -> None:
         } from './public/js/app-hero.js';
 
         assert.equal(getHeroStateLabel('actualized'), 'spaced evidence');
-        assert.equal(getHeroStateLabel('missing'), 'no concepts yet');
+        assert.equal(getHeroStateLabel('missing'), 'no sessions yet');
 
         assert.deepEqual(
           getHeroActionConfig(null),
@@ -202,7 +202,7 @@ def test_hero_helpers_preserve_state_labels_and_actions() -> None:
         );
         assert.deepEqual(
           getHeroActionConfig({ state: 'growing', graphData: { nodes: [] } }),
-          { label: 'Open Concept', action: 'open-map', disabled: false }
+          { label: 'Resume session', action: 'open-map', disabled: false }
         );
         assert.deepEqual(
           getHeroActionConfig({ state: 'hibernating', graphData: null }),
@@ -211,7 +211,7 @@ def test_hero_helpers_preserve_state_labels_and_actions() -> None:
 
         assert.equal(
           getHeroGuidance({ state: 'instantiated', graphData: null }),
-          'Map this source into a concept. The map is not learner evidence.'
+          'Turn the material into a learning session. The map is not learner evidence.'
         );
         assert.equal(describeDoorSource({ type: 'text', text: 'abc' }), '3 chars pasted');
         assert.equal(describeDoorSource({ type: 'url', url: 'https://example.com' }), 'https://example.com');
@@ -379,7 +379,7 @@ def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
           },
           'launch-pad-submit': {
             disabled: false,
-            textContent: 'Save sketch',
+            textContent: 'Save first model',
           },
           'launch-pad-validation': {
             textContent: '',
@@ -625,7 +625,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         );
 
         const emptyHtml = buildLibraryHtml([]);
-        assert.ok(emptyHtml.includes('Begin a reconstruction.'));
+        assert.ok(emptyHtml.includes('Start a learning session.'));
         assert.ok(emptyHtml.includes('App.showIgnition()'));
         assert.ok(!emptyHtml.includes('App.seedLocalQaConcept()'));
 
@@ -783,10 +783,10 @@ def test_board_grid_helpers_preserve_tile_markup_and_events() -> None:
         assert.equal(tiles[0].attrs.class, 'tile-group selected');
         assert.equal(tiles[0].attrs.role, 'button');
         assert.equal(tiles[0].attrs.tabindex, '0');
-        assert.equal(tiles[0].attrs['aria-label'], 'Open First');
+        assert.equal(tiles[0].attrs['aria-label'], 'Resume First');
         assert.ok(tiles[0].innerHTML.includes('concept-pin-0'));
         assert.equal(tiles[1].attrs.class, 'tile-group empty');
-        assert.equal(tiles[1].attrs['aria-label'], 'New concept');
+        assert.equal(tiles[1].attrs['aria-label'], 'Start learning');
         assert.ok(tiles[1].innerHTML.includes('tile-top-empty'));
         assert.deepEqual(events, ['grid:rendered']);
 
@@ -967,6 +967,7 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
         assert.ok(html.includes('class="concept-action-menu"'));
         assert.ok(html.includes('hidden'));
         assert.ok(html.includes('class="concept-delete concept-action-menu-item"'));
+        assert.ok(html.includes('Delete session'));
         assert.ok(html.includes('App.deleteConcept(this.dataset.conceptId,this)'));
         assert.ok(html.includes('data-state=""'));
         assert.ok(!html.includes('data-state="growing"'));
@@ -1043,7 +1044,7 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
 def test_app_shell_uses_organic_icon_contract() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
-    assert "edit_note</span> New concept" in index_html
+    assert "edit_note</span> Start learning" in index_html
     assert "view_quilt</span> Desk" in index_html
     assert "auto_stories</span> Library" in index_html
     assert "chat</span> Learning loop" in index_html
@@ -1057,9 +1058,9 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
     assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
-    assert "What do you want to explain?" in index_html
+    assert "What are you trying to understand?" in index_html
     assert 'id="hero-single-input-field"' in index_html
-    assert 'aria-label="Concept name"' in index_html
+    assert 'aria-label="Learning goal"' in index_html
     assert 'aria-label="What do you want to explain?"' not in index_html
 
 
@@ -2196,7 +2197,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           }
         );
         assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
-        assert.ok(primedHtml.includes('add sketch'));
+        assert.ok(primedHtml.includes('add context'));
         assert.ok(primedHtml.includes('Draft saved'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));
         assert.ok(primedHtml.includes('Your memory draft'));

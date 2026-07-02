@@ -194,6 +194,15 @@ export function createTrainingStore({
     });
   }
 
+  async function markRepairChecked(conceptId, nodeId, at) {
+    if (!at) throw new Error('repair-checked-at-required');
+    return mutateTraining(conceptId, (training) => {
+      const record = ensureNodeRecord(training, nodeId);
+      if (!record.repairs.length) throw new Error('repair-required');
+      record.repair_checked_at = at;
+    });
+  }
+
   return {
     loadTraining,
     saveTraining,
@@ -203,5 +212,6 @@ export function createTrainingStore({
     appendAttempt,
     setStudyRevealed,
     appendRepair,
+    markRepairChecked,
   };
 }
