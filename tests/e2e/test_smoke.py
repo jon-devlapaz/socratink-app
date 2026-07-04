@@ -1240,6 +1240,7 @@ def test_direct_loop_route_redirects_to_app_shell(
     page: Page, base_url: str
 ) -> None:
     """Backcompat /loop should not expose the terminal UI to learners by default."""
+    _enter_app_shell_as_guest(page, base_url)
     page.goto(f"{base_url}/loop")
     expect(page).to_have_url(re.compile(r"/$"))
     expect(page.locator("body")).not_to_contain_text("socratink loop")
