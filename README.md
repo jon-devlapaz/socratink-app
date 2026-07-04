@@ -25,7 +25,7 @@ The product doctrine is stable even while implementation is still moving:
   Production prompt assets bundled with the Vercel serverless function.
 - `public/`
   Hosted frontend.
-- `public/loop/`
+- `lib/loop-public/`
   Standalone `/loop` terminal UI. This is debug/backcompat; the normal learner
   product flow enters SEDA through the app shell and `/api/session`.
 - `lib/seda/`
