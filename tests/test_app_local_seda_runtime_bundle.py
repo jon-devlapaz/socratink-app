@@ -20,7 +20,7 @@ APP_LOCAL_RUNTIME_PATHS = (
     REPO_ROOT / "vendor" / "python" / "ai_service.py",
     REPO_ROOT / "learning_cases" / "cases.jsonl",
     REPO_ROOT / "pedagogical_agents" / "contracts.json",
-    REPO_ROOT / "public" / "loop" / "README.md",
+    REPO_ROOT / "lib" / "loop-public" / "README.md",
     INTERNAL_LOOP_FUNCTION,
 )
 
@@ -52,7 +52,7 @@ def test_app_local_seda_runtime_bundle_has_source_control_anchors() -> None:
 
     root_readme = (REPO_ROOT / "README.md").read_text()
     lib_readme = (REPO_ROOT / "lib" / "README.md").read_text()
-    loop_readme = (REPO_ROOT / "public" / "loop" / "README.md").read_text()
+    loop_readme = (REPO_ROOT / "lib" / "loop-public" / "README.md").read_text()
 
     assert "app-local SEDA loop runtime" in root_readme
     assert "sibling `socratink-tui-agent` checkout" in root_readme
