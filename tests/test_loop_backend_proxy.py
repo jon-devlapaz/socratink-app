@@ -150,6 +150,53 @@ def test_session_proxy_uses_vendored_backend_even_when_external_backend_configur
     assert request.call_args[0][1] == "http://127.0.0.1:9999/api/session"
 
 
+def test_session_proxy_uses_internal_node_function_on_vercel(
+    client: TestClient,
+) -> None:
+    upstream = MagicMock()
+    upstream.status = 201
+    upstream.headers = {"content-type": "application/json"}
+    upstream.read.return_value = b'{"sessionId":"internal-session","status":"active"}'
+    upstream.release_conn = MagicMock()
+
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = _GuestAuthService()
+    try:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "LOOP_BACKEND_URL": "https://stale-loop.example",
+                    "SESSION_COOKIE_KEY": "internal-token",
+                    "VERCEL": "1",
+                },
+                clear=False,
+            ),
+            patch("loop_backend_proxy._POOL.request", return_value=upstream) as request,
+        ):
+            response = client.post(
+                "/api/session",
+                json={},
+                headers={
+                    "host": "preview.example",
+                    "x-forwarded-proto": "https",
+                    "authorization": "Bearer browser-token",
+                    "cookie": "sb_session=sealed",
+                },
+            )
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 201
+    assert response.json()["sessionId"] == "internal-session"
+    assert request.call_args[0][1] == "https://preview.example/api/internal-loop/api/session"
+    forwarded = {key.lower(): value for key, value in request.call_args.kwargs["headers"].items()}
+    assert forwarded["content-type"] == "application/json"
+    assert forwarded["x-socratink-internal-loop-token"] == "internal-token"
+    assert "authorization" not in forwarded
+    assert "cookie" not in forwarded
+
+
 def test_loop_proxy_does_not_forward_accept_encoding(client: TestClient) -> None:
     upstream = MagicMock()
     upstream.status = 200

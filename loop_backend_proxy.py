@@ -120,16 +120,38 @@ def _start_local_loop_backend() -> str:
     ) from last_error
 
 
-def _loop_backend_base(*, force_local_runtime: bool = False) -> str:
+def _vercel_internal_loop_base(request: Request) -> str | None:
+    if not force_vercel_internal_loop():
+        return None
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    if not host:
+        return None
+    proto = request.headers.get("x-forwarded-proto") or "https"
+    return f"{proto}://{host}/api/internal-loop"
+
+
+def force_vercel_internal_loop() -> bool:
+    return bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
+
+
+def _loop_backend_base(
+    *,
+    request: Request,
+    force_local_runtime: bool = False,
+) -> tuple[str, bool]:
+    if force_local_runtime:
+        internal_base = _vercel_internal_loop_base(request)
+        if internal_base:
+            return internal_base, True
     base = os.environ.get("LOOP_BACKEND_URL", "").strip().rstrip("/")
     if base and not force_local_runtime:
-        return base
+        return base, False
     if os.environ.get("SOCRATINK_LOOP_DISABLE_LOCAL") == "1":
         raise HTTPException(
             status_code=503,
             detail="Loop backend is not configured for this deployment.",
         )
-    return _start_local_loop_backend()
+    return _start_local_loop_backend(), False
 
 
 def _loop_unavailable_response(request: Request, err: HTTPException) -> Response:
@@ -180,12 +202,24 @@ def _loop_unavailable_response(request: Request, err: HTTPException) -> Response
     )
 
 
-def _forward_headers(request: Request) -> dict[str, str]:
+def _internal_loop_token() -> str:
+    return (
+        os.environ.get("SOCRATINK_LOOP_API_KEY", "").strip()
+        or os.environ.get("SESSION_COOKIE_KEY", "").strip()
+    )
+
+
+def _forward_headers(request: Request, *, internal_loop: bool = False) -> dict[str, str]:
     headers: dict[str, str] = {}
     for key, value in request.headers.items():
         lowered = key.lower()
         if lowered in _REQUEST_HEADER_ALLOWLIST:
             headers[key] = value
+    if internal_loop:
+        token = _internal_loop_token()
+        if token:
+            headers["X-Socratink-Internal-Loop-Token"] = token
+        return headers
     api_key = os.environ.get("SOCRATINK_LOOP_API_KEY", "").strip()
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -207,7 +241,10 @@ async def proxy_loop_backend(
     force_local_runtime: bool = False,
 ) -> Response:
     try:
-        base = _loop_backend_base(force_local_runtime=force_local_runtime)
+        base, internal_loop = _loop_backend_base(
+            request=request,
+            force_local_runtime=force_local_runtime,
+        )
     except HTTPException as err:
         return _loop_unavailable_response(request, err)
     query = f"?{request.url.query}" if request.url.query else ""
@@ -218,7 +255,7 @@ async def proxy_loop_backend(
             request.method,
             url,
             body=body or None,
-            headers=_forward_headers(request),
+            headers=_forward_headers(request, internal_loop=internal_loop),
             redirect=False,
             preload_content=False,
         )

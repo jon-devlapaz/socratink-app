@@ -5,6 +5,10 @@
     "api/index.py": {
       "includeFiles": "{public/**,app_prompts/**,lib/**,bridge.py,bridge_lib/**,vendor/python/**,pedagogical_agents/**,learning_cases/**,loop-server.mjs,prompt_templates.py}",
       "excludeFiles": "{tests/**,docs/**,logs/**,tmp/**,scripts/**,db/**,.*/**,.env*,agents/**,node_modules/**,package*.json,*.ini,*.md,*.yaml}"
+    },
+    "api/internal-loop/[...path].mjs": {
+      "includeFiles": "{lib/**,bridge.py,bridge_lib/**,vendor/python/**,pedagogical_agents/**,learning_cases/**,public/loop/**,loop-server.mjs,prompt_templates.py}",
+      "excludeFiles": "{tests/**,docs/**,logs/**,tmp/**,scripts/**,db/**,.*/**,.env*,agents/**,node_modules/**,package*.json,*.ini,*.md,*.yaml}"
     }
   },
   "rewrites": [

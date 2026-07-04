@@ -9,6 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TUI_DIR = REPO_ROOT / "scripts" / "socratink_tui"
 LOOP_SERVER_WRAPPER = REPO_ROOT / "socratink-loop-server"
 LOOP_SERVER = REPO_ROOT / "loop-server.mjs"
+INTERNAL_LOOP_FUNCTION = REPO_ROOT / "api" / "internal-loop" / "[...path].mjs"
 APP_LOCAL_RUNTIME_PATHS = (
     REPO_ROOT / "lib" / "README.md",
     REPO_ROOT / "lib" / "seda",
@@ -19,6 +20,7 @@ APP_LOCAL_RUNTIME_PATHS = (
     REPO_ROOT / "learning_cases" / "cases.jsonl",
     REPO_ROOT / "pedagogical_agents" / "contracts.json",
     REPO_ROOT / "public" / "loop" / "README.md",
+    INTERNAL_LOOP_FUNCTION,
 )
 
 
@@ -27,6 +29,7 @@ def test_loop_runtime_wrappers_make_runtime_boundary_explicit() -> None:
     tui_readme = (TUI_DIR / "README.md").read_text()
 
     assert LOOP_SERVER.exists()
+    assert INTERNAL_LOOP_FUNCTION.exists()
     assert "loop-server-control" not in loop_wrapper
     assert "source " not in loop_wrapper
     assert 'export PORT="${PORT:-8787}"' in loop_wrapper
