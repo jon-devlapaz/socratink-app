@@ -13,6 +13,14 @@
   },
   "rewrites": [
     {
+      "source": "/loop",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/loop/:path*",
+      "destination": "/api/index.py"
+    },
+    {
       "source": "/api/internal-loop/:path*",
       "destination": "/api/internal-loop?path=:path*"
     },
