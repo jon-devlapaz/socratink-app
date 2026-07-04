@@ -20,5 +20,5 @@
 @layer components, legacy, paper;
 
 @import '../styles.css?v=149'     layer(components);
-@import '../antigravity.css?v=28' layer(legacy);
+@import '../antigravity.css?v=30' layer(legacy);
 @import 'paper.css?v=12'          layer(paper);
