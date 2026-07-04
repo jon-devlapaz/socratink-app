@@ -1,4 +1,4 @@
-import { createLoopServer } from "../../lib/loop-server/http-server.mjs";
+import { createLoopServer } from "../lib/loop-server/http-server.mjs";
 
 const loopServer = createLoopServer();
 
@@ -14,6 +14,13 @@ function requestToken(req) {
   return Array.isArray(header) ? header[0] : header || "";
 }
 
+function upstreamPathFromRequest(req) {
+  const originalUrl = new URL(req.url || "/", "http://internal");
+  const queryPath = originalUrl.searchParams.get("path");
+  if (queryPath) return `/${queryPath.replace(/^\/+/, "")}`;
+  return originalUrl.pathname.replace(/^\/api\/internal-loop/, "") || "/";
+}
+
 export default function handler(req, res) {
   const expected = expectedToken();
   if (!expected || requestToken(req) !== expected) {
@@ -24,7 +31,6 @@ export default function handler(req, res) {
   }
 
   const originalUrl = new URL(req.url || "/", "http://internal");
-  const upstreamPath = originalUrl.pathname.replace(/^\/api\/internal-loop/, "") || "/";
-  req.url = `${upstreamPath}${originalUrl.search}`;
+  req.url = `${upstreamPathFromRequest(req)}${originalUrl.search}`;
   loopServer.emit("request", req, res);
 }

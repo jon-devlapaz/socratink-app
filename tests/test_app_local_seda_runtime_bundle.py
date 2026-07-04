@@ -9,7 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TUI_DIR = REPO_ROOT / "scripts" / "socratink_tui"
 LOOP_SERVER_WRAPPER = REPO_ROOT / "socratink-loop-server"
 LOOP_SERVER = REPO_ROOT / "loop-server.mjs"
-INTERNAL_LOOP_FUNCTION = REPO_ROOT / "api" / "internal-loop" / "[...path].mjs"
+INTERNAL_LOOP_FUNCTION = REPO_ROOT / "api" / "internal-loop.mjs"
 APP_LOCAL_RUNTIME_PATHS = (
     REPO_ROOT / "lib" / "README.md",
     REPO_ROOT / "lib" / "seda",
