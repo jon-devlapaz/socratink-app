@@ -646,6 +646,27 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     assert edited_training["sketch"]["text"] == "Updated learner sketch."
 
 
+def test_localhost_library_qa_seed_controls_hide_when_storage_unavailable(
+    page: Page, base_url: str
+) -> None:
+    """Local QA seed controls fail closed if browser storage is unavailable."""
+    if not _is_loopback_base_url(base_url):
+        pytest.skip("local QA seed controls are intentionally loopback-only")
+    page.add_init_script(
+        """
+        Object.defineProperty(window, 'localStorage', {
+          configurable: true,
+          get() { throw new Error('localStorage unavailable'); }
+        });
+        """
+    )
+
+    _enter_app_shell_as_guest(page, base_url)
+    page.locator("#nav-library").click()
+
+    expect(page.locator("[data-local-qa-seed]")).to_have_count(0)
+
+
 def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page: Page, base_url: str
 ) -> None:

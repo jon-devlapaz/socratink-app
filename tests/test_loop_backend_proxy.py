@@ -117,6 +117,39 @@ def test_loop_proxy_forwards_to_configured_backend(client: TestClient) -> None:
     upstream.release_conn.assert_called_once()
 
 
+def test_session_proxy_uses_vendored_backend_even_when_external_backend_configured(
+    client: TestClient,
+) -> None:
+    upstream = MagicMock()
+    upstream.status = 201
+    upstream.headers = {"content-type": "application/json"}
+    upstream.read.return_value = b'{"sessionId":"local-session","status":"active"}'
+    upstream.release_conn = MagicMock()
+
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = _GuestAuthService()
+    try:
+        with (
+            patch.dict(
+                "os.environ",
+                {"LOOP_BACKEND_URL": "https://stale-loop.example"},
+                clear=False,
+            ),
+            patch(
+                "loop_backend_proxy._start_local_loop_backend",
+                return_value="http://127.0.0.1:9999",
+            ),
+            patch("loop_backend_proxy._POOL.request", return_value=upstream) as request,
+        ):
+            response = client.post("/api/session", json={})
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 201
+    assert response.json()["sessionId"] == "local-session"
+    assert request.call_args[0][1] == "http://127.0.0.1:9999/api/session"
+
+
 def test_loop_proxy_does_not_forward_accept_encoding(client: TestClient) -> None:
     upstream = MagicMock()
     upstream.status = 200

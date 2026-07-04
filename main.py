@@ -993,12 +993,20 @@ async def proxy_loop_health(request: Request) -> Response:
 
 @app.api_route("/api/session", methods=_LOOP_PROXY_METHODS)
 async def proxy_loop_session_root(request: Request) -> Response:
-    return await proxy_loop_backend(request, "/api/session")
+    return await proxy_loop_backend(
+        request,
+        "/api/session",
+        force_local_runtime=True,
+    )
 
 
 @app.api_route("/api/session/{path:path}", methods=_LOOP_PROXY_METHODS)
 async def proxy_loop_session_path(request: Request, path: str) -> Response:
-    return await proxy_loop_backend(request, f"/api/session/{path}")
+    return await proxy_loop_backend(
+        request,
+        f"/api/session/{path}",
+        force_local_runtime=True,
+    )
 
 
 # Serve the frontend locally. On Vercel, static files are served by the CDN, but

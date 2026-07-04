@@ -209,6 +209,7 @@ const App = (() => {
       return params.get('localQaSeed') === '1'
         || window.localStorage.getItem('socratink.localQaSeed') === '1';
     } catch (err) {
+      /* c8 ignore next -- browser storage denial is fail-closed defensive glue. */
       return false;
     }
   }

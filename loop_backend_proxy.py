@@ -120,9 +120,9 @@ def _start_local_loop_backend() -> str:
     ) from last_error
 
 
-def _loop_backend_base() -> str:
+def _loop_backend_base(*, force_local_runtime: bool = False) -> str:
     base = os.environ.get("LOOP_BACKEND_URL", "").strip().rstrip("/")
-    if base:
+    if base and not force_local_runtime:
         return base
     if os.environ.get("SOCRATINK_LOOP_DISABLE_LOCAL") == "1":
         raise HTTPException(
@@ -200,9 +200,14 @@ def _response_headers(upstream: Mapping[str, str]) -> dict[str, str]:
     }
 
 
-async def proxy_loop_backend(request: Request, upstream_path: str) -> Response:
+async def proxy_loop_backend(
+    request: Request,
+    upstream_path: str,
+    *,
+    force_local_runtime: bool = False,
+) -> Response:
     try:
-        base = _loop_backend_base()
+        base = _loop_backend_base(force_local_runtime=force_local_runtime)
     except HTTPException as err:
         return _loop_unavailable_response(request, err)
     query = f"?{request.url.query}" if request.url.query else ""
