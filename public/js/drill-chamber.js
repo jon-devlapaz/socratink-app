@@ -16,8 +16,17 @@ let sendHandler = null;
 let exitHandler = null;
 let completionHandler = null;
 let historyTurns = 0;
+let speechRecognition = null;
+let listening = false;
+let speechBaseText = '';
+let tutorVoiceEnabled = false;
+let lastSpokenQuestion = '';
 const DEFAULT_SEND_LABEL = 'Check reconstruction';
+const DEFAULT_HINT = 'A sentence is enough.';
+const EMPTY_REPLY_HINT = 'Write a sentence before checking.';
 const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine.';
+const MIC_INPUT_PREF_KEY = 'socratink.loop.micInput';
+const TUTOR_VOICE_PREF_KEY = 'socratink.loop.tutorVoice';
 
 const REQUIRED_ELEMENT_KEYS = [
   'view',
@@ -37,7 +46,10 @@ function hasRequiredElements() {
 
 function bind() {
   const view = document.getElementById('drill-chamber-view');
-  if (els.bound && els.view === view) return hasRequiredElements();
+  if (els.bound && els.view === view) {
+    els.hint = document.getElementById('chamber-hint');
+    return hasRequiredElements();
+  }
   els.bound = false;
   els.view = view;
   els.conceptName = document.getElementById('chamber-concept-name');
@@ -46,6 +58,10 @@ function bind() {
   els.active = document.getElementById('chamber-active');
   els.composer = document.getElementById('chamber-composer');
   els.send = document.getElementById('chamber-send');
+  els.mic = document.getElementById('chamber-mic');
+  els.tutorVoice = document.getElementById('chamber-tutor-voice');
+  els.voiceStatus = document.getElementById('chamber-voice-status');
+  els.hint = document.getElementById('chamber-hint');
   els.exit = document.getElementById('chamber-exit');
   els.chatLog = document.getElementById('chamber-chat-log');
 
@@ -64,10 +80,17 @@ function bind() {
     // early on empty text, leaving the UI permanently disabled until
     // reload. Empty input is a no-op, no state change.
     const text = getComposerValue();
-    if (!text) return;
+    if (!text) {
+      setComposerHint(EMPTY_REPLY_HINT);
+      els.composer.focus();
+      return;
+    }
     els.send.disabled = true;             // visually + functionally lock immediately
     els.composer.disabled = true;
     sendHandler(text);
+  });
+  els.composer.addEventListener('input', () => {
+    if (getComposerValue()) resetComposerHint();
   });
   els.composer.addEventListener('keydown', (e) => {
     if (!hasRequiredElements()) return;
@@ -80,6 +103,7 @@ function bind() {
     if (!hasRequiredElements()) return;
     if (typeof exitHandler === 'function') exitHandler();
   });
+  initVoiceControls();
 
   els.bound = true;
   return true;
@@ -89,11 +113,15 @@ function show({ conceptName, entryName, question }) {
   if (!bind()) return;
   els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
   clearCompletionAction();
+  resetComposerHint();
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
   els.question.textContent = question || '—';
   els.composer.value = '';
   setComposerEnabled(true);
+  syncVoiceControls();
+  lastSpokenQuestion = '';
+  speakTutorQuestion(question || '—');
   resetHistory();
   els.view.hidden = false;
   document.body.classList.add('chamber-open');
@@ -110,6 +138,7 @@ function show({ conceptName, entryName, question }) {
 
 function hide() {
   if (!bind()) return;
+  stopSpeech();
   clearCompletionAction();
   els.view.hidden = true;
   document.body.classList.remove('chamber-open');
@@ -148,6 +177,7 @@ function swapQuestion(nextText) {
     if (!hasRequiredElements()) return;
     els.question.textContent = nextText;
     els.composer.value = '';
+    speakTutorQuestion(nextText);
     els.active.classList.remove('is-fading-out');
     void els.active.offsetWidth;
     els.active.classList.add('is-fading-in');
@@ -161,9 +191,11 @@ function swapQuestion(nextText) {
 
 function setComposerEnabled(enabled) {
   if (!bind()) return;
+  if (!enabled && listening) speechRecognition?.stop();
   if (enabled) clearCompletionAction();
   els.composer.disabled = !enabled;
   els.send.disabled = !enabled;
+  if (els.mic && !els.mic.hidden) els.mic.disabled = !enabled;
 }
 
 /**
@@ -192,16 +224,27 @@ function clearComposer() {
   els.composer.value = '';
 }
 
+function setComposerHint(text) {
+  if (els.hint) els.hint.textContent = text;
+  setVoiceStatus(text === DEFAULT_HINT ? '' : text);
+}
+
+function resetComposerHint() {
+  setComposerHint(DEFAULT_HINT);
+}
+
 function clearCompletionAction() {
   if (!hasRequiredElements()) return;
   completionHandler = null;
   els.active?.removeAttribute('data-complete');
   els.send.textContent = DEFAULT_SEND_LABEL;
   els.composer.placeholder = _originalPlaceholder;
+  resetComposerHint();
 }
 
 function setCompletionAction(label = 'Return to concept', handler = null) {
   if (!bind()) return;
+  stopSpeech();
   completionHandler = typeof handler === 'function' ? handler : exitHandler;
   els.active?.setAttribute('data-complete', 'true');
   els.composer.value = '';
@@ -231,6 +274,139 @@ function appendCreed() {
 
 function onSend(handler) { sendHandler = handler; }
 function onExit(handler) { exitHandler = handler; }
+
+function storageGet(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function storageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* preference just won't stick */
+  }
+}
+
+function micPreferenceEnabled() {
+  return storageGet(MIC_INPUT_PREF_KEY) !== '0';
+}
+
+function setVoiceStatus(text) {
+  if (els.voiceStatus) els.voiceStatus.textContent = text || '';
+}
+
+function setMicListening(isListening) {
+  listening = isListening;
+  if (!els.mic) return;
+  if (isListening) window.speechSynthesis?.cancel();
+  els.mic.classList.toggle('is-listening', isListening);
+  els.mic.setAttribute('aria-pressed', String(isListening));
+  els.mic.setAttribute('aria-label', isListening ? 'Stop dictating answer' : 'Dictate answer');
+}
+
+function setTutorVoiceEnabled(enabled) {
+  tutorVoiceEnabled = enabled;
+  if (!els.tutorVoice) return;
+  els.tutorVoice.classList.toggle('is-speaking', enabled);
+  els.tutorVoice.setAttribute('aria-pressed', String(enabled));
+  els.tutorVoice.setAttribute('aria-label', enabled ? 'Tutor voice on' : 'Tutor voice off');
+  storageSet(TUTOR_VOICE_PREF_KEY, enabled ? '1' : '0');
+}
+
+function speakTutorQuestion(text) {
+  const prompt = String(text || '').trim();
+  if (!tutorVoiceEnabled || !prompt || prompt === lastSpokenQuestion) return;
+  lastSpokenQuestion = prompt;
+  window.speechSynthesis?.cancel();
+  window.speechSynthesis?.speak(new window.SpeechSynthesisUtterance(prompt));
+}
+
+function stopSpeech() {
+  if (listening) speechRecognition?.stop();
+  window.speechSynthesis?.cancel();
+}
+
+function syncVoiceControls() {
+  if (els.mic) {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    els.mic.hidden = !Recognition || !micPreferenceEnabled();
+    els.mic.disabled = els.composer?.disabled || false;
+  }
+  if (els.tutorVoice) {
+    const supported = Boolean(window.speechSynthesis && window.SpeechSynthesisUtterance);
+    els.tutorVoice.hidden = !supported;
+    if (supported) {
+      setTutorVoiceEnabled(storageGet(TUTOR_VOICE_PREF_KEY) === '1');
+    } else {
+      tutorVoiceEnabled = false;
+    }
+  }
+}
+
+function initVoiceControls() {
+  if (els.mic && !els.mic.dataset.voiceBound) {
+    els.mic.dataset.voiceBound = 'true';
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (Recognition) {
+      speechRecognition = new Recognition();
+      speechRecognition.continuous = true;
+      speechRecognition.interimResults = true;
+      speechRecognition.lang = navigator.language || 'en-US';
+      speechRecognition.addEventListener('start', () => {
+        speechBaseText = els.composer.value.trim();
+        setMicListening(true);
+        setVoiceStatus('listening');
+      });
+      speechRecognition.addEventListener('result', (event) => {
+        let transcript = '';
+        for (let i = 0; i < event.results.length; i += 1) {
+          transcript += event.results[i][0].transcript;
+        }
+        els.composer.value = [speechBaseText, transcript.trim()].filter(Boolean).join(' ');
+      });
+      speechRecognition.addEventListener('end', () => {
+        setMicListening(false);
+        setVoiceStatus('');
+        els.composer.focus();
+      });
+      speechRecognition.addEventListener('error', (event) => {
+        setMicListening(false);
+        setVoiceStatus(event.error ? `voice input: ${event.error}` : 'voice input stopped');
+      });
+      els.mic.addEventListener('click', () => {
+        if (els.mic.disabled) return;
+        if (listening) {
+          speechRecognition.stop();
+          return;
+        }
+        try {
+          speechRecognition.start();
+        } catch {
+          setMicListening(false);
+        }
+      });
+    }
+  }
+
+  if (els.tutorVoice && !els.tutorVoice.dataset.voiceBound) {
+    els.tutorVoice.dataset.voiceBound = 'true';
+    els.tutorVoice.addEventListener('click', () => {
+      const enabled = !tutorVoiceEnabled;
+      setTutorVoiceEnabled(enabled);
+      if (!enabled) window.speechSynthesis?.cancel();
+      if (enabled) {
+        lastSpokenQuestion = '';
+        speakTutorQuestion(els.question?.textContent || '');
+      }
+    });
+  }
+
+  syncVoiceControls();
+}
 
 window.DrillChamber = {
   show, hide, appendHistoryTurn, swapQuestion,

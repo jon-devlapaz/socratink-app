@@ -1092,11 +1092,11 @@ body.antigravity-theme .bottom-nav-item.active {
   color: var(--ag-violet);
 }
 
-body.antigravity-theme .bottom-nav-item.active .material-symbols-outlined {
+body.antigravity-theme .bottom-nav-item.active .bottom-nav-icon {
   filter: drop-shadow(0 0 6px rgba(144, 103, 198, 0.40));
 }
 
-html[data-theme="dark"] body.antigravity-theme .bottom-nav-item.active .material-symbols-outlined {
+html[data-theme="dark"] body.antigravity-theme .bottom-nav-item.active .bottom-nav-icon {
   filter: drop-shadow(0 0 6px rgba(158, 139, 255, 0.50));
 }
 

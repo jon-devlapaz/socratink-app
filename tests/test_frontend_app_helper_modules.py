@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
 
+from tests._helpers.node_runner import run_node_module
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
-TEST_NODE_TIMEOUT_SECONDS = 30
 
 
 class ButtonTypeParser(HTMLParser):
@@ -24,23 +24,6 @@ class ButtonTypeParser(HTMLParser):
         attr_names = {name.lower() for name, _value in attrs}
         if "type" not in attr_names:
             self.missing_type.append(self.get_starttag_text() or "<button>")
-
-
-def run_node_module(script: str) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            ["node", "--input-type=module", "-e", script],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=TEST_NODE_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        pytest.fail(
-            f"Node helper module test timed out after {TEST_NODE_TIMEOUT_SECONDS}s",
-            pytrace=False,
-        )
-
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
@@ -158,6 +141,18 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
         assert.deepEqual(sent, ['learner answer']);
         assert.equal(nodes.get('chamber-composer').disabled, true);
         assert.equal(nodes.get('chamber-send').disabled, true);
+
+        nodes.set('chamber-hint', makeNode('chamber-hint'));
+        window.DrillChamber.show({
+          conceptName: 'Concept',
+          entryName: 'Entry',
+          question: 'Question?',
+        });
+        nodes.get('chamber-composer').value = '   ';
+        nodes.get('chamber-send').click();
+        assert.deepEqual(sent, ['learner answer']);
+        assert.equal(nodes.get('chamber-hint').textContent, 'Write a sentence before checking.');
+        assert.equal(nodes.get('chamber-composer').focused, true);
         """
     )
     assert result.returncode == 0, result.stderr
@@ -538,6 +533,8 @@ def test_settings_view_template_preserves_required_dom_ids() -> None:
           'settings-identity-action-host',
           'settings-motion-toggle',
           'settings-sound-toggle',
+          'settings-mic-toggle',
+          'settings-tutor-voice-toggle',
         ]) {
           assert.ok(SETTINGS_HTML.includes(`id="${requiredId}"`), requiredId);
         }
@@ -661,7 +658,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           { id: 'legacy-primed', name: 'Legacy Primed', state: 'growing', graphData: legacyPrimedGraph },
         ], {});
         assert.ok(legacyPrimedHtml.includes('data-state="primed"'));
-        assert.ok(legacyPrimedHtml.includes('>primed<'));
+        assert.ok(legacyPrimedHtml.includes('>draft saved<'));
 
         const legacyNeedsRepairGraph = JSON.stringify({
           metadata: {},
@@ -683,7 +680,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           { id: 'legacy-solid-node', name: 'Legacy Solid Node', state: 'growing', graphData: legacySolidGraph },
         ], {});
         assert.ok(legacySolidHtml.includes('data-state="solidified"'));
-        assert.ok(legacySolidHtml.includes('>solidified<'));
+        assert.ok(legacySolidHtml.includes('>spaced record<'));
 
         const needsRepairTraining = {
           node_records: {
@@ -1041,19 +1038,6 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
     assert result.returncode == 0, result.stderr
 
 
-def test_app_shell_uses_organic_icon_contract() -> None:
-    index_html = (REPO_ROOT / "public" / "index.html").read_text()
-
-    assert "edit_note</span> Start learning" in index_html
-    assert "view_quilt</span> Desk" in index_html
-    assert "auto_stories</span> Library" in index_html
-    assert "chat</span> Learning loop" in index_html
-    assert "Source-less loop" not in index_html
-    assert "rate_review</span> Send Feedback" in index_html
-    for icon_name in ("edit_note", "view_quilt", "auto_stories", "rate_review", "cloud_sync", "more_vert"):
-        assert icon_name in index_html
-
-
 def test_new_concept_field_has_unique_accessible_label() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
@@ -1083,52 +1067,6 @@ def test_feedback_modal_copy_and_button_contract() -> None:
     assert "minlength" not in feedback_textarea
     assert 'id="feedback-status" class="modal-status" role="status" aria-live="polite"' in index_html
     assert '<button class="modal-close" type="button" onclick="Feedback.hide()" aria-label="Close feedback">' in index_html
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_auth_bootstrap_reveals_loop_nav_only_when_available() -> None:
-    result = run_node_module(
-        """
-        import assert from 'node:assert/strict';
-
-        const nodes = new Map([
-          ['auth-controls', { hidden: true }],
-          ['auth-login-link', { hidden: true, href: '', textContent: '' }],
-          ['auth-logout-btn', {
-            hidden: true,
-            disabled: false,
-            textContent: '',
-            dataset: {},
-            addEventListener(type, handler) { this[type] = handler; },
-          }],
-          ['auth-status', { hidden: true, textContent: '' }],
-          ['nav-loop', { hidden: true }],
-        ]);
-        globalThis.window = {
-          location: { pathname: '/', search: '', hash: '', assign() {} },
-        };
-        globalThis.document = {
-          getElementById(id) { return nodes.get(id) || null; },
-        };
-
-        const auth = await import('./public/js/auth.js');
-        globalThis.fetch = async () => ({
-          ok: true,
-          json: async () => ({ guest_mode: true, auth_enabled: true, loop_available: false }),
-        });
-        await auth.bootstrapAuthUi();
-        assert.equal(nodes.get('nav-loop').hidden, true);
-
-        auth.invalidateAuthSession();
-        globalThis.fetch = async () => ({
-          ok: true,
-          json: async () => ({ guest_mode: true, auth_enabled: true, loop_available: true }),
-        });
-        await auth.bootstrapAuthUi();
-        assert.equal(nodes.get('nav-loop').hidden, false);
-        """
-    )
-    assert result.returncode == 0, result.stderr
 
 
 def test_static_buttons_declare_type() -> None:

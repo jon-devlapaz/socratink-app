@@ -184,7 +184,7 @@ def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str)
     expect(clean_page.locator(".first-run-welcome")).to_have_count(0)
     clean_page.locator("#nav-ignition").click()
     expect(clean_page.locator("#ignition-first-use")).to_have_text(
-        "Name what you want to understand. Socratink will ask for your first model, then start the loop."
+        "Name what you want to understand. socratink will ask for your first model, then start the loop."
     )
 
 
@@ -478,7 +478,7 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     card = page.locator(".library-card-vault", has_text="Training Truth QA")
     expect(card).to_be_visible()
     expect(card).to_have_attribute("data-state", "primed")
-    expect(card.locator(".library-card-state")).to_have_text("primed")
+    expect(card.locator(".library-card-state")).to_have_text("draft saved")
     expect(card.locator(".library-card-summary")).to_have_text(
         "Learner-owned reconstruction visible in Library."
     )
@@ -548,6 +548,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         ),
     )
 
+    page.evaluate("localStorage.setItem('socratink.localQaSeed', '1')")
     page.locator("#nav-library").click()
     page.locator("[data-local-qa-seed]").click()
 
@@ -805,6 +806,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
 
+    page.evaluate("localStorage.setItem('socratink.localQaSeed', '1')")
     page.locator("#nav-library").click()
     page.locator("[data-local-repair-qa-seed]").click()
     page.locator(".library-card-vault", has_text="Repair Truth QA").click()
@@ -979,6 +981,7 @@ def test_launch_pad_accepts_any_non_empty_sketch(
     """The launch-pad affordance should enable any non-empty learner response."""
     page.set_viewport_size({"width": 390, "height": 844})
     _enter_app_shell_as_guest(page, base_url)
+    page.wait_for_function("() => window.App?.showLaunchPad")
     page.evaluate(
         """(() => {
             sessionStorage.setItem('socratink:pendingShell', JSON.stringify({
@@ -1027,6 +1030,220 @@ def test_launch_pad_accepts_any_non_empty_sketch(
     expect(page.locator("#launch-pad-validation")).to_have_text(
         "Write anything you think about the concept before building the draft."
     )
+
+
+def test_start_learning_enters_seda_loop_from_product_flow(
+    page: Page, base_url: str
+) -> None:
+    """Start learning should open the product chamber backed by /api/session."""
+    _enter_app_shell_as_guest(page, base_url)
+    resume_drill_requests: list[str] = []
+
+    def remember_resume_drill(request) -> None:
+        if request.method == "POST" and request.url.endswith("/api/drill"):
+            resume_drill_requests.append(request.url)
+
+    def fulfill_extract(route) -> None:
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {
+                        "core_thesis": "Vaccines leave immune memory that speeds later response.",
+                        "learner_goal": "Explain why a second exposure is faster.",
+                    },
+                    "backbone": [{
+                        "id": "b1",
+                        "principle": "Immune memory makes later response faster.",
+                        "dependent_clusters": ["c1"],
+                    }],
+                    "clusters": [{
+                        "id": "c1",
+                        "label": "Memory cells",
+                        "description": "Memory B and T cells persist after exposure.",
+                        "subnodes": [{
+                            "id": "c1_s1",
+                            "label": "Memory cells",
+                            "mechanism": "Memory cells persist after first exposure and respond faster later.",
+                            "learner_scaffold": {
+                                "entry_prompt": "Why is the second exposure faster?",
+                                "task_cue": "Explain the role of memory cells.",
+                            },
+                        }],
+                    }],
+                },
+            }),
+        )
+
+    page.route("**/api/extract", fulfill_extract)
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill(
+        "I want to explain why vaccines create immune memory."
+    )
+    page.locator("#hero-door-submit").click()
+    page.locator("#launch-pad-input").fill(
+        "The first exposure leaves cells that remember the pathogen."
+    )
+    page.locator("#launch-pad-submit").click()
+
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "Try your first explanation", timeout=20_000
+    )
+    state = page.wait_for_function(
+        """() => {
+          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key));
+          return value?.sessionId && value?.latest ? value : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert state["sessionId"]
+    assert state["latest"]["awaiting"]["key"] == "launch_attempt"
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-hint")).to_have_text(
+        "Write a sentence before checking."
+    )
+    page.locator("#chamber-composer").fill(
+        "Memory cells remain after the first exposure and make the second response faster."
+    )
+    expect(page.locator("#chamber-hint")).to_have_text("A sentence is enough.")
+    page.locator("#chamber-send").click()
+    advanced_state = page.wait_for_function(
+        """() => {
+          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key));
+          return value?.latest?.awaiting?.key !== 'launch_attempt' ? value : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert advanced_state["sessionId"] == state["sessionId"]
+    page.locator("#chamber-exit").click()
+    expect(page.locator("#drill-chamber-view")).to_be_hidden()
+    page.evaluate(
+        """window.App.reopenStudy({
+          id: 'c1_s1',
+          label: 'Memory cells',
+          fullLabel: 'Memory cells',
+        })"""
+    )
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    reopened_state = page.wait_for_function(
+        """() => {
+          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key));
+          return value?.sessionId ? value : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert reopened_state["sessionId"] == state["sessionId"]
+    page.locator("#chamber-exit").click()
+    page.reload()
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible(
+        timeout=20_000
+    )
+    page.on("request", remember_resume_drill)
+    resume_text = "Memory cells stay available and respond faster on the next exposure."
+    page.locator(".concept-page-b2__attempt-input").fill(resume_text)
+    with page.expect_request(
+        lambda request: (
+            request.method == "POST"
+            and "/api/session/" in request.url
+            and request.url.endswith("/turn")
+            and request.post_data_json == {"text": resume_text}
+        )
+    ) as resume_turn:
+        page.locator(".concept-page-b2__attempt-save").click()
+    assert resume_turn.value.post_data_json == {"text": resume_text}
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    assert resume_drill_requests == []
+    expect(page.locator("#nav-loop")).to_have_count(0)
+
+
+def test_seda_start_failure_offers_retry_from_product_flow(
+    page: Page, base_url: str
+) -> None:
+    """A failed app-local SEDA start should give the learner a retry action."""
+    _enter_app_shell_as_guest(page, base_url)
+
+    def fulfill_extract(route) -> None:
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {"core_thesis": "Immune memory speeds the next response."},
+                    "backbone": [{"id": "b1", "principle": "Immune memory persists."}],
+                    "clusters": [{
+                        "id": "c1",
+                        "label": "Memory cells",
+                        "subnodes": [{
+                            "id": "c1_s1",
+                            "label": "Memory cells",
+                            "mechanism": "Memory cells persist after exposure.",
+                        }],
+                    }],
+                },
+            }),
+        )
+
+    session_attempts = {"count": 0}
+
+    def fulfill_session(route) -> None:
+        session_attempts["count"] += 1
+        if session_attempts["count"] == 1:
+            route.fulfill(
+                status=503,
+                content_type="application/json",
+                body=json.dumps({"detail": "Loop backend unavailable."}),
+            )
+            return
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "retry-session",
+                "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
+                "learnerTranscript": [],
+                "caseComplete": False,
+            }),
+        )
+
+    page.route("**/api/extract", fulfill_extract)
+    page.route("**/api/session", fulfill_session)
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
+    page.locator("#hero-door-submit").click()
+    page.locator("#launch-pad-input").fill("The first exposure leaves memory cells.")
+    page.locator("#launch-pad-submit").click()
+
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "The learning loop could not start. Try again when ready.",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-send")).to_have_text("Try again")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "Try your first explanation.",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    assert session_attempts["count"] == 2
+
+
+def test_direct_loop_route_redirects_to_app_shell(
+    page: Page, base_url: str
+) -> None:
+    """Backcompat /loop should not expose the terminal UI to learners by default."""
+    page.goto(f"{base_url}/loop")
+    expect(page).to_have_url(re.compile(r"/$"))
+    expect(page.locator("body")).not_to_contain_text("socratink loop")
+    expect(page.locator("#nav-ignition")).to_be_visible()
 
 
 def test_concept_entry_mutation_preserves_active_later_entry(
@@ -1502,9 +1719,7 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     )
     page.locator(".concept-page-b2__attempt-save").click()
 
-    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "solidified"
-    )
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Spaced record")
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     assert len(drill_calls) == 1
     assert drill_calls[0]["drill_mode"] == "re_drill"
@@ -2011,8 +2226,7 @@ def test_mobile_drawer_keeps_feedback_accessible(
     assert drawer_box is not None
     assert drawer_box["x"] >= 0
     assert drawer_box["x"] + drawer_box["width"] <= 390
-    page.evaluate("document.querySelector('#nav-loop').hidden = false")
-    expect(page.locator("#nav-loop")).to_be_visible()
+    expect(page.locator("#nav-loop")).to_have_count(0)
     expect(page.locator("#nav-feedback")).to_be_visible()
 
     page.locator("#nav-feedback").click()
@@ -2630,6 +2844,23 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=8_000)
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
+    expect(clean_page.locator("#chamber-question")).to_contain_text(
+        "What do you want to explain?", timeout=20_000
+    )
+    seda_state = clean_page.wait_for_function(
+        """() => {
+          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key));
+          return value?.sessionId && value?.latest ? value : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert seda_state["latest"]["awaiting"]["key"] in {"learner_goal", "launch_attempt"}
+    clean_page.locator("#chamber-exit").click()
+    expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
+    expect(canvas).to_be_visible(timeout=8_000)
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "What do you think the thermostat checks before it calls for heat?"
     )
@@ -2645,113 +2876,16 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     clean_page.locator(".concept-page-b2__attempt-input").fill(
         "It checks if the room is colder than what we wanted and then starts heat."
     )
-    clean_page.locator(".concept-page-b2__attempt-save").click()
-    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Draft saved")
-    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text(
-        "It checks if the room is colder than what we wanted and then starts heat."
-    )
-    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text("Draft recorded.")
-    expect(clean_page.locator(".concept-page-b2__evidence")).to_have_class(
-        re.compile(r"\bconcept-page-b2__evidence--study-gate\b")
-    )
+    with clean_page.expect_request(
+        lambda request: (
+            request.method == "POST"
+            and "/api/session/" in request.url
+            and request.url.endswith("/turn")
+        )
+    ):
+        clean_page.locator(".concept-page-b2__attempt-save").click()
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
     expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Reveal notes and compare"
-    )
-
-    clean_page.locator(".concept-page-b2__entry-cta").click()
-    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Compare notes")
-    entry_label_style = clean_page.locator(".concept-page-b2__entry-eyebrow").evaluate(
-        """(el) => {
-            const style = window.getComputedStyle(el);
-            return {
-                letterSpacing: style.letterSpacing,
-                textTransform: style.textTransform,
-            };
-        }"""
-    )
-    assert entry_label_style == {"letterSpacing": "normal", "textTransform": "none"}
-    expect(clean_page.locator(".concept-page-b2__study-note")).to_contain_text(
-        "measured room temperature with the set point"
-    )
-    expect(clean_page.locator(".concept-page-b2__study-note")).not_to_have_class(
-        re.compile(r"is-collapsed")
-    )
-    expect(clean_page.locator("[data-study-note-toggle]")).to_have_text("Hide study note")
-    compare_surface_style = clean_page.locator(".concept-page-b2__study-note").evaluate(
-        """(el) => {
-            const style = window.getComputedStyle(el);
-            const bodyStyle = window.getComputedStyle(el.querySelector('[data-study-note-body]'));
-            return {
-                backgroundColor: style.backgroundColor,
-                borderLeftWidth: style.borderLeftWidth,
-                borderTopWidth: style.borderTopWidth,
-                bodyFontWeight: bodyStyle.fontWeight,
-            };
-        }"""
-    )
-    assert compare_surface_style == {
-        "backgroundColor": "rgba(0, 0, 0, 0)",
-        "borderLeftWidth": "2px",
-        "borderTopWidth": "0px",
-        "bodyFontWeight": "500",
-    }
-    study_toggle_box = clean_page.locator("[data-study-note-toggle]").bounding_box()
-    assert study_toggle_box is not None
-    assert study_toggle_box["height"] >= 44
-    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
-        "Missing piece"
-    )
-    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
-        "Missing link"
-    )
-    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
-        "Name that the thermostat compares room temperature with the set point."
-    )
-    expect(clean_page.locator(".concept-page-b2__repair")).not_to_contain_text(
-        "The sketch names current but misses comparison to a target set point."
-    )
-    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
-        "Generated description should not leak"
-    )
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
-
-    clean_page.reload()
-    reopen_created_concept()
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
-
-    clean_page.locator(".concept-page-b2__repair-input").fill(
-        "The thermostat compares the room temperature to the set point before it asks for heat."
-    )
-    clean_page.locator(".concept-page-b2__repair-save").click()
-    clean_page.locator(".concept-page-b2__entry-cta").click()
-    clean_page.set_viewport_size({"width": 390, "height": 844})
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Compare target")
-    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
-    expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
-    clean_page.set_viewport_size({"width": 1280, "height": 720})
-
-    clean_page.reload()
-    reopen_created_concept()
-    expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__entry-title")).to_have_text("Compare target")
-    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
-        "Pressure-check this link"
-    )
-    expect(clean_page.locator(".concept-page-b2__nearby")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
-        "Generated future description should not leak"
-    )
-    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
-        "When measured temperature is below the set point"
-    )
-    expect(clean_page.locator(".concept-page-b2__gestalt")).not_to_contain_text(
-        "Hidden future study note"
-    )
-    expect(clean_page.locator("#drill-chamber-view")).to_have_count(0)
 
 
 def test_source_less_defensive_ui_paths_remain_inert(

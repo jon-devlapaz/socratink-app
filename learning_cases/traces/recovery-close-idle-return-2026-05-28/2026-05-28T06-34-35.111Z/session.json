@@ -1,0 +1,606 @@
+{
+  "source_mode": "source_less",
+  "concept": "Socratink",
+  "learner_goal": "make socratink better",
+  "concept_id": "socratink",
+  "route": {
+    "provisional_map": {
+      "metadata": {
+        "source_title": "Socratink",
+        "core_thesis": "Socratink updates its learning map based on learner attempts to identify gaps.",
+        "architecture_type": "system_description",
+        "difficulty": "medium",
+        "governing_assumptions": [
+          "Learners interact with the system through cold attempts.",
+          "The system aims to optimize learning and retention."
+        ],
+        "low_density": true
+      },
+      "backbone": [
+        {
+          "id": "b1",
+          "principle": "Socratink's Continuous Learning Cycle",
+          "dependent_clusters": [
+            "c1",
+            "c2",
+            "c3"
+          ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": "c1",
+          "label": "Socratink updates its learning map based on learner attempts to identify gaps.",
+          "description": "This mechanism describes how Socratink uses learner interactions, specifically cold attempts, to gather evidence and dynamically adjust the weighting of its internal learning map, thereby identifying and tracking knowledge gaps.",
+          "subnodes": [
+            {
+              "id": "c1_s1",
+              "label": "Learning Map Weighting",
+              "mechanism": "Socratink uses cold attempts and subsequent evaluation to gather evidence, which then weights the learning map to reflect the learner's understanding and identify specific knowledge gaps.",
+              "learner_scaffold": {
+                "bloom_level": "understand",
+                "learner_move": "Explain how",
+                "task_label": "Learning Map Weighting",
+                "task_cue": "Explain how the learning map becomes evidence-weighted.",
+                "tailoring_anchor": "evidence-weighted learning map with cold attempts, gap identification",
+                "entry_prompt": "Your sketch mentions Socratink uses an \"evidence-weighted learning map\" and \"gap identification\" through \"cold attempts\". Explain how these elements combine to make the map evidence-weighted.",
+                "expected_shape": "Describe the process in one or two sentences.",
+                "sentence_starter": "The learning map becomes evidence-weighted when...",
+                "blank_hint": "Consider how learner interactions provide data.",
+                "evidence_goal": "The learner explains the process of how cold attempts and gap identification contribute to weighting the learning map."
+              },
+              "drill_status": null,
+              "gap_type": null,
+              "gap_description": null,
+              "last_drilled": null
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "label": "The Repair Loop Mechanism",
+          "description": "This mechanism details the process Socratink employs to help learners address identified knowledge gaps, guiding them through targeted content and practice until the gap is resolved.",
+          "subnodes": [
+            {
+              "id": "c2_s1",
+              "label": "Gap Repair Process",
+              "mechanism": "After a gap is identified, Socratink initiates a repair loop, guiding the learner through targeted content and practice until the identified gap is addressed and new evidence is gathered.",
+              "learner_scaffold": {
+                "bloom_level": "understand",
+                "learner_move": "Explain how",
+                "task_label": "Gap Repair Process",
+                "task_cue": "Explain how repair works.",
+                "tailoring_anchor": "repair",
+                "entry_prompt": "Your initial description mentions \"repair\" as a feature of Socratink. How does Socratink facilitate the repair of identified knowledge gaps?",
+                "expected_shape": "Describe the steps involved in the repair process.",
+                "sentence_starter": "The repair process in Socratink involves...",
+                "blank_hint": "Think about what happens after a gap is found.",
+                "evidence_goal": "The learner describes the steps Socratink takes to help a user repair a knowledge gap."
+              },
+              "drill_status": null,
+              "gap_type": null,
+              "gap_description": null,
+              "last_drilled": null
+            }
+          ]
+        },
+        {
+          "id": "c3",
+          "label": "Spaced Reconstruction Scheduling",
+          "description": "This mechanism explains how Socratink intelligently schedules future reconstruction attempts based on the learner's performance and the current state of the evidence-weighted learning map to optimize long-term retention.",
+          "subnodes": [
+            {
+              "id": "c3_s1",
+              "label": "Spaced Practice Scheduling",
+              "mechanism": "Socratink schedules spaced reconstruction attempts based on the learner's performance and the evidence-weighted state of the learning map, optimizing retention and reducing forgetting.",
+              "learner_scaffold": {
+                "bloom_level": "understand",
+                "learner_move": "Explain how",
+                "task_label": "Spaced Practice Scheduling",
+                "task_cue": "Explain how spaced reconstruction is scheduled.",
+                "tailoring_anchor": "spaced reconstruction",
+                "entry_prompt": "You noted \"spaced reconstruction\" as a feature. How does Socratink determine when to schedule these reconstruction attempts?",
+                "expected_shape": "Explain the criteria for scheduling spaced reconstruction.",
+                "sentence_starter": "Spaced reconstruction attempts are scheduled based on...",
+                "blank_hint": "Consider how the system uses evidence over time.",
+                "evidence_goal": "The learner explains the factors Socratink uses to schedule spaced reconstruction."
+              },
+              "drill_status": null,
+              "gap_type": null,
+              "gap_description": null,
+              "last_drilled": null
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "domain_mechanics": [
+          {
+            "from": "c1",
+            "to": "c2",
+            "type": "causal",
+            "mechanism": "The identification of a knowledge gap through the evidence-weighted learning map directly initiates the repair loop."
+          },
+          {
+            "from": "c1",
+            "to": "c3",
+            "type": "causal",
+            "mechanism": "The evidence state of the learning map, reflecting understanding and gaps, drives the scheduling decisions for spaced reconstruction."
+          }
+        ],
+        "learning_prerequisites": [
+          {
+            "from": "c1",
+            "to": "c2",
+            "rationale": "Understanding how Socratink identifies gaps and weights its map is necessary to comprehend the purpose and initiation of the repair loop."
+          },
+          {
+            "from": "c1",
+            "to": "c3",
+            "rationale": "Grasping how the learning map is weighted with evidence is essential for understanding how spaced reconstruction attempts are intelligently scheduled."
+          }
+        ]
+      },
+      "frameworks": []
+    },
+    "first_node": {
+      "id": "c1_s1",
+      "label": "Learning Map Weighting",
+      "mechanism": "Socratink uses cold attempts and subsequent evaluation to gather evidence, which then weights the learning map to reflect the learner's understanding and identify specific knowledge gaps.",
+      "learner_prompt": "Your sketch mentions Socratink uses an \"evidence-weighted learning map\" and \"gap identification\" through \"cold attempts\". Explain how these elements combine to make the map evidence-weighted.",
+      "task_label": "Learning Map Weighting",
+      "blank_hint": "Consider how learner interactions provide data.",
+      "evidence_goal": "The learner explains the process of how cold attempts and gap identification contribute to weighting the learning map."
+    },
+    "retry_count": 0,
+    "retry_reasons": []
+  },
+  "product_loop": {
+    "repair_position": "before_model_bridge",
+    "bridge_gate": "before -> missing operation -> after",
+    "graph_truth": "only spaced strong reconstruction may derive solidified",
+    "graph_neutral_events": [
+      "cold_help_turn",
+      "cold_support_exhausted",
+      "gap_identified",
+      "repair_dialogue_turn",
+      "repair_state_bucketed",
+      "repair_cap_selected",
+      "repair_recovery_started",
+      "repair_recovery_closed",
+      "repair_abandoned"
+    ]
+  },
+  "agent_contract": {
+    "orchestrator": "Socratink Orchestrator",
+    "truth_contract": "Agents propose moves. Training store records events. Derivation decides truth. Graph displays only derived evidence.",
+    "state_owner": "training-store/training-derive"
+  },
+  "events": [
+    {
+      "type": "idle_new_concept",
+      "concept": "Socratink"
+    },
+    {
+      "type": "launch_attempt",
+      "text": "Socratink is an evidence-weighted learning map with cold attempts, gap identification, repair, and spaced reconstruction."
+    },
+    {
+      "type": "route_generated"
+    },
+    {
+      "type": "cold_help_turn",
+      "turn_index": 1,
+      "text": "It is like a route with understanding gates.",
+      "answer_mode": "attempt",
+      "score_eligible": false,
+      "classification": null,
+      "routing": "SCAFFOLD",
+      "help_request_reason": "none",
+      "graph_neutral": true,
+      "kc_id": "c1_s1",
+      "agent_response": "That's an interesting way to think about it! To help me understand your thinking, what specifically happens during a cold attempt that provides evidence to Socratink about your understanding?",
+      "generative_commitment": true
+    },
+    {
+      "type": "cold_help_turn",
+      "turn_index": 2,
+      "text": "It is like a route with understanding gates.",
+      "answer_mode": "attempt",
+      "score_eligible": false,
+      "classification": null,
+      "routing": "SCAFFOLD",
+      "help_request_reason": "none",
+      "graph_neutral": true,
+      "kc_id": "c1_s1",
+      "agent_response": "That's an interesting way to think about it. Can you tell me more about how Socratink actually *uses* those cold attempts to adjust the map?",
+      "generative_commitment": true
+    },
+    {
+      "type": "cold_support_exhausted",
+      "help_turns": 2,
+      "reason": "no_substantive_cold_attempt",
+      "graph_neutral": true,
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "gap_identified",
+      "surface": "delta",
+      "cue": "The learner has some correct pieces, but the causal mechanism is still incomplete.",
+      "gap_log": {
+        "kc_id": "c1_s1",
+        "before": "Consider how learner interactions provide data.",
+        "missing_operation": "the causal step that links the before state to the after state",
+        "after": "The learner explains the process of how cold attempts and gap identification contribute to weighting the learning map.",
+        "internal_bloom_lens": "understand",
+        "question_style": "direct"
+      },
+      "repair_scaffold": {
+        "repair_target": "The learner has some correct pieces, but the causal mechanism is still incomplete.",
+        "before": "Consider how learner interactions provide data.",
+        "missing_operation": "the causal step that links the before state to the after state",
+        "after": "The learner explains the process of how cold attempts and gap identification contribute to weighting the learning map.",
+        "internal_bloom_lens": "understand",
+        "question_style": "direct",
+        "socratic_question": "What must happen between \"Consider how learner interactions provide data.\" and \"The learner explains the process of how cold attempts and gap identification contribute to weighting the learning map.\"?"
+      },
+      "scaffold_rejections": [
+        {
+          "reason": "answer_shaped_scaffold",
+          "rejected_missing_operation": "gathering evidence from cold attempts and evaluation"
+        }
+      ],
+      "prompt": "What must happen between \"Consider how learner interactions provide data.\" and \"The learner explains the process of how cold attempts and gap identification contribute to weighting the learning map.\"?",
+      "graph_neutral": true,
+      "training_store_note": "uses study_revealed_at internally to unlock repair without revealing model bridge"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "turn_index": 1,
+      "text": "i am not sure.",
+      "bridge_ready": false,
+      "next_dialogue_action": "escalate",
+      "uncertainty": true,
+      "uncertainty_signal": true,
+      "uncertainty_type": "idk",
+      "ladder_stage": "direct",
+      "ladder_step": 0,
+      "ladder_policy_version": "uncertainty-ladder-v1",
+      "score_eligible": false,
+      "graph_neutral": true,
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "turn_index": 2,
+      "text": "i am not sure.",
+      "bridge_ready": false,
+      "next_dialogue_action": "recover_uncertainty",
+      "uncertainty": true,
+      "uncertainty_signal": true,
+      "uncertainty_type": "idk",
+      "ladder_stage": "bounded_causal_link",
+      "ladder_step": 1,
+      "ladder_policy_version": "uncertainty-ladder-v1",
+      "score_eligible": false,
+      "graph_neutral": true,
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "turn_index": 3,
+      "text": "i am not sure.",
+      "bridge_ready": false,
+      "next_dialogue_action": "recover_uncertainty",
+      "uncertainty": true,
+      "uncertainty_signal": true,
+      "uncertainty_type": "idk",
+      "ladder_stage": "keyword_to_sentence",
+      "ladder_step": 2,
+      "ladder_policy_version": "uncertainty-ladder-v1",
+      "score_eligible": false,
+      "graph_neutral": true,
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "turn_index": 4,
+      "text": "i am not sure.",
+      "bridge_ready": false,
+      "next_dialogue_action": "abandon",
+      "uncertainty": true,
+      "uncertainty_signal": true,
+      "uncertainty_type": "idk",
+      "ladder_stage": "abandon",
+      "ladder_step": 2,
+      "ladder_policy_version": "uncertainty-ladder-v1",
+      "score_eligible": false,
+      "graph_neutral": true,
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_state_bucketed",
+      "source_event_type": "repair_dialogue_turn",
+      "bucket": "uncertain",
+      "bucket_reason": "uncertain_nonrepair",
+      "concept_id": "socratink",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_cap_selected",
+      "bucket": "uncertain",
+      "cap_value": 5,
+      "cap_policy_version": "repair-recovery-v1-shadow",
+      "inputs_fingerprint": "uncertain:5",
+      "concept_id": "socratink",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_recovery_started",
+      "trigger": "repair_abandoned",
+      "recovery_mode": "same_kc_single_turn",
+      "concept_id": "socratink",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_recovery_closed",
+      "outcome": "idle_return",
+      "next_phase": "idle",
+      "concept_id": "socratink",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_abandoned",
+      "text": "i am not sure.",
+      "reason": "uncertain_nonrepair",
+      "graph_neutral": true,
+      "next_step": "micro_scaffold"
+    },
+    {
+      "type": "idle_exit"
+    }
+  ],
+  "derived": [
+    {
+      "event": "gap_identified",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "It is like a route with understanding gates.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 0
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "event": "repair_abandoned",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "It is like a route with understanding gates.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 0
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    }
+  ],
+  "evidence_holds": [],
+  "llm_calls": [
+    {
+      "agent": "Route Agent",
+      "agent_id": "route",
+      "job": "Create a provisional map hypothesis and first reconstruction target.",
+      "required_outputs": [
+        "provisional_map",
+        "first_node"
+      ],
+      "may_propose_events": [
+        "route_generated"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Treating generated route topology as learner evidence.",
+      "stage": "route_generated",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 21580.841582996072,
+      "usage": {
+        "input_tokens": 2738,
+        "output_tokens": 1465
+      }
+    },
+    {
+      "agent": "Cold Attempt Agent",
+      "agent_id": "cold_attempt",
+      "job": "Elicit the learner's current model before recognition or model-bridge material.",
+      "required_outputs": [
+        "learner_prompt"
+      ],
+      "may_propose_events": [
+        "cold_attempt"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Leaking the answer before the learner generates.",
+      "stage": "cold_attempt_prompt",
+      "provider": "orchestrator",
+      "model": "contract",
+      "latency_ms": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    {
+      "agent": "Evidence Judge",
+      "agent_id": "evidence_judge",
+      "job": "Classify attempts for the orchestrator without mutating graph truth.",
+      "required_outputs": [
+        "classification",
+        "gap_description",
+        "routing",
+        "score_eligible",
+        "generative_commitment"
+      ],
+      "may_propose_events": [
+        "cold_attempt",
+        "gap_drill",
+        "spaced_redrill"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Letting an LLM classification override training derivation.",
+      "stage": "cold_attempt",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 5317.052041995339,
+      "usage": {
+        "input_tokens": 1583,
+        "output_tokens": 139
+      }
+    },
+    {
+      "agent": "Evidence Judge",
+      "agent_id": "evidence_judge",
+      "job": "Classify attempts for the orchestrator without mutating graph truth.",
+      "required_outputs": [
+        "classification",
+        "gap_description",
+        "routing",
+        "score_eligible",
+        "generative_commitment"
+      ],
+      "may_propose_events": [
+        "cold_attempt",
+        "gap_drill",
+        "spaced_redrill"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Letting an LLM classification override training derivation.",
+      "stage": "cold_attempt",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 3898.4023750090273,
+      "usage": {
+        "input_tokens": 1583,
+        "output_tokens": 136
+      }
+    },
+    {
+      "agent": "Delta Agent",
+      "agent_id": "delta",
+      "job": "Find the missing causal link and express it as a concrete repair slot.",
+      "required_outputs": [
+        "repair_target",
+        "before",
+        "missing",
+        "after",
+        "prompt"
+      ],
+      "may_propose_events": [
+        "study_reveal"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Naming a vague gap instead of one fillable causal link.",
+      "stage": "repair_scaffold",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 7172.483374990406,
+      "usage": {
+        "input_tokens": 256,
+        "output_tokens": 203
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_prompt",
+      "provider": "orchestrator",
+      "model": "contract",
+      "latency_ms": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    }
+  ],
+  "training": {
+    "concept_id": "socratink",
+    "schema_version": 1,
+    "source_mode": "source_less",
+    "grounding": "learner_sketch",
+    "source_ref": null,
+    "sketch": {
+      "text": "Socratink is an evidence-weighted learning map with cold attempts, gap identification, repair, and spaced reconstruction.",
+      "at": "2026-05-15T10:00:00.000Z"
+    },
+    "node_records": {
+      "c1_s1": {
+        "attempts": [
+          {
+            "id": "zero-schema-entry",
+            "at": "2026-05-15T10:00:00.000Z",
+            "user_text": "It is like a route with understanding gates.",
+            "classification": "thin",
+            "gaps": [],
+            "grader_version": "tui-zero-schema",
+            "kind": "cold"
+          }
+        ],
+        "repairs": [],
+        "study_revealed_at": "2026-05-15T10:12:00.000Z"
+      }
+    }
+  }
+}

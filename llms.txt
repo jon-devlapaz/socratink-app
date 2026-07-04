@@ -3,9 +3,11 @@
 > Learner-led knowledge mapping app. Generation over recognition. The graph reflects learner-generated evidence Socratink has recorded, not what the learner has read. Chat is ignition, not the product surface.
 
 ## Canon
+- [README.md](/README.md): repo shape, runtime surfaces, local run/test commands
 - [DESIGN.md](/DESIGN.md): product intent, decisions, design primitives, voice, boundaries (~160 lines)
 - [AGENTS.md](/AGENTS.md): agent ops — commands, conventions, git workflow
 - [UBIQUITOUS_LANGUAGE.md](/UBIQUITOUS_LANGUAGE.md): canonical domain terms + aliases to avoid
+- [Project state](/docs/project/state.md): current release posture, persistence truth, active risks
 - [ADR index](/docs/adr/README.md): append-only architectural decisions
 
 ## Deep-dive
@@ -13,5 +15,6 @@
 - [Product spec](/docs/product/spec.md): three-phase loop, inline concept-entry/result-surface modes, guardrails
 
 ## Code-adjacent
+- [SEDA runtime map](/lib/README.md)
 - [Design tokens](/public/css/tokens.css)
 - [Agent workflows](/agents/README.md)

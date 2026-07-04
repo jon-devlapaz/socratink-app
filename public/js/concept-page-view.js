@@ -365,7 +365,7 @@ function activeEntryEyebrow({ isBlocked, attempted, state, nextAction, justRevea
   if (nextAction === 'study') return 'Draft saved';
   if (nextAction === 'repair') return 'Needs repair';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
-  if (state === 'solidified') return 'solidified';
+  if (state === 'solidified') return 'Spaced record';
   if (nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
   if (nextAction === 'review') return 'Review later';
   if (state === 'needs repair') return 'Needs repair';
@@ -733,9 +733,18 @@ function renderDrillChamberHtml() {
           <div class="drill-chamber__composer">
             <textarea id="chamber-composer" placeholder="Write your reconstruction here. Fragments are fine." aria-label="Your reply" rows="3"></textarea>
             <div class="drill-chamber__composer-foot">
-              <span class="drill-chamber__hint">A sentence is enough.</span>
-              <button class="drill-chamber__send" id="chamber-send" type="button">Check reconstruction</button>
+              <span class="drill-chamber__hint" id="chamber-hint">A sentence is enough.</span>
+              <div class="drill-chamber__composer-actions">
+                <button class="drill-chamber__voice-button" id="chamber-mic" type="button" aria-label="Dictate answer" aria-pressed="false" hidden>
+                  <span aria-hidden="true">mic</span>
+                </button>
+                <button class="drill-chamber__voice-button" id="chamber-tutor-voice" type="button" aria-label="Tutor voice off" aria-pressed="false" hidden>
+                  <span aria-hidden="true">voice</span>
+                </button>
+                <button class="drill-chamber__send" id="chamber-send" type="button">Check reconstruction</button>
+              </div>
             </div>
+            <span class="drill-chamber__voice-status" id="chamber-voice-status" aria-live="polite"></span>
           </div>
         </div>
       </div>
@@ -786,7 +795,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     ? 'Repair checked'
     : entryEyebrow;
   const studyGatePurpose = derived.attempted && derived.next_action === 'study'
-    ? 'Your draft gives the notes something specific to work against. Study stays hidden until you choose to compare.'
+    ? 'You wrote first. Now socratink can compare your model against the missing relationship.'
     : '';
   const scaffold = entryScaffold(activeEntry);
   const activeEntryTitle = isSourceLess && scaffold

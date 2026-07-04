@@ -81,6 +81,24 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
             response.headers.get("set-cookie", ""),
         )
 
+    def test_seda_session_api_requires_app_entry_session(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        client = self.build_client(service)
+
+        response = client.post("/api/session", json={})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("continue as guest", response.json()["detail"])
+
+    def test_seda_session_turn_api_requires_app_entry_session(self):
+        service = FakeSupabaseAuthService(enabled=True)
+        client = self.build_client(service)
+
+        response = client.post("/api/session/example-session/turn", json={"text": "hi"})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("continue as guest", response.json()["detail"])
+
     def test_unauthenticated_still_redirects_on_non_loopback_host(self):
         service = FakeSupabaseAuthService(enabled=True)
         client = self.build_client(service)

@@ -6,6 +6,7 @@ The tracked repo contains the hosted product surface:
 
 - the hosted app: FastAPI backend plus a vanilla JS frontend in `public/`
 - production Gemini prompt assets in `app_prompts/`
+- the app-local SEDA loop runtime used by learner concept sessions
 
 The product doctrine is stable even while implementation is still moving:
 
@@ -24,6 +25,22 @@ The product doctrine is stable even while implementation is still moving:
   Production prompt assets bundled with the Vercel serverless function.
 - `public/`
   Hosted frontend.
+- `public/loop/`
+  Standalone `/loop` terminal UI. This is debug/backcompat; the normal learner
+  product flow enters SEDA through the app shell and `/api/session`.
+- `lib/seda/`
+  App-local SEDA state machine, handlers, session rehydration, and evidence
+  record projection.
+- `lib/loop-server/`
+  HTTP wrapper around the SEDA runtime. `loop_backend_proxy.py` starts this
+  vendored runtime locally when `LOOP_BACKEND_URL` is not configured.
+- `bridge.py`, `bridge_lib/`, `vendor/python/`
+  Python bridge seam used by the loop runtime for model calls and fake-loop
+  fixtures. These are app-local vendored files; they must not depend on a
+  sibling `socratink-tui-agent` checkout.
+- `learning_cases/` and `pedagogical_agents/`
+  Promoted SEDA regression cases and agent contracts used by the runtime and
+  lab tooling.
 
 ## Local Run
 

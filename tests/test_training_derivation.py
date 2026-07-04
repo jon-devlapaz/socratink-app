@@ -3,29 +3,10 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
-from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-TEST_NODE_TIMEOUT_SECONDS = 30
-
-
-def run_node_module(script: str) -> subprocess.CompletedProcess[str]:
-    try:
-        return subprocess.run(
-            ["node", "--input-type=module", "-e", script],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=TEST_NODE_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired:
-        pytest.fail(
-            f"Node training derivation test timed out after {TEST_NODE_TIMEOUT_SECONDS}s",
-            pytrace=False,
-        )
+from tests._helpers.node_runner import run_node_module
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")

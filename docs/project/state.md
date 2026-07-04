@@ -7,7 +7,12 @@
 - Core derived training states: `null | primed | needs repair | solidified`
 - Agent architecture: `socratinker` is the default execution agent; Socratink Brain (`.socratink-brain/`, `$socratink-brain`) is the durable product-memory substrate and maintenance skill
 - Hosted runtime: Vercel serverless
-- Current persistence: browser `localStorage`; concepts live in `learnops_concepts`, training evidence lives under `socratink:training:v1:<conceptId>`
+- Current persistence: concepts and app-shell training evidence are browser
+  `localStorage` (`learnops_concepts`, `socratink:training:v1:<conceptId>`).
+  App-local SEDA sessions are also keyed from browser `localStorage`
+  (`socratink:seda-session:v1:<conceptId>`), while the loop runtime writes
+  session journals to its file session store (`SOCRATINK_LOOP_SESSION_STORE_DIR`
+  or the OS temp default). This is not Supabase-backed durable learner state.
 - Evidence source of truth: live logs plus the operational docs in this repo
 
 ## Current Phase
@@ -15,11 +20,16 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 
 ## Active Risks
 - Hosted behavior may still diverge from local behavior.
-- `localStorage` is fragile and easy to wipe.
+- `localStorage` and loop file-session persistence are fragile and easy to wipe;
+  they do not provide cross-browser or Supabase-backed resume continuity.
 - Chat/test instrumentation is incomplete, so some regressions will still be harder to reconstruct than they should be.
 - External ingestion paths still need defensive hosted behavior and graceful fallback.
 - Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user may start source-less through Door -> Launch pad -> non-empty Launch attempt -> Smallest actionable route.
 - `ai_service.py` still imports Gemini directly for `drill_chat` and `generate_repair_reps`; ADR-0002's temporary LLM seam exception remains unresolved until those paths migrate through `llm/`.
+- The app-local SEDA runtime now lives in root-level `lib/seda/`,
+  `lib/loop-server/`, `bridge.py`, `bridge_lib/`, `vendor/python/`,
+  `learning_cases/`, and `pedagogical_agents/`. Treat `scripts/socratink_tui/`
+  as legacy CLI/lab surface unless a task explicitly targets it.
 
 ## Product Constraints
 - Generation Before Recognition is non-negotiable.

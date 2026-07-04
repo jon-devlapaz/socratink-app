@@ -42,7 +42,7 @@ Adapters are allowed to contain only:
 
 Adapters must not become a second doctrine surface. If a wrapper still contains the full decision logic, stop rules, verification sequence, or long-form workflow steps, it is no longer acting as an adapter.
 
-## Learning loop
+## Workflow learning ledger
 
 Use `agents/LEARNINGS.md` to capture reusable observations from real founder/agent workflow usage.
 

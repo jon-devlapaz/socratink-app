@@ -14,6 +14,12 @@ const ATTEMPT_CLASSIFICATION_RANK = {
   misconception: 1,
 };
 
+function conceptStateLabel(state) {
+  if (state === 'primed') return 'draft saved';
+  if (state === 'solidified') return 'spaced record';
+  return state;
+}
+
 function rankAttempt(attempt) {
   return ATTEMPT_CLASSIFICATION_RANK[attempt?.classification] || 0;
 }
@@ -96,7 +102,7 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
       const meta = getLibraryConceptMeta(c, training);
       const derivedState = deriveConceptBadge(c, training) || '';
       const stateBadge = derivedState
-        ? `<span class="library-card-state" data-state="${escHtml(derivedState)}">${escHtml(derivedState)}</span>`
+        ? `<span class="library-card-state" data-state="${escHtml(derivedState)}">${escHtml(conceptStateLabel(derivedState))}</span>`
         : '';
       return `
           <div class="library-card library-card-vault" data-state="${escHtml(derivedState)}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
