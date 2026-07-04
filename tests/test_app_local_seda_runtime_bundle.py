@@ -12,6 +12,7 @@ LOOP_SERVER = REPO_ROOT / "loop-server.mjs"
 INTERNAL_LOOP_FUNCTION = REPO_ROOT / "api" / "internal-loop.mjs"
 APP_LOCAL_RUNTIME_PATHS = (
     REPO_ROOT / "lib" / "README.md",
+    REPO_ROOT / "lib" / "package.json",
     REPO_ROOT / "lib" / "seda",
     REPO_ROOT / "lib" / "loop-server",
     REPO_ROOT / "bridge.py",
