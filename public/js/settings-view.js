@@ -52,9 +52,30 @@ export const SETTINGS_HTML = `
             <button type="button" class="settings-toggle" id="settings-sound-toggle"
                     role="switch" aria-checked="false" aria-label="Threshold sounds"></button>
           </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Mic input</div>
+              <div class="settings-row-meta">Dictate answers in drill sessions</div>
+            </div>
+            <button type="button" class="settings-toggle" id="settings-mic-toggle"
+                    role="switch" aria-checked="false" aria-label="Mic input"></button>
+          </div>
+
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-label">Tutor voice</div>
+              <div class="settings-row-meta">Read the active prompt aloud</div>
+            </div>
+            <button type="button" class="settings-toggle" id="settings-tutor-voice-toggle"
+                    role="switch" aria-checked="false" aria-label="Tutor voice"></button>
+          </div>
         </section>
       </div>
     `;
+
+export const MIC_INPUT_PREF_KEY = 'socratink.loop.micInput';
+export const TUTOR_VOICE_PREF_KEY = 'socratink.loop.tutorVoice';
 
 let settingsCornerSyncBound = false;
 
@@ -87,6 +108,7 @@ export async function renderSettingsView({
   wireSettingsTheme(settingsContent, { documentRef, getStoredThemePreference, setTheme });
   wireSettingsMotion(settingsContent, { documentRef });
   wireSettingsSounds(settingsContent, { AudioFX });
+  wireVoiceSettings(settingsContent);
 }
 
 async function wireSettingsIdentity(root, {
@@ -239,5 +261,46 @@ function wireSettingsSounds(root, { AudioFX }) {
     if (next) {
       AudioFX.playFocusTap();
     }
+  });
+}
+
+function wireVoiceSettings(root) {
+  wireStoredSwitch(root.querySelector('#settings-mic-toggle'), {
+    key: MIC_INPUT_PREF_KEY,
+    defaultEnabled: true,
+  });
+  wireStoredSwitch(root.querySelector('#settings-tutor-voice-toggle'), {
+    key: TUTOR_VOICE_PREF_KEY,
+    defaultEnabled: false,
+  });
+}
+
+function wireStoredSwitch(toggle, { key, defaultEnabled }) {
+  if (!toggle) return;
+
+  const read = () => {
+    try {
+      const value = localStorage.getItem(key);
+      if (value === '1') return true;
+      if (value === '0') return false;
+    } catch {
+      /* storage unavailable */
+    }
+    return defaultEnabled;
+  };
+
+  const write = (enabled) => {
+    toggle.setAttribute('aria-checked', String(enabled));
+    try {
+      localStorage.setItem(key, enabled ? '1' : '0');
+    } catch {
+      /* preference just won't stick */
+    }
+  };
+
+  write(read());
+  toggle.addEventListener('click', () => {
+    /* c8 ignore next -- settings toggles are clicked in browser smoke; helper coverage only imports this module. */
+    write(toggle.getAttribute('aria-checked') !== 'true');
   });
 }

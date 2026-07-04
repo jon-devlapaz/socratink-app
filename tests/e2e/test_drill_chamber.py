@@ -211,6 +211,185 @@ def test_drill_chamber_noops_after_partial_rerender(
     }
 
 
+def test_drill_chamber_voice_controls_use_browser_speech_apis(
+    clean_page: Page, base_url: str
+) -> None:
+    """Voice controls reflect browser speech support and dictate into composer."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    result = clean_page.evaluate(
+        """() => {
+            const root = document.createElement('section');
+            root.id = 'drill-chamber-voice-fixture';
+            root.innerHTML = `
+              <section id="drill-chamber-view" hidden>
+                <div id="chamber-concept-name"></div>
+                <div id="chamber-entry-name"></div>
+                <div id="chamber-active">
+                  <div id="chamber-question"></div>
+                  <textarea id="chamber-composer"></textarea>
+                  <button id="chamber-send" type="button">Submit</button>
+                  <button id="chamber-mic" type="button" hidden>Mic</button>
+                  <button id="chamber-tutor-voice" type="button" hidden>Voice</button>
+                  <div id="chamber-voice-status"></div>
+                  <button id="chamber-exit" type="button">Exit</button>
+                  <div id="chamber-chat-log"></div>
+                </div>
+              </section>
+            `;
+            document.body.append(root);
+
+            let lastRecognition = null;
+            const spoken = [];
+
+            class FakeRecognition {
+              constructor() {
+                this.listeners = {};
+                this.startCalls = 0;
+                this.stopCalls = 0;
+                this.throwOnStart = false;
+                lastRecognition = this;
+              }
+              addEventListener(type, handler) {
+                this.listeners[type] = handler;
+              }
+              start() {
+                this.startCalls += 1;
+                if (this.throwOnStart) throw new Error('already started');
+                this.listeners.start?.({});
+              }
+              stop() {
+                this.stopCalls += 1;
+                this.listeners.end?.({});
+              }
+              dispatch(type, event) {
+                this.listeners[type]?.(event);
+              }
+            }
+
+            Object.defineProperty(window, 'SpeechRecognition', {
+              configurable: true,
+              value: FakeRecognition,
+            });
+            Object.defineProperty(window, 'speechSynthesis', {
+              configurable: true,
+              value: {
+                cancel() { spoken.push('cancel'); },
+                speak(utterance) { spoken.push(utterance.text); },
+              },
+            });
+            Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+              configurable: true,
+              value: class {
+                constructor(text) { this.text = text; }
+              },
+            });
+            localStorage.setItem('socratink.loop.micInput', '1');
+            localStorage.setItem('socratink.loop.tutorVoice', '1');
+
+            window.DrillChamber.show({
+              conceptName: 'Concept',
+              entryName: 'Entry',
+              question: 'What must happen first?',
+            });
+
+            const mic = document.getElementById('chamber-mic');
+            const tutorVoice = document.getElementById('chamber-tutor-voice');
+            const composer = document.getElementById('chamber-composer');
+            const voiceStatus = document.getElementById('chamber-voice-status');
+
+            composer.value = 'base';
+            mic.click();
+            lastRecognition.dispatch('result', {
+              results: [
+                [{ transcript: ' ions cross' }],
+                [{ transcript: ' the membrane' }],
+              ],
+            });
+            const dictatedValue = composer.value;
+            const listeningLabel = mic.getAttribute('aria-label');
+            mic.click();
+            const stoppedLabel = mic.getAttribute('aria-label');
+            lastRecognition.dispatch('error', { error: 'no-speech' });
+            const errorStatus = voiceStatus.textContent;
+            mic.disabled = true;
+            mic.click();
+            const startCallsAfterDisabled = lastRecognition.startCalls;
+            mic.disabled = false;
+            lastRecognition.throwOnStart = true;
+            mic.click();
+
+            tutorVoice.click();
+            const storedTutorVoiceOff = localStorage.getItem('socratink.loop.tutorVoice');
+            tutorVoice.click();
+            const tutorVoiceLabel = tutorVoice.getAttribute('aria-label');
+
+            Object.defineProperty(window, 'localStorage', {
+              configurable: true,
+              get() { throw new Error('storage denied'); },
+            });
+            window.DrillChamber.show({
+              conceptName: 'Concept',
+              entryName: 'Entry',
+              question: 'Storage fallback?',
+            });
+            const storageFallbackMicHidden = mic.hidden;
+
+            Object.defineProperty(window, 'SpeechRecognition', {
+              configurable: true,
+              value: undefined,
+            });
+            Object.defineProperty(window, 'webkitSpeechRecognition', {
+              configurable: true,
+              value: undefined,
+            });
+            Object.defineProperty(window, 'speechSynthesis', {
+              configurable: true,
+              value: undefined,
+            });
+            Object.defineProperty(window, 'SpeechSynthesisUtterance', {
+              configurable: true,
+              value: undefined,
+            });
+            window.DrillChamber.show({
+              conceptName: 'Concept',
+              entryName: 'Entry',
+              question: 'Unsupported?',
+            });
+
+            const unsupported = {
+              micHidden: mic.hidden,
+              tutorVoiceHidden: tutorVoice.hidden,
+            };
+            root.remove();
+
+            return {
+              dictatedValue,
+              listeningLabel,
+              stoppedLabel,
+              errorStatus,
+              startCallsAfterDisabled,
+              storedTutorVoiceOff,
+              tutorVoiceLabel,
+              storageFallbackMicHidden,
+              unsupported,
+              spoken,
+            };
+        }"""
+    )
+
+    assert result["dictatedValue"] == "base ions cross the membrane"
+    assert result["listeningLabel"] == "Stop dictating answer"
+    assert result["stoppedLabel"] == "Dictate answer"
+    assert result["errorStatus"] == "voice input: no-speech"
+    assert result["startCallsAfterDisabled"] == 1
+    assert result["storedTutorVoiceOff"] == "0"
+    assert result["tutorVoiceLabel"] == "Tutor voice on"
+    assert result["storageFallbackMicHidden"] is False
+    assert result["unsupported"] == {"micHidden": True, "tutorVoiceHidden": True}
+    assert "What must happen first?" in result["spoken"]
+
+
 def test_drill_chamber_opens_inline_inside_concept_view(
     clean_page: Page, base_url: str
 ) -> None:

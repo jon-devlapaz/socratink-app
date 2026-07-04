@@ -30,6 +30,7 @@ _FORBIDDEN_IMPORT_NEEDLES = (
 _SKIP_DIR_PARTS = {
     ".venv",
     "venv",
+    "vendor",
     ".git",
     "node_modules",
     "__pycache__",

@@ -146,6 +146,7 @@ PROTECTED_API_PATHS = frozenset(
         "/api/extract",
         "/api/extract-url",
         "/api/repair-reps",
+        "/api/session",
     }
 )
 
@@ -200,7 +201,7 @@ def _is_protected_api_request(request: Request) -> bool:
         return False
     if path.startswith("/api/auth/"):
         return False
-    return path in PROTECTED_API_PATHS
+    return path in PROTECTED_API_PATHS or path.startswith("/api/session/")
 
 
 def _resolve_session_state(request: Request):
@@ -409,9 +410,9 @@ def _fallback_smallest_route_from_sketch(
                         id="c1_s1",
                         label="Starting model",
                         mechanism=(
-                            f'Use the learner sketch "{sketch_excerpt}" as the '
-                            "only source. Name what changes, what responds, and "
-                            "what relationship the learner currently thinks connects them."
+                            f"For {concept}, start with one relationship from your draft: "
+                            "what changes, what responds, and how those pieces connect. "
+                            "That relationship becomes the first thing to repair or test."
                         ),
                         learner_scaffold=LearnerScaffold(
                             bloom_level="understand",
@@ -962,13 +963,26 @@ app.include_router(auth_router)
 _LOOP_PROXY_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
 
 
+def _is_direct_loop_document_request(request: Request, path: str = "") -> bool:
+    direct_paths = {"", "/", "index.html"}
+    return (
+        request.method in {"GET", "HEAD"}
+        and path in direct_paths
+        and "text/html" in request.headers.get("accept", "")
+    )
+
+
 @app.api_route("/loop", methods=_LOOP_PROXY_METHODS)
 async def proxy_loop_root(request: Request) -> Response:
+    if _is_direct_loop_document_request(request):
+        return RedirectResponse("/", status_code=302)
     return await proxy_loop_backend(request, "/loop")
 
 
 @app.api_route("/loop/{path:path}", methods=_LOOP_PROXY_METHODS)
 async def proxy_loop_path(request: Request, path: str) -> Response:
+    if _is_direct_loop_document_request(request, path):
+        return RedirectResponse("/", status_code=302)
     return await proxy_loop_backend(request, f"/loop/{path}")
 
 
@@ -979,12 +993,20 @@ async def proxy_loop_health(request: Request) -> Response:
 
 @app.api_route("/api/session", methods=_LOOP_PROXY_METHODS)
 async def proxy_loop_session_root(request: Request) -> Response:
-    return await proxy_loop_backend(request, "/api/session")
+    return await proxy_loop_backend(
+        request,
+        "/api/session",
+        force_local_runtime=True,
+    )
 
 
 @app.api_route("/api/session/{path:path}", methods=_LOOP_PROXY_METHODS)
 async def proxy_loop_session_path(request: Request, path: str) -> Response:
-    return await proxy_loop_backend(request, f"/api/session/{path}")
+    return await proxy_loop_backend(
+        request,
+        f"/api/session/{path}",
+        force_local_runtime=True,
+    )
 
 
 # Serve the frontend locally. On Vercel, static files are served by the CDN, but

@@ -9,6 +9,7 @@ For an agent-crawler index see [`/llms.txt`](../../llms.txt).
 ## Entry Points
 
 - [`docs/README.md`](../README.md) - docs-vault front door and memory boundary
+- [`/README.md`](../../README.md) - repo shape, runtime surfaces, and local run/test commands
 - [`/PRODUCT.md`](../../PRODUCT.md) - strategic product brief
 - [`/DESIGN.md`](../../DESIGN.md) - product/design hub, primitives, voice, and boundaries
 - [`/AGENTS.md`](../../AGENTS.md) - agent ops canon, commands, conventions, git workflow

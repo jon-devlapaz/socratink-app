@@ -80,3 +80,38 @@ export async function submitConceptCreate({ name, learnerGoal, startingSketch, s
   }
   return response.json();
 }
+
+async function postJson(url, body = {}) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    /* c8 ignore next 2 -- HTTP error text is a defensive client branch; backend error behavior is covered separately. */
+    const text = await response.text().catch(() => "");
+    throw new Error(`Server error ${response.status}: ${text}`);
+  }
+  return response.json();
+}
+
+export function createSedaSession() {
+  return postJson("/api/session", {});
+}
+
+export async function getSedaSession(sessionId) {
+  const response = await fetch(`/api/session/${encodeURIComponent(sessionId)}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    /* c8 ignore next 2 -- HTTP error text is a defensive client branch; backend error behavior is covered separately. */
+    const text = await response.text().catch(() => "");
+    throw new Error(`Server error ${response.status}: ${text}`);
+  }
+  return response.json();
+}
+
+export function sendSedaTurn(sessionId, text) {
+  return postJson(`/api/session/${encodeURIComponent(sessionId)}/turn`, { text });
+}

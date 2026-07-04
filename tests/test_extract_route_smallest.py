@@ -144,7 +144,10 @@ def test_extract_smallest_route_cap_exceeded_returns_fallback_route(client):
         "principle": "Starting model",
         "dependent_clusters": ["c1"],
     }]
-    assert "plants take in light" in route["clusters"][0]["subnodes"][0]["mechanism"]
+    mechanism = route["clusters"][0]["subnodes"][0]["mechanism"]
+    assert "For Photosynthesis" in mechanism
+    assert "learner sketch" not in mechanism
+    assert "only source" not in mechanism
     scaffold = route["clusters"][0]["subnodes"][0]["learner_scaffold"]
     assert "plants take in light" in scaffold["entry_prompt"]
     assert scaffold["entry_prompt"].endswith("What do you think connects those parts?")

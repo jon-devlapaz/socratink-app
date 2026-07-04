@@ -1,7 +1,7 @@
 # Learning Cases
 
-Learning cases are promoted TUI traces used to harden the Socratink learning
-loop.
+Learning cases in this legacy lab directory are legacy TUI session traces used
+to harden the Socratink learning loop.
 
 This is not a scrapbook. A case is only useful when it states falsifiable
 invariants that can be replayed against a saved session trace.

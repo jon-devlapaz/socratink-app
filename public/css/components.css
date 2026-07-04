@@ -1,18 +1,22 @@
 /* ── Material Symbols ─────────────────────────────────────── */
 .material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 20px;
+  position: relative;
   line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
   display: inline-block;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
+  color: transparent;
   white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-smoothing: antialiased;
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.material-symbols-outlined::before {
+  content: "";
+  position: absolute;
+  inset: 0.2em;
+  border: 1.5px solid currentColor;
+  border-color: var(--text-sub);
+  transform: rotate(45deg);
 }
 
 /* ── 9. Sidebar + backdrop ────────────────────────────────── */
@@ -51,7 +55,7 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
   cursor: pointer;
   line-height: 1;
   opacity: 0.72;
-  transform: translate(58px, 40px) scale(0.72);
+  transform: scale(0.72);
   transform-origin: bottom right;
   transition:
     transform var(--duration-standard, 220ms) var(--ease-standard),
@@ -66,7 +70,7 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 .theme-toggle-corner:hover .theme-toggle,
 .theme-toggle-corner:focus-within .theme-toggle {
   opacity: 1;
-  transform: translate(0, 0) scale(1);
+  transform: scale(1);
   box-shadow: var(--shadow-raised);
 }
 .theme-toggle:focus-visible {
@@ -120,13 +124,13 @@ body[data-drawer-open="true"] #backdrop { opacity:1; pointer-events:all; }
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle {
     opacity: 1;
-    transform: translate(0, 0) scale(1);
+    transform: scale(1);
     transition: none;
   }
 }
 html[data-motion="reduced"] .theme-toggle {
   opacity: 1;
-  transform: translate(0, 0) scale(1);
+  transform: scale(1);
   transition: none;
 }
 
@@ -163,11 +167,11 @@ html[data-motion="reduced"] .theme-toggle {
 }
 
 #auth-login-link::before {
-  content: "cloud_sync";
-  font-family: "Material Symbols Outlined";
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1;
+  content: "";
+  width: 0.65em;
+  height: 0.65em;
+  border: 1.5px solid currentColor;
+  transform: rotate(45deg);
 }
 
 .auth-link:hover:not(:disabled) {
@@ -448,6 +452,16 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-size: 20px;
   color: inherit;
   flex-shrink: 0;
+}
+.sidebar-nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .sidebar-nav-item:hover {
   background:var(--surface-nested);

@@ -162,6 +162,7 @@ def test_socratink_tui_keeps_app_and_env_template_together() -> None:
     launcher = TUI.read_text()
 
     assert (TUI_DIR / "app.mjs").exists()
+    assert (TUI_DIR / "README.md").exists()
     assert BRIDGE.exists()
     assert (TUI_DIR / "dashboard.mjs").exists()
     assert (TUI_DIR / ".env.example").read_text().startswith("# Socratink terminal dogfood env")

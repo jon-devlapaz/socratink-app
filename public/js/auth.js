@@ -19,6 +19,31 @@ export function isIdentifiedUserSession(session) {
   return Boolean(session?.authenticated && !session?.guest_mode && session?.user);
 }
 
+export async function requireAppEntrySession({
+  fetchSession = fetchAuthSession,
+  redirect = redirectToLogin,
+  waitAfterRedirect = true,
+} = {}) {
+  let session = null;
+  try {
+    session = await fetchSession({ force: true });
+  } catch (err) {
+    /* v8 ignore next -- defensive fetch failure fallback is covered by Node helper tests. */
+    console.warn('Auth entry check failed.', err);
+  }
+
+  if (isGuestSession(session) || isIdentifiedUserSession(session)) {
+    return true;
+  }
+
+  /* v8 ignore next 5 -- browser smoke enters as local guest; redirect fallback is covered by Node helper tests. */
+  redirect();
+  if (waitAfterRedirect) {
+    await new Promise(() => {});
+  }
+  return false;
+}
+
 // Module-scoped session cache. First caller fetches; subsequent callers
 // await the same in-flight promise OR the resolved value. Cleared on
 // logout so the next fetch reflects the new anonymous state.
@@ -98,10 +123,6 @@ function applyAuthUi(session) {
     loginLink.hidden = false;
   }
 
-  const loopLink = document.getElementById('nav-loop');
-  if (loopLink) {
-    loopLink.hidden = !session?.loop_available;
-  }
 }
 
 export async function bootstrapAuthUi() {

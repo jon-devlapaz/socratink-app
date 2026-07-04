@@ -285,12 +285,12 @@ html[data-theme="dark"] #intro-particle-canvas {
     pointer-events: auto;
   }
 
-  /* Mobile bottom nav owns most primary destinations. Keep loop and Feedback in
-     the drawer because they have no bottom-nav equivalents. */
+  /* Mobile bottom nav owns primary destinations. Feedback stays in the drawer
+     because it has no bottom-nav equivalent. */
   #drawer .sidebar-nav {
     display: flex;
   }
-  #drawer .sidebar-nav .sidebar-nav-item:not(#nav-loop):not(#nav-feedback) {
+  #drawer .sidebar-nav .sidebar-nav-item:not(#nav-feedback) {
     display: none;
   }
 
@@ -501,9 +501,15 @@ html[data-theme="dark"] #intro-particle-canvas {
     background: var(--primary);
   }
 
-  .bottom-nav-item .material-symbols-outlined {
-    font-size: 24px;
+  .bottom-nav-icon {
+    width: 24px;
+    height: 24px;
     margin-bottom: 2px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .bottom-nav-label {

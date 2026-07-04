@@ -14,17 +14,14 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link
-    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&icon_names=add,auto_awesome,auto_stories,bolt,chat,close,cloud_sync,delete,edit_note,help,info,memory,more_vert,rate_review,settings,show_chart,view_quilt&display=block"
-    rel="stylesheet">
   <title>socratink</title>
   <link rel="manifest" href="/manifest.webmanifest?v=2">
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png?v=6">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=155">
-  <link rel="stylesheet" href="/css/drill-chamber.css?v=10">
+  <link rel="stylesheet" href="/css/index.css?v=156">
+  <link rel="stylesheet" href="/css/drill-chamber.css?v=11">
 </head>
 
 <body>
@@ -54,19 +51,19 @@
   <!-- Bottom Mobile Navigation -->
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
-      <span class="material-symbols-outlined">edit_note</span>
+      <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.5 5.5 20l2.5-1.5M5.5 20 14 11.5M13.5 5.5l5 5M15 4l5 5-2 2-5-5 2-2Z"/><path d="M5 8.5c1.5-2 4.5-3 7-1.5M19 15.5c-1.5 2-4.5 3-7 1.5"/></svg>
       <span class="bottom-nav-label">Start</span>
     </a>
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
-      <span class="material-symbols-outlined">view_quilt</span>
+      <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="7" height="6" rx="1.5"/><rect x="13" y="5" width="7" height="14" rx="1.5"/><rect x="4" y="13" width="7" height="6" rx="1.5"/></svg>
       <span class="bottom-nav-label">Desk</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showLibrary()" id="bn-library">
-      <span class="material-symbols-outlined">auto_stories</span>
+      <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5c2.5 0 4.5.5 7 2.5v10c-2.5-2-4.5-2.5-7-2.5V6.5Z"/><path d="M19 6.5c-2.5 0-4.5.5-7 2.5v10c2.5-2 4.5-2.5 7-2.5V6.5Z"/><path d="M12 9v10"/></svg>
       <span class="bottom-nav-label">Library</span>
     </a>
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showSettings()" id="bn-settings">
-      <span class="material-symbols-outlined">settings</span>
+      <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v3M12 17.5v3M4.6 7.8l2.6 1.5M16.8 14.7l2.6 1.5M4.6 16.2l2.6-1.5M16.8 9.3l2.6-1.5"/></svg>
       <span class="bottom-nav-label">Settings</span>
     </a>
   </nav>
@@ -80,16 +77,15 @@
 
     <nav class="sidebar-nav">
       <a id="nav-ignition" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showIgnition()"><span class="material-symbols-outlined">edit_note</span> Start learning</a>
+        onclick="App.showIgnition()"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.5 5.5 20l2.5-1.5M5.5 20 14 11.5M13.5 5.5l5 5M15 4l5 5-2 2-5-5 2-2Z"/><path d="M5 8.5c1.5-2 4.5-3 7-1.5M19 15.5c-1.5 2-4.5 3-7 1.5"/></svg> Start learning</a>
       <a id="nav-dashboard" class="sidebar-nav-item active" href="javascript:void(0)"
-        onclick="App.showDashboard()"><span class="material-symbols-outlined">view_quilt</span> Desk</a>
+        onclick="App.showDashboard()"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="7" height="6" rx="1.5"/><rect x="13" y="5" width="7" height="14" rx="1.5"/><rect x="4" y="13" width="7" height="6" rx="1.5"/></svg> Desk</a>
       <a id="nav-library" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showLibrary()"><span class="material-symbols-outlined">auto_stories</span> Library</a>
-      <a id="nav-loop" class="sidebar-nav-item" href="/loop" hidden><span class="material-symbols-outlined">chat</span> Learning loop</a>
+        onclick="App.showLibrary()"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5c2.5 0 4.5.5 7 2.5v10c-2.5-2-4.5-2.5-7-2.5V6.5Z"/><path d="M19 6.5c-2.5 0-4.5.5-7 2.5v10c2.5-2 4.5-2.5 7-2.5V6.5Z"/><path d="M12 9v10"/></svg> Library</a>
       <a id="nav-settings" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="App.showSettings()"><span class="material-symbols-outlined">settings</span> Settings</a>
+        onclick="App.showSettings()"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v3M12 17.5v3M4.6 7.8l2.6 1.5M16.8 14.7l2.6 1.5M4.6 16.2l2.6-1.5M16.8 9.3l2.6-1.5"/></svg> Settings</a>
       <a id="nav-feedback" class="sidebar-nav-item" href="javascript:void(0)"
-        onclick="Feedback.show()"><span class="material-symbols-outlined">rate_review</span> Send Feedback</a>
+        onclick="Feedback.show()"><svg class="sidebar-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14v9H9l-4 3v-12Z"/><path d="M9 10h6M9 13h4"/></svg> Send Feedback</a>
     </nav>
 
     <div class="sidebar-divider"></div>
@@ -282,13 +278,13 @@
             <span class="desk-legend-facet" aria-hidden="true"></span>locked
           </span>
           <span class="desk-legend-item" role="listitem" data-state="primed">
-            <span class="desk-legend-facet" aria-hidden="true"></span>primed
+            <span class="desk-legend-facet" aria-hidden="true"></span>draft saved
           </span>
           <span class="desk-legend-item" role="listitem" data-state="drilled">
             <span class="desk-legend-facet" aria-hidden="true"></span>needs repair
           </span>
           <span class="desk-legend-item" role="listitem" data-state="solidified">
-            <span class="desk-legend-facet" aria-hidden="true"></span>solidified
+            <span class="desk-legend-facet" aria-hidden="true"></span>spaced record
           </span>
         </div>
       </div>
@@ -309,7 +305,7 @@
           What are you trying to understand?
         </h1>
         <p class="ig-first-use" id="ignition-first-use">
-          Name what you want to understand. Socratink will ask for your first model, then start the loop.
+          Name what you want to understand. socratink will ask for your first model, then start the loop.
         </p>
 
         <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
@@ -444,8 +440,8 @@
 
   <div id="tooltip-root" aria-hidden="true"></div>
 
-  <script src="/js/drill-chamber.js?v=12"></script>
-  <script type="module" src="/js/app.js?v=158"></script>
+  <script src="/js/drill-chamber.js?v=14"></script>
+  <script type="module" src="/js/app.js?v=166"></script>
   <script src="/js/intro-particles.js?v=8"></script>
   <script type="module" src="/js/tooltips.js?v=4"></script>
   <script type="module" src="/js/floating-room-label.js?v=6"></script>

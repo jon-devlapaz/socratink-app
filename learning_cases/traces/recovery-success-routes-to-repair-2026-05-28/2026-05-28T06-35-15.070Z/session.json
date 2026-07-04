@@ -1,0 +1,1131 @@
+{
+  "source_mode": "source_less",
+  "concept": "Immune memory",
+  "learner_goal": "understand why vaccines help later",
+  "concept_id": "immune-memory",
+  "route": {
+    "provisional_map": {
+      "metadata": {
+        "source_title": "Immune memory",
+        "core_thesis": "The immune system generates long-lived memory cells that enable a faster and stronger response upon re-exposure to a pathogen.",
+        "architecture_type": "causal_chain",
+        "difficulty": "medium",
+        "governing_assumptions": [
+          "Learner has a basic understanding of the immune system's role in fighting pathogens."
+        ],
+        "low_density": true
+      },
+      "backbone": [
+        {
+          "id": "b1",
+          "principle": "Immune memory provides long-term protection by enabling a rapid and potent response to previously encountered pathogens.",
+          "dependent_clusters": [
+            "c1",
+            "c2",
+            "c3"
+          ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": "c1",
+          "label": "The immune system generates long-lived memory cells that enable a faster and stronger response upon re-exposure to a pathogen.",
+          "description": "Immune memory is the ability of the immune system to remember a pathogen after an initial exposure and mount a more rapid and effective response upon subsequent encounters.",
+          "subnodes": [
+            {
+              "id": "c1_s1",
+              "label": "Immune memory mechanism",
+              "mechanism": "Immune memory relies on the generation of specialized memory B and T lymphocytes during a primary immune response, which persist for extended periods and are capable of rapid activation and differentiation upon subsequent encounters with the same antigen.",
+              "learner_scaffold": {
+                "bloom_level": "understand",
+                "learner_move": "Explain how",
+                "task_label": "Immune memory mechanism",
+                "task_cue": "Explain the core process.",
+                "tailoring_anchor": "body responds faster later",
+                "entry_prompt": "Your sketch mentions the body responds faster later. Explain the underlying mechanism that allows the immune system to achieve this faster response.",
+                "expected_shape": "One to two sentences describing the cellular basis for a quicker, stronger immune reaction.",
+                "sentence_starter": "The immune system achieves a faster response later because...",
+                "blank_hint": "Consider what specific components of the immune system are 'remembering' the pathogen.",
+                "evidence_goal": "Elicit an explanation of memory cells and their role in accelerated response."
+              },
+              "drill_status": null,
+              "gap_type": null,
+              "gap_description": null,
+              "last_drilled": null
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "label": "Memory B and T cells are specialized lymphocytes that provide long-term immunity.",
+          "description": "Memory cells are a subset of lymphocytes, specifically B and T cells, that are programmed during the primary immune response to recognize and respond quickly to specific antigens.",
+          "subnodes": [
+            {
+              "id": "c2_s1",
+              "label": "Memory cell types",
+              "mechanism": "Memory B cells express high-affinity antibodies and can rapidly differentiate into plasma cells, while memory T cells (CD4+ helper and CD8+ cytotoxic) quickly proliferate and execute effector functions upon antigen re-encounter.",
+              "learner_scaffold": {
+                "bloom_level": "remember",
+                "learner_move": "Say it",
+                "task_label": "Memory cell types",
+                "task_cue": "Name the key cells.",
+                "tailoring_anchor": "memory cells",
+                "entry_prompt": "What are the primary types of specialized cells that contribute to immune memory?",
+                "expected_shape": "Name the two main categories of lymphocytes responsible for immune memory.",
+                "sentence_starter": "The primary types of specialized cells are...",
+                "blank_hint": "Think about the main lymphocyte populations involved in adaptive immunity.",
+                "evidence_goal": "Elicit the names of memory B cells and memory T cells."
+              },
+              "drill_status": null,
+              "gap_type": null,
+              "gap_description": null,
+              "last_drilled": null
+            }
+          ]
+        },
+        {
+          "id": "c3",
+          "label": "Secondary immune responses are characterized by quicker onset, higher magnitude, and increased antibody affinity compared to primary responses.",
+          "description": "The presence of immune memory cells leads to a secondary immune response that is qualitatively and quantitatively superior to the initial primary response.",
+          "subnodes": [
+            {
+              "id": "c3_s1",
+              "label": "Secondary response features",
+              "mechanism": "The presence of pre-existing memory cells allows for a more rapid and robust clonal expansion, accelerated antibody production (often with isotype switching and affinity maturation already achieved), and faster effector T cell activation, leading to more effective pathogen clearance.",
+              "learner_scaffold": {
+                "bloom_level": "understand",
+                "learner_move": "Explain how",
+                "task_label": "Secondary response features",
+                "task_cue": "Describe the differences.",
+                "tailoring_anchor": "responds faster later",
+                "entry_prompt": "How does a secondary immune response differ from a primary response in terms of speed, strength, and quality?",
+                "expected_shape": "Describe at least two key characteristics that distinguish a secondary response.",
+                "sentence_starter": "A secondary immune response differs from a primary response by...",
+                "blank_hint": "Consider the timing and magnitude of antibody production, and the overall effectiveness.",
+                "evidence_goal": "Elicit a description of the faster onset, higher magnitude, and improved quality of secondary responses."
+              },
+              "drill_status": null,
+              "gap_type": null,
+              "gap_description": null,
+              "last_drilled": null
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "domain_mechanics": [
+          {
+            "from": "c1",
+            "to": "c2",
+            "type": "causal",
+            "mechanism": "The overall mechanism of immune memory relies on the specific functions of memory B and T cells."
+          },
+          {
+            "from": "c2",
+            "to": "c3",
+            "type": "causal",
+            "mechanism": "Memory B and T cells directly mediate the faster, stronger, and higher-quality secondary immune response."
+          },
+          {
+            "from": "c1",
+            "to": "c3",
+            "type": "causal",
+            "mechanism": "The establishment of immune memory results in the distinct characteristics of a secondary immune response."
+          }
+        ],
+        "learning_prerequisites": [
+          {
+            "from": "c1",
+            "to": "c2",
+            "rationale": "Understanding the general concept of immune memory is foundational for grasping the specific cell types that mediate it."
+          },
+          {
+            "from": "c1",
+            "to": "c3",
+            "rationale": "A basic understanding of immune memory is necessary to appreciate the distinct features of a secondary response."
+          },
+          {
+            "from": "c2",
+            "to": "c3",
+            "rationale": "Knowledge of memory B and T cells is essential for comprehending how the secondary immune response achieves its enhanced characteristics."
+          }
+        ]
+      },
+      "frameworks": []
+    },
+    "first_node": {
+      "id": "c1_s1",
+      "label": "Immune memory mechanism",
+      "mechanism": "Immune memory relies on the generation of specialized memory B and T lymphocytes during a primary immune response, which persist for extended periods and are capable of rapid activation and differentiation upon subsequent encounters with the same antigen.",
+      "learner_prompt": "Your sketch mentions the body responds faster later. Explain the underlying mechanism that allows the immune system to achieve this faster response.",
+      "task_label": "Immune memory mechanism",
+      "blank_hint": "Consider what specific components of the immune system are 'remembering' the pathogen.",
+      "evidence_goal": "Elicit an explanation of memory cells and their role in accelerated response."
+    },
+    "retry_count": 0,
+    "retry_reasons": []
+  },
+  "product_loop": {
+    "repair_position": "before_model_bridge",
+    "strong_cold_path": "not_taken",
+    "graph_truth": "only spaced strong reconstruction may derive solidified",
+    "graph_neutral_events": [
+      "cold_help_turn",
+      "cold_support_exhausted",
+      "gap_identified",
+      "repair_dialogue_turn",
+      "repair_state_bucketed",
+      "repair_cap_selected",
+      "repair_recovery_started",
+      "repair_abandoned",
+      "repair_recovery_turn",
+      "repair_recovery_closed",
+      "model_bridge"
+    ]
+  },
+  "agent_contract": {
+    "orchestrator": "Socratink Orchestrator",
+    "truth_contract": "Agents propose moves. Training store records events. Derivation decides truth. Graph displays only derived evidence.",
+    "state_owner": "training-store/training-derive"
+  },
+  "events": [
+    {
+      "type": "idle_new_concept",
+      "concept": "Immune memory"
+    },
+    {
+      "type": "launch_attempt",
+      "text": "A vaccine gives a safe preview so the body responds faster later."
+    },
+    {
+      "type": "route_generated"
+    },
+    {
+      "type": "cold_help_turn",
+      "turn_index": 1,
+      "text": "I think vaccines help somehow but I am not sure how.",
+      "answer_mode": "attempt",
+      "score_eligible": false,
+      "classification": null,
+      "routing": "SCAFFOLD",
+      "help_request_reason": "none",
+      "graph_neutral": true,
+      "kc_id": "c1_s1",
+      "agent_response": "Your sketch mentions the body responds faster later. Explain the underlying mechanism that allows the immune system to achieve this faster response.",
+      "generative_commitment": true
+    },
+    {
+      "type": "cold_help_turn",
+      "turn_index": 2,
+      "text": "I think vaccines help somehow but I am not sure how.",
+      "answer_mode": "attempt",
+      "score_eligible": false,
+      "classification": null,
+      "routing": "SCAFFOLD",
+      "help_request_reason": "none",
+      "graph_neutral": true,
+      "kc_id": "c1_s1",
+      "agent_response": "You're right that vaccines are related to immune memory! To explain the mechanism, what specific components of the immune system are involved in 'remembering' a pathogen?",
+      "generative_commitment": true
+    },
+    {
+      "type": "cold_support_exhausted",
+      "help_turns": 2,
+      "reason": "no_substantive_cold_attempt",
+      "graph_neutral": true,
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "gap_identified",
+      "surface": "delta",
+      "cue": "The learner has some correct pieces, but the causal mechanism is still incomplete.",
+      "gap_log": {
+        "kc_id": "c1_s1",
+        "before": "Consider what specific components of the immune system are 'remembering' the pathogen.",
+        "missing_operation": "the causal step that links the before state to the after state",
+        "after": "Elicit an explanation of memory cells and their role in accelerated response.",
+        "internal_bloom_lens": "understand",
+        "question_style": "direct"
+      },
+      "repair_scaffold": {
+        "repair_target": "The learner has some correct pieces, but the causal mechanism is still incomplete.",
+        "before": "Consider what specific components of the immune system are 'remembering' the pathogen.",
+        "missing_operation": "the causal step that links the before state to the after state",
+        "after": "Elicit an explanation of memory cells and their role in accelerated response.",
+        "internal_bloom_lens": "understand",
+        "question_style": "direct",
+        "socratic_question": "What must happen between \"Consider what specific components of the immune system are 'remembering' the pathogen.\" and \"Elicit an explanation of memory cells and their role in accelerated response.\"?"
+      },
+      "scaffold_rejections": [
+        {
+          "reason": "answer_shaped_scaffold",
+          "rejected_missing_operation": "Generation of specialized memory B and T lymphocytes."
+        }
+      ],
+      "prompt": "What must happen between \"Consider what specific components of the immune system are 'remembering' the pathogen.\" and \"Elicit an explanation of memory cells and their role in accelerated response.\"?",
+      "graph_neutral": true,
+      "training_store_note": "uses study_revealed_at internally to unlock repair without revealing model bridge"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "gap_id": "gap-c1_s1-1",
+      "turn_index": 1,
+      "text": "it has something to do with germs and practice",
+      "prompt_type": "probe",
+      "support_level": "probe",
+      "classification": "thin",
+      "gap_delta": {
+        "missing_operation": "the causal step that links the before state to the after state",
+        "causal_link_present": false,
+        "missing_operation_addressed": false
+      },
+      "score_eligible": false,
+      "graph_neutral": true,
+      "causal_link_present": false,
+      "missing_operation_addressed": false,
+      "echo_risk": false,
+      "bridge_ready": false,
+      "next_dialogue_action": "probe_again",
+      "judge_reason": "The learner's response is too vague and does not address the specific components or processes of immune memory.",
+      "next_prompt": "Can you be more specific about what 'germs and practice' means in the context of immune memory?",
+      "not_mastery_reason": "The learner's response is too vague and does not reconstruct the causal link.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "gap_id": "gap-c1_s1-1",
+      "turn_index": 2,
+      "text": "it has something to do with germs and practice",
+      "prompt_type": "micro_scaffold",
+      "support_level": "micro_scaffold",
+      "classification": "thin",
+      "gap_delta": {
+        "missing_operation": "the causal step that links the before state to the after state",
+        "causal_link_present": false,
+        "missing_operation_addressed": false
+      },
+      "score_eligible": false,
+      "graph_neutral": true,
+      "causal_link_present": false,
+      "missing_operation_addressed": false,
+      "echo_risk": false,
+      "bridge_ready": false,
+      "next_dialogue_action": "micro_scaffold",
+      "judge_reason": "The learner's response is too vague and does not connect the before and after states or address the missing operation.",
+      "next_prompt": "You're on the right track thinking about repeated exposure. What specific *type* of cell is generated after the first exposure that helps the body 'remember' the pathogen for future encounters?",
+      "not_mastery_reason": "The learner's response is too vague and does not describe the causal link or the missing operation.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "gap_id": "gap-c1_s1-1",
+      "turn_index": 3,
+      "text": "it has something to do with germs and practice",
+      "prompt_type": "micro_scaffold",
+      "support_level": "micro_scaffold",
+      "classification": "thin",
+      "gap_delta": {
+        "missing_operation": "the causal step that links the before state to the after state",
+        "causal_link_present": false,
+        "missing_operation_addressed": false
+      },
+      "score_eligible": false,
+      "graph_neutral": true,
+      "causal_link_present": false,
+      "missing_operation_addressed": false,
+      "echo_risk": false,
+      "bridge_ready": false,
+      "next_dialogue_action": "micro_scaffold",
+      "judge_reason": "The learner's response is too vague and does not connect the before and after states or identify specific immune components.",
+      "next_prompt": "You're thinking about how the body 'learns' from past infections, which is good. The 'before' state asks about specific components. Can you name the specialized cells that remember pathogens and lead to a faster response, as mentioned in the 'after' state?",
+      "not_mastery_reason": "The response is too vague and does not reconstruct the causal link.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "gap_id": "gap-c1_s1-1",
+      "turn_index": 4,
+      "text": "it has something to do with germs and practice",
+      "prompt_type": "micro_scaffold",
+      "support_level": "micro_scaffold",
+      "classification": "wrong_direction",
+      "gap_delta": {
+        "missing_operation": "the causal step that links the before state to the after state",
+        "causal_link_present": false,
+        "missing_operation_addressed": false
+      },
+      "score_eligible": false,
+      "graph_neutral": true,
+      "causal_link_present": false,
+      "missing_operation_addressed": false,
+      "echo_risk": false,
+      "bridge_ready": false,
+      "next_dialogue_action": "micro_scaffold",
+      "judge_reason": "The learner's response is too vague and does not address the specific components or the mechanism of immune memory.",
+      "next_prompt": "You're on the right track thinking about how the body 'learns'. To bridge the gap, think about what specific *cells* are responsible for remembering pathogens and how they enable a faster response next time.",
+      "not_mastery_reason": "The learner's response is too vague and does not mention memory cells or accelerated response.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "gap_id": "gap-c1_s1-1",
+      "turn_index": 5,
+      "text": "it has something to do with germs and practice",
+      "prompt_type": "micro_scaffold",
+      "support_level": "micro_scaffold",
+      "classification": "thin",
+      "gap_delta": {
+        "missing_operation": "the causal step that links the before state to the after state",
+        "causal_link_present": false,
+        "missing_operation_addressed": false
+      },
+      "score_eligible": false,
+      "graph_neutral": true,
+      "causal_link_present": false,
+      "missing_operation_addressed": false,
+      "echo_risk": false,
+      "bridge_ready": false,
+      "next_dialogue_action": "micro_scaffold",
+      "judge_reason": "The learner's response is too vague and does not mention specific immune components or the mechanism of memory.",
+      "next_prompt": "You're on the right track thinking about how the body 'learns'! To get more specific, think about what kind of cells are responsible for 'remembering' past infections and reacting faster next time.",
+      "not_mastery_reason": "The learner's response is too vague and does not reconstruct the causal link.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_state_bucketed",
+      "source_event_type": "repair_dialogue_turn",
+      "bucket": "partial_link",
+      "bucket_reason": "unresolved_gap",
+      "concept_id": "immune-memory",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_cap_selected",
+      "bucket": "partial_link",
+      "cap_value": 5,
+      "cap_policy_version": "repair-recovery-v1-shadow",
+      "inputs_fingerprint": "partial_link:5",
+      "concept_id": "immune-memory",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_recovery_started",
+      "trigger": "repair_abandoned",
+      "recovery_mode": "same_kc_single_turn",
+      "concept_id": "immune-memory",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair_abandoned",
+      "text": "it has something to do with germs and practice",
+      "reason": "unresolved_gap",
+      "graph_neutral": true,
+      "next_step": "recovery_prompt"
+    },
+    {
+      "type": "repair_recovery_turn",
+      "turn_index": 1,
+      "learner_text": "Memory cells remain after the preview and respond faster later.",
+      "judge_next_action": "resume_repair",
+      "progression_state": "ready",
+      "improvement_observed": true,
+      "improvement_note": "Learner successfully reconstructed the causal bridge by identifying memory cells, their persistence, and their role in accelerated response.",
+      "score_eligible": false,
+      "graph_neutral": true,
+      "concept_id": "immune-memory",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow"
+    },
+    {
+      "type": "repair_dialogue_turn",
+      "gap_id": "gap-c1_s1-1",
+      "turn_index": 6,
+      "text": "Memory cells remain after the preview and respond faster later.",
+      "prompt_type": "probe",
+      "support_level": "probe",
+      "classification": "strong",
+      "gap_delta": {
+        "missing_operation": "the causal step that links the before state to the after state",
+        "causal_link_present": true,
+        "missing_operation_addressed": true
+      },
+      "score_eligible": false,
+      "graph_neutral": true,
+      "causal_link_present": true,
+      "missing_operation_addressed": true,
+      "echo_risk": false,
+      "bridge_ready": true,
+      "next_dialogue_action": "commit_repair",
+      "judge_reason": "The learner's statement accurately describes memory cells as the components that remember, their persistence after initial exposure, and their role in an accelerated response, thus forming the complete causal bridge between the before and after states.",
+      "next_prompt": "",
+      "not_mastery_reason": "This turn is part of a repair dialogue and not direct graph mastery evidence.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "repair_recovery_closed",
+      "outcome": "recovered",
+      "next_phase": "repair",
+      "concept_id": "immune-memory",
+      "kc_id": "c1_s1",
+      "policy_version": "repair-recovery-v1-shadow",
+      "graph_neutral": true
+    },
+    {
+      "type": "repair",
+      "text": "Memory cells remain after the preview and respond faster later.",
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "model_bridge",
+      "text": "Immune memory relies on the generation of specialized memory B and T lymphocytes during a primary immune response, which persist for extended periods and are capable of rapid activation and differentiation upon subsequent encounters with the same antigen.",
+      "graph_neutral": true
+    },
+    {
+      "type": "spacing_advanced",
+      "from": "2026-05-15T10:00:00.000Z",
+      "to": "2026-05-16T06:00:00.000Z"
+    },
+    {
+      "type": "spaced_redrill",
+      "text": "Memory cells remain and help the body respond faster later.",
+      "evaluation": {
+        "agent_response": "That's a good start! Can you tell me more about *what kind* of memory cells are involved and *how* they enable a faster response?",
+        "generative_commitment": true,
+        "answer_mode": "attempt",
+        "score_eligible": true,
+        "help_request_reason": "none",
+        "classification": "shallow",
+        "gap_description": "The learner correctly identifies memory cells and their role in a faster response but lacks specificity on the types of cells and the detailed mechanism of their rapid action.",
+        "routing": "PROBE",
+        "response_tier": 2,
+        "response_band": "link",
+        "tier_reason": "Identifies memory cells and their general function but lacks specific cell types and the detailed process of rapid activation."
+      },
+      "kc_id": "c1_s1"
+    },
+    {
+      "type": "idle_exit"
+    }
+  ],
+  "derived": [
+    {
+      "event": "gap_identified",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "I think vaccines help somehow but I am not sure how.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 0
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "event": "repair_abandoned",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "I think vaccines help somehow but I am not sure how.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 0
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "event": "repair",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "I think vaccines help somehow but I am not sure how.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 1
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "event": "model_bridge",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "I think vaccines help somehow but I am not sure how.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 1
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "event": "spacing_advanced",
+      "nodes": {
+        "c1_s1": {
+          "state": "needs repair",
+          "next_action": "repair",
+          "strongest_turn_text": "I think vaccines help somehow but I am not sure how.",
+          "gaps": [],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-15T10:00:00.000Z",
+          "attempt_count": 1,
+          "repair_count": 1
+        }
+      },
+      "concept_status": {
+        "badge": "needs repair",
+        "composition": {
+          "untested": 0,
+          "primed": 0,
+          "needs_repair": 1,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    },
+    {
+      "event": "spaced_redrill",
+      "nodes": {
+        "c1_s1": {
+          "state": "primed",
+          "next_action": "repair",
+          "strongest_turn_text": "Memory cells remain and help the body respond faster later.",
+          "gaps": [
+            {
+              "mechanism": "target mechanism",
+              "correction": "The learner correctly identifies memory cells and their role in a faster response but lacks specificity on the types of cells and the detailed mechanism of their rapid action."
+            }
+          ],
+          "solidify_unlocks_at": null,
+          "last_attempt_at": "2026-05-16T06:00:00.000Z",
+          "attempt_count": 2,
+          "repair_count": 1
+        }
+      },
+      "concept_status": {
+        "badge": "primed",
+        "composition": {
+          "untested": 0,
+          "primed": 1,
+          "needs_repair": 0,
+          "solidified": 0,
+          "total": 1
+        }
+      }
+    }
+  ],
+  "evidence_holds": [],
+  "llm_calls": [
+    {
+      "agent": "Route Agent",
+      "agent_id": "route",
+      "job": "Create a provisional map hypothesis and first reconstruction target.",
+      "required_outputs": [
+        "provisional_map",
+        "first_node"
+      ],
+      "may_propose_events": [
+        "route_generated"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Treating generated route topology as learner evidence.",
+      "stage": "route_generated",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 20283.577291993424,
+      "usage": {
+        "input_tokens": 2728,
+        "output_tokens": 1601
+      }
+    },
+    {
+      "agent": "Cold Attempt Agent",
+      "agent_id": "cold_attempt",
+      "job": "Elicit the learner's current model before recognition or model-bridge material.",
+      "required_outputs": [
+        "learner_prompt"
+      ],
+      "may_propose_events": [
+        "cold_attempt"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Leaking the answer before the learner generates.",
+      "stage": "cold_attempt_prompt",
+      "provider": "orchestrator",
+      "model": "contract",
+      "latency_ms": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    {
+      "agent": "Evidence Judge",
+      "agent_id": "evidence_judge",
+      "job": "Classify attempts for the orchestrator without mutating graph truth.",
+      "required_outputs": [
+        "classification",
+        "gap_description",
+        "routing",
+        "score_eligible",
+        "generative_commitment"
+      ],
+      "may_propose_events": [
+        "cold_attempt",
+        "gap_drill",
+        "spaced_redrill"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Letting an LLM classification override training derivation.",
+      "stage": "cold_attempt",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 3396.2664999999106,
+      "usage": {
+        "input_tokens": 1717,
+        "output_tokens": 131
+      }
+    },
+    {
+      "agent": "Evidence Judge",
+      "agent_id": "evidence_judge",
+      "job": "Classify attempts for the orchestrator without mutating graph truth.",
+      "required_outputs": [
+        "classification",
+        "gap_description",
+        "routing",
+        "score_eligible",
+        "generative_commitment"
+      ],
+      "may_propose_events": [
+        "cold_attempt",
+        "gap_drill",
+        "spaced_redrill"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Letting an LLM classification override training derivation.",
+      "stage": "cold_attempt",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 2740.2732920018025,
+      "usage": {
+        "input_tokens": 1717,
+        "output_tokens": 113
+      }
+    },
+    {
+      "agent": "Delta Agent",
+      "agent_id": "delta",
+      "job": "Find the missing causal link and express it as a concrete repair slot.",
+      "required_outputs": [
+        "repair_target",
+        "before",
+        "missing",
+        "after",
+        "prompt"
+      ],
+      "may_propose_events": [
+        "study_reveal"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Naming a vague gap instead of one fillable causal link.",
+      "stage": "repair_scaffold",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 3598.418416993809,
+      "usage": {
+        "input_tokens": 273,
+        "output_tokens": 230
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_prompt",
+      "provider": "orchestrator",
+      "model": "contract",
+      "latency_ms": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_dialogue",
+      "turn_index": 1,
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 3971.4003339904593,
+      "usage": {
+        "input_tokens": 337,
+        "output_tokens": 238
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_dialogue",
+      "turn_index": 2,
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 4395.672875005403,
+      "usage": {
+        "input_tokens": 337,
+        "output_tokens": 281
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_dialogue",
+      "turn_index": 3,
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 7082.271375009441,
+      "usage": {
+        "input_tokens": 337,
+        "output_tokens": 275
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_dialogue",
+      "turn_index": 4,
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 5054.24724999466,
+      "usage": {
+        "input_tokens": 337,
+        "output_tokens": 233
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_dialogue",
+      "turn_index": 5,
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 4803.618082994944,
+      "usage": {
+        "input_tokens": 337,
+        "output_tokens": 227
+      }
+    },
+    {
+      "agent": "Repair Agent",
+      "agent_id": "repair",
+      "job": "Force own-words reconstruction of the missing link.",
+      "required_outputs": [
+        "repair_prompt",
+        "repair_dialogue_judge",
+        "bridge_ready",
+        "contract_version",
+        "next_action",
+        "progression_state",
+        "improvement_observed",
+        "improvement_note"
+      ],
+      "may_propose_events": [
+        "repair_dialogue_turn",
+        "repair_abandoned",
+        "repair"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Counting scaffold echo or circular repair as proof.",
+      "stage": "repair_dialogue",
+      "turn_index": 6,
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 9253.55245800165,
+      "usage": {
+        "input_tokens": 338,
+        "output_tokens": 257
+      }
+    },
+    {
+      "agent": "Model Bridge Agent",
+      "agent_id": "model_bridge",
+      "job": "Reveal compact comparison material only after generation.",
+      "required_outputs": [
+        "model_bridge_text"
+      ],
+      "may_propose_events": [
+        "model_bridge"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Turning comparison material into evidence or broad study.",
+      "stage": "model_bridge",
+      "provider": "orchestrator",
+      "model": "contract",
+      "latency_ms": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    {
+      "agent": "Re-Drill Agent",
+      "agent_id": "redrill",
+      "job": "Vary spaced reconstruction pressure after spacing is available.",
+      "required_outputs": [
+        "spaced_prompt"
+      ],
+      "may_propose_events": [
+        "spaced_redrill"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Repeating the same wording so the learner can mimic instead of reconstruct.",
+      "stage": "spaced_prompt",
+      "provider": "orchestrator",
+      "model": "contract",
+      "latency_ms": 0,
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      }
+    },
+    {
+      "agent": "Evidence Judge",
+      "agent_id": "evidence_judge",
+      "job": "Classify attempts for the orchestrator without mutating graph truth.",
+      "required_outputs": [
+        "classification",
+        "gap_description",
+        "routing",
+        "score_eligible",
+        "generative_commitment"
+      ],
+      "may_propose_events": [
+        "cold_attempt",
+        "gap_drill",
+        "spaced_redrill"
+      ],
+      "truth_permission": "none",
+      "failure_mode_to_guard": "Letting an LLM classification override training derivation.",
+      "stage": "spaced_redrill",
+      "provider": "gemini",
+      "model": "gemini-2.5-flash",
+      "latency_ms": 6478.260500007309,
+      "usage": {
+        "input_tokens": 1668,
+        "output_tokens": 187
+      }
+    }
+  ],
+  "training": {
+    "concept_id": "immune-memory",
+    "schema_version": 1,
+    "source_mode": "source_less",
+    "grounding": "learner_sketch",
+    "source_ref": null,
+    "sketch": {
+      "text": "A vaccine gives a safe preview so the body responds faster later.",
+      "at": "2026-05-15T10:00:00.000Z"
+    },
+    "node_records": {
+      "c1_s1": {
+        "attempts": [
+          {
+            "id": "zero-schema-entry",
+            "at": "2026-05-15T10:00:00.000Z",
+            "user_text": "I think vaccines help somehow but I am not sure how.",
+            "classification": "thin",
+            "gaps": [],
+            "grader_version": "tui-zero-schema",
+            "kind": "cold"
+          },
+          {
+            "id": "spaced-1",
+            "at": "2026-05-16T06:00:00.000Z",
+            "user_text": "Memory cells remain and help the body respond faster later.",
+            "classification": "partial",
+            "gaps": [
+              {
+                "mechanism": "target mechanism",
+                "correction": "The learner correctly identifies memory cells and their role in a faster response but lacks specificity on the types of cells and the detailed mechanism of their rapid action."
+              }
+            ],
+            "grader_version": "gemini-2.5-flash",
+            "kind": "spaced"
+          }
+        ],
+        "repairs": [
+          {
+            "id": "repair-1",
+            "at": "2026-05-15T10:10:00.000Z",
+            "text": "Memory cells remain after the preview and respond faster later."
+          }
+        ],
+        "study_revealed_at": "2026-05-15T10:12:00.000Z"
+      }
+    }
+  }
+}

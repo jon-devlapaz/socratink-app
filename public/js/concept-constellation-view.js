@@ -186,9 +186,9 @@ function displayState(viewState) {
 function displayStateLabel(viewState) {
   const state = displayState(viewState);
   if (state === 'ready') return 'ready to reconstruct';
-  if (state === 'primed') return 'primed for study';
+  if (state === 'primed') return 'draft saved';
   if (state === 'needs-repair') return 'needs repair';
-  if (state === 'solidified') return 'solidified through spaced reconstruction';
+  if (state === 'solidified') return 'spaced reconstruction on record';
   return 'future room';
 }
 

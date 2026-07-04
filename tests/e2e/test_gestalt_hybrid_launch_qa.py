@@ -235,6 +235,23 @@ def test_source_less_launch_pad_end_to_end_qa(
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=10_000)
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
+    expect(clean_page.locator("#chamber-question")).to_contain_text(
+        "What do you want to explain?", timeout=20_000
+    )
+    seda_state = clean_page.wait_for_function(
+        """() => {
+          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key));
+          return value?.sessionId && value?.latest ? value : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert seda_state["latest"]["awaiting"]["key"] in {"learner_goal", "launch_attempt"}
+    clean_page.locator("#chamber-exit").click()
+    expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
+    expect(canvas).to_be_visible(timeout=10_000)
     expect(canvas).not_to_contain_text("Shaped by your sketch")
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "What do you think the thermostat checks before it calls for heat?"
@@ -248,64 +265,20 @@ def test_source_less_launch_pad_end_to_end_qa(
     clean_page.locator(".concept-page-b2__attempt-input").fill(
         "It checks if the room is colder than what we wanted and then starts heat."
     )
-    clean_page.locator(".concept-page-b2__attempt-save").click()
-    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Draft saved")
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Reveal notes and compare"
-    )
-    expect(clean_page.locator(".concept-page-b2__evidence")).to_contain_text(
-        "Your memory draft"
-    )
-    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
-        "Draft recorded."
-    )
-    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
-        "Missing piece"
-    )
-
-    clean_page.locator(".concept-page-b2__entry-cta").click()
-    expect(clean_page.locator(".concept-page-b2__study-note")).to_contain_text(
-        "measured room temperature with the set point"
-    )
-    expect(clean_page.locator(".concept-page-b2__evidence")).not_to_contain_text(
-        "Missing piece"
-    )
-    expect(clean_page.locator(".concept-page-b2__repair")).to_be_visible()
-    expect(clean_page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
-
-    clean_page.locator(".concept-page-b2__repair-input").fill(
-        "The thermostat compares the room temperature to the set point before it asks for heat."
-    )
-    clean_page.locator(".concept-page-b2__repair-save").click()
-    expect(clean_page.locator(".concept-page-b2__repair")).to_contain_text(
-        "Pressure-check this link"
-    )
-
-    clean_page.locator(".concept-page-b2__entry-cta").click()
-    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
-    expect(
-        clean_page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
-    ).to_be_visible()
-    clean_page.locator("#chamber-composer").fill(
-        "The thermostat compares the measured room temperature with the set point before calling for heat."
-    )
-    clean_page.locator("#chamber-send").click()
-    expect(clean_page.locator("#chamber-composer")).to_be_disabled()
+    with clean_page.expect_request(
+        lambda request: (
+            request.method == "POST"
+            and "/api/session/" in request.url
+            and request.url.endswith("/turn")
+        )
+    ):
+        clean_page.locator(".concept-page-b2__attempt-save").click()
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
     expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
     expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
 
     assert "POST /api/extract Thermostat feedback loop" in requests_seen
-    assert "POST /api/drill c1_s1" in requests_seen
-    repair_gap_payloads = [
-        payload for payload in drill_payloads
-        if "Learner repair text:" in (payload.get("node_mechanism") or "")
-    ]
-    assert repair_gap_payloads
-    assert repair_gap_payloads[-1]["drill_mode"] == "re_drill"
-    assert (
-        "The thermostat compares the room temperature to the set point before it asks for heat."
-        in repair_gap_payloads[-1]["node_mechanism"]
-    )
+    assert drill_payloads == []
 
     if page_errors:
         pytest.fail("pageerror events:\n" + "\n".join(f"  - {err}" for err in page_errors))
