@@ -13,10 +13,4 @@ sibling checkout.
 - `canon/`: graph-truth training store and derivation modules
 - `config/`: repo-local path resolution and runtime preflight checks
 - `feedback/`: loop feedback command handling
-- `observability/`: dashboard/session metrics projection
-- `ui/`: transcript and map formatting helpers shared by loop surfaces
-
-## Lab-only directories
-
-- `lab/`: founder and persona lab tooling. Do not treat this as learner product
-  surface unless a task explicitly targets lab tooling.
+- `ui/`: map formatting helpers shared by loop surfaces

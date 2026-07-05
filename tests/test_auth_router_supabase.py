@@ -9,9 +9,8 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 from cryptography.fernet import Fernet
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-from starlette.requests import Request
 
 from auth.router import GUEST_COOKIE_NAME, _local_e2e_guest_bootstrap_enabled, auth_router
 from auth.service import (

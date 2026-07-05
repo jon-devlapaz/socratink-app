@@ -29,7 +29,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - The app-local SEDA runtime now lives in root-level `lib/seda/`,
   `lib/loop-server/`, `bridge.py`, `bridge_lib/`, `vendor/python/`,
   `learning_cases/`, and `pedagogical_agents/`. Treat `scripts/socratink_tui/`
-  as legacy CLI/lab surface unless a task explicitly targets it.
+  as legacy CLI surface unless a task explicitly targets it.
 
 ## Product Constraints
 - Generation Before Recognition is non-negotiable.

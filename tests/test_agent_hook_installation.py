@@ -14,11 +14,6 @@ def test_agents_canon_scaffold_exists() -> None:
     assert not missing, f"missing agent canon scaffold: {missing}"
 
 
-def test_archived_founder_docs_exist_outside_active_canon() -> None:
-    path = REPO_ROOT / "ARCHIVED_FOUNDER_DOCS" / "agents" / "founder" / "WORKFLOWS" / "01-git-integration.md"
-    assert path.exists(), "missing archived git-integration workflow card"
-
-
 def test_root_adapters_point_to_agents_canon() -> None:
     for rel in ("AGENTS.md", "CLAUDE.md"):
         text = (REPO_ROOT / rel).read_text(encoding="utf-8")

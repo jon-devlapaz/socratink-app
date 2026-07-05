@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Mapping
 import urllib3
 from fastapi import HTTPException, Request
-from starlette.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response
 
 _HOP_BY_HOP = frozenset(
     {

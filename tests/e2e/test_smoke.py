@@ -51,10 +51,11 @@ import json
 import time
 import os
 import re
+from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
+from urllib.request import urlopen
 
 import pytest
-import requests
 from playwright.sync_api import Error as PlaywrightError, Page, expect
 
 
@@ -66,9 +67,8 @@ def test_health_endpoint_ok(base_url: str) -> None:
     last_error: Exception | None = None
     for attempt in range(3):
         try:
-            response = requests.get(urljoin(base_url + "/", "api/health"), timeout=15)
-            response.raise_for_status()
-            payload = response.json()
+            with urlopen(urljoin(base_url + "/", "api/health"), timeout=15) as response:
+                payload = json.load(response)
             assert payload.get("status") == "ok", f"unexpected status: {payload}"
             assert isinstance(payload.get("server_key_configured"), bool), (
                 f"server_key_configured missing or wrong type: {payload}"
@@ -83,7 +83,7 @@ def test_health_endpoint_ok(base_url: str) -> None:
                 f"drill_session_time_limit_seconds must be int>0 or None: {payload}"
             )
             return
-        except (requests.RequestException, AssertionError) as exc:
+        except (HTTPError, URLError, TimeoutError, AssertionError, json.JSONDecodeError) as exc:
             last_error = exc
             if attempt < 2:
                 time.sleep(0.3 * (attempt + 1))

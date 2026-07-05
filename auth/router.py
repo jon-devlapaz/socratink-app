@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from runtime_env import dev_autoguest_enabled, local_auth_bypass_enabled
 
