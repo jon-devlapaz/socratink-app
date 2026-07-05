@@ -3293,12 +3293,15 @@ def test_desk_iso_board_state_surface_and_room_labels(
     clean_page.reload()
     _wait_for_app_settled(clean_page)
     clean_page.locator("#nav-dashboard").click()
-    expect(clean_page.locator("#tile-8")).to_have_class(re.compile(r"\bempty\b"))
-    expect(clean_page.locator("#tile-8")).to_have_attribute(
+    empty_tile = clean_page.locator("#tile-8")
+    expect(empty_tile).to_be_visible()
+    expect(empty_tile).to_have_class(re.compile(r"\bempty\b"))
+    expect(empty_tile).to_have_attribute(
         "aria-label", "Start learning"
     )
 
-    clean_page.locator("#tile-8").focus()
+    empty_tile.focus()
+    clean_page.evaluate("App.showDashboard()")
     expect(clean_page.locator(".room-label")).to_contain_text("Start learning")
     assert captured["console_errors"] == []
     assert captured["failed_requests"] == []

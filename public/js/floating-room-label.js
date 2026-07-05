@@ -125,14 +125,22 @@ import { Bus } from './bus.js';
     return m ? Number(m[1]) : -1;
   }
 
-  function showForEvent(event) {
-    const tile = event.target?.closest?.('.tile-group');
+  function showForTile(tile) {
     const conceptIdx = conceptIndexForTile(tile);
-    if (!tile || conceptIdx < 0) return;
+    if (!tile || conceptIdx < 0 || !tile.getClientRects().length) return;
     const concept = loadConcepts()[conceptIdx];
     show(tile, concept
       ? { name: concept.name, action: 'Resume', kind: 'room' }
       : { name: 'Start learning', action: '', kind: 'empty' });
+  }
+
+  function showForEvent(event) {
+    showForTile(event.target?.closest?.('.tile-group'));
+  }
+
+  function showFocusedTile() {
+    const tile = document.activeElement?.closest?.('.tile-group');
+    showForTile(tile);
   }
 
   function hideForEvent(event) {
@@ -161,6 +169,10 @@ import { Bus } from './bus.js';
     }
     refresh();
     Bus.on('grid:rendered', refresh);
+    Bus.on('dashboard:shown', () => {
+      refresh();
+      requestAnimationFrame(showFocusedTile);
+    });
   }
 
   document.addEventListener('focusin', showForEvent);
