@@ -73,8 +73,15 @@ EXPECTED_404_PATHS: tuple[str, ...] = ("/_vercel/speed-insights/script.js",)
 
 # Chromium reports in-flight bootstrap requests as requestfailed when a smoke
 # test deliberately navigates/reloads during guest setup. Keep this narrow:
-# actual HTTP failures still fail, and aborted app assets still fail.
-EXPECTED_ABORTED_BOOTSTRAP_PATHS: tuple[str, ...] = ("/api/health", "/api/me")
+# actual HTTP failures still fail, and aborted non-bootstrap app assets still fail.
+EXPECTED_ABORTED_BOOTSTRAP_PATHS: tuple[str, ...] = (
+    "/",
+    "/api/health",
+    "/api/me",
+    "/login",
+    "/fonts/Geom-VariableFont_wght.ttf",
+    "/fonts/Inter-VariableFont_opsz,wght.ttf",
+)
 
 
 @pytest.fixture(scope="session")
