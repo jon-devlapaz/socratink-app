@@ -55,7 +55,7 @@ from urllib.parse import urljoin, urlparse
 
 import pytest
 import requests
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Error as PlaywrightError, Page, expect
 
 
 # --- 1. Health check (also serves as serverless warm-up) -----------------
@@ -95,6 +95,28 @@ def test_health_endpoint_ok(base_url: str) -> None:
 
 _cached_guest_cookies = None
 
+
+def _goto_with_retry(page: Page, url: str) -> None:
+    """Retry transient production navigation aborts without masking HTTP failures."""
+    retry_markers = (
+        "net::ERR_ABORTED",
+        "interrupted by another navigation",
+    )
+    last_error: PlaywrightError | None = None
+    for attempt in range(3):
+        try:
+            page.goto(url)
+            return
+        except PlaywrightError as exc:
+            if not any(marker in str(exc) for marker in retry_markers):
+                raise
+            last_error = exc
+            if attempt < 2:
+                page.wait_for_timeout(250 * (attempt + 1))
+    assert last_error is not None
+    raise last_error
+
+
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     """Navigate to base_url and bypass the /login redirect via the guest link.
 
@@ -107,21 +129,21 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
         page.context.add_cookies(_cached_guest_cookies)
 
     if os.getenv("SOCRATINK_E2E_LOCAL_GUEST"):
-        page.goto(urljoin(base_url + "/", "auth/e2e/guest?return_to=%2F"))
+        _goto_with_retry(page, urljoin(base_url + "/", "auth/e2e/guest?return_to=%2F"))
         session = _fetch_browser_session(page)
         if session.get("authenticated") or session.get("guest_mode"):
             _cached_guest_cookies = page.context.cookies()
-            page.goto(base_url)
+            _goto_with_retry(page, base_url)
             return
 
-    page.goto(base_url)
+    _goto_with_retry(page, base_url)
     if "/login" not in page.url:
         session = _fetch_browser_session(page)
         if session.get("authenticated") or session.get("guest_mode"):
             if not _cached_guest_cookies:
                 _cached_guest_cookies = page.context.cookies()
             return
-        page.goto(urljoin(base_url + "/", "login?return_to=%2F"))
+        _goto_with_retry(page, urljoin(base_url + "/", "login?return_to=%2F"))
     if "/login" in page.url:
         expect(page.locator("#guest-continue-link")).to_be_visible()
         expect(page.locator("#guest-continue-link")).to_have_attribute("href", re.compile(r"^/auth/guest"))
@@ -145,17 +167,28 @@ def _wait_for_app_settled(page: Page) -> None:
 
 
 def _fetch_browser_session(page: Page) -> dict:
-    payload = page.evaluate(
-        """async () => {
-            const response = await fetch('/api/me', {
-              credentials: 'same-origin',
-              headers: { Accept: 'application/json' },
-            });
-            if (!response.ok) return {};
-            return response.json();
-        }"""
-    )
-    return payload if isinstance(payload, dict) else {}
+    last_error: PlaywrightError | None = None
+    for attempt in range(3):
+        try:
+            payload = page.evaluate(
+                """async () => {
+                    const response = await fetch('/api/me', {
+                      credentials: 'same-origin',
+                      headers: { Accept: 'application/json' },
+                    });
+                    if (!response.ok) return {};
+                    return response.json();
+                }"""
+            )
+            return payload if isinstance(payload, dict) else {}
+        except PlaywrightError as exc:
+            if "Failed to fetch" not in str(exc):
+                raise
+            last_error = exc
+            if attempt < 2:
+                page.wait_for_timeout(250 * (attempt + 1))
+    assert last_error is not None
+    raise last_error
 
 
 def _is_loopback_base_url(base_url: str) -> bool:
@@ -3292,7 +3325,18 @@ def test_desk_iso_board_state_surface_and_room_labels(
     clean_page.evaluate(seed_board_concepts(8))
     clean_page.reload()
     _wait_for_app_settled(clean_page)
+    expect(clean_page.locator("#ignition-view")).to_be_visible()
     clean_page.locator("#nav-dashboard").click()
+    clean_page.wait_for_function(
+        """() => {
+            const hero = document.querySelector('.hero-card.intro-page');
+            const tile = document.getElementById('tile-8');
+            return hero
+                && window.getComputedStyle(hero).display !== 'none'
+                && tile
+                && tile.getClientRects().length > 0;
+        }"""
+    )
     empty_tile = clean_page.locator("#tile-8")
     expect(empty_tile).to_be_visible()
     expect(empty_tile).to_have_class(re.compile(r"\bempty\b"))
