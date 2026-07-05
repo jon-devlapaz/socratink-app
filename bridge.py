@@ -23,8 +23,8 @@ if not (VENDOR_PYTHON_ROOT / "ai_service.py").exists():
         f"vendored Python seam not found at {VENDOR_PYTHON_ROOT}. Restore "
         "vendor/python from the loop runtime bundle."
     )
-sys.path.insert(0, str(VENDOR_PYTHON_ROOT))
 sys.path.insert(0, str(WORKSPACE_ROOT))
+sys.path.insert(0, str(VENDOR_PYTHON_ROOT))
 
 ai_service: Any = importlib.import_module("ai_service")
 import bridge_lib.fake as bridge_fake
