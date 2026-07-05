@@ -3160,16 +3160,6 @@ const App = (() => {
     }
   }
 
-  function toggleCluster(el) {
-    const isExpanded = el.classList.contains('expanded');
-    /* c8 ignore next -- legacy map cluster DOM exists only in the older graph surface. */
-    const parent = el.parentElement;
-    parent.querySelectorAll('.map-cluster-card').forEach(c => c.classList.remove('expanded'));
-    if (!isExpanded) {
-      el.classList.add('expanded');
-    }
-  }
-
   // ── 17. Init + restore ─────────────────────────────────────
 
 
@@ -4888,7 +4878,7 @@ const App = (() => {
     deleteConcept, toggleConceptActions,
     extract, drill, drillFail, drillPass, consolidate,
     fastForward,
-    hideMapView, setMapMode, toggleCluster,
+    hideMapView, setMapMode,
     showLibrary, hideLibrary, openLibraryConcept, seedLocalQaConcept, seedLocalRepairQaConcept, showDashboard, showIgnition, showSettings,
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     toggleTheme, setTheme, runHeroAction,

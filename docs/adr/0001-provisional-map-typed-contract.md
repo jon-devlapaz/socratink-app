@@ -34,6 +34,6 @@ Smallest-route generation adds a stricter profile outside the general model: `le
 ## Consequences
 
 - **Catches breakage at extraction time, not three steps later.** A malformed map fails at parse, surfacing as a 422 with a specific validator message instead of a Cold attempt UX bug.
-- **Downstream code that previously walked dicts must update.** `scripts/run_tasting_fixture.py` was updated to call `.model_dump()` after extraction; future internal callers must either consume `ProvisionalMap` directly (preferred) or do the same.
+- **Downstream code that previously walked dicts must update.** Future internal callers must either consume `ProvisionalMap` directly (preferred) or call `.model_dump()` at the route boundary.
 - **Wire shape preserved.** Route handlers call `.model_dump()` so frontend consumers see the same JSON they always did.
 - **Schema is bound to prompt versions.** When `app_prompts/extract-system-v1.txt` or `app_prompts/generate-smallest-route-system-v1.txt` changes shape, `ProvisionalMap` and any route-specific validators must change alongside it. Prompts and schemas version together; this ADR doesn't formalize the registry yet (deferred — see spec §5.4).

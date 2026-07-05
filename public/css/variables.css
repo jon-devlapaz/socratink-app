@@ -73,12 +73,6 @@
   --overlay-spinner-track: rgba(var(--lavender-500-rgb), 0.22);
   --overlay-spinner-head:  var(--violet-600);
   --overlay-ring:       rgba(var(--lavender-500-rgb), 0.72);
-  --tooltip-bg:         rgba(var(--ink-900-rgb), 0.96);
-  --tooltip-border:     rgba(var(--violet-600-rgb), 0.40);
-  --tooltip-shadow:     0 18px 42px rgba(10, 10, 22, 0.28);
-  --tooltip-text:       rgba(var(--cream-50-rgb), 0.92);
-  --tooltip-text-sub:   rgba(var(--cream-50-rgb), 0.82);
-  --tooltip-kicker:     rgba(var(--lavender-500-rgb), 0.94);
 
   --gradient-card-start: rgba(var(--paper-0-rgb), 0.96);
   --gradient-card-end:   rgba(var(--cream-50-rgb), 0.96);
@@ -529,8 +523,6 @@
   --shadow-soft:  0 16px 44px rgba(11, 9, 24, 0.24);
   --shadow-hover: 0 24px 60px rgba(11, 9, 24, 0.34);
   --shadow-hero:  0 42px 100px rgba(11, 9, 24, 0.50);
-
-  --tooltip-border: rgba(var(--lavender-500-rgb), 0.42);
 
   --beacon-mid:  rgba(var(--lavender-500-rgb), 0.96);
   --beacon-edge: rgba(var(--violet-600-rgb), 0.96);

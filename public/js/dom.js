@@ -25,9 +25,3 @@ export const TILE_IDS = [
   'tile-6', 'tile-7', 'tile-8',
 ];
 export const tileEls  = TILE_IDS.map(id => document.getElementById(id));
-
-export const POLYGON_IDS = [
-  'cp-top','cp-upper-left','cp-upper-right',
-  'cp-lower-left','cp-lower-right',
-  'cp-bottom-tip','cp-specular','cp-glow',
-];

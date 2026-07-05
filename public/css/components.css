@@ -1752,43 +1752,6 @@ html[data-motion="reduced"] .creation-dialog-shell {
   gap: var(--space-2);
 }
 
-.help-tip-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-  border-radius: 999px;
-  background: transparent;
-  border: 1px solid var(--accent-border);
-  color: var(--accent-primary);
-  cursor: pointer;
-  flex: none;
-  align-self: center;
-  transition: background var(--duration-micro) var(--ease-standard),
-              color var(--duration-micro) var(--ease-standard),
-              border-color var(--duration-micro) var(--ease-standard),
-              box-shadow var(--duration-micro) var(--ease-standard);
-}
-.help-tip-trigger .material-symbols-outlined {
-  font-size: 16px;
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0;
-  line-height: 1;
-}
-.help-tip-trigger:hover,
-.help-tip-trigger[data-pinned="true"] {
-  background: var(--accent-soft);
-  border-color: var(--accent-border-strong);
-  color: var(--primary-fill);
-}
-.help-tip-trigger:focus-visible {
-  outline: none;
-  box-shadow: var(--accent-ring);
-  border-color: var(--accent-border-strong);
-}
-
 /* Empty-state voice line (retired door copy; rule kept as no-op to avoid merge conflicts) */
 .hero-voice-line { display: none; margin: 0; }
 
@@ -1871,10 +1834,7 @@ html[data-motion="reduced"] .creation-dialog-shell {
   outline: none;
   border-color: var(--accent-border-strong);
   transform: scale(1.005) translateY(-1px);
-  /* Hum: a quiet breathing ring while focused. Pairs with intro-particles'
-     pulseFromTyping() outward push so the field reads as a calmly humming
-     source that the keystrokes agitate (the agitation lives in the
-     particles, not in the box itself). 2.2s cycle for a slower exhale. */
+  /* Hum: a quiet breathing ring while focused. */
   animation: hero-input-hum 2.2s ease-in-out infinite;
 }
 .hero-single-input__field:active {
@@ -2152,10 +2112,9 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   margin-left: auto;
   margin-right: auto;
 }
-/* Empty-state: three zones. Hide state chip + start-here tooltip; silence card surface. */
+/* Empty-state: three zones. Hide state chip; silence card surface. */
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-meta-row,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-state-chip-group,
-.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow-row .help-tip-trigger {
+.hero-info:has(.hero-state-chip[data-state="empty"]) .hero-state-chip-group {
   display: none;
 }
 .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-eyebrow-row {
@@ -2170,115 +2129,6 @@ body[data-theme="dark"] .hero-single-input__file-note[data-tone="error"] {
   .hero-info:has(.hero-state-chip[data-state="empty"]) .hero-primary-action {
     min-width: 200px;
   }
-}
-
-.help-tip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: max-content;
-  max-width: 280px;
-  padding: var(--space-3) var(--space-4);
-  padding-inline-end: 32px;
-  background: var(--help-tip-bg, var(--tooltip-bg));
-  color: var(--tooltip-text);
-  font-family: var(--font-body);
-  font-size: var(--text-xs);
-  font-weight: 400;
-  line-height: var(--leading-snug);
-  letter-spacing: -0.005em;
-  border: 1px solid var(--tooltip-border);
-  border-radius: var(--radius-sm);
-  box-shadow:
-    0 18px 42px rgba(var(--ink-900-rgb), 0.22),
-    0 2px 14px rgba(var(--violet-600-rgb), 0.18);
-  opacity: 0;
-  transform: translateY(2px);
-  pointer-events: none;
-  transition: opacity var(--duration-micro) var(--ease-standard),
-              transform var(--duration-micro) var(--ease-standard);
-  z-index: 1000;
-}
-.help-tip[data-show="true"] {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-.help-tip__arrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  background: var(--help-tip-bg, var(--tooltip-bg));
-  border: 0 solid var(--tooltip-border);
-  transform: rotate(45deg);
-}
-.help-tip[data-placement^="top"] .help-tip__arrow {
-  border-right-width: 1px;
-  border-bottom-width: 1px;
-}
-.help-tip[data-placement^="bottom"] .help-tip__arrow {
-  border-left-width: 1px;
-  border-top-width: 1px;
-}
-.help-tip[data-placement^="left"] .help-tip__arrow {
-  border-top-width: 1px;
-  border-right-width: 1px;
-}
-.help-tip[data-placement^="right"] .help-tip__arrow {
-  border-bottom-width: 1px;
-  border-left-width: 1px;
-}
-.help-tip__close {
-  position: absolute;
-  top: 6px;
-  inset-inline-end: 6px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 999px;
-  color: var(--tooltip-text-sub);
-  cursor: pointer;
-  transition: color var(--duration-micro) var(--ease-standard),
-              background var(--duration-micro) var(--ease-standard);
-}
-.help-tip__close:hover,
-.help-tip__close:focus-visible {
-  color: var(--tooltip-text);
-  background: rgba(var(--cream-50-rgb), 0.10);
-  outline: none;
-}
-.help-tip__close .material-symbols-outlined {
-  font-size: 16px;
-  line-height: 1;
-}
-.help-tip[data-pinned="true"] .help-tip__close {
-  display: inline-flex;
-}
-@media (hover: none) {
-  .help-tip[data-show="true"] .help-tip__close { display: inline-flex; }
-}
-@media (max-width: 374px) {
-  .help-tip { max-width: 240px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .help-tip { transition: opacity var(--duration-micro) ease; transform: none; }
-  .help-tip[data-show="true"] { transform: none; }
-}
-html[data-motion="reduced"] .help-tip { transition: opacity var(--duration-micro) ease; transform: none; }
-html[data-motion="reduced"] .help-tip[data-show="true"] { transform: none; }
-
-[data-theme="dark"] {
-  --help-tip-bg: rgba(48, 43, 73, 0.98);
-}
-[data-theme="dark"] .help-tip {
-  box-shadow:
-    0 18px 42px rgba(0, 0, 0, 0.48),
-    0 2px 14px rgba(var(--lavender-500-rgb), 0.20);
 }
 
 /* ============================================================

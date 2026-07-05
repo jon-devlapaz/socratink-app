@@ -6,9 +6,8 @@
  * prefers reduced motion. The user override is additive: it can force
  * quiet motion even when the OS does not request it.
  *
- * Loaded as an ES module by app.js / concept-create.js / graph-view.js.
- * The same module also binds the helper on the window so
- * the classic-script `intro-particles.js` can read it without an import.
+ * Loaded as an ES module by app.js and exposed on the window for any
+ * non-module browser code that needs the same check.
  */
 
 export function prefersReducedMotion() {

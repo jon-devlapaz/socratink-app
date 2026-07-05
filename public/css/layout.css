@@ -20,9 +20,6 @@
     flex-shrink: 0;
     border-right: 1px solid var(--border);
     box-shadow: none;
-    /* Sit above the antigravity-theme intro-particles canvas (position: fixed,
-       z-index: 0 in antigravity.css), which otherwise paints over the sidebar
-       because it's later in DOM order at the same stacking level. */
     z-index: 1;
     transition: margin-left 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
     margin-left: 0;
@@ -159,55 +156,6 @@ body:not([data-map-open="true"]) .map-back-link {
   justify-content: space-between;
   gap: 32px;
   width: 100%;
-}
-.intro-particles {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  overflow: hidden;
-  pointer-events: none;
-}
-.intro-particles::before,
-.intro-particles::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(42px);
-  pointer-events: none;
-}
-.intro-particles::before {
-  width: 260px;
-  height: 260px;
-  top: 16%;
-  left: 12%;
-  background: rgba(141, 134, 201, 0.23);
-}
-.intro-particles::after {
-  width: 300px;
-  height: 300px;
-  right: 10%;
-  bottom: 8%;
-  background: rgba(144, 103, 198, 0.14);
-}
-#intro-particle-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.9;
-  /* Feather the constellation edges so the field reads as atmospheric haze
-     rather than a fenced canvas. Without this, the canvas terminates at the
-     hero-card's bottom edge with a visible horizontal line. */
-  -webkit-mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
-  mask-image: radial-gradient(ellipse 78% 68% at 50% 44%, #000 52%, rgba(0, 0, 0, 0.6) 78%, transparent 100%);
-}
-
-/* Dark-mode tone-down per persona test: the constellation field at
-   0.9 opacity read as a sci-fi loading screen against the navy.
-   Drop to 0.32 so the field is present-but-quiet, "ink on a dark page"
-   rather than "stage lighting." Light mode keeps the original 0.9. */
-html[data-theme="dark"] #intro-particle-canvas {
-  opacity: 0.32;
 }
 /* Pre-board-first experiment, the desk hid the iso grid when there were
    no concepts and reflowed the hero-card into a tall hero-info column.
@@ -570,15 +518,6 @@ html[data-theme="dark"] #intro-particle-canvas {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  #intro-particle-canvas {
-    opacity: 0.72;
-  }
-}
-html[data-motion="reduced"] #intro-particle-canvas {
-  opacity: 0.72;
-}
-
 /* Desktop hides mobile drawer footer — chrome handles theme + sign-in */
 @media (min-width: 900px) {
   .drawer-footer { display: none; }
@@ -893,7 +832,6 @@ html[data-motion="reduced"] #intro-particle-canvas {
 
 .map-threshold-panel,
 .map-provisional-panel,
-.map-first-room,
 .map-locked-study-zone {
   background: var(--surface-card);
   border: 1px solid var(--border);
@@ -942,85 +880,6 @@ html[data-motion="reduced"] #intro-particle-canvas {
   color: var(--text-sub);
   font-style: italic;
 }
-.map-first-room {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.map-first-room-kicker {
-  color: var(--primary);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-.map-first-room h3 {
-  margin: 0 0 6px;
-  font-family: var(--font-display);
-  font-size: 18px;
-  line-height: 1.25;
-  color: var(--text);
-}
-.map-first-room p {
-  margin: 0;
-  color: var(--text-sub);
-  font-size: 13px;
-  line-height: 1.45;
-}
-.map-first-room-action {
-  width: auto;
-  flex: none;
-}
-.map-backbone-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--surface-card);
-  border: 1px solid var(--border);
-  padding: 12px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  margin-bottom: 8px;
-  box-shadow: 0 2px 8px rgba(var(--ink-900-rgb), 0.02);
-}
-
-
-/* Accordion */
-.map-cluster-card { background: var(--surface-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: box-shadow 0.2s; }
-.map-cluster-card.expanded { box-shadow: var(--accent-shadow-lg); border-color: var(--accent-border-strong); }
-.map-cluster-header { padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 14px; color: var(--text); background: var(--surface-card); transition: background 0.2s; }
-.map-cluster-header:hover { background: var(--surface-nested); }
-.map-cluster-icon { color: var(--text-sub); font-size: 18px; transition: transform 0.2s; }
-.map-cluster-card.expanded .map-cluster-icon { transform: rotate(180deg); color: var(--primary); }
-
-.map-cluster-body { display: none; padding: 0 20px 20px; border-top: 1px solid var(--border); background: var(--surface-card); }
-.map-cluster-card.expanded .map-cluster-body { display: block; }
-.map-cluster-desc { font-size: 13px; color: var(--text-sub); line-height: 1.5; margin: 16px 0; }
-
-.map-subnode-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--surface); border-radius: 8px; margin-bottom: 8px; }
-.map-subnode-indicator { width: 8px; height: 8px; border-radius: 50%; background: var(--locked); flex-shrink: 0; margin-top: 6px; }
-.map-subnode-indicator[data-state="primed"] { background: var(--node-primed); }
-.map-subnode-indicator[data-state="drilled"] { background: var(--node-drilled); }
-.map-subnode-indicator[data-state="solid"],
-.map-subnode-indicator[data-state="solidified"] { background: var(--node-solidified); box-shadow: 0 0 5px rgba(var(--node-solidified-rgb), 0.44); }
-.map-subnode-content { flex: 1; }
-.map-subnode-label { font-weight: 600; font-size: 13px; color: var(--text); margin-bottom: 4px; }
-.map-subnode-mech { font-size: 12px; color: var(--text-sub); line-height: 1.4; }
-.map-subnode-mech.is-locked { font-style: italic; opacity: 0.8; }
-
-.map-cx-item { font-size: 13px; color: var(--text); line-height: 1.5; padding: 8px 0; border-bottom: 1px dashed var(--border); }
-.map-cx-item:last-child { border-bottom: none; }
-.map-cx-item strong { color: var(--primary); font-weight:600; }
-
-.map-fw-card { background: var(--surface-nested); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-.map-fw-name { font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 6px; }
-.map-fw-state { font-size: 13px; color: var(--text-sub); line-height: 1.4; }
-
 .map-view-shell { display: flex; flex-direction: column; gap: 24px; min-height: 100%; }
 
 .concept-header {
