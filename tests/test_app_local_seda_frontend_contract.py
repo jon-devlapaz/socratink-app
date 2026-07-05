@@ -14,6 +14,65 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_seda_visible_prompt_strips_context_labels() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { visibleSedaPromptFromResponse } from './public/js/seda-visible-prompt.js';
+
+        const prompt = visibleSedaPromptFromResponse({
+          awaiting: { key: 'cold_attempt' },
+          learnerTranscript: [
+            {
+              text: 'Concept: vaccines create immune memory Try your first explanation. Messy is fine.',
+            },
+            {
+              text: 'Concept: vaccines create immune memory Learner goal: I want to explain why vaccines create immune memory. In your own words, why does a safe preview make the later response faster?',
+            },
+          ],
+        });
+
+        assert.equal(
+          prompt,
+          'Try your first explanation. Messy is fine.\\nIn your own words, why does a safe preview make the later response faster?'
+        );
+        assert.equal(prompt.includes('Concept:'), false);
+        assert.equal(prompt.includes('Learner goal:'), false);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_seda_visible_prompt_drops_setup_log_lines() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { visibleSedaPromptFromResponse } from './public/js/seda-visible-prompt.js';
+
+        const prompt = visibleSedaPromptFromResponse({
+          awaiting: {
+            key: 'cold_attempt',
+            ctaText: 'In your own words, why does a safe preview make the later response faster?',
+          },
+          learnerTranscript: [
+            { level: 'log', text: 'Concept: vaccines create immune memory' },
+            { level: 'log', text: 'Learner goal: I want to explain why vaccines create immune memory.' },
+          ],
+        });
+
+        assert.equal(
+          prompt,
+          'In your own words, why does a safe preview make the later response faster?'
+        );
+        assert.equal(prompt.includes('Concept:'), false);
+        assert.equal(prompt.includes('Learner goal:'), false);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_auth_entry_session_redirect_contract() -> None:
     result = run_node_module(
         """

@@ -62,6 +62,7 @@ import {
   runRepairReps,
   runDrillTurn,
 } from './api-client.js?v=2';
+import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=2';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -3297,24 +3298,7 @@ const App = (() => {
   }
 
   function sedaPromptFromResponse(data) {
-    /* c8 ignore start -- completion rendering is covered by the API evidence proof; browser smoke covers active turns. */
-    if (data?.caseComplete) {
-      const state = data?.record?.derived?.[0]?.nodes
-        ? Object.values(data.record.derived[0].nodes)[0]?.state
-        : null;
-      return state
-        ? `Session complete. Evidence record saved: ${state}.`
-        : 'Session complete. Evidence record saved.';
-    }
-    /* c8 ignore stop */
-    const cta = data?.awaiting?.ctaText || data?.awaiting?.ctaLabel || '';
-    const transcript = Array.isArray(data?.learnerTranscript) ? data.learnerTranscript : [];
-    const visible = transcript
-      .map((entry) => String(entry?.text || '').trim())
-      .filter(Boolean)
-      .slice(-2)
-      .join('\n');
-    return [visible, cta].filter(Boolean).join('\n\n') || 'Your turn.';
+    return visibleSedaPromptFromResponse(data);
   }
 
   function saveSedaResponse(concept, nodeContext, data) {
