@@ -76,8 +76,14 @@ PY
 
     echo "Starting local app for browser coverage at $base_url..."
     mkdir -p .qa-runs
+    local loop_store=".qa-runs/check-coverage-loop-sessions"
+    rm -rf "$loop_store"
+    mkdir -p "$loop_store"
     SOCRATINK_DEV_AUTOGUEST="${SOCRATINK_DEV_AUTOGUEST:-1}" \
     SOCRATINK_E2E_LOCAL_GUEST="${SOCRATINK_E2E_LOCAL_GUEST:-1}" \
+    SOCRATINK_TUI_FAKE_LLM="${SOCRATINK_TUI_FAKE_LLM:-1}" \
+    SOCRATINK_LOOP_SESSION_STORE_DIR="${SOCRATINK_LOOP_SESSION_STORE_DIR:-$PWD/$loop_store}" \
+    PYTHON="${PYTHON:-$PWD/.venv/bin/python}" \
     .venv/bin/uvicorn main:app --host 127.0.0.1 --port "$local_port" >.qa-runs/check-coverage-uvicorn.log 2>&1 &
     LOCAL_SERVER_PID="$!"
     wait_for_health "$health_url"

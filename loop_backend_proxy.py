@@ -43,8 +43,17 @@ _LOCAL_LOOP_BASE: str | None = None
 
 
 def _stop_local_loop_backend() -> None:
-    if _LOCAL_LOOP_PROCESS and _LOCAL_LOOP_PROCESS.poll() is None:
-        _LOCAL_LOOP_PROCESS.terminate()
+    global _LOCAL_LOOP_BASE, _LOCAL_LOOP_PROCESS
+    process = _LOCAL_LOOP_PROCESS
+    _LOCAL_LOOP_PROCESS = None
+    _LOCAL_LOOP_BASE = None
+    if process and process.poll() is None:
+        process.terminate()
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=2)
 
 
 atexit.register(_stop_local_loop_backend)

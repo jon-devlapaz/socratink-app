@@ -1147,7 +1147,8 @@ def test_start_learning_enters_seda_loop_from_product_flow(
     )
     state = page.wait_for_function(
         """() => {
-          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
           return value?.sessionId && value?.latest ? value : null;
@@ -1167,7 +1168,8 @@ def test_start_learning_enters_seda_loop_from_product_flow(
     page.locator("#chamber-send").click()
     advanced_state = page.wait_for_function(
         """() => {
-          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
           return value?.latest?.awaiting?.key !== 'launch_attempt' ? value : null;
@@ -1187,7 +1189,8 @@ def test_start_learning_enters_seda_loop_from_product_flow(
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
     reopened_state = page.wait_for_function(
         """() => {
-          const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
           return value?.sessionId ? value : null;

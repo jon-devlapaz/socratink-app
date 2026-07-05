@@ -278,6 +278,20 @@ def test_local_loop_backend_binds_to_loopback() -> None:
     assert env["HOST"] == "127.0.0.1"
 
 
+def test_stop_local_loop_backend_clears_cached_process() -> None:
+    process = MagicMock()
+    process.poll.return_value = None
+    loop_backend_proxy._LOCAL_LOOP_PROCESS = process
+    loop_backend_proxy._LOCAL_LOOP_BASE = "http://127.0.0.1:8765"
+
+    loop_backend_proxy._stop_local_loop_backend()
+
+    process.terminate.assert_called_once()
+    process.wait.assert_called_once_with(timeout=2)
+    assert loop_backend_proxy._LOCAL_LOOP_PROCESS is None
+    assert loop_backend_proxy._LOCAL_LOOP_BASE is None
+
+
 def test_loop_proxy_releases_connection_when_read_fails(client: TestClient) -> None:
     upstream = MagicMock()
     upstream.read.side_effect = urllib3.exceptions.ProtocolError("broken pipe")
