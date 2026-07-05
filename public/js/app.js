@@ -1,7 +1,6 @@
 import { Bus } from './bus.js';
 import {
   createSedaSession,
-  generateKnowledgeMap,
   getSedaSession,
   sendSedaTurn,
   submitConceptCreate,
