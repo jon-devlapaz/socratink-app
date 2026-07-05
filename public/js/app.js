@@ -3010,6 +3010,7 @@ const App = (() => {
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
     renderDeskDate();
+    Bus.emit('dashboard:shown');
     if (window.innerWidth < 900) closeDrawer();
   }
 
