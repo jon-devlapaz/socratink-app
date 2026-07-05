@@ -120,6 +120,27 @@ import { Bus } from './bus.js';
     tileGroup.addEventListener('blur', () => hide(tileGroup));
   }
 
+  function conceptIndexForTile(tile) {
+    const m = /^tile-(\d+)$/.exec(tile?.id || '');
+    return m ? Number(m[1]) : -1;
+  }
+
+  function showForEvent(event) {
+    const tile = event.target?.closest?.('.tile-group');
+    const conceptIdx = conceptIndexForTile(tile);
+    if (!tile || conceptIdx < 0) return;
+    const concept = loadConcepts()[conceptIdx];
+    show(tile, concept
+      ? { name: concept.name, action: 'Resume', kind: 'room' }
+      : { name: 'Start learning', action: '', kind: 'empty' });
+  }
+
+  function hideForEvent(event) {
+    const tile = event.target?.closest?.('.tile-group');
+    if (tile && event.relatedTarget && tile.contains(event.relatedTarget)) return;
+    if (tile) hide(tile);
+  }
+
   function refresh() {
     const svg = document.getElementById('grid-svg');
     if (!svg) return;
@@ -141,6 +162,11 @@ import { Bus } from './bus.js';
     refresh();
     Bus.on('grid:rendered', refresh);
   }
+
+  document.addEventListener('focusin', showForEvent);
+  document.addEventListener('focusout', hideForEvent);
+  document.addEventListener('mouseover', showForEvent);
+  document.addEventListener('mouseout', hideForEvent);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', watch);
