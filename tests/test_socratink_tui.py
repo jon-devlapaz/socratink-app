@@ -73,9 +73,9 @@ def test_tui_bridge_generate_route_can_use_fake_llm_without_network() -> None:
     assert first_node["learner_prompt"]
     assert payload["llm_call"]["provider"] == "fake"
     assert payload["llm_call"]["raw_text"]
-    assert "<threshold>Vaccines give the immune system a preview.</threshold>" in (
-        payload["llm_call"]["raw_prompt"]["user_prompt"]
-    )
+    raw_prompt = payload["llm_call"]["raw_prompt"]["user_prompt"]
+    assert "<launch_attempt>Vaccines give the immune system a preview.</launch_attempt>" in raw_prompt
+    assert "<substrate_adequacy>minimal</substrate_adequacy>" in raw_prompt
 
 
 def test_tui_bridge_can_surface_retryable_route_validation_failure() -> None:

@@ -1,6 +1,8 @@
 """Tests for the source-less smallest-route generation contract."""
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import pytest
@@ -258,6 +260,21 @@ def test_smallest_route_prompt_requires_internal_bloom_scaffold_contract():
     assert "not sentence-writing instructions" in prompt
 
 
+def test_smallest_route_prompt_matches_vendored_bridge_contract():
+    root_prompt_path = REPO_ROOT / "app_prompts/generate-smallest-route-system-v1.txt"
+    vendor_prompt_path = REPO_ROOT / "vendor/python/app_prompts/generate-smallest-route-system-v1.txt"
+    registry_path = REPO_ROOT / "lib/bridge/registry.json"
+
+    root_prompt = root_prompt_path.read_bytes()
+    vendor_prompt = vendor_prompt_path.read_bytes()
+    registry = json.loads(registry_path.read_text())
+    route_runtime = registry["actions"]["generate-route"]["route_runtime"]
+
+    assert root_prompt == vendor_prompt
+    assert route_runtime["prompt_path"] == "vendor/python/app_prompts/generate-smallest-route-system-v1.txt"
+    assert route_runtime["prompt_sha256"] == hashlib.sha256(vendor_prompt).hexdigest()
+
+
 # ---------------------------------------------------------------------------
 # Task 3 — wiring tests for generate_smallest_provisional_map
 # ---------------------------------------------------------------------------
@@ -284,7 +301,8 @@ def test_generate_smallest_provisional_map_uses_new_prompt():
 
     out = generate_smallest_provisional_map(
         concept="Photosynthesis",
-        threshold="plants take in light and somehow make sugar",
+        launch_attempt="plants take in light and somehow make sugar",
+        substrate_adequacy="minimal",
         learner_goal="I want to understand why leaves make sugar.",
         llm=FakeClient(),
     )
@@ -292,9 +310,11 @@ def test_generate_smallest_provisional_map_uses_new_prompt():
     assert out is fake_pm
     # New prompt is loaded, not the from-sketch one
     assert "smallest actionable route" in captured["system_prompt"].lower()
+    assert "<launch_attempt>plants take in light and somehow make sugar</launch_attempt>" in captured["user_prompt"]
+    assert "<substrate_adequacy>minimal</substrate_adequacy>" in captured["user_prompt"]
     assert "<learner_goal>I want to understand why leaves make sugar.</learner_goal>" in captured["user_prompt"]
     # Task name is distinct so telemetry can distinguish stages
-    assert captured["task_name"] == "smallest_route_from_threshold"
+    assert captured["task_name"] == "smallest_route_from_substrate"
 
 
 def test_generate_smallest_provisional_map_rejects_oversized():
@@ -309,6 +329,6 @@ def test_generate_smallest_provisional_map_rejects_oversized():
     with pytest.raises(SmallestRouteCapExceeded):
         generate_smallest_provisional_map(
             concept="X",
-            threshold="abc def ghi",
+            launch_attempt="abc def ghi",
             llm=FakeClient(),
         )

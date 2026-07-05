@@ -108,7 +108,7 @@ def test_extract_url_characterization(client):
 def test_generate_smallest_route_characterization(client):
     """Characterize the smallest route generation (C-prime)."""
     mock_map = _build_minimal_valid_map()
-    # Triggering decision["path"] == "from_threshold" requires 'name' and 'starting_sketch'
+    # Triggering decision["path"] == "from_launch_attempt" requires 'name' and 'starting_sketch'
     with patch("main.generate_smallest_provisional_map", return_value=mock_map):
         # We also need to mock LCClient.search_concept or the result of it
         with patch("main.LCClient.search_concept", return_value=None):

@@ -316,7 +316,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 
     Returns one of:
       {"path": "extract", "text": str}
-      {"path": "from_threshold", "name": str, "threshold": str, "learner_goal": str}
+      {"path": "from_launch_attempt", "name": str, "launch_attempt": str, "learner_goal": str}
       {"path": "error", "status": 422, "error": str, "message": str}
 
     The source-less launch truth table is enforced here as defense in depth.
@@ -363,17 +363,17 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
                 "message": "Write anything you think about the concept before building the draft."}
 
     return {
-        "path": "from_threshold",
+        "path": "from_launch_attempt",
         "name": name,
-        "threshold": sketch,
+        "launch_attempt": sketch,
         "learner_goal": learner_goal,
     }
 
 
 def _fallback_smallest_route_from_sketch(
-    *, concept: str, threshold: str, learner_goal: str | None = None
+    *, concept: str, launch_attempt: str, learner_goal: str | None = None
 ) -> ProvisionalMap:
-    sketch_excerpt = threshold.strip()[:160] or concept
+    sketch_excerpt = launch_attempt.strip()[:160] or concept
     anchor = "You named parts in your sketch; start by connecting two of them."
     if learner_goal:
         anchor = "Use your goal and sketch, then connect two named parts."
@@ -591,7 +591,7 @@ def extract(req: ExtractRequest):
         })
 
     try:
-        if decision["path"] == "from_threshold":
+        if decision["path"] == "from_launch_attempt":
             lc_result = None
             lc_query_failed = False
             lc_client = None
@@ -652,7 +652,8 @@ def extract(req: ExtractRequest):
 
             provisional_map = generate_smallest_provisional_map(
                 concept=decision["name"],
-                threshold=decision["threshold"],
+                launch_attempt=decision["launch_attempt"],
+                substrate_adequacy="minimal",
                 learner_goal=decision.get("learner_goal"),
                 lc_context=lc_context,
                 api_key=req.api_key,
@@ -731,11 +732,11 @@ def extract(req: ExtractRequest):
         # Source-less generation overbuilt or produced an invalid smallest-route
         # shape. Keep the learner moving with a one-entry route grounded only in
         # their sketch; source-backed extraction still uses its normal errors.
-        if decision["path"] == "from_threshold":
+        if decision["path"] == "from_launch_attempt":
             logger.warning("extract: smallest_route_fallback: %s", err)
             fallback_map = _fallback_smallest_route_from_sketch(
                 concept=decision["name"],
-                threshold=decision["threshold"],
+                launch_attempt=decision["launch_attempt"],
                 learner_goal=decision.get("learner_goal"),
             )
             return {"provisional_map": fallback_map.model_dump()}

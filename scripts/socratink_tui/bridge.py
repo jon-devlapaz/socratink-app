@@ -92,11 +92,13 @@ def _route_user_prompt(
     *,
     concept: str,
     launch_attempt: str,
+    substrate_adequacy: str,
     learner_goal: str | None,
 ) -> str:
     parts = [
         f"<concept>{concept}</concept>",
-        f"<threshold>{launch_attempt}</threshold>",
+        f"<launch_attempt>{launch_attempt}</launch_attempt>",
+        f"<substrate_adequacy>{substrate_adequacy}</substrate_adequacy>",
     ]
     if learner_goal:
         parts.append(f"<learner_goal>{learner_goal}</learner_goal>")
@@ -178,6 +180,9 @@ def generate_route(request: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("concept-required")
     if not launch_attempt:
         raise ValueError("launch-attempt-required")
+    substrate_adequacy = str(request.get("substrate_adequacy") or "minimal").strip()
+    if substrate_adequacy not in {"adequate", "minimal"}:
+        raise ValueError("substrate-adequacy-invalid")
 
     include_raw = bool(request.get("log_raw_llm"))
     learner_goal = str(request.get("learner_goal") or "").strip() or None
@@ -206,6 +211,7 @@ def generate_route(request: dict[str, Any]) -> dict[str, Any]:
                 "user_prompt": _route_user_prompt(
                     concept=concept,
                     launch_attempt=launch_attempt,
+                    substrate_adequacy=substrate_adequacy,
                     learner_goal=learner_goal,
                 ),
             }
@@ -217,7 +223,8 @@ def generate_route(request: dict[str, Any]) -> dict[str, Any]:
 
         pm = ai_service.generate_smallest_provisional_map(
             concept=concept,
-            threshold=launch_attempt,
+            launch_attempt=launch_attempt,
+            substrate_adequacy=substrate_adequacy,
             learner_goal=learner_goal,
             retry_guidance=retry_guidance,
             on_call_complete=on_call_complete,
@@ -229,6 +236,7 @@ def generate_route(request: dict[str, Any]) -> dict[str, Any]:
                 "user_prompt": _route_user_prompt(
                     concept=concept,
                     launch_attempt=launch_attempt,
+                    substrate_adequacy=substrate_adequacy,
                     learner_goal=learner_goal,
                 ),
             }

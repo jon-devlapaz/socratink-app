@@ -73,7 +73,8 @@ def test_extract_short_sketch_no_source_returns_smallest_route(client):
 
     assert r.status_code == 200
     _args, kwargs = mocked.call_args
-    assert kwargs.get("threshold") == "idk" or (len(_args) > 1 and _args[1] == "idk")
+    assert kwargs.get("launch_attempt") == "idk" or (len(_args) > 1 and _args[1] == "idk")
+    assert kwargs.get("substrate_adequacy") == "minimal"
 
 
 def test_extract_fuller_sketch_returns_smallest_route(client):
@@ -95,11 +96,12 @@ def test_extract_fuller_sketch_returns_smallest_route(client):
     _args, kwargs = mocked.call_args
     # concept should be passed either as positional or keyword
     assert kwargs.get("concept") == "Photosynthesis" or (len(_args) > 0 and _args[0] == "Photosynthesis")
-    # threshold (the starting_sketch/seed) must be forwarded to the generator
+    # launch_attempt (the starting_sketch/seed) must be forwarded to the generator
     assert (
-        kwargs.get("threshold") == "plants take in light and somehow make sugar through leaves"
+        kwargs.get("launch_attempt") == "plants take in light and somehow make sugar through leaves"
         or (len(_args) > 1 and _args[1] == "plants take in light and somehow make sugar through leaves")
     )
+    assert kwargs.get("substrate_adequacy") == "minimal"
 
 
 def test_extract_source_less_forwards_learner_goal(client):
