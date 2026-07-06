@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Direct Push Override / no-mistakes Bypass:
-# If you need to bypass the no-mistakes gate for direct origin/dev publication,
-# run `python3 scripts/agent-push.py --bypass-no-mistakes` and complete its
-# preview/ack flow. Raw `git push` still requires the one-shot authorization
-# payload written by agent-push.
+# Raw `git push` requires the one-shot authorization payload written by
+# scripts/agent-push.py.
 
 set -euo pipefail
 
@@ -41,8 +38,6 @@ expected_head = payload["head_sha"]
 
 if route.startswith("origin/"):
     expected_remote = "origin"
-elif route.startswith("no-mistakes/"):
-    expected_remote = "no-mistakes"
 else:
     print(f"[pre-push] ERROR: unsupported authorized route {route!r}", file=sys.stderr)
     raise SystemExit(1)

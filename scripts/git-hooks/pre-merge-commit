@@ -3,13 +3,12 @@ set -euo pipefail
 
 # Block merge commits on protected branches.
 #
-# Why: the no-mistakes daemon rewrites origin/<branch> on every gate cycle.
-# Any "diverged" state you see between local and origin is content-duplicate,
-# not a real divergence. Merging produces a conflict storm and duplicate work.
+# Why: protected branches should stay fast-forwarded to their upstream branch.
+# Merge commits here hide branch hygiene problems and make release history noisy.
 #
 # Recover with:    git merge --abort
 #                  git fetch origin <branch>
-#                  git reset --hard origin/<branch>     (or just: snm)
+#                  git reset --hard origin/<branch>
 #
 # Bypass (rare):   git commit --no-verify
 
@@ -20,15 +19,14 @@ case "$branch" in
     cat >&2 <<EOF
 [pre-merge-commit] ERROR: refusing to create a merge commit on '$branch'.
 
-The no-mistakes daemon rewrites origin/$branch on every gate cycle, so the
-divergence you saw is content-duplicate, not real divergence.
+Protected branches should stay fast-forwarded to origin/$branch.
+Inspect divergence before creating a merge commit.
 
 Recover:
   git merge --abort
   git fetch origin $branch
   git reset --hard origin/$branch
 
-Or run: snm (post-gate auto-sync helper)
 Bypass intentionally: git commit --no-verify
 EOF
     exit 1
