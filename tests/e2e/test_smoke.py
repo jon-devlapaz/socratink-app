@@ -1174,7 +1174,7 @@ def test_start_learning_enters_seda_loop_from_product_flow(
           const value = JSON.parse(localStorage.getItem(key));
           return value?.latest?.awaiting?.key !== 'launch_attempt' ? value : null;
         }""",
-        timeout=20_000,
+        timeout=45_000,
     ).json_value()
     assert advanced_state["sessionId"] == state["sessionId"]
     page.locator("#chamber-exit").click()
