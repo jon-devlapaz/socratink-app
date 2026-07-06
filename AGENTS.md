@@ -24,8 +24,8 @@ This file is the lightweight local operating guide for this repository.
 
 ## Code-work entry point
 - Default to one task, one agent, one worktree, one branch.
-- Home checkout `/Users/jondev/dev/socratink/prod/socratink-app` stays on clean `main` for orientation, publish, and cleanup.
-- Agent prompt line: `Work only in <worktree-path>. Before editing, run /Users/jondev/bin/agent-work guard .`
+- Home checkout stays on clean `main` for orientation, publish, and cleanup.
+- Agent prompt line: `Work only in <worktree-path>. Before editing, run agent-work guard .`
 - For Herdr delegation, a short ask like `Use agent-work for nav icons` is enough; clarify only if scope is ambiguous, then run `agent-work launch "<task>"` from the home checkout.
 - Before publishing, rename or recreate the review branch as `feat/<slug>` so `scripts/agent-push.py` can authorize the push.
 - After merge, delete the merged `feat/<slug>` branch residue and remove the clean worktree with the repo cleanup helper.

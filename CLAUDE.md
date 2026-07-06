@@ -33,14 +33,14 @@ This repository is the primary source for AI-agent routing and safe editing inst
 ```
 
 ## How to start
-- Code work: from the home checkout, run `agent-work start <slug>`, then `cd ../socratink-app-<slug>`.
+- Code work: from the home checkout, run `agent-work start <slug>`, then `cd` into the printed sibling worktree.
 - Delegated Herdr work: for `Use agent-work for <task>`, clarify only if needed, then run `agent-work launch "<task>"`.
 - If you need reproducible local smoke checks, run `bash scripts/qa-smoke.sh`.
 
 ## Routing commands
 - Confirm working directory with `pwd` and repository root with `git rev-parse --show-toplevel`.
 - Confirm status and diff scope before touching files.
-- In agent worktrees, begin with `/Users/jondev/bin/agent-work guard .`.
+- In agent worktrees, begin with `agent-work guard .`.
 - Confirm test target and command with this file before every commit.
 
 ## Conditional loading guidance
