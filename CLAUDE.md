@@ -6,6 +6,8 @@ This repository is the primary source for AI-agent routing and safe editing inst
 
 ## Session checklist
 - Before coding, read this file and `AGENTS.md`.
+- For normal code work, create an isolated task checkout first: `agent-work start <slug>`.
+- Work only inside the printed sibling worktree; keep the home checkout on clean `main`.
 - Verify runtime commands and dependency bootstraps before changes.
 - Run the documented local fast tests before opening a PR.
 - Keep edits scoped to the user request and avoid speculative refactors.
@@ -31,11 +33,14 @@ This repository is the primary source for AI-agent routing and safe editing inst
 ```
 
 ## How to start
+- Code work: from the home checkout, run `agent-work start <slug>`, then `cd` into the printed sibling worktree.
+- Delegated Herdr work: for `Use agent-work for <task>`, clarify only if needed, then run `agent-work launch "<task>"`.
 - If you need reproducible local smoke checks, run `bash scripts/qa-smoke.sh`.
 
 ## Routing commands
 - Confirm working directory with `pwd` and repository root with `git rev-parse --show-toplevel`.
 - Confirm status and diff scope before touching files.
+- In agent worktrees, begin with `agent-work guard .`.
 - Confirm test target and command with this file before every commit.
 
 ## Conditional loading guidance
@@ -69,6 +74,7 @@ This repository is the primary source for AI-agent routing and safe editing inst
 - Preserve established route and agent boundaries.
 
 ## Commit workflow notes
+- Local task branches start as `agent/<slug>`; publishable review branches should be `feat/<slug>` for `scripts/agent-push.py`.
 - Keep task notes brief and link to evidence when reporting changes.
 - Log blockers and manual follow-ups in the task summary so the next session can continue.
 - Update `docs/project/state.md` for larger direction changes.
