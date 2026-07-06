@@ -636,7 +636,11 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
         ], { 'c-1': training });
         assert.ok(cardHtml.includes('data-concept-id="c-1"'));
+        assert.ok(cardHtml.includes('role="button"'));
+        assert.ok(cardHtml.includes('tabindex="0"'));
+        assert.ok(cardHtml.includes('aria-label="Open concept &lt;Unsafe&gt;"'));
         assert.ok(cardHtml.includes('onclick="App.openLibraryConcept(this.dataset.conceptId)"'));
+        assert.ok(cardHtml.includes("event.key==='Enter'||event.key===' '"));
         assert.ok(cardHtml.includes('&lt;Unsafe&gt;'));
         assert.ok(cardHtml.includes('The learner reconstructed the causal mechanism.'));
         assert.ok(!cardHtml.includes('This is the central claim.'));
