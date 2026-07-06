@@ -70,8 +70,8 @@ def test_read_with_cap_exact_boundary():
         _read_with_cap(response_over, max_bytes=100)
 
 
-# === Mid-body exception wrapping (closes the 500-vs-502 leak flagged
-#     by no-mistakes review on PR #66 / commit 2ffb2ee). Stream-read
+# === Mid-body exception wrapping (closes the 500-vs-502 leak flagged during
+#     review on PR #66 / commit 2ffb2ee). Stream-read
 #     exceptions must surface as FetchFailed so the route layer maps
 #     them to 502, matching connection-establish exceptions. ===
 

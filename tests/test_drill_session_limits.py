@@ -163,7 +163,7 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
        backend treats session_start_iso as optional when bypass=True).
 
     2. **Gemini returns score_eligible=True with classification=None.**
-       Earlier no-mistakes review flagged the unconditional raise as a
+       Earlier review flagged the unconditional raise as a
        potential availability hit. _normalize_drill_evaluation now demotes the
        turn to unscored (score_eligible=False) instead of bubbling a 502.
     """
@@ -240,7 +240,7 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
         self.assertIn("session_start_iso is required", str(ctx.exception))
 
     def test_score_eligible_true_with_null_classification_demotes_instead_of_raising(self):
-        """No-mistakes-flagged path: Gemini-the-model occasionally returns
+        """Regression path: Gemini-the-model occasionally returns
         score_eligible=True but classification=None. The normalizer used to
         bubble a ValueError (→ 502); now it demotes the turn to unscored and
         keeps the drill alive. Routing falls back to PROBE/NEXT based on

@@ -35,10 +35,10 @@ Daily orientation
   gwip --json
     Use when: an agent or script needs stable machine-readable state.
 
-Publishing through no-mistakes
+Publishing
   gpub
-    Use when: the working tree is clean and you want to send committed local
-    work through the no-mistakes gate.
+    Use when: the working tree is clean and you want to publish committed local
+    work to the authorized origin target.
     Safe: first run is a preview only. It prints an ack command. It refuses
     dirty working trees so uncommitted files cannot be accidentally skipped.
 
@@ -47,22 +47,6 @@ Publishing through no-mistakes
 
   gpub --ack <token>
     Use when: you have read the gpub preview and intentionally want to publish.
-    After this, run: no-mistakes attach
-
-Direct origin/dev bypass
-  python3 scripts/agent-push.py --bypass-no-mistakes
-    Use when: you intentionally want to skip the no-mistakes gate and publish
-    directly to origin/dev. Safe: first run is still a preview only and prints
-    an ack command; raw git push remains blocked without agent-push authorization.
-
-  SOCRATINK_BYPASS_NO_MISTAKES=1 python3 scripts/agent-push.py
-    Use when: an environment-driven caller needs the same direct origin/dev
-    preview/ack route.
-
-After no-mistakes finishes
-  gfinish
-    Use when: the no-mistakes run is done and origin/dev has the daemon output.
-    It folds local dev back to origin/dev only when the helper's safety checks pass.
 
 Worktree cleanup
   gwt
@@ -86,8 +70,7 @@ Help and readiness
     Use when: you want this command map.
 
   ghelp doctor
-    Use when: you want to check helper executables, hook wiring, no-mistakes,
-    and local shell shortcut wiring.
+    Use when: you want to check helper executables, hook wiring, and local shell shortcut wiring.
 
 Legacy muscle memory
   snm
@@ -97,8 +80,6 @@ Legacy muscle memory
 Rules of thumb
   Dirty tree?        gwip
   Clean + ahead?     gpub
-  Gate running?      no-mistakes attach
-  Gate finished?     gfinish
   Too many sessions? gwt
   Delete clean sessions? gwt --remove-clean --apply
 EOF
@@ -122,20 +103,6 @@ commands = [
         "safe": "preview-first publish",
         "uses": ["publication-preview", "acknowledged-publish"],
         "json": "gpub --json",
-    },
-    {
-        "name": "agent-push --bypass-no-mistakes",
-        "script": "scripts/agent-push.py --bypass-no-mistakes",
-        "safe": "preview-first direct origin/dev publish",
-        "uses": ["publication-preview", "acknowledged-publish", "skip-no-mistakes"],
-        "json": "python3 scripts/agent-push.py --bypass-no-mistakes --json",
-    },
-    {
-        "name": "gfinish",
-        "script": "scripts/no-mistakes-finish-dev.sh",
-        "safe": "guarded post-gate fold",
-        "uses": ["finish-no-mistakes", "fold-dev"],
-        "json": None,
     },
     {
         "name": "gwt",
@@ -175,7 +142,6 @@ run_doctor() {
 
   check_file git-wip-explain "$repo_root/scripts/git-wip-explain.sh" executable
   check_file git-worktree-cleanup "$repo_root/scripts/git-worktree-cleanup.sh" executable
-  check_file no-mistakes-finish-dev "$repo_root/scripts/no-mistakes-finish-dev.sh" executable
   check_file agent-push "$repo_root/scripts/agent-push.py" file
   check_file pre-push-hook "$repo_root/scripts/git-hooks/pre-push" executable
 
@@ -188,19 +154,12 @@ run_doctor() {
     add_check_json hook-path false "core.hooksPath=${hook_path:-unset}"
   fi
 
-  if command -v no-mistakes >/dev/null 2>&1; then
-    add_check_json no-mistakes true "available on PATH"
-  else
-    ok_all="0"
-    add_check_json no-mistakes false "not available on PATH"
-  fi
-
   local zshrc="${HOME:-}/.zshrc"
-  if [ -f "$zshrc" ] && grep -q "gwip()" "$zshrc" && grep -q "gpub()" "$zshrc" && grep -q "gfinish()" "$zshrc" && grep -q "gwt()" "$zshrc"; then
-    add_check_json shell-shortcuts true "gwip/gpub/gfinish/gwt found in ~/.zshrc"
+  if [ -f "$zshrc" ] && grep -q "gwip()" "$zshrc" && grep -q "gpub()" "$zshrc" && grep -q "gwt()" "$zshrc"; then
+    add_check_json shell-shortcuts true "gwip/gpub/gwt found in ~/.zshrc"
   else
     ok_all="0"
-    add_check_json shell-shortcuts false "expected shell shortcuts not found in ~/.zshrc"
+    add_check_json shell-shortcuts false "expected gwip/gpub/gwt shortcuts not found in ~/.zshrc"
   fi
 
   if [ "$json_mode" = "1" ]; then

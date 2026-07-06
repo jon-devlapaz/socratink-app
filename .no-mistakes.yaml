@@ -1,9 +1,0 @@
-agent: codex
-
-commands:
-  test: "bash scripts/no-mistakes-test.sh"
-  lint: "bash scripts/no-mistakes-lint.sh"
-
-ignore_patterns:
-  - "public/_lab/**"
-  - "agents/superpowers/**"

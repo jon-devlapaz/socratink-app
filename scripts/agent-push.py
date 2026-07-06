@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
 
-# Direct Push Override / no-mistakes Bypass:
-# If you need to bypass the no-mistakes gate for direct origin/dev publication:
-# 1. CLI option: Run `python3 scripts/agent-push.py --bypass-no-mistakes`
-# 2. Env variable: Set `SOCRATINK_BYPASS_NO_MISTAKES=1`, then run this script
-#    without --target; it defaults to origin/dev and still requires the normal
-#    preview/ack confirmation.
-# Raw git pushes still require agent-push's one-shot pre-push authorization.
+# Raw git pushes require agent-push's one-shot pre-push authorization.
 
 import argparse
 import base64
@@ -34,9 +28,6 @@ DEFAULT_TRUSTED_REMOTE_PATTERNS = {
     "origin": [
         r"^https://github\.com/[^/]+/socratink-app\.git$",
         r"^git@github\.com:[^/]+/socratink-app\.git$",
-    ],
-    "no-mistakes": [
-        r"(^|/|\\)\.no-mistakes([/\\])repos([/\\])[^/\\]+\.git$",
     ],
 }
 
@@ -143,11 +134,6 @@ def refresh_publication_refs() -> None:
     remotes = _remote_urls()
     if "origin" in remotes:
         _run_git(["fetch", "origin", "+refs/heads/dev:refs/remotes/origin/dev"], check=False)
-    if "no-mistakes" in remotes:
-        _run_git(
-            ["fetch", "no-mistakes", "+refs/heads/dev:refs/remotes/no-mistakes/dev"],
-            check=False,
-        )
 
 
 def _changed_paths() -> list[str]:
@@ -203,7 +189,7 @@ def recommend_route(state: PushState, explicit_target: str | None) -> RouteRecom
     high_risk = [path for path in state.changed_paths if path.startswith(HIGH_RISK_PREFIXES)]
     if high_risk:
         return RouteRecommendation(
-            route="no-mistakes/dev",
+            route="origin/dev",
             risk_class="confirm",
             triggers=high_risk,
         )
@@ -227,8 +213,6 @@ def normalize_target(target: str | None) -> str:
         return "origin/dev"
     if target in {"origin/main", "main"}:
         return "origin/main"
-    if target in {"no-mistakes/dev", "no-mistakes"}:
-        return "no-mistakes/dev"
     if target.startswith("origin/feat/"):
         return target
     if target.startswith("feat/"):
@@ -240,7 +224,7 @@ def route_to_remote_refspec(route: str) -> tuple[str, str]:
     if "/" not in route:
         raise ValueError(f"invalid route: {route}")
     remote, refspec = route.split("/", 1)
-    if remote not in {"origin", "no-mistakes"}:
+    if remote != "origin":
         raise ValueError(f"unsupported remote: {remote}")
     if refspec not in {"dev", "main"} and not refspec.startswith("feat/"):
         raise ValueError(f"unsupported refspec: {refspec}")
@@ -368,17 +352,6 @@ def ensure_destination_fast_forward(state: PushState, intent: PublicationIntent)
     except ValueError as exc:
         raise RuntimeError(f"could not parse {intent.chosen_route} divergence: {counts!r}") from exc
 
-    if remote == "no-mistakes" and refspec == "dev" and state.branch == "dev":
-        raise RuntimeError(
-            "destination no-mistakes/dev is not an ancestor of local dev "
-            f"(remote-only={remote_only}, local-only={local_only}). "
-            "A push would be rejected as non-fast-forward. "
-            "This usually means the gate rewrote dev after a previous run. "
-            "Preserve local dev on a safety branch, reset dev to no-mistakes/dev, "
-            "then cherry-pick only the unique local commits shown by "
-            "`git cherry -v no-mistakes/dev HEAD`."
-        )
-
     raise RuntimeError(
         f"destination {intent.chosen_route} is not an ancestor of local HEAD "
         f"(remote-only={remote_only}, local-only={local_only}); fetch and reconcile before pushing."
@@ -491,30 +464,21 @@ def _push(payload: AuthorizationPayload) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    import os
     parser = argparse.ArgumentParser(description="Authorize and execute one Socratink git publication.")
-    parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name, no-mistakes/dev")
+    parser.add_argument("--target", help="publication target, e.g. origin/dev, origin/feat/name")
     parser.add_argument("--ack", help="ack token printed by the first run")
     parser.add_argument("--json", action="store_true", help="emit machine-readable preview output")
-    parser.add_argument("--bypass-no-mistakes", action="store_true", help="preview direct origin/dev publication without the no-mistakes gate")
     args = parser.parse_args(argv)
-
-    bypass_env = os.environ.get("SOCRATINK_BYPASS_NO_MISTAKES") == "1"
-    bypass_no_mistakes = args.bypass_no_mistakes or bypass_env
 
     try:
         refresh_publication_refs()
         state = collect_state()
         target = args.target
-        if bypass_no_mistakes and not target:
-            target = "origin/dev"
         intent = resolve_publication_intent(state, explicit_target=target)
         ensure_destination_ref_current(state, intent)
         ensure_current_dev_base(state, intent)
         ensure_destination_fast_forward(state, intent)
         payload = build_payload(state, intent)
-        if bypass_no_mistakes and payload.route != "origin/dev":
-            raise ValueError("no-mistakes bypass only supports direct pushes to origin/dev")
     except Exception as exc:
         print_error(str(exc), json_output=args.json)
         return 2
