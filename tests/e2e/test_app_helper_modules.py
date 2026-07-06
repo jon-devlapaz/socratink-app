@@ -423,7 +423,11 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
             ], { 'c-1': training });
             assert(libraryHtml.includes('data-concept-id="c-1"'), 'library card id data attr');
+            assert(libraryHtml.includes('role="button"'), 'library card button role');
+            assert(libraryHtml.includes('tabindex="0"'), 'library card keyboard focus');
+            assert(libraryHtml.includes('aria-label="Open concept &lt;Unsafe&gt;"'), 'library card aria label');
             assert(libraryHtml.includes('App.openLibraryConcept(this.dataset.conceptId)'), 'library card onclick');
+            assert(libraryHtml.includes("event.key==='Enter'||event.key===' '"), 'library card keyboard activation');
             assert(libraryHtml.includes('&lt;Unsafe&gt;'), 'library escaped name');
             assert(libraryHtml.includes('Learner-owned reconstruction.'), 'library card learner evidence');
             assert(!libraryHtml.includes('This is the central claim.'), 'library card no AI thesis fallback');

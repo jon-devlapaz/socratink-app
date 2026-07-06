@@ -98,6 +98,7 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
   } else {
     html += `<div class="library-vault-grid">` + concepts.map(c => {
       const conceptId = String(c?.id ?? '');
+      const conceptName = String(c?.name ?? '');
       const training = trainingByConceptId[conceptId] || null;
       const meta = getLibraryConceptMeta(c, training);
       const derivedState = deriveConceptBadge(c, training) || '';
@@ -105,11 +106,11 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
         ? `<span class="library-card-state" data-state="${escHtml(derivedState)}">${escHtml(conceptStateLabel(derivedState))}</span>`
         : '';
       return `
-          <div class="library-card library-card-vault" data-state="${escHtml(derivedState)}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)">
+          <div class="library-card library-card-vault" role="button" tabindex="0" aria-label="Open concept ${escHtml(conceptName)}" data-state="${escHtml(derivedState)}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.openLibraryConcept(this.dataset.conceptId)}">
             <div class="library-card-header">
               <div>
                 <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
-                <span class="library-card-name">${escHtml(c.name)}</span>
+                <span class="library-card-name">${escHtml(conceptName)}</span>
               </div>
               ${stateBadge}
             </div>
