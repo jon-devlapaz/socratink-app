@@ -84,7 +84,7 @@ import {
   buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=2';
+} from './launch-pad.js?v=3';
 import { emitTelemetry } from './telemetry.js';
 
 import {

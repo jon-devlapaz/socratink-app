@@ -207,6 +207,7 @@ def herdr_status(repo, branch):
         return {"available": False, "state": "unknown", "reason": "herdr unavailable", "duplicate_active_owner": False, "panes": []}
 
     attempts = [
+        ["herdr", "pane", "list"],
         ["herdr", "panes", "--json"],
         ["herdr", "list", "--json"],
         ["herdr", "ps", "--json"],
@@ -226,11 +227,24 @@ def herdr_status(repo, branch):
 
     text = result.stdout.strip()
     active_hits = []
-    repo_terms = {str(repo), repo.name}
-    for line in text.splitlines():
-        low = line.lower()
-        if branch in line and any(term in line for term in repo_terms) and any(word in low for word in ("active", "running", "busy")):
-            active_hits.append(line)
+    try:
+        data = json.loads(text)
+        panes = data.get("result", {}).get("panes", []) if isinstance(data, dict) else []
+    except json.JSONDecodeError:
+        panes = []
+    if panes:
+        repo_text = str(repo)
+        for pane in panes:
+            cwd = pane.get("foreground_cwd") or pane.get("cwd") or ""
+            status = pane.get("agent_status") or ""
+            if cwd.startswith(repo_text) and status in ("working", "running", "active", "busy"):
+                active_hits.append(json.dumps(pane, sort_keys=True))
+    else:
+        repo_terms = {str(repo), repo.name}
+        for line in text.splitlines():
+            low = line.lower()
+            if branch in line and any(term in line for term in repo_terms) and any(word in low for word in ("active", "running", "busy")):
+                active_hits.append(line)
     return {
         "available": True,
         "state": "ok",

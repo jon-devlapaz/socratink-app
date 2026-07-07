@@ -359,6 +359,9 @@ export async function runLaunchPadAction(event, App) {
     // learner needs to retire a concept first. Surface a directive message
     // instead of the generic "try again" copy.
     const isBoardCap = err && err.code === 'board_at_capacity';
+    emitTelemetry('concept_create.launch_pad.persist_failed', {
+      reason: isBoardCap ? 'board_at_capacity' : 'local_persistence',
+    });
     const msg = isBoardCap
       ? 'The board holds nine concepts. Retire one in your library to start another.'
       : 'Could not save the concept locally. Try again.';
