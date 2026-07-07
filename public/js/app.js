@@ -3301,6 +3301,12 @@ const App = (() => {
     return visibleSedaPromptFromResponse(data);
   }
 
+  function drillPromptFromSedaResponse(data, nodeContext, concept) {
+    return data?.awaiting?.key === 'launch_attempt'
+      ? drillQuestionForNodeContext(nodeContext, concept)
+      : sedaPromptFromResponse(data);
+  }
+
   function saveSedaResponse(concept, nodeContext, data) {
     if (!concept?.id || !data?.sessionId) return;
     persistSedaSessionState(concept.id, {
@@ -3313,8 +3319,9 @@ const App = (() => {
 
   async function loadOrCreateSedaResponse(concept, nodeContext) {
     const stored = loadSedaSessionState(concept.id);
+    const sameStoredNode = Boolean(stored?.nodeId && stored.nodeId === nodeContext?.id);
     let data = null;
-    if (stored?.sessionId && !stored?.latest?.caseComplete) {
+    if (stored?.sessionId && sameStoredNode && !stored?.latest?.caseComplete) {
       try {
         data = await getSedaSession(stored.sessionId);
       } catch {
@@ -3328,8 +3335,8 @@ const App = (() => {
     if (data?.awaiting?.key === 'cmd') {
       data = await sendSedaTurn(data.sessionId, concept.name || 'Untitled concept');
     }
-    if (data?.awaiting?.key === 'learner_goal' && concept.learnerGoal) {
-      data = await sendSedaTurn(data.sessionId, concept.learnerGoal);
+    if (data?.awaiting?.key === 'learner_goal') {
+      data = await sendSedaTurn(data.sessionId, concept.learnerGoal || '');
     }
     saveSedaResponse(concept, nodeContext, data);
     return data;
@@ -4566,7 +4573,7 @@ const App = (() => {
           .then(async (data) => {
             if (drillState.sessionToken !== sedaStartToken || !drillState.sedaActive) return;
             drillState.sedaSessionId = data.sessionId;
-            const promptText = sedaPromptFromResponse(data);
+            const promptText = drillPromptFromSedaResponse(data, nodeContext, concept);
             chamberLastShownQuestion = promptText;
             window.DrillChamber.swapQuestion(promptText);
             window.DrillChamber.setLoading?.(false);
