@@ -1047,6 +1047,8 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
 
     assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
     assert "What are you trying to understand?" in index_html
+    assert "Attach study material if you have it, or give your first model next." in index_html
+    assert "socratink will ask for your first model" not in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'aria-label="Learning goal"' in index_html
     assert 'aria-label="What do you want to explain?"' not in index_html
