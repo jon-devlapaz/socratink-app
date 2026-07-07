@@ -317,7 +317,7 @@ elif gate == "git-golden":
 elif gate == "active worktree":
     next_move = "finish the active lane, then promote to feat/<slug> or clean the worktree"
 elif gate == "PR truth gate":
-    next_move = "wait for checks or fix the failing PR signal before merge"
+    next_move = "babysit checks and preview, then re-read PR truth before merge"
 elif gate == "merge decision gate":
     next_move = "merge after explicit approval, then run cleanup and prove git-golden"
 elif gate == "cleanup gate":
