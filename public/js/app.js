@@ -3320,8 +3320,9 @@ const App = (() => {
 
   async function loadOrCreateSedaResponse(concept, nodeContext) {
     const stored = loadSedaSessionState(concept.id);
+    const sameStoredNode = Boolean(stored?.nodeId && stored.nodeId === nodeContext?.id);
     let data = null;
-    if (stored?.sessionId && !stored?.latest?.caseComplete) {
+    if (stored?.sessionId && sameStoredNode && !stored?.latest?.caseComplete) {
       try {
         data = await getSedaSession(stored.sessionId);
       } catch {
