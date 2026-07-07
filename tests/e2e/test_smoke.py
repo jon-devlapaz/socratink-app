@@ -1143,7 +1143,7 @@ def test_start_learning_enters_seda_loop_from_product_flow(
 
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
     expect(page.locator("#chamber-question")).to_contain_text(
-        "Try your first explanation", timeout=20_000
+        "Why is the second exposure faster?", timeout=20_000
     )
     state = page.wait_for_function(
         """() => {
@@ -2904,7 +2904,8 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     expect(canvas).to_be_visible(timeout=8_000)
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
     expect(clean_page.locator("#chamber-question")).to_contain_text(
-        "What do you want to explain?", timeout=20_000
+        "What do you think the thermostat checks before it calls for heat?",
+        timeout=20_000,
     )
     seda_state = clean_page.wait_for_function(
         """() => {
@@ -2915,7 +2916,7 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
         }""",
         timeout=20_000,
     ).json_value()
-    assert seda_state["latest"]["awaiting"]["key"] in {"learner_goal", "launch_attempt"}
+    assert seda_state["latest"]["awaiting"]["key"] == "launch_attempt"
     clean_page.locator("#chamber-exit").click()
     expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
     expect(canvas).to_be_visible(timeout=8_000)

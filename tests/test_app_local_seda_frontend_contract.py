@@ -150,6 +150,31 @@ def test_seda_session_client_uses_app_boundary() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_http_session_accepts_blank_optional_learner_goal() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { createHttpPrompt } from './lib/loop-server/http-prompt.mjs';
+
+        const session = {
+          awaiting: { key: 'learner_goal' },
+          pendingInput: '',
+          events: [],
+        };
+        const value = await createHttpPrompt({
+          cache: new Map(),
+          askCounts: new Map(),
+          session,
+        }).ask('learner_goal', 'Learner goal (optional): ');
+
+        assert.equal(value, '');
+        assert.equal(session.pendingInput, null);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_auth_bootstrap_keeps_loop_out_of_primary_navigation() -> None:
     result = run_node_module(
         """

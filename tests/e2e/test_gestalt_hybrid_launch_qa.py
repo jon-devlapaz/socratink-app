@@ -237,7 +237,8 @@ def test_source_less_launch_pad_end_to_end_qa(
     expect(canvas).to_be_visible(timeout=10_000)
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
     expect(clean_page.locator("#chamber-question")).to_contain_text(
-        "What do you want to explain?", timeout=20_000
+        "What do you think the thermostat checks before it calls for heat?",
+        timeout=20_000,
     )
     seda_state = clean_page.wait_for_function(
         """() => {

@@ -3301,6 +3301,13 @@ const App = (() => {
     return visibleSedaPromptFromResponse(data);
   }
 
+  function drillPromptFromSedaResponse(data, nodeContext, concept) {
+    if (data?.awaiting?.key === 'launch_attempt') {
+      return drillQuestionForNodeContext(nodeContext, concept);
+    }
+    return sedaPromptFromResponse(data);
+  }
+
   function saveSedaResponse(concept, nodeContext, data) {
     if (!concept?.id || !data?.sessionId) return;
     persistSedaSessionState(concept.id, {
@@ -3328,8 +3335,8 @@ const App = (() => {
     if (data?.awaiting?.key === 'cmd') {
       data = await sendSedaTurn(data.sessionId, concept.name || 'Untitled concept');
     }
-    if (data?.awaiting?.key === 'learner_goal' && concept.learnerGoal) {
-      data = await sendSedaTurn(data.sessionId, concept.learnerGoal);
+    if (data?.awaiting?.key === 'learner_goal') {
+      data = await sendSedaTurn(data.sessionId, concept.learnerGoal || '');
     }
     saveSedaResponse(concept, nodeContext, data);
     return data;
@@ -4566,7 +4573,7 @@ const App = (() => {
           .then(async (data) => {
             if (drillState.sessionToken !== sedaStartToken || !drillState.sedaActive) return;
             drillState.sedaSessionId = data.sessionId;
-            const promptText = sedaPromptFromResponse(data);
+            const promptText = drillPromptFromSedaResponse(data, nodeContext, concept);
             chamberLastShownQuestion = promptText;
             window.DrillChamber.swapQuestion(promptText);
             window.DrillChamber.setLoading?.(false);
