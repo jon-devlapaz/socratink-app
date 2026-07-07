@@ -145,7 +145,15 @@ def check_summary(checks):
     for check in checks:
         status = check.get("status")
         conclusion = check.get("conclusion")
-        if status != "COMPLETED":
+        state = check.get("state")
+        if state:
+            if state == "SUCCESS":
+                passed += 1
+            elif state == "PENDING":
+                pending += 1
+            else:
+                failed += 1
+        elif status != "COMPLETED":
             pending += 1
         elif conclusion in ("SUCCESS", "SKIPPED", "NEUTRAL"):
             passed += 1
