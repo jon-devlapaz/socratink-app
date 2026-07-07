@@ -1286,7 +1286,7 @@ def test_seda_start_failure_offers_retry_from_product_flow(
     expect(page.locator("#chamber-send")).to_have_text("Try again")
     page.locator("#chamber-send").click()
     expect(page.locator("#chamber-question")).to_contain_text(
-        "Try your first explanation.",
+        "Reconstruct Immune memory persists. from memory before checking the source.",
         timeout=20_000,
     )
     expect(page.locator("#chamber-composer")).to_be_enabled()
