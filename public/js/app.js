@@ -3302,10 +3302,9 @@ const App = (() => {
   }
 
   function drillPromptFromSedaResponse(data, nodeContext, concept) {
-    if (data?.awaiting?.key === 'launch_attempt') {
-      return drillQuestionForNodeContext(nodeContext, concept);
-    }
-    return sedaPromptFromResponse(data);
+    return data?.awaiting?.key === 'launch_attempt'
+      ? drillQuestionForNodeContext(nodeContext, concept)
+      : sedaPromptFromResponse(data);
   }
 
   function saveSedaResponse(concept, nodeContext, data) {
@@ -3320,8 +3319,9 @@ const App = (() => {
 
   async function loadOrCreateSedaResponse(concept, nodeContext) {
     const stored = loadSedaSessionState(concept.id);
+    const sameStoredNode = Boolean(stored?.nodeId && stored.nodeId === nodeContext?.id);
     let data = null;
-    if (stored?.sessionId && !stored?.latest?.caseComplete) {
+    if (stored?.sessionId && sameStoredNode && !stored?.latest?.caseComplete) {
       try {
         data = await getSedaSession(stored.sessionId);
       } catch {
