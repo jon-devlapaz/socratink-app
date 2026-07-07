@@ -1812,7 +1812,7 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
     )
     page.locator(".concept-page-b2__attempt-save").click()
 
-    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Spaced record")
+    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Solid spaced reconstruction")
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
     assert len(drill_calls) == 1
     assert drill_calls[0]["drill_mode"] == "re_drill"

@@ -30,7 +30,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=27';
+} from './concept-page-view.js?v=28';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -46,7 +46,7 @@ import {
   persistPhaseBResumeState as persistStoredPhaseBResumeState,
   persistPhaseBSessionState as persistStoredPhaseBSessionState,
 } from './phase-b-session.js';
-import { buildLibraryHtml } from './library-view.js?v=2';
+import { buildLibraryHtml } from './library-view.js?v=3';
 import { createTrainingStore, TRAINING_SCHEMA_VERSION } from './training-store.js';
 import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';

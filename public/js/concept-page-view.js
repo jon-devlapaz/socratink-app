@@ -365,7 +365,7 @@ function activeEntryEyebrow({ isBlocked, attempted, state, nextAction, justRevea
   if (nextAction === 'study') return 'Draft saved';
   if (nextAction === 'repair') return 'Needs repair';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
-  if (state === 'solidified') return 'Spaced record';
+  if (state === 'solidified') return 'Solid spaced reconstruction';
   if (nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
   if (nextAction === 'review') return 'Review later';
   if (state === 'needs repair') return 'Needs repair';

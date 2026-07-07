@@ -684,7 +684,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           { id: 'legacy-solid-node', name: 'Legacy Solid Node', state: 'growing', graphData: legacySolidGraph },
         ], {});
         assert.ok(legacySolidHtml.includes('data-state="solidified"'));
-        assert.ok(legacySolidHtml.includes('>spaced record<'));
+        assert.ok(legacySolidHtml.includes('>solid spaced reconstruction<'));
 
         const needsRepairTraining = {
           node_records: {

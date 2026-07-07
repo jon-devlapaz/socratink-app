@@ -16,7 +16,7 @@ const ATTEMPT_CLASSIFICATION_RANK = {
 
 function conceptStateLabel(state) {
   if (state === 'primed') return 'draft saved';
-  if (state === 'solidified') return 'spaced record';
+  if (state === 'solidified') return 'solid spaced reconstruction';
   return state;
 }
 
