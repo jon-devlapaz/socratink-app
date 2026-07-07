@@ -1086,6 +1086,56 @@ def test_launch_pad_accepts_any_non_empty_sketch(
     )
 
 
+def test_launch_pad_persistence_failure_is_retryable(
+    page: Page, base_url: str
+) -> None:
+    """Board-capacity persistence failure leaves the launch sketch retryable."""
+    _enter_app_shell_as_guest(page, base_url)
+    page.wait_for_function("() => window.App?.showLaunchPad")
+
+    def fulfill_extract(route):
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {},
+                    "backbone": [{"id": "b1", "principle": "First model", "dependent_clusters": []}],
+                    "clusters": [],
+                    "relationships": {"domain_mechanics": [], "learning_prerequisites": []},
+                    "frameworks": [],
+                },
+            }),
+        )
+
+    page.route("**/api/extract", fulfill_extract)
+    page.evaluate(
+        """(() => {
+            const concepts = Array.from({ length: 9 }, (_, index) => ({
+                id: `full-board-${index}`,
+                name: `Full board ${index + 1}`,
+                graphData: JSON.stringify({ metadata: {}, backbone: [], clusters: [] }),
+                createdAt: new Date().toISOString(),
+            }));
+            localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+            sessionStorage.setItem('socratink:pendingShell', JSON.stringify({
+                name: 'Persistence failure',
+                goal: '',
+                ts: Date.now(),
+            }));
+            window.App.showLaunchPad();
+        })()"""
+    )
+
+    page.locator("#launch-pad-input").fill("My rough first model.")
+    page.locator("#launch-pad-submit").click()
+
+    expect(page.locator("#launch-pad-validation")).to_have_text(
+        "The board holds nine concepts. Retire one in your library to start another."
+    )
+    assert page.evaluate("sessionStorage.getItem('socratink:pendingShell') !== null")
+
+
 def test_start_learning_enters_seda_loop_from_product_flow(
     page: Page, base_url: str
 ) -> None:
