@@ -23,6 +23,11 @@ print_help() {
 Socratink git helper map
 
 Daily orientation
+  scripts/agent-lane-status.sh
+    Use when: you need the fastest answer to "where are we, who owns this lane,
+    what is blocking, and what is the next professional move?"
+    Safe: read-only. It does not fetch, checkout, push, close panes, or clean.
+
   gwip
     Use when: you feel unsure what changed, what is staged, whether you are
     ahead/behind, or which worktrees exist.
@@ -90,6 +95,13 @@ print_help_json() {
 import json
 
 commands = [
+    {
+        "name": "agent-lane-status",
+        "script": "scripts/agent-lane-status.sh",
+        "safe": "read-only",
+        "uses": ["lane-status", "pr-state", "worktree-inventory", "next-move"],
+        "json": "scripts/agent-lane-status.sh --json",
+    },
     {
         "name": "gwip",
         "script": "scripts/git-wip-explain.sh",
@@ -192,14 +204,14 @@ PY
 check_file() {
   local name="$1" path="$2" kind="$3"
   if [ "$kind" = "executable" ] && [ -x "$path" ]; then
-    add_check_json "$name" true "${path#$repo_root/}"
+    add_check_json "$name" true "${path#"$repo_root"/}"
     return
   fi
   if [ "$kind" = "file" ] && [ -f "$path" ]; then
-    add_check_json "$name" true "${path#$repo_root/}"
+    add_check_json "$name" true "${path#"$repo_root"/}"
     return
   fi
-  add_check_json "$name" false "missing ${kind}: ${path#$repo_root/}"
+  add_check_json "$name" false "missing ${kind}: ${path#"$repo_root"/}"
 }
 
 mode="help"
