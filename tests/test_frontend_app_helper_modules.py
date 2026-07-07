@@ -441,6 +441,90 @@ def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
     assert result.returncode == 0, result.stderr
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_launch_pad_persistence_failure_emits_retry_telemetry() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { Bus } from './public/js/bus.js';
+        import { runLaunchPadAction } from './public/js/launch-pad.js';
+
+        const storage = new Map();
+        globalThis.sessionStorage = {
+          getItem(key) { return storage.has(key) ? storage.get(key) : null; },
+          setItem(key, value) { storage.set(key, String(value)); },
+          removeItem(key) { storage.delete(key); },
+        };
+        globalThis.localStorage = {
+          getItem() { return null; },
+        };
+
+        const elements = {
+          'launch-pad-input': { value: 'My rough first model.' },
+          'launch-pad-submit': {
+            disabled: false,
+            textContent: 'Save first model',
+          },
+          'launch-pad-validation': { textContent: '' },
+          'launch-pad-form': {
+            dataset: {},
+            setAttribute(name, value) { this[name] = value; },
+            removeAttribute(name) { delete this[name]; },
+          },
+        };
+        globalThis.document = {
+          getElementById(id) { return elements[id] || null; },
+        };
+        globalThis.fetch = async () => new Response(JSON.stringify({
+          provisional_map: {
+            metadata: {},
+            backbone: [{ id: 'b1', principle: 'First model', dependent_clusters: [] }],
+            clusters: [],
+            relationships: { domain_mechanics: [], learning_prerequisites: [] },
+            frameworks: [],
+          },
+        }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+
+        storage.set('socratink:pendingShell', JSON.stringify({
+          name: 'Persistence failure',
+          goal: '',
+          ts: Date.now(),
+        }));
+
+        const telemetry = [];
+        Bus.on('telemetry', (payload) => telemetry.push(payload));
+
+        const err = new Error('board full');
+        err.code = 'board_at_capacity';
+        const resultValue = await runLaunchPadAction({ preventDefault() {} }, {
+          persistCreatedConceptFromLaunchPad() { throw err; },
+          navigateToGraphViewFromLaunchPad() {
+            throw new Error('should not navigate after persistence failure');
+          },
+        });
+
+        assert.equal(resultValue, false);
+        assert.equal(storage.has('socratink:pendingShell'), true);
+        assert.equal(elements['launch-pad-submit'].disabled, false);
+        assert.equal(
+          elements['launch-pad-validation'].textContent,
+          'The board holds nine concepts. Retire one in your library to start another.'
+        );
+        assert.deepEqual(
+          telemetry.find((payload) => payload.event === 'concept_create.launch_pad.persist_failed'),
+          {
+            event: 'concept_create.launch_pad.persist_failed',
+            reason: 'board_at_capacity',
+          }
+        );
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_frontend_ai_calls_do_not_forward_browser_gemini_key() -> None:
     for rel_path in [
         "public/js/ai_service.js",

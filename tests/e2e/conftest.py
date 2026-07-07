@@ -81,6 +81,8 @@ EXPECTED_ABORTED_BOOTSTRAP_PATHS: tuple[str, ...] = (
     "/login",
     "/fonts/Geom-VariableFont_wght.ttf",
     "/fonts/Inter-VariableFont_opsz,wght.ttf",
+    "/vendor/utils-0.2.1-dom.esm.js",
+    "/vendor/utils-0.2.1.esm.js",
 )
 
 
