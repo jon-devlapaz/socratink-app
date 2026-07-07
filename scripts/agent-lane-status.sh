@@ -160,7 +160,7 @@ def check_summary(checks):
     return "none"
 
 
-def github_status(branch):
+def github_status(branches):
     if not shutil.which("gh"):
         return {"available": False, "state": "unknown", "reason": "gh unavailable", "open_prs": [], "matching_pr": None}
 
@@ -175,13 +175,18 @@ def github_status(branch):
             "matching_pr": None,
         }
 
-    all_result = run([*base_cmd, "--state", "all", "--head", branch, "--limit", "10"], timeout=15)
-    matching = []
-    if all_result.returncode == 0:
-        matching = json.loads(all_result.stdout or "[]")
-
     open_prs = json.loads(open_result.stdout or "[]")
-    pr = matching[0] if matching else None
+    wanted = set(branches)
+    pr = next((item for item in open_prs if item.get("headRefName") in wanted), None)
+    if pr is None:
+        for candidate in branches:
+            all_result = run([*base_cmd, "--state", "all", "--head", candidate, "--limit", "10"], timeout=15)
+            if all_result.returncode != 0:
+                continue
+            matching = json.loads(all_result.stdout or "[]")
+            if matching:
+                pr = matching[0]
+                break
     if pr:
         pr["checks"] = check_summary(pr.get("statusCheckRollup"))
     return {"available": True, "state": "ok", "reason": "", "open_prs": open_prs, "matching_pr": pr}
@@ -242,7 +247,11 @@ worktrees = parse_worktrees()
 local_branches = lines(git_out(["branch", "--format=%(refname:short)"]))
 remote_branches = lines(git_out(["branch", "-r", "--format=%(refname:short)"]))
 stashes = lines(git_out(["stash", "list"]))
-github = github_status(branch)
+github_branches = [branch]
+github_branches.extend(
+    wt["branch"] for wt in worktrees if wt["branch"] not in {branch, "main", "detached"}
+)
+github = github_status(github_branches)
 herdr = herdr_status(REPO, branch)
 dirty_worktrees = [wt for wt in worktrees if wt["dirty"]]
 
