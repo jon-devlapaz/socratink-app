@@ -63,6 +63,7 @@ import {
   runDrillTurn,
 } from './api-client.js?v=2';
 import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=2';
+import { projectCompletedSedaRecord } from './seda-evidence-projection.js';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -3315,6 +3316,29 @@ const App = (() => {
       latest: data,
       record: data.record || null,
     });
+    if (data.caseComplete && data.record) {
+      void projectSedaEvidence(concept, nodeContext, data);
+    }
+  }
+
+  // Reconstruction evidence must survive outside the chamber: project the
+  // completed session record into the training store the concept page,
+  // Library, and board read from.
+  async function projectSedaEvidence(concept, nodeContext, data) {
+    try {
+      const training = await trainingStore.loadTraining(concept.id);
+      const next = projectCompletedSedaRecord({
+        training,
+        conceptId: concept.id,
+        nodeId: nodeContext?.id || null,
+        record: data.record,
+        sessionId: data.sessionId,
+      });
+      if (next) await trainingStore.saveTraining(next);
+    } catch (err) {
+      /* c8 ignore next 2 -- defensive storage failure branch. */
+      console.warn('SEDA evidence projection unavailable.', err);
+    }
   }
 
   async function loadOrCreateSedaResponse(concept, nodeContext) {

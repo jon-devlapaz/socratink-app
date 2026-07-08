@@ -1,0 +1,116 @@
+// Projects a completed app-local SEDA session record into the learner-visible
+// training evidence store (socratink:training:v1:<conceptId>).
+//
+// Product truth: the SEDA loop simulates spacing with fixed timestamps
+// (lib/seda/constants.mjs), so copying backend attempt times verbatim would
+// let a single sitting derive solidified. Every projected attempt is
+// re-stamped to real wall-clock time so one sitting derives at most primed;
+// solidified stays gated on a real spaced return visit.
+
+export const TRAINING_SCHEMA_VERSION = 1;
+
+function sedaAttemptId(sessionId, index) {
+  return `seda-${sessionId}-${index}`;
+}
+
+// Select the single attempted backend node record. A SEDA session completes
+// exactly one node, so zero or several attempted records is unexpected; fail
+// closed rather than arbitrarily projecting whichever happens to be first.
+function attemptedNodeRecord(record) {
+  const nodeRecords = record?.training?.node_records;
+  if (!nodeRecords || typeof nodeRecords !== 'object') return null;
+  const attempted = Object.values(nodeRecords).filter(
+    (node) => node && Array.isArray(node.attempts) && node.attempts.length,
+  );
+  return attempted.length === 1 ? attempted[0] : null;
+}
+
+function restampedAttempts({ backendRecord, sessionId, now, offset }) {
+  return backendRecord.attempts.map((attempt, index) => ({
+    id: sedaAttemptId(sessionId, index),
+    at: now,
+    user_text: attempt.user_text,
+    classification: attempt.classification,
+    gaps: Array.isArray(attempt.gaps) ? attempt.gaps : [],
+    grader_version: attempt.grader_version || 'seda-loop',
+    // Positional provenance, matching training-store.js: projection re-stamps
+    // every attempt to one real sitting, so the backend's simulated cold/spaced
+    // timing is derived from position here, never copied verbatim (a backend
+    // "spaced" label would otherwise falsely imply a real spaced return).
+    kind: offset + index === 0 ? 'cold' : 'spaced',
+  }));
+}
+
+function restampedRepairs({ backendRecord, sessionId, now }) {
+  const repairs = Array.isArray(backendRecord.repairs) ? backendRecord.repairs : [];
+  return repairs.map((repair, index) => ({
+    id: `${sedaAttemptId(sessionId, index)}-repair`,
+    at: now,
+    text: repair.text,
+  }));
+}
+
+function baseTraining(training, conceptId) {
+  if (training) return training;
+  return {
+    concept_id: conceptId,
+    schema_version: TRAINING_SCHEMA_VERSION,
+    source_mode: 'source_less',
+    grounding: 'learner_sketch',
+    source_ref: null,
+    sketch: null,
+    node_records: {},
+  };
+}
+
+/**
+ * Returns the next training object to save, or null when there is nothing
+ * new to project (no completed record, no attempts, or already projected).
+ */
+export function projectCompletedSedaRecord({
+  training = null,
+  conceptId,
+  nodeId,
+  record,
+  sessionId,
+  now = new Date().toISOString(),
+} = {}) {
+  if (!conceptId || !nodeId || !sessionId) return null;
+  const backendRecord = attemptedNodeRecord(record);
+  if (!backendRecord) return null;
+
+  const next = baseTraining(training, conceptId);
+  const nodeRecords = next.node_records && typeof next.node_records === 'object'
+    ? next.node_records
+    : {};
+  const existing = nodeRecords[nodeId] || { attempts: [], repairs: [] };
+  const existingAttempts = Array.isArray(existing.attempts) ? existing.attempts : [];
+  if (existingAttempts.some((attempt) => attempt?.id === sedaAttemptId(sessionId, 0))) {
+    return null;
+  }
+
+  const projected = {
+    ...existing,
+    attempts: [
+      ...existingAttempts,
+      ...restampedAttempts({ backendRecord, sessionId, now, offset: existingAttempts.length }),
+    ],
+    repairs: [
+      ...(Array.isArray(existing.repairs) ? existing.repairs : []),
+      ...restampedRepairs({ backendRecord, sessionId, now }),
+    ],
+  };
+  if (backendRecord.study_revealed_at && !projected.study_revealed_at) {
+    projected.study_revealed_at = now;
+  }
+
+  return {
+    ...next,
+    concept_id: conceptId,
+    schema_version: TRAINING_SCHEMA_VERSION,
+    node_records: {
+      ...nodeRecords,
+      [nodeId]: projected,
+    },
+  };
+}
