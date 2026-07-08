@@ -20,7 +20,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=161">
+  <link rel="stylesheet" href="/css/index.css?v=165">
   <link rel="stylesheet" href="/css/drill-chamber.css?v=13">
 </head>
 
@@ -206,6 +206,7 @@
           </span>
           <h2 class="desk-title">Learning sessions.</h2>
           <p class="desk-helper">Pick up where you were explaining from memory.</p>
+          <div id="desk-ready-filter-host" class="desk-ready-filter-host"></div>
         </header>
 
         <div class="hero-info" id="hero-info">
@@ -272,6 +273,8 @@
             <g id="tile-8" class="tile-group" transform="translate(140,205)" onclick="App.selectTile(8)"></g>
           </svg>
         </div>
+
+        <div id="desk-due-selection-host" class="desk-due-selection-host" aria-live="polite"></div>
 
         <div class="desk-legend" role="list" aria-label="Tile-state legend">
           <span class="desk-legend-item" role="listitem" data-state="locked">
@@ -439,9 +442,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="/js/drill-chamber.js?v=14"></script>
-  <script type="module" src="/js/app.js?v=177"></script>
+  <script type="module" src="/js/app.js?v=181"></script>
   <script type="module" src="/js/floating-room-label.js?v=8"></script>
-  <script type="module" src="/js/iso-board-state-surface.js?v=5"></script>
+  <script type="module" src="/js/iso-board-state-surface.js?v=7"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>
 
   <!-- Feedback Modal -->

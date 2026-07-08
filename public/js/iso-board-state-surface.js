@@ -118,8 +118,9 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
       if (pin) {
         pin.removeAttribute('data-source-state');
         pin.removeAttribute('data-state');
-        pin.querySelectorAll('.concept-pin-head, .concept-pin-core, .concept-pin-crystal')
-           .forEach((el) => el.remove());
+        pin.querySelectorAll(
+          '.concept-pin-head, .concept-pin-core, .concept-pin-crystal, .concept-pin-due-ring',
+        ).forEach((el) => el.remove());
         const line = pin.querySelector('.concept-pin-line');
         if (line) line.remove();
       }

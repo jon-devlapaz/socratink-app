@@ -147,6 +147,7 @@ PROTECTED_API_PATHS = frozenset(
         "/api/extract-url",
         "/api/repair-reps",
         "/api/session",
+        "/api/learner-state",
     }
 )
 
@@ -157,7 +158,7 @@ _cors_origins = os.environ.get(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
 )
 
@@ -784,6 +785,38 @@ def _is_feedback_storage_unavailable(err: Exception) -> bool:
     )
 
 
+def _is_learner_state_storage_unavailable(err: Exception) -> bool:
+    if isinstance(err, AuthConfigurationError):
+        return True
+    err_msg = str(err)
+    normalized = err_msg.lower()
+    return (
+        "PGRST205" in err_msg
+        or ("learner_state" in normalized and "not found" in normalized)
+        or "permission denied for table learner_state" in normalized
+        or "permission denied for table users" in normalized
+        or "'code': '42501'" in err_msg
+        or '"code":"42501"' in err_msg
+        or '"code": "42501"' in err_msg
+    )
+
+
+def _require_identified_user(request: Request):
+    session = load_current_session_state(request)
+    if (
+        not session.auth_enabled
+        or not session.authenticated
+        or session.guest_mode
+        or not session.user
+        or not session.user.id
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Identified login required to sync learner state.",
+        )
+    return session
+
+
 @app.post("/api/feedback")
 def submit_feedback(req: FeedbackRequest, request: Request):
     """Securely capture user feedback and store in Supabase."""
@@ -810,6 +843,93 @@ def submit_feedback(req: FeedbackRequest, request: Request):
         logger.exception("Unexpected failure in /api/feedback")
         raise HTTPException(
             status_code=500, detail="Unexpected error while saving feedback."
+        ) from err
+
+    return {"status": "ok"}
+
+
+class LearnerStatePayload(BaseModel):
+    schema_version: int = Field(default=1, ge=1)
+    concepts: list = Field(default_factory=list)
+    training: dict = Field(default_factory=dict)
+    updated_at: str | None = None
+
+
+@app.get("/api/learner-state")
+def get_learner_state(request: Request):
+    """Return the authenticated user's synced concepts + training blob."""
+    session = _require_identified_user(request)
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
+
+    try:
+        client = build_supabase_client(supabase_url, publishable_key)
+        result = (
+            client.table("learner_state")
+            .select("schema_version,concepts,training,updated_at")
+            .eq("user_id", session.user.id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as err:
+        if _is_learner_state_storage_unavailable(err):
+            logger.warning("Learner state storage unavailable: %s", err)
+            raise HTTPException(
+                status_code=503,
+                detail="Learner state storage is currently unavailable. Please try again later.",
+            )
+        logger.exception("Unexpected failure in GET /api/learner-state")
+        raise HTTPException(
+            status_code=500, detail="Unexpected error while loading learner state."
+        ) from err
+
+    rows = getattr(result, "data", None) or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="No learner state stored yet.")
+    row = rows[0]
+    return {
+        "schema_version": row.get("schema_version") or 1,
+        "concepts": row.get("concepts") if isinstance(row.get("concepts"), list) else [],
+        "training": row.get("training") if isinstance(row.get("training"), dict) else {},
+        "updated_at": row.get("updated_at"),
+    }
+
+
+@app.put("/api/learner-state")
+def put_learner_state(req: LearnerStatePayload, request: Request):
+    """Upsert the authenticated user's concepts + training blob."""
+    session = _require_identified_user(request)
+    if not isinstance(req.concepts, list):
+        raise HTTPException(status_code=400, detail="concepts must be a list.")
+    if not isinstance(req.training, dict):
+        raise HTTPException(status_code=400, detail="training must be an object.")
+
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
+    payload = {
+        "user_id": session.user.id,
+        "schema_version": req.schema_version,
+        "concepts": req.concepts,
+        "training": req.training,
+        "updated_at": req.updated_at or None,
+    }
+
+    try:
+        client = build_supabase_client(supabase_url, publishable_key)
+        # Prefer server clock when client omits updated_at.
+        if payload["updated_at"] is None:
+            payload.pop("updated_at")
+        client.table("learner_state").upsert(payload, on_conflict="user_id").execute()
+    except Exception as err:
+        if _is_learner_state_storage_unavailable(err):
+            logger.warning("Learner state storage unavailable: %s", err)
+            raise HTTPException(
+                status_code=503,
+                detail="Learner state storage is currently unavailable. Please try again later.",
+            )
+        logger.exception("Unexpected failure in PUT /api/learner-state")
+        raise HTTPException(
+            status_code=500, detail="Unexpected error while saving learner state."
         ) from err
 
     return {"status": "ok"}

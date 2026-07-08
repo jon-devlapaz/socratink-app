@@ -35,11 +35,15 @@ export const EMPTY_TILE = `
     <polygon class="tile-top-dash"  points="70,0 140,40 70,80 0,40"/>
     <polygon class="tile-hit"       points="70,0 140,40 70,80 0,40"/>`;
 
-export function conceptPinSVG(idx, state) {
+export function conceptPinSVG(idx, state, { isDue = false } = {}) {
+  const dueRing = isDue
+    ? `<ellipse class="concept-pin-due-ring" cx="70" cy="43" rx="22" ry="5.5" aria-hidden="true"/>`
+    : '';
   return `
     <g class="concept-marker-anim" id="concept-marker-anim-${idx}">
       <g class="concept-pin" id="concept-pin-${idx}" data-state="${state}" style="pointer-events:none;">
         <ellipse class="concept-pin-shadow" cx="70" cy="43" rx="17" ry="3.5"/>
+        ${dueRing}
         <line class="concept-pin-line" x1="70" y1="-15" x2="70" y2="38"/>
         <circle class="concept-pin-head" cx="70" cy="-15" r="8.5"/>
         <circle class="concept-pin-core" cx="70" cy="-15" r="3.1"/>
@@ -47,15 +51,31 @@ export function conceptPinSVG(idx, state) {
     </g>`;
 }
 
-export function renderGrid({ concepts, tileEls, activeId, bus }) {
+export function renderGrid({
+  concepts,
+  tileEls,
+  activeId,
+  bus,
+  dueConceptIds = null,
+  readyFilterActive = false,
+}) {
+  const dueIds = dueConceptIds instanceof Set ? dueConceptIds : new Set();
   tileEls.forEach((tileEl, idx) => {
     const concept = concepts[idx] || null;
     const isSelected = concept && concept.id === activeId;
     const isEmpty = !concept;
+    const isDue = Boolean(concept && dueIds.has(concept.id));
+    const isFilteredOut = readyFilterActive && (!concept || !isDue);
 
     tileEl.setAttribute('class', 'tile-group' +
       (isEmpty ? ' empty' : '') +
-      (isSelected ? ' selected' : ''));
+      (isSelected ? ' selected' : '') +
+      (isDue ? ' is-due' : '') +
+      (isFilteredOut ? ' is-filtered-out' : ''));
+
+    tileEl.toggleAttribute('data-due', isDue);
+    if (isFilteredOut) tileEl.setAttribute('data-ready-filtered', 'out');
+    else tileEl.removeAttribute('data-ready-filtered');
 
     // Button semantics for keyboard + assistive-tech parity with the
     // SVG <g onclick> handler. tabindex is set here (not in the
@@ -64,13 +84,17 @@ export function renderGrid({ concepts, tileEls, activeId, bus }) {
     tileEl.setAttribute('tabindex', '0');
     tileEl.setAttribute(
       'aria-label',
-      isEmpty ? 'Start learning' : `Resume ${concept.name}`
+      isEmpty
+        ? 'Start learning'
+        : isDue
+          ? `Resume ${concept.name}, ready after spacing`
+          : `Resume ${concept.name}`
     );
 
     if (isEmpty) {
       tileEl.innerHTML = EMPTY_TILE;
     } else {
-      tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state);
+      tileEl.innerHTML = TILE_PLATFORM + conceptPinSVG(idx, concept.state, { isDue });
     }
   });
 

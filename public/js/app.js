@@ -47,7 +47,18 @@ import {
   persistPhaseBSessionState as persistStoredPhaseBSessionState,
 } from './phase-b-session.js';
 import { buildLibraryHtml } from './library-view.js?v=4';
-import { createTrainingStore, TRAINING_SCHEMA_VERSION } from './training-store.js';
+import { createTrainingStore, TRAINING_SCHEMA_VERSION, TRAINING_STORE_KEY_PREFIX } from './training-store.js';
+import {
+  hydrateAndSyncLearnerState,
+  pushLocalLearnerState,
+} from './learner-state-sync.js';
+import {
+  listDueForSpaced,
+  dueConceptIdSet,
+  dueItemsForConcept,
+  renderReadyFilterHtml,
+  renderDueSelectionHtml,
+} from './due-for-spaced.js?v=3';
 import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
@@ -76,7 +87,8 @@ import {
 } from './auth.js?v=5';
 import { prefersReducedMotion } from './motion.js';
 import {
-  STATES, generateId, loadConcepts, saveConcepts, normalizeGraphData,
+  STATES, generateId, loadConcepts, saveConcepts as persistConcepts,
+  normalizeGraphData,
   getActiveId, setActiveId, getActiveConcept,
   getActiveTileIdx, updateActiveConcept, contentStore
 } from './store.js';
@@ -108,6 +120,57 @@ const App = (() => {
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
   const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
   const trainingStore = createTrainingStore();
+  let learnerStatePushTimer = null;
+  let readyFilterActive = false;
+  let cachedDueItems = [];
+
+  function saveConcepts(arr) {
+    persistConcepts(arr);
+    scheduleLearnerStatePush();
+    renderDeskDueSurfaces();
+  }
+
+  function scheduleLearnerStatePush() {
+    if (learnerStatePushTimer) clearTimeout(learnerStatePushTimer);
+    learnerStatePushTimer = setTimeout(() => {
+      learnerStatePushTimer = null;
+      void pushLearnerStateIfIdentified();
+    }, 800);
+  }
+
+  const _appendAttempt = trainingStore.appendAttempt.bind(trainingStore);
+  const _setStudyRevealed = trainingStore.setStudyRevealed.bind(trainingStore);
+  const _appendRepair = trainingStore.appendRepair.bind(trainingStore);
+  const _setProvenance = trainingStore.setProvenance.bind(trainingStore);
+  const _setSketch = trainingStore.setSketch.bind(trainingStore);
+  trainingStore.appendAttempt = async (...args) => {
+    const result = await _appendAttempt(...args);
+    scheduleLearnerStatePush();
+    renderDeskDueSurfaces();
+    return result;
+  };
+  trainingStore.setStudyRevealed = async (...args) => {
+    const result = await _setStudyRevealed(...args);
+    scheduleLearnerStatePush();
+    renderDeskDueSurfaces();
+    return result;
+  };
+  trainingStore.appendRepair = async (...args) => {
+    const result = await _appendRepair(...args);
+    scheduleLearnerStatePush();
+    return result;
+  };
+  trainingStore.setProvenance = async (...args) => {
+    const result = await _setProvenance(...args);
+    scheduleLearnerStatePush();
+    return result;
+  };
+  trainingStore.setSketch = async (...args) => {
+    const result = await _setSketch(...args);
+    scheduleLearnerStatePush();
+    return result;
+  };
+
   let currentGraphController = null;
   let activeDrillNode = null;
   let repairRepsState = null;
@@ -828,7 +891,15 @@ const App = (() => {
 
   // ── 8. Grid rendering ──────────────────────────────────────
   function renderGrid(concepts = loadConcepts()) {
-    renderDeskGrid({ concepts, tileEls, activeId: getActiveId(), bus: Bus });
+    const dueIds = dueConceptIdSet(cachedDueItems);
+    renderDeskGrid({
+      concepts,
+      tileEls,
+      activeId: getActiveId(),
+      bus: Bus,
+      dueConceptIds: dueIds,
+      readyFilterActive,
+    });
   }
 
   function getSidebarActiveConceptId() {
@@ -1622,7 +1693,7 @@ const App = (() => {
 
     renderHero(concept);
     applyControlsForState(concept.state, concept);
-    renderGrid();
+    renderDeskDueSurfaces();
     renderConceptList();
     renderIgnitionGate();
     return concept;
@@ -3011,6 +3082,7 @@ const App = (() => {
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
     renderDeskDate();
+    renderDeskDueSurfaces();
     Bus.emit('dashboard:shown');
     if (window.innerWidth < 900) closeDrawer();
   }
@@ -3022,6 +3094,105 @@ const App = (() => {
     const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     el.textContent = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
     el.dateTime = d.toISOString().slice(0, 10);
+  }
+
+  function collectTrainingByConceptId(concepts = loadConcepts()) {
+    const trainingByConceptId = {};
+    (Array.isArray(concepts) ? concepts : []).forEach((concept) => {
+      if (!concept?.id) return;
+      try {
+        const raw = localStorage.getItem(`${TRAINING_STORE_KEY_PREFIX}${concept.id}`);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          trainingByConceptId[concept.id] = parsed;
+        }
+      } catch {
+        /* ignore corrupt training rows */
+      }
+    });
+    return trainingByConceptId;
+  }
+
+  function refreshDueCache(concepts = loadConcepts()) {
+    cachedDueItems = listDueForSpaced({
+      concepts,
+      trainingByConceptId: collectTrainingByConceptId(concepts),
+    });
+    if (!cachedDueItems.length) readyFilterActive = false;
+    return cachedDueItems;
+  }
+
+  function renderReadyFilter() {
+    const host = document.getElementById('desk-ready-filter-host');
+    if (!host) return;
+    host.innerHTML = renderReadyFilterHtml({
+      count: cachedDueItems.length,
+      active: readyFilterActive,
+    });
+    const button = host.querySelector('#desk-ready-filter');
+    if (!button) return;
+    button.addEventListener('click', () => {
+      readyFilterActive = !readyFilterActive;
+      renderDeskDueSurfaces();
+    });
+  }
+
+  function renderDueSelection() {
+    const host = document.getElementById('desk-due-selection-host');
+    if (!host) return;
+    const activeId = getActiveId();
+    const selectedDue = dueItemsForConcept(cachedDueItems, activeId);
+    host.innerHTML = renderDueSelectionHtml(selectedDue);
+    host.querySelectorAll('.desk-due-selection__action[data-concept-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const conceptId = button.getAttribute('data-concept-id');
+        if (!conceptId) return;
+        const concept = loadConcepts().find((c) => c.id === conceptId);
+        if (!concept) return;
+        selectConcept(conceptId);
+        if (concept.graphData) showMapView(concept);
+      });
+    });
+  }
+
+  function renderDeskDueSurfaces() {
+    refreshDueCache();
+    renderReadyFilter();
+    renderDueSelection();
+    renderGrid();
+    const grid = document.getElementById('grid-container');
+    if (!grid) return;
+    grid.classList.toggle('is-ready-filtered', readyFilterActive && cachedDueItems.length > 0);
+    if (cachedDueItems.length) {
+      grid.setAttribute('data-ready-count', String(cachedDueItems.length));
+    } else {
+      grid.removeAttribute('data-ready-count');
+    }
+  }
+
+  async function syncLearnerStateIfIdentified() {
+    try {
+      const session = await fetchAuthSession();
+      if (!isIdentifiedUserSession(session)) return false;
+      await hydrateAndSyncLearnerState({ isIdentified: true });
+      renderConceptList();
+      renderDeskDueSurfaces();
+      return true;
+    } catch (err) {
+      console.warn('Learner state sync unavailable.', err);
+      return false;
+    }
+  }
+
+  async function pushLearnerStateIfIdentified() {
+    try {
+      const session = await fetchAuthSession();
+      if (!isIdentifiedUserSession(session)) return;
+      await pushLocalLearnerState({ isIdentified: true });
+    } catch (err) {
+      console.warn('Learner state push unavailable.', err);
+    }
   }
 
   function sessionRouteConceptId() {
@@ -3205,10 +3376,11 @@ const App = (() => {
   void bootstrapAuthUi();
   void refreshDrawerFooter();
   bindMapModeControls();
-  renderGrid();
   renderConceptList();
+  renderDeskDueSurfaces();
   renderIgnitionGate();
   initHeroSingleInput();
+  void syncLearnerStateIfIdentified();
 
   // Restore selected concept
   const concepts = loadConcepts();

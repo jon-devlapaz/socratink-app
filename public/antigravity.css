@@ -970,6 +970,238 @@ body.antigravity-theme .desk-helper {
   color: var(--text-muted);
 }
 
+/* ── Ready filter (Linear-style view chip) ─────────────────── */
+body.antigravity-theme .desk-ready-filter-host:empty {
+  display: none;
+}
+
+body.antigravity-theme .desk-ready-filter-host {
+  margin-top: 12px;
+}
+
+body.antigravity-theme .desk-ready-filter {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 5px 10px 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 22%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 220ms ease,
+    transform 180ms ease;
+}
+
+body.antigravity-theme .desk-ready-filter:hover {
+  color: var(--text-main);
+  border-color: color-mix(in srgb, var(--ag-violet) 35%, transparent);
+}
+
+body.antigravity-theme .desk-ready-filter:active {
+  transform: scale(0.97);
+}
+
+body.antigravity-theme .desk-ready-filter.is-active {
+  color: var(--ag-violet);
+  border-color: color-mix(in srgb, var(--ag-violet) 50%, transparent);
+  background: rgba(144, 103, 198, 0.12);
+  box-shadow:
+    0 0 0 3px rgba(144, 103, 198, 0.10),
+    0 1px 0 color-mix(in srgb, #fff 55%, transparent);
+}
+
+body.antigravity-theme .desk-ready-filter__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+body.antigravity-theme .desk-ready-filter.is-active .desk-ready-filter__count {
+  background: rgba(144, 103, 198, 0.22);
+}
+
+/* ── Due marks on the board ────────────────────────────────── */
+body.antigravity-theme .tile-group.is-due .tile-highlight {
+  stroke: var(--ag-violet);
+  stroke-width: 1.75;
+  opacity: 0.98;
+}
+
+body.antigravity-theme .concept-pin-due-ring {
+  fill: none;
+  stroke: rgba(144, 103, 198, 0.55);
+  stroke-width: 1.4;
+  opacity: 0.85;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: desk-due-ring 2.8s ease-in-out infinite;
+}
+
+body.antigravity-theme .tile-group.is-due .concept-pin-crystal {
+  animation: desk-due-breathe 2.8s ease-in-out infinite;
+}
+
+body.antigravity-theme .tile-group.is-due .cp-glow {
+  fill: rgba(144, 103, 198, 0.28);
+}
+
+body.antigravity-theme .tile-group.is-filtered-out {
+  opacity: 0.16;
+  filter: grayscale(0.45);
+  transition: opacity 260ms ease, filter 260ms ease;
+  pointer-events: none;
+}
+
+body.antigravity-theme .tile-group:not(.is-filtered-out) {
+  transition: opacity 260ms ease, filter 260ms ease;
+}
+
+body.antigravity-theme #grid-container.is-ready-filtered .tile-group.is-due {
+  filter: drop-shadow(0 10px 18px rgba(144, 103, 198, 0.22));
+}
+
+@keyframes desk-due-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2.5px); }
+}
+
+@keyframes desk-due-ring {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.antigravity-theme .tile-group.is-due .concept-pin-crystal,
+  body.antigravity-theme .concept-pin-due-ring {
+    animation: none;
+  }
+}
+
+/* ── Selection strip under the board ───────────────────────── */
+body.antigravity-theme .desk-due-selection-host:empty {
+  display: none;
+}
+
+body.antigravity-theme .desk-due-selection-host {
+  width: min(100%, 380px);
+  margin: 10px auto 0;
+}
+
+body.antigravity-theme .desk-due-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 2px 4px;
+  border-top: 1px solid color-mix(in srgb, var(--text-muted) 14%, transparent);
+  animation: desk-due-selection-in 320ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes desk-due-selection-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.antigravity-theme .desk-due-selection {
+    animation: none;
+  }
+}
+
+body.antigravity-theme .desk-due-selection__copy {
+  min-width: 0;
+  text-align: left;
+}
+
+body.antigravity-theme .desk-due-selection__kicker {
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ag-violet) 72%, var(--text-muted));
+}
+
+body.antigravity-theme .desk-due-selection__node {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 560;
+  color: var(--text-main);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+body.antigravity-theme .desk-due-selection__meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+body.antigravity-theme .desk-due-selection__action {
+  appearance: none;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 14px !important;
+  border: 1px solid color-mix(in srgb, var(--ag-violet) 42%, transparent) !important;
+  background: rgba(144, 103, 198, 0.10) !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
+  color: var(--ag-violet);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  border-radius: 999px !important;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+body.antigravity-theme .desk-due-selection__action:hover,
+body.antigravity-theme .desk-due-selection__action:focus-visible {
+  background: rgba(144, 103, 198, 0.18) !important;
+  border-color: color-mix(in srgb, var(--ag-violet) 62%, transparent) !important;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+body.antigravity-theme .desk-due-selection__action:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ag-violet) 55%, transparent);
+  outline-offset: 3px;
+}
+
 body.antigravity-theme .desk-legend {
   display: inline-flex;
   align-items: center;
