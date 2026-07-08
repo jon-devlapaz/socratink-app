@@ -10,10 +10,15 @@ function parseGraphData(raw) {
   }
 }
 
+/**
+ * Drillable IDs must match concept-page route entries
+ * (`deriveConceptEntries`): backbone/subnodes when present, else the
+ * core-thesis fallback. Do not emit raw metadata.id — that is not an
+ * activeEntryId the map view can focus.
+ */
 export function collectDrillableNodeIds(graphData) {
   const ids = [];
   if (!graphData || typeof graphData !== 'object') return ids;
-  if (graphData.metadata?.id) ids.push(graphData.metadata.id);
   (graphData.backbone || []).forEach((item) => {
     if (item?.id) ids.push(item.id);
   });
@@ -22,12 +27,16 @@ export function collectDrillableNodeIds(graphData) {
       if (subnode?.id) ids.push(subnode.id);
     });
   });
+  if (!ids.length) ids.push('core-thesis');
   return ids;
 }
 
 function labelForNode(graphData, nodeId) {
-  if (graphData?.metadata?.id === nodeId) {
-    return graphData.metadata.label || graphData.metadata.name || 'Core thesis';
+  if (nodeId === 'core-thesis') {
+    return graphData?.metadata?.label
+      || graphData?.metadata?.name
+      || graphData?.metadata?.source_title
+      || 'Core thesis';
   }
   const backbone = (graphData?.backbone || []).find((item) => item?.id === nodeId);
   if (backbone) return backbone.label || backbone.name || nodeId;
@@ -83,18 +92,26 @@ export function dueItemsForConcept(dueItems = [], conceptId) {
   return (Array.isArray(dueItems) ? dueItems : []).filter((item) => item.concept_id === conceptId);
 }
 
-/** Linear-style filter chip. Hidden when count is 0. */
+/**
+ * Linear-style filter chip. Count is due *sessions* (concepts), matching
+ * board marks. Hidden when count is 0.
+ */
 export function renderReadyFilterHtml({ count = 0, active = false } = {}) {
   if (!count) return '';
+  const label = 'Due';
+  const ariaLabel = active
+    ? `Showing ${count} session${count === 1 ? '' : 's'} due for spaced reconstruction. Clear filter.`
+    : `Show only ${count} session${count === 1 ? '' : 's'} due for spaced reconstruction.`;
   return `
     <button
       type="button"
       class="desk-ready-filter${active ? ' is-active' : ''}"
       id="desk-ready-filter"
       aria-pressed="${active ? 'true' : 'false'}"
+      aria-label="${ariaLabel}"
       data-ready-count="${count}"
     >
-      <span class="desk-ready-filter__label">Ready</span>
+      <span class="desk-ready-filter__label">${label}</span>
       <span class="desk-ready-filter__count">${count}</span>
     </button>
   `;
@@ -108,8 +125,9 @@ export function renderDueSelectionHtml(dueItems = []) {
   if (!Array.isArray(dueItems) || dueItems.length === 0) return '';
   const next = dueItems[0];
   const meta = dueItems.length > 1
-    ? `${dueItems.length} nodes ready · oldest first`
+    ? `${dueItems.length} nodes due · oldest first`
     : 'Spacing window open · reconstruct before study';
+  const actionLabel = `Reconstruct ${next.node_label} from memory`;
 
   return `
     <div class="desk-due-selection" data-concept-id="${escapeAttr(next.concept_id)}">
@@ -123,6 +141,7 @@ export function renderDueSelectionHtml(dueItems = []) {
         class="desk-due-selection__action"
         data-concept-id="${escapeAttr(next.concept_id)}"
         data-node-id="${escapeAttr(next.node_id)}"
+        aria-label="${escapeAttr(actionLabel)}"
       >
         Reconstruct
       </button>

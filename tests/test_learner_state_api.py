@@ -50,11 +50,21 @@ class FakeLearnerStateTable:
 class FakeSupabaseClient:
     def __init__(self, table: FakeLearnerStateTable):
         self.learner_state_table = table
+        self.access_token = None
 
     def table(self, name: str):
         if name != "learner_state":
             raise AssertionError(f"unexpected table: {name}")
         return self.learner_state_table
+
+
+def _identified_state(user_id: str, *, access_token: str | None = "user-access-jwt") -> AuthSessionState:
+    return AuthSessionState(
+        auth_enabled=True,
+        authenticated=True,
+        user=AuthUser(id=user_id),
+        access_token=access_token,
+    )
 
 
 class LearnerStateApiTests(unittest.TestCase):
@@ -82,13 +92,14 @@ class LearnerStateApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_get_returns_404_when_empty(self):
-        state = AuthSessionState(
-            auth_enabled=True,
-            authenticated=True,
-            user=AuthUser(id="00000000-0000-0000-0000-000000000222"),
-        )
+        state = _identified_state("00000000-0000-0000-0000-000000000222")
         client = self._client(state)
         table = FakeLearnerStateTable(rows=[])
+        captured = {}
+
+        def fake_build(url, key, *, access_token=None):
+            captured["access_token"] = access_token
+            return FakeSupabaseClient(table)
 
         with (
             patch.dict(
@@ -98,22 +109,16 @@ class LearnerStateApiTests(unittest.TestCase):
                     "SUPABASE_PUBLISHABLE_KEY": "pk_test",
                 },
             ),
-            patch(
-                "main.build_supabase_client",
-                return_value=FakeSupabaseClient(table),
-            ),
+            patch("main.build_supabase_client", side_effect=fake_build),
         ):
             response = client.get("/api/learner-state")
 
         self.assertEqual(response.status_code, 404)
+        self.assertEqual(captured["access_token"], "user-access-jwt")
 
     def test_put_and_get_round_trip(self):
         user_id = "00000000-0000-0000-0000-000000000333"
-        state = AuthSessionState(
-            auth_enabled=True,
-            authenticated=True,
-            user=AuthUser(id=user_id),
-        )
+        state = _identified_state(user_id)
         client = self._client(state)
         table = FakeLearnerStateTable(rows=[])
         payload = {
@@ -128,6 +133,11 @@ class LearnerStateApiTests(unittest.TestCase):
             },
             "updated_at": "2026-07-08T12:00:00.000Z",
         }
+        captured = {}
+
+        def fake_build(url, key, *, access_token=None):
+            captured["access_token"] = access_token
+            return FakeSupabaseClient(table)
 
         with (
             patch.dict(
@@ -137,10 +147,7 @@ class LearnerStateApiTests(unittest.TestCase):
                     "SUPABASE_PUBLISHABLE_KEY": "pk_test",
                 },
             ),
-            patch(
-                "main.build_supabase_client",
-                return_value=FakeSupabaseClient(table),
-            ),
+            patch("main.build_supabase_client", side_effect=fake_build),
         ):
             put_response = client.put("/api/learner-state", json=payload)
             get_response = client.get("/api/learner-state")
@@ -148,17 +155,26 @@ class LearnerStateApiTests(unittest.TestCase):
         self.assertEqual(put_response.status_code, 200)
         self.assertEqual(put_response.json(), {"status": "ok"})
         self.assertEqual(table.last_upsert["payload"]["user_id"], user_id)
+        self.assertEqual(captured["access_token"], "user-access-jwt")
         self.assertEqual(get_response.status_code, 200)
         body = get_response.json()
         self.assertEqual(body["concepts"], payload["concepts"])
         self.assertEqual(body["training"], payload["training"])
 
-    def test_missing_supabase_env_returns_503(self):
-        state = AuthSessionState(
-            auth_enabled=True,
-            authenticated=True,
-            user=AuthUser(id="00000000-0000-0000-0000-000000000444"),
+    def test_missing_access_token_returns_401(self):
+        state = _identified_state(
+            "00000000-0000-0000-0000-000000000555",
+            access_token=None,
         )
+        client = self._client(state)
+        response = client.put(
+            "/api/learner-state",
+            json={"schema_version": 1, "concepts": [], "training": {}},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_missing_supabase_env_returns_503(self):
+        state = _identified_state("00000000-0000-0000-0000-000000000444")
         client = self._client(state)
 
         with patch(

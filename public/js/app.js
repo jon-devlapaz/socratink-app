@@ -8,7 +8,7 @@ import {
 import {
   playAnim,
   renderGrid as renderDeskGrid,
-} from './board-grid.js';
+} from './board-grid.js?v=2';
 import {
   clearSettingsPanel as clearShellSettingsPanel,
   closeDrawer as closeShellDrawer,
@@ -51,14 +51,14 @@ import { createTrainingStore, TRAINING_SCHEMA_VERSION, TRAINING_STORE_KEY_PREFIX
 import {
   hydrateAndSyncLearnerState,
   pushLocalLearnerState,
-} from './learner-state-sync.js';
+} from './learner-state-sync.js?v=2';
 import {
   listDueForSpaced,
   dueConceptIdSet,
   dueItemsForConcept,
   renderReadyFilterHtml,
   renderDueSelectionHtml,
-} from './due-for-spaced.js?v=3';
+} from './due-for-spaced.js?v=5';
 import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
@@ -1655,9 +1655,10 @@ const App = (() => {
         showDashboard();
         showEmptyState();
       }
-      renderGrid(concepts);
+      renderDeskDueSurfaces();
       renderConceptList(concepts);
       renderIgnitionGate();
+      scheduleLearnerStatePush();
     };
 
     if (item) {
@@ -1668,6 +1669,10 @@ const App = (() => {
   }
 
   function selectTile(tileIdx) {
+    const tileEl = tileEls[tileIdx];
+    if (tileEl?.classList.contains('is-filtered-out') || tileEl?.getAttribute('data-ready-filtered') === 'out') {
+      return;
+    }
     const concepts = loadConcepts();
     const concept = concepts[tileIdx];
     if (concept) {
@@ -3126,8 +3131,9 @@ const App = (() => {
   function renderReadyFilter() {
     const host = document.getElementById('desk-ready-filter-host');
     if (!host) return;
+    const dueSessionCount = dueConceptIdSet(cachedDueItems).size;
     host.innerHTML = renderReadyFilterHtml({
-      count: cachedDueItems.length,
+      count: dueSessionCount,
       active: readyFilterActive,
     });
     const button = host.querySelector('#desk-ready-filter');
@@ -3147,11 +3153,14 @@ const App = (() => {
     host.querySelectorAll('.desk-due-selection__action[data-concept-id]').forEach((button) => {
       button.addEventListener('click', () => {
         const conceptId = button.getAttribute('data-concept-id');
+        const nodeId = button.getAttribute('data-node-id');
         if (!conceptId) return;
         const concept = loadConcepts().find((c) => c.id === conceptId);
         if (!concept) return;
         selectConcept(conceptId);
-        if (concept.graphData) showMapView(concept);
+        if (!concept.graphData) return;
+        const opts = nodeId ? { activeEntryId: nodeId } : {};
+        showMapView(concept, opts);
       });
     });
   }
@@ -3163,9 +3172,10 @@ const App = (() => {
     renderGrid();
     const grid = document.getElementById('grid-container');
     if (!grid) return;
-    grid.classList.toggle('is-ready-filtered', readyFilterActive && cachedDueItems.length > 0);
-    if (cachedDueItems.length) {
-      grid.setAttribute('data-ready-count', String(cachedDueItems.length));
+    const dueSessionCount = dueConceptIdSet(cachedDueItems).size;
+    grid.classList.toggle('is-ready-filtered', readyFilterActive && dueSessionCount > 0);
+    if (dueSessionCount) {
+      grid.setAttribute('data-ready-count', String(dueSessionCount));
     } else {
       grid.removeAttribute('data-ready-count');
     }

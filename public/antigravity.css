@@ -1051,13 +1051,17 @@ body.antigravity-theme .concept-pin-due-ring {
   fill: none;
   stroke: rgba(144, 103, 198, 0.55);
   stroke-width: 1.4;
-  opacity: 0.85;
+  opacity: 0.7;
   transform-box: fill-box;
   transform-origin: center;
+}
+
+/* Motion is opt-in with the Due filter — ambient breathe/ring off by default. */
+body.antigravity-theme #grid-container.is-ready-filtered .tile-group.is-due .concept-pin-due-ring {
   animation: desk-due-ring 2.8s ease-in-out infinite;
 }
 
-body.antigravity-theme .tile-group.is-due .concept-pin-crystal {
+body.antigravity-theme #grid-container.is-ready-filtered .tile-group.is-due .concept-pin-crystal {
   animation: desk-due-breathe 2.8s ease-in-out infinite;
 }
 
@@ -1097,8 +1101,8 @@ body.antigravity-theme #grid-container.is-ready-filtered .tile-group.is-due {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.antigravity-theme .tile-group.is-due .concept-pin-crystal,
-  body.antigravity-theme .concept-pin-due-ring {
+  body.antigravity-theme #grid-container.is-ready-filtered .tile-group.is-due .concept-pin-crystal,
+  body.antigravity-theme #grid-container.is-ready-filtered .tile-group.is-due .concept-pin-due-ring {
     animation: none;
   }
 }

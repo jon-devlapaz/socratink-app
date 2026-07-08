@@ -64,3 +64,13 @@ gh pr list --state open
 ## Communication defaults
 - Keep responses concise and action-oriented.
 - Cite exact files and commands in changes and handoffs.
+
+## Learned User Preferences
+- During UI polish, show the live browser preview so the user can see what is being made.
+- Desk due/ready UX should stay board-centric (Linear-style Ready filter, due marks, selection strip), not a header inventory list of due nodes.
+- Give blunt honesty on whether desk UI captures metacognitive learning; do not praise-pad weak UX.
+- For Socratink implementation slices, follow `/socratink-agent-flow` when the user routes that way.
+
+## Learned Workspace Facts
+- Due/Ready desk state must come from real training evidence (`spaced_attempt` / spaced re-drill eligibility), never decorative mastery or fake progress chrome.
+- Iso board due marks: avoid CSS/SVG transform footguns on `.tile-group` when styling due tiles.

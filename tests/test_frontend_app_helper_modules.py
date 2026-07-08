@@ -856,6 +856,7 @@ def test_board_grid_helpers_preserve_tile_markup_and_events() -> None:
           attrs: {},
           innerHTML: '',
           setAttribute(name, value) { this.attrs[name] = value; },
+          removeAttribute(name) { delete this.attrs[name]; },
         });
         const tiles = [makeTile(), makeTile()];
         renderGrid({
@@ -874,6 +875,24 @@ def test_board_grid_helpers_preserve_tile_markup_and_events() -> None:
         assert.equal(tiles[1].attrs['aria-label'], 'Start learning');
         assert.ok(tiles[1].innerHTML.includes('tile-top-empty'));
         assert.deepEqual(events, ['grid:rendered']);
+
+        renderGrid({
+          concepts: [{ id: 'c1', name: 'First', state: 'growing' }],
+          tileEls: tiles,
+          activeId: 'c1',
+          bus: { emit(eventName) { events.push(eventName); } },
+          dueConceptIds: new Set(['c1']),
+          readyFilterActive: true,
+        });
+        assert.equal(tiles[0].attrs.class, 'tile-group selected is-due');
+        assert.equal(tiles[0].attrs['data-due'], '');
+        assert.equal(tiles[0].attrs.tabindex, '0');
+        assert.equal(tiles[0].attrs['aria-label'], 'Resume First, due for spaced reconstruction');
+        assert.equal(tiles[1].attrs.class, 'tile-group empty is-filtered-out');
+        assert.equal(tiles[1].attrs.tabindex, '-1');
+        assert.equal(tiles[1].attrs['aria-disabled'], 'true');
+        assert.equal(tiles[1].attrs['data-ready-filtered'], 'out');
+        assert.ok(tiles[0].innerHTML.includes('concept-pin-due-ring'));
 
         const classes = new Set(['anim-crack']);
         const animationEvents = {};

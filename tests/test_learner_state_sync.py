@@ -94,7 +94,10 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
           name: 'Thermostat',
           graphData: JSON.stringify({
             metadata: { id: 'core', label: 'Feedback loop' },
-            backbone: [{ id: 'sensor', label: 'Sensor reading' }],
+            backbone: [
+              { id: 'sensor', label: 'Sensor reading' },
+              { id: 'actuator', label: 'Actuator' },
+            ],
             clusters: [],
           }),
         }];
@@ -103,11 +106,24 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
           c1: {
             concept_id: 'c1',
             node_records: {
+              // metadata.id is not a route entry — must not appear as due.
               core: {
+                attempts: [{
+                  id: 'a0',
+                  at: '2026-07-06T00:00:00.000Z',
+                  user_text: 'strong core',
+                  classification: 'strong',
+                  gaps: [],
+                  grader_version: 'test',
+                }],
+                repairs: [],
+                study_revealed_at: '2026-07-06T00:10:00.000Z',
+              },
+              sensor: {
                 attempts: [{
                   id: 'a1',
                   at: '2026-07-07T00:00:00.000Z',
-                  user_text: 'strong cold',
+                  user_text: 'strong sensor',
                   classification: 'strong',
                   gaps: [],
                   grader_version: 'test',
@@ -115,11 +131,11 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
                 repairs: [],
                 study_revealed_at: '2026-07-07T00:10:00.000Z',
               },
-              sensor: {
+              actuator: {
                 attempts: [{
                   id: 'a2',
                   at: '2026-07-07T01:00:00.000Z',
-                  user_text: 'strong sensor',
+                  user_text: 'strong actuator',
                   classification: 'strong',
                   gaps: [],
                   grader_version: 'test',
@@ -144,23 +160,27 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
           now: '2026-07-08T00:00:00.000Z',
         });
         assert.equal(due.length, 2);
-        assert.equal(due[0].node_id, 'core');
+        assert.equal(due[0].node_id, 'sensor');
+        assert.equal(due[0].node_label, 'Sensor reading');
         assert.deepEqual([...dueConceptIdSet(due)], ['c1']);
         assert.equal(dueItemsForConcept(due, 'c1').length, 2);
+        assert.ok(!due.some((item) => item.node_id === 'core'));
 
-        const filter = renderReadyFilterHtml({ count: 2, active: true });
+        const filter = renderReadyFilterHtml({ count: 1, active: true });
         assert.match(filter, /desk-ready-filter/);
-        assert.match(filter, /Ready/);
+        assert.match(filter, /Due/);
         assert.match(filter, /is-active/);
+        assert.match(filter, /spaced reconstruction/);
         assert.equal(renderReadyFilterHtml({ count: 0 }), '');
 
         const selection = renderDueSelectionHtml(dueItemsForConcept(due, 'c1'));
-        assert.match(selection, /Feedback loop/);
+        assert.match(selection, /Sensor reading/);
         assert.match(selection, /Up next from memory/);
         assert.match(selection, />\\s*Reconstruct\\s*</);
-        assert.match(selection, /2 nodes ready · oldest first/);
+        assert.match(selection, /2 nodes due · oldest first/);
+        assert.match(selection, /data-node-id="sensor"/);
+        assert.match(selection, /aria-label="Reconstruct Sensor reading from memory"/);
         assert.doesNotMatch(selection, /due-for-spaced__list/);
-        assert.doesNotMatch(selection, /Reconstruct from memory/);
         assert.doesNotMatch(selection, />RECONSTRUCT</);
         """
     )

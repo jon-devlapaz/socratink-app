@@ -73,21 +73,25 @@ export function renderGrid({
       (isDue ? ' is-due' : '') +
       (isFilteredOut ? ' is-filtered-out' : ''));
 
-    tileEl.toggleAttribute('data-due', isDue);
+    if (isDue) tileEl.setAttribute('data-due', '');
+    else tileEl.removeAttribute('data-due');
     if (isFilteredOut) tileEl.setAttribute('data-ready-filtered', 'out');
     else tileEl.removeAttribute('data-ready-filtered');
 
     // Button semantics for keyboard + assistive-tech parity with the
     // SVG <g onclick> handler. tabindex is set here (not in the
     // floating-room-label experiment) so it survives every render.
+    // Filtered-out tiles stay in the DOM but leave the tab order.
     tileEl.setAttribute('role', 'button');
-    tileEl.setAttribute('tabindex', '0');
+    tileEl.setAttribute('tabindex', isFilteredOut ? '-1' : '0');
+    if (isFilteredOut) tileEl.setAttribute('aria-disabled', 'true');
+    else tileEl.removeAttribute('aria-disabled');
     tileEl.setAttribute(
       'aria-label',
       isEmpty
         ? 'Start learning'
         : isDue
-          ? `Resume ${concept.name}, ready after spacing`
+          ? `Resume ${concept.name}, due for spaced reconstruction`
           : `Resume ${concept.name}`
     );
 

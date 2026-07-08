@@ -36,6 +36,14 @@ class BuildSupabaseClientTests(unittest.TestCase):
         with self.assertRaises(AuthConfigurationError):
             build_supabase_client(URL, "")
 
+    def test_access_token_sets_authorization_header(self):
+        with patch("auth.supabase_client.create_client") as create:
+            build_supabase_client(URL, KEY, access_token="user.jwt")
+            _, kwargs = create.call_args
+            options = kwargs.get("options") or create.call_args[0][2]
+            headers = getattr(options, "headers", {}) or {}
+            self.assertEqual(headers.get("Authorization"), "Bearer user.jwt")
+
 
 if __name__ == "__main__":
     unittest.main()

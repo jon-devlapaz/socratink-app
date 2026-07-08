@@ -814,7 +814,22 @@ def _require_identified_user(request: Request):
             status_code=401,
             detail="Identified login required to sync learner state.",
         )
+    if not session.access_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Identified login required to sync learner state.",
+        )
     return session
+
+
+def _learner_state_client(session):
+    supabase_url = os.environ.get("SUPABASE_URL", "")
+    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
+    return build_supabase_client(
+        supabase_url,
+        publishable_key,
+        access_token=session.access_token,
+    )
 
 
 @app.post("/api/feedback")
@@ -859,11 +874,9 @@ class LearnerStatePayload(BaseModel):
 def get_learner_state(request: Request):
     """Return the authenticated user's synced concepts + training blob."""
     session = _require_identified_user(request)
-    supabase_url = os.environ.get("SUPABASE_URL", "")
-    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
 
     try:
-        client = build_supabase_client(supabase_url, publishable_key)
+        client = _learner_state_client(session)
         result = (
             client.table("learner_state")
             .select("schema_version,concepts,training,updated_at")
@@ -904,8 +917,6 @@ def put_learner_state(req: LearnerStatePayload, request: Request):
     if not isinstance(req.training, dict):
         raise HTTPException(status_code=400, detail="training must be an object.")
 
-    supabase_url = os.environ.get("SUPABASE_URL", "")
-    publishable_key = os.environ.get("SUPABASE_PUBLISHABLE_KEY", "")
     payload = {
         "user_id": session.user.id,
         "schema_version": req.schema_version,
@@ -915,7 +926,7 @@ def put_learner_state(req: LearnerStatePayload, request: Request):
     }
 
     try:
-        client = build_supabase_client(supabase_url, publishable_key)
+        client = _learner_state_client(session)
         # Prefer server clock when client omits updated_at.
         if payload["updated_at"] is None:
             payload.pop("updated_at")

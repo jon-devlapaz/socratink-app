@@ -21,6 +21,16 @@
   justify-content: center;
 }
 
+/* Mobile keeps a fixed frosted .main-header. layout.css clears it with
+   --chrome-h-top; this file must not wipe that padding or the desk
+   eyebrow slides under the scrim and looks cut off. Extra 28px clears
+   the backdrop-filter bloom past the header box. */
+@media (max-width: 899px) {
+  .hero-card {
+    padding: calc(var(--chrome-h-top) + 28px) 20px 80px;
+  }
+}
+
 /* Override the 2-column grid so the now-only child (the iso board) centers
    in a single column. */
 .hero-card .intro-content {
