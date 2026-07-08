@@ -134,6 +134,9 @@
   letter-spacing: -0.01em;
   line-height: 1.5;
   margin: 0 0 38px;
+  /* Prompts arrive with authored line breaks (title / instruction split).
+     Preserve them so the heading never fuses into one run-on sentence. */
+  white-space: pre-line;
   /* No italics. Gravity from weight + size. */
 }
 
@@ -344,11 +347,11 @@
 .drill-chamber__composer-foot { color: var(--text-muted, rgba(36, 32, 56, 0.55)); }
 .drill-chamber__hint { color: var(--text-muted, rgba(36, 32, 56, 0.55)); }
 .drill-chamber__send {
-  color: var(--accent-primary, #9067C6);
+  color: var(--primary-readable, #70529b);
   border-color: var(--accent-border-strong, rgba(144, 103, 198, 0.32));
 }
 .drill-chamber__voice-button {
-  color: var(--accent-primary, #9067C6);
+  color: var(--primary-readable, #70529b);
   border-color: var(--border-subtle, rgba(36, 32, 56, 0.16));
 }
 .drill-chamber__send:hover {

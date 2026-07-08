@@ -117,7 +117,6 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
             <p class="library-card-summary">${escHtml(meta.thesis)}</p>
             <div class="library-card-meta">
               ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
-              ${meta.difficulty ? `<span class="library-card-pill">${escHtml(meta.difficulty)}</span>` : ''}
               <span class="library-card-pill">${escHtml(`${meta.clusterCount} ${meta.clusterCount === 1 ? 'section' : 'sections'}`)}</span>
               <span class="library-card-pill">${escHtml(`${meta.subnodeCount} ${meta.subnodeCount === 1 ? 'entry' : 'entries'}`)}</span>
             </div>

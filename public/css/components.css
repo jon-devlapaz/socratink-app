@@ -599,6 +599,26 @@ body[data-theme="dark"] .hero-primary-action:disabled {
   font-size:20px;
   pointer-events:none;
 }
+/* The icon font is not loaded, so the generic placeholder renders the
+   kebab as a rotated square — decoration, not a menu affordance. Draw a
+   real vertical ellipsis for this control instead. */
+.concept-actions .material-symbols-outlined::before {
+  content:"\22EE";
+  border:0;
+  transform:none;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--text-sub);
+  font-size:18px;
+  font-weight:700;
+}
+.concept-actions:hover .material-symbols-outlined::before,
+.concept-actions:focus-visible .material-symbols-outlined::before,
+.concept-item.menu-open .concept-actions .material-symbols-outlined::before {
+  color:var(--primary-readable);
+}
 .concept-item:hover .concept-actions,
 .concept-item.active .concept-actions,
 .concept-item:focus-within .concept-actions,

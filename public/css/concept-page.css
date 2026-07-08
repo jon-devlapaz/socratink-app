@@ -960,7 +960,7 @@
   background: color-mix(in srgb, var(--surface) 88%, var(--accent-primary) 12%);
   box-shadow: 0 8px 20px rgba(44, 36, 61, 0.06);
   cursor: pointer;
-  color: var(--accent-primary);
+  color: var(--primary-readable);
   font: inherit;
   font-weight: 650;
 }
