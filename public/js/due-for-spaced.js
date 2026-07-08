@@ -1,4 +1,8 @@
 import { deriveNodeTraining } from './training-derive.js';
+import {
+  deriveConceptEntries,
+  getConceptEntryId,
+} from './concept-page-view.js';
 
 function parseGraphData(raw) {
   if (!raw) return null;
@@ -11,38 +15,27 @@ function parseGraphData(raw) {
 }
 
 /**
- * Drillable IDs must match concept-page route entries
- * (`deriveConceptEntries`): backbone/subnodes when present, else the
- * core-thesis fallback. Do not emit raw metadata.id — that is not an
- * activeEntryId the map view can focus.
+ * Drillable IDs must match concept-page route entries exactly
+ * (`deriveConceptEntries`). Never invent IDs the map cannot focus.
  */
 export function collectDrillableNodeIds(graphData) {
-  const ids = [];
-  if (!graphData || typeof graphData !== 'object') return ids;
-  (graphData.backbone || []).forEach((item) => {
-    if (item?.id) ids.push(item.id);
-  });
-  (graphData.clusters || []).forEach((cluster) => {
-    (cluster?.subnodes || []).forEach((subnode) => {
-      if (subnode?.id) ids.push(subnode.id);
-    });
-  });
-  if (!ids.length) ids.push('core-thesis');
-  return ids;
+  if (!graphData || typeof graphData !== 'object') return [];
+  const entries = deriveConceptEntries(graphData);
+  if (!entries.length) return ['core-thesis'];
+  return entries.map((entry, index) => getConceptEntryId(entry, index));
 }
 
 function labelForNode(graphData, nodeId) {
+  const entries = deriveConceptEntries(graphData || {});
+  const match = entries.find((entry, index) => getConceptEntryId(entry, index) === nodeId);
+  if (match) {
+    return match.label || match.name || nodeId;
+  }
   if (nodeId === 'core-thesis') {
     return graphData?.metadata?.label
       || graphData?.metadata?.name
       || graphData?.metadata?.source_title
       || 'Core thesis';
-  }
-  const backbone = (graphData?.backbone || []).find((item) => item?.id === nodeId);
-  if (backbone) return backbone.label || backbone.name || nodeId;
-  for (const cluster of graphData?.clusters || []) {
-    const sub = (cluster?.subnodes || []).find((item) => item?.id === nodeId);
-    if (sub) return sub.label || sub.name || nodeId;
   }
   return nodeId;
 }

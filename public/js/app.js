@@ -58,7 +58,7 @@ import {
   dueItemsForConcept,
   renderReadyFilterHtml,
   renderDueSelectionHtml,
-} from './due-for-spaced.js?v=5';
+} from './due-for-spaced.js?v=6';
 import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {

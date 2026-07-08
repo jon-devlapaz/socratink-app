@@ -85,6 +85,7 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
           listDueForSpaced,
           dueConceptIdSet,
           dueItemsForConcept,
+          collectDrillableNodeIds,
           renderReadyFilterHtml,
           renderDueSelectionHtml,
         } from './public/js/due-for-spaced.js';
@@ -182,6 +183,30 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
         assert.match(selection, /aria-label="Reconstruct Sensor reading from memory"/);
         assert.doesNotMatch(selection, /due-for-spaced__list/);
         assert.doesNotMatch(selection, />RECONSTRUCT</);
+
+        // Scaffolded clusters win over backbone — due IDs must match the page.
+        const clusterGraph = {
+          metadata: { id: 'core', label: 'Core' },
+          backbone: [{ id: 'bb1', label: 'Backbone only' }],
+          clusters: [{
+            id: 'cl1',
+            label: 'Cluster',
+            subnodes: [{
+              id: 'sn1',
+              label: 'Subnode one',
+              learner_scaffold: { task_label: 'Subnode one', task_cue: 'cue' },
+            }],
+          }],
+        };
+        assert.deepEqual(collectDrillableNodeIds(clusterGraph), ['sn1']);
+        assert.deepEqual(
+          collectDrillableNodeIds({
+            metadata: { id: 'core' },
+            backbone: [{ id: 'bb1', label: 'Backbone' }],
+            clusters: [{ id: 'cl1', subnodes: [{ id: 'sn1', label: 'Ignored sub' }] }],
+          }),
+          ['bb1'],
+        );
         """
     )
     assert result.returncode == 0, result.stderr
