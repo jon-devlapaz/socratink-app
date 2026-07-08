@@ -335,7 +335,7 @@ body.antigravity-theme .library-card-cta {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: -0.005em;
-  color: var(--ag-violet);
+  color: var(--primary-readable, var(--ag-violet));
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -343,18 +343,9 @@ body.antigravity-theme .library-card-cta {
   transition: gap 0.25s ease, color 0.2s ease;
 }
 
-body.antigravity-theme .library-card-cta::after {
-  content: "→";
-  font-size: 14px;
-  transition: transform 0.25s ease;
-}
-
 body.antigravity-theme .library-card.library-card-vault:hover .library-card-cta {
-  gap: 10px;
-}
-
-body.antigravity-theme .library-card.library-card-vault:hover .library-card-cta::after {
-  transform: translateX(2px);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 body.antigravity-theme .library-empty {

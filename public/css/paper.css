@@ -261,13 +261,13 @@
   color: var(--text-muted);
 }
 .composer-card .journal-meta__key {
-  color: var(--accent-primary);
+  color: var(--primary-readable);
   font-weight: 700;
 }
 .composer-card .journal-meta__value { font-style: italic; }
 .composer-card .journal-meta__sep { color: var(--text-muted); }
 .composer-card .journal-meta__add {
-  color: var(--accent-primary);
+  color: var(--primary-readable);
   font-weight: 700;
   text-decoration: underline;
   text-decoration-color: var(--accent-border);
