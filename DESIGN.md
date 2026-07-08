@@ -155,6 +155,7 @@ Design and code-contract boundaries only. For git, deploy, hooks, and other oper
 
 - Ops canon → [`AGENTS.md`](AGENTS.md)
 - Full UX manifesto → [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md)
+- SEDA/UI state alignment → [`docs/design/seda-ui-state-alignment.md`](docs/design/seda-ui-state-alignment.md)
 - Domain language → [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
 - ADR history → [`docs/adr/`](docs/adr/)
 - Product spec deep-dive → [`docs/product/spec.md`](docs/product/spec.md)
