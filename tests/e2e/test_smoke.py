@@ -1378,6 +1378,231 @@ def test_seda_start_failure_offers_retry_from_product_flow(
     assert session_attempts["count"] == 2
 
 
+def test_completed_seda_case_projects_visible_evidence(
+    page: Page, base_url: str
+) -> None:
+    """A completed SEDA case must surface as visible evidence, never solidified.
+
+    The SEDA loop simulates spacing with fixed timestamps 20h apart. Projection
+    must re-stamp attempts to real time so one sitting derives primed at most.
+    """
+    _enter_app_shell_as_guest(page, base_url)
+
+    def fulfill_extract(route) -> None:
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {"core_thesis": "Immune memory speeds the next response."},
+                    "backbone": [{"id": "b1", "principle": "Immune memory persists."}],
+                    "clusters": [{
+                        "id": "c1",
+                        "label": "Memory cells",
+                        "subnodes": [{
+                            "id": "c1_s1",
+                            "label": "Memory cells",
+                            "mechanism": "Memory cells persist after exposure.",
+                            "learner_scaffold": {
+                                "entry_prompt": "Why is the second exposure faster?",
+                                "task_cue": "Explain the role of memory cells.",
+                            },
+                        }],
+                    }],
+                },
+            }),
+        )
+
+    def fulfill_session(route) -> None:
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "projection-session-1",
+                "status": "awaiting_input",
+                "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
+                "learnerTranscript": [],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    # The completed record carries backend node ids and the fixed simulated
+    # timestamps (2026-05-15 cold, 2026-05-16 spaced) from lib/seda/constants.mjs.
+    completed_record = {
+        "sessionId": "projection-session-1",
+        "status": "complete",
+        "awaiting": None,
+        "learnerTranscript": [],
+        "caseComplete": True,
+        "record": {
+            "concept_id": "immune-memory-persists",
+            "training": {
+                "node_records": {
+                    "seda-node-1": {
+                        "attempts": [
+                            {
+                                "id": "cold-1",
+                                "at": "2026-05-15T10:00:00.000Z",
+                                "user_text": "Memory cells remain after the first exposure.",
+                                "classification": "strong",
+                                "gaps": [],
+                                "grader_version": "tui",
+                                "kind": "cold",
+                            },
+                            {
+                                "id": "spaced-1",
+                                "at": "2026-05-16T06:00:00.000Z",
+                                "user_text": "They respond faster on the next exposure.",
+                                "classification": "strong",
+                                "gaps": [],
+                                "grader_version": "tui",
+                                "kind": "spaced",
+                            },
+                        ],
+                        "repairs": [],
+                    },
+                },
+            },
+        },
+    }
+
+    def fulfill_turn(route) -> None:
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(completed_record),
+        )
+
+    page.route("**/api/extract", fulfill_extract)
+    page.route("**/api/session", fulfill_session)
+    page.route(re.compile(r".*/api/session/[^/]+/turn$"), fulfill_turn)
+
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill(
+        "I want to explain why vaccines create immune memory."
+    )
+    page.locator("#hero-door-submit").click()
+    page.locator("#launch-pad-input").fill(
+        "The first exposure leaves cells that remember the pathogen."
+    )
+    page.locator("#launch-pad-submit").click()
+
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    # Mirror the proven-stable SEDA choreography: wait until the launch_attempt
+    # turn is wired into localStorage before sending, so the turn cannot race.
+    page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
+          if (!key) return false;
+          const value = JSON.parse(localStorage.getItem(key) || 'null');
+          return value?.sessionId && value?.latest?.awaiting?.key === 'launch_attempt';
+        }""",
+        timeout=20_000,
+    )
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-hint")).to_have_text(
+        "Write a sentence before checking."
+    )
+    page.locator("#chamber-composer").fill(
+        "Memory cells remain after the first exposure and make the second response faster."
+    )
+    expect(page.locator("#chamber-hint")).to_have_text("A sentence is enough.")
+    page.locator("#chamber-send").click()
+
+    projected = page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:training:v1:${conceptId}` : null;
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key) || 'null');
+          const record = value?.node_records?.['c1_s1'];
+          return record?.attempts?.length ? { attempts: record.attempts } : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+
+    attempts = projected["attempts"]
+    assert len(attempts) == 2
+    assert attempts[0]["user_text"] == "Memory cells remain after the first exposure."
+    # Product truth: re-stamped to real time, so the simulated ~20h gap is gone
+    # and a single sitting cannot clear the 18h spacing gate for solidified.
+    now_ms = page.evaluate("Date.now()")
+    for attempt in attempts:
+        stamped_ms = page.evaluate("(iso) => Date.parse(iso)", attempt["at"])
+        assert abs(now_ms - stamped_ms) < 5 * 60 * 1000
+
+    # Assert the projected *derived state* directly, not just the visible text:
+    # one re-stamped sitting must derive `primed`, never `solidified`.
+    derived_state = page.evaluate(
+        """async () => {
+          const { deriveNodeTraining } = await import('/js/training-derive.js');
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = `socratink:training:v1:${conceptId}`;
+          const training = JSON.parse(localStorage.getItem(key) || 'null');
+          return deriveNodeTraining(training.node_records['c1_s1']).state;
+        }"""
+    )
+    assert derived_state == "primed"
+
+    page.locator("#chamber-exit").click()
+    page.reload()
+    # The evidence artifact renders the strongest/latest reconstruction turn.
+    expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
+        "They respond faster on the next exposure.", timeout=20_000
+    )
+    # Never solidified from one sitting.
+    expect(page.locator(".concept-page-b2__evidence")).not_to_contain_text(
+        "Solidified", timeout=20_000
+    )
+
+    # Exercise the pure projection contract across its remaining branches in the
+    # browser: fresh-training fallback, the study-reveal carry, and the
+    # per-session idempotency guard that stops resume from duplicating attempts.
+    contract = page.evaluate(
+        """async () => {
+          const { projectCompletedSedaRecord } =
+            await import('/js/seda-evidence-projection.js');
+          const record = {
+            training: {
+              node_records: {
+                'backend-node': {
+                  attempts: [{
+                    id: 'cold-1', at: '2026-05-15T10:00:00.000Z',
+                    user_text: 'a', classification: 'strong', gaps: [],
+                    grader_version: 'tui', kind: 'cold',
+                  }],
+                  repairs: [],
+                  study_revealed_at: '2026-05-15T10:12:00.000Z',
+                },
+              },
+            },
+          };
+          const now = new Date().toISOString();
+          const first = projectCompletedSedaRecord({
+            training: null, conceptId: 'c', nodeId: 'n', sessionId: 'sess-x', now, record,
+          });
+          const repeat = projectCompletedSedaRecord({
+            training: first, conceptId: 'c', nodeId: 'n', sessionId: 'sess-x', now, record,
+          });
+          const node = first.node_records['n'];
+          return {
+            builtFreshConcept: first.concept_id === 'c',
+            studyRevealedAt: node.study_revealed_at,
+            attemptAt: node.attempts[0].at,
+            now,
+            idempotent: repeat === null,
+          };
+        }"""
+    )
+    assert contract["builtFreshConcept"] is True
+    assert contract["idempotent"] is True
+    # study_revealed_at is re-stamped to real time, not the simulated constant.
+    assert contract["studyRevealedAt"] == contract["now"]
+    assert contract["attemptAt"] == contract["now"]
+
+
 def test_direct_loop_route_redirects_to_app_shell(
     page: Page, base_url: str
 ) -> None:
