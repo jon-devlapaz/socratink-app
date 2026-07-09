@@ -40,7 +40,7 @@
     pointer-events: auto !important;
   }
 
-  /* Main content — full remaining width */
+  /* Main content — full remaining width; own the vertical scroll when Desk grows */
   #card {
     flex: 1;
     max-width: none;
@@ -53,7 +53,12 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow-x: hidden;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /* Hide bottom nav on desktop */
@@ -145,7 +150,9 @@ body:not([data-map-open="true"]) .map-back-link {
 }
 .intro-page {
   position: relative;
-  overflow: hidden;
+  /* Visible so a tall due-for-spaced list can grow the desk and page-scroll.
+     Decorative bleed is handled by the card radius, not overflow clipping. */
+  overflow: visible;
 }
 .intro-content {
   position: relative;
@@ -204,7 +211,21 @@ body:not([data-map-open="true"]) .map-back-link {
 
 /* ─── Mobile (< 900px): centered-card layout ──────────────── */
 @media (max-width: 899px) {
-  body { flex-direction: column; align-items: center; justify-content: center; }
+  /* flex-start + margin-block:auto on #card: short desks stay centered,
+     tall desks (due list + board) start at the top and page-scroll.
+     justify-content:center clips overflow above the viewport. */
+  body {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #card {
+    margin-block: auto;
+    width: 100%;
+  }
 
   #launch-pad-view {
     max-height: 100dvh;

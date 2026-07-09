@@ -35,6 +35,8 @@ class AuthSessionState:
     sealed_session: str | None = None
     should_clear_cookie: bool = False
     error_reason: str | None = None
+    # Server-only: never included in to_public_dict(). Used for PostgREST RLS.
+    access_token: str | None = None
 
     def to_public_dict(self) -> dict[str, Any]:
         return {
@@ -330,6 +332,7 @@ class SupabaseAuthService:
             user=user,
             guest_mode=True,
             sealed_session=sealed,
+            access_token=access_token,
         )
 
     def build_local_dev_guest_session(self) -> AuthSessionState:
@@ -403,6 +406,7 @@ class SupabaseAuthService:
             authenticated=True,
             user=_map_supabase_user(user),
             guest_mode=bool(claims.get("is_anonymous", False)),
+            access_token=tokens["access_token"],
         )
 
     def _refresh_session(self, refresh_token: str) -> AuthSessionState:
@@ -459,6 +463,7 @@ class SupabaseAuthService:
             user=_map_supabase_user(user) if authenticated else None,
             guest_mode=is_anon,
             sealed_session=sealed,
+            access_token=access_token if authenticated else None,
         )
 
 
