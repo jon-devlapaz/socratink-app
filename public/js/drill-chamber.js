@@ -48,6 +48,7 @@ function bind() {
   const view = document.getElementById('drill-chamber-view');
   if (els.bound && els.view === view) {
     els.hint = document.getElementById('chamber-hint');
+    els.verdict = document.getElementById('chamber-verdict');
     return hasRequiredElements();
   }
   els.bound = false;
@@ -64,6 +65,7 @@ function bind() {
   els.hint = document.getElementById('chamber-hint');
   els.exit = document.getElementById('chamber-exit');
   els.chatLog = document.getElementById('chamber-chat-log');
+  els.verdict = document.getElementById('chamber-verdict');
 
   if (!hasRequiredElements()) return false;
 
@@ -113,6 +115,7 @@ function show({ conceptName, entryName, question }) {
   if (!bind()) return;
   els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
   clearCompletionAction();
+  clearVerdict();
   resetComposerHint();
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
@@ -172,6 +175,7 @@ function appendHistoryTurn(role, text) {
 function swapQuestion(nextText) {
   if (!bind()) return;
   clearCompletionAction();
+  clearVerdict();
   els.active.classList.add('is-fading-out');
   setTimeout(() => {
     if (!hasRequiredElements()) return;
@@ -225,7 +229,10 @@ function clearComposer() {
 }
 
 function setComposerHint(text) {
-  if (els.hint) els.hint.textContent = text;
+  if (els.hint) {
+    els.hint.textContent = text;
+    els.hint.classList?.toggle?.('is-error', Boolean(text && text !== DEFAULT_HINT));
+  }
   setVoiceStatus(text === DEFAULT_HINT ? '' : text);
 }
 
@@ -240,6 +247,32 @@ function clearCompletionAction() {
   els.send.textContent = DEFAULT_SEND_LABEL;
   els.composer.placeholder = _originalPlaceholder;
   resetComposerHint();
+}
+
+function clearVerdict() {
+  if (!bind() || !els.verdict) return;
+  els.verdict.textContent = '';
+  els.verdict.hidden = true;
+}
+
+function appendVerdict(text) {
+  if (!bind() || !els.verdict) return;
+  const copy = String(text || '').trim();
+  if (!copy) return;
+  els.verdict.textContent = '';
+  copy.split(' • ').forEach((segment, index) => {
+    if (index > 0) {
+      const sep = document.createElement('span');
+      sep.className = 'drill-chamber__verdict-sep';
+      sep.textContent = '•';
+      els.verdict.appendChild(sep);
+    }
+    const part = document.createElement('span');
+    part.className = 'drill-chamber__verdict-seg';
+    part.textContent = segment;
+    els.verdict.appendChild(part);
+  });
+  els.verdict.hidden = false;
 }
 
 function setCompletionAction(label = 'Return to concept', handler = null) {
@@ -412,6 +445,6 @@ window.DrillChamber = {
   show, hide, appendHistoryTurn, swapQuestion,
   setComposerEnabled, setLoading, setCompletionAction,
   getComposerValue, clearComposer,
-  appendCreed,
+  appendCreed, appendVerdict, clearVerdict,
   onSend, onExit,
 };

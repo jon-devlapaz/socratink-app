@@ -30,7 +30,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=29';
+} from './concept-page-view.js?v=31';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -74,7 +74,10 @@ import {
   runDrillTurn,
 } from './api-client.js?v=2';
 import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=2';
-import { projectCompletedSedaRecord } from './seda-evidence-projection.js';
+import {
+  projectCompletedSedaRecord,
+  projectLatestSedaAttemptEvent,
+} from './seda-evidence-projection.js';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -97,7 +100,13 @@ import {
   buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=3';
+} from './launch-pad.js?v=5';
+import {
+  coldAttemptCompletionLabel,
+  nextSedaPromptAfterVerdict,
+  sedaCompleteCompletionLabel,
+  verdictCopy,
+} from './drill-verdict.js?v=2';
 import { emitTelemetry } from './telemetry.js';
 
 import {
@@ -652,6 +661,11 @@ const App = (() => {
       conceptField.value = '';
       conceptField.style.height = '';
     }
+    const guessField = document.getElementById('hero-cold-guess-field');
+    if (guessField) {
+      guessField.value = '';
+      guessField.style.height = '';
+    }
     // Reset any pending source selection from the door affordance.
     App._pendingDoorSource = null;
     const sourceAttachBtn = document.getElementById('hero-source-attach');
@@ -675,14 +689,16 @@ const App = (() => {
   function runHeroAction(evtOrNothing) {
     // C-prime door submit handler. Reads the concept input and the pending
     // source (if the learner expanded the source-attach panel). Branches:
-    //   source attached → existing concept-create modal flow (source path)
-    //   no source       → write sessionStorage pending shell → showLaunchPad()
+    //   source attached → direct source extraction
+    //   no source       → write sessionStorage pending shell → run launch submit
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       const conceptField = document.getElementById('hero-single-input-field');
+      const guessField = document.getElementById('hero-cold-guess-field');
       const rawName = (conceptField ? conceptField.value : '').trim();
+      const coldGuess = (guessField ? guessField.value : '').trim();
       const shell = buildPendingShellFromDoorInput(rawName);
-      if (!shell.name) return false;
+      if (!shell.name || !coldGuess) return false;
 
       const sourcePayload = App._pendingDoorSource || null;
 
@@ -701,13 +717,12 @@ const App = (() => {
           name_normalized: shell.name !== rawName,
         });
         /* c8 ignore next -- source-attached submit enters the live extraction path; source UI contracts are covered separately. */
-        runSourceAttachedSubmit({ name: shell.name, source: sourcePayload });
+        runSourceAttachedSubmit({ name: shell.name, source: sourcePayload, startingSketch: coldGuess });
         return false;
       }
 
-      // Source-less path: write pending shell to sessionStorage, then navigate
-      // to the launch pad. DO NOT call /api/extract here — the launch pad
-      // captures the learner's threshold first (C-prime principle #2).
+      // Source-less path: write pending shell to sessionStorage, then reuse
+      // launch-pad.js's submit/persist path from the same screen.
       try {
         sessionStorage.setItem(
           'socratink:pendingShell',
@@ -730,8 +745,12 @@ const App = (() => {
         sourceless: true,
         name_normalized: shell.name !== rawName,
       });
-      App.showLaunchPad();
-      return false;
+      return _runLaunchPadAction(evtOrNothing, App, {
+        input: guessField,
+        submit: document.getElementById('hero-door-submit'),
+        validation: document.getElementById('hero-door-error'),
+        form: document.getElementById('hero-single-input'),
+      });
     }
 
     // Non-form path: the Begin button drives Begin/Extract/Drill/Open-map.
@@ -770,7 +789,10 @@ const App = (() => {
   // ≥2 trimmed chars matches the brainstorm spec for the door.
   function _doorReady() {
     const f = document.getElementById('hero-single-input-field');
-    return !!f && (f.value || '').trim().length >= 2;
+    const guess = document.getElementById('hero-cold-guess-field');
+    return !!f && !!guess
+      && (f.value || '').trim().length >= 2
+      && (guess.value || '').trim().length > 0;
   }
   function _doorUpdateSubmitState() {
     const submitBtn = document.getElementById('hero-door-submit');
@@ -848,14 +870,16 @@ const App = (() => {
   }
 
   function initHeroSingleInput() {
-    // C-prime door: one concept textarea + source-attach toggle.
+    // C-prime door: concept textarea + cold-guess textarea + source toggle.
     const conceptField = document.getElementById('hero-single-input-field');
+    const guessField = document.getElementById('hero-cold-guess-field');
     if (!(conceptField instanceof HTMLTextAreaElement)) return;
 
     const form = document.getElementById('hero-single-input');
 
-    // Enable/disable submit based on non-empty concept input.
+    // Enable/disable submit based on non-empty concept + cold guess.
     conceptField.addEventListener('input', _doorUpdateSubmitState);
+    guessField?.addEventListener('input', _doorUpdateSubmitState);
     _doorUpdateSubmitState();
 
     // Audio feedback (preserve existing behavior).
@@ -864,6 +888,7 @@ const App = (() => {
       (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
 
     conceptField.addEventListener('focus', () => AudioFX.playFocusTap());
+    guessField?.addEventListener('focus', () => AudioFX.playFocusTap());
     conceptField.addEventListener('keydown', (e) => {
       if (isPrintable(e)) {
         AudioFX.playKeyClick();
@@ -881,6 +906,9 @@ const App = (() => {
           form?.requestSubmit?.();
         }
       }
+    });
+    guessField?.addEventListener('keydown', (e) => {
+      if (isPrintable(e)) AudioFX.playKeyClick();
     });
 
     // Wire the source-attach toggle.
@@ -1378,7 +1406,7 @@ const App = (() => {
 
   // ── persistCreatedConceptFromLaunchPad ────────────────────────────────────
   // Mirrors the persistence phase of finishConceptCreateAfterOverlay for the
-  // C-prime launch-pad flow. No overlay to tear down; no source material.
+  // C-prime launch-pad flow. Overlay teardown stays in launch-pad.js.
   // Caller (launch-pad.js) clears the pending shell ONLY AFTER this returns
   // without throwing, maintaining the persistence-then-clear ordering contract.
   //
@@ -1518,7 +1546,7 @@ const App = (() => {
   //   source — { type: 'text'|'url'|'file', text?, url?, filename? } payload
   //            captured by the door's source-panel.
   /* c8 ignore next -- source-attached creation uses the same persistence boundary as launch-pad and is covered by live smoke. */
-  async function runSourceAttachedSubmit({ name, source }) {
+  async function runSourceAttachedSubmit({ name, source, startingSketch = '' }) {
     const setDoorError = (msg) => {
       const errEl = document.getElementById('hero-door-error');
       if (errEl) {
@@ -1568,7 +1596,7 @@ const App = (() => {
     try {
       const data = await submitConceptCreate({
         name,
-        startingSketch: '',
+        startingSketch,
         source: resolvedSource,
       });
       const provisionalMap = data.provisional_map || data.knowledge_map || null;
@@ -1587,7 +1615,7 @@ const App = (() => {
         knowledgeMap: provisionalMap,
         startedAtIso: new Date().toISOString(),
         startedPerf: performance.now(),
-        startingSketch: '',
+        startingSketch,
         source: resolvedSource,
         overlayHandle,
       });
@@ -3246,6 +3274,7 @@ const App = (() => {
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
     const field = document.getElementById('hero-single-input-field');
+    const guessField = document.getElementById('hero-cold-guess-field');
     const submit = document.getElementById('hero-door-submit');
     const sourceAttach = document.getElementById('hero-source-attach');
     const capCta = gate?.querySelector('.ig-button');
@@ -3264,6 +3293,7 @@ const App = (() => {
     }
 
     if (field) field.disabled = atCap;
+    if (guessField) guessField.disabled = atCap;
     // pointer-events:none on the form's data-state="locked" stops mouse
     // input but does not prevent keyboard focus; setting disabled also
     // removes the button from the tab order so kb users can't Enter it
@@ -3490,7 +3520,14 @@ const App = (() => {
       : sedaPromptFromResponse(data);
   }
 
-  function saveSedaResponse(concept, nodeContext, data) {
+  function openStudyAfterVerdict(conceptId, nodeId) {
+    cancelDrill();
+    const concept = loadConcepts().find((item) => item?.id === conceptId) || getActiveConcept();
+    if (!concept) return;
+    void revealStudyForEntry(nodeId, concept, parseConceptGraphData(concept) || {});
+  }
+
+  async function saveSedaResponse(concept, nodeContext, data) {
     if (!concept?.id || !data?.sessionId) return;
     persistSedaSessionState(concept.id, {
       sessionId: data.sessionId,
@@ -3499,7 +3536,7 @@ const App = (() => {
       record: data.record || null,
     });
     if (data.caseComplete && data.record) {
-      void projectSedaEvidence(concept, nodeContext, data);
+      await projectSedaEvidence(concept, nodeContext, data);
     }
   }
 
@@ -3520,6 +3557,28 @@ const App = (() => {
     } catch (err) {
       /* c8 ignore next 2 -- defensive storage failure branch. */
       console.warn('SEDA evidence projection unavailable.', err);
+    }
+  }
+
+  async function projectSedaAttemptEvent(concept, nodeContext, data) {
+    try {
+      const training = await trainingStore.loadTraining(concept.id);
+      const next = projectLatestSedaAttemptEvent({
+        training,
+        conceptId: concept.id,
+        nodeId: nodeContext?.id || null,
+        data,
+        sessionId: data.sessionId,
+      });
+      if (!next) return false;
+      await trainingStore.saveTraining(next);
+      const projected = next.node_records?.[nodeContext?.id || ''];
+      const attempts = Array.isArray(projected?.attempts) ? projected.attempts : [];
+      return attempts[attempts.length - 1]?.classification || true;
+    } catch (err) {
+      /* c8 ignore next 2 -- defensive storage failure branch. */
+      console.warn('SEDA attempt projection unavailable.', err);
+      return false;
     }
   }
 
@@ -3544,7 +3603,7 @@ const App = (() => {
     if (data?.awaiting?.key === 'learner_goal') {
       data = await sendSedaTurn(data.sessionId, concept.learnerGoal || '');
     }
-    saveSedaResponse(concept, nodeContext, data);
+    await saveSedaResponse(concept, nodeContext, data);
     return data;
   }
 
@@ -4387,23 +4446,45 @@ const App = (() => {
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
 
       drillState.sedaSessionId = data.sessionId;
-      saveSedaResponse(concept, drillState.node, data);
+      await saveSedaResponse(concept, drillState.node, data);
+      if (sessionToken !== drillState.sessionToken || !drillState.node) return;
+      const projectedAttemptClassification = data.caseComplete
+        ? null
+        : await projectSedaAttemptEvent(concept, drillState.node, data);
+      const studyReady = data.caseComplete || Boolean(projectedAttemptClassification);
+      if (sessionToken !== drillState.sessionToken || !drillState.node) return;
+      const previousPrompt = chamberLastShownQuestion;
       const promptText = sedaPromptFromResponse(data);
+      const nextPrompt = nextSedaPromptAfterVerdict(promptText, previousPrompt, userText);
       drillState.messages.push({ role: 'user', content: userText });
-      drillState.messages.push({ role: 'assistant', content: promptText });
-      chamberLastShownQuestion = promptText;
+      drillState.messages.push({ role: 'assistant', content: studyReady ? promptText : nextPrompt });
+      chamberLastShownQuestion = studyReady ? promptText : nextPrompt;
       drillState.pending = false;
-      drillState.sessionCompletePending = Boolean(data.caseComplete);
+      drillState.sessionCompletePending = Boolean(studyReady);
       persistSessionState();
 
       if (window.DrillChamber) {
         window.DrillChamber.setLoading?.(false);
-        window.DrillChamber.swapQuestion(promptText);
-        if (data.caseComplete) {
-          /* c8 ignore next -- completed-loop button behavior is covered by API evidence proof; browser smoke covers active turn routing. */
-          window.DrillChamber.setCompletionAction?.('Return to concept', () => cancelDrill());
+        if (studyReady) {
+          window.DrillChamber.appendVerdict?.(verdictCopy({
+            userText,
+            sedaComplete: data.caseComplete,
+            classification: projectedAttemptClassification || undefined,
+          }));
         } else {
-          window.DrillChamber.setComposerEnabled(true);
+          window.DrillChamber.swapQuestion(nextPrompt);
+          setTimeout(() => {
+            window.DrillChamber?.appendVerdict?.(verdictCopy({ userText }));
+            window.DrillChamber?.setCompletionAction?.('Keep going', () => {
+              window.DrillChamber?.setComposerEnabled(true);
+            });
+          }, 260);
+        }
+        if (studyReady) {
+          /* c8 ignore next -- completed-loop button behavior is covered by API evidence proof; browser smoke covers active turn routing. */
+          window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(concept.id, drillState.node?.id));
+        } else {
+          window.DrillChamber.setComposerEnabled(false);
         }
       }
     } catch (err) {
@@ -4546,6 +4627,12 @@ const App = (() => {
         if (data.agent_response?.trim()) {
           drillState.messages.push({ role: 'assistant', content: data.agent_response.trim() });
         }
+        if (window.DrillChamber && completedNodeTurn && userText) {
+          window.DrillChamber.appendVerdict?.(verdictCopy({
+            classification: mapDrillClassificationForTraining(data.classification),
+            userText,
+          }));
+        }
         drillState.pending = false;
         drillState.sessionCompletePending = data.routing === 'SESSION_COMPLETE' || Boolean(data.session_terminated);
 
@@ -4566,7 +4653,13 @@ const App = (() => {
         if (window.DrillChamber) {
           window.DrillChamber.setLoading?.(false);
           if (completedNodeTurn || data.session_terminated) {
-            window.DrillChamber.setCompletionAction?.('Return to concept', () => cancelDrill());
+            const coldClassification = mapDrillClassificationForTraining(data.classification);
+            window.DrillChamber.setCompletionAction?.(
+              completedColdAttempt ? coldAttemptCompletionLabel(coldClassification) : 'Return to concept',
+              completedColdAttempt
+                ? () => openStudyAfterVerdict(concept.id, drillState.node?.id)
+                : () => cancelDrill(),
+            );
           } else {
             window.DrillChamber.setComposerEnabled(true);
           }
@@ -4786,7 +4879,7 @@ const App = (() => {
             /* c8 ignore start -- opening an already-complete stored session is covered by API proof, not browser smoke. */
             if (data.caseComplete) {
               drillState.sessionCompletePending = true;
-              window.DrillChamber.setCompletionAction?.('Return to concept', () => cancelDrill());
+              window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(concept.id, nodeContext?.id));
             } else if (initialSedaTurnText) {
               window.DrillChamber.appendHistoryTurn('ai', promptText);
               window.DrillChamber.appendHistoryTurn('learner', initialSedaTurnText);
@@ -5093,6 +5186,7 @@ const App = (() => {
     // runLaunchPadAction is called by the launch-pad form onsubmit handler.
     // It reads the pending shell, posts to /api/extract, persists, and navigates.
     runLaunchPadAction(event) { return _runLaunchPadAction(event, App); },
+    mountExtractOverlayForLaunchPad(name) { return mountExtractOverlay({ name }); },
     // persistCreatedConceptFromLaunchPad — called by launch-pad.js after a
     // successful /api/extract response. Performs localStorage write, grid
     // refresh, and concept selection. Throws on invalid map so launch-pad.js

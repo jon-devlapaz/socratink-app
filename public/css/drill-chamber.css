@@ -44,7 +44,7 @@
   opacity: 0.78;
   transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.drill-chamber-view:has(.drill-chamber__composer textarea:focus) .drill-chamber__crumb {
+.drill-chamber-view:has(.drill-chamber__composer textarea:focus-visible) .drill-chamber__crumb {
   opacity: 0.30;
 }
 .drill-chamber__crumb a {
@@ -232,6 +232,40 @@
   border: 0;
 }
 
+.drill-chamber__active[data-loading="true"] {
+  opacity: 0.82;
+}
+
+.drill-chamber__verdict {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(var(--paper-0-rgb), 0.64);
+  color: var(--text-strong);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  box-shadow: 0 1px 0 rgba(var(--paper-0-rgb), 0.80) inset;
+}
+
+.drill-chamber__verdict[hidden] {
+  display: none;
+}
+
+.drill-chamber__verdict-seg {
+  display: inline;
+}
+
+.drill-chamber__verdict-seg:first-child {
+  font-weight: 650;
+}
+
+.drill-chamber__verdict-sep {
+  display: inline-block;
+  margin: 0 8px;
+  color: var(--text-muted);
+}
+
 .drill-chamber__active[data-complete="true"] .drill-chamber__composer textarea,
 .drill-chamber__active[data-complete="true"] .drill-chamber__hint,
 .drill-chamber__active[data-complete="true"] .drill-chamber__voice-button {
@@ -346,6 +380,9 @@
 .drill-chamber__composer textarea::placeholder { color: rgba(36, 32, 56, 0.36); }
 .drill-chamber__composer-foot { color: var(--text-muted, rgba(36, 32, 56, 0.55)); }
 .drill-chamber__hint { color: var(--text-muted, rgba(36, 32, 56, 0.55)); }
+.drill-chamber__hint.is-error {
+  color: #7f3f2f;
+}
 .drill-chamber__send {
   color: var(--primary-readable, #70529b);
   border-color: var(--accent-border-strong, rgba(144, 103, 198, 0.32));
@@ -435,6 +472,9 @@
 }
 [data-theme="dark"] .drill-chamber__composer-foot { color: rgba(247, 236, 225, 0.36); }
 [data-theme="dark"] .drill-chamber__hint { color: rgba(247, 236, 225, 0.36); }
+[data-theme="dark"] .drill-chamber__hint.is-error {
+  color: rgba(255, 182, 160, 0.86);
+}
 [data-theme="dark"] .drill-chamber__send {
   color: rgba(176, 156, 224, 0.85);
   border-color: rgba(176, 156, 224, 0.32);
@@ -454,6 +494,13 @@
   background: rgba(176, 156, 224, 0.10);
   border-color: rgba(176, 156, 224, 0.60);
   color: rgba(247, 236, 225, 0.96);
+}
+
+[data-theme="dark"] .drill-chamber__verdict {
+  background: rgba(247, 236, 225, 0.05);
+  border-color: rgba(247, 236, 225, 0.10);
+  color: rgba(247, 236, 225, 0.86);
+  box-shadow: none;
 }
 
 /* ------- First-cold-attempt creed ------- */
@@ -579,6 +626,10 @@
 }
 
 @media (max-width: 720px) {
+  .drill-chamber__inner {
+    padding: 24px 20px 78px;
+  }
+
   .concept-page-b2__active-entry .drill-chamber__crumb {
     align-items: flex-start;
     flex-wrap: wrap;
@@ -592,6 +643,15 @@
   .drill-chamber__composer-foot {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .drill-chamber__composer-actions,
+  .drill-chamber__send {
+    width: 100%;
+  }
+
+  .drill-chamber__send {
+    min-height: 42px;
   }
 }
 

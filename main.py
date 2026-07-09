@@ -374,12 +374,14 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
 def _fallback_smallest_route_from_sketch(
     *, concept: str, launch_attempt: str, learner_goal: str | None = None
 ) -> ProvisionalMap:
-    sketch_excerpt = launch_attempt.strip()[:160] or concept
+    raw_sketch = launch_attempt.strip()
+    sketch_excerpt = raw_sketch[:157].rstrip() + "..." if len(raw_sketch) > 160 else raw_sketch
+    sketch_excerpt = sketch_excerpt or concept
     anchor = "You named parts in your sketch; start by connecting two of them."
     if learner_goal:
         anchor = "Use your goal and sketch, then connect two named parts."
     entry_prompt = (
-        f'You wrote: "{sketch_excerpt}". '
+        f'You wrote: "{sketch_excerpt}" '
         "What do you think connects those parts?"
     )
     return ProvisionalMap(

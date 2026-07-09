@@ -77,6 +77,15 @@ function hasLaunchAttempt(text) {
   return normalizeWhitespace(text).length > 0;
 }
 
+function launchPadControls(controls = {}) {
+  return {
+    input: controls.input || document.getElementById('launch-pad-input'),
+    submit: controls.submit || document.getElementById('launch-pad-submit'),
+    validation: controls.validation || document.getElementById('launch-pad-validation'),
+    form: controls.form || document.getElementById('launch-pad-form'),
+  };
+}
+
 function readPendingShell() {
   try {
     const raw = sessionStorage.getItem(PENDING_SHELL_KEY);
@@ -169,9 +178,7 @@ export function showLaunchPad(App) {
   });
 
   // Reset validation and input from any prior visit.
-  const input = document.getElementById('launch-pad-input');
-  const submit = document.getElementById('launch-pad-submit');
-  const validation = document.getElementById('launch-pad-validation');
+  const { input, submit, validation } = launchPadControls();
   if (input) input.value = '';
   if (submit) submit.disabled = true;
   if (validation) validation.textContent = '';
@@ -229,7 +236,7 @@ export function showLaunchPad(App) {
  * @param {object} App   The App namespace object (passed by app.js wrapper).
  * @returns {false}  Always returns false to suppress default form submission.
  */
-export async function runLaunchPadAction(event, App) {
+export async function runLaunchPadAction(event, App, controls = {}) {
   if (event && typeof event.preventDefault === 'function') {
     event.preventDefault();
   }
@@ -241,9 +248,7 @@ export async function runLaunchPadAction(event, App) {
     return false;
   }
 
-  const input = document.getElementById('launch-pad-input');
-  const submit = document.getElementById('launch-pad-submit');
-  const validation = document.getElementById('launch-pad-validation');
+  const { input, submit, validation, form } = launchPadControls(controls);
   const threshold = (input ? input.value : '').trim();
 
   if (!hasLaunchAttempt(threshold)) {
@@ -270,7 +275,6 @@ export async function runLaunchPadAction(event, App) {
   // aria-busy="true" tells assistive tech the surface is updating;
   // form.dataset.state='busy' drives the paper composer's dim
   // (paper.css .composer-card[data-state="busy"]).
-  const form = document.getElementById('launch-pad-form');
   if (form) {
     form.setAttribute('aria-busy', 'true');
     form.dataset.state = 'busy';
@@ -281,6 +285,7 @@ export async function runLaunchPadAction(event, App) {
     form.dataset.state = '';
     if (submit) submit.textContent = originalSubmitLabel;
   };
+  const overlayHandle = App.mountExtractOverlayForLaunchPad?.(shell.name) || null;
 
   // ── Step 1: POST /api/extract ─────────────────────────────────────────────
   // Telemetry is emitted AFTER the network result is known — one event per
@@ -303,6 +308,7 @@ export async function runLaunchPadAction(event, App) {
         : MISSING_THRESHOLD_COPY;
       if (validation) validation.textContent = validationCopy;
       if (submit) submit.disabled = false;
+      overlayHandle?.removeOverlay(false);
       clearBuildingState();
       emitTelemetry('concept_create.launch_pad.submit', {
         threshold_len: threshold.length,
@@ -333,6 +339,7 @@ export async function runLaunchPadAction(event, App) {
       : 'Something went wrong. Try again.';
     if (validation) validation.textContent = fallbackMsg;
     if (submit) submit.disabled = false;
+    overlayHandle?.removeOverlay(false);
     clearBuildingState();
     return false;
   }
@@ -367,6 +374,7 @@ export async function runLaunchPadAction(event, App) {
       : 'Could not save the concept locally. Try again.';
     if (validation) validation.textContent = msg;
     if (submit) submit.disabled = false;
+    overlayHandle?.removeOverlay(false);
     clearBuildingState();
     return false;
   }
@@ -377,6 +385,7 @@ export async function runLaunchPadAction(event, App) {
   // ── Step 4: Navigate to graph view ───────────────────────────────────────
   // App.navigateToGraphViewFromLaunchPad handles selectConcept + showMapView
   // and passes {fromLaunchPad: true} for Round E's skeleton-line hook.
+  overlayHandle?.removeOverlay(true);
   App.navigateToGraphViewFromLaunchPad({ fromLaunchPad: true });
 
   return false;

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 from urllib.parse import urljoin
 
 from playwright.sync_api import Page, expect
@@ -20,30 +21,108 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     expect(page.locator("#concept-list")).to_be_attached()
 
 
-def test_launch_pad_displays_normalized_concept_and_goal(
+def test_door_forwards_normalized_concept_and_cold_guess(
     clean_page: Page, base_url: str
 ) -> None:
+    captured_payloads: list[dict] = []
+
+    def fulfill_extract(route) -> None:
+        payload = route.request.post_data_json
+        captured_payloads.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {
+                        "core_thesis": "Sodium rushing into a neuron starts an electrical signal.",
+                    },
+                    "backbone": [{"id": "b1", "principle": "Sodium influx changes voltage."}],
+                    "clusters": [{
+                        "id": "c1",
+                        "label": "Sodium influx",
+                        "subnodes": [{
+                            "id": "c1_s1",
+                            "label": "Sodium influx",
+                            "mechanism": "Sodium entering the neuron changes membrane voltage.",
+                        }],
+                    }],
+                },
+            }),
+        )
+
+    clean_page.route("**/api/extract", fulfill_extract)
     _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.locator("#nav-ignition").click()
     clean_page.locator("#hero-single-input-field").fill(
         "I want to understand why sodium rushing into a neuron starts an electrical signal"
     )
+    clean_page.locator("#hero-cold-guess-field").fill(
+        "I think sodium crosses the membrane and that changes the electrical state."
+    )
     clean_page.locator("#hero-door-submit").click()
 
-    expect(clean_page.locator("#launch-pad-concept-name")).to_have_text(
-        "sodium rushing into a neuron starts an electrical signal"
+    expect(clean_page.locator("#extract-overlay")).to_be_visible()
+    assert captured_payloads
+    assert captured_payloads[0]["name"] == "sodium rushing into a neuron starts an electrical signal"
+    assert captured_payloads[0]["starting_sketch"] == (
+        "I think sodium crosses the membrane and that changes the electrical state."
     )
-    expect(clean_page.locator("#launch-pad-concept-goal")).to_have_text(
-        "Goal: I want to understand why sodium rushing into a neuron starts an electrical signal"
+    assert captured_payloads[0]["source"] is None
+
+
+def test_source_attached_door_forwards_source_and_cold_guess(
+    clean_page: Page, base_url: str
+) -> None:
+    captured_payloads: list[dict] = []
+
+    def fulfill_extract(route) -> None:
+        captured_payloads.append(route.request.post_data_json)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {"core_thesis": "Practice improves recall."},
+                    "backbone": [{"id": "b1", "principle": "Retrieval strengthens memory."}],
+                    "clusters": [{
+                        "id": "c1",
+                        "label": "Retrieval",
+                        "subnodes": [{
+                            "id": "c1_s1",
+                            "label": "Retrieval",
+                            "mechanism": "Retrieval practice strengthens recall.",
+                        }],
+                    }],
+                },
+            }),
+        )
+
+    clean_page.route("**/api/extract", fulfill_extract)
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill("why practice improves recall")
+    clean_page.locator("#hero-cold-guess-field").fill("Trying to remember makes the memory easier to find.")
+    clean_page.locator("#hero-source-attach").click()
+    clean_page.locator("#hero-source-panel .overlay-textarea").fill("retrieval practice source note")
+    clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#extract-overlay")).to_be_visible()
+    assert captured_payloads
+    assert captured_payloads[0]["starting_sketch"] == (
+        "Trying to remember makes the memory easier to find."
     )
-    expect(clean_page.locator(".ig-concept-mark")).not_to_contain_text(
-        "on I want"
-    )
+    assert captured_payloads[0]["source"] == {
+        "type": "text",
+        "text": "retrieval practice source note",
+    }
 
 
 def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_url: str) -> None:
     _enter_app_shell_as_guest(clean_page, base_url)
 
+    clean_page.locator("#hero-cold-guess-field").press("x")
     clean_page.locator("#hero-source-attach").click()
     expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
     clean_page.locator("#hero-source-panel .overlay-textarea").fill("source text")
@@ -852,6 +931,84 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               if (previousActiveConcept === null) localStorage.removeItem('learnops_active');
               else localStorage.setItem('learnops_active', previousActiveConcept);
             }
+
+            const drillVerdict = await import('/js/drill-verdict.js');
+            assert(
+              drillVerdict.verdictCopy({ classification: 'partial', userText: 'The query compares with keys.' })
+                .includes('Checked • Partly there •'),
+              'drill verdict partial branch',
+            );
+            assert(
+              drillVerdict.verdictCopy({ classification: 'wrong_direction', userText: 'Keys make the sentence longer.' })
+                .includes('Checked • Wrong angle •'),
+              'drill verdict wrong-direction branch',
+            );
+            same(
+              drillVerdict.nextSedaPromptAfterVerdict('', 'Same question?', 'My rough answer.'),
+              'You wrote: «My rough answer.». Now: name the missing link in one sentence.',
+              'drill verdict fallback prompt',
+            );
+
+            const sedaProjection = await import('/js/seda-evidence-projection.js');
+            same(
+              sedaProjection.projectLatestSedaAttemptEvent({
+                conceptId: 'c',
+                nodeId: 'n',
+                sessionId: 'sess-browser',
+                data: {
+                  events: [
+                    { type: 'cold_attempt', text: 'Earlier weak attempt', evaluation: { classification: 'thin' } },
+                    { type: 'cold_attempt', text: 'Later solid attempt', evaluation: { classification: 'deep' } },
+                  ],
+                },
+                now: '2026-07-09T05:00:00.000Z',
+              }).node_records.n.attempts[0],
+              {
+                id: 'seda-sess-browser-event-1',
+                at: '2026-07-09T05:00:00.000Z',
+                user_text: 'Later solid attempt',
+                classification: 'partial',
+                gaps: [],
+                grader_version: 'seda-loop',
+                kind: 'cold',
+              },
+              'seda projection uses latest recordable cold event',
+            );
+            assert(
+              sedaProjection.projectLatestSedaAttemptEvent({
+                conceptId: 'c',
+                nodeId: 'n',
+                sessionId: 'sess-browser',
+                data: { events: [{ type: 'cold_attempt', text: ' ', evaluation: { classification: 'solid' } }] },
+              }) === null,
+              'seda projection skips blank cold attempts',
+            );
+            assert(
+              sedaProjection.projectLatestSedaAttemptEvent({
+                conceptId: 'c',
+                nodeId: 'n',
+                sessionId: 'sess-browser',
+                data: { events: [{ type: 'cold_attempt', text: 'No usable classification', evaluation: { classification: 'unknown' } }] },
+              }) === null,
+              'seda projection skips unmapped classifications',
+            );
+            const duplicateProjection = sedaProjection.projectLatestSedaAttemptEvent({
+              training: {
+                concept_id: 'c',
+                schema_version: 1,
+                node_records: {
+                  n: {
+                    attempts: [{ id: 'seda-sess-browser-event-0' }],
+                    repairs: [],
+                  },
+                },
+              },
+              conceptId: 'c',
+              nodeId: 'n',
+              sessionId: 'sess-browser',
+              data: { events: [{ type: 'cold_attempt', text: 'Already captured', evaluation: { classification: 'solid' } }] },
+            });
+            assert(duplicateProjection === null, 'seda projection skips duplicate event attempt ids');
 
             const conceptPage = await import('/js/concept-page-view.js');
             const conceptConstellation = await import('/js/concept-constellation-view.js');

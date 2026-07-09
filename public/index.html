@@ -20,8 +20,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=171">
-  <link rel="stylesheet" href="/css/drill-chamber.css?v=13">
+  <link rel="stylesheet" href="/css/index.css?v=182">
+  <link rel="stylesheet" href="/css/drill-chamber.css?v=16">
 </head>
 
 <body>
@@ -304,7 +304,7 @@
             What are you trying to explain?
           </h1>
           <p class="ig-first-use" id="ignition-first-use">
-            Name a concept or question.
+            Write what you remember first. We'll show what to study — not a summary.
           </p>
         </header>
 
@@ -316,13 +316,20 @@
                   onclick="App.showLibrary()">Open library</button>
         </div>
 
-        <form class="composer-card composer-card--linear" id="hero-single-input"
+        <form class="composer-card composer-card--tall" id="hero-single-input"
               onsubmit="return App.runHeroAction(event)" autocomplete="off">
           <textarea class="composer-card__field composer-card__field--linear"
                     id="hero-single-input-field"
                     rows="2" maxlength="200"
                     placeholder="why vaccines create immune memory"
                     aria-label="Learning goal"
+                    aria-describedby="ignition-boundary hero-door-error"></textarea>
+          <textarea class="composer-card__field" id="hero-cold-guess-field"
+                    rows="5" maxlength="1200"
+                    placeholder="I think…
+I'm fuzzy on…
+(e.g. parts, guesses, confusions)"
+                    aria-label="What do you already think?"
                     aria-describedby="ignition-boundary hero-door-error"></textarea>
 
           <div class="composer-card__properties">
@@ -342,10 +349,10 @@
 
           <footer class="composer-card__footer">
             <p class="ig-footnote" id="ignition-boundary">
-              Study stays hidden until you write first.
+              You'll write first. Answers come after.
             </p>
             <button type="submit" class="ig-button ig-button--linear" id="hero-door-submit"
-                    disabled aria-label="Build draft route">Build draft route</button>
+                    disabled aria-label="Start session">Start session</button>
           </footer>
         </form>
       </div>
@@ -444,8 +451,8 @@
   <!-- PDF.js for robust client-side extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <script src="/js/drill-chamber.js?v=14"></script>
-  <script type="module" src="/js/app.js?v=189"></script>
+  <script src="/js/drill-chamber.js?v=16"></script>
+  <script type="module" src="/js/app.js?v=196"></script>
   <script type="module" src="/js/floating-room-label.js?v=8"></script>
   <script type="module" src="/js/iso-board-state-surface.js?v=7"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>
