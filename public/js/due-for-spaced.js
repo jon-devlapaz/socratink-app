@@ -25,7 +25,7 @@ export function collectDrillableNodeIds(graphData) {
   return entries.map((entry, index) => getConceptEntryId(entry, index));
 }
 
-function labelForNode(graphData, nodeId) {
+export function labelForNode(graphData, nodeId) {
   const entries = deriveConceptEntries(graphData || {});
   const match = entries.find((entry, index) => getConceptEntryId(entry, index) === nodeId);
   if (match) {

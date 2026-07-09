@@ -5,11 +5,10 @@ export const CONCEPTS_STORE_KEY = 'learnops_concepts';
 
 function defaultStorage() {
   try {
-    if (typeof localStorage !== 'undefined') return localStorage;
+    return localStorage;
   } catch {
     return null;
   }
-  return null;
 }
 
 function parseJson(raw, fallback) {

@@ -51,14 +51,14 @@ import { createTrainingStore, TRAINING_SCHEMA_VERSION, TRAINING_STORE_KEY_PREFIX
 import {
   hydrateAndSyncLearnerState,
   pushLocalLearnerState,
-} from './learner-state-sync.js?v=2';
+} from './learner-state-sync.js?v=3';
 import {
   listDueForSpaced,
   dueConceptIdSet,
   dueItemsForConcept,
   renderReadyFilterHtml,
   renderDueSelectionHtml,
-} from './due-for-spaced.js?v=6';
+} from './due-for-spaced.js?v=7';
 import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
