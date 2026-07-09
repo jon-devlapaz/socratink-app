@@ -222,16 +222,11 @@ def test_source_less_launch_pad_end_to_end_qa(
     clean_page.locator("#nav-ignition").click()
     expect(clean_page.locator("#ignition-title")).to_have_text("What are you trying to explain?")
     clean_page.locator("#hero-single-input-field").fill("Thermostat feedback loop")
+    clean_page.locator("#hero-cold-guess-field").fill(sketch_text)
     expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
     clean_page.locator("#hero-door-submit").click()
 
-    expect(clean_page.locator("#launch-pad-view")).to_be_visible()
-    expect(clean_page.locator("#launch-pad-concept-name")).to_have_text(
-        "Thermostat feedback loop"
-    )
-    clean_page.locator("#launch-pad-input").fill(sketch_text)
-    expect(clean_page.locator("#launch-pad-submit")).to_be_enabled()
-    clean_page.locator("#launch-pad-submit").click()
+    expect(clean_page.locator("#launch-pad-view")).to_be_hidden()
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=10_000)

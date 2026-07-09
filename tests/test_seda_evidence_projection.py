@@ -132,6 +132,59 @@ def test_projection_is_idempotent_per_session() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_latest_seda_attempt_event_projects_before_case_complete() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { projectLatestSedaAttemptEvent } from './public/js/seda-evidence-projection.js';
+
+        const first = projectLatestSedaAttemptEvent({
+          training: null,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-1',
+          now: '2026-07-09T05:00:00.000Z',
+          data: {
+            caseComplete: false,
+            events: [{
+              type: 'cold_attempt',
+              text: 'I think queries compare against keys.',
+              evaluation: {
+                classification: 'solid',
+                gaps: [],
+                grader_version: 'seda-test',
+              },
+            }],
+          },
+        });
+        const record = first.node_records.n;
+        assert.equal(record.attempts.length, 1);
+        assert.equal(record.attempts[0].id, 'seda-sess-1-event-0');
+        assert.equal(record.attempts[0].classification, 'strong');
+        assert.equal(record.attempts[0].kind, 'cold');
+        assert.equal(record.attempts[0].at, '2026-07-09T05:00:00.000Z');
+        assert.equal(record.study_revealed_at, undefined);
+
+        const repeat = projectLatestSedaAttemptEvent({
+          training: first,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-1',
+          data: {
+            events: [{
+              type: 'cold_attempt',
+              text: 'I think queries compare against keys.',
+              evaluation: { classification: 'solid', gaps: [] },
+            }],
+          },
+        });
+        assert.equal(repeat, null, 'same event must not duplicate attempts');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_projection_returns_null_without_completed_record() -> None:
     result = run_node_module(
         """

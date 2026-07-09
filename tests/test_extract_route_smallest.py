@@ -58,6 +58,19 @@ def test_extract_empty_sketch_no_source_still_rejected(client):
     assert r.json()["detail"]["error"] == "missing_sketch"
 
 
+def test_fallback_route_truncated_sketch_reads_as_excerpt():
+    sketch = "word " * 60
+
+    route = main._fallback_smallest_route_from_sketch(
+        concept="Transformer attention",
+        launch_attempt=sketch,
+    )
+
+    prompt = route.clusters[0].subnodes[0].learner_scaffold.entry_prompt
+    assert prompt.startswith('You wrote: "word word')
+    assert '..." What do you think connects those parts?' in prompt
+
+
 def test_extract_short_sketch_no_source_returns_smallest_route(client):
     """Any non-empty source-less launch attempt can seed the draft route."""
     from tests._helpers.provisional_map_factory import provisional_map_with_node_count

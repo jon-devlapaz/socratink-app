@@ -217,10 +217,10 @@ def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str)
     expect(clean_page.locator(".first-run-welcome")).to_have_count(0)
     clean_page.locator("#nav-ignition").click()
     expect(clean_page.locator("#ignition-first-use")).to_have_text(
-        "Name a concept or question."
+        "Write what you remember first. We'll show what to study — not a summary."
     )
     expect(clean_page.locator("#ignition-boundary")).to_have_text(
-        "Study stays hidden until you write first."
+        "You'll write first. Answers come after."
     )
 
 
@@ -1196,11 +1196,11 @@ def test_start_learning_enters_seda_loop_from_product_flow(
     page.locator("#hero-single-input-field").fill(
         "I want to explain why vaccines create immune memory."
     )
-    page.locator("#hero-door-submit").click()
-    page.locator("#launch-pad-input").fill(
+    page.locator("#hero-cold-guess-field").fill(
         "The first exposure leaves cells that remember the pathogen."
     )
-    page.locator("#launch-pad-submit").click()
+    expect(page.locator("#launch-pad-view")).to_be_hidden()
+    page.locator("#hero-door-submit").click()
 
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
     expect(page.locator("#chamber-question")).to_contain_text(
@@ -1309,6 +1309,149 @@ def test_start_learning_enters_seda_loop_from_product_flow(
     expect(page.locator("#nav-loop")).to_have_count(0)
 
 
+def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
+    clean_page: Page, base_url: str
+) -> None:
+    """A non-final SEDA turn should show feedback, then require an explicit continue."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+
+    def fulfill_extract(route) -> None:
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {"core_thesis": "Immune memory speeds the next response."},
+                    "backbone": [{"id": "b1", "principle": "Immune memory persists."}],
+                    "clusters": [{
+                        "id": "c1",
+                        "label": "Memory cells",
+                        "subnodes": [{
+                            "id": "c1_s1",
+                            "label": "Memory cells",
+                            "mechanism": "Memory cells persist after exposure.",
+                            "learner_scaffold": {
+                                "entry_prompt": "Why is the second exposure faster?",
+                                "task_cue": "Explain the role of memory cells.",
+                            },
+                        }],
+                    }],
+                },
+            }),
+        )
+
+    def fulfill_session(route) -> None:
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "mid-loop-session",
+                "status": "awaiting_input",
+                "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
+                "learnerTranscript": [],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    turn_requests = {"count": 0}
+
+    def fulfill_turn(route) -> None:
+        turn_requests["count"] += 1
+        if turn_requests["count"] == 2:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "sessionId": "mid-loop-session",
+                    "status": "awaiting_input",
+                    "awaiting": {"key": "compare", "ctaText": "Compare your answer with the note."},
+                    "learnerTranscript": [],
+                    "events": [{
+                        "type": "cold_attempt",
+                        "text": "Memory cells remain and respond faster next time.",
+                        "evaluation": {
+                            "classification": "solid",
+                            "gaps": [],
+                            "grader_version": "qa",
+                        },
+                    }],
+                    "caseComplete": False,
+                    "record": None,
+                }),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "mid-loop-session",
+                "status": "awaiting_input",
+                "awaiting": {"key": "missing_link", "ctaText": "Name the missing link."},
+                "learnerTranscript": [],
+                "events": [],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    page.route("**/api/extract", fulfill_extract)
+    page.route(re.compile(r".*/api/session$"), fulfill_session)
+    page.route(re.compile(r".*/api/session/[^/]+/turn$"), fulfill_turn)
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
+    page.locator("#hero-cold-guess-field").fill("The first exposure leaves memory cells.")
+    page.locator("#hero-door-submit").click()
+
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
+          if (!key) return false;
+          const value = JSON.parse(localStorage.getItem(key) || 'null');
+          return value?.sessionId === 'mid-loop-session'
+            && value?.latest?.awaiting?.key === 'launch_attempt';
+        }""",
+        timeout=20_000,
+    )
+    page.locator("#chamber-composer").fill(
+        "Memory cells remain after the first exposure and make the second response faster."
+    )
+    expect(page.locator("#chamber-send")).to_be_enabled()
+    page.locator("#chamber-composer").press("Control+Enter")
+    expect(page.locator("#chamber-question")).to_contain_text(
+        "Name the missing link.", timeout=20_000
+    )
+    assert turn_requests["count"] == 1
+    expect(page.locator("#chamber-verdict")).to_contain_text("Checked", timeout=20_000)
+    expect(page.locator("#chamber-send")).to_have_text("Keep going")
+    expect(page.locator("#chamber-composer")).to_be_disabled()
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    page.locator("#chamber-composer").fill(
+        "Memory cells remain and respond faster next time."
+    )
+    page.locator("#chamber-composer").press("Control+Enter")
+    expect(page.locator("#chamber-verdict")).to_contain_text("Checked", timeout=20_000)
+    expect(page.locator("#chamber-send")).to_have_text("See what to study")
+    projected = page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:training:v1:${conceptId}` : null;
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key) || 'null');
+          const record = value?.node_records?.c1_s1;
+          return record?.attempts?.length ? record.attempts[0] : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert projected["classification"] == "strong"
+    assert projected["kind"] == "cold"
+    assert turn_requests["count"] == 2
+
+
 def test_seda_start_failure_offers_retry_from_product_flow(
     page: Page, base_url: str
 ) -> None:
@@ -1359,12 +1502,12 @@ def test_seda_start_failure_offers_retry_from_product_flow(
         )
 
     page.route("**/api/extract", fulfill_extract)
-    page.route("**/api/session", fulfill_session)
+    page.route(re.compile(r".*/api/session$"), fulfill_session)
     page.locator("#nav-ignition").click()
     page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
+    page.locator("#hero-cold-guess-field").fill("The first exposure leaves memory cells.")
     page.locator("#hero-door-submit").click()
-    page.locator("#launch-pad-input").fill("The first exposure leaves memory cells.")
-    page.locator("#launch-pad-submit").click()
+    expect(page.locator("#launch-pad-view")).to_be_hidden()
 
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
     expect(page.locator("#chamber-question")).to_contain_text(
@@ -1478,18 +1621,18 @@ def test_completed_seda_case_projects_visible_evidence(
         )
 
     page.route("**/api/extract", fulfill_extract)
-    page.route("**/api/session", fulfill_session)
+    page.route(re.compile(r".*/api/session$"), fulfill_session)
     page.route(re.compile(r".*/api/session/[^/]+/turn$"), fulfill_turn)
 
     page.locator("#nav-ignition").click()
     page.locator("#hero-single-input-field").fill(
         "I want to explain why vaccines create immune memory."
     )
-    page.locator("#hero-door-submit").click()
-    page.locator("#launch-pad-input").fill(
+    page.locator("#hero-cold-guess-field").fill(
         "The first exposure leaves cells that remember the pathogen."
     )
-    page.locator("#launch-pad-submit").click()
+    page.locator("#hero-door-submit").click()
+    expect(page.locator("#launch-pad-view")).to_be_hidden()
 
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
     # Mirror the proven-stable SEDA choreography: wait until the launch_attempt
@@ -1513,6 +1656,10 @@ def test_completed_seda_case_projects_visible_evidence(
     )
     expect(page.locator("#chamber-hint")).to_have_text("A sentence is enough.")
     page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-verdict")).to_contain_text("Checked", timeout=20_000)
+    expect(page.locator("#chamber-send")).to_have_text("See what to study")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_be_hidden()
 
     projected = page.wait_for_function(
         """() => {
@@ -1521,7 +1668,9 @@ def test_completed_seda_case_projects_visible_evidence(
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key) || 'null');
           const record = value?.node_records?.['c1_s1'];
-          return record?.attempts?.length ? { attempts: record.attempts } : null;
+          return record?.attempts?.length && record?.study_revealed_at
+            ? { attempts: record.attempts, study_revealed_at: record.study_revealed_at }
+            : null;
         }""",
         timeout=20_000,
     ).json_value()
@@ -1549,7 +1698,6 @@ def test_completed_seda_case_projects_visible_evidence(
     )
     assert derived_state == "primed"
 
-    page.locator("#chamber-exit").click()
     page.reload()
     # The evidence artifact renders the strongest/latest reconstruction turn.
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
@@ -3206,12 +3354,10 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
 
     clean_page.locator("#nav-ignition").click()
     clean_page.locator("#hero-single-input-field").fill("Thermostat feedback loop")
+    clean_page.locator("#hero-cold-guess-field").fill(sketch_text)
     expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
     clean_page.locator("#hero-door-submit").click()
-    expect(clean_page.locator("#launch-pad-view")).to_be_visible()
-    clean_page.locator("#launch-pad-input").fill(sketch_text)
-    expect(clean_page.locator("#launch-pad-submit")).to_be_enabled()
-    clean_page.locator("#launch-pad-submit").click()
+    expect(clean_page.locator("#launch-pad-view")).to_be_hidden()
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=8_000)

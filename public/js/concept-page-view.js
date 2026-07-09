@@ -730,6 +730,7 @@ function renderDrillChamberHtml() {
 
         <div class="drill-chamber__active" id="chamber-active">
           <p class="drill-chamber__question" id="chamber-question">—</p>
+          <div class="drill-chamber__verdict" id="chamber-verdict" role="status" aria-live="polite" hidden></div>
           <div class="drill-chamber__composer">
             <textarea id="chamber-composer" placeholder="Write your reconstruction here. Fragments are fine." aria-label="Your reply" rows="3"></textarea>
             <div class="drill-chamber__composer-foot">

@@ -13,6 +13,31 @@ function sedaAttemptId(sessionId, index) {
   return `seda-${sessionId}-${index}`;
 }
 
+function sedaEventAttemptId(sessionId, index) {
+  return `seda-${sessionId}-event-${index}`;
+}
+
+function mapClassification(classification) {
+  if (classification === 'solid' || classification === 'strong') return 'strong';
+  if (classification === 'deep' || classification === 'partial') return 'partial';
+  if (classification === 'shallow' || classification === 'thin') return 'thin';
+  if (classification === 'misconception' || classification === 'wrong_direction') return 'wrong_direction';
+  return null;
+}
+
+function latestColdAttemptEvent(data) {
+  const events = Array.isArray(data?.events) ? data.events : [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index];
+    if (event?.type !== 'cold_attempt') continue;
+    const text = typeof event.text === 'string' ? event.text.trim() : '';
+    const classification = mapClassification(event?.evaluation?.classification);
+    if (!text || !classification) continue;
+    return { event, index, text, classification };
+  }
+  return null;
+}
+
 // Select the single attempted backend node record. A SEDA session completes
 // exactly one node, so zero or several attempted records is unexpected; fail
 // closed rather than arbitrarily projecting whichever happens to be first.
@@ -60,6 +85,64 @@ function baseTraining(training, conceptId) {
     source_ref: null,
     sketch: null,
     node_records: {},
+  };
+}
+
+/**
+ * Projects the latest recordable SEDA cold_attempt event before the case is
+ * complete. This lets first-session study reveal honor the cold-attempt gate
+ * without waiting for the whole spaced SEDA case to finish.
+ */
+export function projectLatestSedaAttemptEvent({
+  training = null,
+  conceptId,
+  nodeId,
+  data,
+  sessionId,
+  now = new Date().toISOString(),
+} = {}) {
+  if (!conceptId || !nodeId || !sessionId) return null;
+  const coldAttempt = latestColdAttemptEvent(data);
+  if (!coldAttempt) return null;
+
+  const next = baseTraining(training, conceptId);
+  const nodeRecords = next.node_records && typeof next.node_records === 'object'
+    ? next.node_records
+    : {};
+  const existing = nodeRecords[nodeId] || { attempts: [], repairs: [] };
+  const existingAttempts = Array.isArray(existing.attempts) ? existing.attempts : [];
+  const attemptId = sedaEventAttemptId(sessionId, coldAttempt.index);
+  if (existingAttempts.some((attempt) => attempt?.id === attemptId)) {
+    return null;
+  }
+
+  return {
+    ...next,
+    concept_id: conceptId,
+    schema_version: TRAINING_SCHEMA_VERSION,
+    node_records: {
+      ...nodeRecords,
+      [nodeId]: {
+        ...existing,
+        attempts: [
+          ...existingAttempts,
+          {
+            id: attemptId,
+            at: now,
+            user_text: coldAttempt.text,
+            classification: coldAttempt.classification,
+            gaps: Array.isArray(coldAttempt.event?.evaluation?.gaps)
+              ? coldAttempt.event.evaluation.gaps
+              : [],
+            grader_version: coldAttempt.event?.evaluation?.prompt_version
+              || coldAttempt.event?.evaluation?.grader_version
+              || 'seda-loop',
+            kind: existingAttempts.length === 0 ? 'cold' : 'spaced',
+          },
+        ],
+        repairs: Array.isArray(existing.repairs) ? existing.repairs : [],
+      },
+    },
   };
 }
 

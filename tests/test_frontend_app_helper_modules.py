@@ -159,6 +159,37 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_drill_verdict_helpers_keep_seda_transitions_specific() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          nextSedaPromptAfterVerdict,
+          verdictCopy,
+        } from './public/js/drill-verdict.js';
+
+        assert.equal(
+          nextSedaPromptAfterVerdict('Same question?', 'Same question?', 'I guessed with my own words.'),
+          'You wrote: «I guessed with my own words.». Now: name the missing link in one sentence.'
+        );
+        assert.equal(
+          nextSedaPromptAfterVerdict('Explain the mechanism.', 'Same question?', 'My rough answer.'),
+          'You wrote: «My rough answer.». Now: Explain the mechanism.'
+        );
+        assert.match(
+          verdictCopy({ classification: 'partial', userText: 'The query compares with keys.' }),
+          /Checked • Partly there •/
+        );
+        assert.match(
+          verdictCopy({ userText: 'The query compares with keys.', sedaComplete: true }),
+          /Checked • Recorded •/
+        );
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_html_escape_helper_matches_app_contract() -> None:
     result = run_node_module(
         """
@@ -1150,13 +1181,16 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
 
     assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
     assert "What are you trying to explain?" in index_html
-    assert "Name a concept or question." in index_html
-    assert "Study stays hidden until you write first." in index_html
+    assert "Write what you remember first. We'll show what to study" in index_html
+    assert "You'll write first. Answers come after." in index_html
     assert 'id="ignition-boundary"' in index_html
     assert 'class="ig-eyebrow">New session</p>' in index_html
     assert "socratink will ask for your first model" not in index_html
     assert 'id="hero-single-input-field"' in index_html
+    assert 'id="hero-cold-guess-field"' in index_html
     assert 'aria-label="Learning goal"' in index_html
+    assert 'aria-label="What do you already think?"' in index_html
+    assert '>Start session</button>' in index_html
     assert 'aria-label="What do you want to explain?"' not in index_html
 
 
