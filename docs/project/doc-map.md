@@ -34,6 +34,7 @@ On all other topics, the doc listed below for that topic is authoritative.
 | Product contract: loop, routing, progression layers, inline modes, guardrails | [`docs/product/spec.md`](../product/spec.md) |
 | Evidence-weighted graph doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
 | Post-drill result-surface UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
+| First-session momentum (door → first verdict, psychology-backed) | [`docs/product/first-session-momentum-spec.md`](../product/first-session-momentum-spec.md) |
 | Founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
 | Full UX manifesto and voice rationale | [`docs/design/socratink-ux.md`](../design/socratink-ux.md) |
 | Drill data model, training evidence, derivation math, rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
