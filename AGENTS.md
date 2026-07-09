@@ -23,6 +23,11 @@ This file is the lightweight local operating guide for this repository.
 - Run the documented local checks before opening a PR.
 
 ## Code-work entry point
+- For Socratink app feature-slice work, `$socratink-agent-flow` is mandatory by
+  default. If a task asks to implement, review, publish, merge, clean up, prove
+  golden, or orient a feature slice, load and follow that skill first; do not
+  start direct implementation from this pane unless the user explicitly says
+  `no agent flow`.
 - Default to one task, one agent, one worktree, one branch.
 - Home checkout stays on clean `main` for orientation, publish, and cleanup.
 - Agent prompt line: `Work only in <worktree-path>. Before editing, run agent-work guard .`
@@ -69,7 +74,7 @@ gh pr list --state open
 - During UI polish, show the live browser preview so the user can see what is being made.
 - Desk due/ready UX should stay board-centric (Linear-style Ready filter, due marks, selection strip), not a header inventory list of due nodes.
 - Give blunt honesty on whether desk UI captures metacognitive learning; do not praise-pad weak UX.
-- For Socratink implementation slices, follow `/socratink-agent-flow` when the user routes that way.
+- For Socratink implementation slices, follow `/socratink-agent-flow` unless the user explicitly opts out.
 
 ## Learned Workspace Facts
 - Due/Ready desk state must come from real training evidence (`spaced_attempt` / spaced re-drill eligibility), never decorative mastery or fake progress chrome.
