@@ -217,7 +217,10 @@ def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str)
     expect(clean_page.locator(".first-run-welcome")).to_have_count(0)
     clean_page.locator("#nav-ignition").click()
     expect(clean_page.locator("#ignition-first-use")).to_have_text(
-        "Name what you want to understand. Attach study material if you have it, or give your first model next."
+        "Name a concept or question."
+    )
+    expect(clean_page.locator("#ignition-boundary")).to_have_text(
+        "Study stays hidden until you write first."
     )
 
 
