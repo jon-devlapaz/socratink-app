@@ -189,7 +189,7 @@ function learnerGoalForConcept(concept, data) {
 }
 
 function attemptPlaceholderForScaffold(scaffold) {
-  if (!scaffold) return 'Draft what you can recall. Messy is useful.';
+  if (!scaffold) return 'Write what you can explain now. Messy is useful.';
   const starter = cleanScaffoldText(scaffold.sentence_starter);
   if (starter) return starter;
   return 'Write what you can explain right now.';
@@ -551,7 +551,7 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
   const scaffold = options.useScaffold ? entryScaffold(activeEntry) : null;
   const learnerGoal = cleanScaffoldText(options.learnerGoal);
   const targetLabel = cleanScaffoldText(scaffold?.task_label) || cleanScaffoldText(activeEntry?.label) || 'this entry';
-  const heading = scaffold?.entry_prompt || 'Draft what you can recall';
+  const heading = scaffold?.entry_prompt || 'Write what you can explain now';
   const helperParts = [
     learnerGoal && scaffold
       ? `Goal: ${learnerGoal}. First make a starting guess for ${targetLabel}.`
@@ -844,7 +844,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     ? renderSketchWrapperHtml(thresholdText)
     : renderSketchWrapperHtml('');
   const sourceLessProvenanceHtml = '';
-  const contextDockLabel = 'Recall context';
+  const contextDockLabel = 'Concept context';
   const nextReady = (derived.next_action === 'review' || (derived.next_action === 'repair' && options?.repairCheckedThisSession))
     ? nextReadyEntry(backbone, activeIdx, training, options)
     : null;
@@ -862,6 +862,9 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const compareFeedbackHtml = isPostRevealComparison
     ? ' <button class="concept-page-b2__feedback-link" type="button" data-feedback-rating data-feedback-moment="compare notes">Rate this moment</button>'
     : '';
+  const truthNoteText = isAttempting
+    ? 'Study stays hidden until you save a draft. This is not a grade.'
+    : 'Your words shape the path. This is not a grade.';
 
   const activeEntryClass = [
     'concept-page-b2__active-entry',
@@ -879,7 +882,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         ${repairPanelHtml}
         ${attemptPanelHtml}
         ${ctaButton}
-        <p class="concept-page-b2__truth-note">Your words shape the path. This is not a grade.${compareFeedbackHtml}</p>
+        <p class="concept-page-b2__truth-note">${escHtml(truthNoteText)}${compareFeedbackHtml}</p>
       `}
     </section>
   `;

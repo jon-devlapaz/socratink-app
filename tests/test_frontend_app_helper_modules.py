@@ -1548,7 +1548,8 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(coldHtml.includes('Context'));
         assert.ok(coldHtml.includes('I think nerves send electricity'));
         assert.ok(!coldHtml.includes('Write first. Compare after.'));
-        assert.ok(coldHtml.includes('aria-label="Recall context"'));
+        assert.ok(coldHtml.includes('aria-label="Concept context"'));
+        assert.ok(coldHtml.includes('Study stays hidden until you save a draft. This is not a grade.'));
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
         assert.ok(coldHtml.includes('Save draft'));
@@ -1570,7 +1571,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           graphData,
           null
         );
-        assert.ok(coldWithoutTrainingHtml.includes('aria-label="Recall context"'));
+        assert.ok(coldWithoutTrainingHtml.includes('aria-label="Concept context"'));
         assert.ok(!coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(coldWithoutTrainingHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-item'));
@@ -2059,7 +2060,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(sourceLessHtml.includes('aria-label="Recall context"'));
+        assert.ok(sourceLessHtml.includes('aria-label="Concept context"'));
         assert.ok(!sourceLessHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         const sourceAttachedHtml = renderActiveEntryHtml(
           backbone[1],
@@ -2072,7 +2073,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(sourceAttachedHtml.includes('aria-label="Recall context"'));
+        assert.ok(sourceAttachedHtml.includes('aria-label="Concept context"'));
 
         const readyAttemptHtml = renderActiveEntryHtml(
           backbone[1],
@@ -2085,7 +2086,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(readyAttemptHtml.includes('concept-page-b2__attempt'));
         assert.ok(readyAttemptHtml.includes('data-attempt-entry-id="entry-2"'));
-        assert.ok(readyAttemptHtml.includes('Draft what you can recall'));
+        assert.ok(readyAttemptHtml.includes('Write what you can explain now'));
         assert.ok(readyAttemptHtml.includes('Save draft'));
         assert.ok(!readyAttemptHtml.includes('concept-page-b2__entry-cta'));
 
