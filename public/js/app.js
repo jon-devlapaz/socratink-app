@@ -5077,6 +5077,7 @@ const App = (() => {
     fastForward,
     hideMapView, setMapMode,
     showLibrary, hideLibrary, openLibraryConcept, seedLocalQaConcept, seedLocalRepairQaConcept, showDashboard, showIgnition, showSettings,
+    syncLearnerStateIfIdentified, pushLearnerStateIfIdentified,
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
