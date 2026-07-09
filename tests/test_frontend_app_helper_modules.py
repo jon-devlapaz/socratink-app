@@ -1149,8 +1149,11 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
     assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
-    assert "What are you trying to understand?" in index_html
-    assert "Attach study material if you have it, or give your first model next." in index_html
+    assert "What are you trying to explain?" in index_html
+    assert "Name a concept or question." in index_html
+    assert "Study stays hidden until you write first." in index_html
+    assert 'id="ignition-boundary"' in index_html
+    assert 'class="ig-eyebrow">New session</p>' in index_html
     assert "socratink will ask for your first model" not in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'aria-label="Learning goal"' in index_html

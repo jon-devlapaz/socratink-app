@@ -659,9 +659,9 @@ const App = (() => {
     const sourceValue = document.getElementById('hero-source-value');
     if (sourceAttachBtn) {
       sourceAttachBtn.setAttribute('aria-expanded', 'false');
-      sourceAttachBtn.textContent = 'attach';
+      sourceAttachBtn.textContent = 'Attach';
     }
-    if (sourceValue) sourceValue.textContent = 'optional';
+    if (sourceValue) sourceValue.textContent = 'Optional';
     if (sourcePanel) {
       sourcePanel.hidden = true;
       sourcePanel.innerHTML = '';
@@ -800,15 +800,15 @@ const App = (() => {
         panel.innerHTML = '';
         btn.setAttribute('aria-expanded', 'false');
         /* c8 ignore next 2 -- covered by the source picker contract; browser path only resets copy. */
-        btn.textContent = 'attach';
-        if (valueEl) valueEl.textContent = 'optional';
+        btn.textContent = 'Attach';
+        if (valueEl) valueEl.textContent = 'Optional';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else if (hasSource) {
         // Panel is closed and a source is attached — the button is the
         // "remove" affordance. Click clears the source without re-opening.
-        btn.textContent = 'attach';
-        if (valueEl) valueEl.textContent = 'optional';
+        btn.textContent = 'Attach';
+        if (valueEl) valueEl.textContent = 'Optional';
         App._pendingDoorSource = null;
         _doorUpdateSubmitState();
       } else {
@@ -827,7 +827,7 @@ const App = (() => {
             // Paper-style source-meta line: value span shows source ID,
             // button toggles to "remove" (matches the "attach" ↔ "remove"
             // affordance pattern persona-validated in Paper Wave 1).
-            btn.textContent = 'remove';
+            btn.textContent = 'Remove';
             const v = document.getElementById('hero-source-value');
             if (v) v.textContent = describeDoorSource(payload);
             _doorUpdateSubmitState();
@@ -836,9 +836,9 @@ const App = (() => {
             panel.hidden = true;
             panel.innerHTML = '';
             btn.setAttribute('aria-expanded', 'false');
-            btn.textContent = 'attach';
+            btn.textContent = 'Attach';
             const v = document.getElementById('hero-source-value');
-            if (v) v.textContent = 'optional';
+            if (v) v.textContent = 'Optional';
             App._pendingDoorSource = null;
             _doorUpdateSubmitState();
           },

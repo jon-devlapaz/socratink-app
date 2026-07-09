@@ -49,13 +49,13 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
     clean_page.locator("#hero-source-panel .overlay-textarea").fill("source text")
     clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
     expect(clean_page.locator("#hero-source-value")).to_have_text("11 chars pasted")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("remove")
+    expect(clean_page.locator("#hero-source-attach")).to_have_text("Remove")
     clean_page.locator("#hero-source-attach").click()
     clean_page.locator("#hero-source-attach").click()
     expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
     clean_page.locator("#hero-source-panel .creation-source-panel-cancel").click()
-    expect(clean_page.locator("#hero-source-value")).to_have_text("optional")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("attach")
+    expect(clean_page.locator("#hero-source-value")).to_have_text("Optional")
+    expect(clean_page.locator("#hero-source-attach")).to_have_text("Attach")
 
     clean_page.evaluate(
         """() => {

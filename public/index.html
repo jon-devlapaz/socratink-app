@@ -20,7 +20,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=169">
+  <link rel="stylesheet" href="/css/index.css?v=171">
   <link rel="stylesheet" href="/css/drill-chamber.css?v=13">
 </head>
 
@@ -295,21 +295,18 @@
     </section>
 
     <!-- Ignition View: door for new concept entry (paper system) -->
-    <section id="ignition-view" class="primary-view ignition-view"
+    <section id="ignition-view" class="primary-view ignition-view ignition-view--linear"
              aria-labelledby="ignition-title" hidden>
       <div class="ignition-view__inner">
-        <div class="witness-anchor" aria-hidden="true">
-          <svg viewBox="0 0 28 28" width="28" height="28">
-            <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
-          </svg>
-        </div>
-
-        <h1 class="ig-title" id="ignition-title" tabindex="-1">
-          What are you trying to understand?
-        </h1>
-        <p class="ig-first-use" id="ignition-first-use">
-          Name what you want to understand. Attach study material if you have it, or give your first model next.
-        </p>
+        <header class="ig-header">
+          <p class="ig-eyebrow">New session</p>
+          <h1 class="ig-title" id="ignition-title" tabindex="-1">
+            What are you trying to explain?
+          </h1>
+          <p class="ig-first-use" id="ignition-first-use">
+            Name a concept or question.
+          </p>
+        </header>
 
         <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
           <p class="ignition-cap-gate__message">
@@ -319,20 +316,23 @@
                   onclick="App.showLibrary()">Open library</button>
         </div>
 
-        <form class="composer-card" id="hero-single-input"
+        <form class="composer-card composer-card--linear" id="hero-single-input"
               onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <textarea class="composer-card__field" id="hero-single-input-field"
+          <textarea class="composer-card__field composer-card__field--linear"
+                    id="hero-single-input-field"
                     rows="2" maxlength="200"
                     placeholder="why vaccines create immune memory"
-                    aria-label="Learning goal"></textarea>
+                    aria-label="Learning goal"
+                    aria-describedby="ignition-boundary hero-door-error"></textarea>
 
-          <div class="journal-meta">
-            <span class="journal-meta__key">study material</span>
-            <span class="journal-meta__value" id="hero-source-value">optional</span>
-            <span class="journal-meta__sep" aria-hidden="true">—</span>
-            <button type="button" class="journal-meta__add"
-                    id="hero-source-attach" aria-expanded="false"
-                    aria-controls="hero-source-panel">attach</button>
+          <div class="composer-card__properties">
+            <div class="ig-property">
+              <span class="ig-property__label">Source</span>
+              <span class="ig-property__value" id="hero-source-value">Optional</span>
+              <button type="button" class="ig-property__action"
+                      id="hero-source-attach" aria-expanded="false"
+                      aria-controls="hero-source-panel">Attach</button>
+            </div>
           </div>
 
           <div class="creation-source-panel" id="hero-source-panel" hidden></div>
@@ -340,10 +340,13 @@
           <p class="ig-error" id="hero-door-error"
              role="status" aria-live="polite"></p>
 
-          <div class="composer-card__actions">
-            <button type="submit" class="ig-button" id="hero-door-submit"
-                    disabled aria-label="Start learning">Start</button>
-          </div>
+          <footer class="composer-card__footer">
+            <p class="ig-footnote" id="ignition-boundary">
+              Study stays hidden until you write first.
+            </p>
+            <button type="submit" class="ig-button ig-button--linear" id="hero-door-submit"
+                    disabled aria-label="Build draft route">Build draft route</button>
+          </footer>
         </form>
       </div>
     </section>
@@ -442,7 +445,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="/js/drill-chamber.js?v=14"></script>
-  <script type="module" src="/js/app.js?v=186"></script>
+  <script type="module" src="/js/app.js?v=188"></script>
   <script type="module" src="/js/floating-room-label.js?v=8"></script>
   <script type="module" src="/js/iso-board-state-surface.js?v=7"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>
