@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -27,6 +28,7 @@ class _GuestAuthService:
             authenticated=True,
             guest_mode=True,
             user=AuthUser(id="anon-test-user"),
+            access_token="supabase-user-token",
         )
 
     def resolve_cookie_secure(self, base_url: str) -> bool:
@@ -114,7 +116,33 @@ def test_loop_proxy_forwards_to_configured_backend(client: TestClient) -> None:
     assert "content-encoding" not in response.headers
     request.assert_called_once()
     assert request.call_args[0][1] == "https://loop.example/loop?q=1"
+    assert request.call_args.kwargs["retries"] is False
+    timeout = request.call_args.kwargs["timeout"]
+    assert timeout.connect_timeout == 5.0
+    assert timeout.read_timeout == 55.0
     upstream.release_conn.assert_called_once()
+
+
+def test_loop_proxy_turns_upstream_timeout_into_retryable_503(
+    client: TestClient,
+) -> None:
+    timeout_error = urllib3.exceptions.ReadTimeoutError(
+        None,
+        "https://loop.example/api/session",
+        "timed out",
+    )
+    with (
+        patch.dict(
+            "os.environ",
+            {"LOOP_BACKEND_URL": "https://loop.example"},
+            clear=False,
+        ),
+        patch("loop_backend_proxy._POOL.request", side_effect=timeout_error),
+    ):
+        response = client.get("/loop", headers={"Accept": "*/*"})
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Loop backend request timed out."
 
 
 def test_session_proxy_uses_vendored_backend_even_when_external_backend_configured(
@@ -150,7 +178,7 @@ def test_session_proxy_uses_vendored_backend_even_when_external_backend_configur
     assert request.call_args[0][1] == "http://127.0.0.1:9999/api/session"
 
 
-def test_session_proxy_uses_internal_node_function_on_vercel(
+def test_session_proxy_uses_trusted_hosted_loop_service_on_vercel(
     client: TestClient,
 ) -> None:
     upstream = MagicMock()
@@ -166,7 +194,8 @@ def test_session_proxy_uses_internal_node_function_on_vercel(
             patch.dict(
                 "os.environ",
                 {
-                    "LOOP_BACKEND_URL": "https://stale-loop.example",
+                    "LOOP_BACKEND_URL": "https://loop-runtime.example",
+                    "SOCRATINK_LOOP_API_KEY": "loop-token",
                     "SESSION_COOKIE_KEY": "internal-token",
                     "VERCEL": "1",
                 },
@@ -178,7 +207,8 @@ def test_session_proxy_uses_internal_node_function_on_vercel(
                 "/api/session",
                 json={},
                 headers={
-                    "host": "preview.example",
+                    "host": "attacker.example",
+                    "x-forwarded-host": "attacker.example",
                     "x-forwarded-proto": "https",
                     "authorization": "Bearer browser-token",
                     "cookie": "sb_session=sealed",
@@ -189,12 +219,131 @@ def test_session_proxy_uses_internal_node_function_on_vercel(
 
     assert response.status_code == 201
     assert response.json()["sessionId"] == "internal-session"
-    assert request.call_args[0][1] == "https://preview.example/api/internal-loop/api/session"
+    assert request.call_args[0][1] == "https://loop-runtime.example/api/session"
     forwarded = {key.lower(): value for key, value in request.call_args.kwargs["headers"].items()}
     assert forwarded["content-type"] == "application/json"
-    assert forwarded["x-socratink-internal-loop-token"] == "internal-token"
-    assert "authorization" not in forwarded
+    assert forwarded["authorization"] == "Bearer loop-token"
+    assert forwarded["x-socratink-user-access-token"] == "supabase-user-token"
+    assert "x-socratink-internal-loop-token" not in forwarded
     assert "cookie" not in forwarded
+
+
+def test_session_proxy_requires_user_token_for_vercel_internal_store(
+    client: TestClient,
+) -> None:
+    service = _GuestAuthService()
+    service.load_session = lambda _sealed: AuthSessionState(
+        auth_enabled=True,
+        authenticated=True,
+        guest_mode=True,
+        user=AuthUser(id="anon-test-user"),
+    )
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = service
+    try:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "LOOP_BACKEND_URL": "https://loop-runtime.example",
+                    "SOCRATINK_LOOP_API_KEY": "loop-token",
+                    "SESSION_COOKIE_KEY": "internal-token",
+                    "VERCEL": "1",
+                },
+                clear=False,
+            ),
+            patch("loop_backend_proxy._POOL.request") as request,
+        ):
+            response = client.post("/api/session", json={})
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == (
+        "Authenticated session required for durable loop storage."
+    )
+    request.assert_not_called()
+
+
+def test_session_proxy_fails_closed_without_hosted_loop_service(
+    client: TestClient,
+) -> None:
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = _GuestAuthService()
+    try:
+        with (
+            patch.dict(
+                "os.environ",
+                {"SESSION_COOKIE_KEY": "internal-token", "VERCEL": "1"},
+                clear=False,
+            ),
+            patch("loop_backend_proxy._POOL.request") as request,
+        ):
+            os.environ.pop("LOOP_BACKEND_URL", None)
+            os.environ.pop("SOCRATINK_LOOP_API_KEY", None)
+            response = client.post(
+                "/api/session",
+                json={},
+                headers={"host": "attacker.example"},
+            )
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Hosted loop backend is not configured."
+    request.assert_not_called()
+
+
+def test_session_proxy_rejects_request_body_over_64_kib_before_upstream(
+    client: TestClient,
+) -> None:
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = _GuestAuthService()
+    try:
+        with (
+            patch("loop_backend_proxy._start_local_loop_backend", return_value="http://127.0.0.1:9999"),
+            patch("loop_backend_proxy._POOL.request") as request,
+        ):
+            response = client.post(
+                "/api/session",
+                content=b"x" * (64 * 1024 + 1),
+                headers={"content-type": "application/octet-stream"},
+            )
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 413
+    assert response.json()["detail"] == "Loop request body is too large."
+    request.assert_not_called()
+
+
+def test_session_proxy_rejects_insecure_hosted_loop_origin(
+    client: TestClient,
+) -> None:
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = _GuestAuthService()
+    try:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "LOOP_BACKEND_URL": "http://attacker.example",
+                    "SOCRATINK_LOOP_API_KEY": "loop-token",
+                    "VERCEL": "1",
+                },
+                clear=False,
+            ),
+            patch("loop_backend_proxy._POOL.request") as request,
+        ):
+            response = client.post("/api/session", json={})
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Hosted loop backend must be a trusted HTTPS origin."
+    )
+    request.assert_not_called()
 
 
 def test_loop_proxy_does_not_forward_accept_encoding(client: TestClient) -> None:
@@ -354,7 +503,11 @@ def test_vendored_loop_backend_runs_pedagogical_session(
             for text in turns:
                 response = client.post(
                     f"/api/session/{session_id}/turn",
-                    json={"text": text},
+                    json={
+                        "text": text,
+                        "requestId": str(uuid.uuid4()),
+                        "expectedVersion": body["sessionVersion"],
+                    },
                 )
                 assert response.status_code == 200
                 body = response.json()

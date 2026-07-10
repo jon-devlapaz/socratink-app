@@ -441,18 +441,26 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     expect(clean_page.locator("#chamber-composer")).not_to_have_attribute(
         "placeholder", "Preparing your first question"
     )
-    expect(clean_page.locator("#chamber-send")).to_have_text("Check reconstruction")
-    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Pressure check")
+    expect(clean_page.locator("#chamber-send")).to_have_text("Check my answer")
+    expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Reconstruction")
     expect(clean_page.locator("#drill-chamber-view")).to_contain_text(
         "Reconstruct Entry A from memory"
     )
     expect(clean_page.locator("#drill-chamber-view")).not_to_contain_text(
         "ANSWER KEY SHOULD NOT APPEAR"
     )
-    clean_page.evaluate("window.DrillChamber.setLoading(true)")
+    clean_page.evaluate(
+        "window.DrillChamber.setLoading(true, { checkingAnswer: true })"
+    )
     expect(clean_page.locator("#chamber-composer")).to_be_enabled()
     expect(clean_page.locator("#chamber-composer")).to_have_attribute(
         "placeholder", "Write your reconstruction here. Fragments are fine."
+    )
+    expect(clean_page.locator("#chamber-verdict")).to_contain_text(
+        "Answer received", timeout=2_000
+    )
+    expect(clean_page.locator("#chamber-verdict")).to_contain_text(
+        "Checking the link you wrote."
     )
     clean_page.evaluate("window.DrillChamber.setLoading(false)")
     expect(clean_page.locator(".node-strip")).to_be_visible()
@@ -499,6 +507,68 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     expect(clean_page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
         "data-entry-id", "entry-b"
     )
+
+
+def test_mobile_first_session_actions_fit_without_horizontal_shift(
+    clean_page: Page, base_url: str
+) -> None:
+    """Primary Door and chamber actions remain tappable at narrow widths."""
+    clean_page.set_viewport_size({"width": 390, "height": 844})
+    _enter_app_shell_as_guest(clean_page, base_url)
+
+    for width in (390, 320):
+        clean_page.set_viewport_size({"width": width, "height": 700})
+        door_box = clean_page.locator("#hero-door-submit").bounding_box()
+        assert door_box is not None
+        assert door_box["height"] >= 44
+
+    _seed_concept_with_graph(clean_page)
+    clean_page.evaluate("window.App.openLibraryConcept('drill-test-concept')")
+    clean_page.evaluate(
+        """window.App.startDrill({
+            id: 'entry-a',
+            label: 'Entry A',
+            fullLabel: 'Entry A',
+            detail: 'Describe what Entry A means in your own words.',
+        })"""
+    )
+    expect(clean_page.locator("#drill-chamber-view")).to_be_visible()
+    clean_page.evaluate(
+        """() => {
+            document.getElementById('chamber-mic').hidden = false;
+            document.getElementById('chamber-tutor-voice').hidden = false;
+        }"""
+    )
+
+    for width in (390, 320):
+        clean_page.set_viewport_size({"width": width, "height": 700})
+        geometry = clean_page.evaluate(
+            """() => {
+                const box = (selector) => {
+                    const rect = document.querySelector(selector).getBoundingClientRect();
+                    return { left: rect.left, right: rect.right, height: rect.height };
+                };
+                const map = document.getElementById('map-view');
+                const header = document.querySelector('.main-header');
+                return {
+                    actions: box('.drill-chamber__composer-actions'),
+                    send: box('#chamber-send'),
+                    mic: box('#chamber-mic'),
+                    voice: box('#chamber-tutor-voice'),
+                    exit: box('#chamber-exit'),
+                    headerHeight: header.getBoundingClientRect().height,
+                    mapPaddingTop: parseFloat(getComputedStyle(map).paddingTop),
+                    mapClientWidth: map.clientWidth,
+                    mapScrollWidth: map.scrollWidth,
+                };
+            }"""
+        )
+        assert geometry["send"]["left"] >= geometry["actions"]["left"]
+        assert geometry["send"]["right"] <= geometry["actions"]["right"] + 0.5
+        assert abs(geometry["mapPaddingTop"] - geometry["headerHeight"]) <= 0.5
+        assert geometry["mapScrollWidth"] <= geometry["mapClientWidth"]
+        for target in ("send", "mic", "voice", "exit"):
+            assert geometry[target]["height"] >= 44
 
 
 def test_drill_start_from_non_map_view_routes_to_inline_concept(

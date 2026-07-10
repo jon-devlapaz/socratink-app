@@ -636,6 +636,11 @@
     gap: 8px;
   }
 
+  .concept-page-b2__active-entry .drill-chamber__crumb a {
+    min-height: 44px;
+    align-items: center;
+  }
+
   .concept-page-b2__active-entry .drill-chamber__active {
     min-height: 220px;
   }
@@ -645,13 +650,21 @@
     flex-direction: column;
   }
 
-  .drill-chamber__composer-actions,
-  .drill-chamber__send {
+  .drill-chamber__composer-actions {
     width: 100%;
   }
 
   .drill-chamber__send {
-    min-height: 42px;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    min-height: 48px;
+  }
+
+  .drill-chamber__voice-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
   }
 }
 

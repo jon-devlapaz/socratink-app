@@ -48,6 +48,8 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
               remove() {},
             },
             appendChild(child) {
+              this.appended = this.appended || [];
+              this.appended.push(child);
               this.lastChild = child;
             },
             addEventListener(type, handler) {
@@ -93,10 +95,17 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           },
         };
         globalThis.requestAnimationFrame = (callback) => callback();
-        globalThis.setTimeout = (callback) => {
+        const scheduledTimers = [];
+        globalThis.setTimeout = (callback, delay = 0) => {
+          if (delay === 1200) {
+            const timer = { callback, delay, cleared: false };
+            scheduledTimers.push(timer);
+            return timer;
+          }
           callback();
           return 0;
         };
+        globalThis.clearTimeout = (timer) => { if (timer) timer.cleared = true; };
 
         await import('./public/js/drill-chamber.js');
 
@@ -143,11 +152,42 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
         assert.equal(nodes.get('chamber-send').disabled, true);
 
         nodes.set('chamber-hint', makeNode('chamber-hint'));
+        nodes.set('chamber-verdict', makeNode('chamber-verdict'));
         window.DrillChamber.show({
           conceptName: 'Concept',
           entryName: 'Entry',
           question: 'Question?',
         });
+        window.DrillChamber.setLoading(true);
+        assert.equal(nodes.get('chamber-hint').textContent, 'A sentence is enough.');
+        window.DrillChamber.setLoading(true, { checkingAnswer: true });
+        assert.equal(nodes.get('chamber-hint').textContent, 'Checking your answer…');
+        const pendingTimer = scheduledTimers.at(-1);
+        assert.equal(pendingTimer.delay <= 1500, true);
+        pendingTimer.callback();
+        assert.equal(nodes.get('chamber-verdict').hidden, false);
+        assert.deepEqual(
+          nodes.get('chamber-verdict').appended.slice(-3).map((node) => node.textContent),
+          ['Answer received', '•', 'Checking the link you wrote.']
+        );
+        assert.equal(
+          nodes.get('chamber-verdict').lastChild.textContent,
+          'Checking the link you wrote.'
+        );
+        window.DrillChamber.setLoading(false);
+        assert.equal(nodes.get('chamber-hint').textContent, 'A sentence is enough.');
+        assert.equal(nodes.get('chamber-verdict').hidden, true);
+        window.DrillChamber.setLoading(true, { checkingAnswer: true });
+        scheduledTimers.at(-1).callback();
+        window.DrillChamber.appendVerdict('Checked • Partly there');
+        assert.equal(nodes.get('chamber-verdict').lastChild.textContent, 'Partly there');
+        assert.equal(nodes.get('chamber-verdict').hidden, false);
+        window.DrillChamber.setLoading(true, { checkingAnswer: true });
+        const exitTimer = scheduledTimers.at(-1);
+        assert.equal(nodes.get('chamber-active')['data-loading'], 'true');
+        window.DrillChamber.hide();
+        assert.equal(exitTimer.cleared, true);
+        assert.equal(nodes.get('chamber-active')['data-loading'], undefined);
         nodes.get('chamber-composer').value = '   ';
         nodes.get('chamber-send').click();
         assert.deepEqual(sent, ['learner answer']);
@@ -168,22 +208,60 @@ def test_drill_verdict_helpers_keep_seda_transitions_specific() -> None:
           verdictCopy,
         } from './public/js/drill-verdict.js';
 
+        const duplicateFallback = nextSedaPromptAfterVerdict(
+          'Same question?',
+          'Same question?',
+          'I guessed with my own words.'
+        );
         assert.equal(
-          nextSedaPromptAfterVerdict('Same question?', 'Same question?', 'I guessed with my own words.'),
+          duplicateFallback,
           'You wrote: «I guessed with my own words.». Now: name the missing link in one sentence.'
         );
+        assert.notEqual(duplicateFallback, 'Same question?');
         assert.equal(
           nextSedaPromptAfterVerdict('Explain the mechanism.', 'Same question?', 'My rough answer.'),
           'You wrote: «My rough answer.». Now: Explain the mechanism.'
         );
-        assert.match(
-          verdictCopy({ classification: 'partial', userText: 'The query compares with keys.' }),
-          /Checked • Partly there •/
-        );
-        assert.match(
+        const partialVerdict = verdictCopy({
+          classification: 'partial',
+          userText: 'The query compares with keys.',
+        });
+        assert.match(partialVerdict, /Checked • Partly there •/);
+        assert.match(partialVerdict, /The query compares with keys\\./);
+        assert.doesNotMatch(partialVerdict, /partial/i);
+        assert.match(partialVerdict, /Your line: “The query compares with keys\\.”/);
+        assert.match(partialVerdict, /Study will target the missing link\\./);
+        const unsafeFeedback = verdictCopy({
+          classification: 'partial',
+          userText: 'A rough answer.',
+          specificFeedback: 'Classification: shallow. Score 2.',
+        });
+        assert.doesNotMatch(unsafeFeedback, /Classification|shallow|Score 2/i);
+        assert.match(unsafeFeedback, /Study will target the missing link\\./);
+        for (const classification of ['deep', 'thin', 'shallow']) {
+          const copy = verdictCopy({ classification, userText: 'A rough causal link.' });
+          assert.match(copy, /Checked • Partly there •/);
+          assert.doesNotMatch(copy, new RegExp(classification, 'i'));
+        }
+        const wrongDirection = verdictCopy({
+          classification: 'wrong_direction',
+          userText: 'I started from the output.',
+        });
+        assert.match(wrongDirection, /Study will show a different starting point\\./);
+        assert.doesNotMatch(wrongDirection, /wrong_direction/i);
+        assert.equal(
           verdictCopy({ userText: 'The query compares with keys.', sedaComplete: true }),
-          /Checked • Recorded •/
+          'Checked • Recorded • Your attempt is on record. • Study is ready.'
         );
+        const supportTurn = verdictCopy({
+          userText: 'I need one more cue.',
+          recordable: false,
+        });
+        assert.equal(
+          supportTurn,
+          'Response received • Keep going • Your line: “I need one more cue.” • Use the next question to add one cause-and-effect link.'
+        );
+        assert.doesNotMatch(supportTurn, /Checked|Gap found|Study|Partly there|Wrong angle/);
         """
     )
     assert result.returncode == 0, result.stderr
@@ -464,6 +542,7 @@ def test_launch_pad_action_sends_shell_goal_to_extract() -> None:
         assert.equal(capturedBody.name, 'Sodium channels');
         assert.equal(capturedBody.learner_goal, 'I want to explain why sodium starts the signal.');
         assert.equal(capturedBody.starting_sketch, elements['launch-pad-input'].value);
+        assert.equal(capturedBody.route_owner, 'seda');
         assert.equal(Object.hasOwn(capturedBody, 'api_key'), false);
         assert.equal(calls.length, 2);
         assert.equal(storage.has('socratink:pendingShell'), false);

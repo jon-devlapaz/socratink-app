@@ -969,9 +969,9 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator("#drill-chamber-view")).to_be_visible()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Pressure check"
+        "Reconstruction"
     )
-    expect(page.locator("#chamber-send")).to_have_text("Check reconstruction")
+    expect(page.locator("#chamber-send")).to_have_text("Check my answer")
     expect(page.locator(".drill-chamber__hint")).to_have_text("A sentence is enough.")
     expect(
         page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
@@ -1203,21 +1203,37 @@ def test_start_learning_enters_seda_loop_from_product_flow(
     page.locator("#hero-door-submit").click()
 
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
-    expect(page.locator("#chamber-question")).to_contain_text(
-        "Why is the second exposure faster?", timeout=20_000
-    )
+    expect(page.locator("#chamber-question")).not_to_have_text("—", timeout=20_000)
     state = page.wait_for_function(
         """() => {
           const conceptId = localStorage.getItem('learnops_active');
           const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
-          return value?.sessionId && value?.latest ? value : null;
+          return value?.sessionId && value?.latest?.awaiting?.key === 'cold_attempt'
+            ? value
+            : null;
         }""",
-        timeout=20_000,
+        timeout=45_000,
     ).json_value()
     assert state["sessionId"]
-    assert state["latest"]["awaiting"]["key"] == "launch_attempt"
+    assert state["latest"]["awaiting"]["key"] == "cold_attempt"
+    bound_study_note = page.evaluate(
+        """(nodeId) => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts') || '[]')
+            .find((item) => item.id === conceptId);
+          const graph = JSON.parse(concept?.graphData || 'null');
+          const nodes = [
+            ...(graph?.backbone || []),
+            ...(graph?.clusters || []).flatMap((cluster) => cluster?.subnodes || []),
+          ];
+          const node = nodes.find((item) => item?.id === nodeId);
+          return node?.study_note || node?.mechanism || '';
+        }""",
+        state["nodeId"],
+    )
+    assert bound_study_note
     page.locator("#chamber-send").click()
     expect(page.locator("#chamber-hint")).to_have_text(
         "Write a sentence before checking."
@@ -1233,7 +1249,7 @@ def test_start_learning_enters_seda_loop_from_product_flow(
           const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
-          return value?.latest?.awaiting?.key !== 'launch_attempt' ? value : null;
+          return value?.latest?.awaiting?.key !== 'cold_attempt' ? value : null;
         }""",
         timeout=45_000,
     ).json_value()
@@ -1272,47 +1288,97 @@ def test_start_learning_enters_seda_loop_from_product_flow(
         })"""
     )
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
-    expect(page.locator("#chamber-question")).to_contain_text(
-        "What persists after the first exposure?", timeout=20_000
+    expect(page.locator("#chamber-question")).to_have_text(
+        "This learning route cannot be resumed. Your recorded work is still on the map.",
+        timeout=20_000,
     )
+    expect(page.locator("#chamber-send")).to_have_text("Return to map")
     different_node_state = page.wait_for_function(
         """() => {
           const conceptId = localStorage.getItem('learnops_active');
           const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
-          return value?.nodeId === 'c1_s2' && value?.sessionId ? value : null;
+          return value?.nodeId === 'c1_s1' && value?.sessionId ? value : null;
         }""",
         timeout=20_000,
     ).json_value()
-    assert different_node_state["sessionId"] != state["sessionId"]
-    page.locator("#chamber-exit").click()
+    assert different_node_state["sessionId"] == state["sessionId"]
+    page.locator("#chamber-send").click()
     page.reload()
-    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible(
-        timeout=20_000
+    persisted_attempt = page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:training:v1:${conceptId}` : null;
+          if (!key) return null;
+          const training = JSON.parse(localStorage.getItem(key) || 'null');
+          return training?.node_records?.c1_s1?.attempts?.[0] || null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert persisted_attempt["user_text"] == (
+        "Memory cells remain after the first exposure and make the second response faster."
+    )
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
+        "Reveal notes and compare", timeout=20_000
     )
     page.on("request", remember_resume_drill)
-    resume_text = "Memory cells stay available and respond faster on the next exposure."
-    page.locator(".concept-page-b2__attempt-input").fill(resume_text)
-    with page.expect_request(
-        lambda request: (
-            request.method == "POST"
-            and "/api/session/" in request.url
-            and request.url.endswith("/turn")
-            and request.post_data_json == {"text": resume_text}
-        )
-    ) as resume_turn:
-        page.locator(".concept-page-b2__attempt-save").click()
-    assert resume_turn.value.post_data_json == {"text": resume_text}
-    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
+        bound_study_note,
+        timeout=20_000,
+    )
     assert resume_drill_requests == []
     expect(page.locator("#nav-loop")).to_have_count(0)
 
 
-def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
+def _seda_route_event(
+    *,
+    node_id: str = "c1_s1",
+    label: str = "Memory cells",
+    prompt: str = "Why is the second exposure faster?",
+    mechanism: str = "Memory cells persist after exposure.",
+) -> dict:
+    """Small valid route event for source-less SEDA browser stubs."""
+    cluster_id = node_id.split("_s", 1)[0]
+    return {
+        "type": "route_generated",
+        "first_node": {
+            "id": node_id,
+            "kc_id": node_id,
+            "label": label,
+            "mechanism": mechanism,
+            "learner_prompt": prompt,
+            "evidence_goal": "Explain one causal link from memory.",
+        },
+        "node_ids": [node_id],
+        "provisional_map": {
+            "metadata": {"core_thesis": f"{label} changes the later response."},
+            "backbone": [{"id": "b-route", "principle": "A retained change affects a later response."}],
+            "clusters": [{
+                "id": cluster_id,
+                "label": label,
+                "subnodes": [{"id": node_id, "label": label}],
+            }],
+        },
+    }
+
+
+def _seda_route_result(**kwargs) -> dict:
+    """Versioned app-facing route result; raw events are audit-only."""
+    event = _seda_route_event(**kwargs)
+    return {
+        "contractVersion": 1,
+        "status": "ready",
+        "firstNode": event["first_node"],
+        "provisionalMap": event["provisional_map"],
+    }
+
+
+def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     clean_page: Page, base_url: str
 ) -> None:
-    """A non-final SEDA turn should show feedback, then require an explicit continue."""
+    """The Door sketch bootstraps SEDA; the first room answer earns study."""
     page = clean_page
     _enter_app_shell_as_guest(page, base_url)
 
@@ -1330,9 +1396,9 @@ def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
                         "subnodes": [{
                             "id": "c1_s1",
                             "label": "Memory cells",
-                            "mechanism": "Memory cells persist after exposure.",
+                            "mechanism": "Door mechanism A should be replaced.",
                             "learner_scaffold": {
-                                "entry_prompt": "Why is the second exposure faster?",
+                                "entry_prompt": "Door prompt A should be replaced.",
                                 "task_cue": "Explain the role of memory cells.",
                             },
                         }],
@@ -1347,6 +1413,7 @@ def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
             content_type="application/json",
             body=json.dumps({
                 "sessionId": "mid-loop-session",
+                "sessionVersion": 1,
                 "status": "awaiting_input",
                 "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
                 "learnerTranscript": [],
@@ -1355,28 +1422,45 @@ def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
             }),
         )
 
-    turn_requests = {"count": 0}
+    door_sketch = "The first exposure leaves memory cells."
+    room_answer = (
+        "Memory cells remain after the first exposure and make the second response faster."
+    )
+    routed_prompt = "Route prompt B: why does the later response happen faster?"
+    routed_mechanism = (
+        "Route mechanism B: memory cells persist and activate sooner on re-exposure."
+    )
+    turn_texts: list[str] = []
+    turn_payloads: list[dict] = []
 
     def fulfill_turn(route) -> None:
-        turn_requests["count"] += 1
-        if turn_requests["count"] == 2:
+        turn_payloads.append(route.request.post_data_json)
+        turn_texts.append(route.request.post_data_json["text"])
+        if len(turn_texts) == 1:
             route.fulfill(
                 status=200,
                 content_type="application/json",
                 body=json.dumps({
                     "sessionId": "mid-loop-session",
+                    "sessionVersion": 2,
                     "status": "awaiting_input",
-                    "awaiting": {"key": "compare", "ctaText": "Compare your answer with the note."},
+                    "awaiting": {
+                        "key": "cold_attempt",
+                        "ctaText": "Why is the second exposure faster?",
+                    },
                     "learnerTranscript": [],
-                    "events": [{
-                        "type": "cold_attempt",
-                        "text": "Memory cells remain and respond faster next time.",
-                        "evaluation": {
-                            "classification": "solid",
-                            "gaps": [],
-                            "grader_version": "qa",
-                        },
-                    }],
+                    "events": [_seda_route_event(
+                        node_id="c9_s1",
+                        label="Routed memory target",
+                        prompt=routed_prompt,
+                        mechanism=routed_mechanism,
+                    )],
+                    "sourceLessRoute": _seda_route_result(
+                        node_id="c9_s1",
+                        label="Routed memory target",
+                        prompt=routed_prompt,
+                        mechanism=routed_mechanism,
+                    ),
                     "caseComplete": False,
                     "record": None,
                 }),
@@ -1387,10 +1471,444 @@ def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
             content_type="application/json",
             body=json.dumps({
                 "sessionId": "mid-loop-session",
+                "sessionVersion": 3,
                 "status": "awaiting_input",
-                "awaiting": {"key": "missing_link", "ctaText": "Name the missing link."},
+                "awaiting": {
+                    "key": "compare",
+                    "ctaText": "Compare your answer with the note.",
+                },
                 "learnerTranscript": [],
-                "events": [],
+                "events": [{
+                    "type": "cold_attempt",
+                    "kc_id": "c9_s1",
+                    "text": room_answer,
+                    "evaluation": {
+                        "classification": "deep",
+                        "agent_response": (
+                            "You connected memory cells to the faster response, "
+                            "but not why they react sooner."
+                        ),
+                        "gap_description": "Name why memory cells respond faster.",
+                        "grader_version": "qa",
+                    },
+                }],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    page.route("**/api/extract", fulfill_extract)
+    page.route(re.compile(r".*/api/session$"), fulfill_session)
+    page.route(
+        re.compile(r".*/api/session/mid-loop-session/turn$"),
+        fulfill_turn,
+    )
+    page.evaluate(
+        """() => {
+          window.__sedaQuestionHistory = [];
+          const remember = () => {
+            const question = document.getElementById('chamber-question');
+            const value = question?.textContent?.trim();
+            if (value) window.__sedaQuestionHistory.push(value);
+          };
+          new MutationObserver(remember).observe(document.body, {
+            childList: true, characterData: true, subtree: true,
+          });
+          remember();
+        }"""
+    )
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
+    page.locator("#hero-cold-guess-field").fill(door_sketch)
+    page.locator("#hero-door-submit").click()
+
+    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
+    page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
+          if (!key) return false;
+          const value = JSON.parse(localStorage.getItem(key) || 'null');
+          if (value?.sessionId !== 'mid-loop-session'
+            || value?.latest?.awaiting?.key !== 'cold_attempt'
+            || value?.nodeId !== 'c9_s1') return false;
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts') || '[]')
+            .find((item) => item.id === conceptId);
+          const graph = JSON.parse(concept?.graphData || 'null');
+          return graph?.clusters?.[0]?.subnodes?.[0]?.id === 'c9_s1';
+        }""",
+        timeout=20_000,
+    )
+    assert turn_texts == [door_sketch]
+    bootstrap_attempts = page.evaluate(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:training:v1:${conceptId}` : null;
+          const training = key ? JSON.parse(localStorage.getItem(key) || 'null') : null;
+          return Object.values(training?.node_records || {})
+            .flatMap((record) => record?.attempts || []).length;
+        }"""
+    )
+    assert bootstrap_attempts == 0
+    expect(page.locator("#chamber-question")).to_have_text(
+        routed_prompt
+    )
+    question_history = page.evaluate("window.__sedaQuestionHistory")
+    assert "Preparing your first question…" in question_history
+    assert "Door prompt A should be replaced." not in question_history
+    expect(page.locator("#chamber-entry-name")).to_have_text("Routed memory target")
+    page.locator("#chamber-composer").fill(room_answer)
+    expect(page.locator("#chamber-send")).to_be_enabled()
+    page.locator("#chamber-composer").press("Control+Enter")
+    expect(page.locator("#chamber-verdict")).to_have_text(
+        re.compile(r"Checked.*Partly there"), timeout=2_000
+    )
+    expect(page.locator("#chamber-verdict")).not_to_contain_text(
+        "You connected memory cells to the faster response, but not why they react sooner."
+    )
+    expect(page.locator("#chamber-send")).to_have_text("See what to study")
+    expect(page.locator("#chamber-composer")).to_be_disabled()
+    expect(page.locator("#chamber-question")).to_have_text(routed_prompt)
+    assert turn_texts == [door_sketch, room_answer]
+    assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2]
+    projected = page.wait_for_function(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = conceptId ? `socratink:training:v1:${conceptId}` : null;
+          if (!key) return null;
+          const value = JSON.parse(localStorage.getItem(key) || 'null');
+          const record = value?.node_records?.c9_s1;
+          return record?.attempts?.length ? record.attempts[0] : null;
+        }""",
+        timeout=20_000,
+    ).json_value()
+    assert projected["classification"] == "partial"
+    assert projected["kind"] == "cold"
+    assert projected["gaps"] == [{
+        "mechanism": "target mechanism",
+        "correction": "Name why memory cells respond faster.",
+    }]
+    assert page.evaluate(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const key = `socratink:training:v1:${conceptId}`;
+          const training = JSON.parse(localStorage.getItem(key) || 'null');
+          return Boolean(training?.node_records?.c1_s1);
+        }"""
+    ) is False
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_be_hidden()
+    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
+        routed_mechanism, timeout=20_000
+    )
+
+
+def test_late_source_less_route_cannot_overwrite_a_newly_selected_concept(
+    clean_page: Page, base_url: str
+) -> None:
+    """A delayed route is discarded after exit instead of mutating active state."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate(
+        """() => {
+          const safeGraph = {
+            metadata: { core_thesis: 'Keep this graph unchanged.', sentinel: 'safe' },
+            backbone: [{ id: 'b1', principle: 'Safe principle', dependent_clusters: ['c1'] }],
+            clusters: [{
+              id: 'c1', label: 'Safe cluster', description: 'Safe description',
+              subnodes: [{ id: 'c1_s1', label: 'Safe node', mechanism: 'Safe mechanism.' }],
+            }],
+            relationships: { domain_mechanics: [], learning_prerequisites: [] },
+            frameworks: [],
+          };
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: 'safe-concept', name: 'Safe concept', createdAt: Date.now(),
+            state: 'growing', graphData: JSON.stringify(safeGraph),
+          }]));
+          localStorage.setItem('learnops_active', 'safe-concept');
+        }"""
+    )
+
+    page.route(
+        "**/api/extract",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "route_owner": "seda",
+                "provisional_map": {
+                    "metadata": {
+                        "core_thesis": "Pending source-less shell.",
+                        "route_status": "pending_seda",
+                        "graph_neutral": True,
+                    },
+                    "backbone": [{
+                        "id": "b1", "principle": "Pending shell",
+                        "dependent_clusters": ["c1"],
+                    }],
+                    "clusters": [{
+                        "id": "c1", "label": "Pending", "description": "Pending",
+                        "subnodes": [{
+                            "id": "c1_s1", "label": "Pending",
+                            "mechanism": "Learner sketch only.",
+                            "learner_scaffold": {"entry_prompt": "Provisional prompt must stay hidden."},
+                        }],
+                    }],
+                    "relationships": {"domain_mechanics": [], "learning_prerequisites": []},
+                    "frameworks": [],
+                },
+            }),
+        ),
+    )
+    session_id = "66666666-6666-4666-8666-666666666666"
+    page.route(
+        re.compile(r".*/api/session$"),
+        lambda route: route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 1,
+                "status": "awaiting_input",
+                "awaiting": {"key": "launch_attempt", "ctaText": "First try"},
+                "caseComplete": False,
+            }),
+        ),
+    )
+    held_turns = []
+    page.route(
+        re.compile(rf".*/api/session/{session_id}/turn$"),
+        lambda route: held_turns.append(route),
+    )
+
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill("why immune memory persists")
+    page.locator("#hero-cold-guess-field").fill(
+        "The first exposure leaves something ready for the next one."
+    )
+    page.locator("#hero-door-submit").click()
+    expect(page.locator("#chamber-question")).to_have_text(
+        "Preparing your first question…", timeout=20_000
+    )
+    for _ in range(100):
+        if held_turns:
+            break
+        page.wait_for_timeout(50)
+    assert held_turns, "bootstrap turn never reached the held route"
+    source_concept_id = page.evaluate("localStorage.getItem('learnops_active')")
+    assert source_concept_id != "safe-concept"
+
+    page.locator("#chamber-exit").click()
+    page.evaluate("window.App.selectConcept('safe-concept')")
+    expect(page.locator("#drill-chamber-view")).to_be_hidden()
+    held_turns[0].fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps({
+            "sessionId": session_id,
+            "sessionVersion": 2,
+            "status": "awaiting_input",
+            "awaiting": {"key": "cold_attempt", "ctaText": "Authoritative prompt"},
+            "sourceLessRoute": _seda_route_result(
+                node_id="route-node", prompt="Authoritative prompt",
+            ),
+            "events": [_seda_route_event(
+                node_id="route-node", prompt="Authoritative prompt",
+            )],
+            "caseComplete": False,
+        }),
+    )
+    page.wait_for_timeout(300)
+
+    snapshot = page.evaluate(
+        """(sourceId) => {
+          const concepts = JSON.parse(localStorage.getItem('learnops_concepts') || '[]');
+          const safe = concepts.find((concept) => concept.id === 'safe-concept');
+          const source = concepts.find((concept) => concept.id === sourceId);
+          const safeGraph = JSON.parse(safe.graphData);
+          const sourceGraph = JSON.parse(source.graphData);
+          return {
+            activeId: localStorage.getItem('learnops_active'),
+            safeSentinel: safeGraph.metadata.sentinel,
+            safeBoundNode: safeGraph.metadata.seda_route_bound_node_id || null,
+            sourceBoundNode: sourceGraph.metadata.seda_route_bound_node_id || null,
+            sourceSession: localStorage.getItem(`socratink:seda-session:v1:${sourceId}`),
+          };
+        }""",
+        source_concept_id,
+    )
+    assert snapshot == {
+        "activeId": "safe-concept",
+        "safeSentinel": "safe",
+        "safeBoundNode": None,
+        "sourceBoundNode": None,
+        "sourceSession": None,
+    }
+
+    normal_drill_requests: list[dict] = []
+
+    def reject_normal_drill(route) -> None:
+        normal_drill_requests.append(route.request.post_data_json)
+        route.fulfill(
+            status=500,
+            content_type="application/json",
+            body=json.dumps({"error": "placeholder_shell_must_not_drill"}),
+        )
+
+    page.route("**/api/drill", reject_normal_drill)
+    page.goto(f"{base_url}/session/{source_concept_id}")
+    draft_after_reload = "This draft was written against the saved shell."
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible(
+        timeout=20_000
+    )
+    page.locator(".concept-page-b2__attempt-input").fill(draft_after_reload)
+    page.locator(".concept-page-b2__attempt-save").click()
+    expect(page.locator("#chamber-question")).to_have_text(
+        "Preparing your first question…", timeout=20_000
+    )
+    for _ in range(100):
+        if len(held_turns) >= 2:
+            break
+        page.wait_for_timeout(50)
+    assert len(held_turns) == 2
+    assert normal_drill_requests == []
+    assert held_turns[1].request.post_data_json["text"] == (
+        "The first exposure leaves something ready for the next one."
+    )
+
+    held_turns[1].fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps({
+            "sessionId": session_id,
+            "sessionVersion": 2,
+            "status": "awaiting_input",
+            "awaiting": {"key": "cold_attempt", "ctaText": "Recovered route prompt"},
+            "sourceLessRoute": _seda_route_result(
+                node_id="route-node", prompt="Recovered route prompt",
+            ),
+            "events": [_seda_route_event(
+                node_id="route-node", prompt="Recovered route prompt",
+            )],
+            "caseComplete": False,
+        }),
+    )
+    expect(page.locator("#chamber-question")).to_have_text(
+        "Recovered route prompt", timeout=20_000
+    )
+    expect(page.locator("#chamber-composer")).to_have_value(draft_after_reload)
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Not recorded against this question."
+    )
+    recovered = page.evaluate(
+        """(sourceId) => {
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts') || '[]')
+            .find((item) => item.id === sourceId);
+          const graph = JSON.parse(concept.graphData);
+          const training = JSON.parse(
+            localStorage.getItem(`socratink:training:v1:${sourceId}`) || 'null'
+          );
+          return {
+            boundNode: graph.metadata.seda_route_bound_node_id,
+            attempts: Object.values(training?.node_records || {})
+              .flatMap((record) => record.attempts || []).length,
+          };
+        }""",
+        source_concept_id,
+    )
+    assert recovered == {"boundNode": "route-node", "attempts": 0}
+
+
+def test_seda_support_turn_is_neutral_and_records_no_evidence(
+    clean_page: Page, base_url: str
+) -> None:
+    """A support turn stays graph-neutral and returns to a new prompt."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+
+    def fulfill_extract(route) -> None:
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {"core_thesis": "Immune memory speeds later response."},
+                    "backbone": [{
+                        "id": "b1",
+                        "principle": "Immune memory persists.",
+                        "learner_scaffold": {
+                            "entry_prompt": "Why is the second exposure faster?",
+                            "task_cue": "Explain one causal link.",
+                        },
+                    }],
+                    "clusters": [],
+                },
+            }),
+        )
+
+    def fulfill_session(route) -> None:
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "support-turn-session",
+                "sessionVersion": 1,
+                "status": "awaiting_input",
+                "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
+                "learnerTranscript": [],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    door_sketch = "The first exposure leaves memory cells."
+    support_text = "I need one more cue."
+    turn_texts: list[str] = []
+    turn_payloads: list[dict] = []
+
+    def fulfill_turn(route) -> None:
+        turn_payloads.append(route.request.post_data_json)
+        turn_texts.append(route.request.post_data_json["text"])
+        if len(turn_texts) == 1:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "sessionId": "support-turn-session",
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "awaiting": {
+                        "key": "cold_attempt",
+                        "ctaText": "Why is the second exposure faster?",
+                    },
+                    "learnerTranscript": [],
+                    "events": [_seda_route_event()],
+                    "sourceLessRoute": _seda_route_result(),
+                    "caseComplete": False,
+                    "record": None,
+                }),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "support-turn-session",
+                "sessionVersion": 3,
+                "status": "awaiting_input",
+                "awaiting": {
+                    "key": "cold_attempt",
+                    "ctaText": "Try one concrete cause.",
+                },
+                "learnerTranscript": [],
+                "events": [{
+                    "type": "cold_help_turn",
+                    "text": support_text,
+                    "answer_mode": "help_request",
+                    "score_eligible": False,
+                    "graph_neutral": True,
+                    "agent_response": "Try one concrete cause.",
+                }],
                 "caseComplete": False,
                 "record": None,
             }),
@@ -1401,55 +1919,43 @@ def test_seda_mid_loop_turn_keeps_composer_gated_until_continue(
     page.route(re.compile(r".*/api/session/[^/]+/turn$"), fulfill_turn)
     page.locator("#nav-ignition").click()
     page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
-    page.locator("#hero-cold-guess-field").fill("The first exposure leaves memory cells.")
+    page.locator("#hero-cold-guess-field").fill(door_sketch)
     page.locator("#hero-door-submit").click()
 
-    expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
     page.wait_for_function(
         """() => {
           const conceptId = localStorage.getItem('learnops_active');
           const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
-          if (!key) return false;
-          const value = JSON.parse(localStorage.getItem(key) || 'null');
-          return value?.sessionId === 'mid-loop-session'
-            && value?.latest?.awaiting?.key === 'launch_attempt';
+          const value = key ? JSON.parse(localStorage.getItem(key) || 'null') : null;
+          return value?.latest?.awaiting?.key === 'cold_attempt';
         }""",
         timeout=20_000,
     )
-    page.locator("#chamber-composer").fill(
-        "Memory cells remain after the first exposure and make the second response faster."
+    page.locator("#chamber-composer").fill(support_text)
+    page.locator("#chamber-send").click()
+
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Use the next question to add one cause-and-effect link.", timeout=2_000
     )
-    expect(page.locator("#chamber-send")).to_be_enabled()
-    page.locator("#chamber-composer").press("Control+Enter")
-    expect(page.locator("#chamber-question")).to_contain_text(
-        "Name the missing link.", timeout=20_000
-    )
-    assert turn_requests["count"] == 1
-    expect(page.locator("#chamber-verdict")).to_contain_text("Checked", timeout=20_000)
+    expect(page.locator("#chamber-verdict")).to_contain_text("Response received")
+    expect(page.locator("#chamber-verdict")).not_to_contain_text("Gap found")
+    expect(page.locator("#chamber-verdict")).not_to_contain_text("Study")
     expect(page.locator("#chamber-send")).to_have_text("Keep going")
     expect(page.locator("#chamber-composer")).to_be_disabled()
-    page.locator("#chamber-send").click()
-    expect(page.locator("#chamber-composer")).to_be_enabled()
-    page.locator("#chamber-composer").fill(
-        "Memory cells remain and respond faster next time."
-    )
-    page.locator("#chamber-composer").press("Control+Enter")
-    expect(page.locator("#chamber-verdict")).to_contain_text("Checked", timeout=20_000)
-    expect(page.locator("#chamber-send")).to_have_text("See what to study")
-    projected = page.wait_for_function(
+    assert turn_texts == [door_sketch, support_text]
+    assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2]
+    attempt_count = page.evaluate(
         """() => {
           const conceptId = localStorage.getItem('learnops_active');
           const key = conceptId ? `socratink:training:v1:${conceptId}` : null;
-          if (!key) return null;
-          const value = JSON.parse(localStorage.getItem(key) || 'null');
-          const record = value?.node_records?.c1_s1;
-          return record?.attempts?.length ? record.attempts[0] : null;
-        }""",
-        timeout=20_000,
-    ).json_value()
-    assert projected["classification"] == "strong"
-    assert projected["kind"] == "cold"
-    assert turn_requests["count"] == 2
+          const training = key ? JSON.parse(localStorage.getItem(key) || 'null') : null;
+          return Object.values(training?.node_records || {})
+            .flatMap((record) => record?.attempts || []).length;
+        }"""
+    )
+    assert attempt_count == 0
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-composer")).to_be_enabled()
 
 
 def test_seda_start_failure_offers_retry_from_product_flow(
@@ -1495,14 +2001,68 @@ def test_seda_start_failure_offers_retry_from_product_flow(
             content_type="application/json",
             body=json.dumps({
                 "sessionId": "retry-session",
+                "sessionVersion": 1,
                 "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
                 "learnerTranscript": [],
                 "caseComplete": False,
             }),
         )
 
+    bootstrap_turns: list[str] = []
+    turn_payloads: list[dict] = []
+
+    def fulfill_turn(route) -> None:
+        payload = route.request.post_data_json
+        turn_payloads.append(payload)
+        bootstrap_turns.append(payload["text"])
+        if len(bootstrap_turns) == 2:
+            route.fulfill(
+                status=503,
+                content_type="application/json",
+                body=json.dumps({"detail": "Loop turn unavailable."}),
+            )
+            return
+        if len(bootstrap_turns) > 2:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "sessionId": "retry-session",
+                    "sessionVersion": 3,
+                    "status": "awaiting_input",
+                    "awaiting": {"key": "cold_attempt", "ctaText": "Try one concrete cause."},
+                    "events": [{
+                        "type": "cold_help_turn", "text": payload["text"],
+                        "answer_mode": "help_request", "score_eligible": False,
+                        "graph_neutral": True, "agent_response": "Try one concrete cause.",
+                    }],
+                    "caseComplete": False,
+                    "record": None,
+                }),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "retry-session",
+                "sessionVersion": 2,
+                "status": "awaiting_input",
+                "awaiting": {
+                    "key": "cold_attempt",
+                    "ctaText": "Why is the second exposure faster?",
+                },
+                "learnerTranscript": [],
+                "events": [_seda_route_event()],
+                "sourceLessRoute": _seda_route_result(),
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
     page.route("**/api/extract", fulfill_extract)
     page.route(re.compile(r".*/api/session$"), fulfill_session)
+    page.route(re.compile(r".*/api/session/[^/]+/turn$"), fulfill_turn)
     page.locator("#nav-ignition").click()
     page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
     page.locator("#hero-cold-guess-field").fill("The first exposure leaves memory cells.")
@@ -1516,12 +2076,1115 @@ def test_seda_start_failure_offers_retry_from_product_flow(
     )
     expect(page.locator("#chamber-send")).to_have_text("Try again")
     page.locator("#chamber-send").click()
-    expect(page.locator("#chamber-question")).to_contain_text(
-        "Reconstruct Immune memory persists. from memory before checking the source.",
+    expect(page.locator("#chamber-question")).to_have_text(
+        "Why is the second exposure faster?",
         timeout=20_000,
     )
     expect(page.locator("#chamber-composer")).to_be_enabled()
     assert session_attempts["count"] == 2
+    assert bootstrap_turns == ["The first exposure leaves memory cells."]
+
+    learner_answer = "Memory cells make the next response faster."
+    page.locator("#chamber-composer").fill(learner_answer)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-verdict")).to_have_text(
+        re.compile(r"Answer kept.*Not recorded.*The learning loop did not respond\."),
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-send")).to_have_text("Try sending again")
+    expect(page.locator("#chamber-composer")).to_be_disabled()
+    expect(page.locator("#chamber-composer")).to_have_value(learner_answer)
+    expect(page.locator("#chamber-active")).not_to_have_attribute(
+        "data-loading", "true"
+    )
+    expect(page.locator("#chamber-hint")).to_have_text("A sentence is enough.")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Use the next question to add one cause-and-effect link.", timeout=2_000
+    )
+    assert [payload["text"] for payload in turn_payloads] == [
+        "The first exposure leaves memory cells.", learner_answer, learner_answer,
+    ]
+    assert turn_payloads[1]["requestId"] == turn_payloads[2]["requestId"]
+    assert turn_payloads[0]["requestId"] != turn_payloads[1]["requestId"]
+    assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2, 2]
+
+
+def test_missing_source_less_route_preserves_sketch_and_builds_fresh_question(
+    clean_page: Page, base_url: str
+) -> None:
+    """A typed route failure offers a fresh route without evidence or lost Door work."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+
+    page.route(
+        "**/api/extract",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "provisional_map": {
+                    "metadata": {"core_thesis": "Immune memory changes later response."},
+                    "backbone": [{"id": "b1", "principle": "Something persists."}],
+                    "clusters": [],
+                },
+            }),
+        ),
+    )
+    session_requests: list[dict] = []
+
+    def fulfill_session(route) -> None:
+        session_requests.append(route.request.post_data_json)
+        session_number = len(session_requests)
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": f"route-recovery-{session_number}",
+                "sessionVersion": 1,
+                "status": "awaiting_input",
+                "awaiting": {"key": "launch_attempt", "ctaText": "First try"},
+                "learnerTranscript": [],
+                "caseComplete": False,
+            }),
+        )
+
+    turn_requests: list[dict] = []
+    routed_prompt = "Why does retained memory speed the later response?"
+
+    def fulfill_turn(route) -> None:
+        turn_requests.append(route.request.post_data_json)
+        if len(turn_requests) == 1:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "sessionId": "route-recovery-1",
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "awaiting": {"key": "cmd", "ctaText": "Choose what to do next."},
+                    "sourceLessRoute": {
+                        "contractVersion": 1,
+                        "status": "route_unavailable",
+                        "code": "route_unavailable",
+                        "reason": "generation_failed",
+                        "retryable": True,
+                    },
+                    "events": [{
+                        "type": "bridge_error", "phase": "route",
+                        "action": "generate-route", "graph_neutral": True,
+                        "score_eligible": False,
+                    }],
+                    "caseComplete": False,
+                }),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "route-recovery-2",
+                "sessionVersion": 2,
+                "status": "awaiting_input",
+                "awaiting": {"key": "cold_attempt", "ctaText": routed_prompt},
+                "sourceLessRoute": _seda_route_result(prompt=routed_prompt),
+                "events": [_seda_route_event(prompt=routed_prompt)],
+                "caseComplete": False,
+            }),
+        )
+
+    page.route(re.compile(r".*/api/session$"), fulfill_session)
+    page.route(re.compile(r".*/api/session/[^/]+/turn$"), fulfill_turn)
+    door_sketch = "The first exposure leaves something behind."
+    page.locator("#nav-ignition").click()
+    page.locator("#hero-single-input-field").fill("why vaccines create immune memory")
+    page.locator("#hero-cold-guess-field").fill(door_sketch)
+    page.locator("#hero-door-submit").click()
+
+    expect(page.locator("#chamber-question")).to_have_text(
+        "We could not build the first question. Your starting sketch is saved.",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-send")).to_have_text("Build the first question again")
+    expect(page.locator("#chamber-composer")).to_be_disabled()
+    assert page.evaluate(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const training = JSON.parse(localStorage.getItem(`socratink:training:v1:${conceptId}`) || 'null');
+          return Object.values(training?.node_records || {})
+            .flatMap((record) => record?.attempts || []).length;
+        }"""
+    ) == 0
+
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-question")).to_have_text(routed_prompt, timeout=20_000)
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    saved_sketch = page.evaluate(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          return JSON.parse(localStorage.getItem('learnops_concepts'))
+            .find((concept) => concept.id === conceptId)?.startingMapContext;
+        }"""
+    )
+    assert saved_sketch == door_sketch
+    assert session_requests == [
+        {"sourceLessDoorBootstrap": True},
+        {"sourceLessDoorBootstrap": True},
+    ]
+    assert [request["text"] for request in turn_requests] == [door_sketch, door_sketch]
+    assert all(re.fullmatch(r"[0-9a-f-]{36}", request["requestId"], re.I) for request in turn_requests)
+    assert turn_requests[0]["requestId"] != turn_requests[1]["requestId"]
+    assert [request["expectedVersion"] for request in turn_requests] == [1, 1]
+
+
+def test_unbound_source_less_map_with_evidence_is_never_replaced(
+    clean_page: Page, base_url: str
+) -> None:
+    """Legacy node-keyed evidence blocks automatic first-route replacement."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+          const conceptId = 'unbound-evidence-route';
+          const graphData = JSON.stringify({
+            metadata: {
+              core_thesis: 'Memory changes later response.',
+              starting_map_context: 'Something remains after exposure.',
+              source_mode: 'source_less',
+              route_status: 'pending_seda',
+              graph_neutral: true,
+            },
+            backbone: [{
+              id: 'legacy-node', label: 'Legacy target',
+              mechanism: 'A prior mechanism.',
+              learner_scaffold: { entry_prompt: 'What remains after exposure?' },
+            }, {
+              id: 'prior-node', label: 'Prior evidence target',
+              mechanism: 'Earlier work stays keyed here.',
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Unbound evidence QA', createdAt: Date.now(),
+            state: 'growing', startingMapContext: 'Something remains after exposure.',
+            sourceMode: 'source_less', graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch',
+            node_records: {
+              'prior-node': { attempts: [{
+                id: 'legacy-attempt', kind: 'cold', at: '2026-07-09T10:00:00.000Z',
+                user_text: 'My earlier reconstruction.', classification: 'partial',
+                gaps: [], grader_version: 'qa',
+              }], repairs: [] },
+            },
+          }));
+        })()"""
+    )
+    session_requests: list[str] = []
+    page.on(
+        "request",
+        lambda request: session_requests.append(request.url)
+        if "/api/session" in request.url
+        else None,
+    )
+    page.goto(f"{base_url}/session/unbound-evidence-route")
+    page.evaluate(
+        """window.App.reopenStudy({
+          id: 'legacy-node', label: 'Legacy target', fullLabel: 'Legacy target',
+          learner_scaffold: { entry_prompt: 'What remains after exposure?' },
+        })"""
+    )
+
+    expect(page.locator("#chamber-question")).to_have_text(
+        "This learning route cannot be resumed. Your recorded work is still on the map.",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-send")).to_have_text("Return to map")
+    assert session_requests == []
+    unchanged = page.evaluate(
+        """() => {
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts'))[0];
+          const graph = JSON.parse(concept.graphData);
+          const training = JSON.parse(
+            localStorage.getItem('socratink:training:v1:unbound-evidence-route')
+          );
+          return {
+            nodeId: graph.backbone[0].id,
+            boundNodeId: graph.metadata.seda_route_bound_node_id || null,
+            attempt: training.node_records['prior-node'].attempts[0].user_text,
+          };
+        }"""
+    )
+    assert unchanged == {
+        "nodeId": "legacy-node",
+        "boundNodeId": None,
+        "attempt": "My earlier reconstruction.",
+    }
+    page.locator("#chamber-send").click()
+
+
+@pytest.mark.parametrize(
+    "resume_case",
+    [
+        "unbound_without_confirmation",
+        "missing_bound_session",
+        "bound_session_mismatch",
+        "bound_route_mismatch",
+    ],
+)
+def test_invalid_source_less_resume_state_fails_closed(
+    clean_page: Page, base_url: str, resume_case: str
+) -> None:
+    """Every stale/unconfirmed route shape keeps study closed and evidence empty."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    bound_session_id = "11111111-1111-4111-8111-111111111111"
+    page.evaluate(
+        """({ resumeCase, boundSessionId }) => {
+          const conceptId = `invalid-resume-${resumeCase}`;
+          const metadata = {
+            core_thesis: 'Memory changes the later response.',
+            starting_map_context: 'Something remains after exposure.',
+            source_mode: 'source_less',
+          };
+          if (resumeCase !== 'unbound_without_confirmation') {
+            metadata.seda_route_bound_node_id = 'bound-node';
+          }
+          if (!['unbound_without_confirmation', 'missing_bound_session'].includes(resumeCase)) {
+            metadata.seda_route_bound_session_id = boundSessionId;
+          }
+          const graphData = JSON.stringify({
+            metadata,
+            backbone: [{
+              id: 'bound-node', label: 'Bound target', mechanism: 'Memory cells persist.',
+              learner_scaffold: { entry_prompt: 'Why is the next response faster?' },
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Invalid resume QA', createdAt: Date.now(),
+            state: 'growing', sourceMode: 'source_less',
+            startingMapContext: 'Something remains after exposure.', graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch', node_records: {},
+          }));
+          if (['bound_session_mismatch', 'bound_route_mismatch'].includes(resumeCase)) {
+            localStorage.setItem(`socratink:seda-session:v1:${conceptId}`, JSON.stringify({
+              sessionId: boundSessionId, sessionVersion: 2, nodeId: 'bound-node',
+              latest: { caseComplete: false, sessionVersion: 2 },
+            }));
+          }
+          return conceptId;
+        }""",
+        {"resumeCase": resume_case, "boundSessionId": bound_session_id},
+    )
+
+    if resume_case in {"bound_session_mismatch", "bound_route_mismatch"}:
+        response_session_id = (
+            "22222222-2222-4222-8222-222222222222"
+            if resume_case == "bound_session_mismatch"
+            else bound_session_id
+        )
+        route_node_id = (
+            "different-node" if resume_case == "bound_route_mismatch" else "bound-node"
+        )
+        page.route(
+            re.compile(rf".*/api/session/{bound_session_id}$"),
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "sessionId": response_session_id,
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "awaiting": {
+                        "key": "cold_attempt",
+                        "ctaText": "Why is the next response faster?",
+                    },
+                    "sourceLessRoute": _seda_route_result(node_id=route_node_id),
+                    "events": [_seda_route_event(node_id=route_node_id)],
+                    "caseComplete": False,
+                    "record": None,
+                }),
+            ),
+        )
+
+    concept_id = f"invalid-resume-{resume_case}"
+    page.goto(f"{base_url}/session/{concept_id}")
+    page.wait_for_function("() => Boolean(window.App?.reopenStudy)", timeout=20_000)
+    page.evaluate(
+        """() => window.App.reopenStudy({
+          id: 'bound-node', label: 'Bound target', fullLabel: 'Bound target',
+          learner_scaffold: { entry_prompt: 'Why is the next response faster?' },
+        })"""
+    )
+
+    expect(page.locator("#chamber-question")).to_have_text(
+        "We could not build the first question. Your starting sketch is saved.",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-send")).to_have_text(
+        "Build the first question again"
+    )
+    expect(page.locator("#chamber-composer")).to_be_disabled()
+    assert page.evaluate(
+        """(conceptId) => {
+          const training = JSON.parse(
+            localStorage.getItem(`socratink:training:v1:${conceptId}`)
+          );
+          return Object.values(training.node_records || {})
+            .flatMap((record) => record.attempts || []).length;
+        }""",
+        concept_id,
+    ) == 0
+
+
+def test_stale_bound_route_with_existing_evidence_returns_to_map(
+    clean_page: Page, base_url: str
+) -> None:
+    """A stale bound session never replaces evidence with a freshly generated route."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+          const conceptId = 'stale-bound-route';
+          const graphData = JSON.stringify({
+            metadata: {
+              core_thesis: 'Memory changes later response.',
+              starting_map_context: 'Something remains after the first exposure.',
+              source_mode: 'source_less',
+              seda_route_bound_node_id: 'c9_s1',
+              seda_route_bound_session_id: '11111111-1111-4111-8111-111111111111',
+            },
+            backbone: [{
+              id: 'c9_s1', label: 'Current memory target',
+              mechanism: 'Memory cells persist.',
+              learner_scaffold: { entry_prompt: 'Why is the next response faster?' },
+            }, {
+              id: 'prior-node', label: 'Prior evidence target',
+              mechanism: 'A prior mechanism.',
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Stale route QA', createdAt: Date.now(),
+            state: 'growing', startingMapContext: 'Something remains after the first exposure.',
+            graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:seda-session:v1:${conceptId}`, JSON.stringify({
+            sessionId: '11111111-1111-4111-8111-111111111111',
+            nodeId: 'c9_s1', latest: { caseComplete: false },
+          }));
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch',
+            sketch: { text: 'Something remains after the first exposure.' },
+            node_records: {
+              'prior-node': { attempts: [{
+                id: 'prior-attempt', kind: 'cold', at: '2026-07-09T10:00:00.000Z',
+                user_text: 'My earlier recorded reconstruction.', classification: 'partial',
+                gaps: [], grader_version: 'qa',
+              }], repairs: [] },
+            },
+          }));
+        })()"""
+    )
+    page.route(
+        re.compile(r".*/api/session/[^/]+$"),
+        lambda route: route.fulfill(
+            status=404,
+            content_type="application/json",
+            body=json.dumps({"error": "session not found"}),
+        ),
+    )
+    page.goto(f"{base_url}/session/stale-bound-route")
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible(timeout=20_000)
+    page.locator(".concept-page-b2__attempt-input").fill("A new unsent line.")
+    page.locator(".concept-page-b2__attempt-save").click()
+
+    expect(page.locator("#chamber-question")).to_have_text(
+        "This learning route cannot be resumed. Your recorded work is still on the map.",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-send")).to_have_text("Return to map")
+    expect(page.locator("#chamber-composer")).to_be_disabled()
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_be_hidden()
+    expect(page.locator(".concept-page-b2__attempt-input")).to_have_value(
+        "A new unsent line."
+    )
+    preserved = page.evaluate(
+        """() => JSON.parse(
+          localStorage.getItem('socratink:training:v1:stale-bound-route')
+        ).node_records['prior-node'].attempts"""
+    )
+    assert len(preserved) == 1
+    assert preserved[0]["user_text"] == "My earlier recorded reconstruction."
+
+
+def test_stale_tab_conflict_preserves_draft_and_requires_explicit_resubmit(
+    clean_page: Page, base_url: str
+) -> None:
+    """A 409 refreshes the prompt without recording or replaying stale text."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    session_id = "33333333-3333-4333-8333-333333333333"
+    page.evaluate(
+        """(sessionId) => {
+          const conceptId = 'stale-tab-conflict';
+          const graphData = JSON.stringify({
+            metadata: {
+              core_thesis: 'Memory changes later response.',
+              starting_map_context: 'Something remains after exposure.',
+              source_mode: 'source_less',
+              seda_route_bound_node_id: 'bound-node',
+              seda_route_bound_session_id: sessionId,
+            },
+            backbone: [{
+              id: 'bound-node', label: 'Bound target',
+              mechanism: 'Memory cells persist.',
+              learner_scaffold: { entry_prompt: 'Original prompt?' },
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Stale tab QA', createdAt: Date.now(),
+            state: 'growing', sourceMode: 'source_less',
+            startingMapContext: 'Something remains after exposure.', graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:seda-session:v1:${conceptId}`, JSON.stringify({
+            sessionId, sessionVersion: 2, nodeId: 'bound-node',
+            latest: { caseComplete: false, sessionVersion: 2 },
+          }));
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch', node_records: {},
+          }));
+        }""",
+        session_id,
+    )
+    prompt_before = "Why does memory change the later response?"
+    prompt_after = "What persists between the two exposures?"
+    get_count = {"value": 0}
+
+    def fulfill_get(route) -> None:
+        get_count["value"] += 1
+        version = 2 if get_count["value"] == 1 else 3
+        prompt = prompt_before if version == 2 else prompt_after
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": version,
+                "status": "awaiting_input",
+                "awaiting": {"key": "cold_attempt", "ctaText": prompt},
+                "sourceLessRoute": _seda_route_result(
+                    node_id="bound-node", label="Bound target", prompt=prompt,
+                ),
+                "events": [_seda_route_event(
+                    node_id="bound-node", label="Bound target", prompt=prompt,
+                )],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    turn_payloads: list[dict] = []
+    draft = "Memory cells remain ready for the second exposure."
+
+    def fulfill_turn(route) -> None:
+        payload = route.request.post_data_json
+        turn_payloads.append(payload)
+        if len(turn_payloads) == 1:
+            route.fulfill(
+                status=409,
+                content_type="application/json",
+                body=json.dumps({
+                    "error": "session_conflict",
+                    "code": "SessionConflict",
+                    "message": "session changed after this prompt was shown",
+                    "currentVersion": 3,
+                }),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 4,
+                "status": "awaiting_input",
+                "awaiting": {"key": "compare", "ctaText": "Compare with the note."},
+                "events": [{
+                    "type": "cold_attempt", "kc_id": "bound-node", "text": draft,
+                    "evaluation": {
+                        "classification": "deep", "gaps": [], "grader_version": "qa",
+                    },
+                }],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    page.route(
+        re.compile(rf".*/api/session/{session_id}$"),
+        fulfill_get,
+    )
+    page.route(
+        re.compile(rf".*/api/session/{session_id}/turn$"),
+        fulfill_turn,
+    )
+    page.goto(f"{base_url}/session/stale-tab-conflict")
+    page.wait_for_function("() => Boolean(window.App?.reopenStudy)", timeout=20_000)
+    page.evaluate(
+        """() => {
+          window.App.cancelDrill({ restoreMap: false });
+          window.App.reopenStudy({
+            id: 'bound-node', label: 'Bound target', fullLabel: 'Bound target',
+            learner_scaffold: { entry_prompt: 'Original prompt?' },
+          });
+        }"""
+    )
+    expect(page.locator("#chamber-question")).to_have_text(
+        prompt_before, timeout=20_000
+    )
+    page.locator("#chamber-composer").fill(draft)
+    page.locator("#chamber-send").evaluate("button => button.click()")
+
+    expect(page.locator("#chamber-question")).to_have_text(
+        prompt_after, timeout=20_000
+    )
+    expect(page.locator("#chamber-composer")).to_have_value(draft)
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Session changed in another tab"
+    )
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "check your draft again"
+    )
+    assert page.evaluate(
+        """() => {
+          const training = JSON.parse(
+            localStorage.getItem('socratink:training:v1:stale-tab-conflict')
+          );
+          return Object.values(training.node_records || {})
+            .flatMap((record) => record.attempts || []).length;
+        }"""
+    ) == 0
+
+    page.locator("#chamber-send").evaluate("button => button.click()")
+    expect(page.locator("#chamber-send")).to_have_text(
+        "See what to study", timeout=2_000
+    )
+    assert [payload["expectedVersion"] for payload in turn_payloads] == [2, 3]
+    assert turn_payloads[0]["requestId"] != turn_payloads[1]["requestId"]
+    assert [payload["text"] for payload in turn_payloads] == [draft, draft]
+    assert page.evaluate(
+        """() => JSON.parse(
+          localStorage.getItem('socratink:training:v1:stale-tab-conflict')
+        ).node_records['bound-node'].attempts.length"""
+    ) == 1
+
+
+def test_evidence_persistence_failure_withholds_study_until_idempotent_retry(
+    clean_page: Page, base_url: str
+) -> None:
+    """A server-accepted answer is not called recorded until local evidence saves."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    session_id = "44444444-4444-4444-8444-444444444444"
+    page.evaluate(
+        """(sessionId) => {
+          const conceptId = 'projection-retry';
+          const graphData = JSON.stringify({
+            metadata: {
+              core_thesis: 'Memory changes later response.',
+              starting_map_context: 'Something remains after exposure.',
+              source_mode: 'source_less',
+              seda_route_bound_node_id: 'bound-node',
+              seda_route_bound_session_id: sessionId,
+            },
+            backbone: [{
+              id: 'bound-node', label: 'Bound target',
+              mechanism: 'Memory cells persist.',
+              learner_scaffold: { entry_prompt: 'Why is the later response faster?' },
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Projection retry QA', createdAt: Date.now(),
+            state: 'growing', sourceMode: 'source_less',
+            startingMapContext: 'Something remains after exposure.', graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:seda-session:v1:${conceptId}`, JSON.stringify({
+            sessionId, sessionVersion: 2, nodeId: 'bound-node',
+            latest: { caseComplete: false, sessionVersion: 2 },
+          }));
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch', node_records: {},
+          }));
+        }""",
+        session_id,
+    )
+    prompt = "Why is the later response faster?"
+    page.route(
+        re.compile(rf".*/api/session/{session_id}$"),
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 2,
+                "status": "awaiting_input",
+                "awaiting": {"key": "cold_attempt", "ctaText": prompt},
+                "sourceLessRoute": _seda_route_result(
+                    node_id="bound-node", label="Bound target", prompt=prompt,
+                ),
+                "events": [_seda_route_event(
+                    node_id="bound-node", label="Bound target", prompt=prompt,
+                )],
+                "caseComplete": False,
+                "record": None,
+            }),
+        ),
+    )
+    draft = "Memory cells persist and react sooner later."
+    turn_payloads: list[dict] = []
+
+    def fulfill_turn(route) -> None:
+        turn_payloads.append(route.request.post_data_json)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 3,
+                "status": "awaiting_input",
+                "awaiting": {"key": "compare", "ctaText": "Compare with the note."},
+                "events": [{
+                    "type": "cold_attempt", "kc_id": "bound-node", "text": draft,
+                    "evaluation": {
+                        "classification": "deep", "gaps": [], "grader_version": "qa",
+                    },
+                }],
+                "caseComplete": False,
+                "record": None,
+            }),
+        )
+
+    page.route(
+        re.compile(rf".*/api/session/{session_id}/turn$"),
+        fulfill_turn,
+    )
+    page.goto(f"{base_url}/session/projection-retry")
+    page.wait_for_function("() => Boolean(window.App?.reopenStudy)", timeout=20_000)
+    page.evaluate(
+        """() => {
+          window.App.cancelDrill({ restoreMap: false });
+          window.App.reopenStudy({
+            id: 'bound-node', label: 'Bound target', fullLabel: 'Bound target',
+            learner_scaffold: { entry_prompt: 'Why is the later response faster?' },
+          });
+        }"""
+    )
+    page.wait_for_function(
+        """() => {
+          const value = JSON.parse(
+            localStorage.getItem('socratink:seda-session:v1:projection-retry') || 'null'
+          );
+          return value?.latest?.sessionVersion === 2
+            && value?.latest?.awaiting?.key === 'cold_attempt';
+        }""",
+        timeout=20_000,
+    )
+    expect(page.locator("#chamber-composer")).to_be_enabled(timeout=20_000)
+    page.evaluate(
+        """() => {
+          const original = Storage.prototype.setItem;
+          let failNextTrainingWrite = true;
+          Storage.prototype.setItem = function(key, value) {
+            if (failNextTrainingWrite && String(key).startsWith('socratink:training:v1:')) {
+              failNextTrainingWrite = false;
+              throw new DOMException('QA quota failure', 'QuotaExceededError');
+            }
+            return original.call(this, key, value);
+          };
+        }"""
+    )
+    page.locator("#chamber-composer").fill(draft)
+    page.locator("#chamber-send").evaluate("button => button.click()")
+
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Not saved in this browser yet.", timeout=5_000
+    )
+    expect(page.locator("#chamber-verdict")).not_to_contain_text("Recorded")
+    expect(page.locator("#chamber-send")).to_have_text("Try saving again")
+    assert page.evaluate(
+        """() => {
+          const training = JSON.parse(
+            localStorage.getItem('socratink:training:v1:projection-retry')
+          );
+          return Object.values(training.node_records || {})
+            .flatMap((record) => record.attempts || []).length;
+        }"""
+    ) == 0
+
+    page.locator("#chamber-send").evaluate("button => button.click()")
+    expect(page.locator("#chamber-send")).to_have_text(
+        "See what to study", timeout=2_000
+    )
+    assert len(turn_payloads) == 2
+    assert turn_payloads[0]["requestId"] == turn_payloads[1]["requestId"]
+    assert [payload["expectedVersion"] for payload in turn_payloads] == [2, 2]
+    assert page.evaluate(
+        """() => JSON.parse(
+          localStorage.getItem('socratink:training:v1:projection-retry')
+        ).node_records['bound-node'].attempts.length"""
+    ) == 1
+
+
+def test_seda_transport_failure_keeps_draft_and_retries_same_turn(
+    clean_page: Page, base_url: str
+) -> None:
+    """A failed network turn keeps visible effort and its idempotency key."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    session_id = "77777777-7777-4777-8777-777777777777"
+    page.evaluate(
+        """(sessionId) => {
+          const conceptId = 'transport-retry';
+          const graphData = JSON.stringify({
+            metadata: {
+              core_thesis: 'Memory changes later response.',
+              starting_map_context: 'Something remains after exposure.',
+              source_mode: 'source_less',
+              seda_route_bound_node_id: 'bound-node',
+              seda_route_bound_session_id: sessionId,
+            },
+            backbone: [{
+              id: 'bound-node', label: 'Bound target', mechanism: 'Memory cells persist.',
+              learner_scaffold: { entry_prompt: 'Why is the later response faster?' },
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Transport retry QA', createdAt: Date.now(),
+            state: 'growing', sourceMode: 'source_less',
+            startingMapContext: 'Something remains after exposure.', graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:seda-session:v1:${conceptId}`, JSON.stringify({
+            sessionId, sessionVersion: 2, nodeId: 'bound-node',
+            latest: { caseComplete: false, sessionVersion: 2 },
+          }));
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch', node_records: {},
+          }));
+        }""",
+        session_id,
+    )
+    prompt = "Why is the later response faster?"
+    page.route(
+        re.compile(rf".*/api/session/{session_id}$"),
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 2,
+                "status": "awaiting_input",
+                "awaiting": {"key": "cold_attempt", "ctaText": prompt},
+                "sourceLessRoute": _seda_route_result(
+                    node_id="bound-node", label="Bound target", prompt=prompt,
+                ),
+                "events": [_seda_route_event(
+                    node_id="bound-node", label="Bound target", prompt=prompt,
+                )],
+                "caseComplete": False,
+            }),
+        ),
+    )
+    draft = "Memory cells remain ready and react sooner on the next exposure."
+    turn_payloads: list[dict] = []
+
+    def fulfill_turn(route) -> None:
+        turn_payloads.append(route.request.post_data_json)
+        if len(turn_payloads) == 1:
+            route.fulfill(
+                status=503,
+                content_type="application/json",
+                body=json.dumps({"error": "session_store_unavailable"}),
+            )
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 3,
+                "status": "awaiting_input",
+                "awaiting": {"key": "compare", "ctaText": "Compare with the note."},
+                "events": [{
+                    "type": "cold_attempt", "kc_id": "bound-node", "text": draft,
+                    "evaluation": {
+                        "classification": "deep", "gaps": [], "grader_version": "qa",
+                    },
+                }],
+                "caseComplete": False,
+            }),
+        )
+
+    page.route(
+        re.compile(rf".*/api/session/{session_id}/turn$"),
+        fulfill_turn,
+    )
+    page.goto(f"{base_url}/session/transport-retry")
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible(
+        timeout=20_000
+    )
+    page.wait_for_function("() => Boolean(window.App?.reopenStudy)", timeout=20_000)
+    page.evaluate(
+        """() => {
+          window.App.cancelDrill({ restoreMap: false });
+          window.App.reopenStudy({
+            id: 'bound-node', label: 'Bound target', fullLabel: 'Bound target',
+            learner_scaffold: { entry_prompt: 'Why is the later response faster?' },
+          });
+        }"""
+    )
+    page.wait_for_function(
+        """() => {
+          const state = JSON.parse(
+            localStorage.getItem('socratink:seda-session:v1:transport-retry') || 'null'
+          );
+          return state?.latest?.sessionVersion === 2
+            && state?.latest?.awaiting?.key === 'cold_attempt'
+            && document.getElementById('chamber-question')?.textContent
+              === 'Why is the later response faster?'
+            && document.getElementById('chamber-composer')?.disabled === false
+            && document.getElementById('chamber-send')?.textContent === 'Check my answer';
+        }""",
+        timeout=20_000,
+    )
+    page.locator("#chamber-composer").fill(draft)
+    page.locator("#chamber-send").evaluate("button => button.click()")
+
+    for _ in range(100):
+        if turn_payloads:
+            break
+        page.wait_for_timeout(25)
+    assert turn_payloads, "failed SEDA turn never reached the transport stub"
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Answer kept", timeout=5_000
+    )
+    expect(page.locator("#chamber-verdict")).to_contain_text("Not recorded")
+    expect(page.locator("#chamber-send")).to_have_text("Try sending again")
+    expect(page.locator("#chamber-composer")).to_have_value(draft)
+    assert page.evaluate(
+        """() => Object.values(JSON.parse(
+          localStorage.getItem('socratink:training:v1:transport-retry')
+        ).node_records || {}).flatMap((record) => record.attempts || []).length"""
+    ) == 0
+
+    page.locator("#chamber-send").click()
+    expect(page.locator("#chamber-send")).to_have_text(
+        "See what to study", timeout=2_000
+    )
+    assert len(turn_payloads) == 2
+    assert turn_payloads[0]["requestId"] == turn_payloads[1]["requestId"]
+    assert [payload["expectedVersion"] for payload in turn_payloads] == [2, 2]
+
+
+def test_stale_bound_route_without_evidence_builds_fresh_route(
+    clean_page: Page, base_url: str
+) -> None:
+    """A stale pre-attempt binding is replaceable without losing the Door sketch."""
+    page = clean_page
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    page.evaluate(
+        """(() => {
+          const conceptId = 'stale-empty-route';
+          const sketch = 'Something remains after the first exposure.';
+          const graphData = JSON.stringify({
+            metadata: {
+              core_thesis: 'Memory changes later response.',
+              starting_map_context: sketch,
+              source_mode: 'source_less',
+              seda_route_bound_node_id: 'old-node',
+              seda_route_bound_session_id: '11111111-1111-4111-8111-111111111111',
+            },
+            backbone: [{
+              id: 'old-node', label: 'Old target', mechanism: 'Old mechanism.',
+              learner_scaffold: { entry_prompt: 'Old question?' },
+            }],
+            clusters: [],
+          });
+          localStorage.setItem('learnops_concepts', JSON.stringify([{
+            id: conceptId, name: 'Stale empty route QA', createdAt: Date.now(),
+            state: 'growing', startingMapContext: sketch, graphData,
+          }]));
+          localStorage.setItem('learnops_active', conceptId);
+          localStorage.setItem(`socratink:seda-session:v1:${conceptId}`, JSON.stringify({
+            sessionId: '11111111-1111-4111-8111-111111111111',
+            nodeId: 'old-node', latest: { caseComplete: false },
+          }));
+          localStorage.setItem(`socratink:training:v1:${conceptId}`, JSON.stringify({
+            concept_id: conceptId, schema_version: 1,
+            source_mode: 'source_less', grounding: 'learner_sketch',
+            sketch: { text: sketch }, node_records: {},
+          }));
+        })()"""
+    )
+    page.route(
+        re.compile(r".*/api/session/11111111-1111-4111-8111-111111111111$"),
+        lambda route: route.fulfill(
+            status=404,
+            content_type="application/json",
+            body=json.dumps({"error": "session not found"}),
+        ),
+    )
+    fresh_sessions: list[dict] = []
+    fresh_turns: list[dict] = []
+    held_fresh_turns = []
+    fresh_prompt = "Fresh question: why is the next response faster?"
+
+    def fulfill_fresh_session(route) -> None:
+        fresh_sessions.append(route.request.post_data_json)
+        session_id = (
+            "22222222-2222-4222-8222-222222222222"
+            if len(fresh_sessions) == 1
+            else "33333333-3333-4333-8333-333333333333"
+        )
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": session_id,
+                "sessionVersion": 1,
+                "status": "awaiting_input",
+                "awaiting": {"key": "launch_attempt", "ctaText": "First try"},
+                "caseComplete": False,
+            }),
+        )
+
+    def fulfill_fresh_turn(route) -> None:
+        fresh_turns.append(route.request.post_data_json)
+        if len(fresh_turns) == 1:
+            held_fresh_turns.append(route)
+            return
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                "sessionId": "33333333-3333-4333-8333-333333333333",
+                "sessionVersion": 2,
+                "status": "awaiting_input",
+                "awaiting": {"key": "cold_attempt", "ctaText": fresh_prompt},
+                "sourceLessRoute": _seda_route_result(
+                    node_id="fresh-node", prompt=fresh_prompt,
+                ),
+                "events": [_seda_route_event(node_id="fresh-node", prompt=fresh_prompt)],
+                "caseComplete": False,
+            }),
+        )
+
+    page.route(re.compile(r".*/api/session$"), fulfill_fresh_session)
+    page.route(
+        re.compile(r".*/api/session/[0-9a-f-]+/turn$"),
+        fulfill_fresh_turn,
+    )
+    page.goto(f"{base_url}/session/stale-empty-route")
+    page.locator(".concept-page-b2__attempt-input").fill("An unsent line.")
+    page.locator(".concept-page-b2__attempt-save").click()
+    expect(page.locator("#chamber-send")).to_have_text(
+        "Build the first question again", timeout=20_000
+    )
+    expect(page.locator("#chamber-question")).not_to_contain_text("Try again")
+    page.locator("#chamber-send").click()
+
+    for _ in range(100):
+        if held_fresh_turns:
+            break
+        page.wait_for_timeout(50)
+    assert held_fresh_turns, "fresh route request was not held before reload"
+    pending = page.evaluate(
+        """() => {
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts'))[0];
+          const graph = JSON.parse(concept.graphData);
+          return {
+            routeStatus: graph.metadata.route_status || null,
+            graphNeutral: graph.metadata.graph_neutral ?? null,
+            nodeId: graph.metadata.seda_route_bound_node_id || null,
+            sessionId: graph.metadata.seda_route_bound_session_id || null,
+          };
+        }"""
+    )
+    assert pending == {
+        "routeStatus": "pending_seda",
+        "graphNeutral": True,
+        "nodeId": None,
+        "sessionId": None,
+    }
+
+    page.reload()
+    reloaded_draft = "A draft written after the interrupted route request."
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible(timeout=20_000)
+    page.locator(".concept-page-b2__attempt-input").fill(reloaded_draft)
+    page.locator(".concept-page-b2__attempt-save").click()
+
+    expect(page.locator("#chamber-question")).to_have_text(fresh_prompt, timeout=20_000)
+    expect(page.locator("#chamber-composer")).to_be_enabled()
+    expect(page.locator("#chamber-composer")).to_have_value(reloaded_draft)
+    expect(page.locator("#chamber-verdict")).to_contain_text(
+        "Not recorded against this question."
+    )
+    assert fresh_sessions == [
+        {"sourceLessDoorBootstrap": True},
+        {"sourceLessDoorBootstrap": True},
+    ]
+    assert [turn["text"] for turn in fresh_turns] == [
+        "Something remains after the first exposure.",
+        "Something remains after the first exposure.",
+    ]
+    assert [turn["expectedVersion"] for turn in fresh_turns] == [1, 1]
+    recovered = page.evaluate(
+        """() => {
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts'))[0];
+          const graph = JSON.parse(concept.graphData);
+          const training = JSON.parse(localStorage.getItem('socratink:training:v1:stale-empty-route'));
+          return {
+            sketch: concept.startingMapContext,
+            nodeId: graph.metadata.seda_route_bound_node_id,
+            sessionId: graph.metadata.seda_route_bound_session_id,
+            attempts: Object.values(training.node_records || {})
+              .flatMap((record) => record.attempts || []).length,
+          };
+        }"""
+    )
+    assert recovered == {
+        "sketch": "Something remains after the first exposure.",
+        "nodeId": "fresh-node",
+        "sessionId": "33333333-3333-4333-8333-333333333333",
+        "attempts": 0,
+    }
 
 
 def test_completed_seda_case_projects_visible_evidence(
@@ -1565,6 +3228,7 @@ def test_completed_seda_case_projects_visible_evidence(
             content_type="application/json",
             body=json.dumps({
                 "sessionId": "projection-session-1",
+                "sessionVersion": 1,
                 "status": "awaiting_input",
                 "awaiting": {"key": "launch_attempt", "ctaText": "Try your first explanation."},
                 "learnerTranscript": [],
@@ -1577,6 +3241,7 @@ def test_completed_seda_case_projects_visible_evidence(
     # timestamps (2026-05-15 cold, 2026-05-16 spaced) from lib/seda/constants.mjs.
     completed_record = {
         "sessionId": "projection-session-1",
+        "sessionVersion": 3,
         "status": "complete",
         "awaiting": None,
         "learnerTranscript": [],
@@ -1613,7 +3278,30 @@ def test_completed_seda_case_projects_visible_evidence(
         },
     }
 
+    turn_texts: list[str] = []
+
     def fulfill_turn(route) -> None:
+        turn_texts.append(route.request.post_data_json["text"])
+        if len(turn_texts) == 1:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "sessionId": "projection-session-1",
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "awaiting": {
+                        "key": "cold_attempt",
+                        "ctaText": "Why is the second exposure faster?",
+                    },
+                    "learnerTranscript": [],
+                    "events": [_seda_route_event()],
+                    "sourceLessRoute": _seda_route_result(),
+                    "caseComplete": False,
+                    "record": None,
+                }),
+            )
+            return
         route.fulfill(
             status=200,
             content_type="application/json",
@@ -1635,18 +3323,19 @@ def test_completed_seda_case_projects_visible_evidence(
     expect(page.locator("#launch-pad-view")).to_be_hidden()
 
     expect(page.locator("#drill-chamber-view")).to_be_visible(timeout=20_000)
-    # Mirror the proven-stable SEDA choreography: wait until the launch_attempt
-    # turn is wired into localStorage before sending, so the turn cannot race.
+    # The Door sketch is consumed as the launch attempt before the room opens.
+    # The first visible room answer must therefore be the recordable cold turn.
     page.wait_for_function(
         """() => {
           const conceptId = localStorage.getItem('learnops_active');
           const key = conceptId ? `socratink:seda-session:v1:${conceptId}` : null;
           if (!key) return false;
           const value = JSON.parse(localStorage.getItem(key) || 'null');
-          return value?.sessionId && value?.latest?.awaiting?.key === 'launch_attempt';
+          return value?.sessionId && value?.latest?.awaiting?.key === 'cold_attempt';
         }""",
         timeout=20_000,
     )
+    assert turn_texts == ["The first exposure leaves cells that remember the pathogen."]
     page.locator("#chamber-send").click()
     expect(page.locator("#chamber-hint")).to_have_text(
         "Write a sentence before checking."
@@ -3362,30 +5051,51 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=8_000)
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
-    expect(clean_page.locator("#chamber-question")).to_contain_text(
-        "What do you think the thermostat checks before it calls for heat?",
-        timeout=20_000,
-    )
     seda_state = clean_page.wait_for_function(
         """() => {
           const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
-          return value?.sessionId && value?.latest ? value : null;
+          return value?.sessionId && value?.latest?.awaiting?.key === 'cold_attempt'
+            ? value
+            : null;
         }""",
         timeout=20_000,
     ).json_value()
-    assert seda_state["latest"]["awaiting"]["key"] == "launch_attempt"
+    assert seda_state["latest"]["awaiting"]["key"] == "cold_attempt"
+    bound_surface = clean_page.evaluate(
+        """(nodeId) => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts') || '[]')
+            .find((item) => item.id === conceptId);
+          const graph = JSON.parse(concept?.graphData || 'null');
+          const nodes = [
+            ...(graph?.backbone || []),
+            ...(graph?.clusters || []).flatMap((cluster) => cluster?.subnodes || []),
+          ];
+          const node = nodes.find((item) => item?.id === nodeId);
+          return {
+            prompt: node?.learner_scaffold?.entry_prompt || '',
+            taskLabel: node?.learner_scaffold?.task_label || node?.label || '',
+            mechanism: node?.study_note || node?.mechanism || '',
+          };
+        }""",
+        seda_state["nodeId"],
+    )
+    assert bound_surface["prompt"]
+    expect(clean_page.locator("#chamber-question")).to_have_text(
+        bound_surface["prompt"], timeout=20_000
+    )
     clean_page.locator("#chamber-exit").click()
     expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
     expect(canvas).to_be_visible(timeout=8_000)
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
-        "What do you think the thermostat checks before it calls for heat?"
+        bound_surface["prompt"]
     )
     expect(canvas).not_to_contain_text("Shaped by your sketch")
-    expect(canvas).to_contain_text("Compare target")
+    expect(canvas).to_contain_text(bound_surface["taskLabel"])
     expect(canvas).not_to_contain_text("Call for heat")
-    expect(canvas).not_to_contain_text("compares measured room temperature")
+    expect(canvas).not_to_contain_text(bound_surface["mechanism"])
     expect(canvas).not_to_contain_text("Generated description should not leak")
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
     expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(0)

@@ -21,7 +21,7 @@
 // can retry without re-typing the threshold.
 
 import { emitTelemetry } from './telemetry.js';
-import { submitConceptCreate } from './ai_service.js?v=1';
+import { submitConceptCreate } from './ai_service.js?v=5';
 import { AudioFX } from './audio.js?v=4';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio
@@ -300,6 +300,10 @@ export async function runLaunchPadAction(event, App, controls = {}) {
       learnerGoal: shell.goal,
       startingSketch: threshold,
       source: null,
+      // The typed SEDA handoff owns the authoritative first route. This call
+      // only persists a fast graph-neutral shell so the Door does not pay for
+      // two model-generated routes before the learner can write again.
+      routeOwner: 'seda',
     });
   } catch (err) {
     if (err && err.status === 422) {

@@ -33,7 +33,11 @@ The product doctrine is stable even while implementation is still moving:
   record projection.
 - `lib/loop-server/`
   HTTP wrapper around the SEDA runtime. `loop_backend_proxy.py` starts this
-  vendored runtime locally when `LOOP_BACKEND_URL` is not configured.
+  vendored runtime locally with a file session store. On Vercel, FastAPI
+  proxies learner sessions to a configured HTTPS loop service that can run
+  both Node and the Python bridge. The service uses the authenticated user's
+  Supabase token and `db/loop_sessions.sql`; it never falls back to serverless
+  temporary storage.
 - `bridge.py`, `bridge_lib/`, `vendor/python/`
   Python bridge seam used by the loop runtime for model calls and fake-loop
   fixtures. These are app-local vendored files; they must not depend on a
@@ -142,6 +146,77 @@ This repo keeps dependency management intentionally simple:
   Context Hub wrapper (`@aisuite/chub`); none of it ships to Vercel.
 - Keep the Python files flat: one pinned package per line, no `-r` includes,
   no hash blocks.
+
+### Hosted loop persistence
+
+Before deploying hosted `/api/session`, deploy the vendored loop runtime to a
+trusted HTTPS service that includes Node, Python and the bridge dependencies.
+Set `LOOP_BACKEND_URL` and the same `SOCRATINK_LOOP_API_KEY` on the Vercel app
+and loop service. Set `SOCRATINK_LOOP_SESSION_STORE=supabase` on the service.
+Apply `db/loop_sessions.sql` to Supabase. The service also needs `SUPABASE_URL`
+and `SUPABASE_PUBLISHABLE_KEY`.
+
+FastAPI forwards the sealed user's access token only to that configured loop
+origin. The loop service uses it for row-level security. It rejects insecure
+origins, and Vercel fails closed when the URL or loop API key is missing. Do
+not configure a Supabase service-role or secret key for this path.
+The proxy rejects bodies over 64 KiB, performs blocking HTTP work off the
+FastAPI event loop, disables automatic retries for learner POSTs, and bounds
+upstream connect/read waits at 5/55 seconds.
+
+Local development keeps the file store under
+`SOCRATINK_LOOP_SESSION_STORE_DIR` (or the operating-system temporary default).
+`SOCRATINK_LOOP_SESSION_TTL_SECONDS` may override the hosted 30-day session
+expiry. Production and Vercel fail closed when durable storage is unavailable.
+Schedule `public.purge_expired_loop_sessions()` once a day from a trusted
+Supabase database schedule so expired rows do not accumulate.
+
+This makes the loop event journal durable and account-scoped. Concepts and the
+app-shell training record are still browser `localStorage`; full cross-device
+learner continuity is not yet complete.
+
+For source-less Door starts, `/api/extract` now returns only a deterministic
+graph-neutral shell. It does not query Learning Commons or generate a route;
+the typed SEDA `sourceLessRoute` is the single authoritative route owner. This
+removes a duplicate model call from the first-session latency and cost path.
+
+### Loop service container
+
+`Dockerfile.loop` packages the existing Node loop server with the repo-pinned
+Python 3.14 bridge environment. `requirements-loop.txt` contains only the
+bridge's direct Python dependencies and keeps their versions aligned with the
+app runtime. The build context is allowlisted by
+`Dockerfile.loop.dockerignore`, so local `.env` files and other workspace files
+cannot enter the image.
+
+```bash
+docker build --file Dockerfile.loop --tag socratink-loop .
+docker run --rm --publish 8787:8787 \
+  --env SOCRATINK_LOOP_API_KEY \
+  --env SUPABASE_URL \
+  --env SUPABASE_PUBLISHABLE_KEY \
+  --env GEMINI_API_KEY \
+  socratink-loop
+```
+
+Inject those four variables at runtime through the hosting platform's secret
+store; do not pass secret values as Docker build arguments. The image sets
+`NODE_ENV=production`, `SOCRATINK_LOOP_SESSION_STORE=supabase`,
+`HOST=0.0.0.0`, and a default `PORT=8787`. A platform-provided `PORT` overrides
+that default. Configure the platform's process health probe to `GET /health`.
+That endpoint proves the process is up; an authenticated create-session smoke
+test is still required to prove Supabase access, row ownership, and the live
+model path.
+
+After deployment, set the app's `LOOP_BACKEND_URL` to the service's HTTPS
+origin and give the app the same `SOCRATINK_LOOP_API_KEY`. The service itself
+does not need `LOOP_BACKEND_URL`. Optional runtime tuning such as
+`SOCRATINK_LOOP_SESSION_TTL_SECONDS`, `LLM_MODEL`, and the bridge controls
+remain environment-only. The bridge runs non-blocking child processes with
+bounded defaults: `SOCRATINK_BRIDGE_TIMEOUT_MS=45000`,
+`SOCRATINK_BRIDGE_MAX_CONCURRENCY=4`, `SOCRATINK_BRIDGE_MAX_QUEUE=16`, and
+`SOCRATINK_BRIDGE_MAX_OUTPUT_BYTES=1048576`. Tune concurrency only after a
+hosted load test confirms CPU, memory, model quota, and database behavior.
 
 ### Deployment Validation
 

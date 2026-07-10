@@ -185,6 +185,150 @@ def test_latest_seda_attempt_event_projects_before_case_complete() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_completed_record_reconciles_early_cold_event_without_duplicate() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          projectCompletedSedaRecord,
+          projectLatestSedaAttemptEvent,
+        } from './public/js/seda-evidence-projection.js';
+        import { deriveNodeTraining } from './public/js/training-derive.js';
+
+        const early = projectLatestSedaAttemptEvent({
+          training: null,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-1',
+          now: '2026-07-09T05:00:00.000Z',
+          data: { events: [{
+            type: 'cold_attempt',
+            text: 'Memory cells remain after exposure.',
+            evaluation: { classification: 'solid', gaps: [] },
+          }] },
+        });
+        const completedRecord = {
+          training: { node_records: { backend: {
+            attempts: [
+              {
+                user_text: 'Memory cells remain after exposure.',
+                classification: 'strong', gaps: [], grader_version: 'seda',
+              },
+              {
+                user_text: 'They respond faster on re-exposure.',
+                classification: 'strong', gaps: [], grader_version: 'seda',
+              },
+            ],
+            repairs: [],
+          } } },
+        };
+        const reconciled = projectCompletedSedaRecord({
+          training: early,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-1',
+          now: '2026-07-09T05:05:00.000Z',
+          record: completedRecord,
+        });
+
+        const attempts = reconciled.node_records.n.attempts;
+        assert.equal(attempts.length, 2);
+        assert.deepEqual(
+          attempts.map((attempt) => attempt.id),
+          ['seda-sess-1-0', 'seda-sess-1-1'],
+        );
+        assert.equal(
+          attempts.filter((attempt) => attempt.user_text === 'Memory cells remain after exposure.').length,
+          1,
+        );
+        assert.notEqual(
+          deriveNodeTraining(reconciled.node_records.n, {
+            now: '2026-07-09T05:05:00.000Z',
+          }).state,
+          'solidified',
+        );
+        assert.equal(projectCompletedSedaRecord({
+          training: reconciled,
+          conceptId: 'c', nodeId: 'n', sessionId: 'sess-1',
+          record: completedRecord,
+        }), null);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_shallow_early_attempt_matches_completed_classification_and_gap() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          projectCompletedSedaRecord,
+          projectLatestSedaAttemptEvent,
+        } from './public/js/seda-evidence-projection.js';
+        import { deriveNodeTraining } from './public/js/training-derive.js';
+
+        const gap = 'Name why the retained cells can respond sooner.';
+        const early = projectLatestSedaAttemptEvent({
+          training: null,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-shallow',
+          now: '2026-07-09T05:00:00.000Z',
+          data: { events: [{
+            type: 'cold_attempt',
+            text: 'Something remains after exposure.',
+            evaluation: {
+              classification: 'shallow',
+              gap_description: gap,
+              grader_version: 'seda',
+            },
+          }] },
+        });
+        const earlyAttempt = early.node_records.n.attempts[0];
+        assert.equal(earlyAttempt.classification, 'partial');
+        assert.deepEqual(earlyAttempt.gaps, [{
+          mechanism: 'target mechanism', correction: gap,
+        }]);
+        assert.equal(
+          deriveNodeTraining(early.node_records.n, {
+            now: '2026-07-09T05:00:00.000Z',
+          }).state,
+          'primed',
+        );
+
+        const completed = projectCompletedSedaRecord({
+          training: early,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-shallow',
+          now: '2026-07-09T05:05:00.000Z',
+          record: { training: { node_records: { backend: {
+            attempts: [{
+              user_text: 'Something remains after exposure.',
+              classification: 'partial',
+              gaps: [{ mechanism: 'target mechanism', correction: gap }],
+              grader_version: 'seda',
+            }],
+            repairs: [],
+          } } } },
+        });
+        const completedAttempt = completed.node_records.n.attempts[0];
+        assert.equal(completedAttempt.classification, earlyAttempt.classification);
+        assert.deepEqual(completedAttempt.gaps, earlyAttempt.gaps);
+        assert.equal(
+          deriveNodeTraining(completed.node_records.n, {
+            now: '2026-07-09T05:05:00.000Z',
+          }).state,
+          'primed',
+        );
+        """
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_projection_returns_null_without_completed_record() -> None:
     result = run_node_module(
         """

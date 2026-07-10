@@ -194,6 +194,16 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               }
               assert(rejected, `${message}: did not reject`);
             };
+            const throws = (fn, pattern, message) => {
+              let rejected = false;
+              try {
+                fn();
+              } catch (err) {
+                rejected = true;
+                assert(pattern.test(String(err?.message || err)), message);
+              }
+              assert(rejected, `${message}: did not throw`);
+            };
 
             const html = await import('/js/html.js');
             assert(html.escHtml(`<&>"'`) === '&lt;&amp;&gt;&quot;&#39;', 'html escaping');
@@ -949,6 +959,93 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               'drill verdict fallback prompt',
             );
 
+            const aiService = await import('/js/ai_service.js');
+            throws(
+              () => aiService.createSedaTurnSubmission(
+                'answer', -1, '11111111-1111-4111-8111-111111111111'
+              ),
+              /nonnegative SEDA expectedVersion/,
+              'seda turn version guard',
+            );
+            throws(
+              () => aiService.sendSedaTurn('session-id', null),
+              /SEDA turn submission is required/,
+              'seda turn submission guard',
+            );
+
+            const routeBinding = await import('/js/seda-route-binding.js');
+            const baseRoute = {
+              contractVersion: 1,
+              status: 'ready',
+              firstNode: {
+                id: 'route-node', label: 'Route node',
+                mechanism: 'A retained change affects the next response.',
+                learner_prompt: 'What changes the later response?',
+              },
+              provisionalMap: {
+                metadata: {},
+                backbone: [{ id: 'route-backbone', principle: 'A retained change matters.' }],
+                clusters: [{ id: 'route-cluster', subnodes: [{ id: 'route-node' }] }],
+              },
+            };
+            throws(
+              () => routeBinding.readySourceLessSedaRoute({
+                awaiting: { key: 'cold_attempt' },
+                sourceLessRoute: { ...baseRoute, contractVersion: 99 },
+              }),
+              /unsupported sourceLessRoute contractVersion/,
+              'route contract version guard',
+            );
+            throws(
+              () => routeBinding.readySourceLessSedaRoute({
+                awaiting: { key: 'launch_attempt' }, sourceLessRoute: baseRoute,
+              }),
+              /ready route must await cold_attempt/,
+              'route awaiting-state guard',
+            );
+            throws(
+              () => routeBinding.bindSourceLessSedaRoute({
+                data: {
+                  sessionId: 'route-session', awaiting: { key: 'cold_attempt' },
+                  sourceLessRoute: {
+                    ...baseRoute,
+                    provisionalMap: { ...baseRoute.provisionalMap, backbone: [] },
+                  },
+                },
+              }),
+              /backbone must be non-empty/,
+              'route backbone guard',
+            );
+            throws(
+              () => routeBinding.bindSourceLessSedaRoute({
+                data: {
+                  sessionId: 'route-session', awaiting: { key: 'cold_attempt' },
+                  sourceLessRoute: {
+                    ...baseRoute,
+                    provisionalMap: { ...baseRoute.provisionalMap, clusters: null },
+                  },
+                },
+              }),
+              /clusters must be an array/,
+              'route cluster guard',
+            );
+            throws(
+              () => routeBinding.bindSourceLessSedaRoute({
+                data: {
+                  sessionId: 'route-session', awaiting: { key: 'cold_attempt' },
+                  sourceLessRoute: {
+                    ...baseRoute,
+                    provisionalMap: {
+                      ...baseRoute.provisionalMap,
+                      backbone: [{ id: 'route-node' }],
+                    },
+                  },
+                },
+              }),
+              /first_node.id is duplicated/,
+              'duplicate route node guard',
+            );
+
             const sedaProjection = await import('/js/seda-evidence-projection.js');
             same(
               sedaProjection.projectLatestSedaAttemptEvent({
@@ -989,8 +1086,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 nodeId: 'n',
                 sessionId: 'sess-browser',
                 data: { events: [{ type: 'cold_attempt', text: 'No usable classification', evaluation: { classification: 'unknown' } }] },
-              }) === null,
-              'seda projection skips unmapped classifications',
+              }).node_records.n.attempts[0].classification === 'thin',
+              'seda projection mirrors canonical unknown-to-thin storage',
             );
             const duplicateProjection = sedaProjection.projectLatestSedaAttemptEvent({
               training: {
@@ -1009,6 +1106,40 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               data: { events: [{ type: 'cold_attempt', text: 'Already captured', evaluation: { classification: 'solid' } }] },
             });
             assert(duplicateProjection === null, 'seda projection skips duplicate event attempt ids');
+            const earlyProjection = sedaProjection.projectLatestSedaAttemptEvent({
+              conceptId: 'reconcile-concept',
+              nodeId: 'reconcile-node',
+              sessionId: 'reconcile-session',
+              now: '2026-07-09T05:00:00.000Z',
+              data: { events: [{
+                type: 'cold_attempt', text: 'Something remains.',
+                evaluation: { classification: 'shallow', gap_description: 'Name what remains.' },
+              }] },
+            });
+            const reconciledProjection = sedaProjection.projectCompletedSedaRecord({
+              training: earlyProjection,
+              conceptId: 'reconcile-concept',
+              nodeId: 'reconcile-node',
+              sessionId: 'reconcile-session',
+              now: '2026-07-09T05:05:00.000Z',
+              record: { training: { node_records: { backend: {
+                attempts: [
+                  {
+                    user_text: 'Something remains.', classification: 'partial',
+                    gaps: [{ mechanism: 'target mechanism', correction: 'Name what remains.' }],
+                  },
+                  { user_text: 'It responds sooner.', classification: 'strong', gaps: [] },
+                ],
+                repairs: [],
+              } } } },
+            });
+            same(
+              reconciledProjection.node_records['reconcile-node'].attempts.map(
+                (attempt) => attempt.id
+              ),
+              ['seda-reconcile-session-0', 'seda-reconcile-session-1'],
+              'seda projection reconciles early event with completed record',
+            );
 
             const conceptPage = await import('/js/concept-page-view.js');
             const conceptConstellation = await import('/js/concept-constellation-view.js');

@@ -3,20 +3,33 @@ function learnerSnippet(userText) {
   return text.length > 72 ? `${text.slice(0, 69)}...` : text;
 }
 
-export function verdictCopy({ classification, userText, sedaComplete = false } = {}) {
+export function verdictCopy({
+  classification,
+  userText,
+  recordable = true,
+  sedaComplete = false,
+} = {}) {
   const snippet = learnerSnippet(userText);
-  const x = snippet ? `your line "${snippet}"` : 'the attempt';
-  if (sedaComplete) return `Checked • Recorded • ${x} is on record. • Study is ready.`;
-  if (classification === 'strong' || classification === 'solid') {
-    return `Checked • Solid enough to compare • You named ${x}. • Study will show what to add.`;
+  const learnerLine = snippet ? `Your line: “${snippet}”` : 'Your attempt is on record.';
+  if (!recordable) {
+    return `Response received • Keep going • ${learnerLine} • Use the next question to add one cause-and-effect link.`;
   }
-  if (classification === 'partial' || classification === 'deep') {
-    return `Checked • Partly there • You have ${x}. • Study will target the missing link.`;
+  if (sedaComplete) return 'Checked • Recorded • Your attempt is on record. • Study is ready.';
+  if (classification === 'strong' || classification === 'solid') {
+    return `Checked • Solid enough to compare • ${learnerLine} • Study will show what to add.`;
+  }
+  if (
+    classification === 'partial'
+    || classification === 'deep'
+    || classification === 'thin'
+    || classification === 'shallow'
+  ) {
+    return `Checked • Partly there • ${learnerLine} • Study will target the missing link.`;
   }
   if (classification === 'wrong_direction' || classification === 'misconception') {
-    return `Checked • Wrong angle • You focused on ${x}. • Study will reset the mechanism.`;
+    return `Checked • Wrong angle • ${learnerLine} • Study will show a different starting point.`;
   }
-  return `Checked • Gap found • ${x} exposed what to study next. • Study will target it.`;
+  return `Checked • Gap found • ${learnerLine} • Study will target what you just exposed.`;
 }
 
 export function nextSedaPromptAfterVerdict(promptText, previousPrompt, userText) {

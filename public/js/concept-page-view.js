@@ -742,7 +742,7 @@ function renderDrillChamberHtml() {
                 <button class="drill-chamber__voice-button" id="chamber-tutor-voice" type="button" aria-label="Tutor voice off" aria-pressed="false" hidden>
                   <span aria-hidden="true">voice</span>
                 </button>
-                <button class="drill-chamber__send" id="chamber-send" type="button">Check reconstruction</button>
+                <button class="drill-chamber__send" id="chamber-send" type="button">Check my answer</button>
               </div>
             </div>
             <span class="drill-chamber__voice-status" id="chamber-voice-status" aria-live="polite"></span>
@@ -791,7 +791,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     totalNodes,
   });
   const visibleEntryEyebrow = options?.isDrilling
-    ? 'Pressure check'
+    ? 'Reconstruction'
     : options?.repairCheckedThisSession && derived.next_action === 'repair'
     ? 'Repair checked'
     : entryEyebrow;

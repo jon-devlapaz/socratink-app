@@ -254,6 +254,7 @@ async def require_login_or_guest_entry(request: Request, call_next):
         return RedirectResponse(url=f"/login{query}", status_code=302)
 
     state = _resolve_session_state(request)
+    request.state.auth_session = state
     is_protected = _is_protected_html_request(request) or _is_protected_api_request(
         request
     )
@@ -309,6 +310,7 @@ class ExtractRequest(BaseModel):
     learner_goal: str | None = Field(None, max_length=1_000)
     starting_sketch: str | None = Field(None, max_length=10_000)
     source: SourceAttachment | None = None
+    route_owner: Literal["extract", "seda"] | None = None
     api_key: str | None = Field(None, max_length=200)
 
 
@@ -368,6 +370,7 @@ def _resolve_extract_path(req: "ExtractRequest") -> dict:
         "name": name,
         "launch_attempt": sketch,
         "learner_goal": learner_goal,
+        "route_owner": req.route_owner,
     }
 
 
@@ -595,6 +598,17 @@ def extract(req: ExtractRequest):
 
     try:
         if decision["path"] == "from_launch_attempt":
+            if decision.get("route_owner") == "seda":
+                shell = _fallback_smallest_route_from_sketch(
+                    concept=decision["name"],
+                    launch_attempt=decision["launch_attempt"],
+                    learner_goal=decision.get("learner_goal"),
+                ).model_dump()
+                shell["metadata"]["route_status"] = "pending_seda"
+                shell["metadata"]["graph_neutral"] = True
+                logger.info("concept_create.route_deferred", extra={"owner": "seda"})
+                return {"provisional_map": shell, "route_owner": "seda"}
+
             lc_result = None
             lc_query_failed = False
             lc_client = None

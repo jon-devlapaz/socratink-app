@@ -54,6 +54,27 @@ def test_app_bundle_change_requires_index_script_pin_bump() -> None:
     ]
 
 
+def test_ai_service_change_requires_every_direct_import_pin_bump() -> None:
+    checker = _load_checker()
+
+    failures = checker.validate_changed_cache_pins(
+        changed_paths={"public/js/ai_service.js"},
+        old_files={
+            "public/js/app.js": "import './ai_service.js?v=4';",
+            "public/js/launch-pad.js": "import './ai_service.js?v=1';",
+        },
+        new_files={
+            "public/js/app.js": "import './ai_service.js?v=4';",
+            "public/js/launch-pad.js": "import './ai_service.js?v=1';",
+        },
+    )
+
+    assert failures == [
+        "public/js/ai_service.js changed but public/js/app.js still imports ai_service.js?v=4",
+        "public/js/ai_service.js changed but public/js/launch-pad.js still imports ai_service.js?v=1",
+    ]
+
+
 def test_direct_drill_assets_require_index_pin_bumps() -> None:
     checker = _load_checker()
 

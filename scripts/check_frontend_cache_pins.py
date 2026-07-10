@@ -11,10 +11,17 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 APP_JS = "public/js/app.js"
+LAUNCH_PAD_JS = "public/js/launch-pad.js"
 CSS_INDEX = "public/css/index.css"
 INDEX_HTML = "public/index.html"
 STYLES_CSS = "public/styles.css"
-VERSIONED_PARENT_PATHS = (APP_JS, CSS_INDEX, INDEX_HTML, STYLES_CSS)
+VERSIONED_PARENT_PATHS = (
+    APP_JS,
+    LAUNCH_PAD_JS,
+    CSS_INDEX,
+    INDEX_HTML,
+    STYLES_CSS,
+)
 _VERSIONED_REFERENCE_RE = re.compile(
     r"(?P<quote>['\"])(?P<asset>[^'\"]+?)\?v=(?P<pin>[0-9]+)(?:[&#][^'\"]*)?(?P=quote)"
 )

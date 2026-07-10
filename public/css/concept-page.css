@@ -1977,7 +1977,7 @@
 
 @media (max-width: 720px) {
   body[data-map-open="true"] .map-view {
-    padding-top: 72px;
+    padding-top: calc(72px + env(safe-area-inset-top));
     padding-right: 12px;
     padding-left: 12px;
   }

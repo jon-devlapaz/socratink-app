@@ -68,9 +68,58 @@ The accepted north-star image applies to `write`. It is not the whole app shell.
   the next action can be routed.
 - Do not make the map the main surface during `write`; it is peripheral context.
 
+## Source-less route handoff
+
+The app opens the first composer only from the versioned session response
+contract, not by interpreting the raw SEDA event journal:
+
+```text
+sourceLessRoute.contractVersion = 1
+sourceLessRoute.status = ready
+awaiting.key = cold_attempt
+```
+
+`ready` carries the validated first node and provisional map. Backend route
+validation and frontend binding require the same fields, topology, and exactly
+one occurrence of the first node. A non-empty Door sketch may satisfy routing
+substrate only when the session was explicitly created with the source-less
+Door bootstrap option. That sketch remains graph-neutral and non-recordable.
+The preceding app-shell save persists a deterministic graph-neutral shell only;
+it performs no second model route generation. Until `ready`, learner copy says
+only `Preparing your first question…` and the composer remains closed.
+`route_status: pending_seda` plus `graph_neutral: true` is the durable recovery
+marker: reload may rebuild the route only while no attempt or repair evidence
+exists, and any shell-written draft stays unrecorded until the learner reviews
+the authoritative question.
+
+Route generation or contract failure returns typed `route_unavailable`. The
+composer stays closed and no evidence is projected. Recovery preserves the
+Door sketch:
+
+- no recorded evidence: discard only the stale route/session binding and build
+  a fresh first question;
+- any recorded evidence: return to the map without replacing the bound route or
+  its evidence.
+
+An unbound source-less map is eligible for automatic binding only when the
+current Door flow created it. Legacy unbound maps require an explicit recovery
+action, and any existing attempts or repairs force a return to the map. Once a
+route is bound, only that bound node may use its session.
+
+Each prompt response carries `sessionVersion`. Every submitted turn echoes that
+nonnegative version as `expectedVersion` and carries a UUID request ID. A
+transport retry reuses both values; a new learner submission gets a new ID. The
+server checks an idempotent replay before rejecting a stale version, then
+rejects a version mismatch before rehydrating or advancing the session. On a
+typed 409, the app fetches the current prompt, keeps the draft unrecorded, and
+requires the learner to submit it explicitly with a new ID and current version.
+
 ## Current implementation caveat
 
-The app-local SEDA path projects evidence only when `data.caseComplete` is true.
+The app-local SEDA path projects a recordable cold-attempt event before case
+completion so study can open after the first answer. Completed record
+projection later reconciles that event and re-stamps all attempts to the real
+sitting time; it must not append the cold answer twice or manufacture spacing.
 `public/js/seda-evidence-projection.js` re-stamps backend attempts to wall-clock
 time so one sitting cannot falsely derive `solidified`.
 
