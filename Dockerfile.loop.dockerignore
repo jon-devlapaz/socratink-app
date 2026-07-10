@@ -1,0 +1,17 @@
+**
+!requirements-loop.txt
+!loop-server.mjs
+!bridge.py
+!prompt_templates.py
+!bridge_lib/
+!bridge_lib/**
+!lib/
+!lib/**
+!pedagogical_agents/
+!pedagogical_agents/contracts.json
+!vendor/
+!vendor/python/
+!vendor/python/**
+**/__pycache__/
+**/*.pyc
+**/*.pyo

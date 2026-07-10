@@ -115,6 +115,31 @@ def test_short_sketch_no_source_dispatches_to_sketch_path(client):
     assert not fake_extract.called, "must NOT call extract_knowledge_map"
 
 
+def test_seda_owned_source_less_start_skips_lc_and_extract_route_generation(client):
+    with patch("main.LCClient") as fake_lc, \
+         patch("main.generate_smallest_provisional_map") as fake_gen, \
+         patch("main.extract_knowledge_map") as fake_extract:
+        response = client.post("/api/extract", json={
+            "name": "Photosynthesis",
+            "starting_sketch": "Plants use light to make sugar somehow.",
+            "source": None,
+            "route_owner": "seda",
+        })
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["route_owner"] == "seda"
+    assert body["provisional_map"]["metadata"]["route_status"] == "pending_seda"
+    assert body["provisional_map"]["metadata"]["graph_neutral"] is True
+    assert "Plants use light" in (
+        body["provisional_map"]["clusters"][0]["subnodes"][0]
+        ["learner_scaffold"]["entry_prompt"]
+    )
+    fake_lc.assert_not_called()
+    fake_gen.assert_not_called()
+    fake_extract.assert_not_called()
+
+
 def test_empty_sketch_no_source_returns_422_missing_sketch(client):
     response = client.post("/api/extract", json={
         "name": "Photosynthesis",

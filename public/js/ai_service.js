@@ -12,15 +12,17 @@
  * `Server error <status>: <text>` message with `.status` set.
  *
  * @param {{ name: string, learnerGoal?: string, startingSketch: string,
+ *           routeOwner?: 'extract'|'seda',
  *           source: null | { type: 'text'|'url'|'file', text?: string, url?: string, filename?: string } }} args
  * @returns {Promise<{ provisional_map?: object, knowledge_map?: object }>}
  */
-export async function submitConceptCreate({ name, learnerGoal, startingSketch, source }) {
+export async function submitConceptCreate({ name, learnerGoal, startingSketch, source, routeOwner }) {
   const body = {
     name,
     learner_goal: learnerGoal || undefined,
     starting_sketch: startingSketch,
     source,
+    route_owner: routeOwner || undefined,
   };
   const response = await fetch("/api/extract", {
     method: "POST",
@@ -70,15 +72,26 @@ async function postJson(url, body = {}) {
     body: JSON.stringify(body),
   });
   if (!response.ok) {
-    /* c8 ignore next 2 -- HTTP error text is a defensive client branch; backend error behavior is covered separately. */
-    const text = await response.text().catch(() => "");
-    throw new Error(`Server error ${response.status}: ${text}`);
+    const payload = await response.json().catch(async () => ({
+      message: await response.text().catch(() => ''),
+    }));
+    const error = new Error(
+      payload?.message || payload?.error || `Server error ${response.status}`,
+    );
+    error.status = response.status;
+    error.code = payload?.code || payload?.error || null;
+    error.body = payload || {};
+    throw error;
   }
   return response.json();
 }
 
-export function createSedaSession() {
-  return postJson("/api/session", {});
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function createSedaSession({ sourceLessDoorBootstrap = false } = {}) {
+  return postJson("/api/session", sourceLessDoorBootstrap === true
+    ? { sourceLessDoorBootstrap: true }
+    : {});
 }
 
 export async function getSedaSession(sessionId) {
@@ -87,13 +100,48 @@ export async function getSedaSession(sessionId) {
     headers: { Accept: "application/json" },
   });
   if (!response.ok) {
-    /* c8 ignore next 2 -- HTTP error text is a defensive client branch; backend error behavior is covered separately. */
-    const text = await response.text().catch(() => "");
-    throw new Error(`Server error ${response.status}: ${text}`);
+    const payload = await response.json().catch(async () => ({
+      message: await response.text().catch(() => ''),
+    }));
+    const error = new Error(
+      payload?.message || payload?.error || `Server error ${response.status}`,
+    );
+    error.status = response.status;
+    error.code = payload?.code || payload?.error || null;
+    error.body = payload || {};
+    throw error;
   }
   return response.json();
 }
 
-export function sendSedaTurn(sessionId, text) {
-  return postJson(`/api/session/${encodeURIComponent(sessionId)}/turn`, { text });
+function assertSessionVersion(value) {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error('A nonnegative SEDA expectedVersion is required.');
+  }
+  return value;
+}
+
+export function createSedaTurnSubmission(text, expectedVersion, requestId = null) {
+  const generated = globalThis.crypto?.randomUUID?.();
+  const stableRequestId = String(requestId || generated || '').trim();
+  if (!UUID_RE.test(stableRequestId)) throw new Error('A SEDA turn requestId UUID is required.');
+  return {
+    text: String(text ?? ''),
+    requestId: stableRequestId,
+    expectedVersion: assertSessionVersion(expectedVersion),
+  };
+}
+
+export function sendSedaTurn(sessionId, submission) {
+  const turn = submission;
+  if (!turn || typeof turn !== 'object') {
+    throw new Error('A SEDA turn submission is required.');
+  }
+  const requestId = String(turn.requestId || '').trim();
+  if (!UUID_RE.test(requestId)) throw new Error('A SEDA turn requestId UUID is required.');
+  return postJson(`/api/session/${encodeURIComponent(sessionId)}/turn`, {
+    text: String(turn.text ?? ''),
+    requestId,
+    expectedVersion: assertSessionVersion(turn.expectedVersion),
+  });
 }

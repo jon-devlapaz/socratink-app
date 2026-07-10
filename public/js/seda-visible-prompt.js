@@ -64,12 +64,10 @@ export function learnerVisibleSedaText(text) {
 
 export function visibleSedaPromptFromResponse(data) {
   if (data?.caseComplete) {
-    const state = data?.record?.derived?.[0]?.nodes
-      ? Object.values(data.record.derived[0].nodes)[0]?.state
-      : null;
-    return state
-      ? `Session complete. Evidence record saved: ${state}.`
-      : 'Session complete. Evidence record saved.';
+    // Derived graph states are private routing data. Keep completion copy
+    // controlled so rehydrating another tab cannot expose labels such as
+    // "primed" or "solidified" to the learner.
+    return 'Your attempt is on record. Study is ready.';
   }
 
   const cta = learnerVisibleSedaText(data?.awaiting?.ctaText || data?.awaiting?.ctaLabel || '');

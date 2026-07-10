@@ -6,6 +6,7 @@ runtime from this repo and proxies to it over loopback.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import socket
 import subprocess
@@ -14,6 +15,7 @@ import time
 import atexit
 from pathlib import Path
 from typing import Mapping
+from urllib.parse import urlsplit
 import urllib3
 from fastapi import HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
@@ -37,6 +39,8 @@ _REQUEST_HEADER_ALLOWLIST = {"accept", "content-type"}
 _RESPONSE_HEADER_DENYLIST = _HOP_BY_HOP | {"content-encoding"}
 
 _POOL = urllib3.PoolManager()
+_LOOP_PROXY_TIMEOUT = urllib3.Timeout(connect=5.0, read=55.0)
+_MAX_LOOP_REQUEST_BODY_BYTES = 64 * 1024
 _REPO_ROOT = Path(__file__).resolve().parent
 _LOCAL_LOOP_PROCESS: subprocess.Popen | None = None
 _LOCAL_LOOP_BASE: str | None = None
@@ -129,38 +133,53 @@ def _start_local_loop_backend() -> str:
     ) from last_error
 
 
-def _vercel_internal_loop_base(request: Request) -> str | None:
-    if not force_vercel_internal_loop():
-        return None
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
-    if not host:
-        return None
-    proto = request.headers.get("x-forwarded-proto") or "https"
-    return f"{proto}://{host}/api/internal-loop"
-
-
-def force_vercel_internal_loop() -> bool:
+def is_vercel_runtime() -> bool:
     return bool(os.environ.get("VERCEL") or os.environ.get("VERCEL_ENV"))
+
+
+def _validated_hosted_loop_base(raw_base: str) -> str:
+    base = raw_base.strip().rstrip("/")
+    parsed = urlsplit(base)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Hosted loop backend must be a trusted HTTPS origin.",
+        )
+    return base
 
 
 def _loop_backend_base(
     *,
     request: Request,
     force_local_runtime: bool = False,
-) -> tuple[str, bool]:
+) -> str:
     if force_local_runtime:
-        internal_base = _vercel_internal_loop_base(request)
-        if internal_base:
-            return internal_base, True
+        if is_vercel_runtime():
+            hosted_base = os.environ.get("LOOP_BACKEND_URL", "").strip()
+            if not hosted_base or not os.environ.get("SOCRATINK_LOOP_API_KEY", "").strip():
+                raise HTTPException(
+                    status_code=503,
+                    detail="Hosted loop backend is not configured.",
+                )
+            return _validated_hosted_loop_base(hosted_base)
+        return _start_local_loop_backend()
     base = os.environ.get("LOOP_BACKEND_URL", "").strip().rstrip("/")
-    if base and not force_local_runtime:
-        return base, False
+    if base:
+        return base
     if os.environ.get("SOCRATINK_LOOP_DISABLE_LOCAL") == "1":
         raise HTTPException(
             status_code=503,
             detail="Loop backend is not configured for this deployment.",
         )
-    return _start_local_loop_backend(), False
+    return _start_local_loop_backend()
 
 
 def _loop_unavailable_response(request: Request, err: HTTPException) -> Response:
@@ -211,27 +230,28 @@ def _loop_unavailable_response(request: Request, err: HTTPException) -> Response
     )
 
 
-def _internal_loop_token() -> str:
-    return (
-        os.environ.get("SOCRATINK_LOOP_API_KEY", "").strip()
-        or os.environ.get("SESSION_COOKIE_KEY", "").strip()
-    )
-
-
-def _forward_headers(request: Request, *, internal_loop: bool = False) -> dict[str, str]:
+def _forward_headers(
+    request: Request,
+    *,
+    include_user_token: bool = False,
+) -> dict[str, str]:
     headers: dict[str, str] = {}
     for key, value in request.headers.items():
         lowered = key.lower()
         if lowered in _REQUEST_HEADER_ALLOWLIST:
             headers[key] = value
-    if internal_loop:
-        token = _internal_loop_token()
-        if token:
-            headers["X-Socratink-Internal-Loop-Token"] = token
-        return headers
     api_key = os.environ.get("SOCRATINK_LOOP_API_KEY", "").strip()
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
+    if include_user_token:
+        session = getattr(request.state, "auth_session", None)
+        user_access_token = getattr(session, "access_token", None)
+        if not user_access_token:
+            raise HTTPException(
+                status_code=401,
+                detail="Authenticated session required for durable loop storage.",
+            )
+        headers["X-Socratink-User-Access-Token"] = user_access_token
     return headers
 
 
@@ -243,6 +263,25 @@ def _response_headers(upstream: Mapping[str, str]) -> dict[str, str]:
     }
 
 
+async def _bounded_request_body(request: Request) -> bytes:
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > _MAX_LOOP_REQUEST_BODY_BYTES:
+                raise HTTPException(status_code=413, detail="Loop request body is too large.")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid Content-Length header.")
+
+    chunks: list[bytes] = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > _MAX_LOOP_REQUEST_BODY_BYTES:
+            raise HTTPException(status_code=413, detail="Loop request body is too large.")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 async def proxy_loop_backend(
     request: Request,
     upstream_path: str,
@@ -250,7 +289,7 @@ async def proxy_loop_backend(
     force_local_runtime: bool = False,
 ) -> Response:
     try:
-        base, internal_loop = _loop_backend_base(
+        base = _loop_backend_base(
             request=request,
             force_local_runtime=force_local_runtime,
         )
@@ -258,23 +297,41 @@ async def proxy_loop_backend(
         return _loop_unavailable_response(request, err)
     query = f"?{request.url.query}" if request.url.query else ""
     url = f"{base}{upstream_path}{query}"
-    body = await request.body()
+    body = await _bounded_request_body(request)
     try:
-        upstream = _POOL.request(
+        upstream = await asyncio.to_thread(
+            _POOL.request,
             request.method,
             url,
             body=body or None,
-            headers=_forward_headers(request, internal_loop=internal_loop),
+            headers=_forward_headers(
+                request,
+                include_user_token=(
+                    force_local_runtime and is_vercel_runtime()
+                ),
+            ),
             redirect=False,
             preload_content=False,
+            retries=False,
+            timeout=_LOOP_PROXY_TIMEOUT,
         )
+    except urllib3.exceptions.TimeoutError as err:
+        raise HTTPException(
+            status_code=503,
+            detail="Loop backend request timed out.",
+        ) from err
     except urllib3.exceptions.HTTPError as err:
         raise HTTPException(
             status_code=502,
             detail="Loop backend request failed.",
         ) from err
     try:
-        payload = upstream.read()
+        payload = await asyncio.to_thread(upstream.read)
+    except urllib3.exceptions.TimeoutError as err:
+        raise HTTPException(
+            status_code=503,
+            detail="Loop backend response timed out.",
+        ) from err
     except urllib3.exceptions.HTTPError as err:
         raise HTTPException(
             status_code=502,

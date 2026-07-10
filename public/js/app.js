@@ -1,10 +1,11 @@
 import { Bus } from './bus.js';
 import {
+  createSedaTurnSubmission,
   createSedaSession,
   getSedaSession,
   sendSedaTurn,
   submitConceptCreate,
-} from './ai_service.js?v=2';
+} from './ai_service.js?v=5';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -30,7 +31,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=31';
+} from './concept-page-view.js?v=33';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -73,11 +74,19 @@ import {
   runRepairReps,
   runDrillTurn,
 } from './api-client.js?v=2';
-import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=2';
+import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=3';
 import {
   projectCompletedSedaRecord,
   projectLatestSedaAttemptEvent,
-} from './seda-evidence-projection.js';
+} from './seda-evidence-projection.js?v=1';
+import {
+  bindSourceLessSedaRoute,
+  boundSourceLessSedaNodeId,
+  boundSourceLessSedaSessionId,
+  clearBoundSourceLessSedaRoute,
+  hasBoundSourceLessSedaRoute,
+  readySourceLessSedaRoute,
+} from './seda-route-binding.js?v=1';
 import {
   bootstrapAuthUi,
   buildLoginHref,
@@ -100,13 +109,13 @@ import {
   buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=5';
+} from './launch-pad.js?v=6';
 import {
   coldAttemptCompletionLabel,
   nextSedaPromptAfterVerdict,
   sedaCompleteCompletionLabel,
   verdictCopy,
-} from './drill-verdict.js?v=2';
+} from './drill-verdict.js?v=6';
 import { emitTelemetry } from './telemetry.js';
 
 import {
@@ -132,6 +141,7 @@ const App = (() => {
   let learnerStatePushTimer = null;
   let readyFilterActive = false;
   let cachedDueItems = [];
+  const freshSourceLessConceptIds = new Set();
 
   function saveConcepts(arr) {
     persistConcepts(arr);
@@ -1465,6 +1475,10 @@ const App = (() => {
     // No source text — contentStore is not written for source-less concepts.
     concepts.push(concept);
     saveConcepts(concepts);
+    // This in-memory marker is deliberately scoped to the current Door flow.
+    // A legacy unbound map must not gain permission to replace node ids merely
+    // because it lacks a persisted marker.
+    freshSourceLessConceptIds.add(id);
     void initializeConceptTraining({
       conceptId: id,
       provenance: {
@@ -2229,9 +2243,19 @@ const App = (() => {
     });
   }
 
+  function hasPendingSourceLessSedaRoute(concept, graphData = null) {
+    const data = graphData || parseConceptGraphData(concept) || {};
+    return isSourceLessConcept(concept, data)
+      && data?.metadata?.route_status === 'pending_seda'
+      && data?.metadata?.graph_neutral === true
+      && !hasBoundSourceLessSedaRoute(data);
+  }
+
   function shouldResumeSedaForConcept(conceptId) {
     const stored = loadSedaSessionState(conceptId);
-    return Boolean(stored?.sessionId && stored?.latest?.caseComplete !== true);
+    if (stored?.sessionId && stored?.latest?.caseComplete !== true) return true;
+    const concept = loadConcepts().find((item) => item?.id === conceptId) || null;
+    return hasPendingSourceLessSedaRoute(concept);
   }
 
   function buildSedaResumeDrillContext(entryId, concept, data, training = null, options = {}) {
@@ -2448,6 +2472,15 @@ const App = (() => {
     button.disabled = true;
     button.setAttribute('aria-disabled', 'true');
 
+    const graphData = parseConceptGraphData(concept) || data || {};
+    if (hasPendingSourceLessSedaRoute(concept, graphData)) {
+      startDrill(buildSedaResumeDrillContext(entryId, concept, graphData, null, {
+        // This draft was written against the durable shell, not the route SEDA
+        // is about to generate. Keep it visible, but never auto-submit it.
+        restoredDraftText: userText.trim(),
+      }));
+      return;
+    }
     if (shouldResumeSedaForConcept(concept.id)) {
       startDrill(buildSedaResumeDrillContext(entryId, concept, data, null, {
         initialTurnText: userText.trim(),
@@ -2455,7 +2488,6 @@ const App = (() => {
       return;
     }
 
-    const graphData = parseConceptGraphData(concept) || data || {};
     const backbone = deriveConceptEntries(graphData);
     const match = findConceptEntryById(backbone, entryId);
     const entry = match?.entry || {};
@@ -2891,6 +2923,7 @@ const App = (() => {
     // Wire CTA and re-edit affordance
     const docEl = mountEl.querySelector('.concept-page-b2__doc');
     if (docEl) rebindActiveEntryHandlers(docEl, concept, data, training);
+    restoreActiveEntryDraft(activeEntryId);
 
     // Wire route-margin click + vertical keyboard nav.
     bindConceptRouteMarginHandlers(mountEl, data, concept, training);
@@ -3454,6 +3487,8 @@ const App = (() => {
     _normalizationIdx: 0,
     sessionCompletePending: false,
     sedaSessionId: null,
+    sedaSessionVersion: null,
+    sedaPendingSubmission: null,
     sedaActive: false,
   };
 
@@ -3504,10 +3539,63 @@ const App = (() => {
         ...state,
         updatedAt: new Date().toISOString(),
       }));
+      return true;
+    } catch (err) {
+      /* c8 ignore next 2 -- defensive localStorage failure branch. */
+      console.warn('SEDA session state unavailable.', err);
+      return false;
+    }
+  }
+
+  function clearSedaSessionState(conceptId) {
+    try {
+      localStorage.removeItem(sedaSessionKey(conceptId));
     } catch (err) {
       /* c8 ignore next -- defensive localStorage failure branch. */
-      console.warn('SEDA session state unavailable.', err);
+      console.warn('SEDA session state could not be cleared.', err);
     }
+  }
+
+  function routeUnavailableError(reason) {
+    const error = new Error(`Source-less route unavailable: ${reason}`);
+    error.code = 'route_unavailable';
+    error.reason = reason;
+    return error;
+  }
+
+  function assertSedaStartupStillCurrent(conceptId, sessionToken) {
+    if (
+      sessionToken == null
+      || (
+        drillState.sessionToken === sessionToken
+        && drillState.sedaActive
+        && getActiveId() === conceptId
+      )
+    ) return;
+    const error = new Error('Discarded a stale SEDA startup response.');
+    error.code = 'stale_seda_start';
+    throw error;
+  }
+
+  async function hasRecordedConceptEvidence(conceptId) {
+    const training = await trainingStore.loadTraining(conceptId);
+    return Object.values(training?.node_records || {}).some((record) => (
+      (Array.isArray(record?.attempts) && record.attempts.length > 0)
+      || (Array.isArray(record?.repairs) && record.repairs.length > 0)
+    ));
+  }
+
+  function resetSourceLessRouteForFreshStart(concept) {
+    const graphData = parseConceptGraphData(concept) || {};
+    const persisted = persistActiveConceptGraphData(
+      clearBoundSourceLessSedaRoute(graphData),
+      { conceptId: concept.id },
+    );
+    if (!persisted) return null;
+    clearSedaSessionState(concept.id);
+    freshSourceLessConceptIds.add(concept.id);
+    concept.graphData = persisted.graphData;
+    return persisted;
   }
 
   function sedaPromptFromResponse(data) {
@@ -3527,17 +3615,35 @@ const App = (() => {
     void revealStudyForEntry(nodeId, concept, parseConceptGraphData(concept) || {});
   }
 
+  function restoreUnrecordedDraft(text, { chamber = false, entryId = null } = {}) {
+    const draft = String(text || '').trim();
+    if (!draft) return;
+    if (chamber) {
+      const target = document.getElementById('chamber-composer');
+      if (target && 'value' in target) target.value = draft;
+      return;
+    }
+    const resolvedEntryId = entryId || drillState.node?.id || _activeEntryId;
+    if (!resolvedEntryId) return;
+    routeAttemptDrafts.set(routeAttemptDraftKey(resolvedEntryId), draft);
+    restoreActiveEntryDraft(resolvedEntryId);
+  }
+
   async function saveSedaResponse(concept, nodeContext, data) {
-    if (!concept?.id || !data?.sessionId) return;
-    persistSedaSessionState(concept.id, {
+    if (!concept?.id || !data?.sessionId) return false;
+    sessionVersionFromResponse(data);
+    const persisted = persistSedaSessionState(concept.id, {
       sessionId: data.sessionId,
+      sessionVersion: data.sessionVersion,
       nodeId: nodeContext?.id || null,
       latest: data,
       record: data.record || null,
     });
+    if (!persisted) return false;
     if (data.caseComplete && data.record) {
-      await projectSedaEvidence(concept, nodeContext, data);
+      return projectSedaEvidence(concept, nodeContext, data);
     }
+    return !data.caseComplete;
   }
 
   // Reconstruction evidence must survive outside the chamber: project the
@@ -3553,10 +3659,20 @@ const App = (() => {
         record: data.record,
         sessionId: data.sessionId,
       });
-      if (next) await trainingStore.saveTraining(next);
+      /* c8 ignore start -- completed-record idempotency is proven in the projection module contract. */
+      if (!next) {
+        const attempts = training?.node_records?.[nodeContext?.id || '']?.attempts;
+        return Array.isArray(attempts) && attempts.some(
+          (attempt) => attempt?.id === `seda-${data.sessionId}-0`,
+        );
+      }
+      /* c8 ignore stop */
+      await trainingStore.saveTraining(next);
+      return true;
     } catch (err) {
       /* c8 ignore next 2 -- defensive storage failure branch. */
       console.warn('SEDA evidence projection unavailable.', err);
+      return false;
     }
   }
 
@@ -3570,41 +3686,200 @@ const App = (() => {
         data,
         sessionId: data.sessionId,
       });
-      if (!next) return false;
+      if (!next) {
+        const attempts = training?.node_records?.[nodeContext?.id || '']?.attempts;
+        const prefix = `seda-${data.sessionId}-event-`;
+        const projected = Array.isArray(attempts)
+          ? attempts.findLast((attempt) => String(attempt?.id || '').startsWith(prefix))
+          : null;
+        return { ok: true, classification: projected?.classification || null };
+      }
       await trainingStore.saveTraining(next);
       const projected = next.node_records?.[nodeContext?.id || ''];
       const attempts = Array.isArray(projected?.attempts) ? projected.attempts : [];
-      return attempts[attempts.length - 1]?.classification || true;
+      return {
+        ok: true,
+        classification: attempts[attempts.length - 1]?.classification || true,
+      };
     } catch (err) {
       /* c8 ignore next 2 -- defensive storage failure branch. */
       console.warn('SEDA attempt projection unavailable.', err);
-      return false;
+      return { ok: false, classification: null };
     }
   }
 
-  async function loadOrCreateSedaResponse(concept, nodeContext) {
+  function sessionVersionFromResponse(data) {
+    const version = data?.sessionVersion;
+    if (!Number.isInteger(version) || version < 0) {
+      /* c8 ignore next -- transport helpers and server contracts reject invalid versions before this browser boundary. */
+      throw new Error('The learning loop returned an invalid session version.');
+    }
+    return version;
+  }
+
+  function sedaSubmissionForResponse(text, data, requestId = null) {
+    return createSedaTurnSubmission(
+      text,
+      sessionVersionFromResponse(data),
+      requestId,
+    );
+  }
+
+  async function loadOrCreateSedaResponse(
+    concept,
+    nodeContext,
+    { sessionToken = null } = {},
+  ) {
+    const existingGraphData = parseConceptGraphData(concept) || {};
+    const expectedGraphRevision = String(concept.graphData || '');
+    const sourceLess = isSourceLessConcept(concept, existingGraphData);
+    const routeBound = sourceLess && hasBoundSourceLessSedaRoute(existingGraphData);
+    const durablePendingRoute = hasPendingSourceLessSedaRoute(
+      concept,
+      existingGraphData,
+    );
+    if (
+      durablePendingRoute
+      && await hasRecordedConceptEvidence(concept.id)
+    ) {
+      throw routeUnavailableError('pending_route_has_evidence');
+    }
+    if (
+      sourceLess
+      && !routeBound
+      && !durablePendingRoute
+      && !freshSourceLessConceptIds.has(concept.id)
+    ) {
+      throw routeUnavailableError('unbound_route_requires_confirmation');
+    }
+    const resumingBoundNode = routeBound
+      && nodeContext?.id === boundSourceLessSedaNodeId(existingGraphData);
+    if (routeBound && !resumingBoundNode) {
+      throw routeUnavailableError('bound_node_mismatch');
+    }
+    const boundSessionId = resumingBoundNode
+      ? boundSourceLessSedaSessionId(existingGraphData)
+      : '';
+    if (resumingBoundNode && !boundSessionId) {
+      throw routeUnavailableError('missing_bound_session');
+    }
     const stored = loadSedaSessionState(concept.id);
     const sameStoredNode = Boolean(stored?.nodeId && stored.nodeId === nodeContext?.id);
+    const sameBoundSession = !resumingBoundNode || stored?.sessionId === boundSessionId;
     let data = null;
-    if (stored?.sessionId && sameStoredNode && !stored?.latest?.caseComplete) {
+    if (stored?.sessionId && sameStoredNode && sameBoundSession && !stored?.latest?.caseComplete) {
       try {
         data = await getSedaSession(stored.sessionId);
       } catch {
-        /* c8 ignore next -- stale stored session falls back to creating a new app session. */
+        /* c8 ignore next -- the bound-session guard below fails closed after a stale resume. */
         data = null;
       }
     }
     if (!data) {
-      data = await createSedaSession();
+      if (resumingBoundNode) {
+        throw routeUnavailableError('stale_bound_session');
+      }
+      data = await createSedaSession({ sourceLessDoorBootstrap: sourceLess });
+    }
+    if (resumingBoundNode && data?.sessionId !== boundSessionId) {
+      throw routeUnavailableError('bound_session_mismatch');
     }
     if (data?.awaiting?.key === 'cmd') {
-      data = await sendSedaTurn(data.sessionId, concept.name || 'Untitled concept');
+      data = await sendSedaTurn(
+        data.sessionId,
+        sedaSubmissionForResponse(concept.name || 'Untitled concept', data),
+      );
     }
     if (data?.awaiting?.key === 'learner_goal') {
-      data = await sendSedaTurn(data.sessionId, concept.learnerGoal || '');
+      data = await sendSedaTurn(
+        data.sessionId,
+        sedaSubmissionForResponse(concept.learnerGoal || '', data),
+      );
     }
-    await saveSedaResponse(concept, nodeContext, data);
-    return data;
+    if (data?.awaiting?.key === 'launch_attempt') {
+      const launchAttempt = sourceLess
+        ? String(
+          concept.startingMapContext
+          || existingGraphData?.metadata?.starting_map_context
+          || ''
+        ).trim()
+        : '';
+      if (launchAttempt) {
+        // The source-less Door already captured this global starting model.
+        // Feed it into SEDA before the chamber opens so the first answer the
+        // learner writes in the room is the local, recordable cold attempt.
+        // This bootstrap turn bypasses requestSedaTurn on purpose: launch
+        // attempts shape routing but never append learner training evidence.
+        data = await sendSedaTurn(
+          data.sessionId,
+          sedaSubmissionForResponse(launchAttempt, data),
+        );
+      }
+    }
+
+    // Model-backed route generation can finish after the learner has exited or
+    // selected another concept. Do not let that late response write local
+    // session, graph, or drill state into a different active surface.
+    assertSedaStartupStillCurrent(concept.id, sessionToken);
+
+    if (resumingBoundNode && data?.awaiting?.key === 'cold_attempt') {
+      const readyRoute = readySourceLessSedaRoute(data);
+      if (String(readyRoute.first_node?.id || '').trim() !== boundSourceLessSedaNodeId(existingGraphData)) {
+        throw routeUnavailableError('bound_route_mismatch');
+      }
+    }
+
+    let routeBinding = null;
+    let activeConcept = concept;
+    let responseSavedForBinding = false;
+    if (sourceLess && !routeBound) {
+      // SEDA chooses the actual learning target only after reading the Door
+      // sketch. Bind and persist that route before the composer can open, so
+      // prompt, evidence, and study all point at the same authoritative node.
+      // Any malformed/missing route fails into the existing retry UI before
+      // session state or learner training evidence is written.
+      routeBinding = bindSourceLessSedaRoute({
+        data,
+        existingMap: existingGraphData,
+        concept,
+      });
+      Object.assign(nodeContext, routeBinding.nodeContext, { drillMode: 'seda' });
+      // Save the exact bound node/session before stamping the map marker. If
+      // session storage is unavailable, fail without leaving a graph that
+      // claims it has a resumable authoritative route.
+      responseSavedForBinding = await saveSedaResponse(concept, nodeContext, data);
+      /* c8 ignore start -- defensive browser-storage failure; save/persistence retry UX is covered on the active turn path. */
+      if (!responseSavedForBinding) {
+        throw new Error('Could not persist the source-less SEDA session.');
+      }
+      /* c8 ignore stop */
+      const persistedConcept = persistActiveConceptGraphData(
+        routeBinding.graphData,
+        { conceptId: concept.id, expectedGraphRevision },
+      );
+      /* c8 ignore start -- stale graph revision is rejected before route state can be stamped. */
+      if (!persistedConcept) {
+        clearSedaSessionState(concept.id);
+        throw new Error('Could not persist the source-less SEDA route.');
+      }
+      /* c8 ignore stop */
+      activeConcept = persistedConcept;
+      concept.graphData = persistedConcept.graphData;
+      freshSourceLessConceptIds.delete(concept.id);
+      drillState.node = nodeContext;
+      activeDrillNode = nodeContext.id;
+      currentGraphController?.setActiveDrillNode?.(activeDrillNode);
+    }
+
+    if (!responseSavedForBinding) {
+      const responseSaved = await saveSedaResponse(activeConcept, nodeContext, data);
+      /* c8 ignore start -- defensive browser-storage failure on bound-session resume. */
+      if (!responseSaved) {
+        throw new Error('Could not persist the source-less SEDA response.');
+      }
+      /* c8 ignore stop */
+    }
+    return { data, routeBinding, concept: activeConcept };
   }
 
   function parseConceptGraphData(concept) {
@@ -3612,11 +3887,20 @@ const App = (() => {
     return normalizeGraphData(concept.graphData).graphData;
   }
 
-  function persistActiveConceptGraphData(graphData) {
+  function persistActiveConceptGraphData(
+    graphData,
+    { conceptId = getActiveId(), expectedGraphRevision = null } = {},
+  ) {
     const concepts = loadConcepts();
-    const activeId = getActiveId();
-    const conceptIdx = concepts.findIndex((concept) => concept.id === activeId);
+    const conceptIdx = concepts.findIndex((concept) => concept.id === conceptId);
     if (conceptIdx === -1) return null;
+    if (
+      expectedGraphRevision != null
+      && String(concepts[conceptIdx].graphData || '') !== expectedGraphRevision
+    ) {
+      /* c8 ignore next -- late-response CAS failure is covered through the stale-start browser contract. */
+      return null;
+    }
 
     const normalizedGraphData = normalizeGraphData(graphData).graphData;
     concepts[conceptIdx].graphData = JSON.stringify(normalizedGraphData);
@@ -4279,8 +4563,10 @@ const App = (() => {
     drillState.attemptTurnCount = 0;
     drillState.helpTurnCount = 0;
     drillState.sessionCompletePending = false;
-    /* c8 ignore next 2 -- completeStudy reset mirrors cancelDrill; SEDA state mutation is covered in the active path. */
+    /* c8 ignore next 3 -- completeStudy reset mirrors cancelDrill; SEDA state mutation is covered in the active path. */
     drillState.sedaSessionId = null;
+    drillState.sedaSessionVersion = null;
+    drillState.sedaPendingSubmission = null;
     drillState.sedaActive = false;
     drillState.sessionToken += 1;
     if (drillUi) drillUi.style.display = 'none';
@@ -4439,23 +4725,45 @@ const App = (() => {
     drillState.pending = true;
     if (chatInput) chatInput.disabled = true;
     showTypingIndicator();
+    window.DrillChamber?.setLoading?.(true, { checkingAnswer: Boolean(String(userText || '').trim()) });
+
+    const normalizedText = String(userText ?? '');
+    const pendingSubmission = drillState.sedaPendingSubmission;
+    const submission = pendingSubmission?.text === normalizedText
+      ? pendingSubmission
+      : createSedaTurnSubmission(normalizedText, drillState.sedaSessionVersion);
+    drillState.sedaPendingSubmission = submission;
 
     try {
-      const data = await sendSedaTurn(drillState.sedaSessionId, userText);
+      const data = await sendSedaTurn(drillState.sedaSessionId, submission);
       hideTypingIndicator();
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
-
-      drillState.sedaSessionId = data.sessionId;
-      await saveSedaResponse(concept, drillState.node, data);
+      const responseSaved = await saveSedaResponse(concept, drillState.node, data);
+      /* c8 ignore start -- session-state storage failure shares the proven idempotent persistence-retry UI. */
+      if (!responseSaved) {
+        showSedaPersistenceRetry(normalizedText);
+        return;
+      }
+      /* c8 ignore stop */
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
-      const projectedAttemptClassification = data.caseComplete
-        ? null
+      const projectedAttempt = data.caseComplete
+        ? { ok: true, classification: null }
         : await projectSedaAttemptEvent(concept, drillState.node, data);
+      if (!projectedAttempt.ok) {
+        showSedaPersistenceRetry(normalizedText);
+        return;
+      }
+      drillState.sedaPendingSubmission = null;
+      drillState.sedaSessionId = data.sessionId;
+      drillState.sedaSessionVersion = sessionVersionFromResponse(data);
+      const projectedAttemptClassification = projectedAttempt.classification;
       const studyReady = data.caseComplete || Boolean(projectedAttemptClassification);
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
       const previousPrompt = chamberLastShownQuestion;
       const promptText = sedaPromptFromResponse(data);
       const nextPrompt = nextSedaPromptAfterVerdict(promptText, previousPrompt, userText);
+      window.DrillChamber?.appendHistoryTurn('ai', previousPrompt || '');
+      window.DrillChamber?.appendHistoryTurn('learner', normalizedText);
       drillState.messages.push({ role: 'user', content: userText });
       drillState.messages.push({ role: 'assistant', content: studyReady ? promptText : nextPrompt });
       chamberLastShownQuestion = studyReady ? promptText : nextPrompt;
@@ -4474,7 +4782,7 @@ const App = (() => {
         } else {
           window.DrillChamber.swapQuestion(nextPrompt);
           setTimeout(() => {
-            window.DrillChamber?.appendVerdict?.(verdictCopy({ userText }));
+            window.DrillChamber?.appendVerdict?.(verdictCopy({ userText, recordable: false }));
             window.DrillChamber?.setCompletionAction?.('Keep going', () => {
               window.DrillChamber?.setComposerEnabled(true);
             });
@@ -4492,7 +4800,95 @@ const App = (() => {
       hideTypingIndicator();
       if (sessionToken !== drillState.sessionToken) return;
       drillState.pending = false;
-      throw err;
+      window.DrillChamber?.setLoading?.(false);
+      if (err?.status === 409 && err?.body?.error === 'session_conflict') {
+        await reconcileSedaSessionConflict(concept, normalizedText, sessionToken);
+        return;
+      }
+      console.error(err);
+      showSedaTransportRetry(normalizedText);
+      return;
+      /* c8 ignore stop */
+    }
+  }
+
+  function showSedaPersistenceRetry(userText) {
+    drillState.pending = false;
+    window.DrillChamber?.setLoading?.(false);
+    window.DrillChamber?.appendVerdict?.(
+      'Answer received • Not saved in this browser yet.',
+    );
+    window.DrillChamber?.setCompletionAction?.('Try saving again', () => {
+      window.DrillChamber?.setComposerEnabled(false);
+      void requestSedaTurn(userText);
+    });
+    restoreUnrecordedDraft(userText, { chamber: true });
+  }
+
+  function showSedaTransportRetry(userText) {
+    drillState.pending = false;
+    window.DrillChamber?.setLoading?.(false);
+    window.DrillChamber?.appendVerdict?.(
+      'Answer kept • Not recorded • The learning loop did not respond.',
+    );
+    window.DrillChamber?.setCompletionAction?.('Try sending again', () => {
+      window.DrillChamber?.setComposerEnabled(false);
+      void requestSedaTurn(userText);
+    });
+    // Completion actions normally clear the composer. Put the learner's exact
+    // draft back after installing the retry action so a network failure never
+    // turns visible effort into a blank form.
+    restoreUnrecordedDraft(userText, { chamber: true });
+  }
+
+  async function reconcileSedaSessionConflict(concept, draft, sessionToken) {
+    try {
+      const latest = await getSedaSession(drillState.sedaSessionId);
+      if (sessionToken !== drillState.sessionToken || !drillState.node) return;
+      const responseSaved = await saveSedaResponse(concept, drillState.node, latest);
+      /* c8 ignore start -- conflict refresh storage failure reuses the persistence-retry contract. */
+      if (!responseSaved) {
+        showSedaPersistenceRetry(draft);
+        return;
+      }
+      /* c8 ignore stop */
+      drillState.sedaSessionVersion = sessionVersionFromResponse(latest);
+      // A stale submission belongs to the prompt/version that produced it.
+      // Clearing it here ensures an explicit resubmit gets a fresh id bound to
+      // the newly fetched prompt instead of silently replaying stale text.
+      drillState.sedaPendingSubmission = null;
+      drillState.pending = false;
+      /* c8 ignore start -- defensive conflict after remote case completion returns the preserved draft to the map. */
+      if (latest.caseComplete) {
+        window.DrillChamber?.appendVerdict?.(
+          'Session changed in another tab • Your draft was not recorded.',
+        );
+        window.DrillChamber?.setCompletionAction?.('Return to map', () => {
+          const entryId = drillState.node?.id;
+          cancelDrill();
+          restoreUnrecordedDraft(draft, { entryId });
+        });
+        return;
+      }
+      /* c8 ignore stop */
+      const currentPrompt = sedaPromptFromResponse(latest);
+      const question = document.getElementById('chamber-question');
+      if (question) question.textContent = currentPrompt;
+      chamberLastShownQuestion = currentPrompt;
+      restoreUnrecordedDraft(draft, { chamber: true });
+      window.DrillChamber?.appendVerdict?.(
+        'Session changed in another tab • Review the current question, then check your draft again.',
+      );
+      window.DrillChamber?.setComposerEnabled(true);
+    } catch (refreshError) {
+      /* c8 ignore start -- refresh transport failure preserves the draft and is covered by the general transport-retry proof. */
+      console.error(refreshError);
+      if (sessionToken !== drillState.sessionToken) return;
+      restoreUnrecordedDraft(draft, { chamber: true });
+      window.DrillChamber?.appendVerdict?.(
+        'Session changed in another tab • Your draft was not recorded.',
+      );
+      window.DrillChamber?.setComposerEnabled(true);
       /* c8 ignore stop */
     }
   }
@@ -4753,6 +5149,10 @@ const App = (() => {
     const initialSedaTurnText = usesSedaLoop
       ? String(nodeContext?.initialTurnText || '').trim()
       : '';
+    const restoredSedaDraftText = usesSedaLoop
+      ? String(nodeContext?.restoredDraftText || '').trim()
+      : '';
+    const unrecordedSedaDraftText = restoredSedaDraftText || initialSedaTurnText;
 
     // TODO(post-launch): see paired comment ~line 3592. All four guards
     // below (re-drill spacing, 4-entries-per-session, time limit,
@@ -4813,6 +5213,8 @@ const App = (() => {
     drillState.helpTurnCount = 0;
     drillState.sessionCompletePending = false;
     drillState.sedaSessionId = null;
+    drillState.sedaSessionVersion = null;
+    drillState.sedaPendingSubmission = null;
     drillState.sedaActive = usesSedaLoop;
     drillState.sessionToken += 1;
     activeDrillNode = nodeContext?.id || null;
@@ -4857,7 +5259,12 @@ const App = (() => {
     // Show the ironclad chamber view.
     const conceptName = concept?.name || concept?.metadata?.name || 'Concept';
     const entryName = nodeContext.fullLabel || nodeContext.id || 'Entry';
-    const visibleQuestion = drillQuestionForNodeContext(nodeContext, concept);
+    const awaitingAuthoritativeSourceLessRoute = usesSedaLoop
+      && isSourceLessConcept(concept, km)
+      && !hasBoundSourceLessSedaRoute(km);
+    const visibleQuestion = awaitingAuthoritativeSourceLessRoute
+      ? 'Preparing your first question…'
+      : drillQuestionForNodeContext(nodeContext, concept);
     if (window.DrillChamber) {
       window.DrillChamber.show({
         conceptName,
@@ -4868,32 +5275,124 @@ const App = (() => {
         const sedaStartToken = drillState.sessionToken;
         window.DrillChamber.setComposerEnabled(false);
         window.DrillChamber.setLoading?.(true);
-        loadOrCreateSedaResponse(concept, nodeContext)
-          .then(async (data) => {
+        loadOrCreateSedaResponse(
+          concept,
+          nodeContext,
+          { sessionToken: sedaStartToken },
+        )
+          .then(async ({ data, routeBinding, concept: activeConcept }) => {
             if (drillState.sessionToken !== sedaStartToken || !drillState.sedaActive) return;
             drillState.sedaSessionId = data.sessionId;
-            const promptText = drillPromptFromSedaResponse(data, nodeContext, concept);
+            drillState.sedaSessionVersion = sessionVersionFromResponse(data);
+            const promptText = routeBinding && data?.awaiting?.key === 'cold_attempt'
+              ? routeBinding.nodeContext.prompt
+              : drillPromptFromSedaResponse(data, nodeContext, activeConcept);
             chamberLastShownQuestion = promptText;
-            window.DrillChamber.swapQuestion(promptText);
+            if (routeBinding) {
+              const training = await trainingStore.loadTraining(activeConcept.id);
+              if (drillState.sessionToken !== sedaStartToken || !drillState.sedaActive) return;
+              const liveMapContent = document.getElementById('map-content');
+              if (liveMapContent) {
+                renderConceptPageB2(
+                  liveMapContent,
+                  routeBinding.graphData,
+                  activeConcept,
+                  training,
+                  { activeEntryId: nodeContext.id, isDrilling: true },
+                );
+              }
+              window.DrillChamber.show({
+                conceptName: activeConcept?.name || 'Concept',
+                entryName: nodeContext.fullLabel || nodeContext.id || 'Entry',
+                question: promptText,
+              });
+              // show() enables a freshly rendered composer by default; keep it
+              // closed until the authoritative node and session are both ready.
+              window.DrillChamber.setComposerEnabled(false);
+              currentGraphController?.setActiveDrillNode?.(nodeContext.id);
+              currentGraphController?.setInteractionMode?.(initialMode, nodeContext.id);
+            } else {
+              window.DrillChamber.swapQuestion(promptText);
+            }
             window.DrillChamber.setLoading?.(false);
             /* c8 ignore start -- opening an already-complete stored session is covered by API proof, not browser smoke. */
             if (data.caseComplete) {
               drillState.sessionCompletePending = true;
-              window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(concept.id, nodeContext?.id));
+              window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(activeConcept.id, nodeContext?.id));
             } else if (initialSedaTurnText) {
-              window.DrillChamber.appendHistoryTurn('ai', promptText);
-              window.DrillChamber.appendHistoryTurn('learner', initialSedaTurnText);
               await requestSedaTurn(initialSedaTurnText);
             } else {
             /* c8 ignore stop */
               window.DrillChamber.setComposerEnabled(true);
+              if (restoredSedaDraftText) {
+                restoreUnrecordedDraft(restoredSedaDraftText, { chamber: true });
+                window.DrillChamber.appendVerdict?.(
+                  'Draft kept • Not recorded against this question.',
+                );
+              }
             }
           })
-          .catch((err) => {
+          .catch(async (err) => {
             /* c8 ignore start -- defensive startup failure branch for unavailable local loop backend. */
             console.error(err);
+            if (drillState.sessionToken !== sedaStartToken || !drillState.sedaActive) return;
+            if (err?.code === 'stale_seda_start') return;
             drillState.pending = false;
             drillState.sedaSessionId = null;
+            drillState.sedaSessionVersion = null;
+            drillState.sedaPendingSubmission = null;
+            if (err?.code === 'route_unavailable') {
+              let hasEvidence = err?.reason === 'bound_node_mismatch';
+              if (!hasEvidence) {
+                try {
+                  hasEvidence = await hasRecordedConceptEvidence(concept.id);
+                } catch (evidenceError) {
+                  hasEvidence = true;
+                  console.warn('Could not inspect recorded evidence during route recovery.', evidenceError);
+                }
+              }
+              if (drillState.sessionToken !== sedaStartToken || !drillState.sedaActive) return;
+              window.DrillChamber.setLoading?.(false);
+              window.DrillChamber.setComposerEnabled(false);
+              if (unrecordedSedaDraftText) {
+                restoreUnrecordedDraft(unrecordedSedaDraftText);
+                window.DrillChamber.appendVerdict?.('Draft kept • Not recorded.');
+              }
+              if (hasEvidence) {
+                window.DrillChamber.swapQuestion(
+                  'This learning route cannot be resumed. Your recorded work is still on the map.',
+                );
+                window.DrillChamber.setCompletionAction?.('Return to map', () => {
+                  const entryId = nodeContext?.id;
+                  cancelDrill();
+                  restoreUnrecordedDraft(unrecordedSedaDraftText, { entryId });
+                });
+              } else {
+                window.DrillChamber.swapQuestion(
+                  'We could not build the first question. Your starting sketch is saved.',
+                );
+                window.DrillChamber.setCompletionAction?.('Build the first question again', () => {
+                  const retryContext = {
+                    ...nodeContext,
+                    graphNeutral: true,
+                    drillMode: 'seda',
+                    // The fresh route may ask a different question. Do not
+                    // silently submit text written against the stale route.
+                    initialTurnText: '',
+                    restoredDraftText: unrecordedSedaDraftText,
+                  };
+                  if (!resetSourceLessRouteForFreshStart(concept)) {
+                    window.DrillChamber.swapQuestion(
+                      'Your starting sketch is saved, but a fresh question could not be prepared.',
+                    );
+                    return;
+                  }
+                  cancelDrill({ restoreMap: false });
+                  startDrill(retryContext);
+                });
+              }
+              return;
+            }
             window.DrillChamber.swapQuestion('The learning loop could not start. Try again when ready.');
             window.DrillChamber.setLoading?.(false);
             window.DrillChamber.setCompletionAction?.('Try again', () => {
@@ -4928,8 +5427,10 @@ const App = (() => {
         // Accumulate the completed turn into history before the next round trip.
         // The AI side is the question we'd just been asking the learner;
         // the learner side is what they just wrote.
-        window.DrillChamber.appendHistoryTurn('ai', chamberLastShownQuestion || '');
-        window.DrillChamber.appendHistoryTurn('learner', text);
+        if (!drillState.sedaActive) {
+          window.DrillChamber.appendHistoryTurn('ai', chamberLastShownQuestion || '');
+          window.DrillChamber.appendHistoryTurn('learner', text);
+        }
         window.DrillChamber.setComposerEnabled(false);
         try {
           await requestDrillTurn(text);
@@ -4963,6 +5464,8 @@ const App = (() => {
     drillState.helpTurnCount = 0;
     drillState.sessionCompletePending = false;
     drillState.sedaSessionId = null;
+    drillState.sedaSessionVersion = null;
+    drillState.sedaPendingSubmission = null;
     drillState.sedaActive = false;
     chamberLastShownQuestion = '';
     if (drillUi) drillUi.style.display = 'none';

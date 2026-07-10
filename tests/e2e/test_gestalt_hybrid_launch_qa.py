@@ -2,12 +2,13 @@
 
 Run against a local dev server:
 
-    SOCRATINK_E2E_LOCAL_GUEST=1 pytest tests/e2e/test_gestalt_hybrid_launch_qa.py -v
+    SOCRATINK_E2E_LOCAL_GUEST=1 SOCRATINK_TUI_FAKE_LLM=1 \
+      pytest tests/e2e/test_gestalt_hybrid_launch_qa.py -v
 
-This test uses the real Ignition and Launch Pad UI. It mocks only the two AI
-network seams so the pass is fast and deterministic while still catching
-frontend regressions, console errors, failed requests, and unexpected 4xx/5xx
-responses.
+This test uses the real Ignition and Launch Pad UI. It mocks extraction and the
+retired drill seam while the app-local SEDA route uses the deterministic fake
+bridge, so the pass still catches frontend regressions, console errors, failed
+requests, and unexpected 4xx/5xx responses.
 """
 
 from __future__ import annotations
@@ -231,30 +232,53 @@ def test_source_less_launch_pad_end_to_end_qa(
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=10_000)
     expect(clean_page.locator("#drill-chamber-view")).to_be_visible(timeout=10_000)
-    expect(clean_page.locator("#chamber-question")).to_contain_text(
-        "What do you think the thermostat checks before it calls for heat?",
-        timeout=20_000,
-    )
     seda_state = clean_page.wait_for_function(
         """() => {
           const key = Object.keys(localStorage).find((k) => k.startsWith('socratink:seda-session:v1:'));
           if (!key) return null;
           const value = JSON.parse(localStorage.getItem(key));
-          return value?.sessionId && value?.latest ? value : null;
+          return value?.sessionId && value?.latest?.awaiting?.key === 'cold_attempt'
+            ? value
+            : null;
         }""",
         timeout=20_000,
     ).json_value()
-    assert seda_state["latest"]["awaiting"]["key"] in {"learner_goal", "launch_attempt"}
+    assert seda_state["latest"]["awaiting"]["key"] == "cold_attempt"
+    bound_surface = clean_page.evaluate(
+        """(nodeId) => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const concept = JSON.parse(localStorage.getItem('learnops_concepts') || '[]')
+            .find((item) => item.id === conceptId);
+          const graph = JSON.parse(concept?.graphData || 'null');
+          const nodes = [
+            ...(graph?.backbone || []),
+            ...(graph?.clusters || []).flatMap((cluster) => cluster?.subnodes || []),
+          ];
+          const node = nodes.find((item) => item?.id === nodeId);
+          return {
+            prompt: node?.learner_scaffold?.entry_prompt || '',
+            taskLabel: node?.learner_scaffold?.task_label || node?.label || '',
+            mechanism: node?.study_note || node?.mechanism || '',
+          };
+        }""",
+        seda_state["nodeId"],
+    )
+    assert bound_surface["prompt"]
+    assert bound_surface["taskLabel"]
+    assert bound_surface["mechanism"]
+    expect(clean_page.locator("#chamber-question")).to_have_text(
+        bound_surface["prompt"], timeout=20_000
+    )
     clean_page.locator("#chamber-exit").click()
     expect(clean_page.locator("#drill-chamber-view")).to_be_hidden()
     expect(canvas).to_be_visible(timeout=10_000)
     expect(canvas).not_to_contain_text("Shaped by your sketch")
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
-        "What do you think the thermostat checks before it calls for heat?"
+        bound_surface["prompt"]
     )
-    expect(canvas).to_contain_text("Compare target")
+    expect(canvas).to_contain_text(bound_surface["taskLabel"])
     expect(canvas).not_to_contain_text("Call for heat")
-    expect(canvas).not_to_contain_text("compares measured room temperature")
+    expect(canvas).not_to_contain_text(bound_surface["mechanism"])
     expect(canvas).not_to_contain_text("Generated description should not leak")
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
 

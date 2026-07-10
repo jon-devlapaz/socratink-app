@@ -21,9 +21,14 @@ let listening = false;
 let speechBaseText = '';
 let tutorVoiceEnabled = false;
 let lastSpokenQuestion = '';
-const DEFAULT_SEND_LABEL = 'Check reconstruction';
+let pendingVerdictTimer = null;
+let pendingVerdictShown = false;
+const DEFAULT_SEND_LABEL = 'Check my answer';
 const DEFAULT_HINT = 'A sentence is enough.';
 const EMPTY_REPLY_HINT = 'Write a sentence before checking.';
+const CHECKING_REPLY_HINT = 'Checking your answer…';
+const PENDING_VERDICT = 'Answer received • Checking the link you wrote.';
+const PENDING_VERDICT_DELAY_MS = 1200;
 const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine.';
 const MIC_INPUT_PREF_KEY = 'socratink.loop.micInput';
 const TUTOR_VOICE_PREF_KEY = 'socratink.loop.tutorVoice';
@@ -113,6 +118,7 @@ function bind() {
 
 function show({ conceptName, entryName, question }) {
   if (!bind()) return;
+  setLoading(false);
   els.active.querySelectorAll('.drill-chamber__creed').forEach((el) => el.remove());
   clearCompletionAction();
   clearVerdict();
@@ -142,6 +148,7 @@ function show({ conceptName, entryName, question }) {
 function hide() {
   if (!bind()) return;
   stopSpeech();
+  setLoading(false);
   clearCompletionAction();
   els.view.hidden = true;
   document.body.classList.remove('chamber-open');
@@ -207,14 +214,31 @@ function setComposerEnabled(enabled) {
  * The node prompt is already the first question, so loading must never
  * prevent the learner from starting their reconstruction.
  */
-function setLoading(loading) {
+function setLoading(loading, { checkingAnswer = false } = {}) {
   if (!bind()) return;
   if (loading) {
     els.composer.placeholder = _originalPlaceholder;
     els.active?.setAttribute('data-loading', 'true');
+    if (checkingAnswer) {
+      if (els.hint) {
+        els.hint.textContent = CHECKING_REPLY_HINT;
+        els.hint.classList?.remove?.('is-error');
+      }
+      setVoiceStatus(CHECKING_REPLY_HINT);
+      if (pendingVerdictTimer != null) clearTimeout(pendingVerdictTimer);
+      pendingVerdictTimer = setTimeout(() => {
+        pendingVerdictTimer = null;
+        pendingVerdictShown = true;
+        renderVerdict(PENDING_VERDICT);
+      }, PENDING_VERDICT_DELAY_MS);
+    }
   } else {
+    if (pendingVerdictTimer != null) clearTimeout(pendingVerdictTimer);
+    pendingVerdictTimer = null;
+    if (pendingVerdictShown) clearVerdict();
     els.composer.placeholder = _originalPlaceholder;
     els.active?.removeAttribute('data-loading');
+    resetComposerHint();
   }
 }
 
@@ -251,12 +275,22 @@ function clearCompletionAction() {
 
 function clearVerdict() {
   if (!bind() || !els.verdict) return;
+  if (pendingVerdictTimer != null) clearTimeout(pendingVerdictTimer);
+  pendingVerdictTimer = null;
+  pendingVerdictShown = false;
   els.verdict.textContent = '';
   els.verdict.hidden = true;
 }
 
 function appendVerdict(text) {
   if (!bind() || !els.verdict) return;
+  if (pendingVerdictTimer != null) clearTimeout(pendingVerdictTimer);
+  pendingVerdictTimer = null;
+  pendingVerdictShown = false;
+  renderVerdict(text);
+}
+
+function renderVerdict(text) {
   const copy = String(text || '').trim();
   if (!copy) return;
   els.verdict.textContent = '';

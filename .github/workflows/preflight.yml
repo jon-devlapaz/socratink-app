@@ -69,6 +69,7 @@ jobs:
       SUPABASE_JWT_SECRET: 'dummy-jwt-secret'
       APP_BASE_URL: 'http://localhost:8000'
       GEMINI_API_KEY: dummy-for-tests
+      SOCRATINK_TUI_FAKE_LLM: '1'
       SOCRATINK_BASE_URL: 'http://localhost:8000'
       SOCRATINK_E2E_LOCAL_GUEST: '1'
     steps:

@@ -9,10 +9,13 @@
 - Hosted runtime: Vercel serverless
 - Current persistence: concepts and app-shell training evidence are browser
   `localStorage` (`learnops_concepts`, `socratink:training:v1:<conceptId>`).
-  App-local SEDA sessions are also keyed from browser `localStorage`
-  (`socratink:seda-session:v1:<conceptId>`), while the loop runtime writes
-  session journals to its file session store (`SOCRATINK_LOOP_SESSION_STORE_DIR`
-  or the OS temp default). This is not Supabase-backed durable learner state.
+  The browser keeps the app-local SEDA resume pointer in `localStorage`
+  (`socratink:seda-session:v1:<conceptId>`). Locally, the loop runtime writes
+  journals to `SOCRATINK_LOOP_SESSION_STORE_DIR` or the OS temporary default.
+  On Vercel, FastAPI sends session calls to the configured HTTPS loop service;
+  its journals use the RLS-scoped Supabase `loop_sessions` table after
+  `db/loop_sessions.sql` is applied. Production does not fall back to `/tmp`.
+  This is durable session history, not complete cross-device learner state.
 - Evidence source of truth: live logs plus the operational docs in this repo
 
 ## Current Phase
@@ -20,8 +23,10 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 
 ## Active Risks
 - Hosted behavior may still diverge from local behavior.
-- `localStorage` and loop file-session persistence are fragile and easy to wipe;
-  they do not provide cross-browser or Supabase-backed resume continuity.
+- Browser concepts, training evidence, and SEDA resume pointers remain easy to
+  wipe and do not yet provide full cross-browser continuity. Hosted session
+  journals also remain unavailable until `db/loop_sessions.sql` is applied and
+  the trusted loop service is deployed and configured.
 - Chat/test instrumentation is incomplete, so some regressions will still be harder to reconstruct than they should be.
 - External ingestion paths still need defensive hosted behavior and graceful fallback.
 - Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user may start source-less through Door -> Launch pad -> non-empty Launch attempt -> Smallest actionable route.
@@ -54,7 +59,8 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 
 ## Environment Lessons
 - Local success is not deployment validation.
-- Vercel serverless file writes are not durable release evidence; export Socratink Brain-marked runtime logs or use a durable store for hosted drill telemetry.
+- Vercel session durability depends on the RLS-scoped Supabase store and its
+  deployment-time schema/config proof; local file-store success is not enough.
 - Hosted YouTube transcript retrieval can fail because cloud/serverless IPs are blocked.
 - Manual transcript paste remains the hosted fallback.
 - External calls must be reviewed for SSRF risk and error leakage.

@@ -19,10 +19,22 @@ function sedaEventAttemptId(sessionId, index) {
 
 function mapClassification(classification) {
   if (classification === 'solid' || classification === 'strong') return 'strong';
-  if (classification === 'deep' || classification === 'partial') return 'partial';
-  if (classification === 'shallow' || classification === 'thin') return 'thin';
+  if (
+    classification === 'deep'
+    || classification === 'shallow'
+    || classification === 'partial'
+  ) return 'partial';
   if (classification === 'misconception' || classification === 'wrong_direction') return 'wrong_direction';
-  return null;
+  return classification ? 'thin' : null;
+}
+
+function gapsForEarlyAttempt(evaluation) {
+  const correction = typeof evaluation?.gap_description === 'string'
+    ? evaluation.gap_description.trim()
+    : '';
+  return correction
+    ? [{ mechanism: 'target mechanism', correction }]
+    : [];
 }
 
 function latestColdAttemptEvent(data) {
@@ -50,20 +62,23 @@ function attemptedNodeRecord(record) {
   return attempted.length === 1 ? attempted[0] : null;
 }
 
-function restampedAttempts({ backendRecord, sessionId, now, offset }) {
-  return backendRecord.attempts.map((attempt, index) => ({
-    id: sedaAttemptId(sessionId, index),
-    at: now,
-    user_text: attempt.user_text,
-    classification: attempt.classification,
-    gaps: Array.isArray(attempt.gaps) ? attempt.gaps : [],
-    grader_version: attempt.grader_version || 'seda-loop',
-    // Positional provenance, matching training-store.js: projection re-stamps
-    // every attempt to one real sitting, so the backend's simulated cold/spaced
-    // timing is derived from position here, never copied verbatim (a backend
-    // "spaced" label would otherwise falsely imply a real spaced return).
-    kind: offset + index === 0 ? 'cold' : 'spaced',
-  }));
+function restampedAttempts({ backendRecord, sessionId, now, offset, startIndex = 0 }) {
+  return backendRecord.attempts.slice(startIndex).map((attempt, localIndex) => {
+    const backendIndex = startIndex + localIndex;
+    return {
+      id: sedaAttemptId(sessionId, backendIndex),
+      at: now,
+      user_text: attempt.user_text,
+      classification: attempt.classification,
+      gaps: Array.isArray(attempt.gaps) ? attempt.gaps : [],
+      grader_version: attempt.grader_version || 'seda-loop',
+      // Positional provenance, matching training-store.js: projection re-stamps
+      // every attempt to one real sitting, so the backend's simulated cold/spaced
+      // timing is derived from position here, never copied verbatim (a backend
+      // "spaced" label would otherwise falsely imply a real spaced return).
+      kind: offset + localIndex === 0 ? 'cold' : 'spaced',
+    };
+  });
 }
 
 function restampedRepairs({ backendRecord, sessionId, now }) {
@@ -131,9 +146,7 @@ export function projectLatestSedaAttemptEvent({
             at: now,
             user_text: coldAttempt.text,
             classification: coldAttempt.classification,
-            gaps: Array.isArray(coldAttempt.event?.evaluation?.gaps)
-              ? coldAttempt.event.evaluation.gaps
-              : [],
+            gaps: gapsForEarlyAttempt(coldAttempt.event?.evaluation),
             grader_version: coldAttempt.event?.evaluation?.prompt_version
               || coldAttempt.event?.evaluation?.grader_version
               || 'seda-loop',
@@ -172,11 +185,42 @@ export function projectCompletedSedaRecord({
     return null;
   }
 
+  // A recordable cold event may already have been projected to unlock study
+  // before the SEDA case completed. Reconcile that provisional event into the
+  // canonical completed-session attempt instead of appending the same learner
+  // answer twice under a second id.
+  const eventPrefix = `seda-${sessionId}-event-`;
+  const eventAttemptIndex = existingAttempts.findIndex(
+    (attempt) => String(attempt?.id || '').startsWith(eventPrefix),
+  );
+  const reconciledAttempts = [...existingAttempts];
+  let completedStartIndex = 0;
+  if (eventAttemptIndex >= 0) {
+    const [completedCold] = restampedAttempts({
+      backendRecord,
+      sessionId,
+      now,
+      offset: eventAttemptIndex,
+    });
+    reconciledAttempts[eventAttemptIndex] = {
+      ...completedCold,
+      at: existingAttempts[eventAttemptIndex]?.at || now,
+      kind: existingAttempts[eventAttemptIndex]?.kind || completedCold.kind,
+    };
+    completedStartIndex = 1;
+  }
+
   const projected = {
     ...existing,
     attempts: [
-      ...existingAttempts,
-      ...restampedAttempts({ backendRecord, sessionId, now, offset: existingAttempts.length }),
+      ...reconciledAttempts,
+      ...restampedAttempts({
+        backendRecord,
+        sessionId,
+        now,
+        offset: reconciledAttempts.length,
+        startIndex: completedStartIndex,
+      }),
     ],
     repairs: [
       ...(Array.isArray(existing.repairs) ? existing.repairs : []),

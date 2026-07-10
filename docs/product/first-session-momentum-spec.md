@@ -93,21 +93,50 @@ IKEA/endowment, loss aversion, contrast). **Socratink-compatible** forms only.
 
 **Intent:** Reciprocity + post-drill contract. User must never submit an answer and get silence or a duplicate empty prompt.
 
+#### B0. Route-ready gate
+
+For a source-less Door session, the saved Door sketch is the graph-neutral
+launch attempt. The chamber composer opens only after the loop returns the
+versioned `sourceLessRoute` as `ready` and awaits `cold_attempt`. Raw loop events
+are audit data, not a frontend routing API.
+
+SEDA is the single authoritative route owner. The Door's `/api/extract` call
+validates the non-empty sketch and persists only a deterministic,
+learner-sketch-grounded shell (`route_owner: seda`, `graph_neutral: true`); it
+does not call Learning Commons or generate a second model route. While SEDA is
+working, the chamber shows `Preparing your first question…`, never the shell's
+provisional prompt.
+
+The shell marker is durable across reloads. A draft written after reload starts
+SEDA route recovery, remains unsubmitted against the newly generated question,
+and cannot fall through to `/api/drill`. If the pending shell already has
+attempt or repair evidence, recovery fails closed and preserves the old node
+keys instead of replacing them.
+
+If the route is unavailable or malformed, keep the composer closed and append
+no evidence. Tell the learner their starting sketch is saved. A fresh-route
+action is allowed only while no evidence exists; otherwise return to the map
+with existing evidence unchanged.
+
 #### B1. Verdict strip (≤2s after submit)
 
 Show inline below the active question / above composer (reuse `.drill-chamber__verdict`).
+If the final evaluation is still in flight after 1.2s, show the neutral pending
+strip `Answer received • Checking the link you wrote.`. Replace it with the
+final verdict on success and clear it on error. Pending copy must not diagnose,
+score, or reveal study content.
 
 **Copy pattern** (wise feedback; strategy not ability):
 
 ```
-Checked • {verdict_label} • {specific_gap_or_strength} • {next_step}
+Checked • {verdict_label} • {learner_line} • {controlled_next_step}
 ```
 
 | Classification / SEDA signal | `verdict_label` | Body pattern |
 | --- | --- | --- |
-| strong / solid | `Solid enough to compare` | "You named {X}. Study will show what to add." |
-| partial / thin | `Partly there` | "You have {X}. Missing link: {gap}." |
-| wrong_direction | `Wrong angle` | "You focused on {X}. The mechanism starts at {Y}." |
+| strong / solid | `Solid enough to compare` | "Your line: {learner snippet}. Study will show what to add." |
+| partial / thin | `Partly there` | "Your line: {learner snippet}. Study will target the missing link." |
+| wrong_direction | `Wrong angle` | "Your line: {learner snippet}. Study will show a different starting point." |
 | SEDA `continue` / repair keys | `Gap found` | "Study will target what you just exposed." |
 | case complete | `Recorded` | "Your attempt is on record. Study is ready." |
 
@@ -116,6 +145,11 @@ Checked • {verdict_label} • {specific_gap_or_strength} • {next_step}
 - Align with [`post-drill-ux-spec.md`](post-drill-ux-spec.md): no raw classifier badges; no score on cold path.
 - Do **not** show tier/band on first cold-adjacent check unless product spec already allows for spaced path only.
 - Verdict must reference **learner words** when `user_text` is available.
+- Do not render raw event evaluation, agent response, gap, correction, score,
+  or diagnostic prose before study reveal. Verdict language is controlled copy.
+- `Recorded` and a study CTA appear only after the app has persisted the local
+  attempt evidence. A projection failure keeps the same idempotent submission
+  available behind a neutral `Try saving again` action.
 
 #### B2. No same-question re-prompt
 
@@ -154,6 +188,8 @@ Never repeat the identical question string in the active prompt area after verdi
 - [ ] `See what to study` or `Reveal notes and compare` visible when routing permits study.
 - [ ] `tests/e2e/test_smoke.py` or new e2e: launch → drill → submit → expects verdict element.
 - [ ] Node contract test for `sedaTurnVerdict` / verdict copy mapping.
+- [ ] POST-launch and GET-rehydrate responses expose the same versioned ready route.
+- [ ] Missing/stale route recovery keeps the Door sketch and never replaces recorded evidence.
 
 ---
 
