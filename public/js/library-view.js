@@ -1,5 +1,5 @@
 import { escHtml } from './html.js';
-import { deriveConceptBadge, parseConceptGraphData } from './concept-status.js';
+import { deriveConceptBadge } from './concept-status.js';
 
 const EMPTY_RECONSTRUCTION_COPY = 'Your first reconstruction will appear here.';
 
@@ -44,28 +44,13 @@ export function getBestLearnerAttempt(training) {
   })[0];
 }
 
-export function getLibraryConceptMeta(concept, training = null) {
-  const graph = parseConceptGraphData(concept);
-
-  const metadata = graph?.metadata || {};
-  const clusters = Array.isArray(graph?.clusters) ? graph.clusters : [];
-  const subnodeCount = clusters.reduce((total, cluster) => total + ((cluster.subnodes || []).length), 0);
+export function getLibraryConceptMeta(_concept, training = null) {
   const bestAttempt = getBestLearnerAttempt(training);
   const thesis = bestAttempt?.user_text || EMPTY_RECONSTRUCTION_COPY;
-  const sourceLabel = concept.contentFilename
-    ? `Source: ${concept.contentFilename}`
-    : concept.contentType
-      ? `Source: ${concept.contentType.toUpperCase()}`
-      : (metadata.source_title ? `Map: ${metadata.source_title}` : 'Draft map');
 
   return {
     thesis: thesis.length > 180 ? `${thesis.slice(0, 177).trimEnd()}...` : thesis,
     summarySource: bestAttempt ? 'learner_attempt' : 'none',
-    architecture: metadata.architecture_type ? metadata.architecture_type.replace(/_/g, ' ') : null,
-    difficulty: metadata.difficulty || null,
-    clusterCount: clusters.length,
-    subnodeCount,
-    sourceLabel,
   };
 }
 
@@ -115,18 +100,11 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
           <div class="library-card library-card-vault" role="button" tabindex="0" aria-label="Open concept ${escHtml(conceptName)}" data-state="${escHtml(derivedState)}" data-concept-id="${escHtml(conceptId)}" style="cursor:pointer;" onclick="App.openLibraryConcept(this.dataset.conceptId)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();App.openLibraryConcept(this.dataset.conceptId)}">
             <div class="library-card-header">
               <div>
-                <div class="library-card-kicker">${escHtml(meta.sourceLabel)}</div>
                 <span class="library-card-name">${escHtml(conceptName)}</span>
               </div>
               ${stateBadge}
             </div>
             <p class="library-card-summary">${escHtml(meta.thesis)}</p>
-            <div class="library-card-meta">
-              ${meta.architecture ? `<span class="library-card-pill">${escHtml(meta.architecture)}</span>` : ''}
-              <span class="library-card-pill">${escHtml(`${meta.clusterCount} ${meta.clusterCount === 1 ? 'section' : 'sections'}`)}</span>
-              <span class="library-card-pill">${escHtml(`${meta.subnodeCount} ${meta.subnodeCount === 1 ? 'entry' : 'entries'}`)}</span>
-            </div>
-            <div class="library-card-cta">Open concept</div>
           </div>`;
     }).join('') + `</div>`;
   }

@@ -766,19 +766,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           {
             thesis: 'Your first reconstruction will appear here.',
             summarySource: 'none',
-            architecture: 'cause effect',
-            difficulty: 'medium',
-            clusterCount: 2,
-            subnodeCount: 3,
-            sourceLabel: 'Map: Source Title',
           }
-        );
-        assert.equal(
-          getLibraryConceptMeta({
-            contentType: 'pdf',
-            graphData: JSON.stringify({ metadata: { thesis: 'x'.repeat(200) }, clusters: [] }),
-          }).sourceLabel,
-          'Source: PDF'
         );
         assert.ok(getLibraryConceptMeta({ graphData: '{' }).thesis.includes('first reconstruction'));
 
@@ -807,11 +795,6 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           {
             thesis: 'The learner reconstructed the causal mechanism.',
             summarySource: 'learner_attempt',
-            architecture: 'cause effect',
-            difficulty: 'medium',
-            clusterCount: 2,
-            subnodeCount: 3,
-            sourceLabel: 'Map: Source Title',
           }
         );
 
@@ -841,8 +824,9 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         assert.ok(cardHtml.includes('&lt;Unsafe&gt;'));
         assert.ok(cardHtml.includes('The learner reconstructed the causal mechanism.'));
         assert.ok(!cardHtml.includes('This is the central claim.'));
-        assert.ok(cardHtml.includes('2 sections'));
-        assert.ok(cardHtml.includes('3 entries'));
+        assert.ok(!cardHtml.includes('library-card-kicker'));
+        assert.ok(!cardHtml.includes('library-card-meta'));
+        assert.ok(!cardHtml.includes('library-card-cta'));
 
         const noEvidenceHtml = buildLibraryHtml([
           { id: 'legacy-solid', name: 'Legacy Solid', state: 'actualized', graphData: graph },

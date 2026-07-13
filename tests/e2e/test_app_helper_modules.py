@@ -475,16 +475,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             same(library.getLibraryConceptMeta({ name: 'Concept', state: 'growing', graphData: graph }), {
               thesis: 'Your first reconstruction will appear here.',
               summarySource: 'none',
-              architecture: 'cause effect',
-              difficulty: 'medium',
-              clusterCount: 2,
-              subnodeCount: 3,
-              sourceLabel: 'Map: Source Title',
             }, 'library metadata');
-            assert(library.getLibraryConceptMeta({
-              contentFilename: 'notes.md',
-              graphData: JSON.stringify({ metadata: { core_thesis: 'From file' }, clusters: [] }),
-            }).sourceLabel === 'Source: notes.md', 'library filename source');
             const training = {
               node_records: {
                 n1: {
@@ -523,8 +514,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(libraryHtml.includes('&lt;Unsafe&gt;'), 'library escaped name');
             assert(libraryHtml.includes('Learner-owned reconstruction.'), 'library card learner evidence');
             assert(!libraryHtml.includes('This is the central claim.'), 'library card no AI thesis fallback');
-            assert(libraryHtml.includes('2 sections'), 'library section count');
-            assert(libraryHtml.includes('3 entries'), 'library entry count');
+            assert(!libraryHtml.includes('library-card-kicker'), 'library has no source kicker');
+            assert(!libraryHtml.includes('library-card-meta'), 'library has no structure metadata');
+            assert(!libraryHtml.includes('library-card-cta'), 'library row needs no duplicate CTA');
             window.App.showLibrary();
             assert(document.getElementById('library-view').classList.contains('visible'), 'library view visible');
             assert(document.getElementById('library-content').textContent.includes('Your first reconstruction starts here'), 'library app path');

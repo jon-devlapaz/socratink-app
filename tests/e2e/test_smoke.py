@@ -554,6 +554,7 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     page: Page, base_url: str
 ) -> None:
     """Library summaries must be learner evidence, not generated source text."""
+    page.set_viewport_size({"width": 390, "height": 844})
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
     _seed_training_truth_concept(page)
@@ -563,7 +564,7 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     sidebar_dot = page.locator(".concept-item", has_text="Training Truth QA").locator(".concept-dot")
     expect(sidebar_dot).to_have_attribute("data-state", "primed")
 
-    page.locator("#nav-library").click()
+    page.locator("#bn-library").click()
     card = page.locator(".library-card-vault", has_text="Training Truth QA")
     expect(card).to_be_visible()
     expect(card).to_have_attribute("data-state", "primed")
@@ -574,6 +575,29 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     expect(card).not_to_contain_text("growing")
     expect(card).not_to_contain_text("AI GENERATED CORE THESIS SHOULD NOT APPEAR")
     expect(card).not_to_contain_text("SOURCE PREVIEW SHOULD NOT APPEAR")
+    expect(card.locator(".library-card-kicker")).to_have_count(0)
+    expect(card.locator(".library-card-meta")).to_have_count(0)
+    expect(card.locator(".library-card-cta")).to_have_count(0)
+
+    card_style = card.evaluate(
+        """element => {
+            const style = getComputedStyle(element);
+            return {
+                backgroundImage: style.backgroundImage,
+                borderRadius: style.borderRadius,
+                boxShadow: style.boxShadow,
+            };
+        }"""
+    )
+    assert card_style == {
+        "backgroundImage": "none",
+        "borderRadius": "0px",
+        "boxShadow": "none",
+    }
+    card_box = card.bounding_box()
+    assert card_box is not None
+    assert card_box["height"] < 170
+    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
 
 
 def test_library_training_render_survives_one_corrupt_record(
