@@ -107,6 +107,18 @@ For hex values and implementation tokens, see [`public/css/tokens.css`](public/c
 
 **Theme archetypes:** dark = constellation / sky; light = drafting / blueprint. Never invert one into the other.
 
+### In-app surface contracts (evolving)
+
+These contracts define product direction, not deployment status or a pixel freeze. Verify branch and production proof separately before calling a treatment shipped. Preserve each surface's role, hierarchy, and evidence boundary as spacing, copy, and visual treatment evolve. New, Desk, and Library describe different time horizons; they are not a forced funnel.
+
+| Surface | Contract | Reject |
+| --- | --- | --- |
+| **New** | The Door captures a concept name, optional learner goal, and optional source. Without a source, it hands off to the Launch pad for the graph-neutral Launch attempt before source-less generation. Keep both surfaces quiet and linear, with one primary action each. | Chat layout, an in-Door Current model field, route generation from a concept name alone, promotional hero treatment, or study content before the local cold attempt |
+| **Desk** | The board-first reconstruction work surface. First use collapses the isometric board to one centered **Choose a topic** tile. With concepts present, show the compact concept count, evidence-derived crystals, and Due controls only when training evidence permits a spaced attempt. Keep due state and the selected next action on the board. | Progress dashboard, header inventory of due items, decorative mastery, or invented activity state |
+| **Library** | The longitudinal learner-evidence index. Use a quiet divided list with one row per concept, not per session. Foreground the strongest recorded learner reconstruction—or say honestly that none exists yet—alongside evidence-derived state. The whole row opens the concept. Keep the empty state compact and route it back to New. | Saved-content shelf, session feed, source kicker, structure-count pills, separate CTA chrome, oversized promotional empty state, or generated/source prose standing in for learner evidence |
+
+Across all three surfaces, use a quiet paper hierarchy: one plain page title, a small count only when it adds orientation, and bounded panels only where containment helps. First-use states expose one dominant action; occupied indexes may present peer concept actions without promotional hierarchy. Mobile keeps the bottom navigation visible with safe-area clearance and touch targets of at least 44px; desktop uses the sidebar. Do not add scores, progress rings, decorative status, or explanatory chrome to make an intentionally sparse state feel busier. Daily Bloom, time-grown crystals, and next-day crystal changes remain experiments until they ship; do not present them as current behavior.
+
 ---
 
 ## 6. Voice & interaction model
