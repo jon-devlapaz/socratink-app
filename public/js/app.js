@@ -3057,7 +3057,7 @@ const App = (() => {
     const mapView = document.getElementById('map-view');
     const heroCard = document.querySelector('.hero-card');
     if (drillState.active || drillState.pending || drillState.node) {
-      cancelDrill();
+      cancelDrill({ restoreMap: false });
     }
     destroyKnowledgeGraphController();
     document.body.classList.remove('is-drilling');
@@ -3302,7 +3302,12 @@ const App = (() => {
 
   function sessionRouteConceptId() {
     const match = window.location.pathname.match(/^\/session\/([^/?#]+)/);
-    return match ? decodeURIComponent(match[1]) : '';
+    if (!match) return '';
+    try {
+      return decodeURIComponent(match[1]);
+    } catch {
+      return '__malformed_session_route__';
+    }
   }
 
   function showSessionRoute(conceptId, { replace = false } = {}) {
@@ -3316,6 +3321,32 @@ const App = (() => {
   function clearSessionRoute() {
     if (!window.history?.pushState || !window.location.pathname.startsWith('/session/')) return;
     window.history.pushState({}, '', '/');
+  }
+
+  function showMissingSessionFallback() {
+    window.history?.replaceState?.({}, '', '/');
+    showIgnition();
+    const errEl = document.getElementById('hero-door-error');
+    if (errEl) {
+      errEl.textContent = 'That session is not saved in this browser.';
+      errEl.hidden = false;
+    }
+  }
+
+  function syncViewFromLocation() {
+    const conceptId = sessionRouteConceptId();
+    if (!conceptId) {
+      showDashboard();
+      return;
+    }
+
+    const concept = loadConcepts().find((item) => item.id === conceptId && item.graphData);
+    if (!concept) {
+      showMissingSessionFallback();
+      return;
+    }
+    activateConceptSelection(concept.id);
+    showMapView(concept);
   }
 
   function showIgnition() {
@@ -3533,12 +3564,7 @@ const App = (() => {
   // Boot routing runs AFTER drillState is initialized because showIgnition()
   // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
   if (routeConceptId && !routeConcept) {
-    showIgnition();
-    const errEl = document.getElementById('hero-door-error');
-    if (errEl) {
-      errEl.textContent = 'That session is not saved in this browser.';
-      errEl.hidden = false;
-    }
+    showMissingSessionFallback();
   } else if (!toLoad) {
     showIgnition();
   } else {
@@ -3547,6 +3573,7 @@ const App = (() => {
       showMapView(toLoad, { fromBoot: Boolean(routeConcept) });
     }
   }
+  window.addEventListener('popstate', syncViewFromLocation);
 
   function createDrillLogSessionId() {
     if (window.crypto?.randomUUID) return window.crypto.randomUUID();

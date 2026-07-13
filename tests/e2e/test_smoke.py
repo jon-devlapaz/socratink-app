@@ -4536,7 +4536,7 @@ def test_mobile_concept_attempt_has_writing_width(
     )
     expect(page.locator(".concept-page-b2__attempt-input")).to_be_visible()
     expect(page.locator("#drawer-toggle")).to_be_visible()
-    expect(page.locator("#bottom-nav")).not_to_be_visible()
+    expect(page.locator("#bottom-nav")).to_be_visible()
     disabled_save_style = page.locator(".concept-page-b2__attempt-save").evaluate(
         """(el) => {
             const style = window.getComputedStyle(el);
@@ -4589,6 +4589,123 @@ def test_mobile_concept_attempt_has_writing_width(
     assert cue_box["x"] > save_box["x"]
     assert save_box["width"] >= 132
     assert truth_note_box["y"] <= cue_box["y"] + cue_box["height"] + 36
+
+
+def test_mobile_concept_nav_exits_and_history_stay_aligned(
+    page: Page, base_url: str
+) -> None:
+    """Concept routes keep primary exits visible and browser history truthful."""
+    page_errors: list[str] = []
+    page.on("pageerror", lambda error: page_errors.append(str(error)))
+    page.set_viewport_size({"width": 390, "height": 844})
+    _enter_app_shell_as_guest(page, base_url)
+    page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    _seed_route_margin_concept(page)
+    page.reload()
+    _wait_for_app_settled(page)
+
+    page.locator("#bn-library").click()
+    page.locator(".library-card-vault", has_text="How sodium channels").click()
+    expect(page.locator("#map-view")).to_be_visible()
+    expect(page.locator("#bottom-nav")).to_be_visible()
+    expect(page.locator("#bottom-nav .bottom-nav-item.active")).to_have_count(0)
+
+    page.locator(".concept-page-b2__truth-note").scroll_into_view_if_needed()
+    truth_note_box = page.locator(".concept-page-b2__truth-note").bounding_box()
+    bottom_nav_box = page.locator("#bottom-nav").bounding_box()
+    assert truth_note_box is not None
+    assert bottom_nav_box is not None
+    assert truth_note_box["y"] + truth_note_box["height"] <= bottom_nav_box["y"]
+
+    page.evaluate(
+        """() => App.startDrill({
+            id: 'core-thesis',
+            type: 'core',
+            label: 'Core thesis',
+            detail: 'Explain the current model.',
+        })"""
+    )
+    expect(page.locator("body")).to_have_class(re.compile(r"\bis-drilling\b"))
+    page.locator("#bn-library").click()
+    expect(page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
+    expect(page.locator("#library-view")).to_be_visible()
+    expect(page.locator("#map-view")).not_to_be_visible()
+    assert urlparse(page.url).path == "/"
+    page.wait_for_timeout(100)
+    expect(page.locator("#library-view")).to_be_visible()
+    expect(page.locator("#map-view")).not_to_be_visible()
+
+    page.locator(".library-card-vault", has_text="How sodium channels").click()
+    expect(page.locator("#map-view")).to_be_visible()
+    page.locator("#bn-dashboard").click()
+    expect(page.locator(".hero-card")).to_be_visible()
+    expect(page.locator("#map-view")).not_to_be_visible()
+    assert urlparse(page.url).path == "/"
+
+    page.locator("#tile-0").click()
+    expect(page.locator("#map-view")).to_be_visible()
+    assert urlparse(page.url).path == "/session/route-margin-concept"
+    page.evaluate(
+        """() => App.startDrill({
+            id: 'core-thesis',
+            type: 'core',
+            label: 'Core thesis',
+            detail: 'Explain the current model.',
+        })"""
+    )
+    expect(page.locator("body")).to_have_class(re.compile(r"\bis-drilling\b"))
+    history_length = page.evaluate("history.length")
+
+    page.go_back()
+    expect(page.locator("body")).not_to_have_class(re.compile(r"\bis-drilling\b"))
+    expect(page.locator(".hero-card")).to_be_visible()
+    expect(page.locator("#map-view")).not_to_be_visible()
+    expect(page.locator("#bn-dashboard")).to_have_class(re.compile(r"\bactive\b"))
+    assert urlparse(page.url).path == "/"
+    assert page.evaluate("history.length") == history_length
+    page.wait_for_timeout(100)
+    expect(page.locator(".hero-card")).to_be_visible()
+    expect(page.locator("#map-view")).not_to_be_visible()
+
+    page.go_forward()
+    expect(page.locator("#map-view")).to_be_visible()
+    expect(page.locator("#concept-header-title")).to_contain_text(
+        "How sodium channels create an action potential"
+    )
+    expect(page.locator("#bottom-nav .bottom-nav-item.active")).to_have_count(0)
+    assert urlparse(page.url).path == "/session/route-margin-concept"
+    assert page.evaluate("history.length") == history_length
+
+    page.go_back()
+    page.evaluate("localStorage.removeItem('learnops_concepts')")
+    page.go_forward()
+    expect(page.locator("#ignition-view")).to_be_visible()
+    expect(page.locator("#hero-door-error")).to_have_text(
+        "That session is not saved in this browser."
+    )
+    assert urlparse(page.url).path == "/"
+    assert page.evaluate("history.length") == history_length
+
+    history_length_before_missing_boot = page.evaluate("history.length")
+    page.goto(urljoin(base_url + "/", "session/missing-concept"))
+    _wait_for_app_settled(page)
+    expect(page.locator("#ignition-view")).to_be_visible()
+    expect(page.locator("#hero-door-error")).to_have_text(
+        "That session is not saved in this browser."
+    )
+    assert urlparse(page.url).path == "/"
+    assert page.evaluate("history.length") == history_length_before_missing_boot + 1
+
+    history_length_before_malformed_boot = page.evaluate("history.length")
+    page.goto(urljoin(base_url + "/", "session/%E0%A4%A"))
+    _wait_for_app_settled(page)
+    expect(page.locator("#ignition-view")).to_be_visible()
+    expect(page.locator("#hero-door-error")).to_have_text(
+        "That session is not saved in this browser."
+    )
+    assert urlparse(page.url).path == "/"
+    assert page.evaluate("history.length") == history_length_before_malformed_boot + 1
+    assert page_errors == []
 
 
 def test_saved_library_concept_reopens_map_view(
