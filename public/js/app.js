@@ -47,7 +47,7 @@ import {
   persistPhaseBResumeState as persistStoredPhaseBResumeState,
   persistPhaseBSessionState as persistStoredPhaseBSessionState,
 } from './phase-b-session.js';
-import { buildLibraryHtml } from './library-view.js?v=4';
+import { buildLibraryHtml } from './library-view.js?v=5';
 import { createTrainingStore, TRAINING_SCHEMA_VERSION, TRAINING_STORE_KEY_PREFIX } from './training-store.js';
 import {
   hydrateAndSyncLearnerState,
