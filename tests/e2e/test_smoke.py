@@ -5716,6 +5716,9 @@ def test_desk_iso_board_state_surface_and_room_labels(
     # A final-concept deletion arriving from another tab must route through
     # the canonical Desk renderer, not leave stale populated markup behind.
     expect(clean_page.locator("#tile-0 .tile-top")).to_have_count(1)
+    clean_page.locator("#tile-0").evaluate(
+        "el => el.insertAdjacentHTML('beforeend', '<g class=\"empty-tile-affordance\"></g>')"
+    )
     clean_page.evaluate(
         """(() => {
             localStorage.setItem('learnops_concepts', '[]');
