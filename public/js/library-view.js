@@ -15,7 +15,7 @@ const ATTEMPT_CLASSIFICATION_RANK = {
 };
 
 function conceptStateLabel(state) {
-  if (state === 'primed') return 'draft saved';
+  if (state === 'primed') return 'primed for study';
   if (state === 'solidified') return 'solid spaced reconstruction';
   return state;
 }

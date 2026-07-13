@@ -567,7 +567,7 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     card = page.locator(".library-card-vault", has_text="Training Truth QA")
     expect(card).to_be_visible()
     expect(card).to_have_attribute("data-state", "primed")
-    expect(card.locator(".library-card-state")).to_have_text("draft saved")
+    expect(card.locator(".library-card-state")).to_have_text("primed for study")
     expect(card.locator(".library-card-summary")).to_have_text(
         "Learner-owned reconstruction visible in Library."
     )
