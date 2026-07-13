@@ -7,12 +7,17 @@
 }
 
 #grid-container {
-  width: min(420px, calc(100vw - 32px));
+  width: min(420px, calc(100vw - 20px));
+}
+
+#grid-container.is-first-use {
+  width: clamp(11.5rem, 50vw, 12.5rem);
 }
 
 #grid-svg {
   width: 100%;
   height: auto;
+  overflow: visible;
 }
 
 .tile-group[data-board-state="locked"] {
@@ -65,6 +70,80 @@
 .tile-group.empty,
 .tile-group.empty .tile-hit {
   cursor: pointer;
+}
+
+/* A first-use Desk presents one reconstruction plate. Capacity appears
+   only after the learner has a saved session to place on the full board. */
+#grid-container.is-first-use .tile-group.is-capacity {
+  display: none;
+}
+
+#grid-container.is-first-use #grid-svg {
+  aspect-ratio: 140 / 130;
+  filter: drop-shadow(0 18px 22px rgba(var(--violet-600-rgb), 0.20));
+}
+
+#grid-container.is-first-use .tile-group.empty .tile-top-empty {
+  fill: color-mix(in srgb, var(--surface-high) 84%, var(--cream-50) 16%);
+  stroke: color-mix(in srgb, var(--primary-readable) 46%, var(--cream-50));
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+#grid-container.is-first-use .tile-group.empty .tile-top-dash {
+  fill: none;
+  stroke: rgba(var(--paper-0-rgb), 0.88);
+  stroke-width: 1.25;
+  stroke-dasharray: none;
+  opacity: 0.92;
+  transform: scale(0.955);
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+#grid-container.is-first-use .tile-group.empty .tile-left,
+#grid-container.is-first-use .tile-group.empty .tile-right {
+  opacity: 1;
+  stroke: color-mix(in srgb, var(--primary-readable) 18%, var(--cream-50));
+  stroke-width: 1;
+}
+
+#grid-container.is-first-use .tile-group.empty .tile-left {
+  fill: color-mix(in srgb, var(--surface-high) 66%, var(--cream-50) 34%);
+}
+
+#grid-container.is-first-use .tile-group.empty .tile-right {
+  fill: color-mix(in srgb, var(--surface-high) 68%, var(--ink-900) 32%);
+}
+
+.tile-group.is-capacity,
+.tile-group.is-capacity .tile-hit {
+  cursor: default;
+  pointer-events: none;
+}
+
+#grid-container.is-first-use .tile-group.is-primary-empty,
+#grid-container.is-first-use .tile-group.is-primary-empty .tile-hit {
+  cursor: pointer;
+}
+
+#grid-container.is-first-use .tile-group.is-primary-empty .tile-top-empty {
+  fill: color-mix(in srgb, var(--surface-high) 90%, var(--accent-soft) 10%);
+  stroke: var(--primary-readable);
+  stroke-width: 2;
+}
+
+#grid-container.is-first-use .tile-group.is-primary-empty:hover .tile-top-empty,
+#grid-container.is-first-use .tile-group.is-primary-empty:focus-visible .tile-top-empty {
+  fill: color-mix(in srgb, var(--surface-high) 72%, var(--accent-soft-strong) 28%);
+  stroke: var(--primary-readable);
+  stroke-width: 2.8;
+}
+
+#grid-container.is-first-use .tile-group.is-primary-empty:active .tile-top-empty {
+  fill: color-mix(in srgb, var(--surface-high) 60%, var(--accent-soft-strong) 40%);
+  stroke-width: 2.2;
 }
 
 .concept-pin {
@@ -158,9 +237,41 @@
   stroke-linecap: round;
 }
 
+.empty-tile-affordance__label {
+  fill: var(--primary-readable);
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.empty-tile-affordance--primary {
+  opacity: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    opacity var(--duration-quick) var(--ease-standard),
+    transform var(--duration-micro) var(--ease-standard);
+}
+
+.empty-tile-affordance--primary .empty-tile-affordance__line {
+  stroke: var(--primary-readable);
+  stroke-width: 2.6;
+}
+
 .tile-group.empty:hover .empty-tile-affordance,
 .tile-group.empty:focus-within .empty-tile-affordance {
   opacity: 0.78;
+}
+
+.tile-group.is-primary-empty:hover .empty-tile-affordance--primary,
+.tile-group.is-primary-empty:focus-visible .empty-tile-affordance--primary {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.tile-group.is-primary-empty:active .empty-tile-affordance--primary {
+  transform: translateY(1px);
 }
 
 .tile-group.empty:hover .tile-top-empty,
@@ -199,6 +310,64 @@ body.night .tile-group .tile-right {
 body[data-theme="dark"] .empty-tile-affordance__line,
 body.night .empty-tile-affordance__line {
   stroke: rgba(var(--lavender-500-rgb), 0.58);
+}
+
+body[data-theme="dark"] #grid-container.is-first-use .tile-group.empty .tile-top-empty,
+body.night #grid-container.is-first-use .tile-group.empty .tile-top-empty {
+  fill: color-mix(in srgb, var(--cream-50) 72%, var(--paper-0) 28%);
+  stroke: color-mix(in srgb, var(--ink-900) 22%, var(--cream-50));
+}
+
+body[data-theme="dark"] #grid-container.is-first-use .tile-group.empty .tile-left,
+body.night #grid-container.is-first-use .tile-group.empty .tile-left {
+  fill: color-mix(in srgb, var(--cream-50) 72%, var(--paper-0) 28%);
+  opacity: 1;
+}
+
+body[data-theme="dark"] #grid-container.is-first-use .tile-group.empty .tile-right,
+body.night #grid-container.is-first-use .tile-group.empty .tile-right {
+  fill: color-mix(in srgb, var(--cream-50) 66%, var(--ink-900) 12%);
+  opacity: 1;
+}
+
+body[data-theme="dark"] #grid-container.is-first-use .tile-group.is-primary-empty .tile-top-empty,
+body.night #grid-container.is-first-use .tile-group.is-primary-empty .tile-top-empty {
+  stroke: var(--primary-fill-hover);
+}
+
+body[data-theme="dark"] #grid-container.is-first-use .empty-tile-affordance__label,
+body.night #grid-container.is-first-use .empty-tile-affordance__label {
+  fill: var(--primary-fill-hover);
+}
+
+body[data-theme="dark"] #grid-container.is-first-use .empty-tile-affordance__line,
+body.night #grid-container.is-first-use .empty-tile-affordance__line {
+  stroke: var(--primary-fill-hover);
+}
+
+@media (forced-colors: active) {
+  #grid-container.is-first-use .tile-group.is-primary-empty:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 4px;
+  }
+
+  #grid-container.is-first-use .tile-group.is-primary-empty .tile-top-empty {
+    fill: Canvas;
+    stroke: ButtonText;
+  }
+
+  #grid-container.is-first-use .tile-group.is-primary-empty:focus-visible .tile-top-empty {
+    stroke: Highlight;
+    stroke-width: 3px;
+  }
+
+  #grid-container.is-first-use .empty-tile-affordance__line {
+    stroke: ButtonText;
+  }
+
+  #grid-container.is-first-use .empty-tile-affordance__label {
+    fill: ButtonText;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -59,23 +59,38 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     let title = tile.querySelector('.iso-board-state-title');
     if (!hint) {
       tile.removeAttribute('data-evidence-hint');
+      tile.removeAttribute('aria-describedby');
       if (title) title.remove();
       return;
     }
 
+    const titleId = `${tile.id}-evidence-hint`;
     tile.dataset.evidenceHint = hint;
+    tile.setAttribute('aria-describedby', titleId);
     if (!title) {
       title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
       title.classList.add('iso-board-state-title');
       tile.insertBefore(title, tile.firstChild);
     }
+    title.id = titleId;
     title.textContent = hint;
   }
 
-  function deriveBoardState(concept) {
+  function deriveBoardProjection(concept) {
     const training = loadTraining(concept?.id);
-    const badge = deriveConceptBadge(concept, training);
-    return boardStateFromBadge(badge) || legacyBoardStateFromConceptState(concept?.state) || 'locked';
+    const trainingBadge = training
+      ? deriveConceptBadge({ ...concept, graphData: null }, training)
+      : null;
+    const trainingState = boardStateFromBadge(trainingBadge);
+    const legacyBadge = deriveConceptBadge(concept, null);
+    const boardState = trainingState
+      || boardStateFromBadge(legacyBadge)
+      || legacyBoardStateFromConceptState(concept?.state)
+      || 'locked';
+    return {
+      boardState,
+      evidenceHint: trainingState ? evidenceHintForBoardState(trainingState) : '',
+    };
   }
 
   function crystalMarkup(state) {
@@ -93,7 +108,14 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     `;
   }
 
-  function emptyAffordanceMarkup() {
+  function emptyAffordanceMarkup({ primary = false } = {}) {
+    if (primary) {
+      return `
+        <g class="empty-tile-affordance empty-tile-affordance--primary" aria-hidden="true">
+          <text class="empty-tile-affordance__label" x="70" y="63" text-anchor="middle">Choose a topic</text>
+        </g>
+      `;
+    }
     return `
       <g class="empty-tile-affordance" aria-hidden="true">
         <line class="empty-tile-affordance__line" x1="58" y1="40" x2="82" y2="40"></line>
@@ -106,6 +128,8 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     const concept = concepts[idx] || null;
 
     if (!concept) {
+      const isFirstUse = concepts.length === 0;
+      const isPrimaryEmpty = isFirstUse && idx === 4;
       tile.removeAttribute('data-source-state');
       tile.removeAttribute('data-board-state');
       syncEvidenceHint(tile, '');
@@ -124,16 +148,22 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
         const line = pin.querySelector('.concept-pin-line');
         if (line) line.remove();
       }
-      if (!tile.querySelector('.empty-tile-affordance')) {
-        tile.insertAdjacentHTML('beforeend', emptyAffordanceMarkup());
+      const currentAffordance = tile.querySelector('.empty-tile-affordance');
+      const currentIsPrimary = currentAffordance?.classList.contains('empty-tile-affordance--primary');
+      const shouldShowAffordance = !isFirstUse || isPrimaryEmpty;
+      if (currentAffordance && (!shouldShowAffordance || currentIsPrimary !== isPrimaryEmpty)) {
+        currentAffordance.remove();
+      }
+      if (shouldShowAffordance && !tile.querySelector('.empty-tile-affordance')) {
+        tile.insertAdjacentHTML('beforeend', emptyAffordanceMarkup({ primary: isPrimaryEmpty }));
       }
       return;
     }
 
-    const boardState = deriveBoardState(concept);
+    const { boardState, evidenceHint } = deriveBoardProjection(concept);
     tile.dataset.sourceState = concept.state || '';
     tile.dataset.boardState = boardState;
-    syncEvidenceHint(tile, evidenceHintForBoardState(boardState));
+    syncEvidenceHint(tile, evidenceHint);
 
     // Defensive: drop any stale empty affordance the previous render may
     // have inserted. Canonical renderGrid flow wipes innerHTML before
@@ -152,7 +182,7 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     const line = pin.querySelector('.concept-pin-line');
     if (line) {
       line.setAttribute('y1', '22');
-      line.setAttribute('y2', '38');
+      line.setAttribute('y2', '56');
     }
 
     let crystal = pin.querySelector('.concept-pin-crystal');
@@ -199,9 +229,8 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     // renderGrid(), so we never observe our own writes.
     Bus.on('grid:rendered', scheduleRefresh);
 
-    // Filter on STORE_KEY so unrelated cross-tab writes (theme, sound,
-    // motion preferences) don't trigger a board re-render. RAF
-    // throttling helps but the wake-up itself is wasted work.
+    // Route external learner-state changes back through app.js so the
+    // canonical Desk renderer owns markup, due surfaces, and semantics.
     window.addEventListener('storage', (e) => {
       /* c8 ignore start -- browser cross-tab storage events are verified by smoke behavior */
       if (
@@ -209,13 +238,13 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
         || e.key === null
         || e.key?.startsWith(TRAINING_STORE_KEY_PREFIX)
       ) {
-        scheduleRefresh();
+        Bus.emit('desk:external-state-change');
       }
       /* c8 ignore stop */
     });
-    window.addEventListener('focus', scheduleRefresh);
+    window.addEventListener('focus', () => Bus.emit('desk:external-state-change'));
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) scheduleRefresh();
+      if (!document.hidden) Bus.emit('desk:external-state-change');
     });
   }
 

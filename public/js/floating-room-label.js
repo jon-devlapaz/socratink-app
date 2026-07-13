@@ -107,11 +107,15 @@ import { Bus } from './bus.js';
     // they survive every render and stay in sync with the concept name.
 
     const showForTile = () => {
+      if (tileGroup.classList.contains('is-capacity') || tileGroup.classList.contains('is-primary-empty')) {
+        hide(tileGroup);
+        return;
+      }
       const concepts = loadConcepts();
       const concept = concepts[conceptIdx];
       show(tileGroup, concept
         ? { name: concept.name, action: 'Resume', kind: 'room' }
-        : { name: 'Start learning', action: '', kind: 'empty' });
+        : { name: 'Start from memory', action: '', kind: 'empty' });
     };
 
     tileGroup.addEventListener('mouseenter', showForTile);
@@ -128,10 +132,14 @@ import { Bus } from './bus.js';
   function showForTile(tile) {
     const conceptIdx = conceptIndexForTile(tile);
     if (!tile || conceptIdx < 0 || !tile.getClientRects().length) return;
+    if (tile.classList.contains('is-capacity') || tile.classList.contains('is-primary-empty')) {
+      hide(tile);
+      return;
+    }
     const concept = loadConcepts()[conceptIdx];
     show(tile, concept
       ? { name: concept.name, action: 'Resume', kind: 'room' }
-      : { name: 'Start learning', action: '', kind: 'empty' });
+      : { name: 'Start from memory', action: '', kind: 'empty' });
   }
 
   function showForEvent(event) {

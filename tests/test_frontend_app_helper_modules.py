@@ -982,9 +982,29 @@ def test_board_grid_helpers_preserve_tile_markup_and_events() -> None:
         assert.equal(tiles[0].attrs['aria-label'], 'Resume First');
         assert.ok(tiles[0].innerHTML.includes('concept-pin-0'));
         assert.equal(tiles[1].attrs.class, 'tile-group empty');
-        assert.equal(tiles[1].attrs['aria-label'], 'Start learning');
+        assert.equal(tiles[1].attrs['aria-label'], 'Start from memory');
         assert.ok(tiles[1].innerHTML.includes('tile-top-empty'));
         assert.deepEqual(events, ['grid:rendered']);
+
+        const firstUseTiles = Array.from({ length: 9 }, makeTile);
+        renderGrid({
+          concepts: [],
+          tileEls: firstUseTiles,
+          activeId: null,
+          bus: { emit(eventName) { events.push(eventName); } },
+        });
+        assert.equal(firstUseTiles[4].attrs.class, 'tile-group empty is-primary-empty');
+        assert.equal(firstUseTiles[4].attrs.role, 'button');
+        assert.equal(firstUseTiles[4].attrs.tabindex, '0');
+        assert.equal(firstUseTiles[4].attrs['aria-label'], 'Choose a topic');
+        firstUseTiles.forEach((tile, idx) => {
+          if (idx === 4) return;
+          assert.equal(tile.attrs.class, 'tile-group empty is-capacity');
+          assert.equal(tile.attrs['aria-hidden'], 'true');
+          assert.equal(tile.attrs.role, undefined);
+          assert.equal(tile.attrs.tabindex, undefined);
+          assert.equal(tile.attrs['aria-label'], undefined);
+        });
 
         renderGrid({
           concepts: [{ id: 'c1', name: 'First', state: 'growing' }],
@@ -1271,6 +1291,17 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
     assert 'aria-label="What do you already think?"' in index_html
     assert '>Start session</button>' in index_html
     assert 'aria-label="What do you want to explain?"' not in index_html
+
+
+def test_desk_markup_preserves_compact_concept_index() -> None:
+    index_html = (REPO_ROOT / "public" / "index.html").read_text()
+
+    assert '<h2 class="desk-title" id="desk-title">Desk</h2>' in index_html
+    assert '<h3 class="desk-index-title">Concepts</h3>' in index_html
+    assert 'id="desk-concept-count"' in index_html
+    assert 'aria-label="0 concepts"' in index_html
+    assert 'id="grid-container"' in index_html
+    assert 'aria-label="Concept desk"' in index_html
 
 
 def test_feedback_modal_copy_and_button_contract() -> None:
