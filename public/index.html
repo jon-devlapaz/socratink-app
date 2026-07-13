@@ -20,11 +20,11 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=185">
+  <link rel="stylesheet" href="/css/index.css?v=188">
   <link rel="stylesheet" href="/css/drill-chamber.css?v=17">
 </head>
 
-<body>
+<body data-primary-view="desk" data-desk-first-use="true">
   <script>
     try {
       document.body.classList.add('antigravity-theme');
@@ -51,8 +51,8 @@
   <!-- Bottom Mobile Navigation -->
   <nav class="bottom-nav" id="bottom-nav">
     <a class="bottom-nav-item" href="javascript:void(0)" onclick="App.showIgnition()" id="bn-ignition">
-      <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>
-      <span class="bottom-nav-label">Start</span>
+      <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+      <span class="bottom-nav-label">New</span>
     </a>
     <a class="bottom-nav-item active" href="javascript:void(0)" onclick="App.showDashboard()" id="bn-dashboard">
       <svg class="bottom-nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
@@ -192,22 +192,20 @@
       </button>
     </div>
 
-    <!-- Hero card: concept info left, crystal grid right -->
+    <!-- Desk: reconstruction inventory with one honest first-use action. -->
     <section class="hero-card intro-page" aria-labelledby="desk-title">
-      <h2 class="visually-hidden" id="desk-title">Desk</h2>
+      <header class="desk-frame">
+        <h2 class="desk-title" id="desk-title">Desk</h2>
+        <p class="desk-helper">Then write what you remember.</p>
+      </header>
 
       <div class="intro-content">
-        <header class="desk-frame">
-          <span class="desk-eyebrow">
-            <span class="desk-eyebrow-dot" aria-hidden="true"></span>
-            On the desk
-            <span class="desk-eyebrow-sep" aria-hidden="true">·</span>
-            <time id="desk-date" class="desk-eyebrow-date"></time>
-          </span>
-          <h2 class="desk-title">Learning sessions.</h2>
-          <p class="desk-helper">Pick up where you were explaining from memory.</p>
-          <div id="desk-ready-filter-host" class="desk-ready-filter-host"></div>
+        <header class="desk-index-header">
+          <h3 class="desk-index-title">Concepts</h3>
+          <span id="desk-concept-count" class="desk-index-count" aria-label="0 concepts">0</span>
         </header>
+
+        <div id="desk-ready-filter-host" class="desk-ready-filter-host"></div>
 
         <div class="hero-info" id="hero-info">
           <div class="hero-meta-row">
@@ -242,7 +240,7 @@
         </div>
 
         <!-- 3×3 isometric crystal grid -->
-        <div id="grid-container" style="position:relative; padding-top:28px; overflow:visible;">
+        <div id="grid-container">
           <!-- Floating spacing button (disabled in the current MVP) -->
           <button id="btn-consolidate-float" class="btn-consolidate-float" type="button" onclick="App.consolidate()"
             style="display:none;" disabled title="Review opens after spacing." aria-label="Review later">
@@ -253,8 +251,8 @@
             </svg>
           </button>
 
-          <svg id="grid-svg" viewBox="0 0 420 320" width="420" height="320" xmlns="http://www.w3.org/2000/svg"
-            style="overflow:visible;">
+          <svg id="grid-svg" viewBox="0 0 420 365" width="420" height="365" xmlns="http://www.w3.org/2000/svg"
+            role="group" aria-label="Concept desk">
             <defs>
               <filter id="glow-filter" x="-40%" y="-40%" width="180%" height="180%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
@@ -262,34 +260,19 @@
               </filter>
             </defs>
             <!-- Paint order: back → front. Transforms are fixed. Content populated by renderGrid(). -->
-            <g id="tile-0" class="tile-group" transform="translate(140,45)" onclick="App.selectTile(0)"></g>
-            <g id="tile-1" class="tile-group" transform="translate(70,85)" onclick="App.selectTile(1)"></g>
-            <g id="tile-2" class="tile-group" transform="translate(210,85)" onclick="App.selectTile(2)"></g>
-            <g id="tile-3" class="tile-group" transform="translate(0,125)" onclick="App.selectTile(3)"></g>
-            <g id="tile-4" class="tile-group" transform="translate(140,125)" onclick="App.selectTile(4)"></g>
-            <g id="tile-5" class="tile-group" transform="translate(280,125)" onclick="App.selectTile(5)"></g>
-            <g id="tile-6" class="tile-group" transform="translate(70,165)" onclick="App.selectTile(6)"></g>
-            <g id="tile-7" class="tile-group" transform="translate(210,165)" onclick="App.selectTile(7)"></g>
-            <g id="tile-8" class="tile-group" transform="translate(140,205)" onclick="App.selectTile(8)"></g>
+            <g id="tile-0" class="tile-group" transform="translate(140,3)" onclick="App.selectTile(0)"></g>
+            <g id="tile-1" class="tile-group" transform="translate(70,61)" onclick="App.selectTile(1)"></g>
+            <g id="tile-2" class="tile-group" transform="translate(210,61)" onclick="App.selectTile(2)"></g>
+            <g id="tile-3" class="tile-group" transform="translate(0,119)" onclick="App.selectTile(3)"></g>
+            <g id="tile-4" class="tile-group" transform="translate(140,119)" onclick="App.selectTile(4)"></g>
+            <g id="tile-5" class="tile-group" transform="translate(280,119)" onclick="App.selectTile(5)"></g>
+            <g id="tile-6" class="tile-group" transform="translate(70,177)" onclick="App.selectTile(6)"></g>
+            <g id="tile-7" class="tile-group" transform="translate(210,177)" onclick="App.selectTile(7)"></g>
+            <g id="tile-8" class="tile-group" transform="translate(140,235)" onclick="App.selectTile(8)"></g>
           </svg>
         </div>
 
         <div id="desk-due-selection-host" class="desk-due-selection-host" aria-live="polite"></div>
-
-        <div class="desk-legend" role="list" aria-label="Tile-state legend">
-          <span class="desk-legend-item" role="listitem" data-state="locked">
-            <span class="desk-legend-facet" aria-hidden="true"></span>locked
-          </span>
-          <span class="desk-legend-item" role="listitem" data-state="primed">
-            <span class="desk-legend-facet" aria-hidden="true"></span>draft saved
-          </span>
-          <span class="desk-legend-item" role="listitem" data-state="drilled">
-            <span class="desk-legend-facet" aria-hidden="true"></span>needs repair
-          </span>
-          <span class="desk-legend-item" role="listitem" data-state="solidified">
-            <span class="desk-legend-facet" aria-hidden="true"></span>solid spaced reconstruction
-          </span>
-        </div>
       </div>
 
     </section>
@@ -452,9 +435,9 @@ I'm fuzzy on…
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="/js/drill-chamber.js?v=18"></script>
-  <script type="module" src="/js/app.js?v=202"></script>
-  <script type="module" src="/js/floating-room-label.js?v=8"></script>
-  <script type="module" src="/js/iso-board-state-surface.js?v=7"></script>
+  <script type="module" src="/js/app.js?v=205"></script>
+  <script type="module" src="/js/floating-room-label.js?v=10"></script>
+  <script type="module" src="/js/iso-board-state-surface.js?v=10"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>
 
   <!-- Feedback Modal -->

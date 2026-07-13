@@ -803,8 +803,29 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(tileA.getAttribute('aria-label') === 'Resume First', 'tile label');
             assert(tileA.innerHTML.includes('concept-pin-0'), 'tile pin');
             assert(tileB.getAttribute('class') === 'tile-group empty', 'empty tile class');
-            assert(tileB.getAttribute('aria-label') === 'Start learning', 'empty tile label');
+            assert(tileB.getAttribute('aria-label') === 'Start from memory', 'empty tile label');
             same(boardEvents, ['grid:rendered'], 'board event');
+            const firstUseTiles = Array.from({ length: 9 }, () =>
+              document.createElementNS('http://www.w3.org/2000/svg', 'g')
+            );
+            board.renderGrid({
+              concepts: [],
+              tileEls: firstUseTiles,
+              activeId: null,
+              bus: { emit(eventName) { boardEvents.push(eventName); } },
+            });
+            assert(firstUseTiles[4].getAttribute('class') === 'tile-group empty is-primary-empty', 'centre start class');
+            assert(firstUseTiles[4].getAttribute('role') === 'button', 'centre start role');
+            assert(firstUseTiles[4].getAttribute('tabindex') === '0', 'centre start tab stop');
+            assert(firstUseTiles[4].getAttribute('aria-label') === 'Choose a topic', 'centre start label');
+            firstUseTiles.forEach((tile, idx) => {
+              if (idx === 4) return;
+              assert(tile.getAttribute('class') === 'tile-group empty is-capacity', 'capacity class');
+              assert(tile.getAttribute('aria-hidden') === 'true', 'capacity hidden from a11y tree');
+              assert(!tile.hasAttribute('role'), 'capacity has no button role');
+              assert(!tile.hasAttribute('tabindex'), 'capacity has no tab stop');
+              assert(!tile.hasAttribute('aria-label'), 'capacity has no duplicate action label');
+            });
             const animEl = document.createElement('div');
             animEl.id = 'concept-marker-anim-7';
             animEl.classList.add('anim-crack');

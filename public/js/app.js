@@ -9,7 +9,7 @@ import {
 import {
   playAnim,
   renderGrid as renderDeskGrid,
-} from './board-grid.js?v=2';
+} from './board-grid.js?v=5';
 import {
   clearSettingsPanel as clearShellSettingsPanel,
   closeDrawer as closeShellDrawer,
@@ -929,6 +929,28 @@ const App = (() => {
 
   // ── 8. Grid rendering ──────────────────────────────────────
   function renderGrid(concepts = loadConcepts()) {
+    const grid = document.getElementById('grid-container');
+    const gridSvg = document.getElementById('grid-svg');
+    const deskHelper = document.querySelector('.desk-helper');
+    const deskConceptCount = document.getElementById('desk-concept-count');
+    const isFirstUse = concepts.length === 0;
+    if (grid) grid.classList.toggle('is-first-use', isFirstUse);
+    document.body.dataset.deskFirstUse = String(isFirstUse);
+    if (deskConceptCount) {
+      deskConceptCount.textContent = String(concepts.length);
+      deskConceptCount.setAttribute(
+        'aria-label',
+        `${concepts.length} ${concepts.length === 1 ? 'concept' : 'concepts'}`,
+      );
+    }
+    if (gridSvg) {
+      gridSvg.setAttribute('viewBox', isFirstUse ? '140 119 140 130' : '0 0 420 365');
+    }
+    if (deskHelper) {
+      deskHelper.textContent = isFirstUse
+        ? 'Then write what you remember.'
+        : 'Choose a session to reconstruct from memory.';
+    }
     const dueIds = dueConceptIdSet(cachedDueItems);
     renderDeskGrid({
       concepts,
@@ -1712,7 +1734,11 @@ const App = (() => {
 
   function selectTile(tileIdx) {
     const tileEl = tileEls[tileIdx];
-    if (tileEl?.classList.contains('is-filtered-out') || tileEl?.getAttribute('data-ready-filtered') === 'out') {
+    if (
+      tileEl?.classList.contains('is-capacity')
+      || tileEl?.classList.contains('is-filtered-out')
+      || tileEl?.getAttribute('data-ready-filtered') === 'out'
+    ) {
       return;
     }
     const concepts = loadConcepts();
@@ -3127,13 +3153,25 @@ const App = (() => {
 
   function setNavActive(id) {
     currentPrimaryNav = id;
+    document.body.dataset.primaryView = id === 'nav-dashboard'
+      ? 'desk'
+      : id ? id.replace('nav-', '') : 'concept';
     ['nav-dashboard', 'nav-ignition', 'nav-library', 'nav-settings'].forEach((navId) => {
       const el = document.getElementById(navId);
-      if (el) el.classList.toggle('active', navId === currentPrimaryNav);
-      
+      const isActive = navId === currentPrimaryNav;
+      if (el) {
+        el.classList.toggle('active', isActive);
+        if (isActive) el.setAttribute('aria-current', 'page');
+        else el.removeAttribute('aria-current');
+      }
+
       const bnId = navId.replace('nav-', 'bn-');
       const bnEl = document.getElementById(bnId);
-      if (bnEl) bnEl.classList.toggle('active', navId === currentPrimaryNav);
+      if (bnEl) {
+        bnEl.classList.toggle('active', isActive);
+        if (isActive) bnEl.setAttribute('aria-current', 'page');
+        else bnEl.removeAttribute('aria-current');
+      }
     });
     syncConceptListActiveState();
   }
@@ -3147,19 +3185,9 @@ const App = (() => {
     teardownMapView();
     hidePrimaryViews();
     if (heroCard) heroCard.style.display = 'flex';
-    renderDeskDate();
     renderDeskDueSurfaces();
     Bus.emit('dashboard:shown');
     if (window.innerWidth < 900) closeDrawer();
-  }
-
-  function renderDeskDate() {
-    const el = document.getElementById('desk-date');
-    if (!el) return;
-    const d = new Date();
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    el.textContent = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-    el.dateTime = d.toISOString().slice(0, 10);
   }
 
   function collectTrainingByConceptId(concepts = loadConcepts()) {
@@ -3241,6 +3269,12 @@ const App = (() => {
       grid.removeAttribute('data-ready-count');
     }
   }
+
+  Bus.on('desk:external-state-change', () => {
+    renderConceptList();
+    renderIgnitionGate();
+    renderDeskDueSurfaces();
+  });
 
   async function syncLearnerStateIfIdentified() {
     try {
