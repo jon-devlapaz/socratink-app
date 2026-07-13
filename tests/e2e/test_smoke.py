@@ -164,6 +164,7 @@ def _wait_for_app_settled(page: Page) -> None:
     """
     page.wait_for_load_state("load")
     expect(page.locator("#concept-list")).to_be_attached()
+    page.wait_for_function("() => Boolean(window.App)")
 
 
 def _fetch_browser_session(page: Page) -> dict:
