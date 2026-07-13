@@ -2369,6 +2369,7 @@ def test_unbound_source_less_map_with_evidence_is_never_replaced(
         else None,
     )
     page.goto(f"{base_url}/session/unbound-evidence-route")
+    _wait_for_app_settled(page)
     page.evaluate(
         """window.App.reopenStudy({
           id: 'legacy-node', label: 'Legacy target', fullLabel: 'Legacy target',
@@ -4168,6 +4169,7 @@ def test_localhost_inline_scaffold_response_keeps_attempt_retryable(
 
     page.route("**/api/drill", fulfill_drill)
     _enter_app_shell_as_guest(page, base_url)
+    _wait_for_app_settled(page)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
     page.evaluate(
         """(() => {
@@ -4697,8 +4699,12 @@ def test_mobile_concept_nav_exits_and_history_stay_aligned(
     assert page.evaluate("history.length") == history_length_before_missing_boot + 1
 
     history_length_before_malformed_boot = page.evaluate("history.length")
-    page.goto(urljoin(base_url + "/", "session/%E0%A4%A"))
-    _wait_for_app_settled(page)
+    page.evaluate(
+        """() => {
+          history.pushState({}, '', '/session/%E0%A4%A');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }"""
+    )
     expect(page.locator("#ignition-view")).to_be_visible()
     expect(page.locator("#hero-door-error")).to_have_text(
         "That session is not saved in this browser."
