@@ -5716,9 +5716,6 @@ def test_desk_iso_board_state_surface_and_room_labels(
     # A final-concept deletion arriving from another tab must route through
     # the canonical Desk renderer, not leave stale populated markup behind.
     expect(clean_page.locator("#tile-0 .tile-top")).to_have_count(1)
-    clean_page.locator("#tile-0").evaluate(
-        "el => el.insertAdjacentHTML('beforeend', '<g class=\"empty-tile-affordance\"></g>')"
-    )
     clean_page.evaluate(
         """(() => {
             localStorage.setItem('learnops_concepts', '[]');
@@ -5726,8 +5723,12 @@ def test_desk_iso_board_state_surface_and_room_labels(
                 key: 'learnops_concepts',
                 newValue: '[]',
             }));
+            document.getElementById('tile-0').insertAdjacentHTML(
+                'beforeend', '<g class="empty-tile-affordance"></g>'
+            );
         })()"""
     )
+    expect(clean_page.locator("#tile-0 .empty-tile-affordance")).to_have_count(0)
     expect(clean_page.locator("#grid-container")).to_have_class(re.compile(r"\bis-first-use\b"))
     expect(clean_page.locator("#grid-svg .tile-group.is-capacity[aria-hidden='true']")).to_have_count(8)
     expect(clean_page.locator("#grid-svg .tile-group[role='button']")).to_have_count(1)
