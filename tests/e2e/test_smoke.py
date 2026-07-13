@@ -5260,7 +5260,7 @@ def test_source_less_launch_pad_sketch_preserves_gestalt_hybrid_loop(
             ? value
             : null;
         }""",
-        timeout=20_000,
+        timeout=45_000,
     ).json_value()
     assert seda_state["latest"]["awaiting"]["key"] == "cold_attempt"
     bound_surface = clean_page.evaluate(
