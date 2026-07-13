@@ -532,7 +532,11 @@ body.antigravity-theme .library-card-vault[data-state="instantiated"] .library-c
   background: rgba(144, 103, 198, 0.10);
   color: var(--ag-violet);
 }
-body.antigravity-theme .library-card-vault[data-state="primed"] .library-card-state,
+body.antigravity-theme .library-card-vault[data-state="primed"] .library-card-state {
+  background: var(--accent-soft);
+  color: var(--primary-readable);
+}
+
 body.antigravity-theme .library-card-vault[data-state="growing"] .library-card-state {
   background: rgba(77, 186, 138, 0.12);
   color: #2F8C6A;
@@ -558,7 +562,6 @@ html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="i
   background: rgba(158, 139, 255, 0.14);
   color: var(--ag-violet);
 }
-html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="primed"] .library-card-state,
 html[data-theme="dark"] body.antigravity-theme .library-card-vault[data-state="growing"] .library-card-state {
   background: rgba(60, 221, 199, 0.14);
   color: var(--ag-mint);

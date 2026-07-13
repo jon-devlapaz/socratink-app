@@ -498,6 +498,58 @@ def _seed_training_truth_concept(page: Page) -> None:
     )
 
 
+def test_empty_library_is_compact_mobile_concept_index(
+    clean_page: Page, base_url: str, captured
+) -> None:
+    """First-use Library stays quiet, truthful, and immediately actionable."""
+    clean_page.set_viewport_size({"width": 390, "height": 844})
+    _enter_app_shell_as_guest(clean_page, base_url)
+    _wait_for_app_settled(clean_page)
+    clean_page.evaluate(
+        """(() => {
+            localStorage.removeItem('learnops_concepts');
+            window.App.showLibrary();
+        })()"""
+    )
+
+    content = clean_page.locator("#library-content")
+    expect(content.locator(".library-page-title")).to_have_text("Library")
+    expect(content.locator(".library-index-title")).to_have_text("Concepts")
+    expect(content.locator(".library-index-count")).to_have_text("0")
+    expect(content.locator(".library-index-count")).to_have_attribute(
+        "aria-label", "0 concepts"
+    )
+    expect(content.locator(".library-index-empty__title")).to_have_text(
+        "Your first reconstruction starts here"
+    )
+    expect(content.locator(".library-index-empty__description")).to_have_text(
+        "Write from memory. Your reconstruction will appear here."
+    )
+    expect(content.locator(".witness-anchor")).to_have_count(0)
+    expect(content).not_to_contain_text("Your Library")
+    expect(content).not_to_contain_text("Drop a topic")
+
+    empty_index = content.locator(".library-section--empty")
+    empty_box = empty_index.bounding_box()
+    action = content.locator(".library-index-empty__action")
+    action_box = action.bounding_box()
+    bottom_nav_box = clean_page.locator("#bottom-nav").bounding_box()
+    assert empty_box is not None
+    assert action_box is not None
+    assert bottom_nav_box is not None
+    assert empty_box["height"] < 240
+    assert round(action_box["height"]) >= 44
+    assert empty_box["y"] + empty_box["height"] < bottom_nav_box["y"]
+    assert clean_page.evaluate(
+        "document.documentElement.scrollWidth <= window.innerWidth"
+    )
+
+    action.click()
+    expect(clean_page.locator("#ignition-view")).to_be_visible()
+    assert captured["console_errors"] == []
+    assert captured["failed_requests"] == []
+
+
 def test_library_card_uses_training_evidence_not_ai_summary(
     page: Page, base_url: str
 ) -> None:
@@ -515,7 +567,7 @@ def test_library_card_uses_training_evidence_not_ai_summary(
     card = page.locator(".library-card-vault", has_text="Training Truth QA")
     expect(card).to_be_visible()
     expect(card).to_have_attribute("data-state", "primed")
-    expect(card.locator(".library-card-state")).to_have_text("draft saved")
+    expect(card.locator(".library-card-state")).to_have_text("primed for study")
     expect(card.locator(".library-card-summary")).to_have_text(
         "Learner-owned reconstruction visible in Library."
     )
@@ -4530,7 +4582,7 @@ def test_saved_library_concept_reopens_map_view(
     expect(clean_page.locator(".concept-item.active")).to_have_count(1)
 
     clean_page.locator("#nav-library").click()
-    your_library = clean_page.locator("#library-content .library-section", has_text="Your Library")
+    your_library = clean_page.locator("#library-content .library-section", has_text="Concepts")
     your_library.locator(".library-card-vault", has_text="Test Concept").click()
 
     expect(clean_page.locator("#concept-header-title")).to_contain_text("Test Concept")

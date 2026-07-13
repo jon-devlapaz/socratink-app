@@ -15,7 +15,7 @@ const ATTEMPT_CLASSIFICATION_RANK = {
 };
 
 function conceptStateLabel(state) {
-  if (state === 'primed') return 'draft saved';
+  if (state === 'primed') return 'primed for study';
   if (state === 'solidified') return 'solid spaced reconstruction';
   return state;
 }
@@ -71,29 +71,35 @@ export function getLibraryConceptMeta(concept, training = null) {
 
 export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {}) {
   const showLocalQaSeed = options?.showLocalQaSeed === true;
+  const conceptCount = concepts.length;
   let html = `
-      <div class="library-kicker">Library</div>
-
-      <div class="library-section">
-        <h2 class="library-section-title">Your Library</h2>
-        <p class="library-section-copy">Your library shows what you've reconstructed, not what you've saved.</p>
+      <div class="library-shell">
+        <h2 class="library-page-title">Library</h2>
         ${showLocalQaSeed ? `
-          <button type="button" class="ig-button" data-local-qa-seed onclick="App.seedLocalQaConcept()">Seed QA concept</button>
-          <button type="button" class="ig-button" data-local-repair-qa-seed onclick="App.seedLocalRepairQaConcept()">Seed repair QA</button>
+          <div class="library-qa-actions">
+            <button type="button" class="ig-button" data-local-qa-seed onclick="App.seedLocalQaConcept()">Seed QA concept</button>
+            <button type="button" class="ig-button" data-local-repair-qa-seed onclick="App.seedLocalRepairQaConcept()">Seed repair QA</button>
+          </div>
         ` : ''}
+        <section class="library-section${conceptCount === 0 ? ' library-section--empty' : ''}" aria-labelledby="library-concepts-title">
+          <header class="library-index-header">
+            <h3 class="library-index-title" id="library-concepts-title">Concepts</h3>
+            <span class="library-index-count" aria-label="${conceptCount} ${conceptCount === 1 ? 'concept' : 'concepts'}">${conceptCount}</span>
+          </header>
     `;
 
-  if (concepts.length === 0) {
+  if (conceptCount === 0) {
     html += `
-        <div class="library-empty library-empty--ignition">
-          <div class="witness-anchor" aria-hidden="true">
-            <svg viewBox="0 0 28 28" width="28" height="28">
-              <polygon class="witness-anchor__shape" points="14,2 26,14 14,26 2,14"/>
-            </svg>
+        <div class="library-index-empty">
+          <svg class="library-index-empty__icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 7v14"/>
+            <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+          </svg>
+          <div class="library-index-empty__copy">
+            <h4 class="library-index-empty__title">Your first reconstruction starts here</h4>
+            <p class="library-index-empty__description">Write from memory. Your reconstruction will appear here.</p>
           </div>
-          <h3 class="library-empty-headline">Start a learning session.</h3>
-          <p class="library-empty-sub">Drop a topic. The loop makes the gap inspectable.</p>
-          <button type="button" class="ig-button" onclick="App.showIgnition()">Start learning</button>
+          <button type="button" class="library-index-empty__action" onclick="App.showIgnition()">Start learning</button>
         </div>`;
   } else {
     html += `<div class="library-vault-grid">` + concepts.map(c => {
@@ -125,6 +131,6 @@ export function buildLibraryHtml(concepts, trainingByConceptId = {}, options = {
     }).join('') + `</div>`;
   }
 
-  html += `</div>`;
+  html += `</section></div>`;
   return html;
 }

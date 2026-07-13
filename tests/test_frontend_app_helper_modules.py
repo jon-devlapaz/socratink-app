@@ -816,7 +816,10 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
         );
 
         const emptyHtml = buildLibraryHtml([]);
-        assert.ok(emptyHtml.includes('Start a learning session.'));
+        assert.ok(emptyHtml.includes('Your first reconstruction starts here'));
+        assert.ok(emptyHtml.includes('Write from memory. Your reconstruction will appear here.'));
+        assert.ok(emptyHtml.includes('aria-label="0 concepts"'));
+        assert.ok(!emptyHtml.includes('witness-anchor'));
         assert.ok(emptyHtml.includes('App.showIgnition()'));
         assert.ok(!emptyHtml.includes('App.seedLocalQaConcept()'));
 
@@ -856,7 +859,7 @@ def test_library_view_helpers_preserve_card_metadata_and_empty_state() -> None:
           { id: 'legacy-primed', name: 'Legacy Primed', state: 'growing', graphData: legacyPrimedGraph },
         ], {});
         assert.ok(legacyPrimedHtml.includes('data-state="primed"'));
-        assert.ok(legacyPrimedHtml.includes('>draft saved<'));
+        assert.ok(legacyPrimedHtml.includes('>primed for study<'));
 
         const legacyNeedsRepairGraph = JSON.stringify({
           metadata: {},

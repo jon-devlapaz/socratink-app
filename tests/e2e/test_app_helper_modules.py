@@ -507,7 +507,10 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             };
             assert(library.getLibraryConceptMeta({ graphData: '{' }).thesis.includes('first reconstruction'), 'library malformed fallback');
             assert(library.getLibraryConceptMeta({ graphData: graph }, training).thesis === 'Learner-owned reconstruction.', 'library learner evidence');
-            assert(library.buildLibraryHtml([]).includes('Start a learning session.'), 'library empty state');
+            const emptyLibraryHtml = library.buildLibraryHtml([]);
+            assert(emptyLibraryHtml.includes('Your first reconstruction starts here'), 'library empty state');
+            assert(emptyLibraryHtml.includes('library-index-count'), 'library empty count');
+            assert(!emptyLibraryHtml.includes('witness-anchor'), 'library has no decorative witness art');
             const libraryHtml = library.buildLibraryHtml([
               { id: 'c-1', name: '<Unsafe>', state: 'growing', graphData: graph },
             ], { 'c-1': training });
@@ -524,7 +527,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(libraryHtml.includes('3 entries'), 'library entry count');
             window.App.showLibrary();
             assert(document.getElementById('library-view').classList.contains('visible'), 'library view visible');
-            assert(document.getElementById('library-content').textContent.includes('Start a learning session.'), 'library app path');
+            assert(document.getElementById('library-content').textContent.includes('Your first reconstruction starts here'), 'library app path');
 
             const trainingStoreModule = await import('/js/training-store.js');
             assert(trainingStoreModule.TRAINING_SCHEMA_VERSION === 1, 'training schema version');
