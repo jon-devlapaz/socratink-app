@@ -1963,15 +1963,8 @@
 }
 
 @media (max-width: 900px) {
-  body[data-map-open="true"] .bottom-nav {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transform: translateY(100%);
-  }
-
   body[data-map-open="true"] .concept-page-b2__doc {
-    padding-bottom: 28px;
+    padding-bottom: var(--chrome-h-bottom);
   }
 }
 
