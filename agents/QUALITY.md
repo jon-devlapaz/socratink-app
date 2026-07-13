@@ -9,7 +9,7 @@ Every agent must be able to answer these before editing:
 1. **What docs are binding for this task?**
 2. **What source file is authoritative?**
 3. **What command proves the change did not break the deploy, agent bootstrap, or product invariant?**
-4. **Does this edit touch a third-party SDK, API, hosted platform, browser API, or test framework?** If yes, fetch current docs via Context7 (`AGENTS.md` → "Layer 3 — Context7") before generating code. If Context7 is unavailable or lacks coverage, use `bash scripts/chub-docs.sh` as the repo-pinned Context Hub fallback. Do not rely on model memory for external API behavior.
+4. **Does this edit touch a third-party SDK, API, hosted platform, browser API, or test framework?** If yes, retrieve current primary documentation before generating code. Use the agent runtime's current-docs tool when available; otherwise use `bash scripts/chub-docs.sh`. Do not rely on model memory for external API behavior.
 
 If any answer is unclear, inspect `docs/project/doc-map.md` before changing code.
 
@@ -23,7 +23,7 @@ If any answer is unclear, inspect `docs/project/doc-map.md` before changing code
 - Cold attempt, study, and re-drill contract: `docs/product/spec.md`.
 - Agent bootstrap: `AGENTS.md` and `CLAUDE.md`.
 - Non-binding founder/agent workflow learnings: `agents/LEARNINGS.md`. Read only for matching workflow tasks or recurring friction; do not treat ledger entries as policy until promoted.
-- External API/SDK/platform behavior: Context7 (see `AGENTS.md` "Layer 3 — Context7"). If Context7 is unavailable or lacks coverage, use the repo-pinned Context Hub wrapper (`bash scripts/chub-docs.sh`). Treat both as external evidence, not Socratink doctrine; local binding docs win on conflicts about Socratink behavior.
+- External API/SDK/platform behavior: current primary documentation. Use the agent runtime's current-docs tool when available; otherwise use the repo-pinned Context Hub wrapper (`bash scripts/chub-docs.sh`). Treat external docs as evidence, not Socratink doctrine; local binding docs win on conflicts about Socratink behavior.
 
 Do not create parallel source-of-truth files accidentally. The intentional migration promotes shared workflow truth into `agents/` while old bootstrap and tool-specific surfaces are reduced to adapters, redirects, or runtime/config surfaces.
 
@@ -56,5 +56,5 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 | Auth/session behavior | targeted auth pytest plus `bash scripts/doctor.sh` |
 | Drill, graph, or mastery behavior | targeted pytest plus review against `docs/product/evidence-weighted-map.md` |
 | Production backend or public JS behavior | targeted pytest plus `./scripts/check-coverage.sh` |
-| External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs, Playwright, browser APIs) | fetch current docs via Context7 before edit, or use `bash scripts/chub-docs.sh` when Context7 is unavailable or lacks coverage; targeted pytest if behavior is testable; `bash scripts/qa-smoke.sh` when the surface is hosted-visible |
+| External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs, Playwright, browser APIs) | retrieve current primary docs before editing, using the agent runtime's current-docs tool or `bash scripts/chub-docs.sh`; run targeted pytest when behavior is testable and `bash scripts/qa-smoke.sh` when the surface is hosted-visible |
 | Hosted release confidence | `bash scripts/verify-deploy.sh HEAD` after deployment |

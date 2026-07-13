@@ -5,28 +5,28 @@
 - Stage: Build-Measure-Learn
 - Core architecture: cold attempt -> targeted study -> spaced re-drill
 - Core derived training states: `null | primed | needs repair | solidified`
-- Agent architecture: `socratinker` is the default execution agent; Socratink Brain (`.socratink-brain/`, `$socratink-brain`) is the durable product-memory substrate and maintenance skill
 - Hosted runtime: Vercel serverless
-- Current persistence: concepts and app-shell training evidence are browser
-  `localStorage` (`learnops_concepts`, `socratink:training:v1:<conceptId>`).
-  The browser keeps the app-local SEDA resume pointer in `localStorage`
-  (`socratink:seda-session:v1:<conceptId>`). Locally, the loop runtime writes
-  journals to `SOCRATINK_LOOP_SESSION_STORE_DIR` or the OS temporary default.
-  On Vercel, FastAPI sends session calls to the configured HTTPS loop service;
-  its journals use the RLS-scoped Supabase `loop_sessions` table after
-  `db/loop_sessions.sql` is applied. Production does not fall back to `/tmp`.
-  This is durable session history, not complete cross-device learner state.
+- Current persistence: concepts and app-shell training evidence are local-first
+  in browser `localStorage` (`learnops_concepts`,
+  `socratink:training:v1:<conceptId>`). Identified users get best-effort merge
+  and sync through the RLS-scoped Supabase `learner_state` table; guests remain
+  device-local. The browser keeps the app-local SEDA resume pointer in
+  `localStorage` (`socratink:seda-session:v1:<conceptId>`). Locally, the loop
+  runtime writes journals to `SOCRATINK_LOOP_SESSION_STORE_DIR` or the OS
+  temporary default. On Vercel, FastAPI proxies `/api/session` to the trusted
+  HTTPS loop service, and production journals use the deployed RLS-scoped
+  Supabase `loop_sessions` store. Production does not fall back to `/tmp`.
+  Durable journals do not yet provide complete cross-device session resume.
 - Evidence source of truth: live logs plus the operational docs in this repo
 
 ## Current Phase
-The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library now shows only the user's own reconstructed work; both the multi-concept starter shelf and the curated Hermes Agent fixture have been removed. Current smoke tests seed a concept directly into `learnops_concepts` localStorage. The product is now in Build-Measure-Learn: build features, measure with instrumentation and Socratink Brain, learn from compiled evidence.
+The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004-library-is-users-work-only.md), Library now shows only the user's own reconstructed work; both the multi-concept starter shelf and the curated Hermes Agent fixture have been removed. Current smoke tests seed a concept directly into `learnops_concepts` localStorage. The product is now in Build-Measure-Learn: build features, measure with instrumentation, and learn from compiled evidence.
 
 ## Active Risks
 - Hosted behavior may still diverge from local behavior.
-- Browser concepts, training evidence, and SEDA resume pointers remain easy to
-  wipe and do not yet provide full cross-browser continuity. Hosted session
-  journals also remain unavailable until `db/loop_sessions.sql` is applied and
-  the trusted loop service is deployed and configured.
+- Guest concepts and training evidence remain browser-local. Identified-user
+  sync is best-effort, and SEDA resume pointers remain device-local, so durable
+  production journals do not yet provide complete cross-device session resume.
 - Chat/test instrumentation is incomplete, so some regressions will still be harder to reconstruct than they should be.
 - External ingestion paths still need defensive hosted behavior and graceful fallback.
 - Library shows only the user's own reconstructed work (ADR-0004); there are no checked-in Library fixtures. A first-run user may start source-less through Door -> Launch pad -> non-empty Launch attempt -> Smallest actionable route.
@@ -50,12 +50,9 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - improve instrumentation
 - validate hosted behavior before treating local success as done
 
-## Use These Docs
-- [docs/product/evidence-weighted-map.md](../product/evidence-weighted-map.md): binding doctrine for what the graph may/must not claim
-- [docs/product/spec.md](../product/spec.md): binding product contract for the three-phase loop, routing, progression layers, inline concept-entry/result-surface modes, and guardrails
-- [docs/superpowers/specs/2026-05-15-drill-data-model-design.md](../superpowers/specs/2026-05-15-drill-data-model-design.md): binding drill data-model canon for training evidence, derivation math, and rendering fields
-- [docs/project/doc-map.md](doc-map.md): curated index of canonical entry points and deep-dives, with precedence rules at the top
-- `logs/drill-runs.jsonl` and screenshots: current release evidence and gaps
+## Canonical docs
+Use [docs/project/doc-map.md](doc-map.md) to find current product, design, and
+architecture docs and their precedence.
 
 ## Environment Lessons
 - Local success is not deployment validation.

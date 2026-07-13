@@ -1,65 +1,22 @@
 # Agent Learnings Ledger
 
-This is the non-binding learning ledger for founder and agent workflow usage.
+This file contains unresolved, non-binding evidence about founder and agent
+workflow. Binding workflow lives in `AGENTS.md`, `agents/README.md`, and
+`agents/QUALITY.md`.
 
-It captures high-signal observations from real work so repeated workflow friction becomes easier to notice. It is not policy, not a prompt pack, and not a second canon. Future agents may use it as evidence, but binding workflow truth still lives in `AGENTS.md`, `CLAUDE.md`, `agents/README.md`, `agents/QUALITY.md`, and product canon.
+Read it only for workflow design, bootstrap, publication safety, artifact
+placement, verification discipline, or recurring workflow friction. Add an
+entry only after real usage exposes a reusable pattern. Promote through a
+reviewed edit to an active canonical file; once resolved, remove the entry and
+rely on git history.
 
-## Read Rule
+## Active patterns
 
-Read this file only when the task touches agent/founder workflow design, bootstrap instructions, publication safety, artifact placement, verification discipline, workflow-card creation, migration into `agents/`, or when the current task repeats known workflow friction.
-
-For context efficiency, read this contract and the Pattern Index first. Open detailed entries only for matching pattern keys or statuses.
-
-## Write Rule
-
-Append or update an entry only after real usage exposes reusable workflow evidence. Good learning evidence includes:
-
-- workflow friction that slowed or confused a task
-- task-alignment misses between the founder request and agent behavior
-- verification misses or unclear proof standards
-- publication, branch, or artifact-placement safety issues
-- repeated uncertainty about which canon surface owns a rule
-- founder-agent coordination patterns worth formalizing
-
-Do not log ordinary task details, product doctrine, one-off preferences, speculative ideas, or anything that belongs directly in a workflow card today.
-
-## Status Vocabulary
-
-- `observed`: seen in real usage, not yet recurring enough to change canon
-- `candidate`: recurring or high-risk enough that promotion should be considered
-- `promoted`: incorporated into a canonical workflow, adapter, or binding doc
-- `rejected`: reviewed and intentionally not promoted
-- `superseded`: replaced by a newer learning or canonical rule
-
-## Promotion Rule
-
-Promote by human-reviewable doc edit, never by automatic canon mutation.
-
-Mark an entry `candidate` and recommend a promotion target when either condition is true:
-
-- the same pattern appears in 3 real tasks
-- the same pattern appears in 2 real tasks and affects publication safety, verification integrity, bootstrap correctness, or canon/source-of-truth boundaries
-
-Promotion targets must be explicit: `agents/README.md`, `agents/QUALITY.md`, `docs/project/state.md`, or another active canonical file.
-
-After promotion, update the ledger entry to `promoted`, link the destination, and keep the evidence count. If the decision is not to promote, mark it `rejected` with the reason.
-
-## Pattern Index
-
-Keep this table short. It exists so future agents can spot recurrence without loading every entry.
-
-| Pattern key | Status | Count | Last seen | Recommended promotion target | Entry |
+| Pattern key | Status | Count | Last seen | Recommended target | Entry |
 | --- | --- | ---: | --- | --- | --- |
-| `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [LYYYY-2026-05-13-subagent-delegation-too-soft](#lyyyy-2026-05-13-subagent-delegation-too-soft) |
-| `explore-compress-merge` | `promoted` | 1 | 2026-05-15 | `agents/founder/WORKFLOWS/05-explore-compress.md` | [L0002-2026-05-15-explore-compress-merge](#l0002-2026-05-15-explore-compress-merge) |
-| `verification-gates-not-self-contained` | `promoted` | 2 | 2026-05-18 | `agents/QUALITY.md` | [L0003-2026-05-17-verification-gates-not-self-contained](#l0003-2026-05-17-verification-gates-not-self-contained) |
+| `subagent-delegation-too-soft` | `observed` | 1 | 2026-05-13 | `none yet` | [L0001](#l0001-subagent-delegation-too-soft) |
 
-
-## Entries
-
-Add new entries inline using the existing table and entry shape.
-
-# LYYYY-2026-05-13-subagent-delegation-too-soft
+## L0001: Subagent delegation too soft
 
 - Status: `observed`
 - Pattern key: `subagent-delegation-too-soft`
@@ -78,55 +35,6 @@ Small, judgment-heavy repo-doc cleanups can stall when delegated to a subagent w
 
 - `2026-05-13`: a `GPT-5.5` high-reasoning worker was asked to perform a lean CRG docs cleanup. It returned `NO_CHANGES` after correctly concluding that the old CRG support docs overstated visualization auto-sync and needed simplification. The cleanup then had to be executed locally with a narrower edit contract.
 
-## Promotion Notes
+## Next decision
 
 Still non-binding because this is one observed failure mode, not yet a repeated pattern. If it recurs, promote a rule into the canonical workflow docs: keep small canon-boundary cleanups local by default, or give subagents an explicit patch contract with exact files and exact claims to change.
-
-# L0002-2026-05-15-explore-compress-merge
-
-- Status: `promoted`
-- Pattern key: `explore-compress-merge`
-- First seen: `2026-05-15`
-- Last seen: `2026-05-15`
-- Evidence count: `1`
-- Affected workflow surface: `founder session design`
-- Recommended promotion target: `agents/founder/WORKFLOWS/05-explore-compress.md` (already written)
-- Related canonical files: `agents/founder/WORKFLOWS/03-prototyping.md`
-
-## Observation
-
-When a grilling or design session hits a question that can only be answered by prototyping, diverging into free exploration and then using a rewind+summarize to compress the result back into the primary thread preserves context quality on both ends: the exploration is unconstrained, and the primary session isn't drowned in churn.
-
-The key mechanism is treating the conversation's rewind+summarize as a compression primitive — not a rollback. The artifact is retained; only the iteration noise is dropped.
-
-## Evidence
-
-- `2026-05-15`: founder ran `/grill-with-docs` on a UI design question, hit an unanswerable fork, diverged into `/prototype`, iterated freely, then used `/rewind` + "summarize" to compress learnings back into the grilling session. Described as "smooth" with explicit intent to repeat.
-
-## Promotion Notes
-
-Promoted immediately into `agents/founder/WORKFLOWS/05-explore-compress.md` on first sighting because the pattern was deliberate, low-risk, and the founder explicitly wanted it captured as a reusable workflow card. Revisit the card if a second sighting shows the workflow needs tighter stop rules.
-
-# L0003-2026-05-17-verification-gates-not-self-contained
-
-- Status: `promoted`
-- Pattern key: `verification-gates-not-self-contained`
-- First seen: `2026-05-17`
-- Last seen: `2026-05-18`
-- Evidence count: `2`
-- Affected workflow surface: `verification discipline`
-- Recommended promotion target: `agents/QUALITY.md`
-- Related canonical files: `scripts/qa-smoke.sh`, `scripts/check-coverage.sh`, `agents/QUALITY.md`
-
-## Observation
-
-A command documented as a local verification gate must carry its own local-only setup defaults. If a passing gate depends on environment set by another wrapper, agents can report false confidence or waste time debugging auth symptoms that are really harness setup drift.
-
-## Evidence
-
-- `2026-05-17`: `./scripts/check-coverage.sh` passed because it set `SOCRATINK_E2E_LOCAL_GUEST=1`, but `bash scripts/qa-smoke.sh local` initially failed four guest-bootstrap tests by redirecting to `/login?auth_error=authentication_failed`. The fix was to make `qa-smoke.sh` enable the local E2E guest path for loopback targets only.
-- `2026-05-18`: promoting `scripts/check-coverage.sh` into GitHub Actions exposed another hidden harness assumption: the browser coverage path needed a loopback app plus a CI-safe `/auth/e2e/guest` bootstrap contract. The CI workflow now provisions Python, Node coverage tooling, Chromium, the local app, and an explicit compare branch before running the gate.
-
-## Promotion Notes
-
-Promoted into `agents/QUALITY.md` after the second sighting affected verification integrity. Keep subagent edit-contract guidance unpromoted until it recurs; that pattern remains a delegation prompt habit, not binding quality doctrine.
