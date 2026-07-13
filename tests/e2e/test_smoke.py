@@ -5302,6 +5302,188 @@ def test_active_concept_delete_confirms_then_returns_to_desk(
     )
 
 
+def test_first_use_desk_has_one_start_socket(
+    clean_page: Page, base_url: str, captured: dict
+) -> None:
+    """A blank Desk presents one accessible reconstruction plate."""
+
+    clean_page.set_viewport_size({"width": 390, "height": 844})
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.evaluate(
+        """(() => {
+            localStorage.removeItem('learnops_concepts');
+            localStorage.removeItem('learnops_active');
+        })()"""
+    )
+    clean_page.reload()
+    _wait_for_app_settled(clean_page)
+    clean_page.evaluate("App.showDashboard()")
+
+    expect(clean_page.locator("#desk-title")).to_have_text("Desk")
+    expect(clean_page.locator(".desk-helper")).to_have_text(
+        "Then write what you remember."
+    )
+    expect(clean_page.locator(".desk-helper")).to_be_visible()
+    expect(clean_page.locator(".desk-index-header")).to_be_hidden()
+    expect(clean_page.locator("#grid-container")).to_have_class(re.compile(r"\bis-first-use\b"))
+    expect(clean_page.locator("#grid-svg")).to_have_attribute("viewBox", "140 119 140 130")
+    expect(clean_page.locator("#tile-4")).to_have_class(re.compile(r"\bis-primary-empty\b"))
+    expect(clean_page.locator("#tile-4")).to_have_attribute("role", "button")
+    expect(clean_page.locator("#tile-4")).to_have_attribute("tabindex", "0")
+    expect(clean_page.locator("#tile-4")).to_have_attribute("aria-label", "Choose a topic")
+    expect(clean_page.locator("#tile-4 .empty-tile-affordance__label")).to_have_text("Choose a topic")
+    expect(clean_page.locator("#tile-4 .empty-tile-affordance__line")).to_have_count(0)
+    expect(clean_page.locator("#bn-ignition .bottom-nav-label")).to_have_text("New")
+    expect(clean_page.locator("body")).to_have_attribute("data-primary-view", "desk")
+    expect(clean_page.locator("body")).to_have_attribute("data-desk-first-use", "true")
+    expect(clean_page.locator("#bn-dashboard")).to_have_attribute("aria-current", "page")
+    expect(clean_page.locator("#nav-dashboard")).to_have_attribute("aria-current", "page")
+    expect(clean_page.locator("#bn-ignition")).not_to_have_attribute("aria-current", re.compile(r".+"))
+    expect(clean_page.locator("#grid-svg .tile-group.is-capacity")).to_have_count(8)
+    expect(clean_page.locator("#grid-svg .tile-group[role='button']")).to_have_count(1)
+    expect(clean_page.locator("#grid-svg .tile-group[tabindex='0']")).to_have_count(1)
+    expect(clean_page.locator("#grid-svg .tile-group.is-capacity[aria-hidden='true']")).to_have_count(8)
+    expect(clean_page.locator("#grid-svg .is-capacity .empty-tile-affordance")).to_have_count(0)
+    expect(clean_page.locator("#tile-4 .empty-tile-affordance--primary")).to_have_count(1)
+    expect(clean_page.locator(".desk-legend")).to_have_count(0)
+    expect(clean_page.locator(".desk-eyebrow")).to_have_count(0)
+
+    mobile_layout = clean_page.evaluate(
+        """(() => {
+            const rect = (selector) => {
+                const b = document.querySelector(selector)?.getBoundingClientRect();
+                return b ? { left: b.left, right: b.right, top: b.top,
+                             bottom: b.bottom, width: b.width, height: b.height } : null;
+            };
+            return {
+                clientWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                scrollHeight: document.documentElement.scrollHeight,
+                helper: rect('.desk-helper'),
+                helperFontSize: parseFloat(getComputedStyle(document.querySelector('.desk-helper')).fontSize),
+                helperWhiteSpace: getComputedStyle(document.querySelector('.desk-helper')).whiteSpace,
+                board: rect('#grid-svg'),
+                boardOverflow: getComputedStyle(document.querySelector('#grid-svg')).overflow,
+                start: rect('#tile-4'),
+                nav: rect('#bottom-nav'),
+                navLabelFontSizes: Array.from(document.querySelectorAll('.bottom-nav-label'))
+                    .map((label) => parseFloat(getComputedStyle(label).fontSize)),
+                activeLabelColor: getComputedStyle(document.querySelector('#bn-dashboard .bottom-nav-label')).color,
+                primaryReadableColor: (() => {
+                    const probe = document.createElement('span');
+                    probe.style.color = 'var(--primary-readable)';
+                    document.body.appendChild(probe);
+                    const color = getComputedStyle(probe).color;
+                    probe.remove();
+                    return color;
+                })(),
+                hiddenCapacityCount: Array.from(document.querySelectorAll('.tile-group.is-capacity'))
+                    .filter((tile) => getComputedStyle(tile).display === 'none').length,
+                drawerToggleDisplay: getComputedStyle(document.querySelector('.drawer-toggle')).display,
+            };
+        })()"""
+    )
+    assert mobile_layout["scrollWidth"] == mobile_layout["clientWidth"] == 390
+    assert mobile_layout["scrollHeight"] <= 844
+    assert mobile_layout["helperFontSize"] >= 14
+    assert mobile_layout["helperWhiteSpace"] != "nowrap"
+    assert mobile_layout["boardOverflow"] == "visible"
+    assert mobile_layout["hiddenCapacityCount"] == 8
+    assert 184 <= mobile_layout["board"]["width"] <= 200
+    assert mobile_layout["board"]["left"] >= 0
+    assert mobile_layout["board"]["right"] <= 390
+    assert mobile_layout["board"]["bottom"] <= mobile_layout["nav"]["top"]
+    assert mobile_layout["start"]["width"] >= 44
+    assert mobile_layout["start"]["height"] >= 44
+    assert all(size >= 12 for size in mobile_layout["navLabelFontSizes"])
+    assert mobile_layout["activeLabelColor"] == mobile_layout["primaryReadableColor"]
+    assert mobile_layout["drawerToggleDisplay"] == "none"
+
+    clean_page.set_viewport_size({"width": 320, "height": 720})
+    narrow_layout = clean_page.evaluate(
+        """(() => {
+            const helper = document.querySelector('.desk-helper').getBoundingClientRect();
+            const board = document.querySelector('#grid-svg').getBoundingClientRect();
+            const nav = document.querySelector('#bottom-nav').getBoundingClientRect();
+            return {
+                clientWidth: document.documentElement.clientWidth,
+                scrollWidth: document.documentElement.scrollWidth,
+                helperLeft: helper.left,
+                helperRight: helper.right,
+                boardLeft: board.left,
+                boardRight: board.right,
+                boardBottom: board.bottom,
+                boardWidth: board.width,
+                navTop: nav.top,
+            };
+        })()"""
+    )
+    assert narrow_layout["scrollWidth"] == narrow_layout["clientWidth"] == 320
+    assert narrow_layout["helperLeft"] >= 0
+    assert narrow_layout["helperRight"] <= 320
+    assert narrow_layout["boardLeft"] >= 0
+    assert narrow_layout["boardRight"] <= 320
+    assert narrow_layout["boardBottom"] <= narrow_layout["navTop"]
+    assert 184 <= narrow_layout["boardWidth"] <= 200
+    clean_page.set_viewport_size({"width": 390, "height": 844})
+
+    clean_page.emulate_media(forced_colors="active")
+    clean_page.locator("#tile-4").focus()
+    tile_focus = clean_page.locator("#tile-4").evaluate(
+        "el => ({ style: getComputedStyle(el).outlineStyle, "
+        "width: parseFloat(getComputedStyle(el).outlineWidth) })"
+    )
+    clean_page.locator("#bn-dashboard").focus()
+    nav_focus = clean_page.locator("#bn-dashboard").evaluate(
+        "el => ({ style: getComputedStyle(el).outlineStyle, "
+        "width: parseFloat(getComputedStyle(el).outlineWidth) })"
+    )
+    assert tile_focus["style"] == "solid" and tile_focus["width"] >= 2
+    assert nav_focus["style"] == "solid" and nav_focus["width"] >= 2
+    clean_page.emulate_media(forced_colors="none")
+
+    # The retained inline handler still fails closed for visual-capacity tiles.
+    clean_page.locator("#tile-0").evaluate(
+        "el => el.dispatchEvent(new MouseEvent('click', { bubbles: true }))"
+    )
+    expect(clean_page.locator(".hero-card.intro-page")).to_be_visible()
+    expect(clean_page.locator("#ignition-view")).to_be_hidden()
+
+    clean_page.locator("#tile-4").click()
+    expect(clean_page.locator("#ignition-view")).to_be_visible()
+    expect(clean_page.locator("body")).to_have_attribute("data-primary-view", "ignition")
+    expect(clean_page.locator(".drawer-toggle")).to_be_visible()
+    clean_page.evaluate("App.showDashboard()")
+    expect(clean_page.locator(".desk-index-header")).to_be_hidden()
+    assert captured["console_errors"] == []
+    assert captured["failed_requests"] == []
+
+
+def test_first_use_desk_fits_desktop_without_inner_scroll(
+    clean_page: Page, base_url: str, captured: dict
+) -> None:
+    """The one-screen empty Desk must not create a permanent desktop scrollbar."""
+
+    clean_page.set_viewport_size({"width": 1280, "height": 720})
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.evaluate(
+        """(() => {
+            localStorage.removeItem('learnops_concepts');
+            localStorage.removeItem('learnops_active');
+        })()"""
+    )
+    clean_page.reload()
+    _wait_for_app_settled(clean_page)
+    clean_page.evaluate("App.showDashboard()")
+
+    card_size = clean_page.locator("#card").evaluate(
+        "el => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight })"
+    )
+    assert card_size["scrollHeight"] <= card_size["clientHeight"]
+    assert captured["console_errors"] == []
+    assert captured["failed_requests"] == []
+
+
 def test_desk_iso_board_state_surface_and_room_labels(
     clean_page: Page, base_url: str, captured: dict
 ) -> None:
@@ -5461,13 +5643,22 @@ def test_desk_iso_board_state_surface_and_room_labels(
         "#tile-1": "Reconstruction evidence is on record.",
         "#tile-2": "A specific gap is ready to repair.",
         "#tile-3": "Spaced reconstruction is on record.",
-        "#tile-6": "Reconstruction evidence is on record.",
-        "#tile-7": "Spaced reconstruction is on record.",
         "#tile-8": "Spaced reconstruction is on record.",
     }
     for selector, hint in expected_hints.items():
         expect(clean_page.locator(selector)).to_have_attribute("data-evidence-hint", hint)
+        tile_id = selector.removeprefix("#")
+        expect(clean_page.locator(selector)).to_have_attribute(
+            "aria-describedby", f"{tile_id}-evidence-hint"
+        )
+        expect(clean_page.locator(f"#{tile_id}-evidence-hint")).to_have_text(hint)
     expect(clean_page.locator("#tile-0")).not_to_have_attribute("data-evidence-hint", re.compile(r".+"))
+    expect(clean_page.locator("#tile-0")).not_to_have_attribute("aria-describedby", re.compile(r".+"))
+    for selector in ("#tile-6", "#tile-7"):
+        expect(clean_page.locator(selector)).not_to_have_attribute("data-evidence-hint", re.compile(r".+"))
+        expect(clean_page.locator(selector)).not_to_have_attribute("aria-describedby", re.compile(r".+"))
+        expect(clean_page.locator(f"{selector} .iso-board-state-title")).to_have_count(0)
+    expect(clean_page.locator("#tile-7")).to_have_attribute("data-board-state", "solidified")
 
     # Button semantics so screen readers announce tiles as actionable.
     expect(clean_page.locator("#tile-1")).to_have_attribute("role", "button")
@@ -5514,28 +5705,40 @@ def test_desk_iso_board_state_surface_and_room_labels(
     expect(empty_tile).to_be_visible()
     expect(empty_tile).to_have_class(re.compile(r"\bempty\b"))
     expect(empty_tile).to_have_attribute(
-        "aria-label", "Start learning"
+        "aria-label", "Start from memory"
     )
 
     empty_tile.focus()
     clean_page.evaluate("App.showDashboard()")
-    expect(clean_page.locator(".room-label")).to_contain_text("Start learning")
+    expect(clean_page.locator(".room-label")).to_contain_text("Start from memory")
+
+    # A final-concept deletion arriving from another tab must route through
+    # the canonical Desk renderer, not leave stale populated markup behind.
+    expect(clean_page.locator("#tile-0 .tile-top")).to_have_count(1)
+    clean_page.evaluate(
+        """(() => {
+            localStorage.setItem('learnops_concepts', '[]');
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: 'learnops_concepts',
+                newValue: '[]',
+            }));
+        })()"""
+    )
+    expect(clean_page.locator("#grid-container")).to_have_class(re.compile(r"\bis-first-use\b"))
+    expect(clean_page.locator("#grid-svg .tile-group.is-capacity[aria-hidden='true']")).to_have_count(8)
+    expect(clean_page.locator("#grid-svg .tile-group[role='button']")).to_have_count(1)
+    expect(clean_page.locator("#tile-4")).to_have_attribute("aria-label", "Choose a topic")
+    expect(clean_page.locator("#tile-0 .tile-top")).to_have_count(0)
+    expect(clean_page.locator("#tile-0 .tile-top-empty")).to_have_count(1)
+    expect(clean_page.locator("#concept-list .concept-item")).to_have_count(0)
     assert captured["console_errors"] == []
     assert captured["failed_requests"] == []
 
 
-def test_desk_layout_identical_when_empty_or_populated(
+def test_desk_board_expands_after_first_saved_session(
     clean_page: Page, base_url: str, captured: dict
 ) -> None:
-    """Empty desk (0 concepts) renders the same iso board geometry as populated.
-
-    Regression: the layout.css empty-state rule used to hide #grid-container
-    entirely, leaving an empty desk blank. The iso-board state-surface
-    experiment overrides that so the 9-tile board is visible at all sizes
-    of the library — its empty tiles invite creation via the + affordance.
-    This guards that the hero-card, grid-container, svg, and per-tile
-    positions are pixel-identical regardless of how many concepts exist.
-    """
+    """First use shows one plate; one saved session restores the full board."""
 
     # Tile bboxes intentionally NOT compared: populated tiles render a
     # crystal pin that extends above the iso platform, so their full bbox
@@ -5553,17 +5756,38 @@ def test_desk_layout_identical_when_empty_or_populated(
         const gridContainer = document.getElementById('grid-container');
         const grid = document.getElementById('grid-svg');
         const tiles = Array.from(document.querySelectorAll('#grid-svg .tile-group'));
+        const gridBox = grid?.getBoundingClientRect();
         return {
             heroCard: r(heroCard),
             gridContainer: r(gridContainer),
             gridContainerDisplay: gridContainer
                 ? window.getComputedStyle(gridContainer).display : null,
             svg: r(grid),
+            viewBox: grid?.getAttribute('viewBox'),
             tileCount: tiles.length,
+            visibleTileCount: tiles.filter(
+                (tile) => window.getComputedStyle(tile).display !== 'none'
+            ).length,
+            helperText: document.querySelector('.desk-helper')?.textContent,
+            helperDisplay: getComputedStyle(document.querySelector('.desk-helper')).display,
+            indexHeaderDisplay: getComputedStyle(document.querySelector('.desk-index-header')).display,
+            indexTitle: document.querySelector('.desk-index-title')?.textContent,
+            conceptCount: document.querySelector('#desk-concept-count')?.textContent,
+            conceptCountLabel: document.querySelector('#desk-concept-count')?.getAttribute('aria-label'),
+            panel: r(document.querySelector('.intro-content')),
+            primaryView: document.body.dataset.primaryView,
+            deskFirstUse: document.body.dataset.deskFirstUse,
+            drawerToggleDisplay: getComputedStyle(document.querySelector('.drawer-toggle')).display,
             tilePlatformPositions: tiles.map(t => {
                 const top = t.querySelector('.tile-top, .tile-top-empty');
-                const b = top ? r(top) : null;
-                return { id: t.id, platform: b };
+                const b = top?.getBoundingClientRect();
+                const platform = b && gridBox ? {
+                    x: Math.round(b.left - gridBox.left),
+                    y: Math.round(b.top - gridBox.top),
+                    w: Math.round(b.width),
+                    h: Math.round(b.height),
+                } : null;
+                return { id: t.id, platform };
             }),
         };
     })()"""
@@ -5594,30 +5818,63 @@ def test_desk_layout_identical_when_empty_or_populated(
             }}
         }})()"""
 
+    clean_page.set_viewport_size({"width": 390, "height": 844})
     _enter_app_shell_as_guest(clean_page, base_url)
     samples = {}
     for count in [0, 1, 5, 9]:
         clean_page.evaluate(seed_n_concepts(count))
         clean_page.reload()
         _wait_for_app_settled(clean_page)
-        clean_page.locator("#nav-dashboard").click()
+        clean_page.evaluate("App.showDashboard()")
         samples[count] = clean_page.evaluate(sample_script)
 
-    # Reference is the populated state (9 concepts) — that's the layout
-    # contract everyone expects. Empty (0) and partial (1, 5) must match.
+    # Any saved session restores the existing full-board geometry. Only the
+    # completely empty state collapses to the single centre plate.
     ref = samples[9]
     assert ref["tileCount"] == 9, "9-concept desk must render 9 tiles"
+    assert ref["visibleTileCount"] == 9
+    assert ref["viewBox"] == "0 0 420 365"
     assert ref["gridContainerDisplay"] == "block"
     assert ref["heroCard"] is not None
     assert ref["gridContainer"]["w"] > 0 and ref["gridContainer"]["h"] > 0
+    assert ref["helperDisplay"] == "none"
+    assert ref["indexHeaderDisplay"] == "flex"
+    assert ref["indexTitle"] == "Concepts"
+    assert ref["conceptCount"] == "9"
+    assert ref["conceptCountLabel"] == "9 concepts"
 
-    for count, sample in samples.items():
-        if count == 9:
-            continue
+    first_use = samples[0]
+    assert first_use["tileCount"] == 9
+    assert first_use["visibleTileCount"] == 1
+    assert first_use["viewBox"] == "140 119 140 130"
+    assert 184 <= first_use["gridContainer"]["w"] <= 200
+    assert first_use["gridContainerDisplay"] == "block"
+    assert first_use["helperText"] == "Then write what you remember."
+    assert first_use["helperDisplay"] != "none"
+    assert first_use["indexHeaderDisplay"] == "none"
+    assert first_use["primaryView"] == "desk"
+    assert first_use["deskFirstUse"] == "true"
+    assert first_use["drawerToggleDisplay"] == "none"
+
+    for count in (1, 5):
+        sample = samples[count]
         assert sample["tileCount"] == 9, (
             f"desk at {count} concepts must still render all 9 tile slots, "
             f"got {sample['tileCount']}"
         )
+        assert sample["visibleTileCount"] == 9
+        assert sample["viewBox"] == "0 0 420 365"
+        assert sample["helperText"] == "Choose a session to reconstruct from memory."
+        assert sample["helperDisplay"] == "none"
+        assert sample["indexHeaderDisplay"] == "flex"
+        assert sample["indexTitle"] == "Concepts"
+        assert sample["conceptCount"] == str(count)
+        assert sample["conceptCountLabel"] == f"{count} {'concept' if count == 1 else 'concepts'}"
+        assert sample["panel"]["x"] >= 0
+        assert sample["panel"]["x"] + sample["panel"]["w"] <= 390
+        assert sample["primaryView"] == "desk"
+        assert sample["deskFirstUse"] == "false"
+        assert sample["drawerToggleDisplay"] != "none"
         assert sample["gridContainerDisplay"] == "block", (
             f"#grid-container hidden at {count} concepts (was display="
             f"{sample['gridContainerDisplay']!r}); empty desk regression"
@@ -5626,14 +5883,15 @@ def test_desk_layout_identical_when_empty_or_populated(
             f"hero-card geometry differs at {count} concepts: "
             f"got {sample['heroCard']}, expected {ref['heroCard']}"
         )
-        assert sample["gridContainer"] == ref["gridContainer"], (
-            f"grid-container geometry differs at {count}: "
-            f"got {sample['gridContainer']}, expected {ref['gridContainer']}"
-        )
-        assert sample["svg"] == ref["svg"], (
-            f"grid-svg geometry differs at {count}: "
-            f"got {sample['svg']}, expected {ref['svg']}"
-        )
+        for dimension in ("x", "w", "h"):
+            assert sample["gridContainer"][dimension] == ref["gridContainer"][dimension], (
+                f"grid-container {dimension} differs at {count}: "
+                f"got {sample['gridContainer']}, expected {ref['gridContainer']}"
+            )
+            assert sample["svg"][dimension] == ref["svg"][dimension], (
+                f"grid-svg {dimension} differs at {count}: "
+                f"got {sample['svg']}, expected {ref['svg']}"
+            )
         for ref_tile, sample_tile in zip(
             ref["tilePlatformPositions"],
             sample["tilePlatformPositions"],
@@ -5644,6 +5902,39 @@ def test_desk_layout_identical_when_empty_or_populated(
                 f"tile {ref_tile['id']} iso platform drifted at {count} concepts: "
                 f"got {sample_tile['platform']}, expected {ref_tile['platform']}"
             )
+
+    clean_page.set_viewport_size({"width": 320, "height": 720})
+    clean_page.evaluate(seed_n_concepts(1))
+    clean_page.reload()
+    _wait_for_app_settled(clean_page)
+    clean_page.evaluate("App.showDashboard()")
+    narrow = clean_page.evaluate(sample_script)
+    assert narrow["panel"]["x"] >= 0
+    assert narrow["panel"]["x"] + narrow["panel"]["w"] <= 320
+    assert 254 <= narrow["svg"]["w"] <= 262
+    assert clean_page.evaluate(
+        "document.documentElement.scrollWidth <= window.innerWidth"
+    )
+
+    clean_page.set_viewport_size({"width": 1280, "height": 720})
+    clean_page.wait_for_function("window.innerWidth === 1280")
+    desktop = clean_page.evaluate(sample_script)
+    assert desktop["panel"]["x"] >= 0
+    assert desktop["panel"]["x"] + desktop["panel"]["w"] <= 1280
+    assert 360 <= desktop["svg"]["w"] <= 420
+    assert desktop["svg"]["x"] >= 0
+    assert desktop["svg"]["x"] + desktop["svg"]["w"] <= 1280
+    assert clean_page.evaluate(
+        "document.documentElement.scrollWidth <= window.innerWidth"
+    )
+
+    clean_page.set_viewport_size({"width": 390, "height": 844})
+    clean_page.wait_for_function("window.innerWidth === 390")
+    clean_page.evaluate(
+        "() => new Promise(resolve => requestAnimationFrame(() => "
+        "requestAnimationFrame(resolve)))"
+    )
+    expect(clean_page.locator(".desk-index-header")).to_be_visible()
 
     assert captured["console_errors"] == []
     assert captured["failed_requests"] == []

@@ -896,78 +896,116 @@ html[data-theme="dark"] body.antigravity-theme .settings-toggle[aria-checked="tr
 }
 
 /* ══════════════════════════════════════════════════════════════
-   4b. DESK FRAME — date eyebrow + italic title + state legend
-   Header above the iso-board, legend below. Folded in from the
-   _lab/desk-variants prototype (persona pick: variant D = C-header
-   + A-legend). See docs/superpowers/specs or git log for the
-   capture.
+   4b. DESK FRAME — compact reconstruction heading
    ══════════════════════════════════════════════════════════════ */
 
 body.antigravity-theme .desk-frame {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-  margin: 0 auto clamp(12px, 2.5vh, 24px);
-  max-width: 460px;
-}
-
-body.antigravity-theme .desk-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgba(144, 103, 198, 0.10);
-  border: 1px solid rgba(144, 103, 198, 0.22);
-  color: var(--ag-violet);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-
-html[data-theme="dark"] body.antigravity-theme .desk-eyebrow {
-  background: rgba(158, 139, 255, 0.12);
-  border-color: rgba(158, 139, 255, 0.24);
-}
-
-body.antigravity-theme .desk-eyebrow-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentcolor;
-}
-
-body.antigravity-theme .desk-eyebrow-sep {
-  opacity: 0.55;
-}
-
-body.antigravity-theme .desk-eyebrow-date:empty::before {
-  content: "—";
+  align-items: flex-start;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+  gap: 10px;
 }
 
 body.antigravity-theme .desk-title {
-  margin: 4px 0 0;
-  font-family: Outfit, Manrope, Inter, sans-serif;
-  font-size: clamp(1.4rem, 1.4vw + 0.8rem, 1.75rem);
-  font-weight: 400;
-  font-style: italic;
-  letter-spacing: -0.018em;
-  line-height: 1.18;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 2vw + 1rem, 2.55rem);
+  font-weight: 700;
+  font-style: normal;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
   color: var(--text-main);
-  text-wrap: balance;
 }
 
 body.antigravity-theme .desk-helper {
   margin: 0;
-  max-width: 38ch;
-  font-size: 14.5px;
-  font-weight: 300;
-  font-style: italic;
-  line-height: 1.55;
+  max-width: 50ch;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.5;
+  letter-spacing: -0.012em;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* Occupied Desk: borrow Library's compact index grammar without turning
+   the isometric board into a card illustration. The frame stays quiet;
+   the evidence-derived crystal remains the visual foreground. */
+body.antigravity-theme .desk-index-header {
+  display: none;
+}
+
+body.antigravity-theme[data-desk-first-use="false"] .hero-card {
+  padding-top: calc(var(--chrome-h-top) + var(--space-5));
+}
+
+body.antigravity-theme[data-desk-first-use="false"] .desk-title {
+  font-size: 1.625rem;
+  letter-spacing: var(--tracking-tight);
+}
+
+body.antigravity-theme[data-desk-first-use="false"] .desk-helper {
+  display: none;
+}
+
+body.antigravity-theme[data-desk-first-use="false"] .hero-card .intro-content {
+  margin-top: var(--space-5);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(var(--paper-0-rgb), 0.34);
+  overflow: visible;
+}
+
+body.antigravity-theme[data-desk-first-use="false"] .desk-index-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+}
+
+body.antigravity-theme .desk-index-title,
+body.antigravity-theme .desk-index-count {
+  margin: 0;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: var(--leading-snug);
+}
+
+body.antigravity-theme .desk-index-count {
+  font-variant-numeric: tabular-nums;
+}
+
+body.antigravity-theme[data-desk-first-use="false"] #grid-container {
+  width: min(420px, calc(100% - 24px));
+  margin: var(--space-8) auto var(--space-6);
+}
+
+body.antigravity-theme[data-desk-first-use="false"] .desk-ready-filter-host {
+  padding: 0 var(--space-4);
+}
+
+@media (max-width: 899px) {
+  body.antigravity-theme[data-desk-first-use="false"] .hero-card {
+    padding-right: var(--space-5);
+    padding-left: var(--space-5);
+  }
+
+  body.antigravity-theme[data-desk-first-use="false"] .desk-ready-filter {
+    min-height: 44px;
+  }
 }
 
 /* ── Ready filter (Linear-style view chip) ─────────────────── */
@@ -1206,48 +1244,6 @@ body.antigravity-theme .desk-due-selection__action:focus-visible {
   outline-offset: 3px;
 }
 
-body.antigravity-theme .desk-legend {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px;
-  margin: clamp(12px, 2.5vh, 24px) auto 0;
-  font-size: 12px;
-  color: var(--text-muted);
-  letter-spacing: 0.01em;
-}
-
-body.antigravity-theme .desk-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-body.antigravity-theme .desk-legend-facet {
-  width: 10px;
-  height: 10px;
-  border: 1px solid currentcolor;
-  transform: rotate(45deg);
-  box-sizing: border-box;
-}
-
-body.antigravity-theme .desk-legend-item[data-state="locked"]     { color: rgba(141, 134, 201, 0.72); }
-body.antigravity-theme .desk-legend-item[data-state="primed"]     { color: var(--ag-violet); }
-body.antigravity-theme .desk-legend-item[data-state="drilled"]    { color: #B6741E; }
-body.antigravity-theme .desk-legend-item[data-state="solidified"] { color: var(--ag-violet); }
-body.antigravity-theme .desk-legend-item[data-state="solidified"] .desk-legend-facet {
-  background: currentcolor;
-}
-
-html[data-theme="dark"] body.antigravity-theme .desk-legend-item[data-state="primed"],
-html[data-theme="dark"] body.antigravity-theme .desk-legend-item[data-state="solidified"] {
-  color: var(--ag-violet);
-}
-html[data-theme="dark"] body.antigravity-theme .desk-legend-item[data-state="drilled"] {
-  color: #F1B864;
-}
-
 /* ══════════════════════════════════════════════════════════════
    5. SIDEBAR & BOTTOM NAV — quiet refinements
    ══════════════════════════════════════════════════════════════ */
@@ -1316,15 +1312,49 @@ html[data-theme="dark"] body.antigravity-theme .sidebar-nav-item.active:focus-vi
 }
 
 body.antigravity-theme .bottom-nav-item.active {
-  color: var(--ag-violet);
+  color: var(--primary-readable);
+}
+
+body.antigravity-theme .bottom-nav-item.active::before {
+  display: none;
 }
 
 body.antigravity-theme .bottom-nav-item.active .bottom-nav-icon {
-  filter: drop-shadow(0 0 6px rgba(144, 103, 198, 0.40));
+  filter: none;
+  stroke-width: 2.1;
 }
 
 html[data-theme="dark"] body.antigravity-theme .bottom-nav-item.active .bottom-nav-icon {
-  filter: drop-shadow(0 0 6px rgba(158, 139, 255, 0.50));
+  filter: none;
+}
+
+body.antigravity-theme .bottom-nav-item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ag-violet) 62%, transparent);
+  outline-offset: 2px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+body.antigravity-theme .bottom-nav-label {
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+body.antigravity-theme .bottom-nav-item.active .bottom-nav-label {
+  color: var(--primary-readable);
+  font-weight: 700;
+}
+
+@media (forced-colors: active) {
+  body.antigravity-theme .bottom-nav-item:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  body.antigravity-theme .bottom-nav-item.active,
+  body.antigravity-theme .bottom-nav-item.active .bottom-nav-label {
+    color: LinkText;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════
