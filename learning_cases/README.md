@@ -91,19 +91,5 @@ Every promoted case must answer:
 - What checks make the claim falsifiable?
 - Why is this a regression, golden, or research case?
 
-## Refresh broadcast (after session-record changes)
-
-When `product_loop` derive logic changes in `lib/seda/session-record.mjs`, update
-promoted traces without re-capturing a scripted loop session:
-
-```bash
-node scripts/refresh-trace-broadcast.mjs
-./socratink-harness replay
-```
-
-This re-derives `product_loop` from saved `events[]` only. **Full re-capture**
-(a new scripted legacy lab run replacing `session.json`) is required only when
-`checks.event_order` should change — not for broadcast fixes.
-
 `expected_invariants` and `session_log` are compatibility aliases for current
 tools. New cases should be read as `checks` and `trace`.

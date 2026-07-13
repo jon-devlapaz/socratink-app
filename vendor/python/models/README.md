@@ -64,11 +64,6 @@ Import from `models` directly.
   fields that copy a substantial phrase from the hidden mechanism.
 - **Pydantic v2 semantics.** All models are Pydantic v2 (`BaseModel`,
   `ConfigDict`). v1 patterns (`@validator`, `Config` class) do not work.
-- **There is a current defensive `if text is None` check in
-  `sketch_validation.py:115`** against a `str`-typed parameter. This
-  violates AGENTS.md anti-defensiveness and is captured as a follow-up.
-  Removing it is what enables flipping `warn_unreachable = True` in
-  root `pyproject.toml` (`[tool.mypy]`).
 
 ## Related
 
