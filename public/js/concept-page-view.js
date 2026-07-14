@@ -476,7 +476,7 @@ function renderEvidenceArtifactHtml(derived) {
     : '';
 
   return `
-    <section class="concept-page-b2__evidence${isStudyGate ? ' concept-page-b2__evidence--study-gate' : ''}${isRepairing ? ' concept-page-b2__evidence--compact' : ''}" aria-label="Learner draft evidence">
+    <section class="concept-page-b2__evidence${isStudyGate ? ' concept-page-b2__evidence--study-gate' : ''}${isRepairing ? ' concept-page-b2__evidence--compact' : ''}" aria-label="Learner draft evidence" tabindex="-1">
       <span class="eyebrow concept-page-b2__evidence-eyebrow">${isStudyGate ? 'Your memory draft' : 'Your draft'}</span>
       <blockquote>${escHtml(attempt.user_text)}</blockquote>
       ${bridgeHtml}
@@ -492,6 +492,7 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId, options = {}
     : [{ mechanism: 'missing link', correction: 'Write the part that was missing from your first attempt.' }];
   const entryId = activeEntryId || activeEntry.id || 'core-thesis';
   const repairs = Array.isArray(derived.record?.repairs) ? derived.record.repairs : [];
+  const latestRepairText = String(repairs.at(-1)?.text || '').trim();
   const repairCheckedThisSession = repairs.length && options?.repairCheckedThisSession === true;
   const nextAttemptButton = repairs.length && !repairCheckedThisSession
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}" data-active-entry-action="drill-gap">Pressure-check this link</button>`
@@ -507,26 +508,35 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId, options = {}
   const inputFormHtml = repairs.length
     ? ''
     : `
-      <textarea
-        class="concept-page-b2__repair-input"
-        data-repair-entry-id="${escHtml(entryId)}"
-        aria-label="Write the missing link"
-        rows="4"
-        maxlength="1200"
-        placeholder="Write the corrected link here."
-      ></textarea>
-      <p class="concept-page-b2__repair-error" data-repair-error hidden>Write the missing link before saving.</p>
+      <label class="concept-page-b2__field">
+        <span class="concept-page-b2__field-label">Your repaired link</span>
+        <textarea
+          class="concept-page-b2__repair-input"
+          data-repair-entry-id="${escHtml(entryId)}"
+          rows="4"
+          maxlength="1200"
+          placeholder="Write the corrected link here."
+        ></textarea>
+      </label>
+      <p class="concept-page-b2__repair-status" data-repair-status role="status" aria-live="polite"></p>
+      <p class="concept-page-b2__repair-error" data-repair-error role="alert" hidden>Write the missing link before saving.</p>
       <button class="concept-page-b2__repair-save" type="button" data-repair-entry-id="${escHtml(entryId)}">Save repair</button>
     `;
 
   return `
-    <section class="concept-page-b2__repair${repairs.length ? ' concept-page-b2__repair--saved' : ''}" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link">
+    <section class="concept-page-b2__repair${repairs.length ? ' concept-page-b2__repair--saved' : ''}" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link" tabindex="-1">
       <span class="eyebrow concept-page-b2__repair-eyebrow">${repairCheckedThisSession ? 'Repair checked' : repairs.length ? 'Repair saved' : 'Repair'}</span>
       <h3>${repairCheckedThisSession ? 'Repair checked for now.' : repairs.length ? 'Pressure-check the repaired link.' : 'Write the missing link.'}</h3>
       <div class="concept-page-b2__repair-target">
         <span>Missing link</span>
         <p>${escHtml(repairTarget)}</p>
       </div>
+      ${latestRepairText ? `
+        <div class="concept-page-b2__saved-repair">
+          <span>Your saved repair</span>
+          <blockquote>${escHtml(latestRepairText)}</blockquote>
+        </div>
+      ` : ''}
       ${helperHtml}
       ${inputFormHtml}
       ${nextAttemptButton}
@@ -570,15 +580,18 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
       <span class="eyebrow concept-page-b2__attempt-eyebrow visually-hidden">cold attempt</span>
       <h3>${escHtml(heading)}</h3>
       ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
-      <textarea
-        class="concept-page-b2__attempt-input"
-        data-attempt-entry-id="${escHtml(activeEntryId)}"
-        aria-label="Write what you can reconstruct"
-        rows="6"
-        maxlength="2400"
-        placeholder="${escHtml(placeholder)}"
-      ></textarea>
-      <p class="concept-page-b2__attempt-error" data-attempt-error hidden>${escHtml(errorText)}</p>
+      <label class="concept-page-b2__field concept-page-b2__attempt-field">
+        <span class="concept-page-b2__field-label">Your reconstruction</span>
+        <textarea
+          class="concept-page-b2__attempt-input"
+          data-attempt-entry-id="${escHtml(activeEntryId)}"
+          rows="6"
+          maxlength="2400"
+          placeholder="${escHtml(placeholder)}"
+        ></textarea>
+      </label>
+      <p class="concept-page-b2__attempt-status" data-attempt-status role="status" aria-live="polite"></p>
+      <p class="concept-page-b2__attempt-error" data-attempt-error role="alert" hidden>${escHtml(errorText)}</p>
       <div class="concept-page-b2__attempt-actions">
         <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}" disabled aria-disabled="true">${escHtml(buttonLabel)}</button>
         ${cueHtml}
@@ -823,7 +836,7 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     : 'Study note stays hidden while you repair.';
   const studyNoteHtml = derived.record?.study_revealed_at && !isAttempting
     ? `
-      <section class="concept-page-b2__study-note${collapseStudyNote ? ' is-collapsed' : ''}" aria-label="Study note">
+      <section class="concept-page-b2__study-note${collapseStudyNote ? ' is-collapsed' : ''}" aria-label="Study note" tabindex="-1">
         <div class="concept-page-b2__study-note-header">
           <span class="eyebrow concept-page-b2__study-note-eyebrow">Study note</span>
           <button class="concept-page-b2__study-note-toggle" type="button" data-study-note-toggle aria-expanded="${collapseStudyNote ? 'false' : 'true'}">${collapseStudyNote ? 'Show study note' : 'Hide study note'}</button>

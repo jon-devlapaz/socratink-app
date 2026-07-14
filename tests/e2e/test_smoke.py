@@ -1038,6 +1038,13 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Needs repair"
     )
+    expect(page.locator(".concept-page-b2__repair--saved")).to_be_focused()
+    expect(page.locator(".concept-page-b2__repair--saved")).to_contain_text(
+        "Your saved repair"
+    )
+    expect(page.locator(".concept-page-b2__repair--saved")).to_contain_text(
+        "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
+    )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Pressure-check this link"
     )
@@ -3725,6 +3732,9 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
         "Cold Attempt QA source"
     )
     expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
+    expect(page.locator(".concept-page-b2__attempt-field")).to_contain_text(
+        "Your reconstruction"
+    )
     expect(page.locator(".concept-page-b2__study-note")).to_have_count(0)
     save_button = page.locator(".concept-page-b2__attempt-save")
     expect(save_button).to_be_disabled()
@@ -3742,6 +3752,7 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Draft saved"
     )
+    expect(page.locator(".concept-page-b2__evidence")).to_be_focused()
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reveal notes and compare"
     )

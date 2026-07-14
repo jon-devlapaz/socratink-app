@@ -1684,6 +1684,9 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
         assert.ok(coldHtml.includes('Save draft'));
+        assert.ok(coldHtml.includes('Your reconstruction'));
+        assert.ok(coldHtml.includes('data-attempt-status'));
+        assert.ok(coldHtml.includes('role="status"'));
         assert.ok(!coldHtml.includes('Shaped by your sketch'));
         assert.ok(!coldHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(!coldHtml.includes('AI-generated answer structure must stay hidden.'));
@@ -2606,6 +2609,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Write the missing link.'));
         assert.ok(repairHtml.includes('Use your words. One or two sentences is enough.'));
         assert.ok(repairHtml.includes('Save repair'));
+        assert.ok(repairHtml.includes('Your repaired link'));
+        assert.ok(repairHtml.includes('data-repair-status'));
         assert.ok(repairHtml.includes('Study note stays hidden while you repair.'));
         assert.ok(repairHtml.includes('Show study note'));
         const fallbackRepairHtml = renderActiveEntryHtml(
@@ -2670,6 +2675,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairedHtml.includes('Pressure-check the repaired link.'));
         assert.ok(repairedHtml.includes('concept-page-b2__repair'));
         assert.ok(repairedHtml.includes('Pressure-check this link'));
+        assert.ok(repairedHtml.includes('Your saved repair'));
+        assert.ok(repairedHtml.includes('Voltage-gated channels open at threshold.'));
         assert.ok(repairedHtml.includes('data-active-entry-action="drill-gap"'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-input'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-save'));

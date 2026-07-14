@@ -31,7 +31,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=33';
+} from './concept-page-view.js?v=34';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -2098,6 +2098,12 @@ const App = (() => {
     syncInlineAttemptSaveButton(input.closest('.concept-page-b2__attempt'));
   }
 
+  function focusRenderedMoment(selector) {
+    requestAnimationFrame(() => {
+      document.querySelector(selector)?.focus?.();
+    });
+  }
+
   /**
    * Wire event handlers on the work column after a swap or initial mount.
    * Handles the CTA (start drill) and the threshold re-edit affordance.
@@ -2453,6 +2459,7 @@ const App = (() => {
         };
         await trainingStore.saveTraining(training);
         renderActiveEntryWorkColumn(entryId, concept, graphData, training);
+        focusRenderedMoment('.concept-page-b2__study-note');
         return;
       }
       const training = await trainingStore.setStudyRevealed(
@@ -2474,6 +2481,7 @@ const App = (() => {
         training,
         renderOptions,
       );
+      focusRenderedMoment('.concept-page-b2__study-note');
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
       console.warn('Study reveal failed.', err);
@@ -2484,6 +2492,7 @@ const App = (() => {
     const panel = button?.closest?.('.concept-page-b2__attempt');
     const entryId = button?.dataset?.attemptEntryId || panel?.dataset?.attemptEntryId || null;
     const input = panel?.querySelector?.('.concept-page-b2__attempt-input');
+    const statusEl = panel?.querySelector?.('[data-attempt-status]');
     const errorEl = panel?.querySelector?.('[data-attempt-error]');
     const userText = input?.value || '';
     if (!entryId || !concept?.id) return;
@@ -2497,6 +2506,8 @@ const App = (() => {
     if (errorEl) errorEl.hidden = true;
     button.disabled = true;
     button.setAttribute('aria-disabled', 'true');
+    panel?.setAttribute('aria-busy', 'true');
+    if (statusEl) statusEl.textContent = 'Checking and saving your draft…';
 
     const graphData = parseConceptGraphData(concept) || data || {};
     if (hasPendingSourceLessSedaRoute(concept, graphData)) {
@@ -2584,6 +2595,7 @@ const App = (() => {
         : graphData;
       const mountEl = document.getElementById('map-content');
       if (mountEl) renderConceptPageB2(mountEl, renderGraphData, renderConcept, training, { activeEntryId: entryId });
+      focusRenderedMoment('.concept-page-b2__evidence');
     } catch (err) {
       console.warn('Memory attempt failed.', err);
       button.disabled = false;
@@ -2592,6 +2604,8 @@ const App = (() => {
         errorEl.textContent = 'The system could not record this yet. Try again.';
         errorEl.hidden = false;
       }
+      panel?.removeAttribute('aria-busy');
+      if (statusEl) statusEl.textContent = '';
     }
   }
 
@@ -2599,6 +2613,7 @@ const App = (() => {
     const panel = button?.closest?.('.concept-page-b2__repair');
     const entryId = button?.dataset?.repairEntryId || panel?.dataset?.repairEntryId || null;
     const input = panel?.querySelector?.('.concept-page-b2__repair-input');
+    const statusEl = panel?.querySelector?.('[data-repair-status]');
     const errorEl = panel?.querySelector?.('[data-repair-error]');
     const text = (input?.value || '').trim().slice(0, 1200);
     if (!entryId || !concept?.id) return;
@@ -2608,6 +2623,9 @@ const App = (() => {
       return;
     }
     if (errorEl) errorEl.hidden = true;
+    button.disabled = true;
+    panel?.setAttribute('aria-busy', 'true');
+    if (statusEl) statusEl.textContent = 'Saving your repair…';
 
     try {
       const training = await trainingStore.appendRepair(concept.id, entryId, {
@@ -2619,6 +2637,7 @@ const App = (() => {
       if (mountEl) {
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
+        focusRenderedMoment('.concept-page-b2__repair--saved');
       }
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
@@ -2627,6 +2646,9 @@ const App = (() => {
         errorEl.textContent = 'Repair could not be saved. Try again.';
         errorEl.hidden = false;
       }
+      button.disabled = false;
+      panel?.removeAttribute('aria-busy');
+      if (statusEl) statusEl.textContent = '';
     }
   }
 
