@@ -4,6 +4,12 @@ This document is the binding design and implementation contract for socratink. I
 
 > Read alongside [evidence-weighted-map.md](evidence-weighted-map.md). That doctrine governs what the graph may and must not claim. Where wording here could be read as "the graph shows what the learner knows," the evidence-weighted-map doctrine controls: the graph shows what Socratink has evidence for.
 
+Accepted operational learner-continuity contracts are split into:
+
+- [source-less route continuity and evidence preservation](source-less-route-continuity-spec.md)
+- [learner-state sync honesty](learner-state-sync-honesty-spec.md)
+- [learner wait and recovery](learner-wait-and-recovery-spec.md)
+
 ---
 
 ## 1. Product Thesis

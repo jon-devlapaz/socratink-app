@@ -3,6 +3,10 @@
 This contract keeps SEDA loop logic, graph truth, and learner-visible UI states
 from collapsing into one enum.
 
+The accepted source-less binding, retry and learner-text preservation contract
+is in
+[`source-less-route-continuity-spec.md`](../product/source-less-route-continuity-spec.md).
+
 ## Rule
 
 SEDA chooses the next pedagogical move. The training store derives graph truth.
@@ -103,8 +107,11 @@ Door sketch:
 
 An unbound source-less map is eligible for automatic binding only when the
 current Door flow created it. Legacy unbound maps require an explicit recovery
-action, and any existing attempts or repairs force a return to the map. Once a
-route is bound, only that bound node may use its session.
+action, and any existing attempts or repairs force a return to the map. The
+concept-level route and node-level SEDA case are separate bindings. Once a case
+is bound, only that node may use its session. Entering another node keeps the
+same route and creates or resumes a case bound to the new node; it must not
+reuse the first node's case or regenerate the route.
 
 Each prompt response carries `sessionVersion`. Every submitted turn echoes that
 nonnegative version as `expectedVersion` and carries a UUID request ID. A

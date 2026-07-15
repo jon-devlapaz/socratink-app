@@ -40,6 +40,18 @@ On all other topics, the doc listed below for that topic is authoritative.
 | Drill data model, training evidence, derivation math, rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
 | Architectural decisions | [`docs/adr/README.md`](../adr/README.md) |
 
+## Accepted implementation specs
+
+These production-backed contracts passed the initial Taste Gate on 14 July
+2026. Their accepted status makes them implementation authority for their
+bounded repair packets.
+
+| Topic | Doc |
+| --- | --- |
+| Source-less route continuity and evidence preservation | [`docs/product/source-less-route-continuity-spec.md`](../product/source-less-route-continuity-spec.md) |
+| Signed-in local-save and account-sync honesty | [`docs/product/learner-state-sync-honesty-spec.md`](../product/learner-state-sync-honesty-spec.md) |
+| Model-backed wait states and recovery | [`docs/product/learner-wait-and-recovery-spec.md`](../product/learner-wait-and-recovery-spec.md) |
+
 ## Maintenance
 
 - Open `docs/` as an Obsidian vault only as a navigation layer. Git and this
