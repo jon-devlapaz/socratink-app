@@ -35,6 +35,9 @@ if [ ! -x ".venv/bin/python" ]; then
   exit 1
 fi
 
+echo "[doctor] agent-doc integrity..."
+.venv/bin/python scripts/check_agent_docs.py
+
 echo "[doctor] context-hub wrapper..."
 if [ ! -x "scripts/chub-docs.sh" ]; then
   echo "[doctor] FAIL: scripts/chub-docs.sh missing or not executable" >&2
