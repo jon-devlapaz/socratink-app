@@ -4,6 +4,10 @@
 > [`post-drill-ux-spec.md`](post-drill-ux-spec.md). This spec governs the learner's
 > first ~90 seconds: door, launch, extract wait, first drill check, and the
 > surfaces that must reflect effort before reconstruction is complete.
+> Accepted route-continuity, save-acknowledgement and recovery contracts are in
+> [`source-less-route-continuity-spec.md`](source-less-route-continuity-spec.md)
+> and
+> [`learner-wait-and-recovery-spec.md`](learner-wait-and-recovery-spec.md).
 >
 > **Does not override** generation-before-recognition. Study still unlocks only
 > after substantive learner generation. This spec defines *how* to reduce
