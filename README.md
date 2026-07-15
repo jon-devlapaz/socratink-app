@@ -68,7 +68,9 @@ starting Uvicorn to catch missing `.env` / `.env.local` auth configuration.
 
 ## Testing
 
-End-to-End browser smoke tests are powered by Playwright and Pytest. To run them, make sure the development server is running in the background, or point the tests to the live production server.
+End-to-End browser smoke tests are powered by Playwright and Pytest. The local
+runner reuses a healthy development server or starts and stops one itself. You
+can also point it to the live production server.
 
 ```bash
 # Test against local dev server (http://localhost:8000)
