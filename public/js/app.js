@@ -27,17 +27,21 @@ import {
 import { createCountdownTimer } from './app-timer.js';
 import {
   deriveConceptEntries,
+  deriveConceptEntryViewState,
   findConceptEntryById,
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=34';
+} from './concept-page-view.js?v=39';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
   markComparisonAcknowledged,
 } from './comparison-acknowledgement.js';
-import { renderConceptConstellationHtml } from './concept-constellation-view.js?v=5';
+import {
+  derivePostRepairBridge,
+  renderConceptConstellationHtml,
+} from './concept-constellation-view.js?v=7';
 import { deriveConceptBadge } from './concept-status.js';
 import {
   getDefaultPhaseBSessionState,
@@ -139,6 +143,7 @@ const App = (() => {
   const LOCAL_QA_NODE_ID = 'qa-node';
   const LOCAL_REPAIR_QA_CONCEPT_ID = 'qa-repair-concept';
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
+  const LOCAL_REPAIR_QA_NEXT_NODE_ID = 'depolarization-node';
   const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
   const trainingStore = createTrainingStore();
   let learnerStatePushTimer = null;
@@ -355,28 +360,48 @@ const App = (() => {
   function buildLocalRepairQaConcept(nowMs) {
     const studyNote = 'Voltage-gated sodium channels open when membrane voltage reaches threshold; the concentration gradient drives flow after the gate opens.';
     const purpose = 'Name what opens the channel before reading the study note.';
+    const nextStudyNote = 'Sodium entry makes the membrane voltage less negative and begins depolarization.';
+    const nextPurpose = 'Explain what changes the membrane voltage from memory.';
     const graphData = {
       metadata: {
         source_title: 'Repair QA source',
         starting_map_context: 'I think sodium just rushes in.',
         map_maturity: 'provisional',
       },
-      backbone: [{
-        id: LOCAL_REPAIR_QA_NODE_ID,
-        label: 'Sodium channel gate',
-        purpose,
-        study_note: studyNote,
-        drill_status: null,
-      }],
-      clusters: [{
-        id: 'cluster-1',
-        subnodes: [{
+      backbone: [
+        {
           id: LOCAL_REPAIR_QA_NODE_ID,
           label: 'Sodium channel gate',
           purpose,
           study_note: studyNote,
           drill_status: null,
-        }],
+        },
+        {
+          id: LOCAL_REPAIR_QA_NEXT_NODE_ID,
+          label: 'Membrane depolarization',
+          purpose: nextPurpose,
+          study_note: nextStudyNote,
+          drill_status: null,
+        },
+      ],
+      clusters: [{
+        id: 'cluster-1',
+        subnodes: [
+          {
+            id: LOCAL_REPAIR_QA_NODE_ID,
+            label: 'Sodium channel gate',
+            purpose,
+            study_note: studyNote,
+            drill_status: null,
+          },
+          {
+            id: LOCAL_REPAIR_QA_NEXT_NODE_ID,
+            label: 'Membrane depolarization',
+            purpose: nextPurpose,
+            study_note: nextStudyNote,
+            drill_status: null,
+          },
+        ],
       }],
     };
 
@@ -637,6 +662,10 @@ const App = (() => {
   }
 
   function refreshConstellationAvailability(training = null) {
+    if (document.querySelector('.concept-page-b2__doc--post-repair')) {
+      setConstellationAvailable(false);
+      return;
+    }
     if (document.body.dataset.conceptSourceMode === 'source_less') {
       setConstellationAvailable(false);
       return;
@@ -2149,6 +2178,20 @@ const App = (() => {
           }
           return;
         }
+        if (ctaBtn.dataset.activeEntryAction === 'write-repair') {
+          const repairPanel = docEl.querySelector('.concept-page-b2__repair');
+          const studyNote = docEl.querySelector('.concept-page-b2__study-note');
+          const studyNoteToggle = docEl.querySelector('[data-study-note-toggle]');
+          repairPanel?.removeAttribute('hidden');
+          studyNote?.classList.add('is-collapsed');
+          if (studyNoteToggle) {
+            studyNoteToggle.textContent = 'Show study note';
+            studyNoteToggle.setAttribute('aria-expanded', 'false');
+          }
+          ctaBtn.hidden = true;
+          repairPanel?.querySelector('.concept-page-b2__repair-input')?.focus?.();
+          return;
+        }
         if (ctaBtn.dataset.activeEntryAction === 'drill-gap') {
           const entryId = ctaBtn.dataset.activeEntryId;
           startDrill(buildRepairGapDrillContext(entryId, concept, data, training));
@@ -2261,6 +2304,31 @@ const App = (() => {
     });
   }
 
+  function renderActiveEntryDocumentHtml(activeEntry, activeIdx, backbone, concept, data, training, renderOptions = {}) {
+    const activeHtml = renderActiveEntryHtml(
+      activeEntry,
+      activeIdx,
+      backbone,
+      concept,
+      data,
+      training,
+      renderOptions,
+    );
+    const postRepairBridge = derivePostRepairBridge(data, training, getConceptEntryId(activeEntry, activeIdx), renderOptions);
+    if (!postRepairBridge) return { html: activeHtml, hasPostRepair: false };
+    const constellationHtml = renderConceptConstellationHtml(data, {
+      ...renderOptions,
+      concept,
+      training,
+      activeEntryId: postRepairBridge.repairedEntryId,
+      postRepairBridge,
+    });
+    return {
+      html: `${activeHtml}<section class="concept-post-repair-host">${constellationHtml}</section>`,
+      hasPostRepair: true,
+    };
+  }
+
   function renderActiveEntryWorkColumn(entryId, concept, data, training = null, options = {}) {
     const docEl = document.querySelector('.concept-page-b2__doc');
     const backbone = deriveConceptEntries(data);
@@ -2271,7 +2339,7 @@ const App = (() => {
     if (!docEl || !match) return;
     const renderBackbone = backbone.length ? backbone : [match.entry];
     const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, training, options);
-    docEl.innerHTML = renderActiveEntryHtml(
+    const rendered = renderActiveEntryDocumentHtml(
       match.entry,
       match.index,
       renderBackbone,
@@ -2280,6 +2348,8 @@ const App = (() => {
       training,
       renderOptions,
     );
+    docEl.innerHTML = rendered.html;
+    docEl.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
     rebindActiveEntryHandlers(docEl, concept, data, training);
   }
 
@@ -2375,8 +2445,8 @@ const App = (() => {
     const label = entry.label || entry.principle || entry.task_label || concept?.name || 'Entry';
     const gapTitle = titleFromRepairGap(gap, label);
     const visiblePrompt = gap
-      ? `Close the note. Rebuild the repaired link for ${gapTitle}: name the condition, the action, and what changes next.`
-      : `Close the note. Reconstruct this entry from memory.`;
+      ? `Rebuild the repaired link for ${gapTitle}: name the condition, the action, and what changes next.`
+      : `Reconstruct this entry from memory.`;
     const repairContext = [
       entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || '',
       latestAttempt.user_text ? `Learner cold draft: ${latestAttempt.user_text}` : '',
@@ -2653,7 +2723,11 @@ const App = (() => {
       if (mountEl) {
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
-        focusRenderedMoment('.concept-page-b2__repair--saved');
+        focusRenderedMoment(
+          mountEl.querySelector('.concept-post-repair__rail')
+            ? '.concept-post-repair__rail'
+            : '.concept-page-b2__repair--saved',
+        );
       }
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
@@ -2786,7 +2860,9 @@ const App = (() => {
       );
       const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
       const renderOptions = conceptPageRenderOptionsForEntry(liveConcept, _activeEntryId, training, {});
-      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
+      const rendered = renderActiveEntryDocumentHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
+      docEl.innerHTML = rendered.html;
+      docEl.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
       rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
       bindConceptRouteMarginHandlers(document.getElementById('map-content'), freshData, liveConcept, training);
     });
@@ -2828,7 +2904,9 @@ const App = (() => {
       comparisonAcknowledged: true,
     } : {});
     setTimeout(() => {
-      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training, renderOptions);
+      const rendered = renderActiveEntryDocumentHtml(newEntry, newIdx, backbone, concept, data, training, renderOptions);
+      doc.innerHTML = rendered.html;
+      doc.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
       rebindActiveEntryHandlers(doc, concept, data, training);
       bindConceptRouteMarginHandlers(mountEl, data, concept, training);
       restoreActiveEntryDraft(entryId);
@@ -2971,13 +3049,21 @@ const App = (() => {
     const renderBackbone = backbone.length ? backbone : [activeEntry];
 
     const renderOptions = conceptPageRenderOptionsForEntry(concept, activeEntryId, training, options);
-    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training, renderOptions);
+    const rendered = renderActiveEntryDocumentHtml(
+      activeEntry,
+      activeIdx,
+      renderBackbone,
+      concept,
+      data,
+      training,
+      renderOptions,
+    );
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
     mountEl.innerHTML = `
-      <div class="concept-page-b2__doc">
-        ${docHtml}
+      <div class="concept-page-b2__doc${rendered.hasPostRepair ? ' concept-page-b2__doc--post-repair' : ''}">
+        ${rendered.html}
       </div>
     `;
 
@@ -3145,29 +3231,67 @@ const App = (() => {
     }
   }
 
+  async function openConceptEntry(entryId, { focusAttempt = false } = {}) {
+    const concept = getActiveConcept();
+    const data = parseConceptGraphData(concept);
+    const entries = deriveConceptEntries(data || {});
+    const match = findConceptEntryById(entries, entryId);
+    if (!entryId || !concept || !data || !match || entryId === _activeEntryId) return false;
+
+    try {
+      const training = await trainingStore.loadTraining(concept.id);
+      const state = deriveConceptEntryViewState(entries, match.index, training);
+      if (state.state === 'locked') return false;
+      setActiveEntry(entryId, data, concept, training, { focusAttempt });
+      return true;
+    } catch (err) {
+      console.warn('Concept entry unavailable.', err);
+      return false;
+    }
+  }
+
   function bindMapModeControls() {
     document.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
+      const postRepairAction = target?.closest('[data-post-repair-action]') || null;
+      if (postRepairAction) {
+        event.preventDefault();
+        const action = postRepairAction.getAttribute('data-post-repair-action');
+        if (action === 'break') {
+          showDashboard();
+          return;
+        }
+        if (action === 'next-entry') {
+          const entryId = postRepairAction.getAttribute('data-entry-id');
+          void openConceptEntry(entryId, { focusAttempt: true });
+          return;
+        }
+        if (action === 'pressure-check') {
+          const entryId = postRepairAction.getAttribute('data-repair-entry-id');
+          const concept = getActiveConcept();
+          const data = parseConceptGraphData(concept);
+          if (!entryId || !concept || !data) return;
+          void trainingStore.loadTraining(concept.id)
+            .then((training) => startDrill(buildRepairGapDrillContext(entryId, concept, data, training)))
+            .catch((err) => console.warn('Repair record unavailable for pressure-check.', err));
+          return;
+        }
+      }
       const constellationNode = target?.closest('.concept-constellation__node[data-entry-id]') || null;
       if (constellationNode) {
         const entryId = constellationNode.getAttribute('data-entry-id');
         const state = constellationNode.getAttribute('data-state');
+        const opensSuggestedRoom = constellationNode.getAttribute('data-bridge-target') === 'true';
         if (state === 'locked') return;
-        const concept = getActiveConcept();
-        /* v8 ignore start -- route-margin async handoff is covered by browser smoke through the same active-entry renderer. */
-        const data = parseConceptGraphData(concept);
-        if (entryId && data && concept) {
+        if (entryId) {
           event.preventDefault();
-          void trainingStore.loadTraining(concept.id)
-            .then((training) => setActiveEntry(entryId, data, concept, training))
-            .catch(() => setActiveEntry(entryId, data, concept, null));
+          void openConceptEntry(entryId, { focusAttempt: opensSuggestedRoom });
         }
         return;
-        /* v8 ignore stop */
       }
 
       const button = target
-        ? target.closest('[data-map-mode]')
+        ? target.closest('button[data-map-mode]')
         : null;
       if (!button) return;
       const mode = button.getAttribute('data-map-mode');
@@ -3184,7 +3308,10 @@ const App = (() => {
       const constellationNode = target?.closest('.concept-constellation__node[data-entry-id]') || null;
       if (!constellationNode) return;
       event.preventDefault();
-      constellationNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      void openConceptEntry(
+        constellationNode.getAttribute('data-entry-id'),
+        { focusAttempt: constellationNode.getAttribute('data-bridge-target') === 'true' },
+      );
     });
 
   }

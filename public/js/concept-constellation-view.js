@@ -2,7 +2,9 @@ import { escHtml } from './html.js';
 import {
   deriveConceptEntries,
   deriveConceptEntryViewState,
+  deriveRepairPhase,
   getConceptEntryId,
+  nextReadyEntry,
 } from './concept-page-view.js';
 
 const SVG_WIDTH = 800;
@@ -107,6 +109,25 @@ function resolveNodePosition(entries, entry, index, angles) {
   };
 }
 
+function resolveBridgeNodePosition(entries, entry, index, bridge) {
+  const id = getConceptEntryId(entry, index);
+  if (id === bridge?.repairedEntryId) return { x: 292, y: 286 };
+  if (id === bridge?.targetEntryId) return { x: 528, y: 306 };
+
+  const peripheral = entries.filter((candidate, candidateIndex) => {
+    const candidateId = getConceptEntryId(candidate, candidateIndex);
+    return candidateId !== bridge?.repairedEntryId && candidateId !== bridge?.targetEntryId;
+  });
+  const peripheralIndex = peripheral.findIndex((candidate) => candidate === entry);
+  const spread = peripheral.length <= 1 ? 0 : 250 / (peripheral.length - 1);
+  const angle = -145 + (peripheralIndex * spread);
+  const position = polar(CENTER, 238, angle);
+  return {
+    x: clamp(position.x, 86, SVG_WIDTH - 86),
+    y: clamp(position.y, 84, SVG_HEIGHT - 84),
+  };
+}
+
 function entryFallbackLabel(index) {
   return `Entry ${String(index + 1).padStart(2, '0')}`;
 }
@@ -192,17 +213,42 @@ function displayStateLabel(viewState) {
   return 'future room';
 }
 
+export function derivePostRepairBridge(data = {}, training = null, activeEntryId = null, options = {}) {
+  if (options?.isDrilling) return null;
+  const entries = deriveConceptEntries(data);
+  const resolvedEntryId = activeEntryId || getConceptEntryId(entries[0], 0);
+  const activeIndex = entries.findIndex((entry, index) => getConceptEntryId(entry, index) === resolvedEntryId);
+  if (activeIndex < 0) return null;
+
+  const record = training?.node_records?.[resolvedEntryId] || null;
+  const viewState = deriveConceptEntryViewState(entries, activeIndex, training, options);
+  if (
+    viewState.nextAction !== 'repair'
+    || deriveRepairPhase(record, options) !== 'saved'
+  ) return null;
+
+  const target = nextReadyEntry(entries, activeIndex, training, options);
+  return {
+    repairedEntryId: resolvedEntryId,
+    targetEntryId: target?.id || null,
+  };
+}
+
 function buildConstellationModel(entries, training, activeEntryId, options = {}) {
+  const bridge = options.postRepairBridge || null;
   const angles = resolveBackboneAngles(entries.length);
   const nodes = entries.map((entry, index) => {
     const id = getConceptEntryId(entry, index);
     const viewState = deriveConceptEntryViewState(entries, index, training, options);
     const isActive = id === activeEntryId;
-    const position = resolveNodePosition(entries, entry, index, angles);
-    const label = canShowEntryLabel(viewState, index, isActive)
+    const isSuggested = bridge?.targetEntryId === id;
+    const position = bridge
+      ? resolveBridgeNodePosition(entries, entry, index, bridge)
+      : resolveNodePosition(entries, entry, index, angles);
+    const label = canShowEntryLabel(viewState, index, isActive || isSuggested)
       ? entrySafeLabel(entry, index)
       : entryFallbackLabel(index);
-    const purpose = entrySafePurpose(entry, viewState, index, isActive);
+    const purpose = entrySafePurpose(entry, viewState, index, isActive || isSuggested);
     return {
       id,
       index,
@@ -211,7 +257,12 @@ function buildConstellationModel(entries, training, activeEntryId, options = {})
       position,
       viewState,
       isActive,
-      className: stateClass(viewState, isActive),
+      isSuggested,
+      bridgeRole: isActive ? 'repair' : isSuggested ? 'suggested' : null,
+      className: [
+        stateClass(viewState, isActive),
+        isSuggested ? 'is-suggested' : '',
+      ].filter(Boolean).join(' '),
     };
   });
 
@@ -219,6 +270,7 @@ function buildConstellationModel(entries, training, activeEntryId, options = {})
     nodes,
     selectedNode: nodes.find((node) => node.isActive) || nodes[0] || null,
     stars: buildStars(entries),
+    bridge,
   };
 }
 
@@ -256,14 +308,39 @@ function renderConnectors(nodes) {
   }).join('');
 }
 
+function renderSuggestedConnector(nodes, bridge) {
+  if (!bridge?.repairedEntryId || !bridge?.targetEntryId) return '';
+  const from = nodes.find((node) => node.id === bridge.repairedEntryId);
+  const to = nodes.find((node) => node.id === bridge.targetEntryId);
+  if (!from || !to) return '';
+  return `
+    <path
+      class="concept-constellation__edge is-suggested"
+      data-edge-recommendation="true"
+      d="${buildCurvePath(from.position, to.position)}"
+      aria-hidden="true"
+    />
+  `;
+}
+
 function renderNode(node) {
   const label = escHtml(node.label);
   const purpose = escHtml(node.purpose);
   const state = escHtml(displayState(node.viewState));
   const stateLabel = escHtml(displayStateLabel(node.viewState));
   const entryId = escHtml(node.id);
-  const selectable = state !== 'locked';
-  const ariaLabel = escHtml(`${node.label}, ${stateLabel}${node.isActive ? ', current room' : ''}`);
+  const selectable = state !== 'locked' && !node.isActive;
+  const indexLabel = String(node.index + 1).padStart(2, '0');
+  const bridgeLabel = node.bridgeRole === 'repair'
+    ? 'Correction kept'
+    : node.bridgeRole === 'suggested' ? 'Suggested next' : null;
+  const ariaLabel = escHtml([
+    indexLabel,
+    node.label,
+    bridgeLabel,
+    stateLabel,
+    node.isActive ? 'current room' : null,
+  ].filter(Boolean).join(', '));
   const className = ['concept-constellation__node', node.className].filter(Boolean).join(' ');
   return `
     <g
@@ -274,6 +351,7 @@ function renderNode(node) {
       data-state-label="${stateLabel}"
       data-selected-name="${label}"
       data-selected-purpose="${purpose}"
+      data-bridge-target="${node.isSuggested ? 'true' : 'false'}"
       role="${selectable ? 'button' : 'listitem'}"
       tabindex="${selectable ? '0' : '-1'}"
       focusable="${selectable ? 'true' : 'false'}"
@@ -281,11 +359,68 @@ function renderNode(node) {
       transform="translate(${node.position.x.toFixed(1)} ${node.position.y.toFixed(1)})"
     >
       <circle class="concept-constellation__halo" r="42" aria-hidden="true" />
-      <path class="concept-constellation__dot" d="${diamondPath(node.isActive ? 26 : 22)}" aria-hidden="true" />
+      <path class="concept-constellation__dot" d="${diamondPath(node.isActive || node.isSuggested ? 26 : 22)}" aria-hidden="true" />
       <path class="concept-constellation__facet" d="M 0 -22 L 0 22 M -18 0 L 18 0" aria-hidden="true" />
       <text class="concept-constellation__index" x="-44" y="-34">${String(node.index + 1).padStart(2, '0')}</text>
       <text class="concept-constellation__label" y="52" text-anchor="middle">${label}</text>
+      ${node.bridgeRole ? `<text class="concept-constellation__bridge-role" y="72" text-anchor="middle">${node.bridgeRole === 'repair' ? 'Correction kept' : 'Suggested next'}</text>` : ''}
     </g>
+  `;
+}
+
+function renderPostRepairRail(model) {
+  const bridge = model.bridge;
+  const target = model.nodes.find((node) => node.id === bridge?.targetEntryId) || null;
+  const targetLabel = target ? escHtml(target.label) : '';
+  const nextHtml = target
+    ? `
+      <section class="concept-post-repair__next">
+        <span class="eyebrow">Suggested next</span>
+        <h4>${targetLabel}</h4>
+        <p>Another ready room lets this link settle.</p>
+        <button
+          class="concept-post-repair__primary"
+          type="button"
+          data-post-repair-action="next-entry"
+          data-entry-id="${escHtml(target.id)}"
+          aria-label="Enter this room: ${targetLabel}"
+        >Enter this room</button>
+        <button class="concept-post-repair__break" type="button" data-post-repair-action="break">Take a short break</button>
+      </section>
+    `
+    : `
+      <section class="concept-post-repair__next concept-post-repair__next--break">
+        <span class="eyebrow">Let this settle</span>
+        <h4>Take a short break.</h4>
+        <p>No nearby room is ready. The repaired link stays on your route.</p>
+        <button class="concept-post-repair__break concept-post-repair__break--standalone" type="button" data-post-repair-action="break">Take a short break</button>
+      </section>
+    `;
+  const pressureCheckHtml = `
+      <details class="concept-post-repair__options">
+        <summary>More options</summary>
+        <button
+          type="button"
+          data-post-repair-action="pressure-check"
+          data-repair-entry-id="${escHtml(bridge?.repairedEntryId || '')}"
+        >
+          <strong>Pressure-check this link</strong>
+          <span>Fresh practice. Your map stays unchanged.</span>
+        </button>
+      </details>
+    `;
+
+  return `
+    <article class="concept-post-repair__rail" aria-label="Post-repair handoff" tabindex="-1">
+      <section class="concept-post-repair__truth">
+        <span class="eyebrow">Correction kept</span>
+        <h3>Your map is unchanged.</h3>
+        <p>Reconstruct this link later to test it.</p>
+      </section>
+      ${nextHtml}
+      ${pressureCheckHtml}
+      <footer>Correction kept. No new reconstruction evidence.</footer>
+    </article>
   `;
 }
 
@@ -306,7 +441,54 @@ function renderSelectedDetail(node) {
   `;
 }
 
+function renderConstellationSvg(model) {
+  const titleId = model.bridge ? 'concept-post-repair-title' : 'concept-constellation-title';
+  const descriptionId = model.bridge ? 'concept-post-repair-desc' : 'concept-constellation-desc';
+  const hasSuggestedTarget = Boolean(
+    model.bridge?.targetEntryId
+    && model.nodes.some((node) => node.id === model.bridge.targetEntryId),
+  );
+  const description = model.bridge
+    ? hasSuggestedTarget
+      ? 'The repaired room remains unchanged. One eligible room is suggested for interleaving.'
+      : 'The repaired room remains unchanged. No nearby room is ready, so the repaired link stays on the route.'
+    : 'A draft map of concept rooms. Future rooms hide study content until reconstruction evidence exists.';
+  return `
+    <svg
+      class="concept-constellation__svg"
+      viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}"
+      aria-labelledby="${titleId} ${descriptionId}"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title id="${titleId}">${model.bridge ? 'Post-repair route' : 'Concept constellation'}</title>
+      <desc id="${descriptionId}">${description}</desc>
+      <g class="concept-constellation__stars" aria-hidden="true">
+        ${renderStars(model.stars)}
+      </g>
+      <g class="concept-constellation__links" aria-hidden="true">
+        ${renderConnectors(model.nodes)}
+        ${renderSuggestedConnector(model.nodes, model.bridge)}
+      </g>
+      <g class="concept-constellation__entries" role="group" aria-label="Concept rooms">
+        ${model.nodes.map(renderNode).join('')}
+      </g>
+    </svg>
+  `;
+}
+
 function renderConstellation(model) {
+  const constellationSvg = renderConstellationSvg(model);
+  if (model.bridge) {
+    return `
+      <div class="concept-constellation__shell concept-constellation__shell--bridge" aria-label="Post-repair concept route">
+        <div class="concept-post-repair__canvas">
+          <span class="eyebrow">draft route</span>
+          ${constellationSvg}
+        </div>
+        ${renderPostRepairRail(model)}
+      </div>
+    `;
+  }
   return `
     <div class="concept-constellation__shell" aria-label="Concept constellation">
       <div class="concept-constellation__copy">
@@ -318,24 +500,7 @@ function renderConstellation(model) {
         <strong>Overview first.</strong>
         <span>Select a room to orient, then return to the route to write.</span>
       </div>
-      <svg
-          class="concept-constellation__svg"
-          viewBox="0 0 ${SVG_WIDTH} ${SVG_HEIGHT}"
-          aria-labelledby="concept-constellation-title concept-constellation-desc"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <title id="concept-constellation-title">Concept constellation</title>
-          <desc id="concept-constellation-desc">A draft map of concept rooms. Future rooms hide study content until reconstruction evidence exists.</desc>
-          <g class="concept-constellation__stars" aria-hidden="true">
-            ${renderStars(model.stars)}
-          </g>
-          <g class="concept-constellation__links" aria-hidden="true">
-            ${renderConnectors(model.nodes)}
-          </g>
-          <g class="concept-constellation__entries" role="list">
-            ${model.nodes.map(renderNode).join('')}
-          </g>
-        </svg>
+      ${constellationSvg}
       ${renderSelectedDetail(model.selectedNode)}
     </div>
   `;
@@ -345,6 +510,9 @@ export function renderConceptConstellationHtml(data = {}, options = {}) {
   const entries = deriveConceptEntries(data);
   const training = options.training || null;
   const activeEntryId = options.activeEntryId || getConceptEntryId(entries[0], 0);
-  const model = buildConstellationModel(entries, training, activeEntryId, options);
+  const model = buildConstellationModel(entries, training, activeEntryId, {
+    ...options,
+    postRepairBridge: options.postRepairBridge || null,
+  });
   return renderConstellation(model);
 }

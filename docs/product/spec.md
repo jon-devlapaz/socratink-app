@@ -146,13 +146,17 @@ the concept page renders a post-reveal comparison on the same surface before
 expanding the full route margin. This comparison may show the learner's draft,
 the same-entry study note, and named gaps when recorded. It must not show
 score/tier/band, diagnose the learner, reveal future entries, or count as graph
-truth. The normal comparison-exit action is `Keep working`, which writes
+truth. The normal comparison-exit action is `Return to route`, which writes
 UI-only acknowledgement state so return/reload can restore the expanded
 workspace; it does not append training evidence or imply progress. The repair
-branch is the exception: it suppresses `Keep working`, shows the repair panel,
-and only after a repair is saved offers `Pressure-check this link`. Saving the
-repair may also expand the workspace, but neither the repair nor the gap drill
-mutates graph state or records training evidence.
+branch is the exception: it suppresses that exit, shows the repair panel, and
+after a repair is saved renders an interleaving bridge. If a later room is
+genuinely ready under the existing training derivation, that room is the
+primary suggestion; otherwise a short break is primary. A break remains visible
+when a room is suggested, while `Pressure-check this link` stays behind
+progressive disclosure as graph-neutral fresh practice. Saving the repair,
+following the suggestion, taking a break, and pressure-checking do not mutate
+graph truth or record new reconstruction evidence.
 
 ---
 

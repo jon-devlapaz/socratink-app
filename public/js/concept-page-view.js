@@ -59,6 +59,25 @@ function trainingRecordsFor(training) {
     : {};
 }
 
+export function deriveRepairPhase(record = null, options = {}) {
+  const repairs = Array.isArray(record?.repairs) ? record.repairs : [];
+  if (!repairs.length) return 'write';
+
+  const latestAt = (items) => items.reduce((latest, item) => {
+    const at = Date.parse(item?.at || '');
+    return Number.isFinite(at) ? Math.max(latest, at) : latest;
+  }, Number.NEGATIVE_INFINITY);
+  const latestRepairAt = latestAt(repairs);
+  const attempts = Array.isArray(record?.attempts) ? record.attempts : [];
+  const latestAttemptAt = latestAt(attempts);
+  if (latestAttemptAt > latestRepairAt) return 'write';
+
+  if (options?.repairCheckedThisSession === true) return 'checked';
+  const checkedAt = Date.parse(record?.repair_checked_at || '');
+  if (Number.isFinite(checkedAt) && checkedAt >= latestRepairAt) return 'checked';
+  return 'saved';
+}
+
 function recordWithLegacyStudyReveal(entry, record, legacyEntry) {
   const status = String(entry?.drill_status || '').toLowerCase();
   const phase = String(entry?.drill_phase || '').toLowerCase();
@@ -113,8 +132,11 @@ function entryLearnerState(backbone, index, training, options = {}) {
   const checkedEntryIds = Array.isArray(options?.repairCheckedEntryIds)
     ? options.repairCheckedEntryIds
     : [];
+  const repairPhase = deriveRepairPhase(derived.record, {
+    repairCheckedThisSession: checkedEntryIds.includes(entryId),
+  });
   if (derived.attempted) {
-    if (derived.state === 'needs repair' && checkedEntryIds.includes(entryId)) {
+    if (derived.state === 'needs repair' && repairPhase === 'checked') {
       /* c8 ignore next -- secondary route-state label is covered by Node render tests; source-less browser route chrome is hidden */
       return 'repair checked';
     }
@@ -360,9 +382,9 @@ export function renderConceptStripHtml(backbone, activeEntry, activeIdx, trainin
 
 function activeEntryEyebrow({ isBlocked, attempted, state, nextAction, justRevealedStudy }) {
   if (isBlocked) return 'locked';
-  if (!attempted) return 'Start from memory';
+  if (!attempted) return '';
   if (justRevealedStudy) return 'Compare notes';
-  if (nextAction === 'study') return 'Draft saved';
+  if (nextAction === 'study') return 'Your draft';
   if (nextAction === 'repair') return 'Needs repair';
   if (state === 'needs repair' && nextAction === 'spaced_attempt') return 'Ready to reconstruct again';
   if (state === 'solidified') return 'Solid spaced reconstruction';
@@ -493,19 +515,20 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId, options = {}
   const entryId = activeEntryId || activeEntry.id || 'core-thesis';
   const repairs = Array.isArray(derived.record?.repairs) ? derived.record.repairs : [];
   const latestRepairText = String(repairs.at(-1)?.text || '').trim();
-  const repairCheckedThisSession = repairs.length && options?.repairCheckedThisSession === true;
-  const nextAttemptButton = repairs.length && !repairCheckedThisSession
+  const repairPhase = deriveRepairPhase(derived.record, options);
+  const waitsForRepairAction = repairPhase === 'write';
+  const nextAttemptButton = repairPhase === 'saved'
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__repair-attempt" type="button" data-active-entry-id="${escHtml(entryId)}" data-active-entry-action="drill-gap">Pressure-check this link</button>`
     : '';
   const repairTarget = repairGapCorrection(gaps[0]) || 'Write the part that was missing from your first attempt.';
 
-  const helperHtml = repairCheckedThisSession
-    ? '<p class="concept-page-b2__repair-helper">Return later for spaced reconstruction. A strong later answer can update the record. <button class="concept-page-b2__feedback-link" type="button" data-feedback-rating data-feedback-moment="repair checked">Rate this moment</button></p>'
-    : repairs.length
+  const helperHtml = repairPhase === 'checked'
+    ? '<p class="concept-page-b2__repair-helper">Return later for spaced reconstruction. A strong later answer can update the record.</p>'
+    : repairPhase === 'saved'
     ? ''
     : `<p class="concept-page-b2__repair-helper">Use your words. One or two sentences is enough.</p>`;
 
-  const inputFormHtml = repairs.length
+  const inputFormHtml = repairPhase !== 'write'
     ? ''
     : `
       <label class="concept-page-b2__field">
@@ -523,10 +546,20 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId, options = {}
       <button class="concept-page-b2__repair-save" type="button" data-repair-entry-id="${escHtml(entryId)}">Save repair</button>
     `;
 
+  if (repairPhase === 'saved') {
+    return `
+      <section class="concept-page-b2__repair concept-page-b2__repair--saved" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link" tabindex="-1">
+        <h3>Explain the link again from memory.</h3>
+        <p class="concept-page-b2__repair-context">${escHtml(repairTarget)}</p>
+        ${nextAttemptButton}
+      </section>
+    `;
+  }
+
   return `
-    <section class="concept-page-b2__repair${repairs.length ? ' concept-page-b2__repair--saved' : ''}" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link" tabindex="-1">
-      <span class="eyebrow concept-page-b2__repair-eyebrow">${repairCheckedThisSession ? 'Repair checked' : repairs.length ? 'Repair saved' : 'Repair'}</span>
-      <h3>${repairCheckedThisSession ? 'Repair checked for now.' : repairs.length ? 'Pressure-check the repaired link.' : 'Write the missing link.'}</h3>
+    <section class="concept-page-b2__repair${repairPhase !== 'write' ? ' concept-page-b2__repair--saved' : ''}" data-repair-entry-id="${escHtml(entryId)}" aria-label="Repair missing link" tabindex="-1"${waitsForRepairAction ? ' hidden' : ''}>
+      <span class="eyebrow concept-page-b2__repair-eyebrow">${repairPhase === 'checked' ? 'Repair checked' : 'Repair'}</span>
+      <h3>${repairPhase === 'checked' ? 'Repair checked for now.' : 'Write the missing link.'}</h3>
       <div class="concept-page-b2__repair-target">
         <span>Missing link</span>
         <p>${escHtml(repairTarget)}</p>
@@ -544,13 +577,15 @@ function renderRepairPanelHtml(activeEntry, derived, activeEntryId, options = {}
   `;
 }
 
-function nextReadyEntry(backbone, activeIdx, training, options = {}) {
+export function nextReadyEntry(backbone, activeIdx, training, options = {}) {
   for (let index = activeIdx + 1; index < backbone.length; index += 1) {
     const derived = entryTraining(backbone, index, training, options);
     if (!derived.attempted && predecessorsAttempted(backbone, index, training, options)) {
       const entry = backbone[index];
       return {
         id: getConceptEntryId(entry, index),
+        entry,
+        index,
       };
     }
   }
@@ -785,6 +820,10 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const activeEntryId = getConceptEntryId(activeEntry, activeIdx);
 
   const derived = entryTraining(backbone, activeIdx, training, options);
+  const repairs = Array.isArray(derived.record?.repairs) ? derived.record.repairs : [];
+  const repairPhase = deriveRepairPhase(derived.record, options);
+  const isSavedRepairAwaitingCheck = derived.next_action === 'repair'
+    && repairPhase === 'saved';
   const sourceMode = sourceModeForConcept(concept, data, training);
   const isSourceLess = sourceMode === 'source_less';
   const viewMode = isSourceLess ? deriveSourceLessViewMode(derived, options) : (options?.viewMode || 'expanded-workspace');
@@ -817,21 +856,21 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   });
   const visibleEntryEyebrow = options?.isDrilling
     ? 'Reconstruction'
-    : options?.repairCheckedThisSession && derived.next_action === 'repair'
+    : repairPhase === 'checked' && derived.next_action === 'repair'
     ? 'Repair checked'
+    : isSavedRepairAwaitingCheck
+    ? 'Repair saved'
     : entryEyebrow;
-  const studyGatePurpose = derived.attempted && derived.next_action === 'study'
-    ? 'You wrote first. Now socratink can compare your model against the missing relationship.'
-    : '';
   const scaffold = entryScaffold(activeEntry);
   const activeEntryTitle = isSourceLess && scaffold
     ? (scaffold.task_label || scaffold.learner_move || activeEntry.label || 'Core thesis')
     : (activeEntry.label || 'Core thesis');
-  const suppressPurposeForScaffoldAttempt = isAttempting && isColdReadyEntry && Boolean(scaffold?.entry_prompt);
-  const entryPurpose = suppressPurposeForScaffoldAttempt
+  const suppressPurpose = options?.isDrilling
+    || Boolean(derived.record?.study_revealed_at)
+    || (isAttempting && isColdReadyEntry);
+  const entryPurpose = suppressPurpose
     ? ''
-    : studyGatePurpose
-      || scaffold?.task_cue
+    : scaffold?.task_cue
       || activeEntry.purpose
       || (isBlocked
         ? 'Locked until you write from memory on the entry above. The mechanism stays hidden until you have put your current model into words.'
@@ -842,11 +881,12 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     nextAction: derived.next_action,
   });
   const ctaAction = derived.next_action === 'study' ? 'study' : 'drill';
-  const collapseStudyNote = derived.next_action === 'repair' && !isPostRevealComparison;
-  const hiddenStudyNoteText = options?.repairCheckedThisSession && derived.next_action === 'repair'
+  const collapseStudyNote = derived.next_action === 'repair' && repairPhase !== 'write';
+  const suppressStudyNoteForSavedRepair = collapseStudyNote && repairPhase === 'saved';
+  const hiddenStudyNoteText = repairPhase === 'checked' && derived.next_action === 'repair'
     ? 'Study note stays hidden for later reconstruction.'
     : 'Study note stays hidden while you repair.';
-  const studyNoteHtml = derived.record?.study_revealed_at && !isAttempting
+  const studyNoteHtml = derived.record?.study_revealed_at && !isAttempting && !suppressStudyNoteForSavedRepair
     ? `
       <section class="concept-page-b2__study-note${collapseStudyNote ? ' is-collapsed' : ''}" aria-label="Study note" tabindex="-1">
         <div class="concept-page-b2__study-note-header">
@@ -858,7 +898,9 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
       </section>
     `
     : '';
-  const evidenceArtifactHtml = !isAttempting ? renderEvidenceArtifactHtml(derived) : '';
+  const evidenceArtifactHtml = !isAttempting && !isSavedRepairAwaitingCheck
+    ? renderEvidenceArtifactHtml(derived)
+    : '';
   const repairPanelHtml = isAttempting ? '' : renderRepairPanelHtml(activeEntry, derived, activeEntryId, options);
   const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId, activeEntry, {
     useScaffold: isColdReadyEntry,
@@ -871,23 +913,23 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
     : renderSketchWrapperHtml('');
   const sourceLessProvenanceHtml = '';
   const contextDockLabel = 'Concept context';
-  const nextReady = (derived.next_action === 'review' || (derived.next_action === 'repair' && options?.repairCheckedThisSession))
+  const nextReady = (derived.next_action === 'review' || (derived.next_action === 'repair' && repairPhase === 'checked'))
     ? nextReadyEntry(backbone, activeIdx, training, options)
     : null;
   const nextReadyButton = nextReady
-    ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(nextReady.id)}" data-active-entry-action="next-entry">${isSourceLess ? 'Continue' : 'Continue route'}</button>`
+    ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(nextReady.id)}" data-active-entry-action="next-entry">Continue route</button>`
     : '';
-  const ctaButton = options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
+  const repairActionButton = derived.next_action === 'repair' && repairPhase === 'write'
+    ? `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="write-repair">Write the repair</button>`
+    : '';
+  const ctaButton = repairActionButton || (options?.isDrilling || isAttempting || derived.next_action === 'repair' || derived.next_action === 'review' || derived.next_action === null
     ? (isPostRevealComparison
       && derived.next_action !== 'repair'
-      ? (nextReadyButton || `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="keep-working">Keep working</button>`)
+      ? (nextReadyButton || `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="keep-working">Return to route</button>`)
       : nextReadyButton)
     : isBlocked
     ? `<button class="concept-page-b2__entry-cta concept-page-b2__entry-cta--disabled" type="button" disabled aria-disabled="true" title="Write from memory on the entry above first">Locked</button>`
-    : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="${escHtml(ctaAction)}">${ctaLabel}</button>`;
-  const compareFeedbackHtml = isPostRevealComparison
-    ? ' <button class="concept-page-b2__feedback-link" type="button" data-feedback-rating data-feedback-moment="compare notes">Rate this moment</button>'
-    : '';
+    : `<button class="concept-page-b2__entry-cta" type="button" data-active-entry-id="${escHtml(activeEntryId)}" data-active-entry-action="${escHtml(ctaAction)}">${ctaLabel}</button>`);
   const truthNoteText = isAttempting
     ? 'Study stays hidden until you save a draft. This is not a grade.'
     : 'Your words shape the path. This is not a grade.';
@@ -895,11 +937,10 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const activeEntryClass = [
     'concept-page-b2__active-entry',
     options?.isDrilling ? 'concept-page-b2__active-entry--drilling' : '',
-    suppressPurposeForScaffoldAttempt ? 'concept-page-b2__active-entry--prompt-first' : '',
   ].filter(Boolean).join(' ');
   const activeHtml = `
     <section class="${activeEntryClass}" aria-label="Active concept entry">
-      <span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(visibleEntryEyebrow)}</span>
+      ${visibleEntryEyebrow ? `<span class="eyebrow concept-page-b2__entry-eyebrow">${escHtml(visibleEntryEyebrow)}</span>` : ''}
       <h2 class="concept-page-b2__entry-title">${escHtml(activeEntryTitle)}</h2>
       ${entryPurpose ? `<p class="concept-page-b2__entry-purpose">${escHtml(entryPurpose)}</p>` : ''}
       ${options?.isDrilling ? renderDrillChamberHtml() : `
@@ -908,12 +949,12 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         ${repairPanelHtml}
         ${attemptPanelHtml}
         ${ctaButton}
-        <p class="concept-page-b2__truth-note">${escHtml(truthNoteText)}${compareFeedbackHtml}</p>
+        ${isSavedRepairAwaitingCheck ? '' : `<p class="concept-page-b2__truth-note">${escHtml(truthNoteText)}</p>`}
       `}
     </section>
   `;
 
-  const suppressNearbyForPrimaryHandoff = Boolean(nextReadyButton) && options?.repairCheckedThisSession === true;
+  const suppressNearbyForPrimaryHandoff = Boolean(nextReadyButton) && repairPhase === 'checked';
   const nearby = !hidesRouteAndNearby && isExpandedWorkspace && !isAttempting && !suppressNearbyForPrimaryHandoff
     ? backbone.filter((n) => n !== activeEntry)
     : [];

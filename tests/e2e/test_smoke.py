@@ -690,7 +690,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reveal notes and compare"
@@ -711,26 +711,9 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Compare notes"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
-    expect(page.locator("[data-feedback-rating]")).to_have_text("Rate this moment")
-    page.locator("[data-feedback-rating]").click()
-    expect(page.locator("#feedback-overlay")).to_be_visible()
-    expect(page.locator("#feedback-title")).to_have_text("Rate this moment")
-    expect(page.locator("#feedback-desc")).to_have_text(
-        "How did comparing your answer to the notes feel? A 9 or 10 means the UX feels ready for a new customer."
-    )
-    expect(page.locator("#feedback-submit")).to_have_text("Send Rating")
-    expect(page.locator("#feedback-ux-rating")).to_be_focused()
-    page.locator("#feedback-ux-rating").select_option("9")
-    page.locator("#feedback-submit").click()
-    expect(page.locator("#feedback-status")).to_have_text(
-        "Thank you! Feedback captured."
-    )
-    assert feedback_payloads == [
-        {"message": "UX feel: 9/10\nUX moment: compare notes"}
-    ]
-    page.locator(".modal-close").click()
-    expect(page.locator("#feedback-overlay")).not_to_be_visible()
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Return to route")
+    expect(page.locator("[data-feedback-rating]")).to_have_count(0)
+    assert feedback_payloads == []
     revealed_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
     )
@@ -854,7 +837,7 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Study QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reveal notes and compare"
@@ -951,7 +934,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Learner thinks"
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
         "Your memory draft"
@@ -966,6 +949,18 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     )
     expect(page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "Missing piece"
+    )
+    expect(page.locator(".concept-page-b2__study-note")).not_to_have_class(
+        re.compile(r"is-collapsed")
+    )
+    expect(page.locator("[data-study-note-toggle]")).to_have_text("Hide study note")
+    expect(page.locator(".concept-page-b2__repair")).to_be_hidden()
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Write the repair")
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__repair")).to_be_visible()
+    expect(page.locator(".concept-page-b2__repair-input")).to_be_focused()
+    expect(page.locator(".concept-page-b2__study-note")).to_have_class(
+        re.compile(r"is-collapsed")
     )
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "Missing link"
@@ -996,7 +991,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "labelLetterSpacing": "normal",
         "saveMinHeight": "44px",
     }
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_be_hidden()
 
     page.locator(".concept-page-b2__repair-save").click()
     expect(page.locator("[data-repair-error]")).to_be_visible()
@@ -1035,28 +1030,87 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
     )
     page.locator(".concept-page-b2__repair-save").click()
-    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Needs repair"
+    expect(page.locator(".concept-post-repair__rail")).to_be_focused()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    expect(page.locator(".concept-post-repair__truth")).to_contain_text(
+        "Your map is unchanged."
     )
-    expect(page.locator(".concept-page-b2__repair--saved")).to_be_focused()
-    expect(page.locator(".concept-page-b2__repair--saved")).to_contain_text(
-        "Your saved repair"
+    expect(page.locator(".concept-post-repair__truth")).to_contain_text(
+        "Reconstruct this link later to test it."
     )
-    expect(page.locator(".concept-page-b2__repair--saved")).to_contain_text(
-        "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
+    expect(page.locator(".concept-post-repair__primary")).to_have_text(
+        "Enter this room"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Pressure-check this link"
+    expect(page.locator(".concept-post-repair__primary")).to_have_attribute(
+        "aria-label", "Enter this room: Membrane depolarization"
     )
-    expect(page.locator(".concept-page-b2__repair")).to_be_visible()
+    expect(page.locator(".concept-post-repair__break")).to_have_text(
+        "Take a short break"
+    )
+    suggested_node = page.locator(
+        '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
+    )
+    expect(suggested_node).to_be_visible()
+    expect(suggested_node).to_have_attribute("role", "button")
+    expect(suggested_node).to_have_attribute("tabindex", "0")
+    expect(suggested_node).to_have_attribute(
+        "aria-label", re.compile(r"Membrane depolarization.*ready to reconstruct")
+    )
+    repaired_label_fill = page.locator(
+        ".concept-post-repair-host .concept-constellation__node.is-active "
+        ".concept-constellation__label"
+    ).evaluate("el => getComputedStyle(el).fill")
+    assert repaired_label_fill == "rgba(36, 32, 56, 0.84)"
+    suggested_eyebrow_color = page.locator(
+        ".concept-post-repair__next > .eyebrow"
+    ).evaluate("el => getComputedStyle(el).color")
+    assert suggested_eyebrow_color == "rgb(112, 82, 155)"
+    expect(
+        page.locator('.concept-post-repair-host [data-edge-recommendation="true"]')
+    ).to_be_visible()
+    expect(
+        page.locator('.concept-post-repair-host [data-edge-evidence="true"]')
+    ).to_have_count(0)
     assert page.evaluate("window.scrollY") == 0
-    page.locator(".concept-page-b2__entry-cta").click()
+
+    # The graph itself is keyboard-operable and routes to the genuinely ready room.
+    suggested_node.focus()
+    suggested_node.press("Enter")
+    expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Membrane depolarization"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_have_count(0)
+
+    # Reload returns to the pending repair handoff; pressure-check remains
+    # available through progressive disclosure.
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    # The primary action routes by entry identity, not by proxy-clicking the
+    # decorative graph node. Removing that rendering detail must not dead-end
+    # the learner's main path.
+    page.evaluate(
+        "document.querySelector('.concept-post-repair-host [data-bridge-target=\"true\"]')?.remove()"
+    )
+    page.locator(".concept-post-repair__primary").click()
+    expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Membrane depolarization"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    page.locator(".concept-post-repair__options summary").click()
+    expect(
+        page.locator('[data-post-repair-action="pressure-check"]')
+    ).to_be_visible()
+    page.locator('[data-post-repair-action="pressure-check"]').click()
     expect(page.locator("#drill-chamber-view")).to_be_visible()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Reconstruction"
     )
-    expect(page.locator("#chamber-send")).to_have_text("Check my answer")
-    expect(page.locator(".drill-chamber__hint")).to_have_text("A sentence is enough.")
+    expect(page.locator("#chamber-send")).to_have_text("Check the link")
+    expect(page.locator(".drill-chamber__hint")).to_have_text("One clear connection is enough.")
     expect(
         page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
     ).to_be_visible()
@@ -1083,16 +1137,8 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__study-note")).not_to_contain_text(
         "while you repair"
     )
-    expect(page.locator("[data-feedback-rating]")).to_have_text("Rate this moment")
-    page.locator("[data-feedback-rating]").click()
-    expect(page.locator("#feedback-overlay")).to_be_visible()
-    expect(page.locator("#feedback-desc")).to_have_text(
-        "How did checking your repair feel? A 9 or 10 means the UX feels ready for a new customer."
-    )
-    expect(page.locator("#feedback-ux-rating")).to_be_focused()
-    page.keyboard.press("Escape")
-    expect(page.locator("#feedback-overlay")).not_to_be_visible()
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator("[data-feedback-rating]")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Continue route")
     assert "/session/qa-repair-concept" in page.url
     page.reload()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
@@ -1101,7 +1147,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "Repair checked for now."
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Continue route")
     assert drill_calls[0]["drill_mode"] == "re_drill"
     repaired_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
