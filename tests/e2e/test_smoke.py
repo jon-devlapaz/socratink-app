@@ -1462,7 +1462,7 @@ def _seda_route_result(**kwargs) -> dict:
 def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     clean_page: Page, base_url: str
 ) -> None:
-    """The Door sketch bootstraps SEDA; the first room answer earns study."""
+    """The real chamber carries one SEDA case through the nested learner loop."""
     page = clean_page
     _enter_app_shell_as_guest(page, base_url)
 
@@ -1510,6 +1510,8 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     room_answer = (
         "Memory cells remain after the first exposure and make the second response faster."
     )
+    repair_answer = "The retained cells recognize the antigen and activate sooner."
+    transfer_answer = "A saved pattern can make a later matching response start sooner."
     routed_prompt = "Route prompt B: why does the later response happen faster?"
     routed_mechanism = (
         "Route mechanism B: memory cells persist and activate sooner on re-exposure."
@@ -1550,32 +1552,63 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
                 }),
             )
             return
+        route_event = _seda_route_event(
+            node_id="c9_s1", label="Routed memory target",
+            prompt=routed_prompt, mechanism=routed_mechanism,
+        )
+        cold_event = {
+            "type": "cold_attempt", "kc_id": "c9_s1", "text": room_answer,
+            "evaluation": {
+                "classification": "deep",
+                "agent_response": (
+                    "You connected memory cells to the faster response, "
+                    "but not why they react sooner."
+                ),
+                "gap_description": "Name why memory cells respond faster.",
+                "grader_version": "qa",
+            },
+        }
+        gap_event = {
+            "type": "gap_identified", "graph_neutral": True,
+            "repair_scaffold": {
+                "socratic_question": "What lets the retained cells react sooner?",
+            },
+            "gap_log": {"missing_operation": "recognition triggers faster activation"},
+        }
+        repair_turn = {
+            "type": "repair_dialogue_turn", "text": repair_answer,
+            "bridge_ready": True, "graph_neutral": True, "score_eligible": False,
+        }
+        repair_event = {"type": "repair", "text": repair_answer, "graph_neutral": True}
+        bridge_event = {"type": "model_bridge", "text": routed_mechanism, "graph_neutral": True}
+        decision_event = {
+            "type": "post_bridge_transfer_decision", "run_gap": True,
+            "graph_neutral": True, "score_eligible": False,
+        }
+        transfer_event = {
+            "type": "post_bridge_transfer_check", "text": transfer_answer,
+            "graph_neutral": True, "score_eligible": False,
+            "evaluation": {"classification": "deep"},
+        }
+        turns = {
+            2: ({"key": "continue", "ctaText": cold_event["evaluation"]["agent_response"]}, [route_event, cold_event]),
+            3: ({"key": "repair", "ctaText": gap_event["repair_scaffold"]["socratic_question"]}, [route_event, cold_event, gap_event]),
+            4: ({"key": "continue", "ctaText": "Continue."}, [route_event, cold_event, gap_event, repair_turn, repair_event]),
+            5: ({"key": "run_gap_drill", "ctaText": "Try using it somewhere new?"}, [route_event, cold_event, gap_event, repair_turn, repair_event, bridge_event]),
+            6: ({"key": "gap_attempt", "ctaText": "Use it somewhere new."}, [route_event, cold_event, gap_event, repair_turn, repair_event, bridge_event, decision_event]),
+            7: ({"key": "spaced_attempt", "ctaText": "From memory, explain it again."}, [route_event, cold_event, gap_event, repair_turn, repair_event, bridge_event, decision_event, transfer_event]),
+        }
+        awaiting, events = turns[len(turn_texts)]
         route.fulfill(
             status=200,
             content_type="application/json",
             body=json.dumps({
                 "sessionId": "mid-loop-session",
-                "sessionVersion": 3,
+                "sessionVersion": len(turn_texts) + 1,
                 "status": "awaiting_input",
-                "awaiting": {
-                    "key": "compare",
-                    "ctaText": "Compare your answer with the note.",
-                },
+                "awaiting": awaiting,
                 "learnerTranscript": [],
-                "events": [{
-                    "type": "cold_attempt",
-                    "kc_id": "c9_s1",
-                    "text": room_answer,
-                    "evaluation": {
-                        "classification": "deep",
-                        "agent_response": (
-                            "You connected memory cells to the faster response, "
-                            "but not why they react sooner."
-                        ),
-                        "gap_description": "Name why memory cells respond faster.",
-                        "grader_version": "qa",
-                    },
-                }],
+                "events": events,
                 "caseComplete": False,
                 "record": None,
             }),
@@ -1650,9 +1683,9 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     expect(page.locator("#chamber-verdict")).not_to_contain_text(
         "You connected memory cells to the faster response, but not why they react sooner."
     )
-    expect(page.locator("#chamber-send")).to_have_text("See what to study")
+    expect(page.locator("#chamber-send")).to_have_text("Work this link")
     expect(page.locator("#chamber-composer")).to_be_disabled()
-    expect(page.locator("#chamber-question")).to_have_text(routed_prompt)
+    expect(page.locator("#chamber-question")).to_contain_text("not why they react sooner")
     assert turn_texts == [door_sketch, room_answer]
     assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2]
     projected = page.wait_for_function(
@@ -1681,10 +1714,39 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
         }"""
     ) is False
     page.locator("#chamber-send").click()
-    expect(page.locator("#drill-chamber-view")).to_be_hidden()
-    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
-        routed_mechanism, timeout=20_000
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "repair")
+    expect(page.locator("#chamber-anchor-text")).to_have_text(room_answer)
+    expect(page.locator("#chamber-question")).to_have_text("What lets the retained cells react sooner?")
+    page.locator("#chamber-composer").fill(repair_answer)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "repair-ready")
+    expect(page.locator("#chamber-anchor-label")).to_have_text("Your repair")
+    expect(page.locator("#chamber-anchor-text")).to_have_text(repair_answer)
+    expect(page.locator("#chamber-send")).to_have_text("See the connection")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "bridge")
+    expect(page.locator("#chamber-anchor-label")).to_have_text("Your repair")
+    expect(page.locator("#chamber-anchor-text")).to_have_text(repair_answer)
+    expect(page.locator("#chamber-bridge-text")).to_have_text(routed_mechanism)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "transfer")
+    expect(page.locator("#chamber-bridge")).to_be_hidden()
+    page.locator("#chamber-composer").fill(transfer_answer)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "settle")
+    assert turn_texts == [
+        door_sketch, room_answer, "continue", repair_answer, "continue", "y", transfer_answer,
+    ]
+    evidence = page.evaluate(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const training = JSON.parse(localStorage.getItem(`socratink:training:v1:${conceptId}`));
+          return training.node_records.c9_s1;
+        }"""
     )
+    assert len(evidence["attempts"]) == 1
+    assert [repair["text"] for repair in evidence["repairs"]] == [repair_answer]
+    assert evidence["study_revealed_at"]
 
 
 def test_late_source_less_route_cannot_overwrite_a_newly_selected_concept(
@@ -2024,8 +2086,9 @@ def test_seda_support_turn_is_neutral_and_records_no_evidence(
     expect(page.locator("#chamber-verdict")).to_contain_text("Response received")
     expect(page.locator("#chamber-verdict")).not_to_contain_text("Gap found")
     expect(page.locator("#chamber-verdict")).not_to_contain_text("Study")
-    expect(page.locator("#chamber-send")).to_have_text("Keep going")
-    expect(page.locator("#chamber-composer")).to_be_disabled()
+    expect(page.locator("#chamber-send")).to_have_text("Check the link")
+    expect(page.locator("#chamber-question")).to_have_text("Try one concrete cause.")
+    expect(page.locator("#chamber-composer")).to_be_enabled()
     assert turn_texts == [door_sketch, support_text]
     assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2]
     attempt_count = page.evaluate(
@@ -2038,8 +2101,6 @@ def test_seda_support_turn_is_neutral_and_records_no_evidence(
         }"""
     )
     assert attempt_count == 0
-    page.locator("#chamber-send").click()
-    expect(page.locator("#chamber-composer")).to_be_enabled()
 
 
 def test_seda_start_failure_offers_retry_from_product_flow(
@@ -3064,7 +3125,7 @@ def test_seda_transport_failure_keeps_draft_and_retries_same_turn(
             && document.getElementById('chamber-question')?.textContent
               === 'Why is the later response faster?'
             && document.getElementById('chamber-composer')?.disabled === false
-            && document.getElementById('chamber-send')?.textContent === 'Check my answer';
+            && document.getElementById('chamber-send')?.textContent === 'Check the link';
         }""",
         timeout=20_000,
     )

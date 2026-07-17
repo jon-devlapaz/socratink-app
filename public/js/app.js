@@ -74,11 +74,14 @@ import {
   runRepairReps,
   runDrillTurn,
 } from './api-client.js?v=2';
-import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=3';
+import {
+  sedaSurfaceFromResponse,
+  visibleSedaPromptFromResponse,
+} from './seda-visible-prompt.js?v=5';
 import {
   projectCompletedSedaRecord,
   projectLatestSedaAttemptEvent,
-} from './seda-evidence-projection.js?v=1';
+} from './seda-evidence-projection.js?v=2';
 import {
   bindSourceLessSedaRoute,
   boundSourceLessSedaNodeId,
@@ -4813,7 +4816,30 @@ const App = (() => {
     handleSystemAction(action);
   }
 
-  async function requestSedaTurn(userText) {
+  function presentSedaSurface(data, { challengePrompt = null } = {}) {
+    const surface = sedaSurfaceFromResponse(data);
+    const chamber = window.DrillChamber;
+    if (!chamber) return surface;
+
+    chamber.setSurface?.(surface.mode, surface);
+    chamber.setQuestion?.(surface.mode === 'challenge' && challengePrompt
+      ? challengePrompt
+      : surface.question);
+    chamber.setComposerEnabled(surface.composerEnabled);
+    if (surface.verdict) chamber.appendVerdict?.(surface.verdict);
+    if (surface.completionAction) {
+      chamber.setCompletionAction?.(surface.completionAction.label, () => {
+        if (surface.completionAction.kind === 'return') {
+          cancelDrill();
+          return;
+        }
+        void requestSedaTurn(surface.completionAction.value, { internal: true });
+      });
+    }
+    return surface;
+  }
+
+  async function requestSedaTurn(userText, { internal = false } = {}) {
     const concept = getActiveConcept();
     if (!concept || !drillState.node || !drillState.sedaSessionId) return;
     const sessionToken = drillState.sessionToken;
@@ -4821,7 +4847,9 @@ const App = (() => {
     drillState.pending = true;
     if (chatInput) chatInput.disabled = true;
     showTypingIndicator();
-    window.DrillChamber?.setLoading?.(true, { checkingAnswer: Boolean(String(userText || '').trim()) });
+    window.DrillChamber?.setLoading?.(true, {
+      checkingAnswer: !internal && Boolean(String(userText || '').trim()),
+    });
 
     const normalizedText = String(userText ?? '');
     const pendingSubmission = drillState.sedaPendingSubmission;
@@ -4837,7 +4865,7 @@ const App = (() => {
       const responseSaved = await saveSedaResponse(concept, drillState.node, data);
       /* c8 ignore start -- session-state storage failure shares the proven idempotent persistence-retry UI. */
       if (!responseSaved) {
-        showSedaPersistenceRetry(normalizedText);
+        showSedaPersistenceRetry(normalizedText, { internal });
         return;
       }
       /* c8 ignore stop */
@@ -4846,49 +4874,45 @@ const App = (() => {
         ? { ok: true, classification: null }
         : await projectSedaAttemptEvent(concept, drillState.node, data);
       if (!projectedAttempt.ok) {
-        showSedaPersistenceRetry(normalizedText);
+        showSedaPersistenceRetry(normalizedText, { internal });
         return;
       }
       drillState.sedaPendingSubmission = null;
       drillState.sedaSessionId = data.sessionId;
       drillState.sedaSessionVersion = sessionVersionFromResponse(data);
       const projectedAttemptClassification = projectedAttempt.classification;
-      const studyReady = data.caseComplete || Boolean(projectedAttemptClassification);
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
-      const previousPrompt = chamberLastShownQuestion;
-      const promptText = sedaPromptFromResponse(data);
-      const nextPrompt = nextSedaPromptAfterVerdict(promptText, previousPrompt, userText);
-      window.DrillChamber?.appendHistoryTurn('ai', previousPrompt || '');
-      window.DrillChamber?.appendHistoryTurn('learner', normalizedText);
-      drillState.messages.push({ role: 'user', content: userText });
-      drillState.messages.push({ role: 'assistant', content: studyReady ? promptText : nextPrompt });
-      chamberLastShownQuestion = studyReady ? promptText : nextPrompt;
+      const surface = sedaSurfaceFromResponse(data);
+      const studyReady = data.caseComplete || (
+        Boolean(projectedAttemptClassification) && surface.mode === 'unsupported'
+      );
+      if (!internal) drillState.messages.push({ role: 'user', content: normalizedText });
+      drillState.messages.push({ role: 'assistant', content: surface.prompt });
+      chamberLastShownQuestion = surface.prompt;
       drillState.pending = false;
-      drillState.sessionCompletePending = Boolean(studyReady);
+      drillState.sessionCompletePending = Boolean(studyReady || surface.mode === 'settle');
       persistSessionState();
 
       if (window.DrillChamber) {
         window.DrillChamber.setLoading?.(false);
-        if (studyReady) {
+        presentSedaSurface(data);
+        if (!internal && (studyReady || surface.mode === 'gap')) {
           window.DrillChamber.appendVerdict?.(verdictCopy({
             userText,
             sedaComplete: data.caseComplete,
             classification: projectedAttemptClassification || undefined,
           }));
-        } else {
-          window.DrillChamber.swapQuestion(nextPrompt);
-          setTimeout(() => {
-            window.DrillChamber?.appendVerdict?.(verdictCopy({ userText, recordable: false }));
-            window.DrillChamber?.setCompletionAction?.('Keep going', () => {
-              window.DrillChamber?.setComposerEnabled(true);
-            });
-          }, 260);
+        } else if (!internal && surface.mode === 'challenge') {
+          const lastEvent = Array.isArray(data?.events) ? data.events.at(-1) : null;
+          if (lastEvent?.graph_neutral === true && lastEvent?.score_eligible === false) {
+            window.DrillChamber.appendVerdict?.(verdictCopy({ userText, recordable: false }));
+          }
         }
         if (studyReady) {
-          /* c8 ignore next -- completed-loop button behavior is covered by API evidence proof; browser smoke covers active turn routing. */
-          window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(concept.id, drillState.node?.id));
-        } else {
-          window.DrillChamber.setComposerEnabled(false);
+          window.DrillChamber.setCompletionAction?.(
+            sedaCompleteCompletionLabel(),
+            () => openStudyAfterVerdict(concept.id, drillState.node?.id),
+          );
         }
       }
     } catch (err) {
@@ -4898,17 +4922,17 @@ const App = (() => {
       drillState.pending = false;
       window.DrillChamber?.setLoading?.(false);
       if (err?.status === 409 && err?.body?.error === 'session_conflict') {
-        await reconcileSedaSessionConflict(concept, normalizedText, sessionToken);
+        await reconcileSedaSessionConflict(concept, normalizedText, sessionToken, { internal });
         return;
       }
       console.error(err);
-      showSedaTransportRetry(normalizedText);
+      showSedaTransportRetry(normalizedText, { internal });
       return;
       /* c8 ignore stop */
     }
   }
 
-  function showSedaPersistenceRetry(userText) {
+  function showSedaPersistenceRetry(userText, { internal = false } = {}) {
     drillState.pending = false;
     window.DrillChamber?.setLoading?.(false);
     window.DrillChamber?.appendVerdict?.(
@@ -4916,12 +4940,12 @@ const App = (() => {
     );
     window.DrillChamber?.setCompletionAction?.('Try saving again', () => {
       window.DrillChamber?.setComposerEnabled(false);
-      void requestSedaTurn(userText);
+      void requestSedaTurn(userText, { internal });
     });
-    restoreUnrecordedDraft(userText, { chamber: true });
+    if (!internal) restoreUnrecordedDraft(userText, { chamber: true });
   }
 
-  function showSedaTransportRetry(userText) {
+  function showSedaTransportRetry(userText, { internal = false } = {}) {
     drillState.pending = false;
     window.DrillChamber?.setLoading?.(false);
     window.DrillChamber?.appendVerdict?.(
@@ -4929,22 +4953,22 @@ const App = (() => {
     );
     window.DrillChamber?.setCompletionAction?.('Try sending again', () => {
       window.DrillChamber?.setComposerEnabled(false);
-      void requestSedaTurn(userText);
+      void requestSedaTurn(userText, { internal });
     });
     // Completion actions normally clear the composer. Put the learner's exact
     // draft back after installing the retry action so a network failure never
     // turns visible effort into a blank form.
-    restoreUnrecordedDraft(userText, { chamber: true });
+    if (!internal) restoreUnrecordedDraft(userText, { chamber: true });
   }
 
-  async function reconcileSedaSessionConflict(concept, draft, sessionToken) {
+  async function reconcileSedaSessionConflict(concept, draft, sessionToken, { internal = false } = {}) {
     try {
       const latest = await getSedaSession(drillState.sedaSessionId);
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
       const responseSaved = await saveSedaResponse(concept, drillState.node, latest);
       /* c8 ignore start -- conflict refresh storage failure reuses the persistence-retry contract. */
       if (!responseSaved) {
-        showSedaPersistenceRetry(draft);
+        showSedaPersistenceRetry(draft, { internal });
         return;
       }
       /* c8 ignore stop */
@@ -4968,19 +4992,17 @@ const App = (() => {
       }
       /* c8 ignore stop */
       const currentPrompt = sedaPromptFromResponse(latest);
-      const question = document.getElementById('chamber-question');
-      if (question) question.textContent = currentPrompt;
       chamberLastShownQuestion = currentPrompt;
-      restoreUnrecordedDraft(draft, { chamber: true });
+      presentSedaSurface(latest);
+      if (!internal) restoreUnrecordedDraft(draft, { chamber: true });
       window.DrillChamber?.appendVerdict?.(
         'Session changed in another tab • Review the current question, then check your draft again.',
       );
-      window.DrillChamber?.setComposerEnabled(true);
     } catch (refreshError) {
       /* c8 ignore start -- refresh transport failure preserves the draft and is covered by the general transport-retry proof. */
       console.error(refreshError);
       if (sessionToken !== drillState.sessionToken) return;
-      restoreUnrecordedDraft(draft, { chamber: true });
+      if (!internal) restoreUnrecordedDraft(draft, { chamber: true });
       window.DrillChamber?.appendVerdict?.(
         'Session changed in another tab • Your draft was not recorded.',
       );
@@ -5411,15 +5433,10 @@ const App = (() => {
               window.DrillChamber.swapQuestion(promptText);
             }
             window.DrillChamber.setLoading?.(false);
-            /* c8 ignore start -- opening an already-complete stored session is covered by API proof, not browser smoke. */
-            if (data.caseComplete) {
-              drillState.sessionCompletePending = true;
-              window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(activeConcept.id, nodeContext?.id));
-            } else if (initialSedaTurnText) {
+            if (initialSedaTurnText) {
               await requestSedaTurn(initialSedaTurnText);
             } else {
-            /* c8 ignore stop */
-              window.DrillChamber.setComposerEnabled(true);
+              presentSedaSurface(data, { challengePrompt: promptText });
               if (restoredSedaDraftText) {
                 restoreUnrecordedDraft(restoredSedaDraftText, { chamber: true });
                 window.DrillChamber.appendVerdict?.(

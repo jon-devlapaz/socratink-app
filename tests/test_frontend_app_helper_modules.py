@@ -46,6 +46,7 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
             classList: {
               add() {},
               remove() {},
+              toggle() {},
             },
             appendChild(child) {
               this.appended = this.appended || [];
@@ -118,6 +119,15 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           'chamber-send',
           'chamber-exit',
           'chamber-chat-log',
+          'chamber-hint',
+          'chamber-verdict',
+          'chamber-beat-label',
+          'chamber-beat-note',
+          'chamber-anchor',
+          'chamber-anchor-label',
+          'chamber-anchor-text',
+          'chamber-bridge',
+          'chamber-bridge-text',
         ]) {
           nodes.set(id, makeNode(id));
         }
@@ -143,6 +153,31 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
         assert.equal(nodes.get('drill-chamber-view').hidden, false);
         assert.equal(nodes.get('chamber-question').textContent, 'Question?');
 
+        for (const mode of [
+          'challenge',
+          'gap',
+          'repair',
+          'recovery',
+          'repair-ready',
+          'bridge',
+          'transfer',
+          'settle',
+          'complete',
+        ]) {
+          window.DrillChamber.setSurface(mode);
+          assert.equal(
+            nodes.get('drill-chamber-view')['data-loop-surface'],
+            mode,
+            `chamber must render emitted ${mode} surface`,
+          );
+        }
+        window.DrillChamber.setSurface('recovery');
+        assert.equal(nodes.get('chamber-beat-label').textContent, 'One smaller step');
+        assert.equal(nodes.get('chamber-send').textContent, 'Try this step');
+        window.DrillChamber.setSurface('complete');
+        assert.equal(nodes.get('chamber-beat-label').textContent, 'Loop complete');
+        assert.equal(nodes.get('chamber-send').textContent, 'Return to concept');
+
         const sent = [];
         window.DrillChamber.onSend((text) => sent.push(text));
         nodes.get('chamber-composer').value = '  learner answer  ';
@@ -159,7 +194,7 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           question: 'Question?',
         });
         window.DrillChamber.setLoading(true);
-        assert.equal(nodes.get('chamber-hint').textContent, 'A sentence is enough.');
+        assert.equal(nodes.get('chamber-hint').textContent, 'One clear connection is enough.');
         window.DrillChamber.setLoading(true, { checkingAnswer: true });
         assert.equal(nodes.get('chamber-hint').textContent, 'Checking your answer…');
         const pendingTimer = scheduledTimers.at(-1);
@@ -175,7 +210,7 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           'Checking the link you wrote.'
         );
         window.DrillChamber.setLoading(false);
-        assert.equal(nodes.get('chamber-hint').textContent, 'A sentence is enough.');
+        assert.equal(nodes.get('chamber-hint').textContent, 'One clear connection is enough.');
         assert.equal(nodes.get('chamber-verdict').hidden, true);
         window.DrillChamber.setLoading(true, { checkingAnswer: true });
         scheduledTimers.at(-1).callback();

@@ -742,6 +742,18 @@ function renderDrillChamberHtml() {
         <div class="drill-chamber__chat-log" id="chamber-chat-log" hidden></div>
 
         <div class="drill-chamber__active" id="chamber-active">
+          <div class="drill-chamber__beat">
+            <span class="drill-chamber__beat-label" id="chamber-beat-label">Reconstruct</span>
+            <p class="drill-chamber__beat-note" id="chamber-beat-note">Build the connection before you see it.</p>
+          </div>
+          <blockquote class="drill-chamber__anchor" id="chamber-anchor" hidden>
+            <span id="chamber-anchor-label">Your first model</span>
+            <p id="chamber-anchor-text"></p>
+          </blockquote>
+          <aside class="drill-chamber__bridge" id="chamber-bridge" hidden>
+            <span>Mechanism</span>
+            <p id="chamber-bridge-text"></p>
+          </aside>
           <p class="drill-chamber__question" id="chamber-question">—</p>
           <div class="drill-chamber__verdict" id="chamber-verdict" role="status" aria-live="polite" hidden></div>
           <div class="drill-chamber__composer">
@@ -750,10 +762,10 @@ function renderDrillChamberHtml() {
               <span class="drill-chamber__hint" id="chamber-hint">A sentence is enough.</span>
               <div class="drill-chamber__composer-actions">
                 <button class="drill-chamber__voice-button" id="chamber-mic" type="button" aria-label="Dictate answer" aria-pressed="false" hidden>
-                  <span aria-hidden="true">mic</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>
                 </button>
                 <button class="drill-chamber__voice-button" id="chamber-tutor-voice" type="button" aria-label="Tutor voice off" aria-pressed="false" hidden>
-                  <span aria-hidden="true">voice</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6.5 9H3v6h3.5l4.5 4zM15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>
                 </button>
                 <button class="drill-chamber__send" id="chamber-send" type="button">Check my answer</button>
               </div>

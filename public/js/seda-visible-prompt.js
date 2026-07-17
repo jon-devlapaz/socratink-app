@@ -79,3 +79,116 @@ export function visibleSedaPromptFromResponse(data) {
     .join('\n');
   return [visible, cta].filter(Boolean).join('\n\n') || 'Your turn.';
 }
+
+function latestEvent(data, type) {
+  const events = Array.isArray(data?.events) ? data.events : [];
+  return events.findLast((event) => event?.type === type) || null;
+}
+
+const AWAITING_SURFACE_MODE = Object.freeze({
+  cmd: 'challenge',
+  concept: 'challenge',
+  learner_goal: 'challenge',
+  launch_attempt: 'challenge',
+  substrate_refinement: 'challenge',
+  cold_attempt: 'challenge',
+  repair: 'repair',
+  repair_dialogue_turns: 'repair',
+  repair_recovery: 'recovery',
+  run_gap_drill: 'bridge',
+  gap_attempt: 'transfer',
+  spaced_attempt: 'settle',
+});
+
+function surfaceMode(data, lastEvent) {
+  if (data?.caseComplete) return 'complete';
+  const awaitingKey = data?.awaiting?.key || null;
+  if (awaitingKey === 'continue') return lastEvent?.type === 'repair' ? 'repair-ready' : 'gap';
+  return AWAITING_SURFACE_MODE[awaitingKey] || 'unsupported';
+}
+
+function surfacePresentation(mode, { prompt, gapText }) {
+  if (mode === 'gap') return {
+    question: gapText || 'There is one missing connection in your model.',
+    composerEnabled: false,
+    completionAction: { label: 'Work this link', kind: 'submit', value: 'continue' },
+  };
+  if (mode === 'repair') return {
+    question: gapText || prompt,
+    composerEnabled: true,
+    completionAction: null,
+  };
+  if (mode === 'recovery') return {
+    question: prompt || 'Name only the first part of the link you can see.',
+    composerEnabled: true,
+    completionAction: null,
+  };
+  if (mode === 'repair-ready') return {
+    question: 'You formed the missing connection in your own words.',
+    composerEnabled: false,
+    completionAction: { label: 'See the connection', kind: 'submit', value: 'continue' },
+  };
+  if (mode === 'bridge') return {
+    question: 'Close it when you can rebuild the link.',
+    composerEnabled: false,
+    completionAction: { label: 'Close and rebuild', kind: 'submit', value: 'y' },
+  };
+  if (mode === 'transfer') return {
+    question: 'Without looking back, rebuild the connection in your own words. Then name one situation where it would matter.',
+    composerEnabled: true,
+    completionAction: null,
+  };
+  if (mode === 'settle') return {
+    question: 'Keep the repaired connection. The next useful test is later, from memory.',
+    composerEnabled: false,
+    completionAction: { label: 'Return to concept', kind: 'return' },
+    verdict: 'Repair practiced • This turn did not change your record.',
+  };
+  if (mode === 'complete') return {
+    question: 'This learning loop is complete.',
+    composerEnabled: false,
+    completionAction: { label: 'Return to concept', kind: 'return' },
+  };
+  if (mode === 'unsupported') return {
+    question: 'This learning step is not available here. Your recorded work is unchanged.',
+    composerEnabled: false,
+    completionAction: { label: 'Return to concept', kind: 'return' },
+  };
+  return {
+    question: prompt,
+    composerEnabled: true,
+    completionAction: null,
+  };
+}
+
+/**
+ * Maps the hosted SEDA transport state onto the learner-facing nested loop.
+ * This is presentation only: evidence eligibility stays owned by SEDA events.
+ */
+export function sedaSurfaceFromResponse(data) {
+  const lastEvent = Array.isArray(data?.events) ? data.events.at(-1) : null;
+  const mode = surfaceMode(data, lastEvent);
+
+  const coldAttempt = latestEvent(data, 'cold_attempt');
+  const gap = latestEvent(data, 'gap_identified');
+  const repair = latestEvent(data, 'repair');
+  const bridge = latestEvent(data, 'model_bridge');
+
+  const surface = {
+    mode,
+    prompt: visibleSedaPromptFromResponse(data),
+    originalText: learnerVisibleSedaText(coldAttempt?.text || ''),
+    gapText: learnerVisibleSedaText(
+      gap?.repair_scaffold?.socratic_question
+      || gap?.gap_log?.missing_operation
+      || data?.awaiting?.ctaText
+      || '',
+    ),
+    repairText: learnerVisibleSedaText(repair?.text || ''),
+    bridgeText: learnerVisibleSedaText(bridge?.text || ''),
+  };
+  return {
+    ...surface,
+    ...surfacePresentation(mode, surface),
+  };
+}

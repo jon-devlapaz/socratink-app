@@ -82,6 +82,73 @@ def test_seda_visible_prompt_drops_setup_log_lines() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_seda_surface_maps_outer_repair_bridge_and_transfer_beats() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { sedaSurfaceFromResponse } from './public/js/seda-visible-prompt.js';
+
+        const events = [
+          { type: 'cold_attempt', text: 'The query compares with keys.' },
+          {
+            type: 'gap_identified',
+            repair_scaffold: { socratic_question: 'What turns that comparison into a weighted result?' },
+          },
+        ];
+        const repair = sedaSurfaceFromResponse({
+          events,
+          awaiting: { key: 'repair', ctaText: 'What turns that comparison into a weighted result?' },
+        });
+        assert.equal(repair.mode, 'repair');
+        assert.equal(repair.originalText, 'The query compares with keys.');
+        assert.equal(repair.gapText, 'What turns that comparison into a weighted result?');
+
+        const bridgeEvents = [...events, { type: 'repair', text: 'Similarity becomes a weight.' }, {
+            type: 'model_bridge', text: 'Attention normalizes similarities into weights.'
+          }];
+        const ready = sedaSurfaceFromResponse({
+          events: [...events, { type: 'repair', text: 'Similarity becomes a weight.' }],
+          awaiting: { key: 'continue' },
+        });
+        assert.equal(ready.mode, 'repair-ready');
+        assert.equal(ready.repairText, 'Similarity becomes a weight.');
+
+        const bridge = sedaSurfaceFromResponse({
+          events: bridgeEvents,
+          awaiting: { key: 'run_gap_drill' },
+        });
+        assert.equal(bridge.mode, 'bridge');
+        assert.equal(bridge.repairText, 'Similarity becomes a weight.');
+        assert.equal(bridge.bridgeText, 'Attention normalizes similarities into weights.');
+
+        assert.equal(sedaSurfaceFromResponse({
+          events: bridgeEvents,
+          awaiting: { key: 'gap_attempt' },
+        }).mode, 'transfer');
+        assert.equal(sedaSurfaceFromResponse({
+          awaiting: { key: 'spaced_attempt' },
+        }).mode, 'settle');
+
+        const recovery = sedaSurfaceFromResponse({
+          awaiting: {
+            key: 'repair_recovery',
+            ctaText: 'Name only the first cause you can see.',
+          },
+        });
+        assert.equal(recovery.mode, 'recovery');
+        assert.equal(recovery.prompt, 'Name only the first cause you can see.');
+
+        const complete = sedaSurfaceFromResponse({
+          caseComplete: true,
+          awaiting: null,
+        });
+        assert.equal(complete.mode, 'complete');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_auth_entry_session_redirect_contract() -> None:
     result = run_node_module(
         """

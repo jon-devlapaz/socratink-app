@@ -23,6 +23,7 @@ let tutorVoiceEnabled = false;
 let lastSpokenQuestion = '';
 let pendingVerdictTimer = null;
 let pendingVerdictShown = false;
+let currentSurface = 'challenge';
 const DEFAULT_SEND_LABEL = 'Check my answer';
 const DEFAULT_HINT = 'A sentence is enough.';
 const EMPTY_REPLY_HINT = 'Write a sentence before checking.';
@@ -30,6 +31,78 @@ const CHECKING_REPLY_HINT = 'Checking your answer…';
 const PENDING_VERDICT = 'Answer received • Checking the link you wrote.';
 const PENDING_VERDICT_DELAY_MS = 1200;
 const _originalPlaceholder = 'Write your reconstruction here. Fragments are fine.';
+const SURFACES = {
+  challenge: {
+    label: 'Reconstruct',
+    note: 'Build the connection before you see it.',
+    send: 'Check the link',
+    hint: 'One clear connection is enough.',
+    placeholder: _originalPlaceholder,
+  },
+  gap: {
+    label: 'One missing link',
+    note: 'Your first model is held steady. Work only the edge that broke.',
+    send: 'Work this link',
+    hint: 'The rest of your model stays untouched.',
+    placeholder: 'Add only the missing connection.',
+  },
+  repair: {
+    label: 'Repair one link',
+    note: 'Use the question to revise your own explanation.',
+    send: 'Try this repair',
+    hint: 'Answer the question in your own words.',
+    placeholder: 'Complete the causal link.',
+  },
+  recovery: {
+    label: 'One smaller step',
+    note: 'Get unstuck without turning help into evidence.',
+    send: 'Try this step',
+    hint: 'One short connection is enough.',
+    placeholder: 'Name the first part of the link you can see.',
+  },
+  'repair-ready': {
+    label: 'Link formed',
+    note: 'Now compare your connection with the full mechanism.',
+    send: 'See the connection',
+    hint: 'Your repair is kept as written.',
+    placeholder: '',
+  },
+  bridge: {
+    label: 'Compare',
+    note: 'Compare this with your repair, then rebuild from memory.',
+    send: 'Close and rebuild',
+    hint: 'The next turn does not change your record.',
+    placeholder: '',
+  },
+  transfer: {
+    label: 'Rebuild',
+    note: 'The bridge is closed. Use the connection somewhere new.',
+    send: 'Check the transfer',
+    hint: 'This is practice, not mastery evidence.',
+    placeholder: 'Rebuild the connection from memory.',
+  },
+  settle: {
+    label: 'Loop complete',
+    note: 'You found a gap, repaired it, and rebuilt once.',
+    send: 'Return to concept',
+    hint: 'A later memory check can change the record.',
+    placeholder: '',
+  },
+  complete: {
+    label: 'Loop complete',
+    note: 'Your recorded work is preserved without an extra mastery claim.',
+    send: 'Return to concept',
+    hint: 'The next evidence comes from a later reconstruction.',
+    placeholder: '',
+  },
+  unsupported: {
+    label: 'Loop paused',
+    note: 'This step cannot be shown safely in this app.',
+    send: 'Return to concept',
+    hint: 'Your recorded work is unchanged.',
+    placeholder: '',
+  },
+};
 const MIC_INPUT_PREF_KEY = 'socratink.loop.micInput';
 const TUTOR_VOICE_PREF_KEY = 'socratink.loop.tutorVoice';
 
@@ -71,6 +144,13 @@ function bind() {
   els.exit = document.getElementById('chamber-exit');
   els.chatLog = document.getElementById('chamber-chat-log');
   els.verdict = document.getElementById('chamber-verdict');
+  els.beatLabel = document.getElementById('chamber-beat-label');
+  els.beatNote = document.getElementById('chamber-beat-note');
+  els.anchor = document.getElementById('chamber-anchor');
+  els.anchorLabel = document.getElementById('chamber-anchor-label');
+  els.anchorText = document.getElementById('chamber-anchor-text');
+  els.bridge = document.getElementById('chamber-bridge');
+  els.bridgeText = document.getElementById('chamber-bridge-text');
 
   if (!hasRequiredElements()) return false;
 
@@ -126,6 +206,7 @@ function show({ conceptName, entryName, question }) {
   els.conceptName.textContent = conceptName || '—';
   els.entryName.textContent = entryName || '—';
   els.question.textContent = question || '—';
+  setSurface('challenge');
   els.composer.value = '';
   setComposerEnabled(true);
   syncVoiceControls();
@@ -143,6 +224,38 @@ function show({ conceptName, entryName, question }) {
       || els.view.contains(active);
     if (canClaimFocus) els.composer.focus();
   });
+}
+
+function setSurface(mode = 'challenge', context = {}) {
+  if (!bind()) return;
+  const surface = SURFACES[mode] || SURFACES.challenge;
+  currentSurface = SURFACES[mode] ? mode : 'challenge';
+  els.view.setAttribute('data-loop-surface', currentSurface);
+  if (els.beatLabel) els.beatLabel.textContent = surface.label;
+  if (els.beatNote) els.beatNote.textContent = surface.note;
+  if (els.anchor && els.anchorText) {
+    const originalText = String(context.originalText || '').trim();
+    const repairText = String(context.repairText || '').trim();
+    const useRepair = ['repair-ready', 'bridge'].includes(mode) && repairText;
+    const anchorText = useRepair ? repairText : originalText;
+    if (els.anchorLabel) els.anchorLabel.textContent = useRepair ? 'Your repair' : 'Your first model';
+    els.anchorText.textContent = anchorText;
+    els.anchor.hidden = !anchorText || !['gap', 'repair', 'repair-ready', 'bridge'].includes(mode);
+  }
+  if (els.bridge && els.bridgeText) {
+    const bridgeText = String(context.bridgeText || '').trim();
+    els.bridgeText.textContent = bridgeText;
+    els.bridge.hidden = mode !== 'bridge' || !bridgeText;
+  }
+  els.send.textContent = surface.send;
+  els.composer.placeholder = surface.placeholder;
+  setComposerHint(surface.hint);
+}
+
+function restoreSurfaceComposer() {
+  const surface = SURFACES[currentSurface] || SURFACES.challenge;
+  els.composer.placeholder = surface.placeholder;
+  setComposerHint(surface.hint);
 }
 
 function hide() {
@@ -200,6 +313,15 @@ function swapQuestion(nextText) {
   }, 240);
 }
 
+function setQuestion(text) {
+  if (!bind()) return;
+  clearCompletionAction();
+  clearVerdict();
+  els.question.textContent = String(text || '').trim() || 'Your turn.';
+  els.composer.value = '';
+  speakTutorQuestion(els.question.textContent);
+}
+
 function setComposerEnabled(enabled) {
   if (!bind()) return;
   if (!enabled && listening) speechRecognition?.stop();
@@ -236,9 +358,8 @@ function setLoading(loading, { checkingAnswer = false } = {}) {
     if (pendingVerdictTimer != null) clearTimeout(pendingVerdictTimer);
     pendingVerdictTimer = null;
     if (pendingVerdictShown) clearVerdict();
-    els.composer.placeholder = _originalPlaceholder;
+    restoreSurfaceComposer();
     els.active?.removeAttribute('data-loading');
-    resetComposerHint();
   }
 }
 
@@ -268,9 +389,9 @@ function clearCompletionAction() {
   if (!hasRequiredElements()) return;
   completionHandler = null;
   els.active?.removeAttribute('data-complete');
-  els.send.textContent = DEFAULT_SEND_LABEL;
-  els.composer.placeholder = _originalPlaceholder;
-  resetComposerHint();
+  const surface = SURFACES[currentSurface] || SURFACES.challenge;
+  els.send.textContent = surface.send || DEFAULT_SEND_LABEL;
+  restoreSurfaceComposer();
 }
 
 function clearVerdict() {
@@ -476,8 +597,8 @@ function initVoiceControls() {
 }
 
 window.DrillChamber = {
-  show, hide, appendHistoryTurn, swapQuestion,
-  setComposerEnabled, setLoading, setCompletionAction,
+  show, hide, appendHistoryTurn, swapQuestion, setQuestion,
+  setComposerEnabled, setLoading, setCompletionAction, setSurface,
   getComposerValue, clearComposer,
   appendCreed, appendVerdict, clearVerdict,
   onSend, onExit,
