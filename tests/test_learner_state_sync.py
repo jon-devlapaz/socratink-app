@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import shutil
+from pathlib import Path
 
 import pytest
 
 from tests._helpers.node_runner import run_node_module
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
@@ -14,7 +17,19 @@ def test_merge_learner_state_unions_evidence_without_dropping_attempts() -> None
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
-        import { mergeLearnerState } from './public/js/learner-state-sync.js';
+        import {
+          mergeLearnerState,
+          mergeTrainingRecords,
+        } from './public/js/learner-state-sync.js';
+
+        const checkedOnlyLocally = mergeTrainingRecords(
+          { concept_id: 'checked', node_records: { n1: { repair_checked_at: '2026-07-08T11:00:00.000Z' } } },
+          { concept_id: 'checked', node_records: { n1: {} } },
+        );
+        assert.equal(
+          checkedOnlyLocally.node_records.n1.repair_checked_at,
+          '2026-07-08T11:00:00.000Z',
+        );
 
         const local = {
           concepts: [{ id: 'c1', name: 'Local', updated_at: '2026-07-08T12:00:00.000Z' }],
@@ -74,6 +89,111 @@ def test_merge_learner_state_unions_evidence_without_dropping_attempts() -> None
         """
     )
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_identified_hydration_preserves_repair_check_round_trip() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          CONCEPTS_STORE_KEY,
+          hydrateAndSyncLearnerState,
+        } from './public/js/learner-state-sync.js';
+
+        const trainingKey = 'socratink:training:v1:c1';
+        const checkedAt = '2026-07-08T10:20:00.000Z';
+        const mem = new Map([
+          [CONCEPTS_STORE_KEY, JSON.stringify([{ id: 'c1', name: 'Local concept' }])],
+          [trainingKey, JSON.stringify({
+            concept_id: 'c1',
+            schema_version: 1,
+            grounding: 'ungrounded',
+            node_records: {
+              n1: {
+                attempts: [{
+                  id: 'a1',
+                  at: '2026-07-08T10:00:00.000Z',
+                  user_text: 'local attempt',
+                  classification: 'partial',
+                  gaps: [],
+                  grader_version: 'test',
+                }],
+                repairs: [{
+                  id: 'r1',
+                  at: '2026-07-08T10:10:00.000Z',
+                  text: 'local repair',
+                }],
+                study_revealed_at: '2026-07-08T10:05:00.000Z',
+                repair_checked_at: checkedAt,
+              },
+            },
+          })],
+        ]);
+        const storage = {
+          getItem(key) { return mem.has(key) ? mem.get(key) : null; },
+          setItem(key, value) { mem.set(key, String(value)); },
+          key(index) { return [...mem.keys()][index] || null; },
+          get length() { return mem.size; },
+        };
+
+        let remote = {
+          concepts: [{ id: 'c1', name: 'Remote concept' }],
+          training: {
+            c1: {
+              concept_id: 'c1',
+              schema_version: 1,
+              grounding: 'ungrounded',
+              node_records: {
+                n1: {
+                  attempts: [],
+                  repairs: [],
+                  study_revealed_at: null,
+                },
+              },
+            },
+          },
+        };
+        const fetchImpl = async (_url, options = {}) => {
+          if (!options.method || options.method === 'GET') {
+            return { status: 200, ok: true, async json() { return remote; } };
+          }
+          remote = JSON.parse(options.body);
+          return { status: 200, ok: true, async json() { return remote; } };
+        };
+
+        const first = await hydrateAndSyncLearnerState({
+          storage,
+          fetchImpl,
+          isIdentified: true,
+        });
+        assert.equal(first.state.training.c1.node_records.n1.repair_checked_at, checkedAt);
+        assert.equal(JSON.parse(mem.get(trainingKey)).node_records.n1.repair_checked_at, checkedAt);
+        assert.equal(remote.training.c1.node_records.n1.repair_checked_at, checkedAt);
+
+        const second = await hydrateAndSyncLearnerState({
+          storage,
+          fetchImpl,
+          isIdentified: true,
+        });
+        assert.equal(second.state.training.c1.node_records.n1.repair_checked_at, checkedAt);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_evidence_writes_schedule_identified_state_push() -> None:
+    app_js = (REPO_ROOT / "public" / "js" / "app.js").read_text(encoding="utf-8")
+    for method in (
+        "appendAttempt",
+        "setStudyRevealed",
+        "appendRepair",
+        "saveTraining",
+        "markRepairChecked",
+    ):
+        start = app_js.index(f"trainingStore.{method} = async")
+        end = app_js.index("\n  };", start)
+        assert "scheduleLearnerStatePush();" in app_js[start:end], method
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")

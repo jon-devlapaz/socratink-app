@@ -50,6 +50,14 @@ function latestColdAttemptEvent(data) {
   return null;
 }
 
+function latestIndexedEvent(data, type) {
+  const events = Array.isArray(data?.events) ? data.events : [];
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    if (events[index]?.type === type) return { event: events[index], index };
+  }
+  return null;
+}
+
 // Select the single attempted backend node record. A SEDA session completes
 // exactly one node, so zero or several attempted records is unexpected; fail
 // closed rather than arbitrarily projecting whichever happens to be first.
@@ -104,9 +112,9 @@ function baseTraining(training, conceptId) {
 }
 
 /**
- * Projects the latest recordable SEDA cold_attempt event before the case is
- * complete. This lets first-session study reveal honor the cold-attempt gate
- * without waiting for the whole spaced SEDA case to finish.
+ * Projects recordable progress before the case is complete: the cold attempt,
+ * the honest study-reveal boundary, and the learner's accepted repair. The
+ * repair dialogue and immediate transfer remain graph-neutral and unprojected.
  */
 export function projectLatestSedaAttemptEvent({
   training = null,
@@ -126,10 +134,42 @@ export function projectLatestSedaAttemptEvent({
     : {};
   const existing = nodeRecords[nodeId] || { attempts: [], repairs: [] };
   const existingAttempts = Array.isArray(existing.attempts) ? existing.attempts : [];
+  const existingRepairs = Array.isArray(existing.repairs) ? existing.repairs : [];
+  const attempts = [...existingAttempts];
+  const repairs = [...existingRepairs];
+  let studyRevealedAt = existing.study_revealed_at;
+  let changed = false;
   const attemptId = sedaEventAttemptId(sessionId, coldAttempt.index);
-  if (existingAttempts.some((attempt) => attempt?.id === attemptId)) {
-    return null;
+  if (!attempts.some((attempt) => attempt?.id === attemptId)) {
+    attempts.push({
+      id: attemptId,
+      at: now,
+      user_text: coldAttempt.text,
+      classification: coldAttempt.classification,
+      gaps: gapsForEarlyAttempt(coldAttempt.event?.evaluation),
+      grader_version: coldAttempt.event?.evaluation?.prompt_version
+        || coldAttempt.event?.evaluation?.grader_version
+        || 'seda-loop',
+      kind: attempts.length === 0 ? 'cold' : 'spaced',
+    });
+    changed = true;
   }
+
+  if (!studyRevealedAt && latestIndexedEvent(data, 'gap_identified')) {
+    studyRevealedAt = now;
+    changed = true;
+  }
+
+  const repairEvent = latestIndexedEvent(data, 'repair');
+  if (repairEvent?.event?.text && studyRevealedAt) {
+    const repairId = `${sedaEventAttemptId(sessionId, repairEvent.index)}-repair`;
+    if (!repairs.some((repair) => repair?.id === repairId)) {
+      repairs.push({ id: repairId, at: now, text: repairEvent.event.text });
+      changed = true;
+    }
+  }
+
+  if (!changed) return null;
 
   return {
     ...next,
@@ -139,21 +179,9 @@ export function projectLatestSedaAttemptEvent({
       ...nodeRecords,
       [nodeId]: {
         ...existing,
-        attempts: [
-          ...existingAttempts,
-          {
-            id: attemptId,
-            at: now,
-            user_text: coldAttempt.text,
-            classification: coldAttempt.classification,
-            gaps: gapsForEarlyAttempt(coldAttempt.event?.evaluation),
-            grader_version: coldAttempt.event?.evaluation?.prompt_version
-              || coldAttempt.event?.evaluation?.grader_version
-              || 'seda-loop',
-            kind: existingAttempts.length === 0 ? 'cold' : 'spaced',
-          },
-        ],
-        repairs: Array.isArray(existing.repairs) ? existing.repairs : [],
+        attempts,
+        repairs,
+        ...(studyRevealedAt ? { study_revealed_at: studyRevealedAt } : {}),
       },
     },
   };
@@ -210,6 +238,13 @@ export function projectCompletedSedaRecord({
     completedStartIndex = 1;
   }
 
+  const existingRepairs = Array.isArray(existing.repairs) ? existing.repairs : [];
+  const eventRepairPrefix = `seda-${sessionId}-event-`;
+  const canonicalRepairs = restampedRepairs({ backendRecord, sessionId, now });
+  const reconciledRepairs = existingRepairs.filter(
+    (repair) => !String(repair?.id || '').startsWith(eventRepairPrefix),
+  );
+
   const projected = {
     ...existing,
     attempts: [
@@ -222,10 +257,7 @@ export function projectCompletedSedaRecord({
         startIndex: completedStartIndex,
       }),
     ],
-    repairs: [
-      ...(Array.isArray(existing.repairs) ? existing.repairs : []),
-      ...restampedRepairs({ backendRecord, sessionId, now }),
-    ],
+    repairs: [...reconciledRepairs, ...canonicalRepairs],
   };
   if (backendRecord.study_revealed_at && !projected.study_revealed_at) {
     projected.study_revealed_at = now;

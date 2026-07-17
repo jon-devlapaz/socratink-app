@@ -46,6 +46,7 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
             classList: {
               add() {},
               remove() {},
+              toggle() {},
             },
             appendChild(child) {
               this.appended = this.appended || [];
@@ -118,6 +119,15 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           'chamber-send',
           'chamber-exit',
           'chamber-chat-log',
+          'chamber-hint',
+          'chamber-verdict',
+          'chamber-beat-label',
+          'chamber-beat-note',
+          'chamber-anchor',
+          'chamber-anchor-label',
+          'chamber-anchor-text',
+          'chamber-bridge',
+          'chamber-bridge-text',
         ]) {
           nodes.set(id, makeNode(id));
         }
@@ -143,6 +153,31 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
         assert.equal(nodes.get('drill-chamber-view').hidden, false);
         assert.equal(nodes.get('chamber-question').textContent, 'Question?');
 
+        for (const mode of [
+          'challenge',
+          'gap',
+          'repair',
+          'recovery',
+          'repair-ready',
+          'bridge',
+          'transfer',
+          'settle',
+          'complete',
+        ]) {
+          window.DrillChamber.setSurface(mode);
+          assert.equal(
+            nodes.get('drill-chamber-view')['data-loop-surface'],
+            mode,
+            `chamber must render emitted ${mode} surface`,
+          );
+        }
+        window.DrillChamber.setSurface('recovery');
+        assert.equal(nodes.get('chamber-beat-label').textContent, 'One smaller step');
+        assert.equal(nodes.get('chamber-send').textContent, 'Try this step');
+        window.DrillChamber.setSurface('complete');
+        assert.equal(nodes.get('chamber-beat-label').textContent, 'Loop complete');
+        assert.equal(nodes.get('chamber-send').textContent, 'Return to concept');
+
         const sent = [];
         window.DrillChamber.onSend((text) => sent.push(text));
         nodes.get('chamber-composer').value = '  learner answer  ';
@@ -159,7 +194,7 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           question: 'Question?',
         });
         window.DrillChamber.setLoading(true);
-        assert.equal(nodes.get('chamber-hint').textContent, 'A sentence is enough.');
+        assert.equal(nodes.get('chamber-hint').textContent, 'One clear connection is enough.');
         window.DrillChamber.setLoading(true, { checkingAnswer: true });
         assert.equal(nodes.get('chamber-hint').textContent, 'Checking your answer…');
         const pendingTimer = scheduledTimers.at(-1);
@@ -175,7 +210,7 @@ def test_drill_chamber_noops_when_required_nodes_are_missing() -> None:
           'Checking the link you wrote.'
         );
         window.DrillChamber.setLoading(false);
-        assert.equal(nodes.get('chamber-hint').textContent, 'A sentence is enough.');
+        assert.equal(nodes.get('chamber-hint').textContent, 'One clear connection is enough.');
         assert.equal(nodes.get('chamber-verdict').hidden, true);
         window.DrillChamber.setLoading(true, { checkingAnswer: true });
         scheduledTimers.at(-1).callback();
@@ -1265,13 +1300,15 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
 def test_new_concept_field_has_unique_accessible_label() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
-    assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
+    assert '<h2 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
     assert "What are you trying to explain?" in index_html
     assert "Write what you remember first. We'll show what to study" in index_html
-    assert "You'll write first. Answers come after." in index_html
+    assert "Add your first model to start." in index_html
     assert 'id="ignition-boundary"' in index_html
     assert 'class="ig-eyebrow">New session</p>' in index_html
     assert "socratink will ask for your first model" not in index_html
+    assert 'for="hero-single-input-field">Topic or question</label>' in index_html
+    assert 'for="hero-cold-guess-field">Your first model</label>' in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'id="hero-cold-guess-field"' in index_html
     assert 'aria-label="Learning goal"' in index_html
@@ -1389,7 +1426,11 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
-        import { renderConceptConstellationHtml } from './public/js/concept-constellation-view.js';
+        import {
+          derivePostRepairBridge,
+          renderConceptConstellationHtml,
+        } from './public/js/concept-constellation-view.js';
+        import { deriveRepairPhase } from './public/js/concept-page-view.js';
 
         const data = {
           metadata: {
@@ -1447,9 +1488,10 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.match(activeHtml, /Draft structure only\\./);
         assert.match(activeHtml, /Overview first\\./);
         assert.match(activeHtml, /concept-constellation__return/);
-        assert.doesNotMatch(activeHtml, /role="img"/);
+        assert.doesNotMatch(activeHtml, /<svg[^>]*role="img"/);
         assert.match(activeHtml, /class="concept-constellation__node[^"]*"\\s+data-entry-id="gate"/);
         assert.match(activeHtml, /class="concept-constellation__node is-active"/);
+        assert.match(activeHtml, /class="concept-constellation__node is-active"[\\s\\S]*?role="img"[\\s\\S]*?tabindex="-1"/);
         assert.match(activeHtml, /data-state="primed"/);
         assert.match(activeHtml, /role="button"/);
         assert.match(activeHtml, /tabindex="0"/);
@@ -1486,6 +1528,115 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.match(coldHtml, /data-entry-id="gate"[\\s\\S]*data-state="ready"/);
         assert.match(coldHtml, /Entry 02/);
         assert.doesNotMatch(coldHtml, /Signal spread/);
+        const repairTraining = {
+          node_records: {
+            gate: {
+              attempts: [{
+                at: '2026-05-21T00:00:00Z',
+                classification: 'partial',
+                user_text: 'Sodium moves inward.',
+                gaps: [{ description: 'Name what opens the gate.' }],
+              }],
+              study_revealed_at: '2026-05-21T00:02:00Z',
+              repairs: [{
+                id: 'repair-1',
+                at: '2026-05-21T00:03:00Z',
+                text: 'Threshold opens the gate before the gradient can act.',
+              }],
+            },
+          },
+        };
+        const bridge = derivePostRepairBridge(data, repairTraining, 'gate');
+        assert.deepEqual(bridge, {
+          repairedEntryId: 'gate',
+          targetEntryId: 'spread',
+        });
+        const bridgeHtml = renderConceptConstellationHtml(data, {
+          activeEntryId: 'gate',
+          training: repairTraining,
+          postRepairBridge: bridge,
+        });
+        assert.match(bridgeHtml, /concept-constellation__shell--bridge/);
+        assert.match(bridgeHtml, /Your map is unchanged\\./);
+        assert.match(bridgeHtml, /Reconstruct this link later to test it\\./);
+        assert.match(bridgeHtml, /Suggested next/);
+        assert.match(bridgeHtml, /Signal spread/);
+        assert.match(bridgeHtml, /data-edge-recommendation="true"/);
+        assert.match(bridgeHtml, /concept-constellation__edge is-suggested/);
+        assert.match(bridgeHtml, /data-post-repair-action="next-entry"/);
+        assert.match(bridgeHtml, /Enter this room/);
+        assert.match(bridgeHtml, /aria-label="Enter this room: Signal spread"/);
+        assert.match(bridgeHtml, /concept-constellation__entries" role="group" aria-label="Concept rooms"/);
+        assert.match(bridgeHtml, /aria-label="02, Signal spread, Suggested next, ready to reconstruct"/);
+        assert.match(bridgeHtml, /Take a short break/);
+        assert.match(bridgeHtml, /<details class="concept-post-repair__options">/);
+        assert.match(bridgeHtml, /Pressure-check this link/);
+        assert.match(bridgeHtml, /Correction kept\\. No new reconstruction evidence\\./);
+        assert.match(bridgeHtml, /class="concept-constellation__node is-active"[\\s\\S]*?role="img"[\\s\\S]*?tabindex="-1"/);
+        assert.match(bridgeHtml, /data-entry-id="spread"[\\s\\S]*data-bridge-target="true"[\\s\\S]*role="button"[\\s\\S]*tabindex="0"/);
+        assert.doesNotMatch(bridgeHtml, /Reset phase/);
+        assert.match(bridgeHtml, /Entry 03/);
+
+        const peripheralHtml = renderConceptConstellationHtml({
+          backbone: [
+            { id: 'repair', label: 'Repair room' },
+            { id: 'target', label: 'Target room' },
+            { id: 'peripheral', label: 'Peripheral room' },
+          ],
+        }, {
+          activeEntryId: 'repair',
+          postRepairBridge: { repairedEntryId: 'repair', targetEntryId: 'target' },
+        });
+        assert.match(peripheralHtml, /data-entry-id="peripheral"/);
+
+        const noCandidateData = {
+          ...data,
+          clusters: [{ ...data.clusters[0], subnodes: [data.clusters[0].subnodes[0]] }],
+        };
+        const noCandidateBridge = derivePostRepairBridge(noCandidateData, repairTraining, 'gate');
+        assert.deepEqual(noCandidateBridge, {
+          repairedEntryId: 'gate',
+          targetEntryId: null,
+        });
+        const noCandidateHtml = renderConceptConstellationHtml(noCandidateData, {
+          activeEntryId: 'gate',
+          training: repairTraining,
+          postRepairBridge: noCandidateBridge,
+        });
+        assert.match(noCandidateHtml, /Take a short break\\./);
+        assert.match(noCandidateHtml, /No nearby room is ready\\./);
+        assert.match(noCandidateHtml, /No nearby room is ready, so the repaired link stays on the route\\./);
+        assert.doesNotMatch(noCandidateHtml, /One eligible room is suggested/);
+        assert.doesNotMatch(noCandidateHtml, /data-post-repair-action="next-entry"/);
+
+        const checkedTraining = structuredClone(repairTraining);
+        checkedTraining.node_records.gate.repair_checked_at = '2026-05-21T00:04:00Z';
+        assert.equal(deriveRepairPhase(checkedTraining.node_records.gate), 'checked');
+        assert.equal(derivePostRepairBridge(data, checkedTraining, 'gate'), null);
+
+        const failedAfterCheck = structuredClone(checkedTraining);
+        failedAfterCheck.node_records.gate.attempts.push({
+          at: '2026-05-21T00:05:00Z', classification: 'partial',
+        });
+        assert.equal(deriveRepairPhase(failedAfterCheck.node_records.gate), 'write');
+
+        const repairedAgain = structuredClone(failedAfterCheck);
+        repairedAgain.node_records.gate.repairs.push({
+          at: '2026-05-21T00:06:00Z', text: 'A newer correction.',
+        });
+        assert.equal(deriveRepairPhase(repairedAgain.node_records.gate), 'saved');
+        assert.equal(
+          deriveRepairPhase(repairedAgain.node_records.gate, { repairCheckedThisSession: true }),
+          'checked',
+        );
+        assert.equal(
+          derivePostRepairBridge(data, repairTraining, 'gate', { repairCheckedThisSession: true }),
+          null,
+        );
+        assert.equal(
+          derivePostRepairBridge(data, repairTraining, 'gate', { isDrilling: true }),
+          null,
+        );
         assert.match(coldHtml, /data-entry-id="legacy"[\\s\\S]*data-state="primed"/);
 
         for (const forbidden of [
@@ -1683,6 +1834,8 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(coldHtml.includes('Study stays hidden until you save a draft. This is not a grade.'));
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
+        assert.ok(!coldHtml.includes('Start from memory'));
+        assert.ok(!coldHtml.includes('Name the trigger without reading the note.'));
         assert.ok(coldHtml.includes('Save draft'));
         assert.ok(coldHtml.includes('Your reconstruction'));
         assert.ok(coldHtml.includes('data-attempt-status'));
@@ -1742,6 +1895,9 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(savedHtml.includes('concept-page-b2__evidence--study-gate'));
         assert.ok(!savedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
         assert.ok(savedHtml.includes('The gate probably opens when the voltage gets high enough.'));
+        assert.ok(savedHtml.includes('Your draft'));
+        assert.ok(!savedHtml.includes('Draft saved'));
+        assert.ok(!savedHtml.includes('You wrote first. Now socratink can compare'));
         assert.ok(savedHtml.includes('Reveal notes and compare'));
         assert.ok(!savedHtml.includes('Missing piece'));
         assert.ok(!savedHtml.includes('threshold as the opening condition'));
@@ -1779,12 +1935,11 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(compareHtml.includes('Compare notes'));
         assert.ok(compareHtml.includes('The channel opens when voltage reaches threshold.'));
         assert.ok(compareHtml.includes('Voltage-gated sodium channels open at threshold'));
-        assert.ok(compareHtml.includes('Continue'));
+        assert.ok(compareHtml.includes('Continue route'));
         assert.ok(compareHtml.includes('data-active-entry-action="next-entry"'));
         assert.ok(compareHtml.includes('data-active-entry-id="spread"'));
-        assert.ok(compareHtml.includes('Rate this moment'));
-        assert.ok(compareHtml.includes('data-feedback-rating'));
-        assert.ok(compareHtml.includes('data-feedback-moment="compare notes"'));
+        assert.ok(!compareHtml.includes('Rate this moment'));
+        assert.ok(!compareHtml.includes('data-feedback-rating'));
         assert.ok(!compareHtml.includes('No missing piece recorded for this draft.'));
         assert.ok(!compareHtml.includes('concept-page-b2__route-item'));
         assert.ok(compareHtml.includes('concept-page-b2__gestalt--single-column'));
@@ -1801,12 +1956,11 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           { comparisonAcknowledged: false, now: '2026-05-21T11:00:00.000Z' }
         );
         assert.ok(autoCompareHtml.includes('Compare notes'));
-        assert.ok(autoCompareHtml.includes('Continue'));
+        assert.ok(autoCompareHtml.includes('Continue route'));
         assert.ok(autoCompareHtml.includes('data-active-entry-action="next-entry"'));
         assert.ok(autoCompareHtml.includes('data-active-entry-id="spread"'));
-        assert.ok(autoCompareHtml.includes('Rate this moment'));
-        assert.ok(autoCompareHtml.includes('data-feedback-rating'));
-        assert.ok(autoCompareHtml.includes('data-feedback-moment="compare notes"'));
+        assert.ok(!autoCompareHtml.includes('Rate this moment'));
+        assert.ok(!autoCompareHtml.includes('data-feedback-rating'));
         assert.ok(autoCompareHtml.includes('concept-page-b2__gestalt--single-column'));
         assert.ok(!autoCompareHtml.includes('concept-page-b2__nearby'));
         assert.ok(!autoCompareHtml.includes('concept-page-b2__route-item'));
@@ -2018,7 +2172,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           {},
           { metadata: {} }
         );
-        assert.ok(legacyStudyHtml.includes('Draft saved'));
+        assert.ok(legacyStudyHtml.includes('Your draft'));
+        assert.ok(!legacyStudyHtml.includes('Draft saved'));
         assert.ok(!legacyStudyHtml.includes('study required entry 1 of 1'));
         assert.ok(legacyStudyHtml.includes('data-active-entry-action="study"'));
         assert.ok(legacyStudyHtml.includes('Reveal notes and compare'));
@@ -2173,7 +2328,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(readyHtml.includes('concept-page-b2__gestalt'));
         assert.ok(readyHtml.includes('concept-page-b2__route'));
         assert.ok(!readyHtml.includes('Write first. Compare after.'));
-        assert.ok(readyHtml.includes('Start from memory'));
+        assert.ok(!readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('Save draft'));
         assert.ok(readyHtml.includes('Need a cue?'));
@@ -2383,12 +2538,13 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         );
         assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
         assert.ok(primedHtml.includes('add context'));
-        assert.ok(primedHtml.includes('Draft saved'));
+        assert.ok(primedHtml.includes('Your draft'));
+        assert.ok(!primedHtml.includes('Draft saved'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));
         assert.ok(primedHtml.includes('Your memory draft'));
         assert.ok(primedHtml.includes('concept-page-b2__evidence--study-gate'));
         assert.ok(!primedHtml.includes('Draft recorded. Having your own words fresh in mind makes it easier to notice the differences when you read the notes.'));
-        assert.ok(primedHtml.includes('Draft saved'));
+        assert.ok(!primedHtml.includes('Draft saved'));
         assert.ok(primedHtml.includes('A strong first attempt.'));
         assert.ok(!primedHtml.includes('Missing piece'));
         assert.ok(!primedHtml.includes('Hidden reference note.'));
@@ -2611,8 +2767,11 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(repairHtml.includes('Save repair'));
         assert.ok(repairHtml.includes('Your repaired link'));
         assert.ok(repairHtml.includes('data-repair-status'));
-        assert.ok(repairHtml.includes('Study note stays hidden while you repair.'));
-        assert.ok(repairHtml.includes('Show study note'));
+        assert.ok(repairHtml.includes('data-active-entry-action="write-repair"'));
+        assert.ok(repairHtml.includes('Write the repair'));
+        assert.ok(repairHtml.includes('aria-expanded="true"'));
+        assert.ok(repairHtml.includes('Hide study note'));
+        assert.match(repairHtml, /concept-page-b2__repair[^>]+hidden/);
         const fallbackRepairHtml = renderActiveEntryHtml(
           { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },
           1,
@@ -2668,18 +2827,21 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(repairedHtml.includes('Needs repair'));
+        assert.ok(!repairedHtml.includes('Needs repair'));
         assert.ok(!repairedHtml.includes('repair the gap entry 1 of 1'));
         assert.ok(!repairedHtml.includes('Write it again'));
         assert.ok(repairedHtml.includes('Repair saved'));
-        assert.ok(repairedHtml.includes('Pressure-check the repaired link.'));
+        assert.ok(repairedHtml.includes('Explain the link again from memory.'));
         assert.ok(repairedHtml.includes('concept-page-b2__repair'));
         assert.ok(repairedHtml.includes('Pressure-check this link'));
-        assert.ok(repairedHtml.includes('Your saved repair'));
-        assert.ok(repairedHtml.includes('Voltage-gated channels open at threshold.'));
+        assert.ok(!repairedHtml.includes('Your draft'));
+        assert.ok(!repairedHtml.includes('Your repair'));
+        assert.ok(!repairedHtml.includes('Voltage-gated channels open at threshold.'));
         assert.ok(repairedHtml.includes('data-active-entry-action="drill-gap"'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-input'));
         assert.ok(!repairedHtml.includes('concept-page-b2__repair-save'));
+        assert.ok(!repairedHtml.includes('Study note stays hidden while you repair.'));
+        assert.ok(!repairedHtml.includes('Your words shape the path.'));
         assert.ok(!repairedHtml.includes('Save this repair before you try from memory again.'));
 
         const checkedRepairHtml = renderActiveEntryHtml(
@@ -2706,17 +2868,16 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
                   at: '2026-05-15T10:10:00.000Z',
                   text: 'Voltage-gated channels open at threshold.',
                 }],
+                repair_checked_at: '2026-05-15T10:20:00.000Z',
               },
             },
-          },
-          { repairCheckedThisSession: true }
+          }
         );
         assert.ok(checkedRepairHtml.includes('Repair checked'));
         assert.ok(checkedRepairHtml.includes('Repair checked for now.'));
         assert.ok(checkedRepairHtml.includes('Study note stays hidden for later reconstruction.'));
-        assert.ok(checkedRepairHtml.includes('Rate this moment'));
-        assert.ok(checkedRepairHtml.includes('data-feedback-rating'));
-        assert.ok(checkedRepairHtml.includes('data-feedback-moment="repair checked"'));
+        assert.ok(!checkedRepairHtml.includes('Rate this moment'));
+        assert.ok(!checkedRepairHtml.includes('data-feedback-rating'));
         assert.ok(!checkedRepairHtml.includes('Pressure-check this link'));
         assert.ok(!checkedRepairHtml.includes('Study note stays hidden while you repair.'));
 

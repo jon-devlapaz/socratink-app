@@ -27,17 +27,21 @@ import {
 import { createCountdownTimer } from './app-timer.js';
 import {
   deriveConceptEntries,
+  deriveConceptEntryViewState,
   findConceptEntryById,
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=34';
+} from './concept-page-view.js?v=39';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
   markComparisonAcknowledged,
 } from './comparison-acknowledgement.js';
-import { renderConceptConstellationHtml } from './concept-constellation-view.js?v=5';
+import {
+  derivePostRepairBridge,
+  renderConceptConstellationHtml,
+} from './concept-constellation-view.js?v=7';
 import { deriveConceptBadge } from './concept-status.js';
 import {
   getDefaultPhaseBSessionState,
@@ -52,7 +56,7 @@ import { createTrainingStore, TRAINING_SCHEMA_VERSION, TRAINING_STORE_KEY_PREFIX
 import {
   hydrateAndSyncLearnerState,
   pushLocalLearnerState,
-} from './learner-state-sync.js?v=3';
+} from './learner-state-sync.js?v=4';
 import {
   listDueForSpaced,
   dueConceptIdSet,
@@ -74,11 +78,14 @@ import {
   runRepairReps,
   runDrillTurn,
 } from './api-client.js?v=2';
-import { visibleSedaPromptFromResponse } from './seda-visible-prompt.js?v=3';
+import {
+  sedaSurfaceFromResponse,
+  visibleSedaPromptFromResponse,
+} from './seda-visible-prompt.js?v=5';
 import {
   projectCompletedSedaRecord,
   projectLatestSedaAttemptEvent,
-} from './seda-evidence-projection.js?v=1';
+} from './seda-evidence-projection.js?v=2';
 import {
   bindSourceLessSedaRoute,
   boundSourceLessSedaNodeId,
@@ -136,6 +143,7 @@ const App = (() => {
   const LOCAL_QA_NODE_ID = 'qa-node';
   const LOCAL_REPAIR_QA_CONCEPT_ID = 'qa-repair-concept';
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
+  const LOCAL_REPAIR_QA_NEXT_NODE_ID = 'depolarization-node';
   const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
   const trainingStore = createTrainingStore();
   let learnerStatePushTimer = null;
@@ -160,6 +168,8 @@ const App = (() => {
   const _appendAttempt = trainingStore.appendAttempt.bind(trainingStore);
   const _setStudyRevealed = trainingStore.setStudyRevealed.bind(trainingStore);
   const _appendRepair = trainingStore.appendRepair.bind(trainingStore);
+  const _saveTraining = trainingStore.saveTraining.bind(trainingStore);
+  const _markRepairChecked = trainingStore.markRepairChecked.bind(trainingStore);
   const _setProvenance = trainingStore.setProvenance.bind(trainingStore);
   const _setSketch = trainingStore.setSketch.bind(trainingStore);
   trainingStore.appendAttempt = async (...args) => {
@@ -176,6 +186,17 @@ const App = (() => {
   };
   trainingStore.appendRepair = async (...args) => {
     const result = await _appendRepair(...args);
+    scheduleLearnerStatePush();
+    return result;
+  };
+  trainingStore.saveTraining = async (...args) => {
+    const result = await _saveTraining(...args);
+    scheduleLearnerStatePush();
+    renderDeskDueSurfaces();
+    return result;
+  };
+  trainingStore.markRepairChecked = async (...args) => {
+    const result = await _markRepairChecked(...args);
     scheduleLearnerStatePush();
     return result;
   };
@@ -339,28 +360,48 @@ const App = (() => {
   function buildLocalRepairQaConcept(nowMs) {
     const studyNote = 'Voltage-gated sodium channels open when membrane voltage reaches threshold; the concentration gradient drives flow after the gate opens.';
     const purpose = 'Name what opens the channel before reading the study note.';
+    const nextStudyNote = 'Sodium entry makes the membrane voltage less negative and begins depolarization.';
+    const nextPurpose = 'Explain what changes the membrane voltage from memory.';
     const graphData = {
       metadata: {
         source_title: 'Repair QA source',
         starting_map_context: 'I think sodium just rushes in.',
         map_maturity: 'provisional',
       },
-      backbone: [{
-        id: LOCAL_REPAIR_QA_NODE_ID,
-        label: 'Sodium channel gate',
-        purpose,
-        study_note: studyNote,
-        drill_status: null,
-      }],
-      clusters: [{
-        id: 'cluster-1',
-        subnodes: [{
+      backbone: [
+        {
           id: LOCAL_REPAIR_QA_NODE_ID,
           label: 'Sodium channel gate',
           purpose,
           study_note: studyNote,
           drill_status: null,
-        }],
+        },
+        {
+          id: LOCAL_REPAIR_QA_NEXT_NODE_ID,
+          label: 'Membrane depolarization',
+          purpose: nextPurpose,
+          study_note: nextStudyNote,
+          drill_status: null,
+        },
+      ],
+      clusters: [{
+        id: 'cluster-1',
+        subnodes: [
+          {
+            id: LOCAL_REPAIR_QA_NODE_ID,
+            label: 'Sodium channel gate',
+            purpose,
+            study_note: studyNote,
+            drill_status: null,
+          },
+          {
+            id: LOCAL_REPAIR_QA_NEXT_NODE_ID,
+            label: 'Membrane depolarization',
+            purpose: nextPurpose,
+            study_note: nextStudyNote,
+            drill_status: null,
+          },
+        ],
       }],
     };
 
@@ -621,6 +662,10 @@ const App = (() => {
   }
 
   function refreshConstellationAvailability(training = null) {
+    if (document.querySelector('.concept-page-b2__doc--post-repair')) {
+      setConstellationAvailable(false);
+      return;
+    }
     if (document.body.dataset.conceptSourceMode === 'source_less') {
       setConstellationAvailable(false);
       return;
@@ -806,10 +851,19 @@ const App = (() => {
   }
   function _doorUpdateSubmitState() {
     const submitBtn = document.getElementById('hero-door-submit');
+    const hint = document.getElementById('ignition-boundary');
     if (!submitBtn) return;
     // Mirror the at-cap gate: if at cap, stay disabled regardless of input.
     const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
-    submitBtn.disabled = atCap || !_doorReady();
+    const ready = _doorReady();
+    submitBtn.disabled = atCap || !ready;
+    if (hint) {
+      hint.textContent = atCap
+        ? 'The board holds nine sessions. Retire one to start another.'
+        : ready
+          ? "You'll write first. Answers come after."
+          : 'Add your first model to start.';
+    }
   }
 
   let _sourcePanelGen = 0;
@@ -2133,6 +2187,20 @@ const App = (() => {
           }
           return;
         }
+        if (ctaBtn.dataset.activeEntryAction === 'write-repair') {
+          const repairPanel = docEl.querySelector('.concept-page-b2__repair');
+          const studyNote = docEl.querySelector('.concept-page-b2__study-note');
+          const studyNoteToggle = docEl.querySelector('[data-study-note-toggle]');
+          repairPanel?.removeAttribute('hidden');
+          studyNote?.classList.add('is-collapsed');
+          if (studyNoteToggle) {
+            studyNoteToggle.textContent = 'Show study note';
+            studyNoteToggle.setAttribute('aria-expanded', 'false');
+          }
+          ctaBtn.hidden = true;
+          repairPanel?.querySelector('.concept-page-b2__repair-input')?.focus?.();
+          return;
+        }
         if (ctaBtn.dataset.activeEntryAction === 'drill-gap') {
           const entryId = ctaBtn.dataset.activeEntryId;
           startDrill(buildRepairGapDrillContext(entryId, concept, data, training));
@@ -2245,6 +2313,31 @@ const App = (() => {
     });
   }
 
+  function renderActiveEntryDocumentHtml(activeEntry, activeIdx, backbone, concept, data, training, renderOptions = {}) {
+    const activeHtml = renderActiveEntryHtml(
+      activeEntry,
+      activeIdx,
+      backbone,
+      concept,
+      data,
+      training,
+      renderOptions,
+    );
+    const postRepairBridge = derivePostRepairBridge(data, training, getConceptEntryId(activeEntry, activeIdx), renderOptions);
+    if (!postRepairBridge) return { html: activeHtml, hasPostRepair: false };
+    const constellationHtml = renderConceptConstellationHtml(data, {
+      ...renderOptions,
+      concept,
+      training,
+      activeEntryId: postRepairBridge.repairedEntryId,
+      postRepairBridge,
+    });
+    return {
+      html: `${activeHtml}<section class="concept-post-repair-host">${constellationHtml}</section>`,
+      hasPostRepair: true,
+    };
+  }
+
   function renderActiveEntryWorkColumn(entryId, concept, data, training = null, options = {}) {
     const docEl = document.querySelector('.concept-page-b2__doc');
     const backbone = deriveConceptEntries(data);
@@ -2255,7 +2348,7 @@ const App = (() => {
     if (!docEl || !match) return;
     const renderBackbone = backbone.length ? backbone : [match.entry];
     const renderOptions = conceptPageRenderOptionsForEntry(concept, entryId, training, options);
-    docEl.innerHTML = renderActiveEntryHtml(
+    const rendered = renderActiveEntryDocumentHtml(
       match.entry,
       match.index,
       renderBackbone,
@@ -2264,6 +2357,8 @@ const App = (() => {
       training,
       renderOptions,
     );
+    docEl.innerHTML = rendered.html;
+    docEl.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
     rebindActiveEntryHandlers(docEl, concept, data, training);
   }
 
@@ -2359,8 +2454,8 @@ const App = (() => {
     const label = entry.label || entry.principle || entry.task_label || concept?.name || 'Entry';
     const gapTitle = titleFromRepairGap(gap, label);
     const visiblePrompt = gap
-      ? `Close the note. Rebuild the repaired link for ${gapTitle}: name the condition, the action, and what changes next.`
-      : `Close the note. Reconstruct this entry from memory.`;
+      ? `Rebuild the repaired link for ${gapTitle}: name the condition, the action, and what changes next.`
+      : `Reconstruct this entry from memory.`;
     const repairContext = [
       entry.mechanism || entry.principle || entry.study_note || entry.detail || entry.purpose || '',
       latestAttempt.user_text ? `Learner cold draft: ${latestAttempt.user_text}` : '',
@@ -2637,7 +2732,11 @@ const App = (() => {
       if (mountEl) {
         window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
         renderConceptPageB2(mountEl, data, concept, training, { activeEntryId: entryId });
-        focusRenderedMoment('.concept-page-b2__repair--saved');
+        focusRenderedMoment(
+          mountEl.querySelector('.concept-post-repair__rail')
+            ? '.concept-post-repair__rail'
+            : '.concept-page-b2__repair--saved',
+        );
       }
     } catch (err) {
       /* c8 ignore next -- defensive storage/invariant failure branch */
@@ -2770,7 +2869,9 @@ const App = (() => {
       );
       const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
       const renderOptions = conceptPageRenderOptionsForEntry(liveConcept, _activeEntryId, training, {});
-      docEl.innerHTML = renderActiveEntryHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
+      const rendered = renderActiveEntryDocumentHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
+      docEl.innerHTML = rendered.html;
+      docEl.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
       rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
       bindConceptRouteMarginHandlers(document.getElementById('map-content'), freshData, liveConcept, training);
     });
@@ -2812,7 +2913,9 @@ const App = (() => {
       comparisonAcknowledged: true,
     } : {});
     setTimeout(() => {
-      doc.innerHTML = renderActiveEntryHtml(newEntry, newIdx, backbone, concept, data, training, renderOptions);
+      const rendered = renderActiveEntryDocumentHtml(newEntry, newIdx, backbone, concept, data, training, renderOptions);
+      doc.innerHTML = rendered.html;
+      doc.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
       rebindActiveEntryHandlers(doc, concept, data, training);
       bindConceptRouteMarginHandlers(mountEl, data, concept, training);
       restoreActiveEntryDraft(entryId);
@@ -2955,13 +3058,21 @@ const App = (() => {
     const renderBackbone = backbone.length ? backbone : [activeEntry];
 
     const renderOptions = conceptPageRenderOptionsForEntry(concept, activeEntryId, training, options);
-    const docHtml = renderActiveEntryHtml(activeEntry, activeIdx, renderBackbone, concept, data, training, renderOptions);
+    const rendered = renderActiveEntryDocumentHtml(
+      activeEntry,
+      activeIdx,
+      renderBackbone,
+      concept,
+      data,
+      training,
+      renderOptions,
+    );
 
     // Mount the whole thing
     mountEl.classList.add('concept-page-b2');
     mountEl.innerHTML = `
-      <div class="concept-page-b2__doc">
-        ${docHtml}
+      <div class="concept-page-b2__doc${rendered.hasPostRepair ? ' concept-page-b2__doc--post-repair' : ''}">
+        ${rendered.html}
       </div>
     `;
 
@@ -3129,29 +3240,67 @@ const App = (() => {
     }
   }
 
+  async function openConceptEntry(entryId, { focusAttempt = false } = {}) {
+    const concept = getActiveConcept();
+    const data = parseConceptGraphData(concept);
+    const entries = deriveConceptEntries(data || {});
+    const match = findConceptEntryById(entries, entryId);
+    if (!entryId || !concept || !data || !match || entryId === _activeEntryId) return false;
+
+    try {
+      const training = await trainingStore.loadTraining(concept.id);
+      const state = deriveConceptEntryViewState(entries, match.index, training);
+      if (state.state === 'locked') return false;
+      setActiveEntry(entryId, data, concept, training, { focusAttempt });
+      return true;
+    } catch (err) {
+      console.warn('Concept entry unavailable.', err);
+      return false;
+    }
+  }
+
   function bindMapModeControls() {
     document.addEventListener('click', (event) => {
       const target = event.target instanceof Element ? event.target : null;
+      const postRepairAction = target?.closest('[data-post-repair-action]') || null;
+      if (postRepairAction) {
+        event.preventDefault();
+        const action = postRepairAction.getAttribute('data-post-repair-action');
+        if (action === 'break') {
+          showDashboard();
+          return;
+        }
+        if (action === 'next-entry') {
+          const entryId = postRepairAction.getAttribute('data-entry-id');
+          void openConceptEntry(entryId, { focusAttempt: true });
+          return;
+        }
+        if (action === 'pressure-check') {
+          const entryId = postRepairAction.getAttribute('data-repair-entry-id');
+          const concept = getActiveConcept();
+          const data = parseConceptGraphData(concept);
+          if (!entryId || !concept || !data) return;
+          void trainingStore.loadTraining(concept.id)
+            .then((training) => startDrill(buildRepairGapDrillContext(entryId, concept, data, training)))
+            .catch((err) => console.warn('Repair record unavailable for pressure-check.', err));
+          return;
+        }
+      }
       const constellationNode = target?.closest('.concept-constellation__node[data-entry-id]') || null;
       if (constellationNode) {
         const entryId = constellationNode.getAttribute('data-entry-id');
         const state = constellationNode.getAttribute('data-state');
+        const opensSuggestedRoom = constellationNode.getAttribute('data-bridge-target') === 'true';
         if (state === 'locked') return;
-        const concept = getActiveConcept();
-        /* v8 ignore start -- route-margin async handoff is covered by browser smoke through the same active-entry renderer. */
-        const data = parseConceptGraphData(concept);
-        if (entryId && data && concept) {
+        if (entryId) {
           event.preventDefault();
-          void trainingStore.loadTraining(concept.id)
-            .then((training) => setActiveEntry(entryId, data, concept, training))
-            .catch(() => setActiveEntry(entryId, data, concept, null));
+          void openConceptEntry(entryId, { focusAttempt: opensSuggestedRoom });
         }
         return;
-        /* v8 ignore stop */
       }
 
       const button = target
-        ? target.closest('[data-map-mode]')
+        ? target.closest('button[data-map-mode]')
         : null;
       if (!button) return;
       const mode = button.getAttribute('data-map-mode');
@@ -3168,7 +3317,10 @@ const App = (() => {
       const constellationNode = target?.closest('.concept-constellation__node[data-entry-id]') || null;
       if (!constellationNode) return;
       event.preventDefault();
-      constellationNode.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      void openConceptEntry(
+        constellationNode.getAttribute('data-entry-id'),
+        { focusAttempt: constellationNode.getAttribute('data-bridge-target') === 'true' },
+      );
     });
 
   }
@@ -4800,7 +4952,37 @@ const App = (() => {
     handleSystemAction(action);
   }
 
-  async function requestSedaTurn(userText) {
+  function presentSedaSurface(data, { challengePrompt = null } = {}) {
+    const surface = sedaSurfaceFromResponse(data);
+    const chamber = window.DrillChamber;
+    if (!chamber) return surface;
+
+    chamber.setSurface?.(surface.mode, surface);
+    chamber.setQuestion?.(surface.mode === 'challenge' && challengePrompt
+      ? challengePrompt
+      : surface.question);
+    chamber.setComposerEnabled(surface.composerEnabled);
+    if (surface.verdict) chamber.appendVerdict?.(surface.verdict);
+    if (surface.completionAction) {
+      const actionLabel = surface.completionAction.kind === 'study'
+        ? sedaCompleteCompletionLabel()
+        : surface.completionAction.label;
+      chamber.setCompletionAction?.(actionLabel, () => {
+        if (surface.completionAction.kind === 'return') {
+          cancelDrill();
+          return;
+        }
+        if (surface.completionAction.kind === 'study') {
+          openStudyAfterVerdict(getActiveConcept()?.id, drillState.node?.id);
+          return;
+        }
+        void requestSedaTurn(surface.completionAction.value, { internal: true });
+      });
+    }
+    return surface;
+  }
+
+  async function requestSedaTurn(userText, { internal = false } = {}) {
     const concept = getActiveConcept();
     if (!concept || !drillState.node || !drillState.sedaSessionId) return;
     const sessionToken = drillState.sessionToken;
@@ -4808,7 +4990,9 @@ const App = (() => {
     drillState.pending = true;
     if (chatInput) chatInput.disabled = true;
     showTypingIndicator();
-    window.DrillChamber?.setLoading?.(true, { checkingAnswer: Boolean(String(userText || '').trim()) });
+    window.DrillChamber?.setLoading?.(true, {
+      checkingAnswer: !internal && Boolean(String(userText || '').trim()),
+    });
 
     const normalizedText = String(userText ?? '');
     const pendingSubmission = drillState.sedaPendingSubmission;
@@ -4824,7 +5008,7 @@ const App = (() => {
       const responseSaved = await saveSedaResponse(concept, drillState.node, data);
       /* c8 ignore start -- session-state storage failure shares the proven idempotent persistence-retry UI. */
       if (!responseSaved) {
-        showSedaPersistenceRetry(normalizedText);
+        showSedaPersistenceRetry(normalizedText, { internal });
         return;
       }
       /* c8 ignore stop */
@@ -4833,49 +5017,45 @@ const App = (() => {
         ? { ok: true, classification: null }
         : await projectSedaAttemptEvent(concept, drillState.node, data);
       if (!projectedAttempt.ok) {
-        showSedaPersistenceRetry(normalizedText);
+        showSedaPersistenceRetry(normalizedText, { internal });
         return;
       }
       drillState.sedaPendingSubmission = null;
       drillState.sedaSessionId = data.sessionId;
       drillState.sedaSessionVersion = sessionVersionFromResponse(data);
       const projectedAttemptClassification = projectedAttempt.classification;
-      const studyReady = data.caseComplete || Boolean(projectedAttemptClassification);
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
-      const previousPrompt = chamberLastShownQuestion;
-      const promptText = sedaPromptFromResponse(data);
-      const nextPrompt = nextSedaPromptAfterVerdict(promptText, previousPrompt, userText);
-      window.DrillChamber?.appendHistoryTurn('ai', previousPrompt || '');
-      window.DrillChamber?.appendHistoryTurn('learner', normalizedText);
-      drillState.messages.push({ role: 'user', content: userText });
-      drillState.messages.push({ role: 'assistant', content: studyReady ? promptText : nextPrompt });
-      chamberLastShownQuestion = studyReady ? promptText : nextPrompt;
+      const surface = sedaSurfaceFromResponse(data);
+      const studyReady = data.caseComplete || (
+        Boolean(projectedAttemptClassification) && surface.mode === 'unsupported'
+      );
+      if (!internal) drillState.messages.push({ role: 'user', content: normalizedText });
+      drillState.messages.push({ role: 'assistant', content: surface.prompt });
+      chamberLastShownQuestion = surface.prompt;
       drillState.pending = false;
-      drillState.sessionCompletePending = Boolean(studyReady);
+      drillState.sessionCompletePending = Boolean(studyReady || surface.mode === 'settle');
       persistSessionState();
 
       if (window.DrillChamber) {
         window.DrillChamber.setLoading?.(false);
-        if (studyReady) {
+        presentSedaSurface(data);
+        if (!internal && (studyReady || surface.mode === 'gap')) {
           window.DrillChamber.appendVerdict?.(verdictCopy({
             userText,
             sedaComplete: data.caseComplete,
             classification: projectedAttemptClassification || undefined,
           }));
-        } else {
-          window.DrillChamber.swapQuestion(nextPrompt);
-          setTimeout(() => {
-            window.DrillChamber?.appendVerdict?.(verdictCopy({ userText, recordable: false }));
-            window.DrillChamber?.setCompletionAction?.('Keep going', () => {
-              window.DrillChamber?.setComposerEnabled(true);
-            });
-          }, 260);
+        } else if (!internal && surface.mode === 'challenge') {
+          const lastEvent = Array.isArray(data?.events) ? data.events.at(-1) : null;
+          if (lastEvent?.graph_neutral === true && lastEvent?.score_eligible === false) {
+            window.DrillChamber.appendVerdict?.(verdictCopy({ userText, recordable: false }));
+          }
         }
-        if (studyReady) {
-          /* c8 ignore next -- completed-loop button behavior is covered by API evidence proof; browser smoke covers active turn routing. */
-          window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(concept.id, drillState.node?.id));
-        } else {
-          window.DrillChamber.setComposerEnabled(false);
+        if (studyReady && surface.mode !== 'complete') {
+          window.DrillChamber.setCompletionAction?.(
+            sedaCompleteCompletionLabel(),
+            () => openStudyAfterVerdict(concept.id, drillState.node?.id),
+          );
         }
       }
     } catch (err) {
@@ -4885,17 +5065,17 @@ const App = (() => {
       drillState.pending = false;
       window.DrillChamber?.setLoading?.(false);
       if (err?.status === 409 && err?.body?.error === 'session_conflict') {
-        await reconcileSedaSessionConflict(concept, normalizedText, sessionToken);
+        await reconcileSedaSessionConflict(concept, normalizedText, sessionToken, { internal });
         return;
       }
       console.error(err);
-      showSedaTransportRetry(normalizedText);
+      showSedaTransportRetry(normalizedText, { internal });
       return;
       /* c8 ignore stop */
     }
   }
 
-  function showSedaPersistenceRetry(userText) {
+  function showSedaPersistenceRetry(userText, { internal = false } = {}) {
     drillState.pending = false;
     window.DrillChamber?.setLoading?.(false);
     window.DrillChamber?.appendVerdict?.(
@@ -4903,12 +5083,12 @@ const App = (() => {
     );
     window.DrillChamber?.setCompletionAction?.('Try saving again', () => {
       window.DrillChamber?.setComposerEnabled(false);
-      void requestSedaTurn(userText);
+      void requestSedaTurn(userText, { internal });
     });
-    restoreUnrecordedDraft(userText, { chamber: true });
+    if (!internal) restoreUnrecordedDraft(userText, { chamber: true });
   }
 
-  function showSedaTransportRetry(userText) {
+  function showSedaTransportRetry(userText, { internal = false } = {}) {
     drillState.pending = false;
     window.DrillChamber?.setLoading?.(false);
     window.DrillChamber?.appendVerdict?.(
@@ -4916,22 +5096,22 @@ const App = (() => {
     );
     window.DrillChamber?.setCompletionAction?.('Try sending again', () => {
       window.DrillChamber?.setComposerEnabled(false);
-      void requestSedaTurn(userText);
+      void requestSedaTurn(userText, { internal });
     });
     // Completion actions normally clear the composer. Put the learner's exact
     // draft back after installing the retry action so a network failure never
     // turns visible effort into a blank form.
-    restoreUnrecordedDraft(userText, { chamber: true });
+    if (!internal) restoreUnrecordedDraft(userText, { chamber: true });
   }
 
-  async function reconcileSedaSessionConflict(concept, draft, sessionToken) {
+  async function reconcileSedaSessionConflict(concept, draft, sessionToken, { internal = false } = {}) {
     try {
       const latest = await getSedaSession(drillState.sedaSessionId);
       if (sessionToken !== drillState.sessionToken || !drillState.node) return;
       const responseSaved = await saveSedaResponse(concept, drillState.node, latest);
       /* c8 ignore start -- conflict refresh storage failure reuses the persistence-retry contract. */
       if (!responseSaved) {
-        showSedaPersistenceRetry(draft);
+        showSedaPersistenceRetry(draft, { internal });
         return;
       }
       /* c8 ignore stop */
@@ -4955,19 +5135,17 @@ const App = (() => {
       }
       /* c8 ignore stop */
       const currentPrompt = sedaPromptFromResponse(latest);
-      const question = document.getElementById('chamber-question');
-      if (question) question.textContent = currentPrompt;
       chamberLastShownQuestion = currentPrompt;
-      restoreUnrecordedDraft(draft, { chamber: true });
+      presentSedaSurface(latest);
+      if (!internal) restoreUnrecordedDraft(draft, { chamber: true });
       window.DrillChamber?.appendVerdict?.(
         'Session changed in another tab • Review the current question, then check your draft again.',
       );
-      window.DrillChamber?.setComposerEnabled(true);
     } catch (refreshError) {
       /* c8 ignore start -- refresh transport failure preserves the draft and is covered by the general transport-retry proof. */
       console.error(refreshError);
       if (sessionToken !== drillState.sessionToken) return;
-      restoreUnrecordedDraft(draft, { chamber: true });
+      if (!internal) restoreUnrecordedDraft(draft, { chamber: true });
       window.DrillChamber?.appendVerdict?.(
         'Session changed in another tab • Your draft was not recorded.',
       );
@@ -5398,15 +5576,10 @@ const App = (() => {
               window.DrillChamber.swapQuestion(promptText);
             }
             window.DrillChamber.setLoading?.(false);
-            /* c8 ignore start -- opening an already-complete stored session is covered by API proof, not browser smoke. */
-            if (data.caseComplete) {
-              drillState.sessionCompletePending = true;
-              window.DrillChamber.setCompletionAction?.(sedaCompleteCompletionLabel(), () => openStudyAfterVerdict(activeConcept.id, nodeContext?.id));
-            } else if (initialSedaTurnText) {
+            if (initialSedaTurnText) {
               await requestSedaTurn(initialSedaTurnText);
             } else {
-            /* c8 ignore stop */
-              window.DrillChamber.setComposerEnabled(true);
+              presentSedaSurface(data, { challengePrompt: promptText });
               if (restoredSedaDraftText) {
                 restoreUnrecordedDraft(restoredSedaDraftText, { chamber: true });
                 window.DrillChamber.appendVerdict?.(

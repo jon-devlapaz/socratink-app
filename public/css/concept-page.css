@@ -13,7 +13,7 @@
 .concept-page-b2 .eyebrow,
 .concept-strip .eyebrow {
   font-family: ui-monospace, monospace;
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--accent-secondary);
@@ -88,7 +88,14 @@
 .concept-strip__edge.is-active { stroke: rgba(144, 103, 198, 0.55); stroke-width: 1.6; }
 [data-theme="dark"] .concept-strip__edge { stroke: rgba(215, 190, 255, 0.22); }
 [data-theme="dark"] .concept-strip__edge.is-active { stroke: rgba(215, 190, 255, 0.55); }
-.concept-strip__node circle { transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1); }
+.concept-strip__node circle {
+  transition:
+    fill 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    r 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    stroke 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    stroke-width 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
 .concept-strip__node--ready circle { fill: rgba(144, 103, 198, 0.10); stroke: rgba(144, 103, 198, 0.46); }
 .concept-strip__node--locked circle { fill: rgba(36, 32, 56, 0.18); stroke: rgba(36, 32, 56, 0.10); stroke-dasharray: 3 2; }
 .concept-strip__node--primed circle { fill: var(--accent-primary, #9067C6); stroke: var(--accent-primary, #9067C6); }
@@ -105,7 +112,7 @@
 [data-theme="dark"] .concept-strip__node--solidified circle { fill: rgba(77, 186, 138, 0.86); stroke: rgba(77, 186, 138, 0.96); }
 .concept-strip__node text {
   font-family: 'Inter', sans-serif;
-  font-size: 9px;
+  font-size: var(--text-xs);
   text-anchor: middle;
   letter-spacing: 0.04em;
   fill: var(--text-muted);
@@ -274,7 +281,7 @@
 .concept-constellation__index {
   fill: rgba(215, 190, 255, 0.78);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 820;
   letter-spacing: 0.14em;
 }
@@ -311,6 +318,10 @@
 .concept-constellation__node[data-state="locked"] {
   cursor: default;
 }
+.concept-constellation__node.is-active,
+.concept-constellation__node.is-active .concept-constellation__dot {
+  cursor: default;
+}
 .concept-constellation__node[data-state="locked"] .concept-constellation__dot {
   fill: rgba(var(--cream-50-rgb), 0.035);
   stroke: rgba(var(--mauve-200-rgb), 0.42);
@@ -334,7 +345,7 @@
   stroke: rgba(195, 239, 221, 0.70);
 }
 .concept-constellation__node:focus-visible .concept-constellation__halo,
-.concept-constellation__node:hover:not([data-state="locked"]) .concept-constellation__halo {
+.concept-constellation__node:hover:not([data-state="locked"]):not(.is-active) .concept-constellation__halo {
   opacity: 0.92;
   transform: scale(1.18);
 }
@@ -397,7 +408,7 @@
   margin-top: 14px;
 }
 .concept-constellation__return {
-  min-height: 38px;
+  min-height: 40px;
   appearance: none;
   border: 1px solid rgba(var(--violet-600-rgb), 0.16);
   border-radius: 999px;
@@ -407,6 +418,479 @@
   padding: 0 14px;
   cursor: pointer;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.20);
+}
+
+/* Post-repair bridge: the constellation becomes a light drafting surface.
+   Motion indicates a navigation suggestion only; it never upgrades evidence. */
+.concept-page-b2__doc.concept-page-b2__doc--post-repair {
+  width: 100%;
+  max-width: none;
+  margin-top: 4px;
+  padding-inline: 0;
+}
+.concept-page-b2__doc--post-repair > .concept-page-b2__gestalt {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.concept-page-b2__doc--post-repair .concept-page-b2__route,
+.concept-page-b2__doc--post-repair .concept-page-b2__active-entry,
+.concept-page-b2__doc--post-repair .concept-page-b2__nearby {
+  display: none;
+}
+.concept-page-b2__doc--post-repair .concept-page-b2__work {
+  width: 100%;
+  max-width: none;
+}
+.concept-page-b2__doc--post-repair .concept-page-b2__context-dock {
+  max-width: none;
+  margin: 0 0 18px;
+}
+.concept-page-b2__doc--post-repair .concept-page-b2__threshold {
+  margin-bottom: 0;
+}
+.concept-post-repair-host {
+  width: calc(100% + 80px);
+  margin: 18px -40px 0;
+}
+.concept-constellation__shell.concept-constellation__shell--bridge {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(380px, 0.98fr);
+  min-height: 642px;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: var(--cream-50);
+  color: var(--ink-900);
+  box-shadow: none;
+}
+.concept-constellation__shell.concept-constellation__shell--bridge::before {
+  display: none;
+}
+.concept-post-repair__canvas {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  padding: 32px 24px 18px;
+  border-right: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--cream-50) 94%, var(--lavender-500) 6%);
+}
+.concept-post-repair__canvas > .eyebrow {
+  position: absolute;
+  z-index: 3;
+  top: 30px;
+  left: 30px;
+  color: var(--text-muted);
+}
+.concept-constellation__shell--bridge .concept-constellation__svg {
+  width: 100%;
+  min-height: 575px;
+  margin: 10px auto 0;
+  color: var(--violet-600);
+  overflow: visible;
+}
+.concept-constellation__shell--bridge .concept-constellation__star {
+  fill: rgba(var(--mauve-200-rgb), 0.32);
+}
+.concept-constellation__shell--bridge .concept-constellation__edge {
+  stroke: rgba(var(--mauve-200-rgb), 0.62);
+  stroke-width: 1.05;
+  stroke-dasharray: 2 11;
+  filter: none;
+}
+.concept-constellation__shell--bridge .concept-constellation__edge.is-lit {
+  stroke: rgba(var(--ink-900-rgb), 0.34);
+  stroke-width: 1.35;
+  stroke-dasharray: none;
+  filter: none;
+}
+.concept-constellation__shell--bridge .concept-constellation__edge.is-suggested {
+  stroke: rgba(var(--violet-600-rgb), 0.58);
+  stroke-width: 1.7;
+  stroke-dasharray: 7 12;
+  filter: drop-shadow(0 0 4px rgba(var(--violet-600-rgb), 0.16));
+  animation: concept-bridge-path 2.2s linear infinite;
+}
+.concept-constellation__shell--bridge .concept-constellation__label {
+  fill: rgba(var(--ink-900-rgb), 0.84);
+  stroke: rgba(var(--cream-50-rgb), 0.94);
+  stroke-width: 6px;
+  font-size: 14px;
+  font-weight: 720;
+}
+.concept-constellation__shell--bridge .concept-constellation__node.is-active .concept-constellation__label {
+  fill: rgba(var(--ink-900-rgb), 0.84);
+}
+.concept-constellation__shell--bridge .concept-constellation__index {
+  fill: rgba(var(--ink-900-rgb), 0.54);
+}
+.concept-constellation__shell--bridge .concept-constellation__bridge-role {
+  fill: var(--violet-600);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  font-weight: 780;
+  letter-spacing: 0.02em;
+  paint-order: stroke;
+  stroke: rgba(var(--cream-50-rgb), 0.96);
+  stroke-width: 4px;
+}
+.concept-constellation__shell--bridge .concept-constellation__halo {
+  fill: rgba(var(--violet-600-rgb), 0.08);
+}
+.concept-constellation__shell--bridge .concept-constellation__dot {
+  fill: var(--cream-50);
+  stroke: rgba(var(--mauve-200-rgb), 0.86);
+  filter: none;
+}
+.concept-constellation__shell--bridge .concept-constellation__facet {
+  stroke: rgba(var(--ink-900-rgb), 0.26);
+}
+.concept-constellation__shell--bridge .concept-constellation__node[data-state="locked"] .concept-constellation__dot {
+  fill: rgba(var(--cream-50-rgb), 0.72);
+  stroke: rgba(var(--mauve-200-rgb), 0.68);
+}
+.concept-constellation__shell--bridge .concept-constellation__node[data-state="locked"] .concept-constellation__label {
+  fill: rgba(var(--ink-900-rgb), 0.42);
+}
+.concept-constellation__shell--bridge .concept-constellation__node.is-active .concept-constellation__dot {
+  fill: var(--violet-600);
+  stroke: var(--cream-50);
+  filter: drop-shadow(0 0 9px rgba(var(--violet-600-rgb), 0.26));
+}
+.concept-constellation__shell--bridge .concept-constellation__node.is-suggested .concept-constellation__dot {
+  fill: var(--cream-50);
+  stroke: var(--violet-600);
+  stroke-width: 2.3;
+  filter: drop-shadow(0 0 8px rgba(var(--violet-600-rgb), 0.20));
+}
+.concept-constellation__shell--bridge .concept-constellation__node.is-suggested .concept-constellation__halo {
+  opacity: 0.78;
+  transform: scale(1.2);
+}
+.concept-constellation__shell--bridge .concept-constellation__node.is-active .concept-constellation__halo {
+  animation: concept-bridge-breathe 3.2s ease-in-out infinite;
+}
+.concept-constellation__shell--bridge .concept-constellation__node.is-suggested .concept-constellation__halo {
+  animation: concept-bridge-beacon 2.4s ease-in-out infinite;
+}
+.concept-constellation__shell--bridge .concept-constellation__node:focus-visible .concept-constellation__dot,
+.concept-constellation__shell--bridge .concept-constellation__node:hover:not([data-state="locked"]):not(.is-active) .concept-constellation__dot {
+  stroke: var(--violet-600);
+  stroke-width: 2.6;
+}
+.concept-post-repair__rail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 34px 36px 30px;
+  background: color-mix(in srgb, var(--cream-50) 97%, var(--lavender-500) 3%);
+  color: var(--ink-900);
+  outline: none;
+}
+.concept-post-repair__rail:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--violet-600);
+}
+.concept-post-repair__truth {
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.concept-post-repair__truth .eyebrow,
+.concept-post-repair__next .eyebrow {
+  color: var(--primary-fill-hover);
+}
+.concept-post-repair__truth h3 {
+  max-width: 12ch;
+  margin: 14px 0 12px;
+  color: var(--ink-900);
+  font-family: var(--font-display);
+  font-size: clamp(31px, 3vw, 43px);
+  font-weight: 720;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+.concept-post-repair__truth p,
+.concept-post-repair__next p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.concept-post-repair__next {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 32px 0 24px;
+}
+.concept-post-repair__next h4 {
+  margin: 14px 0 16px;
+  color: var(--ink-900);
+  font-family: var(--font-display);
+  font-size: clamp(27px, 2.4vw, 36px);
+  font-weight: 720;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+}
+.concept-post-repair__primary {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(var(--white-rgb), 0.58);
+  color: var(--primary-readable);
+  box-shadow: var(--ui-shadow-border, 0 0 0 1px rgba(var(--ink-900-rgb), 0.08));
+  font: 720 13px/1.2 var(--font-body);
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    background-color 170ms ease-out,
+    box-shadow 170ms ease-out,
+    color 170ms ease-out,
+    scale 150ms ease-out,
+    transform 170ms ease-out;
+}
+.concept-post-repair__primary::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition:
+    background-color 170ms ease-out,
+    transform 170ms ease-out;
+}
+.concept-post-repair__primary:hover,
+.concept-post-repair__primary:focus-visible {
+  background: rgba(var(--violet-600-rgb), 0.10);
+  color: var(--primary-fill-hover);
+  box-shadow:
+    var(--ui-shadow-border, 0 0 0 1px rgba(var(--ink-900-rgb), 0.08)),
+    0 8px 20px rgba(var(--violet-600-rgb), 0.10);
+  transform: translateY(-1px);
+  outline: none;
+}
+.concept-post-repair__primary:hover::before,
+.concept-post-repair__primary:focus-visible::before {
+  background: currentColor;
+  transform: rotate(45deg) scale(0.78);
+}
+.concept-post-repair__break {
+  display: inline-flex;
+  width: auto;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 4px;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font: 600 13px/1.3 var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 150ms ease-out, scale 150ms ease-out;
+}
+.concept-post-repair__break:hover,
+.concept-post-repair__break:focus-visible,
+.concept-post-repair__break:active {
+  color: var(--violet-600);
+  box-shadow: none;
+  transform: none;
+  outline: none;
+}
+.concept-post-repair__break:hover,
+.concept-post-repair__break:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.concept-post-repair__break:active {
+  scale: 0.96;
+}
+.concept-post-repair__break--standalone {
+  margin-top: 18px;
+  padding-inline: 12px;
+  border-radius: 8px;
+  background: rgba(var(--violet-600-rgb), 0.08);
+  color: var(--primary-readable);
+}
+.concept-post-repair__options {
+  border-top: 1px solid var(--border-subtle);
+}
+.concept-post-repair__options summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font: 700 14px/1.2 var(--font-body);
+  cursor: pointer;
+  list-style: none;
+}
+.concept-post-repair__options summary::-webkit-details-marker {
+  display: none;
+}
+.concept-post-repair__options summary::after {
+  content: "+";
+  color: var(--violet-600);
+  font-size: 20px;
+  font-weight: 500;
+}
+.concept-post-repair__options[open] summary::after {
+  content: "−";
+}
+.concept-post-repair__options > button {
+  width: 100%;
+  min-height: 54px;
+  margin: 0 0 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(var(--cream-50-rgb), 0.72);
+  color: rgba(var(--ink-900-rgb), 0.84);
+  text-align: left;
+  cursor: pointer;
+}
+.concept-post-repair__options > button strong,
+.concept-post-repair__options > button span {
+  display: block;
+}
+.concept-post-repair__options > button strong {
+  font: 720 13px/1.3 var(--font-body);
+}
+.concept-post-repair__options > button span {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.concept-post-repair__options > button:hover,
+.concept-post-repair__options > button:focus-visible {
+  border-color: rgba(var(--violet-600-rgb), 0.46);
+  outline: none;
+}
+.concept-post-repair__rail footer {
+  margin-top: auto;
+  padding-top: 24px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+@keyframes concept-bridge-path {
+  to { stroke-dashoffset: -38; }
+}
+@keyframes concept-bridge-breathe {
+  0%, 100% { opacity: 0.66; transform: scale(1.08); }
+  50% { opacity: 1; transform: scale(1.27); }
+}
+@keyframes concept-bridge-beacon {
+  0%, 100% { opacity: 0.5; transform: scale(1.05); }
+  50% { opacity: 0.92; transform: scale(1.3); }
+}
+
+@media (max-width: 980px) {
+  .concept-page-b2__doc.concept-page-b2__doc--post-repair {
+    padding-inline: 20px;
+  }
+  .concept-post-repair-host {
+    width: auto;
+    margin-inline: 0;
+  }
+  .concept-constellation__shell.concept-constellation__shell--bridge {
+    grid-template-columns: 1fr;
+  }
+  .concept-post-repair__canvas {
+    min-height: 390px;
+    padding: 22px 14px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .concept-post-repair__canvas > .eyebrow {
+    top: 20px;
+    left: 22px;
+  }
+  .concept-constellation__shell--bridge .concept-constellation__svg {
+    min-height: 390px;
+    margin: 0;
+    transform: none;
+  }
+  .concept-post-repair__rail {
+    min-height: 520px;
+    padding: 28px 28px 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .concept-page-b2__doc.concept-page-b2__doc--post-repair {
+    margin-top: 0;
+    padding-inline: 16px;
+  }
+  .concept-page-b2__doc--post-repair .concept-page-b2__context-dock {
+    margin-bottom: 6px;
+  }
+  .concept-post-repair-host {
+    width: calc(100% + 32px);
+    margin: 0 -16px;
+  }
+  .concept-constellation__shell.concept-constellation__shell--bridge {
+    min-height: 0;
+  }
+  .concept-post-repair__canvas {
+    min-height: 0;
+    padding-inline: 4px;
+  }
+  .concept-constellation__shell--bridge .concept-constellation__svg {
+    height: 210px;
+    min-height: 210px;
+    transform: scale(1.55);
+    transform-origin: 50% 52%;
+  }
+  .concept-constellation__shell--bridge .concept-constellation__label {
+    font-size: 16px;
+    stroke-width: 7px;
+  }
+  .concept-post-repair__rail {
+    min-height: 0;
+    padding: 24px 20px calc(28px + env(safe-area-inset-bottom));
+  }
+  .concept-post-repair__truth {
+    padding-bottom: 16px;
+  }
+  .concept-post-repair__truth h3 {
+    max-width: 13ch;
+    margin: 10px 0 8px;
+    font-size: 34px;
+  }
+  .concept-post-repair__next {
+    padding: 12px 0;
+  }
+  .concept-post-repair__next h4 {
+    margin: 8px 0;
+    font-size: 25px;
+    line-height: 1;
+  }
+  .concept-post-repair__next p {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .concept-post-repair__primary {
+    margin-top: 12px;
+  }
+  .concept-post-repair__rail footer {
+    margin-top: 18px;
+  }
 }
 [data-theme="dark"] .concept-view-switch {
   background: rgba(255, 255, 255, 0.055);
@@ -511,7 +995,7 @@
 .concept-page-b2__route-index {
   padding-top: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
   color: var(--accent-secondary);
 }
@@ -699,6 +1183,33 @@
   font-size: 16px;
   line-height: 1.48;
 }
+.concept-page-b2__repair--saved {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 24px;
+  max-width: 620px;
+  margin: 8px 0 28px;
+  padding: 22px 24px;
+  border-left: 0;
+  border: 1px solid rgba(var(--violet-600-rgb), 0.16);
+  border-radius: 8px;
+  background: rgba(var(--paper-0-rgb), 0.42);
+}
+.concept-page-b2__repair--saved h3 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.concept-page-b2__repair-context {
+  grid-column: 1;
+  max-width: 60ch;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.48;
+}
 .concept-page-b2__saved-repair {
   margin: 0 0 14px;
   padding-left: 14px;
@@ -716,6 +1227,29 @@
   color: var(--text-strong);
   font-size: 15px;
   line-height: 1.5;
+}
+.concept-page-b2__repair--saved .concept-page-b2__repair-attempt {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+@media (max-width: 620px) {
+  .concept-page-b2__repair--saved {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .concept-page-b2__repair--saved .concept-page-b2__repair-attempt {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
 }
 .concept-page-b2__field {
   display: block;
@@ -964,7 +1498,12 @@
   font-family: inherit; font-size: 14px; font-weight: 600;
   letter-spacing: 0;
   cursor: pointer;
-  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    background-color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    scale 150ms ease-out,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .concept-page-b2__entry-cta:hover {
   background: color-mix(in srgb, var(--accent-primary) 88%, var(--ink-900) 12%);
@@ -972,14 +1511,6 @@
   box-shadow: 0 12px 26px rgba(var(--violet-600-rgb), 0.20);
   transform: translateY(-1px);
 }
-.concept-page-b2__entry-cta::after {
-  content: "\2192";
-  font-size: 16px;
-  transform: translateX(0);
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.concept-page-b2__entry-cta:hover::after { transform: translateX(4px); }
-
 .concept-page-b2__nearby {
   margin-top: 80px;
   padding-top: 28px;
@@ -1068,7 +1599,7 @@
 .concept-page-b2__nearby-item:last-child { border-bottom: 0; }
 .concept-page-b2__nearby-num {
   font-family: ui-monospace, monospace;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--accent-secondary);
   letter-spacing: 0.06em;
 }
@@ -1174,14 +1705,18 @@
 
 /* Re-edit sketch affordance */
 .concept-page-b2__threshold-edit {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   margin-left: 12px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
   color: var(--accent-primary);
   text-decoration: none;
   border-bottom: 1px dashed currentColor;
-  padding-bottom: 1px;
+  padding: 0 8px 1px;
   cursor: pointer;
 }
 .concept-page-b2__threshold-edit:hover { color: var(--text-strong); }
@@ -1230,7 +1765,13 @@
   border-radius: 999px;
   padding: 7px 18px;
   cursor: pointer;
-  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 40px;
+  transition:
+    background-color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    scale 150ms ease-out,
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .concept-page-b2__threshold-cancel {
   background: transparent;
@@ -1276,7 +1817,7 @@
     left: 12px; bottom: 8px; top: auto;
     gap: 8px;
   }
-  .concept-strip__active-name { font-size: 11px; padding: 3px 8px; }
+  .concept-strip__active-name { font-size: var(--text-xs); padding: 3px 8px; }
   .concept-page-b2 .concept-strip__overlay .eyebrow,
   .concept-strip__overlay .eyebrow { padding: 3px 6px; }
 
@@ -1436,6 +1977,14 @@
   .concept-constellation__edge.is-lit {
     animation: none;
   }
+  .concept-constellation__shell--bridge .concept-constellation__edge.is-suggested,
+  .concept-constellation__shell--bridge .concept-constellation__node.is-active .concept-constellation__halo,
+  .concept-constellation__shell--bridge .concept-constellation__node.is-suggested .concept-constellation__halo {
+    animation: none;
+  }
+  .concept-post-repair__primary {
+    transition: none;
+  }
   .concept-constellation__halo,
   .concept-constellation__dot {
     transition: none;
@@ -1560,7 +2109,7 @@
 
 .node-strip-num {
   padding-top: 0;
-  font-size: 9px;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
   color: rgba(var(--lavender-500-rgb), 0.82);
 }
@@ -1686,7 +2235,7 @@
   appearance: none;
   flex: 0 1 auto;
   width: 100%;
-  min-height: 0;
+  min-height: 44px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -1699,6 +2248,7 @@
   color: var(--text-muted);
   text-align: left;
   cursor: pointer;
+  transition: scale 150ms ease-out;
 }
 
 .vd-sketch-head .concept-page-b2__threshold-edit {
@@ -1725,7 +2275,15 @@
 }
 
 .vd-sketch-toggle:active {
-  transform: scale(0.98);
+  scale: 0.96;
+}
+
+@media (max-width: 720px) {
+  .concept-constellation__return,
+  .concept-page-b2__threshold-cancel,
+  .concept-page-b2__threshold-save {
+    min-height: 44px;
+  }
 }
 
 .vd-sketch-toggle:focus-visible {

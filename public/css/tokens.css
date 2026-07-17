@@ -48,6 +48,8 @@
 }
 
 :root {
+  font-synthesis: none;
+
   --ink-900:        #242038;
   --violet-600:     #9067c6;
   --lavender-500:   #8d86c9;
@@ -108,9 +110,9 @@
   --font-display: "Geom", "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-body:    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --text-xs:   clamp(0.7rem,  0.65rem + 0.25vw, 0.80rem);
+  --text-xs:   clamp(0.75rem, 0.65rem + 0.25vw, 0.80rem);
   --text-sm:   clamp(0.8rem,  0.75rem + 0.35vw, 0.95rem);
-  --text-base: clamp(0.95rem, 0.85rem + 0.50vw, 1.10rem);
+  --text-base: clamp(1rem,    0.85rem + 0.50vw, 1.10rem);
   --text-lg:   clamp(1.10rem, 1.00rem + 0.60vw, 1.25rem);
   --text-xl:   clamp(1.25rem, 1.10rem + 0.75vw, 1.40rem);
   --text-2xl:  clamp(1.50rem, 1.30rem + 1.00vw, 1.75rem);

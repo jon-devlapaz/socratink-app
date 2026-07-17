@@ -96,6 +96,14 @@ function earliestIso(a, b) {
   return aMs <= bMs ? a : b;
 }
 
+function latestIso(a, b) {
+  const aMs = Date.parse(a || '');
+  const bMs = Date.parse(b || '');
+  if (!Number.isFinite(aMs)) return b || null;
+  if (!Number.isFinite(bMs)) return a || null;
+  return aMs >= bMs ? a : b;
+}
+
 export function mergeTrainingRecords(localTraining, remoteTraining) {
   if (!localTraining) return remoteTraining || null;
   if (!remoteTraining) return localTraining;
@@ -116,6 +124,7 @@ export function mergeTrainingRecords(localTraining, remoteTraining) {
       attempts: mergeAttemptLists(localNode.attempts, remoteNode.attempts),
       repairs: mergeRepairLists(localNode.repairs, remoteNode.repairs),
       study_revealed_at: earliestIso(localNode.study_revealed_at, remoteNode.study_revealed_at),
+      repair_checked_at: latestIso(localNode.repair_checked_at, remoteNode.repair_checked_at),
     };
   });
 

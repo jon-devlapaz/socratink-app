@@ -185,6 +185,58 @@ def test_latest_seda_attempt_event_projects_before_case_complete() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_seda_progress_projects_reveal_and_repair_but_not_transfer() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { projectLatestSedaAttemptEvent } from './public/js/seda-evidence-projection.js';
+
+        const data = { events: [
+          {
+            type: 'cold_attempt',
+            text: 'The query compares with keys.',
+            evaluation: { classification: 'shallow', gap_description: 'Explain the weighting.' },
+          },
+          { type: 'gap_identified', graph_neutral: true },
+          { type: 'repair_dialogue_turn', text: 'Similarity becomes a weight.', graph_neutral: true },
+          { type: 'repair', text: 'Similarity becomes a normalized weight.', graph_neutral: true },
+          { type: 'model_bridge', text: 'Similarities are normalized into weights.', graph_neutral: true },
+          {
+            type: 'post_bridge_transfer_check',
+            text: 'The weights select relevant values.',
+            graph_neutral: true,
+            score_eligible: false,
+          },
+        ] };
+        const projected = projectLatestSedaAttemptEvent({
+          training: null,
+          conceptId: 'c',
+          nodeId: 'n',
+          sessionId: 'sess-nested',
+          now: '2026-07-15T12:00:00.000Z',
+          data,
+        });
+        const record = projected.node_records.n;
+        assert.equal(record.attempts.length, 1);
+        assert.equal(record.study_revealed_at, '2026-07-15T12:00:00.000Z');
+        assert.deepEqual(record.repairs.map(({ text }) => text), [
+          'Similarity becomes a normalized weight.',
+        ]);
+        assert.equal(
+          record.attempts.some((attempt) => attempt.user_text === 'The weights select relevant values.'),
+          false,
+          'graph-neutral transfer must not become mastery evidence',
+        );
+        assert.equal(projectLatestSedaAttemptEvent({
+          training: projected,
+          conceptId: 'c', nodeId: 'n', sessionId: 'sess-nested', data,
+        }), null, 'same progress must be idempotent');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_completed_record_reconciles_early_cold_event_without_duplicate() -> None:
     result = run_node_module(
         """

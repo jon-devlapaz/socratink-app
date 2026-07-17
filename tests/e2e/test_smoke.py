@@ -221,7 +221,7 @@ def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str)
         "Write what you remember first. We'll show what to study — not a summary."
     )
     expect(clean_page.locator("#ignition-boundary")).to_have_text(
-        "You'll write first. Answers come after."
+        "Add your first model to start."
     )
 
 
@@ -690,7 +690,7 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         "No source attached. Treat this route as provisional."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reveal notes and compare"
@@ -711,26 +711,9 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Compare notes"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Keep working")
-    expect(page.locator("[data-feedback-rating]")).to_have_text("Rate this moment")
-    page.locator("[data-feedback-rating]").click()
-    expect(page.locator("#feedback-overlay")).to_be_visible()
-    expect(page.locator("#feedback-title")).to_have_text("Rate this moment")
-    expect(page.locator("#feedback-desc")).to_have_text(
-        "How did comparing your answer to the notes feel? A 9 or 10 means the UX feels ready for a new customer."
-    )
-    expect(page.locator("#feedback-submit")).to_have_text("Send Rating")
-    expect(page.locator("#feedback-ux-rating")).to_be_focused()
-    page.locator("#feedback-ux-rating").select_option("9")
-    page.locator("#feedback-submit").click()
-    expect(page.locator("#feedback-status")).to_have_text(
-        "Thank you! Feedback captured."
-    )
-    assert feedback_payloads == [
-        {"message": "UX feel: 9/10\nUX moment: compare notes"}
-    ]
-    page.locator(".modal-close").click()
-    expect(page.locator("#feedback-overlay")).not_to_be_visible()
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Return to route")
+    expect(page.locator("[data-feedback-rating]")).to_have_count(0)
+    assert feedback_payloads == []
     revealed_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
     )
@@ -822,6 +805,17 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page.route("**/api/drill", fulfill_drill)
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    checked_at = page.evaluate(
+        """async () => {
+          const { mergeTrainingRecords } = await import('/js/learner-state-sync.js');
+          const merged = mergeTrainingRecords(
+            { concept_id: 'checked', node_records: { n1: { repair_checked_at: '2026-07-08T11:00:00.000Z' } } },
+            { concept_id: 'checked', node_records: { n1: {} } },
+          );
+          return merged.node_records.n1.repair_checked_at;
+        }"""
+    )
+    assert checked_at == "2026-07-08T11:00:00.000Z"
     page.evaluate(
         """(() => {
             const graphData = JSON.stringify({
@@ -854,7 +848,7 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Legacy Study QA").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
         "Reveal notes and compare"
@@ -951,7 +945,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Learner thinks"
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__evidence")).to_contain_text(
         "Your memory draft"
@@ -966,6 +960,18 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     )
     expect(page.locator(".concept-page-b2__evidence")).not_to_contain_text(
         "Missing piece"
+    )
+    expect(page.locator(".concept-page-b2__study-note")).not_to_have_class(
+        re.compile(r"is-collapsed")
+    )
+    expect(page.locator("[data-study-note-toggle]")).to_have_text("Hide study note")
+    expect(page.locator(".concept-page-b2__repair")).to_be_hidden()
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Write the repair")
+    page.locator(".concept-page-b2__entry-cta").click()
+    expect(page.locator(".concept-page-b2__repair")).to_be_visible()
+    expect(page.locator(".concept-page-b2__repair-input")).to_be_focused()
+    expect(page.locator(".concept-page-b2__study-note")).to_have_class(
+        re.compile(r"is-collapsed")
     )
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "Missing link"
@@ -996,7 +1002,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "labelLetterSpacing": "normal",
         "saveMinHeight": "44px",
     }
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_be_hidden()
 
     page.locator(".concept-page-b2__repair-save").click()
     expect(page.locator("[data-repair-error]")).to_be_visible()
@@ -1035,28 +1041,141 @@ def test_localhost_concept_repair_appends_learner_gap_work(
         "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
     )
     page.locator(".concept-page-b2__repair-save").click()
-    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Needs repair"
+    expect(page.locator(".concept-post-repair__rail")).to_be_focused()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    expect(page.locator(".concept-post-repair__truth")).to_contain_text(
+        "Your map is unchanged."
     )
-    expect(page.locator(".concept-page-b2__repair--saved")).to_be_focused()
-    expect(page.locator(".concept-page-b2__repair--saved")).to_contain_text(
-        "Your saved repair"
+    expect(page.locator(".concept-post-repair__truth")).to_contain_text(
+        "Reconstruct this link later to test it."
     )
-    expect(page.locator(".concept-page-b2__repair--saved")).to_contain_text(
-        "Threshold opens voltage-gated sodium channels; the gradient drives sodium flow only after that gate opens."
+    expect(page.locator(".concept-post-repair__primary")).to_have_text(
+        "Enter this room"
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
-        "Pressure-check this link"
+    expect(page.locator(".concept-post-repair__primary")).to_have_attribute(
+        "aria-label", "Enter this room: Membrane depolarization"
     )
-    expect(page.locator(".concept-page-b2__repair")).to_be_visible()
+    expect(page.locator(".concept-post-repair__break")).to_have_text(
+        "Take a short break"
+    )
+    page.evaluate(
+        """(() => {
+          const concepts = JSON.parse(localStorage.getItem('learnops_concepts') || '[]');
+          const concept = concepts.find((item) => item.id === 'qa-repair-concept');
+          const graph = JSON.parse(concept.graphData);
+          graph.backbone.push({ id: 'peripheral-node', label: 'Peripheral room' });
+          concept.graphData = JSON.stringify(graph);
+          localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+        })()"""
+    )
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    suggested_node = page.locator(
+        '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
+    )
+    expect(suggested_node).to_be_visible()
+    expect(suggested_node).to_have_attribute("role", "button")
+    expect(suggested_node).to_have_attribute("tabindex", "0")
+    expect(suggested_node).to_have_attribute(
+        "aria-label", re.compile(r"Membrane depolarization.*ready to reconstruct")
+    )
+    repaired_label_fill = page.locator(
+        ".concept-post-repair-host .concept-constellation__node.is-active "
+        ".concept-constellation__label"
+    ).evaluate("el => getComputedStyle(el).fill")
+    assert repaired_label_fill == "rgba(36, 32, 56, 0.84)"
+    suggested_eyebrow_color = page.locator(
+        ".concept-post-repair__next > .eyebrow"
+    ).evaluate("el => getComputedStyle(el).color")
+    assert suggested_eyebrow_color == "rgb(112, 82, 155)"
+    expect(
+        page.locator('.concept-post-repair-host [data-edge-recommendation="true"]')
+    ).to_be_visible()
+    expect(
+        page.locator('.concept-post-repair-host [data-edge-evidence="true"]')
+    ).to_have_count(0)
     assert page.evaluate("window.scrollY") == 0
-    page.locator(".concept-page-b2__entry-cta").click()
+
+    page.locator(".concept-post-repair__break").click()
+    expect(page.locator(".hero-card")).to_be_visible()
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Repair Truth QA").click()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+
+    # A failed room load stays on the handoff instead of losing the route.
+    page.evaluate(
+        """(() => {
+          window.__qaOriginalGetItem = Storage.prototype.getItem;
+          Storage.prototype.getItem = function (key) {
+            if (String(key).startsWith('socratink:training:v1:')) {
+              throw new Error('forced room load failure');
+            }
+            return window.__qaOriginalGetItem.call(this, key);
+          };
+        })()"""
+    )
+    suggested_node = page.locator(
+        '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
+    )
+    suggested_node.dispatch_event("click")
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    page.evaluate(
+        """(() => {
+          Storage.prototype.getItem = window.__qaOriginalGetItem;
+          delete window.__qaOriginalGetItem;
+        })()"""
+    )
+    suggested_node.dispatch_event("click")
+    expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Membrane depolarization"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_have_count(0)
+
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+
+    # The graph itself is keyboard-operable and routes to the genuinely ready room.
+    suggested_node = page.locator(
+        '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
+    )
+    suggested_node.focus()
+    suggested_node.press("Enter")
+    expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Membrane depolarization"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_have_count(0)
+
+    # Reload returns to the pending repair handoff; pressure-check remains
+    # available through progressive disclosure.
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    # The primary action routes by entry identity, not by proxy-clicking the
+    # decorative graph node. Removing that rendering detail must not dead-end
+    # the learner's main path.
+    page.evaluate(
+        "document.querySelector('.concept-post-repair-host [data-bridge-target=\"true\"]')?.remove()"
+    )
+    page.locator(".concept-post-repair__primary").click()
+    expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Membrane depolarization"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    page.locator(".concept-post-repair__options summary").click()
+    expect(
+        page.locator('[data-post-repair-action="pressure-check"]')
+    ).to_be_visible()
+    page.locator('[data-post-repair-action="pressure-check"]').click()
     expect(page.locator("#drill-chamber-view")).to_be_visible()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Reconstruction"
     )
-    expect(page.locator("#chamber-send")).to_have_text("Check my answer")
-    expect(page.locator(".drill-chamber__hint")).to_have_text("A sentence is enough.")
+    expect(page.locator("#chamber-send")).to_have_text("Check the link")
+    expect(page.locator(".drill-chamber__hint")).to_have_text("One clear connection is enough.")
     expect(
         page.locator(".concept-page-b2__active-entry--drilling #drill-chamber-view")
     ).to_be_visible()
@@ -1083,16 +1202,8 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__study-note")).not_to_contain_text(
         "while you repair"
     )
-    expect(page.locator("[data-feedback-rating]")).to_have_text("Rate this moment")
-    page.locator("[data-feedback-rating]").click()
-    expect(page.locator("#feedback-overlay")).to_be_visible()
-    expect(page.locator("#feedback-desc")).to_have_text(
-        "How did checking your repair feel? A 9 or 10 means the UX feels ready for a new customer."
-    )
-    expect(page.locator("#feedback-ux-rating")).to_be_focused()
-    page.keyboard.press("Escape")
-    expect(page.locator("#feedback-overlay")).not_to_be_visible()
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator("[data-feedback-rating]")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Continue route")
     assert "/session/qa-repair-concept" in page.url
     page.reload()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
@@ -1101,7 +1212,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-page-b2__repair")).to_contain_text(
         "Repair checked for now."
     )
-    expect(page.locator(".concept-page-b2__entry-cta")).to_have_count(0)
+    expect(page.locator(".concept-page-b2__entry-cta")).to_have_text("Continue route")
     assert drill_calls[0]["drill_mode"] == "re_drill"
     repaired_training = page.evaluate(
         """JSON.parse(localStorage.getItem('socratink:training:v1:qa-repair-concept'))"""
@@ -1462,7 +1573,7 @@ def _seda_route_result(**kwargs) -> dict:
 def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     clean_page: Page, base_url: str
 ) -> None:
-    """The Door sketch bootstraps SEDA; the first room answer earns study."""
+    """The real chamber carries one SEDA case through the nested learner loop."""
     page = clean_page
     _enter_app_shell_as_guest(page, base_url)
 
@@ -1510,6 +1621,8 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     room_answer = (
         "Memory cells remain after the first exposure and make the second response faster."
     )
+    repair_answer = "The retained cells recognize the antigen and activate sooner."
+    transfer_answer = "A saved pattern can make a later matching response start sooner."
     routed_prompt = "Route prompt B: why does the later response happen faster?"
     routed_mechanism = (
         "Route mechanism B: memory cells persist and activate sooner on re-exposure."
@@ -1550,32 +1663,63 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
                 }),
             )
             return
+        route_event = _seda_route_event(
+            node_id="c9_s1", label="Routed memory target",
+            prompt=routed_prompt, mechanism=routed_mechanism,
+        )
+        cold_event = {
+            "type": "cold_attempt", "kc_id": "c9_s1", "text": room_answer,
+            "evaluation": {
+                "classification": "deep",
+                "agent_response": (
+                    "You connected memory cells to the faster response, "
+                    "but not why they react sooner."
+                ),
+                "gap_description": "Name why memory cells respond faster.",
+                "grader_version": "qa",
+            },
+        }
+        gap_event = {
+            "type": "gap_identified", "graph_neutral": True,
+            "repair_scaffold": {
+                "socratic_question": "What lets the retained cells react sooner?",
+            },
+            "gap_log": {"missing_operation": "recognition triggers faster activation"},
+        }
+        repair_turn = {
+            "type": "repair_dialogue_turn", "text": repair_answer,
+            "bridge_ready": True, "graph_neutral": True, "score_eligible": False,
+        }
+        repair_event = {"type": "repair", "text": repair_answer, "graph_neutral": True}
+        bridge_event = {"type": "model_bridge", "text": routed_mechanism, "graph_neutral": True}
+        decision_event = {
+            "type": "post_bridge_transfer_decision", "run_gap": True,
+            "graph_neutral": True, "score_eligible": False,
+        }
+        transfer_event = {
+            "type": "post_bridge_transfer_check", "text": transfer_answer,
+            "graph_neutral": True, "score_eligible": False,
+            "evaluation": {"classification": "deep"},
+        }
+        turns = {
+            2: ({"key": "continue", "ctaText": cold_event["evaluation"]["agent_response"]}, [route_event, cold_event]),
+            3: ({"key": "repair", "ctaText": gap_event["repair_scaffold"]["socratic_question"]}, [route_event, cold_event, gap_event]),
+            4: ({"key": "continue", "ctaText": "Continue."}, [route_event, cold_event, gap_event, repair_turn, repair_event]),
+            5: ({"key": "run_gap_drill", "ctaText": "Try using it somewhere new?"}, [route_event, cold_event, gap_event, repair_turn, repair_event, bridge_event]),
+            6: ({"key": "gap_attempt", "ctaText": "Use it somewhere new."}, [route_event, cold_event, gap_event, repair_turn, repair_event, bridge_event, decision_event]),
+            7: ({"key": "spaced_attempt", "ctaText": "From memory, explain it again."}, [route_event, cold_event, gap_event, repair_turn, repair_event, bridge_event, decision_event, transfer_event]),
+        }
+        awaiting, events = turns[len(turn_texts)]
         route.fulfill(
             status=200,
             content_type="application/json",
             body=json.dumps({
                 "sessionId": "mid-loop-session",
-                "sessionVersion": 3,
+                "sessionVersion": len(turn_texts) + 1,
                 "status": "awaiting_input",
-                "awaiting": {
-                    "key": "compare",
-                    "ctaText": "Compare your answer with the note.",
-                },
+                "awaiting": awaiting,
                 "learnerTranscript": [],
-                "events": [{
-                    "type": "cold_attempt",
-                    "kc_id": "c9_s1",
-                    "text": room_answer,
-                    "evaluation": {
-                        "classification": "deep",
-                        "agent_response": (
-                            "You connected memory cells to the faster response, "
-                            "but not why they react sooner."
-                        ),
-                        "gap_description": "Name why memory cells respond faster.",
-                        "grader_version": "qa",
-                    },
-                }],
+                "events": events,
                 "caseComplete": False,
                 "record": None,
             }),
@@ -1650,9 +1794,9 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     expect(page.locator("#chamber-verdict")).not_to_contain_text(
         "You connected memory cells to the faster response, but not why they react sooner."
     )
-    expect(page.locator("#chamber-send")).to_have_text("See what to study")
+    expect(page.locator("#chamber-send")).to_have_text("Work this link")
     expect(page.locator("#chamber-composer")).to_be_disabled()
-    expect(page.locator("#chamber-question")).to_have_text(routed_prompt)
+    expect(page.locator("#chamber-question")).to_contain_text("not why they react sooner")
     assert turn_texts == [door_sketch, room_answer]
     assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2]
     projected = page.wait_for_function(
@@ -1681,10 +1825,42 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
         }"""
     ) is False
     page.locator("#chamber-send").click()
-    expect(page.locator("#drill-chamber-view")).to_be_hidden()
-    expect(page.locator(".concept-page-b2__study-note")).to_contain_text(
-        routed_mechanism, timeout=20_000
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "repair")
+    expect(page.locator("#chamber-anchor-text")).to_have_text(room_answer)
+    expect(page.locator("#chamber-question")).to_have_text("What lets the retained cells react sooner?")
+    page.locator("#chamber-composer").fill(repair_answer)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "repair-ready")
+    expect(page.locator("#chamber-anchor-label")).to_have_text("Your repair")
+    expect(page.locator("#chamber-anchor-text")).to_have_text(repair_answer)
+    expect(page.locator("#chamber-send")).to_have_text("See the connection")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "bridge")
+    expect(page.locator("#chamber-anchor-label")).to_have_text("Your repair")
+    expect(page.locator("#chamber-anchor-text")).to_have_text(repair_answer)
+    expect(page.locator("#chamber-bridge-text")).to_have_text(routed_mechanism)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "transfer")
+    expect(page.locator("#chamber-bridge")).to_be_hidden()
+    page.locator("#chamber-composer").fill(transfer_answer)
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "settle")
+    expect(page.locator("#chamber-send")).to_have_text("Return to concept")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_count(0)
+    assert turn_texts == [
+        door_sketch, room_answer, "continue", repair_answer, "continue", "y", transfer_answer,
+    ]
+    evidence = page.evaluate(
+        """() => {
+          const conceptId = localStorage.getItem('learnops_active');
+          const training = JSON.parse(localStorage.getItem(`socratink:training:v1:${conceptId}`));
+          return training.node_records.c9_s1;
+        }"""
     )
+    assert len(evidence["attempts"]) == 1
+    assert [repair["text"] for repair in evidence["repairs"]] == [repair_answer]
+    assert evidence["study_revealed_at"]
 
 
 def test_late_source_less_route_cannot_overwrite_a_newly_selected_concept(
@@ -2024,8 +2200,9 @@ def test_seda_support_turn_is_neutral_and_records_no_evidence(
     expect(page.locator("#chamber-verdict")).to_contain_text("Response received")
     expect(page.locator("#chamber-verdict")).not_to_contain_text("Gap found")
     expect(page.locator("#chamber-verdict")).not_to_contain_text("Study")
-    expect(page.locator("#chamber-send")).to_have_text("Keep going")
-    expect(page.locator("#chamber-composer")).to_be_disabled()
+    expect(page.locator("#chamber-send")).to_have_text("Check the link")
+    expect(page.locator("#chamber-question")).to_have_text("Try one concrete cause.")
+    expect(page.locator("#chamber-composer")).to_be_enabled()
     assert turn_texts == [door_sketch, support_text]
     assert [payload["expectedVersion"] for payload in turn_payloads] == [1, 2]
     attempt_count = page.evaluate(
@@ -2038,8 +2215,6 @@ def test_seda_support_turn_is_neutral_and_records_no_evidence(
         }"""
     )
     assert attempt_count == 0
-    page.locator("#chamber-send").click()
-    expect(page.locator("#chamber-composer")).to_be_enabled()
 
 
 def test_seda_start_failure_offers_retry_from_product_flow(
@@ -2181,7 +2356,7 @@ def test_seda_start_failure_offers_retry_from_product_flow(
     expect(page.locator("#chamber-active")).not_to_have_attribute(
         "data-loading", "true"
     )
-    expect(page.locator("#chamber-hint")).to_have_text("A sentence is enough.")
+    expect(page.locator("#chamber-hint")).to_have_text("One clear connection is enough.")
     page.locator("#chamber-send").click()
     expect(page.locator("#chamber-verdict")).to_contain_text(
         "Use the next question to add one cause-and-effect link.", timeout=2_000
@@ -3064,7 +3239,7 @@ def test_seda_transport_failure_keeps_draft_and_retries_same_turn(
             && document.getElementById('chamber-question')?.textContent
               === 'Why is the later response faster?'
             && document.getElementById('chamber-composer')?.disabled === false
-            && document.getElementById('chamber-send')?.textContent === 'Check my answer';
+            && document.getElementById('chamber-send')?.textContent === 'Check the link';
         }""",
         timeout=20_000,
     )
@@ -3612,7 +3787,7 @@ def test_concept_entry_mutation_preserves_active_later_entry(
     page.locator(".library-card-vault", has_text="Active Entry QA").click()
     page.locator('.concept-page-b2__route-item[data-entry-id="entry-two"]').click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
@@ -3750,7 +3925,7 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
     page.locator(".concept-page-b2__attempt-save").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__evidence")).to_be_focused()
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
@@ -4119,7 +4294,7 @@ def test_localhost_concept_page_corrupt_training_storage_recovers_and_records_at
     save_button = page.locator(".concept-page-b2__attempt-save")
     save_button.click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     assert len(drill_calls) == 1
     assert drill_calls[0]["node_id"] == "corrupt-node"
