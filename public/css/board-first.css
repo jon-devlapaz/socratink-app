@@ -9,6 +9,7 @@
 /* Remove the giant card feel while preserving the same Desk view container. */
 .hero-card {
   box-sizing: border-box;
+  flex-direction: column;
   width: 100%;
   max-width: 960px;
   min-height: 100dvh;
