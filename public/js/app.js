@@ -160,6 +160,8 @@ const App = (() => {
   const _appendAttempt = trainingStore.appendAttempt.bind(trainingStore);
   const _setStudyRevealed = trainingStore.setStudyRevealed.bind(trainingStore);
   const _appendRepair = trainingStore.appendRepair.bind(trainingStore);
+  const _saveTraining = trainingStore.saveTraining.bind(trainingStore);
+  const _markRepairChecked = trainingStore.markRepairChecked.bind(trainingStore);
   const _setProvenance = trainingStore.setProvenance.bind(trainingStore);
   const _setSketch = trainingStore.setSketch.bind(trainingStore);
   trainingStore.appendAttempt = async (...args) => {
@@ -176,6 +178,17 @@ const App = (() => {
   };
   trainingStore.appendRepair = async (...args) => {
     const result = await _appendRepair(...args);
+    scheduleLearnerStatePush();
+    return result;
+  };
+  trainingStore.saveTraining = async (...args) => {
+    const result = await _saveTraining(...args);
+    scheduleLearnerStatePush();
+    renderDeskDueSurfaces();
+    return result;
+  };
+  trainingStore.markRepairChecked = async (...args) => {
+    const result = await _markRepairChecked(...args);
     scheduleLearnerStatePush();
     return result;
   };
