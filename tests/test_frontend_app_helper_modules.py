@@ -1577,6 +1577,18 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.doesNotMatch(bridgeHtml, /Reset phase/);
         assert.match(bridgeHtml, /Entry 03/);
 
+        const peripheralHtml = renderConceptConstellationHtml({
+          backbone: [
+            { id: 'repair', label: 'Repair room' },
+            { id: 'target', label: 'Target room' },
+            { id: 'peripheral', label: 'Peripheral room' },
+          ],
+        }, {
+          activeEntryId: 'repair',
+          postRepairBridge: { repairedEntryId: 'repair', targetEntryId: 'target' },
+        });
+        assert.match(peripheralHtml, /data-entry-id="peripheral"/);
+
         const noCandidateData = {
           ...data,
           clusters: [{ ...data.clusters[0], subnodes: [data.clusters[0].subnodes[0]] }],

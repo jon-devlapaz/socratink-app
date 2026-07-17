@@ -399,7 +399,7 @@ def test_drill_chamber_opens_inline_inside_concept_view(
       1. Seed a concept with a graph and navigate to its map view.
       2. Invoke App.startDrill() via the browser to simulate the user
          clicking a drill-ready graph node.
-      3. Assert the chamber is visible without hiding the concept context.
+      3. Assert the chamber is visible without replacing the concept view.
 
     Note: this test exercises the JS wiring (startDrill -> DrillChamber.show)
     without making a real network call to the drill API. The typing indicator
@@ -441,7 +441,7 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     expect(clean_page.locator("#chamber-composer")).not_to_have_attribute(
         "placeholder", "Preparing your first question"
     )
-    expect(clean_page.locator("#chamber-send")).to_have_text("Check my answer")
+    expect(clean_page.locator("#chamber-send")).to_have_text("Check the link")
     expect(clean_page.locator(".concept-page-b2__entry-eyebrow")).to_have_text("Reconstruction")
     expect(clean_page.locator("#drill-chamber-view")).to_contain_text(
         "Reconstruct Entry A from memory"
@@ -464,8 +464,9 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     )
     clean_page.evaluate("window.DrillChamber.setLoading(false)")
     expect(clean_page.locator(".node-strip")).to_be_visible()
-    expect(clean_page.locator(".vd-sketch-wrapper")).to_be_visible()
-    # The concept view remains visible as context during an active drill.
+    expect(clean_page.locator(".vd-sketch-wrapper")).to_have_count(1)
+    # The concept view remains mounted during an active drill, while its
+    # secondary context may stay collapsed to keep reconstruction focused.
     expect(clean_page.locator("#map-view")).to_be_visible()
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').focus()
     clean_page.keyboard.press("Enter")

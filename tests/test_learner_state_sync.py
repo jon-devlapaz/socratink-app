@@ -17,7 +17,19 @@ def test_merge_learner_state_unions_evidence_without_dropping_attempts() -> None
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
-        import { mergeLearnerState } from './public/js/learner-state-sync.js';
+        import {
+          mergeLearnerState,
+          mergeTrainingRecords,
+        } from './public/js/learner-state-sync.js';
+
+        const checkedOnlyLocally = mergeTrainingRecords(
+          { concept_id: 'checked', node_records: { n1: { repair_checked_at: '2026-07-08T11:00:00.000Z' } } },
+          { concept_id: 'checked', node_records: { n1: {} } },
+        );
+        assert.equal(
+          checkedOnlyLocally.node_records.n1.repair_checked_at,
+          '2026-07-08T11:00:00.000Z',
+        );
 
         const local = {
           concepts: [{ id: 'c1', name: 'Local', updated_at: '2026-07-08T12:00:00.000Z' }],

@@ -805,6 +805,17 @@ def test_legacy_primed_study_node_reveals_study_without_fabricating_evidence(
     page.route("**/api/drill", fulfill_drill)
     _enter_app_shell_as_guest(page, base_url)
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    checked_at = page.evaluate(
+        """async () => {
+          const { mergeTrainingRecords } = await import('/js/learner-state-sync.js');
+          const merged = mergeTrainingRecords(
+            { concept_id: 'checked', node_records: { n1: { repair_checked_at: '2026-07-08T11:00:00.000Z' } } },
+            { concept_id: 'checked', node_records: { n1: {} } },
+          );
+          return merged.node_records.n1.repair_checked_at;
+        }"""
+    )
+    assert checked_at == "2026-07-08T11:00:00.000Z"
     page.evaluate(
         """(() => {
             const graphData = JSON.stringify({
@@ -1047,6 +1058,18 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     expect(page.locator(".concept-post-repair__break")).to_have_text(
         "Take a short break"
     )
+    page.evaluate(
+        """(() => {
+          const concepts = JSON.parse(localStorage.getItem('learnops_concepts') || '[]');
+          const concept = concepts.find((item) => item.id === 'qa-repair-concept');
+          const graph = JSON.parse(concept.graphData);
+          graph.backbone.push({ id: 'peripheral-node', label: 'Peripheral room' });
+          concept.graphData = JSON.stringify(graph);
+          localStorage.setItem('learnops_concepts', JSON.stringify(concepts));
+        })()"""
+    )
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
     suggested_node = page.locator(
         '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
     )
@@ -1073,7 +1096,49 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     ).to_have_count(0)
     assert page.evaluate("window.scrollY") == 0
 
+    page.locator(".concept-post-repair__break").click()
+    expect(page.locator(".hero-card")).to_be_visible()
+    page.locator("#nav-library").click()
+    page.locator(".library-card-vault", has_text="Repair Truth QA").click()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+
+    # A failed room load stays on the handoff instead of losing the route.
+    page.evaluate(
+        """(() => {
+          window.__qaOriginalGetItem = Storage.prototype.getItem;
+          Storage.prototype.getItem = function (key) {
+            if (String(key).startsWith('socratink:training:v1:')) {
+              throw new Error('forced room load failure');
+            }
+            return window.__qaOriginalGetItem.call(this, key);
+          };
+        })()"""
+    )
+    suggested_node = page.locator(
+        '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
+    )
+    suggested_node.dispatch_event("click")
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+    page.evaluate(
+        """(() => {
+          Storage.prototype.getItem = window.__qaOriginalGetItem;
+          delete window.__qaOriginalGetItem;
+        })()"""
+    )
+    suggested_node.dispatch_event("click")
+    expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
+        "Membrane depolarization"
+    )
+    expect(page.locator(".concept-page-b2__attempt-input")).to_be_focused()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_have_count(0)
+
+    page.reload()
+    expect(page.locator(".concept-constellation__shell--bridge")).to_be_visible()
+
     # The graph itself is keyboard-operable and routes to the genuinely ready room.
+    suggested_node = page.locator(
+        '.concept-post-repair-host .concept-constellation__node[data-bridge-target="true"]'
+    )
     suggested_node.focus()
     suggested_node.press("Enter")
     expect(page.locator(".concept-page-b2__entry-title")).to_have_text(
@@ -1780,6 +1845,9 @@ def test_source_less_first_chamber_answer_shows_verdict_and_study_cta(
     page.locator("#chamber-composer").fill(transfer_answer)
     page.locator("#chamber-send").click()
     expect(page.locator("#drill-chamber-view")).to_have_attribute("data-loop-surface", "settle")
+    expect(page.locator("#chamber-send")).to_have_text("Return to concept")
+    page.locator("#chamber-send").click()
+    expect(page.locator("#drill-chamber-view")).to_have_count(0)
     assert turn_texts == [
         door_sketch, room_answer, "continue", repair_answer, "continue", "y", transfer_answer,
     ]
