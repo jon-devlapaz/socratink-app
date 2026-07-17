@@ -1356,7 +1356,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               {},
               { metadata: {} },
             );
-            assert(legacyStudyHtml.includes('Draft saved'), 'legacy primed study stays in study phase');
+            assert(legacyStudyHtml.includes('Your draft'), 'legacy primed study keeps the learner draft visible');
+            assert(!legacyStudyHtml.includes('Draft saved'), 'legacy primed study removes phase jargon');
             assert(legacyStudyHtml.includes('data-active-entry-action="study"'), 'legacy primed study reveals study before redrill');
             assert(legacyStudyHtml.includes('Reveal notes and compare'), 'legacy primed study cta is learner-facing');
             const legacyStudyRevealedHtml = conceptPage.renderActiveEntryHtml(
@@ -1545,7 +1546,8 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               }
             );
             assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
-            assert(conceptPagePrimedHtml.includes('Draft saved'), 'concept page primed study eyebrow');
+            assert(conceptPagePrimedHtml.includes('Your draft'), 'concept page primed study labels the learner artifact');
+            assert(!conceptPagePrimedHtml.includes('Draft saved'), 'concept page primed study removes ceremonial copy');
             assert(conceptPagePrimedHtml.includes('concept-page-b2__evidence'), 'concept page primed shows recorded draft before study');
             assert(conceptPagePrimedHtml.includes('Your memory draft'), 'concept page primed evidence uses learner language');
             assert(conceptPagePrimedHtml.includes('A strong first attempt.'), 'concept page primed preserves learner words before study');
@@ -1655,7 +1657,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(conceptPageRepairHtml.includes('Use your words. One or two sentences is enough.'), 'concept page repair gives brief scope');
             assert(!conceptPageRepairHtml.includes('1 missing link to repair'), 'concept page repair removes count chip noise');
             assert(!conceptPageRepairHtml.includes('Save this repair before you try from memory again.'), 'concept page repair removes order explanation');
-            assert(conceptPageRepairHtml.includes('Show study note'), 'concept page repair starts with study note tucked away');
+            assert(conceptPageRepairHtml.includes('Hide study note'), 'concept page repair starts with the study note visible');
+            assert(conceptPageRepairHtml.includes('data-active-entry-action="write-repair"'), 'concept page repair stages writing behind an explicit action');
+            assert(/concept-page-b2__repair[^>]+hidden/.test(conceptPageRepairHtml), 'concept page repair form stays out of the accessibility tree until requested');
             assert(conceptPageRepairHtml.includes('Save repair'), 'concept page repair save');
             const conceptPageFallbackRepairHtml = conceptPage.renderActiveEntryHtml(
               { label: 'Fallback repair', study_note: 'Study the unnamed entry.' },

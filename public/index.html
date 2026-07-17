@@ -20,8 +20,8 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=191">
-  <link rel="stylesheet" href="/css/drill-chamber.css?v=17">
+  <link rel="stylesheet" href="/css/index.css?v=196">
+  <link rel="stylesheet" href="/css/drill-chamber.css?v=21">
 </head>
 
 <body data-primary-view="desk" data-desk-first-use="true">
@@ -283,9 +283,9 @@
       <div class="ignition-view__inner">
         <header class="ig-header">
           <p class="ig-eyebrow">New session</p>
-          <h1 class="ig-title" id="ignition-title" tabindex="-1">
+          <h2 class="ig-title" id="ignition-title" tabindex="-1">
             What are you trying to explain?
-          </h1>
+          </h2>
           <p class="ig-first-use" id="ignition-first-use">
             Write what you remember first. We'll show what to study — not a summary.
           </p>
@@ -301,12 +301,14 @@
 
         <form class="composer-card composer-card--tall" id="hero-single-input"
               onsubmit="return App.runHeroAction(event)" autocomplete="off">
+          <label class="composer-card__label" for="hero-single-input-field">Topic or question</label>
           <textarea class="composer-card__field composer-card__field--linear"
                     id="hero-single-input-field"
                     rows="2" maxlength="200"
                     placeholder="why vaccines create immune memory"
                     aria-label="Learning goal"
                     aria-describedby="ignition-boundary hero-door-error"></textarea>
+          <label class="composer-card__label" for="hero-cold-guess-field">Your first model</label>
           <textarea class="composer-card__field" id="hero-cold-guess-field"
                     rows="5" maxlength="1200"
                     placeholder="I think…
@@ -332,7 +334,7 @@ I'm fuzzy on…
 
           <footer class="composer-card__footer">
             <p class="ig-footnote" id="ignition-boundary">
-              You'll write first. Answers come after.
+              Add your first model to start.
             </p>
             <button type="submit" class="ig-button ig-button--linear" id="hero-door-submit"
                     disabled aria-label="Start session">Start session</button>
@@ -357,9 +359,9 @@ I'm fuzzy on…
         </p>
         <p class="ig-concept-goal" id="launch-pad-concept-goal" hidden></p>
 
-        <h1 class="ig-title" id="launch-pad-title" tabindex="-1">
+        <h2 class="ig-title" id="launch-pad-title" tabindex="-1">
           What do you already think?
-        </h1>
+        </h2>
 
         <p class="ig-helper">
           Name the parts, guesses, examples, or confusions you have.
@@ -434,8 +436,8 @@ I'm fuzzy on…
   <!-- PDF.js for robust client-side extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-  <script src="/js/drill-chamber.js?v=18"></script>
-  <script type="module" src="/js/app.js?v=208"></script>
+  <script src="/js/drill-chamber.js?v=20"></script>
+  <script type="module" src="/js/app.js?v=213"></script>
   <script type="module" src="/js/floating-room-label.js?v=10"></script>
   <script type="module" src="/js/iso-board-state-surface.js?v=10"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>

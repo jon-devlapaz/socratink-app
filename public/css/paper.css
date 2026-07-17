@@ -342,6 +342,22 @@
   background: rgba(var(--paper-0-rgb), 0.42);
 }
 
+.ignition-view--linear .composer-card__label {
+  display: block;
+  padding: 10px 16px 0;
+  color: var(--primary-readable);
+  font-family: ui-monospace, monospace;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.ignition-view--linear .composer-card__label + .composer-card__field {
+  padding-top: 8px;
+}
+
 .ignition-view--linear #hero-cold-guess-field {
   padding: 10px 16px 0;
   min-height: calc(var(--rule-step) * 4.35);
@@ -431,7 +447,7 @@
   margin: 0;
   max-width: none;
   padding: 0;
-  font-size: 11px;
+  font-size: var(--text-xs);
   line-height: var(--leading-snug);
 }
 
@@ -567,6 +583,7 @@
   cursor: pointer;
   transition:
     background var(--duration-quick) var(--ease-standard),
+    scale      var(--duration-micro) ease-out,
     transform  var(--duration-micro) var(--ease-standard),
     box-shadow var(--duration-quick) var(--ease-standard);
 }
@@ -778,7 +795,7 @@ body.antigravity-theme #library-view {
 .library-page-title {
   margin: 0 0 var(--space-6);
   color: var(--text-strong);
-  font-family: var(--font-body);
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: 700;
   line-height: var(--leading-tight);
@@ -1066,6 +1083,171 @@ body.antigravity-theme #library-view {
   }
 }
 
+/* ── Cross-view UI + typography refinement ──────────────────
+   Shared polish from the Better UI / Better Typography pass. Keep this
+   structural: no learner state, graph truth, or route behavior changes. */
+
+body.antigravity-theme {
+  --ui-shadow-border:
+    0 0 0 1px oklch(0 0 0 / 0.06),
+    0 1px 2px -1px oklch(0 0 0 / 0.06),
+    0 2px 4px oklch(0 0 0 / 0.04);
+}
+
+html[data-theme="dark"] body.antigravity-theme {
+  --ui-shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
+}
+
+.sidebar-brand-mark {
+  outline: 1px solid oklch(0 0 0 / 0.10);
+  outline-offset: -1px;
+}
+
+html[data-theme="dark"] .sidebar-brand-mark {
+  outline-color: oklch(1 0 0 / 0.10);
+}
+
+.sidebar-section-label,
+.ignition-view--linear .composer-card__label,
+.ignition-view--linear .composer-card__footer .ig-footnote,
+body.antigravity-theme .library-kicker,
+body.antigravity-theme .settings-page-kicker {
+  font-size: var(--text-xs);
+}
+
+.ignition-view--linear .ig-property__action,
+.ignition-view--linear .composer-card__footer .ig-button--linear {
+  min-height: 40px;
+}
+
+.library-section-copy,
+.settings-page-copy,
+.ig-first-use,
+.ig-helper,
+.modal-desc,
+.feedback-rating-copy {
+  text-wrap: pretty;
+}
+
+body.antigravity-theme .settings-page-title {
+  font-family: var(--font-display);
+  font-weight: 650;
+  text-wrap: balance;
+}
+
+body.antigravity-theme .settings-section-heading {
+  font-family: var(--font-body);
+}
+
+body.antigravity-theme .settings-identity-row,
+body.antigravity-theme .settings-display,
+.feedback-modal {
+  border-color: transparent;
+  box-shadow: var(--ui-shadow-border);
+}
+
+body.antigravity-theme .settings-identity-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 14px;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out,
+    scale 150ms ease-out;
+}
+
+body.antigravity-theme .settings-pill {
+  min-height: 40px;
+  padding: 7px 16px;
+  transition:
+    background-color 150ms ease-out,
+    color 150ms ease-out,
+    scale 150ms ease-out;
+}
+
+body.antigravity-theme .settings-identity-action:active,
+body.antigravity-theme .settings-pill:active:not(:disabled) {
+  scale: 0.96;
+}
+
+body.antigravity-theme .settings-toggle {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  transition: scale 150ms ease-out;
+}
+
+body.antigravity-theme .settings-toggle::before {
+  content: "";
+  position: absolute;
+  inset: 9px 0 auto;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(36, 32, 56, 0.14);
+  transition: background-color 250ms ease-out;
+}
+
+html[data-theme="dark"] body.antigravity-theme .settings-toggle::before {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+body.antigravity-theme .settings-toggle::after {
+  top: 12px;
+  left: 3px;
+}
+
+body.antigravity-theme .settings-toggle[aria-checked="true"] {
+  background: transparent;
+  box-shadow: none;
+}
+
+body.antigravity-theme .settings-toggle[aria-checked="true"]::before {
+  background: var(--ag-violet);
+}
+
+body.antigravity-theme .settings-toggle:hover:not(:disabled),
+body.antigravity-theme .settings-toggle:active:not(:disabled) {
+  opacity: 1;
+  scale: 1;
+  transform: none;
+}
+
+@media (max-width: 899px) {
+  .ignition-view--linear .ig-property__action,
+  .ignition-view--linear .composer-card__footer .ig-button--linear {
+    min-height: 44px;
+  }
+
+  .ig-button,
+  .concept-constellation__return,
+  .modal-close,
+  body.antigravity-theme .settings-identity-action,
+  body.antigravity-theme .settings-pill {
+    min-height: 44px;
+  }
+
+  .modal-close {
+    flex-basis: 44px;
+    width: 44px;
+  }
+
+  input,
+  select,
+  textarea,
+  .feedback-rating-input,
+  .modal-textarea {
+    font-size: 1rem;
+  }
+}
+
 /* ── Reduced motion ────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -1088,6 +1270,14 @@ body.antigravity-theme #library-view {
   }
   .composer-card[data-state="locked"],
   .composer-card[data-state="busy"] {
+    transition: none;
+  }
+
+  body.antigravity-theme .settings-identity-action,
+  body.antigravity-theme .settings-pill,
+  body.antigravity-theme .settings-toggle,
+  body.antigravity-theme .settings-toggle::before,
+  body.antigravity-theme .settings-toggle::after {
     transition: none;
   }
 }

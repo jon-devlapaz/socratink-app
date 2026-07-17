@@ -1300,13 +1300,15 @@ def test_app_shell_ui_preserves_drawer_settings_and_concept_list_contracts() -> 
 def test_new_concept_field_has_unique_accessible_label() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
-    assert '<h1 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
+    assert '<h2 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
     assert "What are you trying to explain?" in index_html
     assert "Write what you remember first. We'll show what to study" in index_html
-    assert "You'll write first. Answers come after." in index_html
+    assert "Add your first model to start." in index_html
     assert 'id="ignition-boundary"' in index_html
     assert 'class="ig-eyebrow">New session</p>' in index_html
     assert "socratink will ask for your first model" not in index_html
+    assert 'for="hero-single-input-field">Topic or question</label>' in index_html
+    assert 'for="hero-cold-guess-field">Your first model</label>' in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'id="hero-cold-guess-field"' in index_html
     assert 'aria-label="Learning goal"' in index_html

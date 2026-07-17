@@ -56,7 +56,7 @@ import { createTrainingStore, TRAINING_SCHEMA_VERSION, TRAINING_STORE_KEY_PREFIX
 import {
   hydrateAndSyncLearnerState,
   pushLocalLearnerState,
-} from './learner-state-sync.js?v=3';
+} from './learner-state-sync.js?v=4';
 import {
   listDueForSpaced,
   dueConceptIdSet,
@@ -851,10 +851,19 @@ const App = (() => {
   }
   function _doorUpdateSubmitState() {
     const submitBtn = document.getElementById('hero-door-submit');
+    const hint = document.getElementById('ignition-boundary');
     if (!submitBtn) return;
     // Mirror the at-cap gate: if at cap, stay disabled regardless of input.
     const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
-    submitBtn.disabled = atCap || !_doorReady();
+    const ready = _doorReady();
+    submitBtn.disabled = atCap || !ready;
+    if (hint) {
+      hint.textContent = atCap
+        ? 'The board holds nine sessions. Retire one to start another.'
+        : ready
+          ? "You'll write first. Answers come after."
+          : 'Add your first model to start.';
+    }
   }
 
   let _sourcePanelGen = 0;

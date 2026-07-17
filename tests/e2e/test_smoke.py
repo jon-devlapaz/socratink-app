@@ -221,7 +221,7 @@ def test_first_run_guidance_is_inline_not_modal(clean_page: Page, base_url: str)
         "Write what you remember first. We'll show what to study — not a summary."
     )
     expect(clean_page.locator("#ignition-boundary")).to_have_text(
-        "You'll write first. Answers come after."
+        "Add your first model to start."
     )
 
 
@@ -2288,7 +2288,7 @@ def test_seda_start_failure_offers_retry_from_product_flow(
     expect(page.locator("#chamber-active")).not_to_have_attribute(
         "data-loading", "true"
     )
-    expect(page.locator("#chamber-hint")).to_have_text("A sentence is enough.")
+    expect(page.locator("#chamber-hint")).to_have_text("One clear connection is enough.")
     page.locator("#chamber-send").click()
     expect(page.locator("#chamber-verdict")).to_contain_text(
         "Use the next question to add one cause-and-effect link.", timeout=2_000
@@ -3719,7 +3719,7 @@ def test_concept_entry_mutation_preserves_active_later_entry(
     page.locator(".library-card-vault", has_text="Active Entry QA").click()
     page.locator('.concept-page-b2__route-item[data-entry-id="entry-two"]').click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     page.locator(".concept-page-b2__entry-cta").click()
     expect(page.locator(".concept-page-b2__route-item.is-active")).to_have_attribute(
@@ -3857,7 +3857,7 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     )
     page.locator(".concept-page-b2__attempt-save").click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     expect(page.locator(".concept-page-b2__evidence")).to_be_focused()
     expect(page.locator(".concept-page-b2__entry-cta")).to_have_text(
@@ -4226,7 +4226,7 @@ def test_localhost_concept_page_corrupt_training_storage_recovers_and_records_at
     save_button = page.locator(".concept-page-b2__attempt-save")
     save_button.click()
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Draft saved"
+        "Your draft"
     )
     assert len(drill_calls) == 1
     assert drill_calls[0]["node_id"] == "corrupt-node"
