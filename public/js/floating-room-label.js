@@ -176,6 +176,7 @@ import { Bus } from './bus.js';
       return;
     }
     refresh();
+    requestAnimationFrame(showFocusedTile);
     Bus.on('grid:rendered', refresh);
     Bus.on('dashboard:shown', () => {
       refresh();
