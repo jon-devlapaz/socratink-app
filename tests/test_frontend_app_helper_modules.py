@@ -1488,10 +1488,10 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.match(activeHtml, /Draft structure only\\./);
         assert.match(activeHtml, /Overview first\\./);
         assert.match(activeHtml, /concept-constellation__return/);
-        assert.doesNotMatch(activeHtml, /role="img"/);
+        assert.doesNotMatch(activeHtml, /<svg[^>]*role="img"/);
         assert.match(activeHtml, /class="concept-constellation__node[^"]*"\\s+data-entry-id="gate"/);
         assert.match(activeHtml, /class="concept-constellation__node is-active"/);
-        assert.match(activeHtml, /class="concept-constellation__node is-active"[\\s\\S]*?role="listitem"[\\s\\S]*?tabindex="-1"/);
+        assert.match(activeHtml, /class="concept-constellation__node is-active"[\\s\\S]*?role="img"[\\s\\S]*?tabindex="-1"/);
         assert.match(activeHtml, /data-state="primed"/);
         assert.match(activeHtml, /role="button"/);
         assert.match(activeHtml, /tabindex="0"/);
@@ -1572,7 +1572,7 @@ def test_concept_constellation_renderer_redacts_locked_source_content() -> None:
         assert.match(bridgeHtml, /<details class="concept-post-repair__options">/);
         assert.match(bridgeHtml, /Pressure-check this link/);
         assert.match(bridgeHtml, /Correction kept\\. No new reconstruction evidence\\./);
-        assert.match(bridgeHtml, /class="concept-constellation__node is-active"[\\s\\S]*?role="listitem"[\\s\\S]*?tabindex="-1"/);
+        assert.match(bridgeHtml, /class="concept-constellation__node is-active"[\\s\\S]*?role="img"[\\s\\S]*?tabindex="-1"/);
         assert.match(bridgeHtml, /data-entry-id="spread"[\\s\\S]*data-bridge-target="true"[\\s\\S]*role="button"[\\s\\S]*tabindex="0"/);
         assert.doesNotMatch(bridgeHtml, /Reset phase/);
         assert.match(bridgeHtml, /Entry 03/);

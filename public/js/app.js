@@ -4964,9 +4964,16 @@ const App = (() => {
     chamber.setComposerEnabled(surface.composerEnabled);
     if (surface.verdict) chamber.appendVerdict?.(surface.verdict);
     if (surface.completionAction) {
-      chamber.setCompletionAction?.(surface.completionAction.label, () => {
+      const actionLabel = surface.completionAction.kind === 'study'
+        ? sedaCompleteCompletionLabel()
+        : surface.completionAction.label;
+      chamber.setCompletionAction?.(actionLabel, () => {
         if (surface.completionAction.kind === 'return') {
           cancelDrill();
+          return;
+        }
+        if (surface.completionAction.kind === 'study') {
+          openStudyAfterVerdict(getActiveConcept()?.id, drillState.node?.id);
           return;
         }
         void requestSedaTurn(surface.completionAction.value, { internal: true });
@@ -5044,7 +5051,7 @@ const App = (() => {
             window.DrillChamber.appendVerdict?.(verdictCopy({ userText, recordable: false }));
           }
         }
-        if (studyReady) {
+        if (studyReady && surface.mode !== 'complete') {
           window.DrillChamber.setCompletionAction?.(
             sedaCompleteCompletionLabel(),
             () => openStudyAfterVerdict(concept.id, drillState.node?.id),

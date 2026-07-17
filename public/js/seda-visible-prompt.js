@@ -147,7 +147,7 @@ function surfacePresentation(mode, { prompt, gapText }) {
   if (mode === 'complete') return {
     question: 'This learning loop is complete.',
     composerEnabled: false,
-    completionAction: { label: 'Return to concept', kind: 'return' },
+    completionAction: { kind: 'study' },
   };
   if (mode === 'unsupported') return {
     question: 'This learning step is not available here. Your recorded work is unchanged.',

@@ -143,6 +143,7 @@ def test_seda_surface_maps_outer_repair_bridge_and_transfer_beats() -> None:
           awaiting: null,
         });
         assert.equal(complete.mode, 'complete');
+        assert.deepEqual(complete.completionAction, { kind: 'study' });
         """
     )
     assert result.returncode == 0, result.stderr

@@ -352,7 +352,7 @@ function renderNode(node) {
       data-selected-name="${label}"
       data-selected-purpose="${purpose}"
       data-bridge-target="${node.isSuggested ? 'true' : 'false'}"
-      role="${selectable ? 'button' : 'listitem'}"
+      role="${selectable ? 'button' : 'img'}"
       tabindex="${selectable ? '0' : '-1'}"
       focusable="${selectable ? 'true' : 'false'}"
       aria-label="${ariaLabel}"
