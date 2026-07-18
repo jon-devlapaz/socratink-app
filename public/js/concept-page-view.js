@@ -205,11 +205,6 @@ function entryScaffold(entry) {
   return normalizeLearnerScaffold(entry?.learner_scaffold);
 }
 
-function learnerGoalForConcept(concept, data) {
-  return cleanScaffoldText(concept?.learnerGoal)
-    || cleanScaffoldText(data?.metadata?.learner_goal);
-}
-
 function attemptPlaceholderForScaffold(scaffold) {
   if (!scaffold) return 'Write what you can explain now. Messy is useful.';
   const starter = cleanScaffoldText(scaffold.sentence_starter);
@@ -594,16 +589,7 @@ export function nextReadyEntry(backbone, activeIdx, training, options = {}) {
 
 function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
   const scaffold = options.useScaffold ? entryScaffold(activeEntry) : null;
-  const learnerGoal = cleanScaffoldText(options.learnerGoal);
-  const targetLabel = cleanScaffoldText(scaffold?.task_label) || cleanScaffoldText(activeEntry?.label) || 'this entry';
   const heading = scaffold?.entry_prompt || 'Write what you can explain now';
-  const helperParts = [
-    learnerGoal && scaffold
-      ? `Goal: ${learnerGoal}. First make a starting guess for ${targetLabel}.`
-      : '',
-    scaffold?.expected_shape || '',
-  ].filter(Boolean);
-  const helper = helperParts.join(' ');
   const placeholder = attemptPlaceholderForScaffold(scaffold);
   const buttonLabel = 'Save draft';
   const errorText = scaffold
@@ -614,7 +600,6 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
       <span class="eyebrow concept-page-b2__attempt-eyebrow visually-hidden">cold attempt</span>
       <h3>${escHtml(heading)}</h3>
-      ${helper ? `<p class="concept-page-b2__attempt-helper">${escHtml(helper)}</p>` : ''}
       <label class="concept-page-b2__field concept-page-b2__attempt-field">
         <span class="concept-page-b2__field-label">Your reconstruction</span>
         <textarea
@@ -738,27 +723,6 @@ function renderBlankStartHtml(scaffold = null, activeEntryId = 'entry') {
   `;
 }
 
-function renderSketchWrapperHtml(thresholdText) {
-  const hasSketch = Boolean(thresholdText);
-  const preview = hasSketch
-    ? thresholdText
-    : 'You have not written a first model yet.';
-  return `
-    <section class="vd-sketch-wrapper concept-page-b2__threshold${hasSketch ? '' : ' concept-page-b2__threshold--empty'}" data-sketch-collapsed="true" aria-label="Concept context">
-      <div class="vd-sketch-head">
-        <button class="vd-sketch-toggle" type="button" data-action="toggle-sketch" aria-expanded="false" aria-controls="vd-sketch-body">
-          <span class="concept-page-b2__threshold-label">Context</span>
-          <span class="vd-sketch-preview">${escHtml(preview)}</span>
-        </button>
-        <a class="concept-page-b2__threshold-edit" href="javascript:void(0)" data-edit-threshold>${hasSketch ? 'edit' : 'add context'}</a>
-      </div>
-      <div class="vd-sketch-body" id="vd-sketch-body" hidden>
-        <p>${escHtml(preview)}</p>
-      </div>
-    </section>
-  `;
-}
-
 function renderDrillChamberHtml() {
   return `
     <section id="drill-chamber-view" class="drill-chamber-view" hidden aria-label="Reconstruction check">
@@ -814,8 +778,6 @@ function renderDrillChamberHtml() {
 }
 
 export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept, data, training = null, options = {}) {
-  const meta = data?.metadata || {};
-  const thresholdText = (concept?.startingMapContext || meta.starting_map_context || '').trim();
   const totalNodes = backbone.length || 1;
   const activeEntryId = getConceptEntryId(activeEntry, activeIdx);
 
@@ -905,14 +867,8 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
   const attemptPanelHtml = isAttempting ? renderAttemptPanelHtml(activeEntryId, activeEntry, {
     useScaffold: isColdReadyEntry,
     showCue: isColdReadyEntry,
-    learnerGoal: learnerGoalForConcept(concept, data),
   }) : '';
 
-  const thresholdHtml = thresholdText
-    ? renderSketchWrapperHtml(thresholdText)
-    : renderSketchWrapperHtml('');
-  const sourceLessProvenanceHtml = '';
-  const contextDockLabel = 'Concept context';
   const nextReady = (derived.next_action === 'review' || (derived.next_action === 'repair' && repairPhase === 'checked'))
     ? nextReadyEntry(backbone, activeIdx, training, options)
     : null;
@@ -990,10 +946,6 @@ export function renderActiveEntryHtml(activeEntry, activeIdx, backbone, concept,
         quiet: showsOnlyQuietRoute,
       })}
       <div class="concept-page-b2__work">
-        <div class="concept-page-b2__context-dock" aria-label="${escHtml(contextDockLabel)}">
-          ${thresholdHtml}
-          ${sourceLessProvenanceHtml}
-        </div>
         ${activeHtml}
         ${nearbyHtml}
       </div>

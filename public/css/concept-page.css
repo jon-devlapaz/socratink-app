@@ -444,13 +444,6 @@
   width: 100%;
   max-width: none;
 }
-.concept-page-b2__doc--post-repair .concept-page-b2__context-dock {
-  max-width: none;
-  margin: 0 0 18px;
-}
-.concept-page-b2__doc--post-repair .concept-page-b2__threshold {
-  margin-bottom: 0;
-}
 .concept-post-repair-host {
   width: calc(100% + 80px);
   margin: 18px -40px 0;
@@ -837,9 +830,6 @@
     margin-top: 0;
     padding-inline: 16px;
   }
-  .concept-page-b2__doc--post-repair .concept-page-b2__context-dock {
-    margin-bottom: 6px;
-  }
   .concept-post-repair-host {
     width: calc(100% + 32px);
     margin: 0 -16px;
@@ -1034,22 +1024,6 @@
 }
 .concept-page-b2__active-entry {
   max-width: 640px;
-}
-.concept-page-b2__threshold {
-  font-style: italic;
-  color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1.7;
-  padding: 0 0 0 22px;
-  border-left: 2px solid var(--accent-primary);
-  margin-bottom: 34px;
-}
-[data-theme="dark"] .concept-page-b2__threshold { border-left-color: rgba(176, 156, 224, 0.55); }
-.concept-page-b2__threshold--empty { opacity: 0.55; }
-.concept-page-b2__threshold-label {
-  color: var(--text-strong);
-  font-style: normal;
-  font-weight: 600;
 }
 .concept-page-b2__entry-eyebrow { display: block; margin-bottom: 14px; }
 .concept-page-b2__entry-title { font-size: 36px; line-height: 1.15; font-weight: 600; margin: 0 0 16px; color: var(--text-strong); }
@@ -1703,95 +1677,6 @@
   .concept-strip__node circle { animation: none; transition: none; }
 }
 
-/* Re-edit sketch affordance */
-.concept-page-b2__threshold-edit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  margin-left: 12px;
-  font-size: var(--text-xs);
-  letter-spacing: 0.04em;
-  color: var(--accent-primary);
-  text-decoration: none;
-  border-bottom: 1px dashed currentColor;
-  padding: 0 8px 1px;
-  cursor: pointer;
-}
-.concept-page-b2__threshold-edit:hover { color: var(--text-strong); }
-
-/* ============================================================
-   Inline threshold editor (replaces the blockquote on edit click)
-   Matches the threshold's visual rhythm: italic body, violet left rule.
-   ============================================================ */
-.concept-page-b2__threshold-editor {
-  margin-bottom: 56px;
-  padding: 0 0 0 22px;
-  border-left: 2px solid var(--accent-primary);
-  animation: concept-page-fade-in 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-[data-theme="dark"] .concept-page-b2__threshold-editor { border-left-color: rgba(176, 156, 224, 0.55); }
-.concept-page-b2__threshold-input {
-  width: 100%;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  resize: vertical;
-  font-family: inherit;
-  font-style: italic;
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--text-strong);
-  padding: 0;
-  min-height: 96px;
-}
-.concept-page-b2__threshold-input::placeholder {
-  color: var(--text-muted);
-  opacity: 0.62;
-}
-.concept-page-b2__threshold-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 14px;
-}
-.concept-page-b2__threshold-cancel,
-.concept-page-b2__threshold-save {
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  border-radius: 999px;
-  padding: 7px 18px;
-  cursor: pointer;
-  min-height: 40px;
-  transition:
-    background-color 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    color 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    scale 150ms ease-out,
-    transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-.concept-page-b2__threshold-cancel {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid var(--border-subtle);
-}
-.concept-page-b2__threshold-cancel:hover {
-  color: var(--text-strong);
-  border-color: var(--accent-border-strong);
-}
-.concept-page-b2__threshold-save {
-  background: var(--accent-primary);
-  color: var(--cream-50);
-  border: 1px solid transparent;
-}
-.concept-page-b2__threshold-save:hover {
-  background: var(--primary-fill);
-  transform: translateY(-1px);
-}
-
 /* ============================================================
    Responsive -- the strip needs to stay legible across widths,
    and the work column copy scales down on narrower viewports.
@@ -1914,11 +1799,6 @@
   }
   .concept-page-b2__route-cue {
     display: none;
-  }
-  .concept-page-b2__threshold {
-    font-size: 15px;
-    line-height: 1.6;
-    margin-bottom: 36px;
   }
   .concept-page-b2__entry-title {
     font-size: 26px;
@@ -2197,130 +2077,10 @@
   -webkit-line-clamp: 2;
 }
 
-.concept-page-b2__context-dock {
-  min-height: 44px;
-  padding: 0 2px;
-  border: 0;
-  border-bottom: 1px solid rgba(var(--ink-900-rgb), 0.10);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text-muted);
-}
-
-.concept-page-b2__source-note {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.vd-sketch-wrapper.concept-page-b2__threshold {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  font-style: normal;
-  min-width: 0;
-}
-
-.vd-sketch-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-}
-
-.vd-sketch-toggle {
-  appearance: none;
-  flex: 0 1 auto;
-  width: 100%;
-  min-height: 44px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  box-shadow: none;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
-  align-items: center;
-  padding: 11px 0;
-  color: var(--text-muted);
-  text-align: left;
-  cursor: pointer;
-  transition: scale 150ms ease-out;
-}
-
-.vd-sketch-head .concept-page-b2__threshold-edit {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--accent-primary);
-  text-decoration: none;
-}
-
-.vd-sketch-head .concept-page-b2__threshold-edit:hover,
-.vd-sketch-head .concept-page-b2__threshold-edit:focus-visible {
-  text-decoration: underline;
-  outline: none;
-}
-
-.vd-sketch-toggle:hover,
-.vd-sketch-toggle:focus-visible {
-  background: transparent;
-  box-shadow: none;
-}
-
-.vd-sketch-toggle:active {
-  scale: 0.96;
-}
-
 @media (max-width: 720px) {
-  .concept-constellation__return,
-  .concept-page-b2__threshold-cancel,
-  .concept-page-b2__threshold-save {
+  .concept-constellation__return {
     min-height: 44px;
   }
-}
-
-.vd-sketch-toggle:focus-visible {
-  outline: 2px solid rgba(var(--violet-600-rgb), 0.32);
-  outline-offset: 2px;
-}
-
-.vd-sketch-toggle .concept-page-b2__threshold-label {
-  color: var(--text-strong);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.vd-sketch-preview {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-.vd-sketch-wrapper[data-sketch-collapsed="false"] .vd-sketch-preview {
-  display: none;
-}
-
-.vd-sketch-body {
-  grid-column: 1 / -1;
-  padding: 8px 12px 10px;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.vd-sketch-body p {
-  margin: 0 0 10px;
 }
 
 .concept-page-b2__active-entry {
@@ -2520,13 +2280,7 @@
   border-color: rgba(176, 156, 224, 0.28);
 }
 
-[data-theme="dark"] .concept-page-b2__context-dock,
 [data-theme="dark"] .concept-page-b2__active-entry {
-  border-color: rgba(176, 156, 224, 0.18);
-}
-
-[data-theme="dark"] .concept-page-b2__context-dock {
-  background: transparent;
   border-color: rgba(176, 156, 224, 0.18);
 }
 
@@ -2643,10 +2397,6 @@
     white-space: normal;
   }
 
-  .concept-page-b2__context-dock {
-    min-height: 0;
-  }
-
   .concept-page-b2__active-entry .concept-page-b2__attempt-input {
     min-height: 148px;
     height: 148px;
@@ -2682,10 +2432,6 @@
 @media (max-height: 760px) and (min-width: 721px) {
   .concept-page-b2__work {
     gap: 8px;
-  }
-
-  .concept-page-b2__context-dock {
-    min-height: 34px;
   }
 
   .concept-page-b2__active-entry {

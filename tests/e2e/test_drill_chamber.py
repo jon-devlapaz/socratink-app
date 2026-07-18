@@ -464,9 +464,9 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     )
     clean_page.evaluate("window.DrillChamber.setLoading(false)")
     expect(clean_page.locator(".node-strip")).to_be_visible()
-    expect(clean_page.locator(".vd-sketch-wrapper")).to_have_count(1)
-    # The concept view remains mounted during an active drill, while its
-    # secondary context may stay collapsed to keep reconstruction focused.
+    expect(clean_page.locator(".vd-sketch-wrapper")).to_have_count(0)
+    # The concept view remains mounted during an active drill without
+    # repeating the launch attempt as a recall cue.
     expect(clean_page.locator("#map-view")).to_be_visible()
     clean_page.locator('.concept-page-b2__route-item[data-entry-id="entry-a"]').focus()
     clean_page.keyboard.press("Enter")

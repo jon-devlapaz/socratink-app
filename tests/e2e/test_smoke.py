@@ -678,16 +678,15 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
     )
     assert training["source_mode"] == "source_less"
     assert training["grounding"] == "learner_sketch"
+    assert training["sketch"]["text"] == "Learner rough sketch baseline."
     assert training["node_records"]["qa-node"]["attempts"][0]["classification"] == "strong"
 
     card.click()
     expect(page.locator("#concept-header-title")).to_contain_text("QA fixture source")
     expect(page.locator("#concept-header-tags .map-badge.state")).to_have_count(0)
-    context_dock = page.locator(".concept-page-b2__context-dock")
-    expect(context_dock).to_contain_text("Context")
-    expect(context_dock).to_contain_text("Learner rough sketch baseline.")
-    expect(context_dock).not_to_contain_text(
-        "No source attached. Treat this route as provisional."
+    expect(page.locator(".concept-page-b2__context-dock")).to_have_count(0)
+    expect(page.locator("#map-content")).not_to_contain_text(
+        "Learner rough sketch baseline."
     )
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Your draft"
@@ -721,25 +720,6 @@ def test_localhost_library_qa_seed_creates_training_truth_concept(
         revealed_training["node_records"]["qa-node"]["study_revealed_at"]
         is not None
     )
-    page.locator("[data-edit-threshold]").click()
-    page.locator(".concept-page-b2__threshold-input").fill("Temporary learner sketch.")
-    page.keyboard.press("Escape")
-    expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
-        "Learner rough sketch baseline."
-    )
-    page.locator("[data-edit-threshold]").click()
-    page.locator(".concept-page-b2__threshold-input").fill("Updated learner sketch.")
-    page.locator(".concept-page-b2__threshold-save").click()
-    expect(page.locator(".concept-page-b2__threshold")).to_contain_text(
-        "Updated learner sketch."
-    )
-    expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
-        "Compare notes"
-    )
-    edited_training = page.evaluate(
-        """JSON.parse(localStorage.getItem('socratink:training:v1:local-qa-training-concept'))"""
-    )
-    assert edited_training["sketch"]["text"] == "Updated learner sketch."
 
 
 def test_localhost_library_qa_seed_controls_hide_when_storage_unavailable(
@@ -940,10 +920,7 @@ def test_localhost_concept_repair_appends_learner_gap_work(
     page.locator(".library-card-vault", has_text="Repair Truth QA").click()
     expect(page.locator("#concept-header-title")).to_contain_text("Repair QA source")
     expect(page.locator("#concept-header-tags")).not_to_contain_text("thin sketch")
-    expect(page.locator(".concept-page-b2__threshold")).to_contain_text("Context")
-    expect(page.locator(".concept-page-b2__threshold")).not_to_contain_text(
-        "Learner thinks"
-    )
+    expect(page.locator(".concept-page-b2__context-dock")).to_have_count(0)
     expect(page.locator(".concept-page-b2__entry-eyebrow")).to_have_text(
         "Your draft"
     )
@@ -3875,7 +3852,7 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
         """(() => {
             const graphData = JSON.stringify({
                 metadata: {
-                    source_title: 'Cold Attempt QA source',
+                    source_title: 'Cold Attempt Truth QA source-less route',
                     starting_map_context: 'Learner only remembers sodium flow.',
                     map_maturity: 'provisional',
                 },
@@ -3903,9 +3880,7 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
 
     page.locator("#nav-library").click()
     page.locator(".library-card-vault", has_text="Cold Attempt Truth QA").click()
-    expect(page.locator("#concept-header-title")).to_contain_text(
-        "Cold Attempt QA source"
-    )
+    expect(page.locator("#concept-header-title")).to_have_text("Cold Attempt Truth QA")
     expect(page.locator(".concept-page-b2__attempt")).to_be_visible()
     expect(page.locator(".concept-page-b2__attempt-field")).to_contain_text(
         "Your reconstruction"
@@ -3945,6 +3920,37 @@ def test_localhost_concept_page_cold_attempt_appends_training_evidence(
     assert attempt["classification"] == "thin"
     assert attempt["gaps"][0]["description"] == (
         "Names sodium flow but misses that voltage threshold opens the gate."
+    )
+
+
+def test_concept_title_preserves_real_source_less_route_suffix(
+    clean_page: Page, base_url: str
+) -> None:
+    """Only the exact legacy synthetic title is collapsed to the concept name."""
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.evaluate("localStorage.clear(); sessionStorage.clear();")
+    clean_page.evaluate(
+        """(() => {
+            const title = 'Designing a source-less route';
+            const graphData = JSON.stringify({
+                metadata: { source_title: title, map_maturity: 'provisional' },
+                backbone: [{ id: 'title-node', label: 'Title node', purpose: 'Reconstruct it.' }],
+                clusters: [],
+            });
+            localStorage.setItem('learnops_concepts', JSON.stringify([{
+                id: 'qa-source-less-title',
+                name: title,
+                createdAt: Date.now(),
+                state: 'growing',
+                graphData,
+            }]));
+        })()"""
+    )
+
+    clean_page.locator("#nav-library").click()
+    clean_page.locator(".library-card-vault", has_text="Designing a source-less route").click()
+    expect(clean_page.locator("#concept-header-title")).to_have_text(
+        "Designing a source-less route"
     )
 
 
@@ -4750,15 +4756,7 @@ def test_mobile_concept_attempt_has_writing_width(
     title_box = page.locator("#concept-header-title").bounding_box()
     assert title_box is not None
     assert title_box["y"] > toggle_box["y"] + toggle_box["height"]
-    context_label_box = page.locator(".concept-page-b2__threshold-label").bounding_box()
-    context_edit_box = page.locator("[data-edit-threshold]").bounding_box()
-    assert context_label_box is not None
-    assert context_edit_box is not None
-    context_label_center = context_label_box["y"] + (context_label_box["height"] / 2)
-    context_edit_center = context_edit_box["y"] + (context_edit_box["height"] / 2)
-    assert abs(context_edit_center - context_label_center) <= 6
-    assert context_edit_box["x"] > context_label_box["x"]
-    assert context_edit_box["height"] >= 43.9
+    expect(page.locator(".concept-page-b2__context-dock")).to_have_count(0)
     expect(page.locator(".concept-page-b2__route")).to_have_count(0)
 
     attempt_box = page.locator(".concept-page-b2__attempt-input").bounding_box()
@@ -4961,13 +4959,8 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas).to_be_visible()
     expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
     expect(clean_page.locator("#concept-constellation-content")).to_be_hidden()
-    expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text("Context")
-    expect(canvas.locator(".concept-page-b2__context-dock")).to_contain_text(
-        "I think sodium just rushes in."
-    )
-    expect(canvas.locator(".concept-page-b2__context-dock")).not_to_contain_text(
-        "Write first. Compare after."
-    )
+    expect(canvas.locator(".concept-page-b2__context-dock")).to_have_count(0)
+    expect(canvas).not_to_contain_text("I think sodium just rushes in.")
     expect(canvas.locator(".concept-page-b2__route-item")).to_have_count(0)
     expect(canvas.locator(".concept-page-b2__route-marker-item")).to_have_count(0)
     expect(canvas).not_to_contain_text("Sodium channels open at threshold")
@@ -4982,7 +4975,7 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
         "What do you think makes the sodium channel open?"
     )
-    expect(canvas.locator(".concept-page-b2__attempt")).to_contain_text(
+    expect(canvas.locator(".concept-page-b2__attempt")).not_to_contain_text(
         "Write one sentence. Name the trigger, even if you are guessing."
     )
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_text("Save draft")
@@ -4990,31 +4983,29 @@ def test_concept_view_opens_to_route_margin_canvas(
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_attribute(
         "aria-disabled", "true"
     )
-    expect(canvas.locator(".concept-page-b2__blank-start")).to_contain_text(
-        "Think about the point where a small signal becomes enough to matter."
+    expect(canvas.locator(".concept-page-b2__truth-note")).to_contain_text(
+        "Study stays hidden until you save a draft. This is not a grade."
     )
+    blank_start = canvas.locator("[data-blank-start]")
+    expect(blank_start).to_have_text("Need a cue?")
+    expect(blank_start).to_have_attribute("aria-expanded", "false")
+    expect(canvas.locator("[data-blank-start-hint]")).to_be_hidden()
     attempt_input = canvas.locator(".concept-page-b2__attempt-input")
     attempt_input.fill("asdasdas")
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_be_enabled()
     expect(canvas.locator(".concept-page-b2__attempt-save")).to_have_attribute(
         "aria-disabled", "false"
     )
-    blank_start = canvas.locator("[data-blank-start]")
-    expect(blank_start).to_have_text("Need a cue?")
-    expect(blank_start).to_have_attribute("aria-expanded", "false")
     blank_start.click()
     expect(blank_start).to_be_hidden()
     expect(canvas.locator("[data-blank-start-hint]")).to_be_visible()
     expect(canvas.locator("[data-blank-start-hint]")).to_contain_text(
         "Think about the point where a small signal becomes enough to matter."
     )
-    expect(canvas.locator("[data-blank-start-hint]")).not_to_contain_text(
-        "The mechanism stays hidden"
-    )
-    expect(attempt_input).to_have_value("asdasdas")
     assert clean_page.evaluate(
         "() => document.activeElement === document.querySelector('.concept-page-b2__attempt-input')"
     )
+    expect(attempt_input).to_have_value("asdasdas")
     attempt_input.fill("")
     fallback_html = clean_page.evaluate(
         """async () => {
@@ -5050,7 +5041,7 @@ def test_concept_view_opens_to_route_margin_canvas(
             );
         }"""
     )
-    assert "Write one relationship you suspect." in fallback_html
+    assert "Write one relationship you suspect." not in fallback_html
     assert "Type one relationship you suspect, even if it feels incomplete." in fallback_html
     empty_fallback_html = clean_page.evaluate(
         """async () => {
@@ -5510,14 +5501,7 @@ def test_source_less_defensive_ui_paths_remain_inert(
     _enter_app_shell_as_guest(clean_page, base_url)
 
     clean_page.locator(".concept-item", has_text="How sodium channels").click()
-    clean_page.locator("[data-edit-threshold]").click()
-    clean_page.locator(".concept-page-b2__threshold-input").fill(
-        "This edit races with a deleted local concept."
-    )
-    clean_page.evaluate("localStorage.setItem('learnops_concepts', JSON.stringify([]))")
-    clean_page.locator(".concept-page-b2__threshold-save").click()
-    expect(clean_page.locator(".concept-page-b2__threshold-editor")).to_have_count(0)
-    expect(clean_page.locator(".concept-page-b2__threshold")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__context-dock")).to_have_count(0)
 
     _seed_route_margin_concept(clean_page)
     clean_page.locator("#nav-library").click()

@@ -69,9 +69,7 @@ def fake_map(concept: str) -> ProvisionalMap:
         entry_prompt = (
             "In your own words, why does saving a computed result make the later request faster?"
         )
-        expected_shape = (
-            "first compute -> store result -> cache hit -> faster later response"
-        )
+        expected_shape = "Write one or two sentences."
         sentence_starter = "Caching helps because..."
         blank_hint = "Name the store-and-reuse step."
         evidence_goal = (
@@ -89,9 +87,7 @@ def fake_map(concept: str) -> ProvisionalMap:
         entry_prompt = (
             "In your own words, why does a safe preview make the later response faster?"
         )
-        expected_shape = (
-            "safe preview -> immune selection -> memory -> faster later response"
-        )
+        expected_shape = "Write one or two sentences."
         sentence_starter = "A safe preview helps because..."
         blank_hint = "Name what remains after the preview."
         evidence_goal = (
@@ -114,9 +110,7 @@ def fake_map(concept: str) -> ProvisionalMap:
             f"In your own words, how does an earlier encounter with {concept_clean} "
             "change a later response?"
         )
-        expected_shape = (
-            f"first encounter with {concept_clean} -> retained trace -> later reuse -> changed response"
-        )
+        expected_shape = "Write one or two sentences."
         sentence_starter = f"When {concept_clean} shows up again,"
         blank_hint = f"Name what carries over from the first {concept_clean} encounter."
         evidence_goal = (
@@ -140,7 +134,7 @@ def fake_map(concept: str) -> ProvisionalMap:
     )
     return ProvisionalMap(
         metadata=Metadata(
-            source_title=f"{concept_clean} source-less route",
+            source_title=concept_clean,
             core_thesis=core_thesis,
             architecture_type="causal_chain",
             difficulty="easy",
