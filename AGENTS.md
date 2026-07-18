@@ -76,7 +76,11 @@ gh pr list --state open
 - Desk due/ready UX should stay board-centric (Linear-style Ready filter, due marks, selection strip), not a header inventory list of due nodes.
 - Give blunt honesty on whether desk UI captures metacognitive learning; do not praise-pad weak UX.
 - For Socratink implementation slices, follow `/socratink-agent-flow` unless the user explicitly opts out.
+- Prefer landing UI as small sequential product-story slices with feedback between wires over large UI overhauls.
+- Spaced-return / due copy should use learner reconstruction language (e.g. Ready to revisit, Reconstruct again), not app-maintenance phrasing like Due for maintenance.
 
 ## Learned Workspace Facts
 - Due/Ready desk state must come from real training evidence (`spaced_attempt` / spaced re-drill eligibility), never decorative mastery or fake progress chrome.
 - Iso board due marks: avoid CSS/SVG transform footguns on `.tile-group` when styling due tiles.
+- When editing CSS under `public/`, bump `?v=` cache-bust pins through the parent import chain (`layout.css` → `styles.css` → `index.css` → `index.html`).
+- Treat localStorage and file-backed sessions as non-durable until proven; label readiness claims as local, hosted, or production.
