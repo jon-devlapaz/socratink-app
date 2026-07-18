@@ -4120,6 +4120,9 @@ def test_localhost_legacy_inline_redrill_keeps_spaced_semantics(
 
     page.route("**/api/drill", fulfill_drill)
     _enter_app_shell_as_guest(page, base_url)
+    page.wait_for_function(
+        "() => Boolean(window.App?.getNodeInspectAction)", timeout=20_000
+    )
     page.evaluate("localStorage.clear(); sessionStorage.clear();")
     page.evaluate(
         """(() => {
