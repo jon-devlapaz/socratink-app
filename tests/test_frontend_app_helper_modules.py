@@ -1838,7 +1838,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
         assert.ok(!coldHtml.includes('Start from memory'));
         assert.ok(!coldHtml.includes('Name the trigger without reading the note.'));
         assert.ok(coldHtml.includes('Save draft'));
-        assert.ok(coldHtml.includes('Your reconstruction'));
+        assert.ok(coldHtml.includes('concept-page-b2__field-label visually-hidden">Your reconstruction'));
         assert.ok(!coldHtml.includes('Write one sentence. Name the trigger, even if you are guessing.'));
         assert.ok(coldHtml.includes('data-attempt-status'));
         assert.ok(coldHtml.includes('role="status"'));
@@ -2334,6 +2334,9 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(!readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('Save draft'));
+        assert.ok(readyHtml.includes('concept-page-b2__attempt-composer'));
+        assert.ok(readyHtml.includes('concept-page-b2__attempt-save-mark'));
+        assert.ok(readyHtml.includes('data-attempt-save-label'));
         assert.ok(readyHtml.includes('Need a cue?'));
         assert.ok(readyHtml.includes('concept-page-b2__blank-start'));
         assert.ok(readyHtml.includes('data-blank-start'));

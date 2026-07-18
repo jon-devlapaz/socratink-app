@@ -600,22 +600,34 @@ function renderAttemptPanelHtml(activeEntryId, activeEntry, options = {}) {
     <section class="concept-page-b2__attempt" data-attempt-entry-id="${escHtml(activeEntryId)}" aria-label="Memory reconstruction">
       <span class="eyebrow concept-page-b2__attempt-eyebrow visually-hidden">cold attempt</span>
       <h3>${escHtml(heading)}</h3>
-      <label class="concept-page-b2__field concept-page-b2__attempt-field">
-        <span class="concept-page-b2__field-label">Your reconstruction</span>
-        <textarea
-          class="concept-page-b2__attempt-input"
-          data-attempt-entry-id="${escHtml(activeEntryId)}"
-          rows="6"
-          maxlength="2400"
-          placeholder="${escHtml(placeholder)}"
-        ></textarea>
-      </label>
+      <div class="concept-page-b2__attempt-composer">
+        <label class="concept-page-b2__field concept-page-b2__attempt-field">
+          <span class="concept-page-b2__field-label visually-hidden">Your reconstruction</span>
+          <textarea
+            class="concept-page-b2__attempt-input"
+            data-attempt-entry-id="${escHtml(activeEntryId)}"
+            rows="6"
+            maxlength="2400"
+            placeholder="${escHtml(placeholder)}"
+          ></textarea>
+        </label>
+        <div class="concept-page-b2__attempt-actions">
+          ${cueHtml}
+          <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}" disabled aria-disabled="true">
+            <span class="concept-page-b2__attempt-save-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 30" focusable="false">
+                <path d="M12 1 22 8 12 14 2 8Z"></path>
+                <path d="M2 8 12 14 12 29 3 19Z"></path>
+                <path d="M22 8 12 14 12 29 21 19Z"></path>
+                <path class="concept-page-b2__attempt-save-axis" d="M12 1v28"></path>
+              </svg>
+            </span>
+            <span data-attempt-save-label>${escHtml(buttonLabel)}</span>
+          </button>
+        </div>
+      </div>
       <p class="concept-page-b2__attempt-status" data-attempt-status role="status" aria-live="polite"></p>
       <p class="concept-page-b2__attempt-error" data-attempt-error role="alert" hidden>${escHtml(errorText)}</p>
-      <div class="concept-page-b2__attempt-actions">
-        <button class="concept-page-b2__attempt-save" type="button" data-attempt-entry-id="${escHtml(activeEntryId)}" disabled aria-disabled="true">${escHtml(buttonLabel)}</button>
-        ${cueHtml}
-      </div>
     </section>
   `;
 }

@@ -32,7 +32,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=39';
+} from './concept-page-view.js?v=43';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -2577,8 +2577,11 @@ const App = (() => {
       return;
     }
     if (errorEl) errorEl.hidden = true;
+    const buttonLabel = button.querySelector?.('[data-attempt-save-label]');
+    if (buttonLabel) buttonLabel.textContent = 'Saving draft…';
     button.disabled = true;
     button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('aria-busy', 'true');
     panel?.setAttribute('aria-busy', 'true');
     if (statusEl) statusEl.textContent = 'Checking and saving your draft…';
 
@@ -2649,6 +2652,10 @@ const App = (() => {
         if (nudge) {
           button.disabled = false;
           button.setAttribute('aria-disabled', 'false');
+          button.removeAttribute('aria-busy');
+          panel?.removeAttribute('aria-busy');
+          if (buttonLabel) buttonLabel.textContent = 'Save draft';
+          if (statusEl) statusEl.textContent = '';
           if (errorEl) {
             errorEl.textContent = nudge;
             errorEl.hidden = false;
@@ -2673,6 +2680,8 @@ const App = (() => {
       console.warn('Memory attempt failed.', err);
       button.disabled = false;
       button.setAttribute('aria-disabled', 'false');
+      button.removeAttribute('aria-busy');
+      if (buttonLabel) buttonLabel.textContent = 'Save draft';
       if (errorEl) {
         errorEl.textContent = 'The system could not record this yet. Try again.';
         errorEl.hidden = false;
