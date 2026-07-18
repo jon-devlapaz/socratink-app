@@ -260,6 +260,16 @@ def test_learner_state_and_due_desk_browser_contracts(
               ],
               clusters: [],
             }),
+          }, {
+            id: 'fresh-c2',
+            name: 'Fresh Session',
+            state: 'growing',
+            createdAt: now,
+            graphData: JSON.stringify({
+              metadata: { id: 'core', label: 'Fresh model' },
+              backbone: [{ id: 'fresh-node', label: 'Fresh node' }],
+              clusters: [],
+            }),
           }]));
           localStorage.setItem('learnops_active', 'due-c1');
           localStorage.setItem('socratink:training:v1:due-c1', JSON.stringify({
@@ -292,6 +302,25 @@ def test_learner_state_and_due_desk_browser_contracts(
     clean_page.locator("#desk-ready-filter").click()
     expect(clean_page.locator("#desk-ready-filter")).to_have_attribute("aria-pressed", "true")
     expect(clean_page.locator("#grid-container")).to_have_class(re.compile(r"is-ready-filtered"))
+
+    clean_page.evaluate(
+        """() => {
+          document.documentElement.dataset.theme = 'dark';
+          document.body.dataset.theme = 'dark';
+          document.body.classList.add('night');
+        }"""
+    )
+    filtered_occupied = clean_page.locator(
+        "#grid-container .tile-group.is-filtered-out:not(.empty)"
+    )
+    expect(filtered_occupied).to_have_count(1)
+    expect(filtered_occupied).to_have_css("filter", "grayscale(0.45)")
+    expect(filtered_occupied).to_have_css("opacity", "0.16")
+
+    clean_page.emulate_media(reduced_motion="reduce")
+    expect(
+        clean_page.locator("#grid-container .tile-group.is-due .concept-pin-due-ring")
+    ).to_have_css("animation-name", "none")
 
     # Filtered empty tiles must no-op selectTile.
     clean_page.evaluate("window.App.selectTile(8)")
