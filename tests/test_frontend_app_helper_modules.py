@@ -1827,17 +1827,19 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           { source_mode: 'source_less', node_records: {} },
           { viewMode: 'cold-surface' }
         );
-        assert.ok(coldHtml.includes('Context'));
-        assert.ok(coldHtml.includes('I think nerves send electricity'));
+        assert.ok(!coldHtml.includes('concept-page-b2__context-dock'));
+        assert.ok(!coldHtml.includes('I think nerves send electricity'));
         assert.ok(!coldHtml.includes('Write first. Compare after.'));
-        assert.ok(coldHtml.includes('aria-label="Concept context"'));
-        assert.ok(coldHtml.includes('Study stays hidden until you save a draft. This is not a grade.'));
+        assert.ok(coldHtml.includes('Study stays hidden until you save a draft.'));
+        assert.ok(coldHtml.includes('This is not a grade.'));
+        assert.ok(coldHtml.includes('Need a cue?'));
         assert.ok(coldHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(coldHtml.includes('Sodium gate'));
         assert.ok(!coldHtml.includes('Start from memory'));
         assert.ok(!coldHtml.includes('Name the trigger without reading the note.'));
         assert.ok(coldHtml.includes('Save draft'));
-        assert.ok(coldHtml.includes('Your reconstruction'));
+        assert.ok(coldHtml.includes('concept-page-b2__field-label visually-hidden">Your reconstruction'));
+        assert.ok(!coldHtml.includes('Write one sentence. Name the trigger, even if you are guessing.'));
         assert.ok(coldHtml.includes('data-attempt-status'));
         assert.ok(coldHtml.includes('role="status"'));
         assert.ok(!coldHtml.includes('Shaped by your sketch'));
@@ -1858,7 +1860,8 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
           graphData,
           null
         );
-        assert.ok(coldWithoutTrainingHtml.includes('aria-label="Concept context"'));
+        assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__context-dock'));
+        assert.ok(!coldWithoutTrainingHtml.includes('I think nerves send electricity'));
         assert.ok(!coldWithoutTrainingHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         assert.ok(coldWithoutTrainingHtml.includes('What do you think makes the sodium channel open?'));
         assert.ok(!coldWithoutTrainingHtml.includes('concept-page-b2__route-item'));
@@ -1984,7 +1987,7 @@ def test_source_less_gestalt_hybrid_stage_contracts() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_concept_page_inline_drill_mount_preserves_context() -> None:
+def test_concept_page_inline_drill_mount_omits_launch_attempt() -> None:
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
@@ -2019,9 +2022,9 @@ def test_concept_page_inline_drill_mount_preserves_context() -> None:
         assert.match(html, /node-strip/);
         assert.match(html, /node-strip-item/);
         assert.match(html, /concept-page-b2__route-item/);
-        assert.match(html, /vd-sketch-wrapper/);
-        assert.match(html, /data-action="toggle-sketch"/);
-        assert.match(html, /I think voltage opens a gate/);
+        assert.doesNotMatch(html, /vd-sketch-wrapper/);
+        assert.doesNotMatch(html, /data-action="toggle-sketch"/);
+        assert.doesNotMatch(html, /I think voltage opens a gate/);
         assert.match(html, /concept-page-b2__active-entry--drilling/);
         assert.match(html, /id="drill-chamber-view"/);
         assert.match(html, /id="chamber-chat-log"/);
@@ -2308,7 +2311,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { metadata: { core_thesis: 'fallback thesis' } },
           training
         );
-        assert.ok(blockedHtml.includes('&lt;threshold &amp; sketch&gt;'));
+        assert.ok(!blockedHtml.includes('&lt;threshold &amp; sketch&gt;'));
         assert.ok(blockedHtml.includes('locked'));
         assert.ok(blockedHtml.includes('aria-disabled="true"'));
         assert.ok(blockedHtml.includes('>Locked</button>'));
@@ -2324,17 +2327,22 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { metadata: { starting_map_context: 'metadata sketch' } },
           training
         );
-        assert.ok(readyHtml.includes('metadata sketch'));
+        assert.ok(!readyHtml.includes('metadata sketch'));
         assert.ok(readyHtml.includes('concept-page-b2__gestalt'));
         assert.ok(readyHtml.includes('concept-page-b2__route'));
         assert.ok(!readyHtml.includes('Write first. Compare after.'));
         assert.ok(!readyHtml.includes('Start from memory'));
         assert.ok(!readyHtml.includes('first reconstruction entry 2 of 3'));
         assert.ok(readyHtml.includes('Save draft'));
+        assert.ok(readyHtml.includes('concept-page-b2__attempt-composer'));
+        assert.ok(readyHtml.includes('concept-page-b2__attempt-save-mark'));
+        assert.ok(readyHtml.includes('data-attempt-save-label'));
         assert.ok(readyHtml.includes('Need a cue?'));
+        assert.ok(readyHtml.includes('concept-page-b2__blank-start'));
         assert.ok(readyHtml.includes('data-blank-start'));
         assert.ok(readyHtml.includes('data-blank-start-hint'));
         assert.ok(!readyHtml.includes('The mechanism stays hidden.'));
+        assert.ok(readyHtml.includes('This is not a grade.'));
         assert.ok(readyHtml.includes('concept-page-b2__attempt'));
         assert.ok(!readyHtml.includes('concept-page-b2__entry-cta'));
 
@@ -2349,7 +2357,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(sourceLessHtml.includes('aria-label="Concept context"'));
+        assert.ok(!sourceLessHtml.includes('aria-label="Concept context"'));
         assert.ok(!sourceLessHtml.includes('Shaped from your launch attempt, not verified against a source.'));
         const sourceAttachedHtml = renderActiveEntryHtml(
           backbone[1],
@@ -2362,7 +2370,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             node_records: training.node_records,
           }
         );
-        assert.ok(sourceAttachedHtml.includes('aria-label="Concept context"'));
+        assert.ok(!sourceAttachedHtml.includes('aria-label="Concept context"'));
 
         const readyAttemptHtml = renderActiveEntryHtml(
           backbone[1],
@@ -2427,8 +2435,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
         assert.ok(!scaffoldHtml.includes('Shaped by your sketch'));
         assert.ok(!scaffoldHtml.includes('State the system in your own words.'));
         assert.ok(scaffoldHtml.includes('How would you explain Hermes Agent to a classmate right now?'));
-        assert.ok(scaffoldHtml.includes('Goal: build a reliable agent system. First make a starting guess for Starting model.'));
-        assert.ok(scaffoldHtml.includes('Write 1-2 sentences. Name what it does and one fuzzy part.'));
+        assert.ok(!scaffoldHtml.includes('Goal: build a reliable agent system. First make a starting guess for Starting model.'));
+        assert.ok(!scaffoldHtml.includes('Write 1-2 sentences. Name what it does and one fuzzy part.'));
         assert.ok(scaffoldHtml.includes('My current guess is that Hermes Agent works by...'));
         assert.ok(scaffoldHtml.includes('Pick one phrase from your sketch and say what role it plays.'));
         assert.ok(!scaffoldHtml.includes('Draft your starting guess: what it does, what it connects to, or why it matters.'));
@@ -2508,7 +2516,7 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
           { metadata: {} },
           { source_mode: 'source_less', node_records: {} }
         );
-        assert.ok(fallbackScaffoldHtml.includes('Write one relationship you suspect.'));
+        assert.ok(!fallbackScaffoldHtml.includes('Write one relationship you suspect.'));
         assert.ok(fallbackScaffoldHtml.includes('placeholder="Write what you can explain right now."'));
         assert.ok(!fallbackScaffoldHtml.includes('placeholder="Write one relationship you suspect."'));
         assert.ok(fallbackScaffoldHtml.includes('Type one relationship you suspect, even if it feels incomplete.'));
@@ -2536,8 +2544,8 @@ def test_concept_page_view_renders_active_entry_html_contract() -> None:
             },
           }
         );
-        assert.ok(primedHtml.includes('concept-page-b2__threshold--empty'));
-        assert.ok(primedHtml.includes('add context'));
+        assert.ok(!primedHtml.includes('concept-page-b2__threshold--empty'));
+        assert.ok(!primedHtml.includes('add context'));
         assert.ok(primedHtml.includes('Your draft'));
         assert.ok(!primedHtml.includes('Draft saved'));
         assert.ok(!primedHtml.includes('study required entry 1 of 1'));

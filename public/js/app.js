@@ -32,7 +32,7 @@ import {
   getConceptEntryId,
   renderActiveEntryHtml,
   selectInitialConceptEntry,
-} from './concept-page-view.js?v=39';
+} from './concept-page-view.js?v=43';
 import {
   clearComparisonAcknowledgementsForConcept,
   hasComparisonAcknowledgement,
@@ -2160,7 +2160,7 @@ const App = (() => {
 
   /**
    * Wire event handlers on the work column after a swap or initial mount.
-   * Handles the CTA (start drill) and the threshold re-edit affordance.
+   * Handles the active reconstruction, study, and repair controls.
    *
    * @param {HTMLElement} docEl - The .concept-page-b2__doc element
    * @param {Object} concept - The full concept object
@@ -2287,28 +2287,6 @@ const App = (() => {
           focus: 'rating',
           moment: button.getAttribute('data-feedback-moment') || '',
         });
-      });
-    });
-    docEl.querySelectorAll('[data-edit-threshold]').forEach((link) => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        enterThresholdEditMode(docEl, concept, data, training);
-      });
-    });
-    docEl.querySelectorAll('[data-action="toggle-sketch"]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const wrapper = button.closest('.vd-sketch-wrapper');
-        const body = wrapper?.querySelector?.('.vd-sketch-body');
-        if (!wrapper || !body) return;
-        const expanded = button.getAttribute('aria-expanded') === 'true';
-        button.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-        wrapper.dataset.sketchCollapsed = expanded ? 'true' : 'false';
-        body.hidden = expanded;
-      });
-      button.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        button.click();
       });
     });
   }
@@ -2599,8 +2577,11 @@ const App = (() => {
       return;
     }
     if (errorEl) errorEl.hidden = true;
+    const buttonLabel = button.querySelector?.('[data-attempt-save-label]');
+    if (buttonLabel) buttonLabel.textContent = 'Saving draft…';
     button.disabled = true;
     button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('aria-busy', 'true');
     panel?.setAttribute('aria-busy', 'true');
     if (statusEl) statusEl.textContent = 'Checking and saving your draft…';
 
@@ -2671,6 +2652,10 @@ const App = (() => {
         if (nudge) {
           button.disabled = false;
           button.setAttribute('aria-disabled', 'false');
+          button.removeAttribute('aria-busy');
+          panel?.removeAttribute('aria-busy');
+          if (buttonLabel) buttonLabel.textContent = 'Save draft';
+          if (statusEl) statusEl.textContent = '';
           if (errorEl) {
             errorEl.textContent = nudge;
             errorEl.hidden = false;
@@ -2695,6 +2680,8 @@ const App = (() => {
       console.warn('Memory attempt failed.', err);
       button.disabled = false;
       button.setAttribute('aria-disabled', 'false');
+      button.removeAttribute('aria-busy');
+      if (buttonLabel) buttonLabel.textContent = 'Save draft';
       if (errorEl) {
         errorEl.textContent = 'The system could not record this yet. Try again.';
         errorEl.hidden = false;
@@ -2749,132 +2736,6 @@ const App = (() => {
       panel?.removeAttribute('aria-busy');
       if (statusEl) statusEl.textContent = '';
     }
-  }
-
-  /**
-   * Replace the threshold paragraph with an inline edit textarea + Save/Cancel.
-   * On Save: persist the new text to the active concept (both the
-   * concept.startingMapContext field and graphData.metadata.starting_map_context)
-   * via saveConcepts(), then re-render the threshold + work column.
-   *
-   * Doctrine: editing the sketch is allowed at any time. The active entry
-   * stays the same; only the threshold text changes.
-   */
-  function enterThresholdEditMode(docEl, concept, data, training = null) {
-    const currentText = (concept?.startingMapContext
-      || data?.metadata?.starting_map_context
-      || '').trim();
-    const thresholdEl = docEl.querySelector('.concept-page-b2__threshold');
-    if (!thresholdEl) return;
-
-    const editorHtml = `
-      <div class="concept-page-b2__threshold-editor">
-        <textarea
-          class="concept-page-b2__threshold-input"
-          aria-label="Edit your context"
-          rows="4"
-          maxlength="1200"
-          placeholder="Name the parts, guesses, examples, or confusions you have."
-        >${escHtml(currentText)}</textarea>
-        <div class="concept-page-b2__threshold-actions">
-          <button type="button" class="concept-page-b2__threshold-cancel">Cancel</button>
-          <button type="button" class="concept-page-b2__threshold-save">Save context</button>
-        </div>
-      </div>
-    `;
-    thresholdEl.insertAdjacentHTML('afterend', editorHtml);
-    thresholdEl.hidden = true;
-
-    const editorEl = thresholdEl.nextElementSibling;
-    const textarea = editorEl.querySelector('.concept-page-b2__threshold-input');
-    const cancelBtn = editorEl.querySelector('.concept-page-b2__threshold-cancel');
-    const saveBtn = editorEl.querySelector('.concept-page-b2__threshold-save');
-
-    textarea.focus();
-    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
-    const teardown = () => {
-      editorEl.remove();
-      thresholdEl.hidden = false;
-    };
-
-    cancelBtn.addEventListener('click', teardown);
-
-    textarea.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        teardown();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        /* v8 ignore start -- keyboard shortcut mirrors the covered Save button path. */
-        e.preventDefault();
-        saveBtn.click();
-        /* v8 ignore stop */
-      }
-    });
-
-    saveBtn.addEventListener('click', async () => {
-      const next = (textarea.value || '').trim().slice(0, 1200);
-      const concepts = loadConcepts();
-      const liveConcept = concepts.find((c) => c.id === concept.id);
-      if (!liveConcept) {
-        teardown();
-        return;
-      }
-      liveConcept.startingMapContext = next;
-      try {
-        const liveData = typeof liveConcept.graphData === 'string'
-          ? JSON.parse(liveConcept.graphData)
-          : (liveConcept.graphData || {});
-        if (!liveData.metadata) liveData.metadata = {};
-        liveData.metadata.starting_map_context = next;
-        liveConcept.graphData = JSON.stringify(liveData);
-      } catch (err) {
-        /* c8 ignore next -- defensive malformed graphData fallback */
-        console.warn('[concept-page] graphData parse failed; saved startingMapContext only.', err);
-      }
-      saveConcepts(concepts);
-      try {
-        await trainingStore.setSketch(concept.id, {
-          text: next,
-          at: new Date().toISOString(),
-        });
-      } catch (err) {
-        /* c8 ignore next -- defensive localStorage failure path */
-        console.warn('[concept-page] training sketch update failed.', err);
-      }
-
-      // Re-render the work column with the fresh data so the quote updates
-      // in place. Use the same active entry id we were on.
-      const freshData = typeof liveConcept.graphData === 'string'
-        ? JSON.parse(liveConcept.graphData)
-        : liveConcept.graphData;
-      // Mutate the closed-over concept/data references in place so the
-      // route-margin handlers wired in renderConceptPageB2 see the just-saved
-      // threshold on subsequent navigation. Without this, those handlers
-      // re-render via setActiveEntry using stale references and the edit
-      // appears to vanish until full reload.
-      concept.startingMapContext = liveConcept.startingMapContext;
-      concept.graphData = liveConcept.graphData;
-      if (data) {
-        if (!data.metadata) data.metadata = {};
-        data.metadata.starting_map_context = next;
-        if (freshData?.backbone) data.backbone = freshData.backbone;
-        if (freshData?.clusters) data.clusters = freshData.clusters;
-        if (freshData?.relationships) data.relationships = freshData.relationships;
-      }
-      const backbone = deriveConceptEntries(freshData);
-      const activeIdx = Math.max(
-        0,
-        backbone.findIndex((n) => (n.id || `entry-${backbone.indexOf(n)}`) === _activeEntryId)
-      );
-      const activeEntry = backbone[activeIdx] || backbone[0] || { id: 'core-thesis', label: 'Core thesis' };
-      const renderOptions = conceptPageRenderOptionsForEntry(liveConcept, _activeEntryId, training, {});
-      const rendered = renderActiveEntryDocumentHtml(activeEntry, activeIdx, backbone, liveConcept, freshData, training, renderOptions);
-      docEl.innerHTML = rendered.html;
-      docEl.classList.toggle('concept-page-b2__doc--post-repair', rendered.hasPostRepair);
-      rebindActiveEntryHandlers(docEl, liveConcept, freshData, training);
-      bindConceptRouteMarginHandlers(document.getElementById('map-content'), freshData, liveConcept, training);
-    });
   }
 
   /**
@@ -3039,7 +2900,7 @@ const App = (() => {
    *
    * @param {HTMLElement} mountEl - The #map-content element
    * @param {Object} data - Parsed graphData (metadata, backbone, clusters, relationships)
-   * @param {Object} concept - The full concept object (for threshold text + name)
+   * @param {Object} concept - The full concept object
    */
   function renderConceptPageB2(mountEl, data, concept, training = null, options = {}) {
     if (!mountEl || !data) return;
@@ -3079,7 +2940,7 @@ const App = (() => {
     // Set module-level active entry state
     _activeEntryId = activeEntryId;
 
-    // Wire CTA and re-edit affordance
+    // Wire active reconstruction, study, and repair controls.
     const docEl = mountEl.querySelector('.concept-page-b2__doc');
     if (docEl) rebindActiveEntryHandlers(docEl, concept, data, training);
     restoreActiveEntryDraft(activeEntryId);
@@ -3119,7 +2980,13 @@ const App = (() => {
 
     const titleEl = document.getElementById('concept-header-title');
     const tagsEl = document.getElementById('concept-header-tags');
-    if (titleEl) titleEl.textContent = meta.source_title || concept.name || '';
+    const sourceTitle = String(meta.source_title || '').trim();
+    const conceptTitle = String(concept.name || '').trim();
+    const legacySyntheticTitle = `${conceptTitle} source-less route`;
+    const displayTitle = sourceTitle === legacySyntheticTitle
+      ? conceptTitle
+      : (sourceTitle || conceptTitle);
+    if (titleEl) titleEl.textContent = displayTitle;
     if (tagsEl) {
       tagsEl.innerHTML = '';
     }

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from ai_service import _validate_smallest_route, SmallestRouteCapExceeded
+from bridge_lib.fake.defaults import fake_map
 from models.provisional_map import Cluster, LearnerScaffold, ProvisionalMap, Relationships, Subnode
 from tests._helpers.provisional_map_factory import (
     provisional_map_with_node_count as _provisional_map_with_node_count,
@@ -15,6 +16,16 @@ from tests._helpers.provisional_map_factory import (
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def test_fake_route_expected_shape_describes_format_without_previewing_answer():
+    route = fake_map("How vaccines create immune memory")
+    scaffold = route.clusters[0].subnodes[0].learner_scaffold
+
+    assert scaffold is not None
+    assert route.metadata.source_title == "How vaccines create immune memory"
+    assert scaffold.expected_shape == "Write one or two sentences."
+    assert "immune selection" not in scaffold.expected_shape.lower()
 
 
 def _learner_scaffold() -> LearnerScaffold:

@@ -715,7 +715,9 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             assert(savedLaunchPadTraining.source_mode === 'source_less', 'launch pad writes source-less provenance');
             assert(savedLaunchPadTraining.grounding === 'learner_sketch', 'launch pad writes learner sketch grounding');
             assert(savedLaunchPadTraining.sketch.text === 'rough learner threshold', 'launch pad writes sketch text');
+            assert(savedLaunchPadConcept.startingMapContext === 'rough learner threshold', 'launch pad preserves route context on concept');
             assert(savedLaunchPadConcept.learnerGoal === 'raw learner goal', 'launch pad preserves learner goal on concept');
+            assert(JSON.parse(savedLaunchPadConcept.graphData).metadata.starting_map_context === 'rough learner threshold', 'launch pad preserves route context in graph metadata');
             assert(JSON.parse(savedLaunchPadConcept.graphData).metadata.learner_goal === 'raw learner goal', 'launch pad preserves learner goal in graph metadata');
 
             const sourcePanel = await import('/js/source-panel.js?v=3');
@@ -1505,7 +1507,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               { metadata: { core_thesis: 'fallback thesis' } },
               conceptTraining
             );
-            assert(conceptPageHtml.includes('&lt;threshold &amp; sketch&gt;'), 'concept page threshold escapes');
+            assert(!conceptPageHtml.includes('&lt;threshold &amp; sketch&gt;'), 'concept page omits launch attempt');
             assert(conceptPageHtml.includes('locked'), 'concept page blocked eyebrow');
             assert(conceptPageHtml.includes('aria-disabled="true"'), 'concept page blocked cta');
             assert(conceptPageHtml.includes('Second &amp; unsafe'), 'concept page nearby escapes');
@@ -1545,7 +1547,7 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
                 },
               }
             );
-            assert(conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page empty threshold');
+            assert(!conceptPagePrimedHtml.includes('concept-page-b2__threshold--empty'), 'concept page omits empty context dock');
             assert(conceptPagePrimedHtml.includes('Your draft'), 'concept page primed study labels the learner artifact');
             assert(!conceptPagePrimedHtml.includes('Draft saved'), 'concept page primed study removes ceremonial copy');
             assert(conceptPagePrimedHtml.includes('concept-page-b2__evidence'), 'concept page primed shows recorded draft before study');

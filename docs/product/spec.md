@@ -130,10 +130,10 @@ Each node derives its next action within the three-phase loop:
 
 The frontend uses derived `next_action`, not persisted `drill_phase`, to choose the concept-page mode.
 
-Concept pages render source-less provenance from the training record inside the
-compact context dock: when `source_mode === "source_less"`, show `No source
-attached. Treat this route as provisional.` as a compact source note below the
-recall context.
+Concept pages retain `source_mode` and the launch attempt as route provenance,
+but do not repeat the launch attempt in the active reconstruction surface. The
+local cold attempt must stay free of answer-shaped recall cues. The learner's
+saved local draft becomes the comparison artifact after generation.
 
 Source-less first entries may use `learner_scaffold.tailoring_anchor` internally
 to shape the cold-attempt prompt. It should not render as learner-facing AI

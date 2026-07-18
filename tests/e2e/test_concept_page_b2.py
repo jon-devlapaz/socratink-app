@@ -1,6 +1,6 @@
 """End-to-end smoke for the B-2 concept page layout.
 
-Covers: open a concept page; route margin, threshold, active entry, and the
+Covers: open a concept page; route margin, active entry, and the
 cold-entry draft surface is inline without the old nearby panel.
 
 Note: this file checks that the legacy Route/Graph toggle is gone. The live
@@ -139,19 +139,13 @@ def _open_seeded_concept_via_sidebar(page: Page, base_url: str) -> None:
 
 
 def test_b2_layout_renders(clean_page: Page, base_url: str) -> None:
-    """Route margin, threshold, and active entry render without the nearby panel."""
+    """Route margin and active entry render without a recall-cue dock."""
     _open_seeded_concept_via_sidebar(clean_page, base_url)
     expect(clean_page.locator(".concept-page-b2__route")).to_be_visible(timeout=8_000)
     expect(clean_page.locator(".concept-page-b2__entry-title")).to_be_visible()
     expect(clean_page.locator(".concept-page-b2__attempt-input")).to_be_visible()
-    # threshold must be present (either with learner text or empty-state)
-    expect(clean_page.locator(".concept-page-b2__threshold")).to_be_visible()
+    expect(clean_page.locator(".concept-page-b2__context-dock")).to_have_count(0)
     expect(clean_page.locator(".concept-page-b2__nearby")).to_have_count(0)
-    expect(clean_page.locator(".vd-sketch-body")).to_be_hidden()
-    clean_page.locator('[data-action="toggle-sketch"]').press("Enter")
-    expect(clean_page.locator(".vd-sketch-body")).to_be_visible()
-    clean_page.locator('[data-action="toggle-sketch"]').press(" ")
-    expect(clean_page.locator(".vd-sketch-body")).to_be_hidden()
 
 
 def test_b2_cta_opens_inline_attempt(clean_page: Page, base_url: str) -> None:
