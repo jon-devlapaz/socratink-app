@@ -6143,12 +6143,15 @@ def test_desk_board_expands_after_first_saved_session(
                          w: Math.round(b.width), h: Math.round(b.height) } : null;
         };
         const heroCard = document.querySelector('.hero-card.intro-page');
+        const deskFrame = document.querySelector('.desk-frame');
         const gridContainer = document.getElementById('grid-container');
         const grid = document.getElementById('grid-svg');
         const tiles = Array.from(document.querySelectorAll('#grid-svg .tile-group'));
         const gridBox = grid?.getBoundingClientRect();
         return {
             heroCard: r(heroCard),
+            heroDirection: heroCard ? getComputedStyle(heroCard).flexDirection : null,
+            deskFrame: r(deskFrame),
             gridContainer: r(gridContainer),
             gridContainerDisplay: gridContainer
                 ? window.getComputedStyle(gridContainer).display : null,
@@ -6302,6 +6305,24 @@ def test_desk_board_expands_after_first_saved_session(
     assert narrow["panel"]["x"] >= 0
     assert narrow["panel"]["x"] + narrow["panel"]["w"] <= 320
     assert 254 <= narrow["svg"]["w"] <= 262
+    assert clean_page.evaluate(
+        "document.documentElement.scrollWidth <= window.innerWidth"
+    )
+
+    # The user's compact desktop viewport still has enough room for the
+    # canonical board. Keep the Desk frame stacked so the header cannot split
+    # the panel into a narrow second column.
+    clean_page.set_viewport_size({"width": 1012, "height": 1114})
+    clean_page.wait_for_function("window.innerWidth === 1012")
+    compact_desktop = clean_page.evaluate(sample_script)
+    assert compact_desktop["heroDirection"] == "column"
+    assert compact_desktop["deskFrame"]["x"] == compact_desktop["panel"]["x"]
+    assert compact_desktop["deskFrame"]["w"] == compact_desktop["panel"]["w"]
+    assert compact_desktop["panel"]["w"] >= 520
+    assert 400 <= compact_desktop["svg"]["w"] <= 420
+    panel_center = compact_desktop["panel"]["x"] + compact_desktop["panel"]["w"] / 2
+    board_center = compact_desktop["svg"]["x"] + compact_desktop["svg"]["w"] / 2
+    assert abs(panel_center - board_center) <= 1
     assert clean_page.evaluate(
         "document.documentElement.scrollWidth <= window.innerWidth"
     )
