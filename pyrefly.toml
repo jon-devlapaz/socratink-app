@@ -27,7 +27,6 @@ project-includes = [
 project-excludes = [
     "**/.venv/",
     "**/node_modules/",
-    "**/.code-review-graph/",
     "**/.worktrees/",
     "**/.vercel/",
     "**/public/",

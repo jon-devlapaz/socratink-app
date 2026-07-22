@@ -23,11 +23,10 @@ logs/
 tmp/
 output/
 
-# Agent/tool runtime state and generated code-review graph data.
+# Agent/tool runtime state.
 .agents/
 .claude/
 .codex/
-.code-review-graph/
 .superpowers/
 .worktrees/
 .vscode/

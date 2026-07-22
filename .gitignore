@@ -92,9 +92,6 @@ b&a/
 .socratink-brain/.obsidian/
 docs/research/
 docs/pipeline/
-# Added by code-review-graph
-.code-review-graph/
-docs/code-graph.html
 # QA test artifacts (local Playwright + axe-core runs)
 .qa-runs/
 
