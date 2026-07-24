@@ -61,6 +61,20 @@ export interface ComposerCta {
 }
 
 export interface SedaCtx {
+  // --- North-star intake (hosted first vertical slice) ---
+  /** writer: source-intake. reader: initial-reconstruction. */
+  sourceText: string | null;
+  /** writer: source-intake. reader: initial-reconstruction. */
+  explanationTarget: string | null;
+  /** writer: initial-reconstruction. replayed from its immutable event. */
+  initialReconstruction: string | null;
+  /** genuine server timestamp paired with initialReconstruction. */
+  initialReconstructionAt: string | null;
+  /** writer: reconstruction-gap. learner-authored, graph-neutral repair. */
+  initialRepair: string | null;
+  /** genuine server timestamp paired with initialRepair. */
+  initialRepairAt: string | null;
+
   // --- Session inputs (writer: ignition; also idle for re-entry) ---
   /** writer: ignition, idle. readers: route, app.mjs final write. */
   concept: string;
@@ -125,4 +139,6 @@ export interface SedaCtx {
   colorEnabled: boolean;
   /** writer: adapter via session-kernel. Terminal uses a session path; hosted uses null. */
   logDir: string | null;
+  /** server clock; injected only by focused checks. */
+  now: () => string;
 }

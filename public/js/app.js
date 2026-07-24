@@ -19,7 +19,6 @@ import {
 } from './app-shell-ui.js?v=2';
 import { escHtml } from './html.js';
 import {
-  describeDoorSource,
   getHeroActionConfig,
   getHeroGuidance,
   getHeroStateLabel,
@@ -113,7 +112,6 @@ import {
 } from './store.js';
 import { AudioFX } from './audio.js?v=4';
 import {
-  buildPendingShellFromDoorInput,
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
 } from './launch-pad.js?v=6';
@@ -135,6 +133,7 @@ import {
 await requireAppEntrySession();
 
 const App = (() => {
+  const NORTH_STAR_SESSION_KEY = 'socratink:north-star-session:v1';
   const REPAIR_REPS_STORE_KEY = 'learnops_repair_reps_v1';
   const FIRST_COLD_ATTEMPT_CREED_KEY = 'socratink:firstColdAttemptCreedSeen:v1';
   const SEDA_SESSION_STORE_KEY_PREFIX = 'socratink:seda-session:v1:';
@@ -149,6 +148,8 @@ const App = (() => {
   let learnerStatePushTimer = null;
   let readyFilterActive = false;
   let cachedDueItems = [];
+  let northStarSession = null;
+  let northStarBusy = false;
   const freshSourceLessConceptIds = new Set();
 
   function saveConcepts(arr) {
@@ -710,7 +711,6 @@ const App = (() => {
   }
 
   function clearHeroThresholdComposer() {
-    // C-prime door: only one text field (concept). Clear it and reset submit.
     const conceptField = document.getElementById('hero-single-input-field');
     if (conceptField) {
       conceptField.value = '';
@@ -721,91 +721,35 @@ const App = (() => {
       guessField.value = '';
       guessField.style.height = '';
     }
-    // Reset any pending source selection from the door affordance.
-    App._pendingDoorSource = null;
-    const sourceAttachBtn = document.getElementById('hero-source-attach');
-    const sourcePanel = document.getElementById('hero-source-panel');
-    const sourceValue = document.getElementById('hero-source-value');
-    if (sourceAttachBtn) {
-      sourceAttachBtn.setAttribute('aria-expanded', 'false');
-      sourceAttachBtn.textContent = 'Attach';
-    }
-    if (sourceValue) sourceValue.textContent = 'Optional';
-    if (sourcePanel) {
-      sourcePanel.hidden = true;
-      sourcePanel.innerHTML = '';
-    }
     const submitBtn = document.getElementById('hero-door-submit');
     if (submitBtn instanceof HTMLButtonElement) {
       submitBtn.disabled = true;
     }
   }
 
-  function runHeroAction(evtOrNothing) {
-    // C-prime door submit handler. Reads the concept input and the pending
-    // source (if the learner expanded the source-attach panel). Branches:
-    //   source attached → direct source extraction
-    //   no source       → write sessionStorage pending shell → run launch submit
+  async function runHeroAction(evtOrNothing) {
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
-      const conceptField = document.getElementById('hero-single-input-field');
-      const guessField = document.getElementById('hero-cold-guess-field');
-      const rawName = (conceptField ? conceptField.value : '').trim();
-      const coldGuess = (guessField ? guessField.value : '').trim();
-      const shell = buildPendingShellFromDoorInput(rawName);
-      if (!shell.name || !coldGuess) return false;
-
-      const sourcePayload = App._pendingDoorSource || null;
-
-      if (sourcePayload) {
-        // Source-attached path: skip the (now-retired) conversational modal
-        // and run the extract pipeline directly. The learner already supplied
-        // name + source on the door; the modal's summary-card review step was
-        // pure friction. runSourceAttachedSubmit mounts the extract overlay,
-        // posts /api/extract (with the URL two-step when applicable), and
-        // either navigates to the graph view on success or surfaces the error
-        // inline on the door so the learner can retry without a modal remount.
-        emitTelemetry('concept_create.door.submit', {
-          has_source: true,
-          source_type: sourcePayload?.type || null,
-          sourceless: false,
-          name_normalized: shell.name !== rawName,
-        });
-        /* c8 ignore next -- source-attached submit enters the live extraction path; source UI contracts are covered separately. */
-        runSourceAttachedSubmit({ name: shell.name, source: sourcePayload, startingSketch: coldGuess });
-        return false;
-      }
-
-      // Source-less path: write pending shell to sessionStorage, then reuse
-      // launch-pad.js's submit/persist path from the same screen.
+      if (!_doorReady() || northStarBusy) return false;
+      const source = document.getElementById('hero-single-input-field')?.value || '';
+      const target = document.getElementById('hero-cold-guess-field')?.value || '';
+      const error = document.getElementById('hero-door-error');
+      setNorthStarBusy(true);
+      if (error) error.textContent = '';
       try {
-        sessionStorage.setItem(
-          'socratink:pendingShell',
-          JSON.stringify({ ...shell, ts: Date.now() }),
-        );
+        let data = northStarSession || await createSedaSession();
+        northStarSession = data;
+        rememberNorthStarSession(data.sessionId);
+        if (data.awaiting?.key === 'source') data = await sendNorthStarText(data, source);
+        if (data.awaiting?.key === 'target') data = await sendNorthStarText(data, target);
+        renderNorthStarState(data);
       } catch (err) {
-        // sessionStorage unavailable (disabled by the browser, quota exceeded, etc.)
-        // Surface the error without navigating — the learner must be able to retry.
-        console.error('socratink: sessionStorage unavailable', err);
-        const errEl = document.getElementById('hero-door-error');
-        if (errEl) {
-          errEl.textContent = 'Your browser has storage disabled. Enable session storage to continue.';
-          errEl.hidden = false;
-        }
-        return false;
+        if (error) error.textContent = err?.message || 'The session could not be saved. Try again.';
+        if (northStarSession) renderNorthStarState(northStarSession);
+      } finally {
+        setNorthStarBusy(false);
       }
-      emitTelemetry('concept_create.door.submit', {
-        has_source: false,
-        source_type: null,
-        sourceless: true,
-        name_normalized: shell.name !== rawName,
-      });
-      return _runLaunchPadAction(evtOrNothing, App, {
-        input: guessField,
-        submit: document.getElementById('hero-door-submit'),
-        validation: document.getElementById('hero-door-error'),
-        form: document.getElementById('hero-single-input'),
-      });
+      return false;
     }
 
     // Non-form path: the Begin button drives Begin/Extract/Drill/Open-map.
@@ -833,115 +777,202 @@ const App = (() => {
     }
   }
 
-  // ── C-prime door wiring ────────────────────────────────────────────────
-  // Wires the concept input → submit-state and the source-attach toggle.
-  // Replaces the old two-field initHeroSingleInput (sketch field removed in C-prime).
-
-  // Single source of truth for "is the door ready to submit?".
-  // Used by _doorUpdateSubmitState (input handler) AND by
-  // renderIgnitionGate (cap-state computation) so the button-disabled
-  // logic and the keyboard-submit gate share the same predicate.
-  // ≥2 trimmed chars matches the brainstorm spec for the door.
   function _doorReady() {
     const f = document.getElementById('hero-single-input-field');
     const guess = document.getElementById('hero-cold-guess-field');
-    return !!f && !!guess
-      && (f.value || '').trim().length >= 2
-      && (guess.value || '').trim().length > 0;
+    if (!guess || !(guess.value || '').trim()) return false;
+    if (northStarSession?.awaiting?.key === 'target') return true;
+    return Boolean(f && (f.value || '').trim());
   }
+
+  function reconstructionReady() {
+    return Boolean(document.getElementById('north-star-explanation-field')?.value.trim());
+  }
+
+  function repairReady() {
+    return Boolean(document.getElementById('north-star-repair-field')?.value.trim());
+  }
+
   function _doorUpdateSubmitState() {
     const submitBtn = document.getElementById('hero-door-submit');
     const hint = document.getElementById('ignition-boundary');
     if (!submitBtn) return;
-    // Mirror the at-cap gate: if at cap, stay disabled regardless of input.
-    const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
     const ready = _doorReady();
-    submitBtn.disabled = atCap || !ready;
+    submitBtn.disabled = northStarBusy || !ready;
     if (hint) {
-      hint.textContent = atCap
-        ? 'The board holds nine sessions. Retire one to start another.'
+      hint.textContent = northStarSession?.awaiting?.key === 'target'
+        ? 'Source saved. Retry the explanation target.'
         : ready
-          ? "You'll write first. Answers come after."
-          : 'Add your first model to start.';
+          ? 'Ready. The source will close before you explain.'
+          : 'The source disappears before you explain.';
     }
   }
 
-  let _sourcePanelGen = 0;
+  function setNorthStarBusy(value) {
+    northStarBusy = Boolean(value);
+    const capture = document.getElementById('hero-single-input');
+    const reconstruction = document.getElementById('north-star-reconstruction-form');
+    const repair = document.getElementById('north-star-repair-form');
+    if (capture) capture.dataset.state = northStarBusy ? 'busy' : '';
+    if (reconstruction) reconstruction.dataset.state = northStarBusy ? 'busy' : '';
+    if (repair) repair.dataset.state = northStarBusy ? 'busy' : '';
+    _doorUpdateSubmitState();
+    const reconstructionSubmit = document.getElementById('north-star-reconstruction-submit');
+    if (reconstructionSubmit) reconstructionSubmit.disabled = northStarBusy || !reconstructionReady();
+    const repairSubmit = document.getElementById('north-star-repair-submit');
+    if (repairSubmit) repairSubmit.disabled = northStarBusy || !repairReady();
+  }
 
-  function _bindDoorSourceAttach() {
-    const btn = document.getElementById('hero-source-attach');
-    const panel = document.getElementById('hero-source-panel');
-    if (!btn || !panel) return;
+  function rememberNorthStarSession(sessionId) {
+    if (!sessionId) return;
+    try { sessionStorage.setItem(NORTH_STAR_SESSION_KEY, sessionId); } catch { /* reload resume unavailable */ }
+  }
 
-    btn.addEventListener('click', () => {
-      const isOpen = btn.getAttribute('aria-expanded') === 'true';
-      const hasSource = !!App._pendingDoorSource;
-      const valueEl = document.getElementById('hero-source-value');
-      if (isOpen) {
-        // Panel is open — collapse and abandon any in-progress source pick.
-        // Bump generation so any in-flight dynamic import bails on resolve.
-        /* v8 ignore next 10 -- browser DOM collapse reset is covered by interaction smoke, not helper coverage. */
-        _sourcePanelGen += 1;
-        panel.hidden = true;
-        panel.innerHTML = '';
-        btn.setAttribute('aria-expanded', 'false');
-        /* c8 ignore next 2 -- covered by the source picker contract; browser path only resets copy. */
-        btn.textContent = 'Attach';
-        if (valueEl) valueEl.textContent = 'Optional';
-        App._pendingDoorSource = null;
-        _doorUpdateSubmitState();
-      } else if (hasSource) {
-        // Panel is closed and a source is attached — the button is the
-        // "remove" affordance. Click clears the source without re-opening.
-        btn.textContent = 'Attach';
-        if (valueEl) valueEl.textContent = 'Optional';
-        App._pendingDoorSource = null;
-        _doorUpdateSubmitState();
-      } else {
-        // Panel is closed and no source — expand and mount the source panel.
-        ++_sourcePanelGen;
-        panel.hidden = false;
-        btn.setAttribute('aria-expanded', 'true');
-        mountSourcePanel(panel, {
-          onAttach(payload) {
-            // Collapse the panel on attach (chip-style); the button label
-            // becomes the persistent affordance for clearing.
-            App._pendingDoorSource = payload;
-            panel.hidden = true;
-            panel.innerHTML = '';
-            btn.setAttribute('aria-expanded', 'false');
-            // Paper-style source-meta line: value span shows source ID,
-            // button toggles to "remove" (matches the "attach" ↔ "remove"
-            // affordance pattern persona-validated in Paper Wave 1).
-            btn.textContent = 'Remove';
-            const v = document.getElementById('hero-source-value');
-            if (v) v.textContent = describeDoorSource(payload);
-            _doorUpdateSubmitState();
-          },
-          onCancel() {
-            panel.hidden = true;
-            panel.innerHTML = '';
-            btn.setAttribute('aria-expanded', 'false');
-            btn.textContent = 'Attach';
-            const v = document.getElementById('hero-source-value');
-            if (v) v.textContent = 'Optional';
-            App._pendingDoorSource = null;
-            _doorUpdateSubmitState();
-          },
-        });
+  async function sendNorthStarText(session, text) {
+    const response = await sendSedaTurn(
+      session.sessionId,
+      createSedaTurnSubmission(text, session.sessionVersion),
+    );
+    northStarSession = response;
+    rememberNorthStarSession(response.sessionId);
+    return response;
+  }
+
+  function targetFromSession(session) {
+    return session?.savedReconstruction?.target
+      || session?.events?.findLast?.((event) => event?.type === 'target_submitted')?.text
+      || '';
+  }
+
+  function showNorthStarPanel(panel) {
+    const capture = document.getElementById('hero-single-input');
+    const reconstruction = document.getElementById('north-star-reconstruction');
+    const saved = document.getElementById('north-star-saved');
+    if (capture) capture.hidden = panel !== 'capture';
+    if (reconstruction) reconstruction.hidden = panel !== 'reconstruction';
+    if (saved) saved.hidden = panel !== 'saved';
+  }
+
+  async function evaluateNorthStarGap() {
+    if (!northStarSession || northStarBusy) return;
+    const error = document.getElementById('north-star-gap-error');
+    setNorthStarBusy(true);
+    if (error) error.textContent = '';
+    try {
+      const retrying = northStarSession.awaiting?.key === 'retry_reconstruction_gap';
+      renderNorthStarState(await sendNorthStarText(northStarSession, retrying ? 'retry' : ''));
+    } catch (err) {
+      if (error) error.textContent = err?.message || 'The gap could not be generated. Try again.';
+    } finally {
+      setNorthStarBusy(false);
+    }
+  }
+
+  function renderNorthStarRepair(session) {
+    const result = session.reconstructionRepair;
+    const gapText = document.getElementById('north-star-gap-text');
+    const gapError = document.getElementById('north-star-gap-error');
+    const retry = document.getElementById('north-star-gap-retry');
+    const form = document.getElementById('north-star-repair-form');
+    const saved = document.getElementById('north-star-repair-saved');
+
+    if (gapError) gapError.textContent = '';
+    if (retry) retry.hidden = true;
+    if (form) form.hidden = true;
+    if (saved) saved.hidden = true;
+
+    if (result?.status === 'unavailable') {
+      if (gapText) gapText.textContent = '';
+      if (gapError) gapError.textContent = result.message;
+      if (retry) retry.hidden = false;
+      requestAnimationFrame(() => retry?.focus());
+      return;
+    }
+
+    if (!result) {
+      if (gapText) gapText.textContent = 'Finding one consequential gap…';
+      if (session.awaiting?.key === 'evaluate_reconstruction_gap') {
+        queueMicrotask(() => void evaluateNorthStarGap());
       }
-    });
+      return;
+    }
+
+    if (gapText) gapText.textContent = result.gap;
+    if (result.status === 'saved') {
+      if (saved) saved.hidden = false;
+      document.getElementById('north-star-repair-saved-text').textContent = result.repair;
+      return;
+    }
+
+    if (form) form.hidden = false;
+    requestAnimationFrame(() => document.getElementById('north-star-repair-field')?.focus());
+  }
+
+  function renderNorthStarState(session) {
+    if (!session) return;
+    northStarSession = session;
+    rememberNorthStarSession(session.sessionId);
+    const target = targetFromSession(session);
+
+    if (session.savedReconstruction) {
+      showNorthStarPanel('saved');
+      document.getElementById('north-star-saved-target').textContent = session.savedReconstruction.target;
+      document.getElementById('north-star-saved-explanation').textContent = session.savedReconstruction.explanation;
+      const recorded = new Date(session.savedReconstruction.submittedAt);
+      document.getElementById('north-star-saved-time').textContent = Number.isNaN(recorded.valueOf())
+        ? session.savedReconstruction.submittedAt
+        : recorded.toLocaleString();
+      renderNorthStarRepair(session);
+      return;
+    }
+
+    if (session.awaiting?.key === 'initial_reconstruction') {
+      showNorthStarPanel('reconstruction');
+      document.getElementById('north-star-target-text').textContent = target;
+      requestAnimationFrame(() => document.getElementById('north-star-explanation-field')?.focus());
+      return;
+    }
+
+    showNorthStarPanel('capture');
+    const sourceField = document.getElementById('hero-single-input-field');
+    const sourceLabel = document.querySelector('label[for="hero-single-input-field"]');
+    const targetField = document.getElementById('hero-cold-guess-field');
+    const submit = document.getElementById('hero-door-submit');
+    const hint = document.getElementById('ignition-boundary');
+    const waitingForTarget = session.awaiting?.key === 'target';
+    if (sourceField) sourceField.hidden = waitingForTarget;
+    if (sourceLabel) sourceLabel.hidden = waitingForTarget;
+    if (submit) {
+      submit.textContent = waitingForTarget ? 'Continue to explanation' : 'Close source and explain';
+      submit.setAttribute('aria-label', submit.textContent);
+    }
+    if (waitingForTarget && hint) hint.textContent = 'Source saved. Retry the explanation target.';
+    if (waitingForTarget) requestAnimationFrame(() => targetField?.focus());
+  }
+
+  async function restoreNorthStarSession() {
+    let sessionId = '';
+    try { sessionId = sessionStorage.getItem(NORTH_STAR_SESSION_KEY) || ''; } catch { return; }
+    if (!sessionId) return;
+    try {
+      renderNorthStarState(await getSedaSession(sessionId));
+    } catch (err) {
+      if (![400, 404].includes(err?.status)) {
+        const error = document.getElementById('hero-door-error');
+        if (error) error.textContent = 'The saved session could not be reopened.';
+      }
+      try { sessionStorage.removeItem(NORTH_STAR_SESSION_KEY); } catch { /* no-op */ }
+      northStarSession = null;
+    }
   }
 
   function initHeroSingleInput() {
-    // C-prime door: concept textarea + cold-guess textarea + source toggle.
     const conceptField = document.getElementById('hero-single-input-field');
     const guessField = document.getElementById('hero-cold-guess-field');
     if (!(conceptField instanceof HTMLTextAreaElement)) return;
 
     const form = document.getElementById('hero-single-input');
 
-    // Enable/disable submit based on non-empty concept + cold guess.
     conceptField.addEventListener('input', _doorUpdateSubmitState);
     guessField?.addEventListener('input', _doorUpdateSubmitState);
     _doorUpdateSubmitState();
@@ -957,15 +988,8 @@ const App = (() => {
       if (isPrintable(e)) {
         AudioFX.playKeyClick();
       }
-      // Cmd/Ctrl+Enter submits — but only if the same gate the submit
-      // button uses says we're ready (≥2 chars trimmed AND not at the
-      // 9-concept cap). Previously this check just truthy-checked the
-      // trimmed value, which let a 1-char concept submit via keyboard
-      // even though the button was correctly disabled, AND let a kb
-      // user bypass cap-state by hitting Cmd+Enter.
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
-        if (!atCap && _doorReady()) {
+        if (_doorReady()) {
           e.preventDefault();
           form?.requestSubmit?.();
         }
@@ -973,11 +997,69 @@ const App = (() => {
     });
     guessField?.addEventListener('keydown', (e) => {
       if (isPrintable(e)) AudioFX.playKeyClick();
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && _doorReady()) {
+        e.preventDefault();
+        form?.requestSubmit?.();
+      }
     });
 
-    // Wire the source-attach toggle.
-    _bindDoorSourceAttach();
-
+    const reconstructionForm = document.getElementById('north-star-reconstruction-form');
+    const reconstructionField = document.getElementById('north-star-explanation-field');
+    const reconstructionSubmit = document.getElementById('north-star-reconstruction-submit');
+    const repairForm = document.getElementById('north-star-repair-form');
+    const repairField = document.getElementById('north-star-repair-field');
+    const repairSubmit = document.getElementById('north-star-repair-submit');
+    const updateReconstruction = () => {
+      if (reconstructionSubmit) reconstructionSubmit.disabled = northStarBusy || !reconstructionReady();
+    };
+    reconstructionField?.addEventListener('input', updateReconstruction);
+    reconstructionField?.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && reconstructionReady()) {
+        event.preventDefault();
+        reconstructionForm?.requestSubmit?.();
+      }
+    });
+    reconstructionForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!northStarSession || !reconstructionReady() || northStarBusy) return;
+      const error = document.getElementById('north-star-reconstruction-error');
+      setNorthStarBusy(true);
+      if (error) error.textContent = '';
+      try {
+        renderNorthStarState(await sendNorthStarText(northStarSession, reconstructionField.value));
+      } catch (err) {
+        if (error) error.textContent = err?.message || 'The explanation could not be saved. Try again.';
+      } finally {
+        setNorthStarBusy(false);
+      }
+    });
+    const updateRepair = () => {
+      if (repairSubmit) repairSubmit.disabled = northStarBusy || !repairReady();
+    };
+    repairField?.addEventListener('input', updateRepair);
+    repairField?.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && repairReady()) {
+        event.preventDefault();
+        repairForm?.requestSubmit?.();
+      }
+    });
+    repairForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!northStarSession || !repairReady() || northStarBusy) return;
+      const error = document.getElementById('north-star-repair-error');
+      setNorthStarBusy(true);
+      if (error) error.textContent = '';
+      try {
+        renderNorthStarState(await sendNorthStarText(northStarSession, repairField.value));
+      } catch (err) {
+        if (error) error.textContent = err?.message || 'The repair could not be saved. Try again.';
+      } finally {
+        setNorthStarBusy(false);
+      }
+    });
+    document.getElementById('north-star-gap-retry')
+      ?.addEventListener('click', () => void evaluateNorthStarGap());
+    void restoreNorthStarSession();
   }
 
 
@@ -3377,7 +3459,7 @@ const App = (() => {
   function syncViewFromLocation() {
     const conceptId = sessionRouteConceptId();
     if (!conceptId) {
-      showDashboard();
+      showIgnition();
       return;
     }
 
@@ -3409,44 +3491,23 @@ const App = (() => {
   }
 
   function renderIgnitionGate() {
-    const atCap = loadConcepts().length >= BOARD_SLOT_COUNT;
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
     const field = document.getElementById('hero-single-input-field');
     const guessField = document.getElementById('hero-cold-guess-field');
     const submit = document.getElementById('hero-door-submit');
-    const sourceAttach = document.getElementById('hero-source-attach');
-    const capCta = gate?.querySelector('.ig-button');
 
-    if (gate) gate.hidden = !atCap;
-    if (form) form.dataset.state = atCap ? 'locked' : '';
-
-    // Focus handoff MUST run BEFORE disabling the field. Setting
-    // .disabled on a focused element synchronously blurs it, which
-    // shifts document.activeElement to <body> immediately. If we
-    // disable first, the activeElement === field check below always
-    // fails and the keyboard user gets stranded with focus on body.
-    if (atCap && document.activeElement === field && capCta) {
-      /* c8 ignore next -- browser focus handoff is covered by manual QA */
-      capCta.focus();
-    }
-
-    if (field) field.disabled = atCap;
-    if (guessField) guessField.disabled = atCap;
-    // pointer-events:none on the form's data-state="locked" stops mouse
-    // input but does not prevent keyboard focus; setting disabled also
-    // removes the button from the tab order so kb users can't Enter it
-    // and accidentally expand the source panel while at cap.
-    if (sourceAttach) sourceAttach.disabled = atCap;
-    if (submit) {
-      submit.disabled = atCap || !_doorReady();
-    }
+    if (gate) gate.hidden = true;
+    if (form) form.dataset.state = northStarBusy ? 'busy' : '';
+    if (field) field.disabled = northStarBusy;
+    if (guessField) guessField.disabled = northStarBusy;
+    if (submit) submit.disabled = northStarBusy || !_doorReady();
 
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.classList.toggle('at-cap', atCap);
-      el.title = atCap ? 'Library full. Retire a session to add another.' : '';
+      el.classList.remove('at-cap');
+      el.title = '';
     });
   }
 
@@ -3606,7 +3667,7 @@ const App = (() => {
   // calls teardownMapView() which reads drillState — TDZ-unsafe earlier.
   if (routeConceptId && !routeConcept) {
     showMissingSessionFallback();
-  } else if (!toLoad) {
+  } else if (!routeConcept && !resumeConcept) {
     showIgnition();
   } else {
     activateConceptSelection(toLoad.id);
@@ -5800,10 +5861,6 @@ const App = (() => {
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     toggleTheme, setTheme, runHeroAction,
     _readFile,  // exposed for concept-create.js's source-panel file uploader
-    // C-prime door state: pending source from the door's + add source material panel.
-    // Set by the source-attach onAttach callback; cleared by clearHeroThresholdComposer.
-    // Null when no source is attached at the door.
-    _pendingDoorSource: null,
     // C-prime launch pad — Round D implementation.
     // showLaunchPad is called by the no-source door path in runHeroAction after
     // writing the pending shell to sessionStorage. It hides the ignition view and
