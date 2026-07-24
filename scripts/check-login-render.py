@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import json
 import sys
 from pathlib import Path
 
@@ -24,9 +25,10 @@ from auth.router import (
 from main import app
 
 
-LOGIN_HTML = ROOT / "public" / "login.html"
-LOGIN_CSS = ROOT / "public" / "css" / "login.css"
-LOGIN_JS = ROOT / "public" / "js" / "login.js"
+LOGIN_ASSETS = ROOT / "auth" / "login_assets"
+LOGIN_HTML = LOGIN_ASSETS / "login.html"
+LOGIN_CSS = LOGIN_ASSETS / "login.css"
+LOGIN_JS = LOGIN_ASSETS / "login.js"
 
 
 def main() -> None:
@@ -34,6 +36,7 @@ def main() -> None:
     css = LOGIN_CSS.read_text(encoding="utf-8")
     js = LOGIN_JS.read_text(encoding="utf-8")
     router = (ROOT / "auth" / "router.py").read_text(encoding="utf-8")
+    vercel = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
 
     with TestClient(app) as client:
         response = client.get(
@@ -83,6 +86,7 @@ def main() -> None:
     assert redirect.headers["location"] == "/login?return_to=%2Flibrary"
     assert "_EMBEDDED_LOGIN_CSS" not in router
     assert "_EMBEDDED_LOGIN_JS" not in router
+    assert "auth/login_assets/**" in vercel["functions"]["api/index.py"]["includeFiles"]
 
     invalid_templates = (
         _LOGIN_JS_MARKER,

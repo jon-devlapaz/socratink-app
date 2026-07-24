@@ -15,9 +15,10 @@ from runtime_env import dev_autoguest_enabled, local_auth_bypass_enabled
 from .service import AuthConfigurationError, AuthSessionState, SupabaseAuthService
 
 auth_router = APIRouter()
-_login_css = Path(__file__).resolve().parent.parent / "public" / "css" / "login.css"
-_login_js = Path(__file__).resolve().parent.parent / "public" / "js" / "login.js"
-_login_html = Path(__file__).resolve().parent.parent / "public" / "login.html"
+_login_assets = Path(__file__).resolve().parent / "login_assets"
+_login_css = _login_assets / "login.css"
+_login_js = _login_assets / "login.js"
+_login_html = _login_assets / "login.html"
 logger = logging.getLogger(__name__)
 GUEST_COOKIE_NAME = "socratink_guest"
 
