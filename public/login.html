@@ -14,9 +14,16 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="stylesheet" href="/css/tokens.css?v=3">
-  <link rel="stylesheet" href="/css/login.css?v=6">
+  <!-- socratink-login-css -->
+  <script>
+    try {
+      if (localStorage.getItem('socratink.motion') === 'reduced') {
+        document.documentElement.dataset.motion = 'reduced';
+      }
+    } catch (err) { /* localStorage unavailable; fall through */ }
+  </script>
 </head>
-<body data-mode="signin">
+<body data-mode="signin" data-login-template="public">
   <div id="stardust-container" aria-hidden="true"></div>
   <div class="aurora aurora-a" data-parallax="0.05"></div>
   <div class="aurora aurora-b" data-parallax="0.03"></div>
@@ -25,18 +32,22 @@
   <main class="login-shell">
     <div class="login-stage">
       <div class="brand-lockup">
-        <img src="/brand/socratink-mark-square.png?v=1" alt="socratink mark" class="brand-mark">
-        <h1 class="brand-title">socra<span class="brand-title-accent">tink</span></h1>
-        <p class="brand-pronunciation">sō·krə·tink</p>
+        <p class="brand-title">socra<span class="brand-title-accent">tink</span></p>
       </div>
 
       <section class="login-card" aria-labelledby="login-heading">
         <div class="login-card-inner">
-          <h2 id="login-heading" class="sr-only">Login</h2>
+          <div id="auth-status-banner" class="auth-status-banner" role="status" aria-live="polite" aria-atomic="true" hidden></div>
 
-          <div id="auth-status-banner" class="auth-status-banner" hidden></div>
+          <div class="login-introduction">
+            <h1 id="login-heading">Close the source. Explain it. See what survives.</h1>
+          </div>
 
           <div class="social-stack">
+            <a id="guest-continue-link" class="guest-button" href="/">
+              Start without an account
+            </a>
+            <div class="login-divider" aria-hidden="true"><span>or</span></div>
             <a id="google-login-link" class="google-button" href="/auth/google">
               <svg class="google-mark" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
@@ -44,32 +55,14 @@
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
               </svg>
-              <span id="google-label">Continue with Google</span>
+              <span id="google-label">Start with a Google account</span>
             </a>
-            <a id="guest-continue-link" class="guest-button" href="/">
-              continue as guest
-            </a>
-            <div class="icon-chip-row">
-              <a class="coffee-button" href="https://buymeacoffee.com/socratink" target="_blank" rel="noopener noreferrer" aria-label="Support the build on Buy Me a Coffee">
-                <svg class="coffee-cup" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M6.75 8.5h8.5v5.25a4.25 4.25 0 0 1-8.5 0V8.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
-                  <path d="M15.25 10h1.25a2 2 0 0 1 0 4h-1.25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                  <path d="M5.5 18.5h11.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-                  <path d="M8.5 5.5c0-.9.75-1.1.75-2M12 5.5c0-.9.75-1.1.75-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
-                </svg>
-              </a>
-              <a class="discord-link" href="https://discord.gg/ZEHqpC6vMx" target="_blank" rel="noopener noreferrer" aria-label="Join the socratink Discord">
-                <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M19.54 5.34A17.3 17.3 0 0 0 15.3 4l-.2.38a12.6 12.6 0 0 0-3.1-.38 12.6 12.6 0 0 0-3.1.38L8.7 4a17.3 17.3 0 0 0-4.24 1.34C1.73 9.38.98 13.3 1.36 17.16a17.56 17.56 0 0 0 5.3 2.66l1.08-1.46a11.2 11.2 0 0 1-1.78-.86l.44-.34a12.43 12.43 0 0 0 11.2 0l.44.34c-.56.33-1.15.62-1.78.86l1.08 1.46a17.56 17.56 0 0 0 5.3-2.66c.46-4.48-.72-8.36-3.1-11.82ZM8.52 14.9c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Zm6.96 0c-1.04 0-1.9-.96-1.9-2.14 0-1.18.84-2.14 1.9-2.14s1.92.96 1.9 2.14c0 1.18-.84 2.14-1.9 2.14Z" fill="currentColor"></path>
-                </svg>
-              </a>
-            </div>
           </div>
         </div>
       </section>
     </div>
   </main>
 
-  <script type="module" src="/js/login.js?v=2"></script>
+  <!-- socratink-login-js -->
 </body>
 </html>

@@ -78,6 +78,9 @@ fi
 echo "[doctor] mypy baseline (mypy.ini scope)..."
 .venv/bin/mypy . >/dev/null
 
+echo "[doctor] login render contract..."
+.venv/bin/python scripts/check-login-render.py
+
 echo "[doctor] auth/env preflight..."
 .venv/bin/python scripts/check-local-auth.py --port "$PORT"
 
