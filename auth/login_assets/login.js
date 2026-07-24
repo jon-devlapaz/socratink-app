@@ -124,7 +124,7 @@ async function bootstrap() {
   try {
     const session = await fetchSession();
     if (session.guest_mode) {
-      setBanner("Guest mode is active. Continue with Google to save and sync, or return to the app.", "default");
+      setBanner("Guest mode is active. Continue with Google, or return to the app.", "default");
       if (guestLink) {
         guestLink.href = safeReturnTo();
         guestLink.textContent = "return to app";

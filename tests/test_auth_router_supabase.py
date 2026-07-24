@@ -5,6 +5,7 @@ Uses a fake service matching the SupabaseAuthService interface.
 
 import unittest
 import os
+from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -12,7 +13,13 @@ from cryptography.fernet import Fernet
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from auth.router import GUEST_COOKIE_NAME, _local_e2e_guest_bootstrap_enabled, auth_router
+from auth.router import (
+    GUEST_COOKIE_NAME,
+    _inline_login_assets,
+    _local_e2e_guest_bootstrap_enabled,
+    _read_login_asset,
+    auth_router,
+)
 from auth.service import (
     AuthConfigurationError,
     AuthSessionState,
@@ -113,6 +120,15 @@ def build_client(
 
 
 class LoginRouteTests(unittest.TestCase):
+    def test_required_login_asset_read_failure_is_not_hidden(self):
+        with patch.object(Path, "read_text", side_effect=OSError("missing")):
+            with self.assertRaisesRegex(OSError, "missing"):
+                _read_login_asset(Path("missing.html"))
+
+    def test_login_template_requires_each_asset_marker_once(self):
+        with self.assertRaisesRegex(RuntimeError, "exactly one"):
+            _inline_login_assets("<!-- socratink-login-css -->", "css", "js")
+
     def setUp(self):
         self._env_keys = (
             "SOCRATINK_DEV_AUTOGUEST",
@@ -167,7 +183,7 @@ class LoginRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.text
         self.assertIn("Continue with Google", body)
-        self.assertIn("continue as guest", body)
+        self.assertIn('id="guest-continue-link"', body)
 
     def test_dev_autoguest_login_redirects_to_guest_without_error(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
@@ -201,7 +217,7 @@ class LoginRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Continue with Google", response.text)
-        self.assertIn("continue as guest", response.text)
+        self.assertIn('id="guest-continue-link"', response.text)
 
     def test_dev_autoguest_return_to_error_renders_login(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
@@ -215,7 +231,7 @@ class LoginRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Continue with Google", response.text)
-        self.assertIn("continue as guest", response.text)
+        self.assertIn('id="guest-continue-link"', response.text)
 
     def test_login_clears_invalid_session_cookie_on_html_response(self):
         service = FakeSupabaseAuthService(enabled=True)
