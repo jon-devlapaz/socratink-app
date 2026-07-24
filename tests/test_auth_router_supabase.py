@@ -5,6 +5,7 @@ Uses a fake service matching the SupabaseAuthService interface.
 
 import unittest
 import os
+from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -12,7 +13,13 @@ from cryptography.fernet import Fernet
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from auth.router import GUEST_COOKIE_NAME, _local_e2e_guest_bootstrap_enabled, auth_router
+from auth.router import (
+    GUEST_COOKIE_NAME,
+    _inline_login_assets,
+    _local_e2e_guest_bootstrap_enabled,
+    _read_login_asset,
+    auth_router,
+)
 from auth.service import (
     AuthConfigurationError,
     AuthSessionState,
@@ -113,6 +120,15 @@ def build_client(
 
 
 class LoginRouteTests(unittest.TestCase):
+    def test_required_login_asset_read_failure_is_not_hidden(self):
+        with patch.object(Path, "read_text", side_effect=OSError("missing")):
+            with self.assertRaisesRegex(OSError, "missing"):
+                _read_login_asset(Path("missing.html"))
+
+    def test_login_template_requires_each_asset_marker_once(self):
+        with self.assertRaisesRegex(RuntimeError, "exactly one"):
+            _inline_login_assets("<!-- socratink-login-css -->", "css", "js")
+
     def setUp(self):
         self._env_keys = (
             "SOCRATINK_DEV_AUTOGUEST",
