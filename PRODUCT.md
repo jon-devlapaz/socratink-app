@@ -1,90 +1,104 @@
-# Product
+# Socratink product truth
 
-> Strategic product brief. This file defines who socratink is for, what promise it makes, and what category mistakes it refuses. It is not the UX doctrine. For learner flow, state claims, copy rules, and sensory behavior, read [DESIGN.md](./DESIGN.md).
+Authority: `socratink-north-star`, decided by the founder and effective 22 July 2026. The canonical note is `/Users/jondev/dev/socratink/research/socratink-research-vault/60-product-doctrine/north-star.md`. This repository contract mirrors that doctrine for implementation. If they conflict, the canonical note wins.
 
-## Register
+## Who it is for
 
-product
+Working professionals learning technical material for their jobs.
 
-## Users
+The first product accepts one narrow input: technical text the learner pastes into Socratink.
 
-Learners who want to know what they can actually reconstruct, not what they can recognize after reading. They arrive with source material, a concept name, notes, transcripts, articles, or a rough starting model, then use socratink to expose gaps, repair them, and return later for spaced reconstruction.
+## The job
 
-The main context is focused study. The learner may be unsure, tired, or vocabulary-poor, so the interface must reduce shame and ambiguity without giving away the mechanism before generation.
+Help me discover what I can explain without the source, where my explanation breaks, and what I need to reconstruct later so I can use the material at work.
 
-## Product Purpose
+## The promise
 
-socratink is an evidence-weighted map for learning by reconstruction. It turns material into a provisional concept map, asks the learner for an unscored cold attempt, gives targeted study only after that attempt, and records graph truth only when spaced re-drill provides evidence.
+**Close the source. Explain it. See what survives.**
 
-Success means the learner can trust the map because it never rewards mere exposure. The graph shows what socratink has evidence for, not what the learner knows.
+Socratink preserves the learner's exact explanations, locates the important gap against the source, supports a learner-authored repair, and later asks for another unaided explanation so the learner can see what changed.
 
-## Product Doctrine
+## The product loop
 
-socratink's core doctrine is maximum agent-assisted learning, minimum agent-replaced thinking.
+1. Paste one piece of technical material.
+2. Name one explanation target.
+3. Hide the source and explain it from memory.
+4. Compare the attempt with the source and locate the consequential gap.
+5. Write a repair in the learner's own words.
+6. Leave, then return after real elapsed time.
+7. Reconstruct again without the source.
+8. Show the difference without claiming more than the attempts prove.
 
-The product should use agents to reduce friction around structure, gap localization, retrieval scheduling, connection-making, and reflection. It must not use agents to replace the learner's generative work. The learner's own reconstruction is the event that matters. Everything else is scaffolding around that event.
+SEDA may orchestrate this loop internally. It is not the learner-facing product or navigation model.
 
-The product through-line is: socratink turns material into reconstruction targets, uses learner attempts to expose repairable gaps, and only records learning evidence when the learner reconstructs from memory under the right conditions.
+## The evidence boundary
 
-socratink is not teaching by explaining better. It is teaching by making the learner's current model visible, repairable, and re-testable.
+- The source, goal, model feedback, and repair guidance are context.
+- Learner-generated attempts are evidence.
+- Immediate fluency, completion, confidence, and AI agreement are not mastery.
+- Only eligible source-hidden reconstruction across time can strengthen the product's claim about what the learner can currently explain.
+- A reconstruction must be checked against the active target. Plausible prose is not correctness evidence.
+- The graph records this evidence. It is not the leading promise and must never imply progress the learner did not demonstrate.
 
-The start of the product outputs a provisional cognitive object, not a lesson:
+## Product requirements
 
-- with an imported source, extraction produces a provisional map
-- without a source, the launch attempt produces a smallest actionable route
-- in both cases, the first serious product surface is a draft route plus a first reconstruction target
-- graph truth begins only when the learner generates reconstruction evidence
+| ID | Obligation | Acceptance signal |
+|---|---|---|
+| PT-1 | Socratink must accept pasted technical text and one explanation target. | A working professional can begin without creating a course, graph, account, or study plan. |
+| PT-2 | Socratink must hide answer-bearing source and guidance during each reconstruction. | Neither the first nor return explanation surface reveals the source, prior guidance, or prior attempt. |
+| PT-3 | Socratink must preserve each submitted explanation exactly. | Reloading the session returns the original text and submission time unchanged. |
+| PT-4 | Socratink must check the explanation against both the active target and source. | Gap feedback identifies one consequential target-relevant break grounded in the source. |
+| PT-5 | Socratink must require the learner to author the repair. | Model output may support the repair but cannot submit or record it for the learner. |
+| PT-6 | Socratink must keep guidance, repair completion, confidence, and AI agreement from strengthening learner evidence. | None of those events changes the evidence claim or displays mastery. |
+| PT-7 | Socratink must require real elapsed time before the return reconstruction becomes eligible. | The learner cannot complete the return reconstruction immediately after repair. |
+| PT-8 | Socratink must restrict comparison claims to the exact recorded attempts. | The comparison describes observable differences and uncertainty without inferring mastery, retention, or ability. |
+| PT-9 | Socratink must derive every visible graph claim from learner reconstruction evidence. | Removing the learner attempts removes the corresponding graph claim; context and model output alone cannot create it. |
 
-This doctrine makes the concept view the first real learning surface. Its job is to reveal the proposed shape of a concept and ask the learner to make the first node real in their own words. It should feel like a draft route artifact with an active reconstruction node, not a study page, dashboard, content browser, or progress tracker.
+These requirements derive from the founder-approved north star. Each acceptance signal is the minimum behavioral proof for implementation.
 
-## Moat Thesis
+## First product slice
 
-socratink's moat is not generating learning content. Content generation, concept maps, Feynman notes, AI tutors, summaries, and polished study pages are copyable.
+The first slice must support:
 
-The defensible asset is a longitudinal reconstruction graph: a record of what a learner can actually generate, where they break down, how they repair, when they can reconstruct again under spacing, and which future challenge should come next.
+- one pasted technical source
+- one explanation target
+- one source-hidden first explanation
+- one source-grounded consequential gap
+- one learner-authored repair
+- one genuinely delayed source-hidden return explanation
+- one honest comparison of the exact attempts
+- same-device session resume
 
-The product compounds when it preserves four layers:
+The first slice will not include:
 
-- **Proposed structure**: provisional maps and smallest actionable routes generated from sources, launch attempts, and later concept connections.
-- **Learner evidence**: cold attempts, gaps, repair text, study reveals, and spaced re-drills.
-- **Transfer context**: relationships between concepts, prerequisites, analogies, recurring mechanisms, and contrasts.
-- **Metacognitive memory**: patterns in how the learner learns, such as missing causal triggers, overusing recognition, needing examples before abstraction, or improving after repair.
+- graph-first storytelling, dashboards, Desk, or Library
+- visible SEDA phases or agent choreography
+- generic chat, generated summaries, or generated flashcards as the center of value
+- broad all-learner positioning
+- accounts, synchronization, collaboration, payments, or teams
+- URL, document, audio, or video ingestion
+- themes, sound, voice, animation systems, gamification, scores, or mastery labels
 
-Feynman notes, concept-to-concept connections, and a long-lived metacognitive agent are strategic only when they sit on top of this evidence graph. If they drift into generic AI summary, chat, or coaching, they weaken the product.
+Existing code does not create a product requirement.
 
-The durable promise is: socratink helps the learner face the next challenge at the edge of their reconstructive capability, with agents doing everything around the thinking except the thinking itself.
+## Category and decision filter
 
-## Product Promise
+Socratink is reconstruction practice. It is not a generic AI tutor, summarizer, flashcard generator, spaced-repetition clone, or knowledge-graph product.
 
-The promise is small, specific, and load-bearing:
+Build a change only when it materially improves at least one of these:
 
-- help the learner see what they can actually reconstruct
-- reduce prep friction without faking understanding
-- make the graph trustworthy by tying visible progress to recorded evidence
+- reaching the first unaided explanation
+- grounding a precise, useful gap
+- enabling learner-authored repair without answer substitution
+- getting the learner back for a genuinely delayed reconstruction
+- making longitudinal evidence more durable, truthful, or understandable
 
-If a feature makes socratink feel bigger, noisier, more diagnostic, or more congratulatory without increasing truthful reconstruction evidence, it is probably off-strategy.
+## Validation boundary
 
-## Brand Personality
+The north-star behavior is a working professional returning after real elapsed time and reconstructing a technical idea more completely without the source, while Socratink preserves both attempts and reports the change honestly.
 
-Calm, precise, Socratic.
+This is direction, not proof of demand or learning efficacy. Expansion requires working professionals to use the loop with real job material, return, and show willingness to keep using or pay for it. Shipping, tests, and repository activity are not product validation.
 
-The product should feel like a quiet reading room with a rigorous tutor present. It should be patient without being soft, exact without being clinical, and honest about uncertainty. socratink is lowercase in product copy.
+## Deferred design
 
-## Strategic Non-Goals
-
-- Quiz apps that score cold attempts or frame struggle as failure.
-- Course dashboards that imply completion from reading.
-- Gamified learning surfaces with streaks, XP, badges, leaderboards, ranks, combos, or achievement popups.
-- Generic AI tutor branding that claims to know the learner's mind.
-- Diagnostic dashboards with beginner, intermediate, advanced, schema, or learning-style labels.
-- Clinical white SaaS, neon dark dashboards, stock education imagery, emoji-led encouragement, and hype copy.
-- Graphs that look like content browsers, progress bars, or mastery charts.
-
-## Boundary
-
-`PRODUCT.md` is intentionally orthogonal to `DESIGN.md`.
-
-- `PRODUCT.md` owns users, purpose, promise, brand posture, and strategic non-goals.
-- `DESIGN.md` owns learner flow, state semantics, copy rules, visual grammar, motion, and refusal mechanics at the interface level.
-
-If a statement starts to specify what a screen shows, when a state mutates, how copy should sound on a particular surface, or how the interface should feel in motion, it belongs in `DESIGN.md`, not here.
+Product truth does not choose the framework, storage engine, model provider, visual system, deployment platform, exact return interval, or graph presentation. Use the smallest design that satisfies the requirements and replace it only when observed use reaches its limit.
