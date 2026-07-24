@@ -3459,7 +3459,7 @@ const App = (() => {
   function syncViewFromLocation() {
     const conceptId = sessionRouteConceptId();
     if (!conceptId) {
-      showIgnition();
+      showDashboard();
       return;
     }
 
