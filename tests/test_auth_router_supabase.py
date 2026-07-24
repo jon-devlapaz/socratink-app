@@ -167,7 +167,7 @@ class LoginRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         body = response.text
         self.assertIn("Continue with Google", body)
-        self.assertIn("continue as guest", body)
+        self.assertIn('id="guest-continue-link"', body)
 
     def test_dev_autoguest_login_redirects_to_guest_without_error(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
@@ -201,7 +201,7 @@ class LoginRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Continue with Google", response.text)
-        self.assertIn("continue as guest", response.text)
+        self.assertIn('id="guest-continue-link"', response.text)
 
     def test_dev_autoguest_return_to_error_renders_login(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
@@ -215,7 +215,7 @@ class LoginRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Continue with Google", response.text)
-        self.assertIn("continue as guest", response.text)
+        self.assertIn('id="guest-continue-link"', response.text)
 
     def test_login_clears_invalid_session_cookie_on_html_response(self):
         service = FakeSupabaseAuthService(enabled=True)
