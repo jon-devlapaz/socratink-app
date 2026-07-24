@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import re
-import json
 from urllib.parse import urljoin
 
 from playwright.sync_api import Page, expect
@@ -21,120 +20,94 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     expect(page.locator("#concept-list")).to_be_attached()
 
 
-def test_door_forwards_normalized_concept_and_cold_guess(
-    clean_page: Page, base_url: str
+def _enter_reconstruction(
+    clean_page: Page,
+    base_url: str,
+    *,
+    source: str,
+    target: str,
 ) -> None:
-    captured_payloads: list[dict] = []
-
-    def fulfill_extract(route) -> None:
-        payload = route.request.post_data_json
-        captured_payloads.append(payload)
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({
-                "provisional_map": {
-                    "metadata": {
-                        "core_thesis": "Sodium rushing into a neuron starts an electrical signal.",
-                    },
-                    "backbone": [{"id": "b1", "principle": "Sodium influx changes voltage."}],
-                    "clusters": [{
-                        "id": "c1",
-                        "label": "Sodium influx",
-                        "subnodes": [{
-                            "id": "c1_s1",
-                            "label": "Sodium influx",
-                            "mechanism": "Sodium entering the neuron changes membrane voltage.",
-                        }],
-                    }],
-                },
-            }),
-        )
-
-    clean_page.route("**/api/extract", fulfill_extract)
     _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.locator("#nav-ignition").click()
-    clean_page.locator("#hero-single-input-field").fill(
-        "I want to understand why sodium rushing into a neuron starts an electrical signal"
-    )
-    clean_page.locator("#hero-cold-guess-field").fill(
-        "I think sodium crosses the membrane and that changes the electrical state."
-    )
+    clean_page.locator("#hero-single-input-field").fill(source)
+    clean_page.locator("#hero-cold-guess-field").fill(target)
     clean_page.locator("#hero-door-submit").click()
-
-    expect(clean_page.locator("#extract-overlay")).to_be_visible()
-    assert captured_payloads
-    assert captured_payloads[0]["name"] == "sodium rushing into a neuron starts an electrical signal"
-    assert captured_payloads[0]["starting_sketch"] == (
-        "I think sodium crosses the membrane and that changes the electrical state."
-    )
-    assert captured_payloads[0]["source"] is None
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
 
 
-def test_source_attached_door_forwards_source_and_cold_guess(
+def test_intake_hides_source_before_reconstruction(
     clean_page: Page, base_url: str
 ) -> None:
-    captured_payloads: list[dict] = []
-
-    def fulfill_extract(route) -> None:
-        captured_payloads.append(route.request.post_data_json)
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({
-                "provisional_map": {
-                    "metadata": {"core_thesis": "Practice improves recall."},
-                    "backbone": [{"id": "b1", "principle": "Retrieval strengthens memory."}],
-                    "clusters": [{
-                        "id": "c1",
-                        "label": "Retrieval",
-                        "subnodes": [{
-                            "id": "c1_s1",
-                            "label": "Retrieval",
-                            "mechanism": "Retrieval practice strengthens recall.",
-                        }],
-                    }],
-                },
-            }),
-        )
-
-    clean_page.route("**/api/extract", fulfill_extract)
-    _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.locator("#nav-ignition").click()
-    clean_page.locator("#hero-single-input-field").fill("why practice improves recall")
-    clean_page.locator("#hero-cold-guess-field").fill("Trying to remember makes the memory easier to find.")
-    clean_page.locator("#hero-source-attach").click()
-    clean_page.locator("#hero-source-panel .overlay-textarea").fill("retrieval practice source note")
-    clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
-    clean_page.locator("#hero-door-submit").click()
-
-    expect(clean_page.locator("#extract-overlay")).to_be_visible()
-    assert captured_payloads
-    assert captured_payloads[0]["starting_sketch"] == (
-        "Trying to remember makes the memory easier to find."
+    source = "Voltage-gated sodium channels open before sodium enters the neuron."
+    target = "Explain why sodium influx starts an electrical signal."
+    _enter_reconstruction(
+        clean_page,
+        base_url,
+        source=source,
+        target=target,
     )
-    assert captured_payloads[0]["source"] == {
-        "type": "text",
-        "text": "retrieval practice source note",
-    }
+
+    expect(clean_page.locator("#hero-single-input")).to_be_hidden()
+    expect(clean_page.locator("#north-star-explanation-field")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert source not in clean_page.locator("body").inner_text()
+
+
+def test_exact_reconstruction_and_repair_survive_reload(
+    clean_page: Page, base_url: str
+) -> None:
+    source = "Retrieval practice strengthens access to a memory by requiring recall."
+    target = "Explain why retrieval practice improves later recall."
+    explanation = "  Trying to retrieve makes the route to the memory easier to use.  "
+    repair = "  The effortful retrieval itself strengthens later access.  "
+    _enter_reconstruction(
+        clean_page,
+        base_url,
+        source=source,
+        target=target,
+    )
+
+    clean_page.locator("#north-star-explanation-field").fill(explanation)
+    clean_page.locator("#north-star-reconstruction-submit").click()
+    expect(clean_page.locator("#north-star-saved")).to_be_visible()
+    assert (
+        clean_page.locator("#north-star-saved-explanation").text_content()
+        == explanation
+    )
+    expect(clean_page.locator("#north-star-repair-form")).to_be_visible(
+        timeout=20_000
+    )
+    clean_page.locator("#north-star-repair-field").fill(repair)
+    clean_page.locator("#north-star-repair-submit").click()
+    expect(clean_page.locator("#north-star-repair-saved")).to_be_visible()
+    assert (
+        clean_page.locator("#north-star-repair-saved-text").text_content()
+        == repair
+    )
+
+    clean_page.reload()
+    expect(clean_page.locator("#north-star-saved")).to_be_visible()
+    assert (
+        clean_page.locator("#north-star-saved-explanation").text_content()
+        == explanation
+    )
+    assert (
+        clean_page.locator("#north-star-repair-saved-text").text_content()
+        == repair
+    )
 
 
 def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_url: str) -> None:
     _enter_app_shell_as_guest(clean_page, base_url)
 
-    clean_page.locator("#hero-cold-guess-field").press("x")
-    clean_page.locator("#hero-source-attach").click()
-    expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
-    clean_page.locator("#hero-source-panel .overlay-textarea").fill("source text")
-    clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
-    expect(clean_page.locator("#hero-source-value")).to_have_text("11 chars pasted")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("Remove")
-    clean_page.locator("#hero-source-attach").click()
-    clean_page.locator("#hero-source-attach").click()
-    expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
-    clean_page.locator("#hero-source-panel .creation-source-panel-cancel").click()
-    expect(clean_page.locator("#hero-source-value")).to_have_text("Optional")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("Attach")
+    expect(clean_page.locator("#hero-single-input-field")).to_have_attribute(
+        "aria-label", "Source material"
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_attribute(
+        "aria-label", "Explanation target"
+    )
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_attached()
+    expect(clean_page.locator("#north-star-saved")).to_be_attached()
 
     clean_page.evaluate(
         """() => {

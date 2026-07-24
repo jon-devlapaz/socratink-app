@@ -510,10 +510,10 @@ def test_drill_chamber_opens_inline_inside_concept_view(
     )
 
 
-def test_mobile_first_session_actions_fit_without_horizontal_shift(
+def test_mobile_intake_and_chamber_actions_fit_without_horizontal_shift(
     clean_page: Page, base_url: str
 ) -> None:
-    """Primary Door and chamber actions remain tappable at narrow widths."""
+    """Primary intake and chamber actions remain tappable at narrow widths."""
     clean_page.set_viewport_size({"width": 390, "height": 844})
     _enter_app_shell_as_guest(clean_page, base_url)
 

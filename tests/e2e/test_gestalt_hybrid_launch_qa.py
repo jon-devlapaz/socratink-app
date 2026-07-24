@@ -1,14 +1,14 @@
-"""QA browser pass for the source-less sketch-to-scaffold loop.
+"""QA browser pass for the independently seeded gestalt and attempt surfaces.
 
 Run against a local dev server:
 
     SOCRATINK_E2E_LOCAL_GUEST=1 SOCRATINK_TUI_FAKE_LLM=1 \
       pytest tests/e2e/test_gestalt_hybrid_launch_qa.py -v
 
-This test uses the real Ignition and Launch Pad UI. It mocks extraction and the
-retired drill seam while the app-local SEDA route uses the deterministic fake
-bridge, so the pass still catches frontend regressions, console errors, failed
-requests, and unexpected 4xx/5xx responses.
+This test seeds the retired entrance's output directly, then checks the live
+concept, SEDA and attempt surfaces. It catches frontend regressions, console
+errors, failed requests and unexpected 4xx/5xx responses without preserving
+the retired Door/extract bootstrap.
 """
 
 from __future__ import annotations
@@ -146,13 +146,13 @@ def _mock_extract_response() -> dict:
     }
 
 
-def test_source_less_launch_pad_end_to_end_qa(
+def test_source_less_gestalt_downstream_qa(
     clean_page: Page,
     base_url: str,
     captured: dict,
     same_origin,
 ) -> None:
-    """Real browser QA pass: sketch -> tailored prompt -> draft -> reveal -> repair."""
+    """Seeded browser QA pass: route -> tailored prompt -> learner attempt."""
 
     sketch_text = (
         "I manage facilities for a small clinic. I think thermostats turn heat on when "
@@ -160,25 +160,89 @@ def test_source_less_launch_pad_end_to_end_qa(
     )
     page_errors = _page_errors(clean_page)
     bad_responses = _same_origin_response_failures(clean_page, same_origin)
-    requests_seen: list[str] = []
     drill_payloads: list[dict] = []
+    session_payloads: list[dict] = []
+    turn_payloads: list[dict] = []
+    provisional_map = _mock_extract_response()["provisional_map"]
+    first_source = provisional_map["clusters"][0]["subnodes"][0]
+    first_node = {
+        "id": first_source["id"],
+        "kc_id": first_source["id"],
+        "label": first_source["label"],
+        "mechanism": first_source["study_note"],
+        "learner_prompt": first_source["learner_scaffold"]["entry_prompt"],
+        "evidence_goal": first_source["learner_scaffold"]["evidence_goal"],
+    }
+    route_event = {
+        "type": "route_generated",
+        "first_node": first_node,
+        "node_ids": [first_node["id"]],
+        "provisional_map": provisional_map,
+    }
+    source_less_route = {
+        "contractVersion": 1,
+        "status": "ready",
+        "firstNode": first_node,
+        "provisionalMap": provisional_map,
+    }
 
-    def fulfill_extract(route) -> None:
-        payload = route.request.post_data_json
-        requests_seen.append(f"POST /api/extract {payload['name']}")
-        assert payload["name"] == "Thermostat feedback loop"
-        assert payload["starting_sketch"] == sketch_text
-        assert payload["source"] is None
+    def ready_session_body() -> dict:
+        return {
+            "sessionId": "gestalt-session",
+            "sessionVersion": 1,
+            "status": "awaiting_input",
+            "awaiting": {
+                "key": "cold_attempt",
+                "ctaText": first_node["learner_prompt"],
+            },
+            "events": [route_event],
+            "sourceLessRoute": source_less_route,
+            "caseComplete": False,
+            "record": None,
+        }
+
+    def fulfill_session(route) -> None:
+        session_payloads.append(route.request.post_data_json)
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps(ready_session_body()),
+        )
+
+    def fulfill_resume(route) -> None:
         route.fulfill(
             status=200,
             content_type="application/json",
-            body=json.dumps(_mock_extract_response()),
+            body=json.dumps(ready_session_body()),
+        )
+
+    def fulfill_turn(route) -> None:
+        payload = route.request.post_data_json
+        turn_payloads.append(payload)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({
+                **ready_session_body(),
+                "sessionVersion": 2,
+                "awaiting": {"key": "continue", "ctaText": "Continue."},
+                "events": [
+                    route_event,
+                    {
+                        "type": "cold_attempt",
+                        "text": payload["text"],
+                        "evaluation": {
+                            "classification": "shallow",
+                            "score_eligible": True,
+                        },
+                    },
+                ],
+            }),
         )
 
     def fulfill_drill(route) -> None:
         payload = route.request.post_data_json
         drill_payloads.append(payload)
-        requests_seen.append(f"POST /api/drill {payload['node_id']}")
         route.fulfill(
             status=200,
             content_type="application/json",
@@ -214,20 +278,35 @@ def test_source_less_launch_pad_end_to_end_qa(
             ),
         )
 
-    clean_page.route("**/api/extract", fulfill_extract)
+    clean_page.route(re.compile(r".*/api/session$"), fulfill_session)
+    clean_page.route(
+        re.compile(r".*/api/session/gestalt-session$"),
+        fulfill_resume,
+    )
+    clean_page.route(
+        re.compile(r".*/api/session/gestalt-session/turn$"),
+        fulfill_turn,
+    )
     clean_page.route("**/api/drill", fulfill_drill)
 
     _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.evaluate("localStorage.clear(); sessionStorage.clear();")
 
-    clean_page.locator("#nav-ignition").click()
-    expect(clean_page.locator("#ignition-title")).to_have_text("What are you trying to explain?")
-    clean_page.locator("#hero-single-input-field").fill("Thermostat feedback loop")
-    clean_page.locator("#hero-cold-guess-field").fill(sketch_text)
-    expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
-    clean_page.locator("#hero-door-submit").click()
-
-    expect(clean_page.locator("#launch-pad-view")).to_be_hidden()
+    clean_page.evaluate(
+        """({ map, sketch }) => {
+          App.persistCreatedConceptFromLaunchPad(
+            map,
+            {
+              name: 'Thermostat feedback loop',
+              goal: 'explain thermostat feedback loops to a new technician',
+              ts: Date.now(),
+            },
+            sketch,
+          );
+          App.navigateToGraphViewFromLaunchPad({ fromLaunchPad: true });
+        }""",
+        {"map": provisional_map, "sketch": sketch_text},
+    )
 
     canvas = clean_page.locator(".concept-page-b2__gestalt")
     expect(canvas).to_be_visible(timeout=10_000)
@@ -288,8 +367,7 @@ def test_source_less_launch_pad_end_to_end_qa(
     with clean_page.expect_request(
         lambda request: (
             request.method == "POST"
-            and "/api/session/" in request.url
-            and request.url.endswith("/turn")
+            and request.url.endswith("/api/session/gestalt-session/turn")
         )
     ):
         clean_page.locator(".concept-page-b2__attempt-save").click()
@@ -297,7 +375,10 @@ def test_source_less_launch_pad_end_to_end_qa(
     expect(clean_page.locator(".concept-page-b2__route")).to_have_count(0)
     expect(clean_page.locator("#concept-view-switch")).to_be_hidden()
 
-    assert "POST /api/extract Thermostat feedback loop" in requests_seen
+    assert session_payloads == [{"sourceLessDoorBootstrap": True}]
+    assert [payload["text"] for payload in turn_payloads] == [
+        "It checks if the room is colder than what we wanted and then starts heat."
+    ]
     assert drill_payloads == []
 
     if page_errors:

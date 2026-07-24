@@ -1301,20 +1301,21 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
     index_html = (REPO_ROOT / "public" / "index.html").read_text()
 
     assert '<h2 class="ig-title" id="ignition-title" tabindex="-1">' in index_html
-    assert "What are you trying to explain?" in index_html
-    assert "Write what you remember first. We'll show what to study" in index_html
-    assert "Add your first model to start." in index_html
+    assert "Learn by rebuilding the idea" in index_html
+    assert "Give Socratink one source and one explanation target." in index_html
+    assert "The source disappears before you explain." in index_html
     assert 'id="ignition-boundary"' in index_html
     assert 'class="ig-eyebrow">New session</p>' in index_html
-    assert "socratink will ask for your first model" not in index_html
-    assert 'for="hero-single-input-field">Topic or question</label>' in index_html
-    assert 'for="hero-cold-guess-field">Your first model</label>' in index_html
+    assert 'for="hero-single-input-field">Source material</label>' in index_html
+    assert 'for="hero-cold-guess-field">Explanation target</label>' in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'id="hero-cold-guess-field"' in index_html
-    assert 'aria-label="Learning goal"' in index_html
-    assert 'aria-label="What do you already think?"' in index_html
-    assert '>Start session</button>' in index_html
-    assert 'aria-label="What do you want to explain?"' not in index_html
+    assert 'aria-label="Source material"' in index_html
+    assert 'aria-label="Explanation target"' in index_html
+    assert '>Close source and explain</button>' in index_html
+    assert 'id="north-star-reconstruction"' in index_html
+    assert 'id="north-star-explanation-field"' in index_html
+    assert 'id="north-star-repair-form"' in index_html
 
 
 def test_desk_markup_preserves_compact_concept_index() -> None:
