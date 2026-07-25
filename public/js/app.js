@@ -5,7 +5,7 @@ import {
   getSedaSession,
   sendSedaTurn,
   submitConceptCreate,
-} from './ai_service.js?v=5';
+} from './ai_service.js?v=6';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -114,7 +114,7 @@ import { AudioFX } from './audio.js?v=4';
 import {
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=6';
+} from './launch-pad.js?v=7';
 import {
   coldAttemptCompletionLabel,
   nextSedaPromptAfterVerdict,
@@ -737,7 +737,7 @@ const App = (() => {
       setNorthStarBusy(true);
       if (error) error.textContent = '';
       try {
-        let data = northStarSession || await createSedaSession();
+        let data = northStarSession || await createSedaSession({ northStarIntake: true });
         northStarSession = data;
         rememberNorthStarSession(data.sessionId);
         if (data.awaiting?.key === 'source') data = await sendNorthStarText(data, source);

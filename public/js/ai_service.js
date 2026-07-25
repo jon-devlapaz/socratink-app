@@ -88,10 +88,14 @@ async function postJson(url, body = {}) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function createSedaSession({ sourceLessDoorBootstrap = false } = {}) {
-  return postJson("/api/session", sourceLessDoorBootstrap === true
-    ? { sourceLessDoorBootstrap: true }
-    : {});
+export function createSedaSession({
+  sourceLessDoorBootstrap = false,
+  northStarIntake = false,
+} = {}) {
+  return postJson("/api/session", {
+    ...(sourceLessDoorBootstrap === true ? { sourceLessDoorBootstrap: true } : {}),
+    ...(northStarIntake === true ? { northStarIntake: true } : {}),
+  });
 }
 
 export async function getSedaSession(sessionId) {

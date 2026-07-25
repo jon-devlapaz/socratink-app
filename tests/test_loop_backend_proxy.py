@@ -490,7 +490,7 @@ def test_vendored_loop_backend_runs_pedagogical_session(
         original_service = main.app.state.auth_service
         main.app.state.auth_service = _GuestAuthService()
         try:
-            start = client.post("/api/session", json={})
+            start = client.post("/api/session", json={"northStarIntake": True})
             assert start.status_code == 201
             session_id = start.json()["sessionId"]
 

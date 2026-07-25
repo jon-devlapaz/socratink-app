@@ -216,6 +216,7 @@ def test_seda_session_client_uses_app_boundary() -> None:
         };
 
         await createSedaSession({ sourceLessDoorBootstrap: true });
+        await createSedaSession({ northStarIntake: true });
         await getSedaSession('session/1');
         const firstSubmission = createSedaTurnSubmission('first attempt', 4);
         await sendSedaTurn('session/1', firstSubmission);
@@ -226,13 +227,14 @@ def test_seda_session_client_uses_app_boundary() -> None:
         assert.equal(calls[0].url, '/api/session');
         assert.equal(calls[0].options.method, 'POST');
         assert.deepEqual(JSON.parse(calls[0].options.body), { sourceLessDoorBootstrap: true });
-        assert.equal(calls[1].url, '/api/session/session%2F1');
-        assert.equal(calls[1].options.method, 'GET');
-        assert.equal(calls[2].url, '/api/session/session%2F1/turn');
-        assert.equal(calls[2].options.method, 'POST');
-        const firstBody = JSON.parse(calls[2].options.body);
-        const retryBody = JSON.parse(calls[3].options.body);
-        const nextBody = JSON.parse(calls[4].options.body);
+        assert.deepEqual(JSON.parse(calls[1].options.body), { northStarIntake: true });
+        assert.equal(calls[2].url, '/api/session/session%2F1');
+        assert.equal(calls[2].options.method, 'GET');
+        assert.equal(calls[3].url, '/api/session/session%2F1/turn');
+        assert.equal(calls[3].options.method, 'POST');
+        const firstBody = JSON.parse(calls[3].options.body);
+        const retryBody = JSON.parse(calls[4].options.body);
+        const nextBody = JSON.parse(calls[5].options.body);
         assert.match(firstBody.requestId, /^[0-9a-f-]{36}$/i);
         assert.deepEqual(firstBody, retryBody);
         assert.equal(firstBody.text, 'first attempt');
@@ -473,7 +475,9 @@ def test_http_post_intake_and_get_rehydrate_preserve_exact_reconstruction() -> N
         };
 
         try {
-          const started = await post('/api/session', {});
+          const legacy = await post('/api/session', {});
+          assert.equal(legacy.awaiting.key, 'cmd');
+          const started = await post('/api/session', { northStarIntake: true });
           assert.equal(started.awaiting.key, 'source');
           const sessionId = started.sessionId;
           let expectedVersion = started.sessionVersion;
