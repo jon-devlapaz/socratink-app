@@ -209,6 +209,13 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
           renderReadyFilterHtml,
           renderDueSelectionHtml,
         } from './public/js/due-for-spaced.js';
+        import { parseConceptGraphData } from './public/js/concept-status.js';
+
+        const objectGraphData = { backbone: [], clusters: [] };
+        assert.deepEqual(parseConceptGraphData({ graphData: JSON.stringify(objectGraphData) }), objectGraphData);
+        assert.equal(parseConceptGraphData({ graphData: objectGraphData }), objectGraphData);
+        assert.equal(parseConceptGraphData({ graphData: '{not-json' }), null);
+        assert.equal(parseConceptGraphData({}), null);
 
         const concepts = [{
           id: 'c1',

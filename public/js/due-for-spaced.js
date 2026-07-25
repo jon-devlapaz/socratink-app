@@ -1,18 +1,9 @@
 import { deriveNodeTraining } from './training-derive.js';
+import { parseConceptGraphData } from './concept-status.js';
 import {
   deriveConceptEntries,
   getConceptEntryId,
 } from './concept-page-view.js';
-
-function parseGraphData(raw) {
-  if (!raw) return null;
-  if (typeof raw === 'object') return raw;
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Drillable IDs must match concept-page route entries exactly
@@ -52,7 +43,7 @@ export function listDueForSpaced({
   const due = [];
   (Array.isArray(concepts) ? concepts : []).forEach((concept) => {
     if (!concept?.id) return;
-    const graphData = parseGraphData(concept.graphData);
+    const graphData = parseConceptGraphData(concept);
     const training = trainingByConceptId[concept.id] || null;
     const nodeRecords = training?.node_records && typeof training.node_records === 'object'
       ? training.node_records

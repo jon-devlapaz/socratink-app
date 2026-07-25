@@ -62,7 +62,7 @@ import {
   dueItemsForConcept,
   renderReadyFilterHtml,
   renderDueSelectionHtml,
-} from './due-for-spaced.js?v=7';
+} from './due-for-spaced.js?v=8';
 import { mountSourcePanel } from './source-panel.js?v=3';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
@@ -212,7 +212,6 @@ const App = (() => {
     return result;
   };
 
-  let currentGraphController = null;
   let activeDrillNode = null;
   let repairRepsState = null;
   let themePreference = 'light';
@@ -568,7 +567,6 @@ const App = (() => {
     themePreference = applyStoredThemePreference(nextPreference, {
       persist,
       themeToggleEl,
-      onRemount: remountOpenKnowledgeGraphForTheme,
     });
   }
 
@@ -584,17 +582,6 @@ const App = (() => {
   function setTheme(nextPreference) {
     applyThemePreference(normalizeThemePreference(nextPreference));
   }
-
-  // Graph controller stubs: graph-view.js and the cytoscape constellation
-  // were deleted in the strip-as-nav port (2026-05-11). These stubs keep
-  // the many call sites in startDrill, cancelDrill, and repair-reps from
-  // throwing; they will be cleaned up in a follow-up refactor pass.
-  function buildKnowledgeGraphMountConfig() { return null; }
-  function destroyKnowledgeGraphController() { currentGraphController = null; }
-  function mountKnowledgeGraphController() { return null; }
-  function captureKnowledgeGraphViewState() { return null; }
-  function restoreKnowledgeGraphViewState() {}
-  function remountOpenKnowledgeGraphForTheme() {}
 
   function setMapShellOpen(isOpen) {
     document.body.dataset.mapOpen = isOpen ? 'true' : 'false';
@@ -3111,10 +3098,6 @@ const App = (() => {
         console.warn('Training records unavailable for concept page render.', err);
       });
 
-    // Graph view deleted (strip-as-nav port). The knowledge graph controller
-    // is retained in case other surfaces still reference it; it becomes a
-    // no-op when graph-stage is absent from the DOM.
-    destroyKnowledgeGraphController();
     if (drillUi) drillUi.style.display = 'none';
     if (chatHistory) chatHistory.innerHTML = '';
 
@@ -3141,7 +3124,6 @@ const App = (() => {
     if (drillState.active || drillState.pending || drillState.node) {
       cancelDrill({ restoreMap: false });
     }
-    destroyKnowledgeGraphController();
     document.body.classList.remove('is-drilling');
     if (mapView) mapView.classList.remove('visible');
     setMapShellOpen(false);
@@ -4031,7 +4013,6 @@ const App = (() => {
       freshSourceLessConceptIds.delete(concept.id);
       drillState.node = nodeContext;
       activeDrillNode = nodeContext.id;
-      currentGraphController?.setActiveDrillNode?.(activeDrillNode);
     }
 
     if (!responseSavedForBinding) {
@@ -4243,7 +4224,6 @@ const App = (() => {
 
   function setRepairRepsState(nextState) {
     repairRepsState = nextState;
-    currentGraphController?.setInteractionMode?.('repair-reps', nextState?.nodeId || activeDrillNode);
   }
 
   function getSpacingBlockReason(nodeData, nodeId) {
@@ -4269,9 +4249,6 @@ const App = (() => {
   }
 
   function getNextReachableInspectTarget(currentNodeId) {
-    const graphSuggestion = currentGraphController?.getNextNodeSuggestion?.(currentNodeId);
-    if (graphSuggestion?.id) return graphSuggestion;
-
     const concept = getActiveConcept();
     const graphData = parseConceptGraphData(concept) || {};
 
@@ -4419,7 +4396,6 @@ const App = (() => {
     if (actionKind === 'focus-next') {
       const nextTarget = getNextReachableInspectTarget(nodeContext.id);
       if (nextTarget?.id) {
-        currentGraphController?.selectNode?.(nextTarget.id);
         return;
       }
       reopenStudy(nodeContext);
@@ -4441,8 +4417,6 @@ const App = (() => {
     }
 
     activeDrillNode = resumeState.nodeId;
-    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
-    currentGraphController?.setInteractionMode?.('study', activeDrillNode);
     setMapMode('graph');
     return true;
   }
@@ -4454,16 +4428,11 @@ const App = (() => {
     const graphData = parseConceptGraphData(concept);
     const nodeData = resolveNodeData(graphData || {}, nodeContext.id) || {};
     if (!isRepairRepsEligible(nodeData)) {
-      currentGraphController?.showBlockedMessage?.(
-        'Repair Reps are not ready',
-        'Finish targeted study first, or return after a non-solid re-drill. Repair work never changes graph truth.'
-      );
       return;
     }
 
     const nodeLabel = nodeContext.fullLabel || nodeContext.label || concept.name || 'Repair target';
     activeDrillNode = nodeContext.id;
-    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
     setMapMode('graph');
     setRepairRepsState({
       status: 'loading',
@@ -4669,7 +4638,6 @@ const App = (() => {
   function exitRepairReps() {
     repairRepsState = null;
     activeDrillNode = null;
-    currentGraphController?.clearActiveDrillNode?.();
   }
 
   function reopenStudy(nodeContext) {
@@ -4714,7 +4682,6 @@ const App = (() => {
     if (patched) {
       persistActiveConceptGraphData(graphData);
       recordInterleavingEvent('study_complete', concept.id, nodeId, studyCompletedAt);
-      currentGraphController?.syncFromKnowledgeMap?.(graphData, null);
     }
 
     drillState.active = false;
@@ -4740,8 +4707,6 @@ const App = (() => {
     }
 
     persistPhaseBResumeState(null);
-    currentGraphController?.setInteractionMode?.('inspect');
-    currentGraphController?.clearActiveDrillNode?.();
     activeDrillNode = null;
   }
 
@@ -4861,10 +4826,7 @@ const App = (() => {
     if (!action) return;
 
     if (action.action === 'UPDATE_NODE_STATE' && action.id && action.newState) {
-      currentGraphController?.updateNodeState?.(action.id, action.newState);
-
       if (action.newState === 'solidified' && activeDrillNode === action.id) {
-        currentGraphController?.clearActiveDrillNode?.();
         activeDrillNode = null;
       }
     }
@@ -5184,17 +5146,11 @@ const App = (() => {
         if (!training) throw new Error('attempt-not-recorded');
       }
 
-      const graphMutationConcept = graphNeutralDrill
-        ? null
-        : patchActiveConceptDrillOutcome(data, drillMode, { coldAttemptRecorded: completedColdAttempt });
-      const graphMutated = Boolean(graphMutationConcept);
+      if (!graphNeutralDrill) {
+        patchActiveConceptDrillOutcome(data, drillMode, { coldAttemptRecorded: completedColdAttempt });
+      }
 
       const handleVisualTransition = async () => {
-        if (graphMutated) {
-          const freshGraphData = parseConceptGraphData(graphMutationConcept);
-          currentGraphController?.syncFromKnowledgeMap?.(freshGraphData, activeDrillNode);
-        }
-
         drillState.messages = outboundMessages;
         drillState.probeCount = data.probe_count ?? drillState.probeCount;
         persistSessionState();
@@ -5248,18 +5204,6 @@ const App = (() => {
           } else {
             window.DrillChamber.setComposerEnabled(true);
           }
-        }
-        if (completedNodeTurn) {
-          currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'study' : 'post-drill', activeDrillNode);
-          if (completedColdAttempt) {
-            currentGraphController?.flashPrimed?.(activeDrillNode);
-          }
-          if (drillMode === 're_drill' && data.classification === 'solid') {
-            /* c8 ignore next -- optional graph animation; state mutation is covered */
-            currentGraphController?.flashSolidification?.(activeDrillNode);
-          }
-        } else {
-          currentGraphController?.setInteractionMode?.(drillMode === 'cold_attempt' ? 'cold-attempt-active' : 're-drill-active', activeDrillNode);
         }
       };
 
@@ -5327,10 +5271,6 @@ const App = (() => {
 
     const nodeData = resolveNodeData(km, nodeContext.id) || {};
     if (nodeData.drill_status === 'solidified') {
-      currentGraphController?.showBlockedMessage?.(
-        'Solid evidence already recorded',
-        'This entry already has a solid spaced reconstruction on record. Pick an entry without that record to keep the graph truthful.'
-      );
       return;
     }
 
@@ -5350,8 +5290,6 @@ const App = (() => {
     const bypassSessionLimits = true;
 
     if (!bypassSessionLimits && (nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled') && !isReDrillEligible(nodeData, nodeContext.id)) {
-      const blockReason = getSpacingBlockReason(nodeData, nodeContext.id);
-      currentGraphController?.showBlockedMessage?.(blockReason.headline, blockReason.body);
       return;
     }
 
@@ -5360,23 +5298,14 @@ const App = (() => {
     const uniqueNodeCount = getSessionNodeCount();
 
     if (!bypassSessionLimits && uniqueNodeCount >= 4 && isNewSessionNode) {
-      currentGraphController?.showBlockedMessage?.(
-        'Session node limit reached',
-        'You have drilled 4 entries this session. This is a good stopping point. Spacing retrieval across sessions improves long-term retention.'
-      );
       return;
     }
 
     if (!bypassSessionLimits && hasDrillSessionTimeLimitElapsed(sessionState.startedAt)) {
-      currentGraphController?.setInteractionMode?.('session-complete', activeDrillNode);
       return;
     }
 
     if (!bypassSessionLimits && (sessionState.retriesByNode[nodeContext.id] || 0) >= 3) {
-      currentGraphController?.showBlockedMessage?.(
-        'Retrieval ceiling reached',
-        'You have attempted this entry 3 times this session. Space your attempts and return in a future session.'
-      );
       return;
     }
 
@@ -5435,14 +5364,6 @@ const App = (() => {
       drillTitle.textContent = `Active entry: ${label}`;
     }
 
-    let initialMode = 'cold-attempt-active';
-    if (nodeData.drill_status === 'primed' || nodeData.drill_status === 'drilled' || nodeData.drill_status === 'solidified') {
-      initialMode = 're-drill-active';
-    }
-    if (nodeData.drill_phase === 're_drill') initialMode = 're-drill-active';
-
-    currentGraphController?.setActiveDrillNode?.(activeDrillNode);
-    currentGraphController?.setInteractionMode?.(initialMode, activeDrillNode);
     document.body.classList.add('is-drilling');
 
     // Show the ironclad chamber view.
@@ -5498,8 +5419,6 @@ const App = (() => {
               // show() enables a freshly rendered composer by default; keep it
               // closed until the authoritative node and session are both ready.
               window.DrillChamber.setComposerEnabled(false);
-              currentGraphController?.setActiveDrillNode?.(nodeContext.id);
-              currentGraphController?.setInteractionMode?.(initialMode, nodeContext.id);
             } else {
               window.DrillChamber.swapQuestion(promptText);
             }
@@ -5637,7 +5556,6 @@ const App = (() => {
       window.DrillChamber.hide();
     }
 
-    const shouldShowSessionComplete = drillState.sessionCompletePending;
     drillState.sessionToken += 1;
     drillState.active = false;
     drillState.messages = [];
@@ -5660,8 +5578,6 @@ const App = (() => {
       chatInput.value = '';
       chatInput.disabled = true;
     }
-    currentGraphController?.clearActiveDrillNode?.();
-    currentGraphController?.setInteractionMode?.(shouldShowSessionComplete ? 'session-complete' : 'inspect');
     persistPhaseBResumeState(null);
 
     // Restore the concept page view (map + detail).
