@@ -9,7 +9,6 @@ Usage:
   scripts/git-worktree-cleanup.sh
   scripts/git-worktree-cleanup.sh --json
   scripts/git-worktree-cleanup.sh --remove <worktree-path> --apply
-  scripts/git-worktree-cleanup.sh --remove-clean --apply
 
 Default mode is read-only. Removal mode refuses the current worktree, the main
 worktree, dirty worktrees, and paths that are not registered git worktrees.
@@ -25,7 +24,6 @@ repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || fail "not inside a g
 main_worktree="$(git worktree list --porcelain | awk '/^worktree /{sub(/^worktree /, ""); print; exit}')"
 
 remove_path=""
-remove_clean="0"
 apply="0"
 json_mode="0"
 
@@ -44,10 +42,6 @@ while [ "$#" -gt 0 ]; do
       remove_path="$2"
       shift 2
       ;;
-    --remove-clean)
-      remove_clean="1"
-      shift
-      ;;
     --apply)
       apply="1"
       shift
@@ -59,8 +53,7 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
-[ -z "$remove_path" ] || [ "$remove_clean" = "0" ] || fail "--remove and --remove-clean cannot be combined"
-[ "$json_mode" = "0" ] || { [ -z "$remove_path" ] && [ "$remove_clean" = "0" ]; } || fail "--json is only supported in list mode"
+[ "$json_mode" = "0" ] || [ -z "$remove_path" ] || fail "--json is only supported in list mode"
 
 canonical_path() {
   local path="$1"
@@ -80,28 +73,6 @@ is_clean_worktree() {
 has_branch_head() {
   local path="$1"
   git -C "$path" symbolic-ref --quiet --short HEAD >/dev/null
-}
-
-collect_clean_removable_worktrees() {
-  local repo_root_canonical main_canonical wt wt_canonical
-  repo_root_canonical="$(canonical_path "$repo_root")"
-  main_canonical="$(canonical_path "$main_worktree")"
-
-  while IFS= read -r line; do
-    case "$line" in
-      worktree\ *)
-        wt="${line#worktree }"
-        [ -d "$wt" ] || continue
-        wt_canonical="$(canonical_path "$wt")" || continue
-        [ "$wt_canonical" != "$repo_root_canonical" ] || continue
-        [ "$wt_canonical" != "$main_canonical" ] || continue
-        has_branch_head "$wt_canonical" || continue
-        if is_clean_worktree "$wt_canonical"; then
-          printf '%s\n' "$wt_canonical"
-        fi
-        ;;
-    esac
-  done < <(git worktree list --porcelain)
 }
 
 print_list() {
@@ -160,7 +131,6 @@ print_list() {
   echo "  * current worktree; never removed by this helper"
   echo "  M main worktree; never removed by this helper"
   echo "  clean-removable: can be removed with --remove <path> --apply"
-  echo "  all clean-removable: can be removed with --remove-clean --apply"
   echo "  detached-blocked: detached HEAD; create or move a branch before removal"
   echo "  dirty-blocked: has staged, unstaged, or untracked files"
   echo "  missing-prunable: path is gone; run git worktree prune manually if needed"
@@ -259,25 +229,6 @@ payload = {
 print(json.dumps(payload, sort_keys=True))
 PY
 }
-
-if [ "$remove_clean" = "1" ]; then
-  [ "$apply" = "1" ] || fail "bulk removal requires --apply"
-  clean_worktrees=()
-  while IFS= read -r target; do
-    clean_worktrees+=("$target")
-  done < <(collect_clean_removable_worktrees)
-  if [ "${#clean_worktrees[@]}" -eq 0 ]; then
-    echo "[git-worktree-cleanup] no clean-removable worktrees found"
-    exit 0
-  fi
-  echo "[git-worktree-cleanup] removing ${#clean_worktrees[@]} clean-removable worktree(s)"
-  for target in "${clean_worktrees[@]}"; do
-    echo "[git-worktree-cleanup] removing $target"
-    git worktree remove "$target"
-  done
-  echo "[git-worktree-cleanup] removed ${#clean_worktrees[@]} worktree(s)"
-  exit 0
-fi
 
 if [ -z "$remove_path" ]; then
   if [ "$json_mode" = "1" ]; then
