@@ -216,6 +216,7 @@ def test_seda_session_client_uses_app_boundary() -> None:
         };
 
         await createSedaSession({ sourceLessDoorBootstrap: true });
+        await createSedaSession({ northStarIntake: true });
         await getSedaSession('session/1');
         const firstSubmission = createSedaTurnSubmission('first attempt', 4);
         await sendSedaTurn('session/1', firstSubmission);
@@ -226,13 +227,14 @@ def test_seda_session_client_uses_app_boundary() -> None:
         assert.equal(calls[0].url, '/api/session');
         assert.equal(calls[0].options.method, 'POST');
         assert.deepEqual(JSON.parse(calls[0].options.body), { sourceLessDoorBootstrap: true });
-        assert.equal(calls[1].url, '/api/session/session%2F1');
-        assert.equal(calls[1].options.method, 'GET');
-        assert.equal(calls[2].url, '/api/session/session%2F1/turn');
-        assert.equal(calls[2].options.method, 'POST');
-        const firstBody = JSON.parse(calls[2].options.body);
-        const retryBody = JSON.parse(calls[3].options.body);
-        const nextBody = JSON.parse(calls[4].options.body);
+        assert.deepEqual(JSON.parse(calls[1].options.body), { northStarIntake: true });
+        assert.equal(calls[2].url, '/api/session/session%2F1');
+        assert.equal(calls[2].options.method, 'GET');
+        assert.equal(calls[3].url, '/api/session/session%2F1/turn');
+        assert.equal(calls[3].options.method, 'POST');
+        const firstBody = JSON.parse(calls[3].options.body);
+        const retryBody = JSON.parse(calls[4].options.body);
+        const nextBody = JSON.parse(calls[5].options.body);
         assert.match(firstBody.requestId, /^[0-9a-f-]{36}$/i);
         assert.deepEqual(firstBody, retryBody);
         assert.equal(firstBody.text, 'first attempt');
@@ -442,7 +444,7 @@ def test_source_less_route_response_is_versioned_and_fails_closed() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_http_post_launch_and_get_rehydrate_expose_same_ready_route() -> None:
+def test_http_post_intake_and_get_rehydrate_preserve_exact_reconstruction() -> None:
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
@@ -473,8 +475,10 @@ def test_http_post_launch_and_get_rehydrate_expose_same_ready_route() -> None:
         };
 
         try {
-          const started = await post('/api/session', { sourceLessDoorBootstrap: true });
-          assert.equal(started.awaiting.key, 'cmd');
+          const legacy = await post('/api/session', {});
+          assert.equal(legacy.awaiting.key, 'cmd');
+          const started = await post('/api/session', { northStarIntake: true });
+          assert.equal(started.awaiting.key, 'source');
           const sessionId = started.sessionId;
           let expectedVersion = started.sessionVersion;
           const turn = async (text) => {
@@ -484,30 +488,60 @@ def test_http_post_launch_and_get_rehydrate_expose_same_ready_route() -> None:
             expectedVersion = result.sessionVersion;
             return result;
           };
-          const named = await turn('Immune memory');
-          assert.equal(named.awaiting.key, 'learner_goal');
-          const goalSkipped = await turn('');
-          assert.equal(goalSkipped.awaiting.key, 'launch_attempt');
-          const launched = await turn("I don't know yet.");
+          const source = 'Memory B cells persist after an initial exposure.';
+          const target = 'Why does a second exposure trigger a faster response?';
+          const attempt = 'The body remembers the pathogen and reacts sooner.';
+          const repair = 'Memory B cells persist, recognize the pathogen, and expand quickly.';
 
-          assert.equal(launched.awaiting.key, 'cold_attempt');
-          assert.equal(launched.sourceLessRoute.contractVersion, 1);
-          assert.equal(launched.sourceLessRoute.status, 'ready');
+          const sourced = await turn(source);
+          assert.equal(sourced.awaiting.key, 'target');
+          assert.equal(JSON.stringify(sourced).includes(source), false);
+          assert.equal(Object.hasOwn(sourced.events[0], 'text'), false);
+
+          const targeted = await turn(target);
+          assert.equal(targeted.awaiting.key, 'initial_reconstruction');
+          const reconstructed = await turn(attempt);
+          assert.equal(reconstructed.awaiting.key, 'evaluate_reconstruction_gap');
+          assert.equal(reconstructed.savedReconstruction.target, target);
+          assert.equal(reconstructed.savedReconstruction.explanation, attempt);
           assert.equal(
-            launched.sourceLessRoute.firstNode.id,
-            launched.sourceLessRoute.provisionalMap.clusters[0].subnodes[0].id,
+            reconstructed.events.find(
+              (event) => event.type === 'initial_reconstruction_submitted',
+            ).text,
+            attempt,
           );
-          assert.equal(launched.events.some((event) => event.type === 'substrate_refinement'), false);
-          assert.equal(launched.events.some((event) => event.type === 'cold_attempt'), false);
+
+          const evaluated = await turn('');
+          assert.equal(evaluated.awaiting.key, 'initial_repair');
+          assert.equal(evaluated.reconstructionRepair.status, 'ready');
+          const repaired = await turn(repair);
+          assert.equal(repaired.awaiting.key, 'initial_repair_saved');
+          assert.equal(repaired.awaiting.readOnly, true);
+          assert.equal(repaired.reconstructionRepair.status, 'saved');
+          assert.equal(repaired.reconstructionRepair.repair, repair);
 
           const rehydratedResponse = await fetch(`${base}/api/session/${sessionId}`);
           const rehydratedText = await rehydratedResponse.text();
           assert.equal(rehydratedResponse.ok, true, rehydratedText);
           const rehydrated = JSON.parse(rehydratedText);
-          assert.equal(rehydrated.awaiting.key, 'cold_attempt');
-          assert.deepEqual(rehydrated.sourceLessRoute, launched.sourceLessRoute);
+          assert.equal(rehydrated.awaiting.key, 'initial_repair_saved');
+          assert.deepEqual(rehydrated.savedReconstruction, repaired.savedReconstruction);
+          assert.deepEqual(rehydrated.reconstructionRepair, repaired.reconstructionRepair);
+          assert.equal(JSON.stringify(rehydrated).includes(source), false);
+          assert.equal(
+            rehydrated.events.find(
+              (event) => event.type === 'initial_reconstruction_submitted',
+            ).text,
+            attempt,
+          );
           const stored = await store.load(sessionId);
-          assert.equal(stored.metadata.source_less_door_bootstrap, true);
+          assert.equal(stored.events[0].text, source);
+          assert.equal(
+            stored.events.find(
+              (event) => event.type === 'initial_reconstruction_submitted',
+            ).text,
+            attempt,
+          );
         } finally {
           await new Promise((resolve) => server.close(resolve));
           await fs.rm(rootDir, { recursive: true, force: true });

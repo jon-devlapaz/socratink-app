@@ -465,21 +465,16 @@ def test_loop_proxy_releases_connection_when_read_fails(client: TestClient) -> N
 def test_vendored_loop_backend_runs_pedagogical_session(
     client: TestClient,
 ) -> None:
+    source = "Memory B cells persist after an initial exposure."
+    target = "Why does a second exposure trigger a faster response?"
+    attempt = "The body remembers the pathogen and reacts sooner."
+    repair = "Memory B cells persist, recognize the pathogen, and expand quickly."
     turns = [
-        "Immune memory",
-        "I want to explain why a second exposure gets handled faster.",
-        "First exposure activates B and T cells; some become memory cells that stay around.",
-        "Memory cells stay after the first infection, so later the body does not start from scratch.",
-        "Continue",
-        "The missing link is that some activated cells persist as memory cells after the first exposure.",
-        "Those memory cells persist and respond faster when the same pathogen returns.",
-        "Continue",
-        "Continue",
-        (
-            "The first exposure leaves memory B and T cells behind. On a later exposure "
-            "those memory cells recognize the pathogen quickly, expand, and make a faster "
-            "stronger response."
-        ),
+        source,
+        target,
+        attempt,
+        "",
+        repair,
     ]
     with patch.dict(
         os.environ,
@@ -495,7 +490,7 @@ def test_vendored_loop_backend_runs_pedagogical_session(
         original_service = main.app.state.auth_service
         main.app.state.auth_service = _GuestAuthService()
         try:
-            start = client.post("/api/session", json={})
+            start = client.post("/api/session", json={"northStarIntake": True})
             assert start.status_code == 201
             session_id = start.json()["sessionId"]
 
@@ -511,13 +506,15 @@ def test_vendored_loop_backend_runs_pedagogical_session(
                 )
                 assert response.status_code == 200
                 body = response.json()
-                if body["caseComplete"]:
-                    break
         finally:
             main.app.state.auth_service = original_service
 
     try:
-        assert body["caseComplete"] is True
-        assert body["record"]["derived"][0]["nodes"]["c1_s1"]["state"] == "primed"
+        assert body["awaiting"]["key"] == "initial_repair_saved"
+        assert body["awaiting"]["readOnly"] is True
+        assert body["savedReconstruction"]["target"] == target
+        assert body["savedReconstruction"]["explanation"] == attempt
+        assert body["reconstructionRepair"]["status"] == "saved"
+        assert body["reconstructionRepair"]["repair"] == repair
     finally:
         loop_backend_proxy._stop_local_loop_backend()

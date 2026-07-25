@@ -321,7 +321,7 @@
 
 .ignition-view--linear .composer-card__field--linear {
   background: transparent;
-  min-height: 96px;
+  min-height: 180px;
   padding: 14px 16px;
   line-height: 1.5;
   font-size: var(--text-base);
@@ -481,6 +481,80 @@
 
 .ignition-view--linear .ig-error:empty {
   padding: 0;
+}
+
+.north-star-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.north-star-step[hidden] {
+  display: none;
+}
+
+.north-star-step__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.north-star-target,
+.north-star-record,
+.north-star-gap,
+.north-star-repair-saved {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: rgba(var(--paper-0-rgb), 0.6);
+}
+
+.north-star-target__label,
+.north-star-record dt {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.north-star-target p,
+.north-star-record dd,
+.north-star-gap__text,
+.north-star-repair-saved p:last-child {
+  margin: var(--space-2) 0 0;
+  color: var(--text-strong);
+  line-height: var(--leading-relaxed);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.north-star-gap .ig-error {
+  padding-left: 0;
+}
+
+.north-star-gap .ig-button {
+  margin-top: var(--space-3);
+}
+
+.north-star-record {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.north-star-record div {
+  min-width: 0;
+}
+
+.north-star-record dd {
+  font-size: var(--text-base);
+}
+
+.north-star-record div:last-child dd {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
 }
 
 .ignition-view--linear .ignition-cap-gate {

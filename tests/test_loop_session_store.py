@@ -464,9 +464,17 @@ def test_http_session_bootstrap_and_turn_idempotency_contract() -> None:
           assert.equal(createCalls[0].sourceLessDoorBootstrap, true);
           assert.equal((await store.load(sessionId)).metadata.source_less_door_bootstrap, true);
 
-          const defaulted = await post("/api/session", { sourceLessDoorBootstrap: "true" });
+          const northStar = await post("/api/session", { northStarIntake: true });
+          assert.equal(northStar.status, 201);
+          assert.equal(createCalls[1].northStarIntake, true);
+
+          const defaulted = await post("/api/session", {
+            sourceLessDoorBootstrap: "true",
+            northStarIntake: "true",
+          });
           assert.equal(defaulted.status, 201);
-          assert.equal(createCalls[1].sourceLessDoorBootstrap, false);
+          assert.equal(createCalls[2].sourceLessDoorBootstrap, false);
+          assert.equal(createCalls[2].northStarIntake, false);
 
           const requestId = "50000000-0000-4000-8000-000000000001";
           const missingRequestId = await post(`/api/session/${sessionId}/turn`, {

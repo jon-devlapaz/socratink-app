@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
 import re
-import json
 from urllib.parse import urljoin
 
+import pytest
 from playwright.sync_api import Page, expect
 
 
@@ -21,120 +22,263 @@ def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
     expect(page.locator("#concept-list")).to_be_attached()
 
 
-def test_door_forwards_normalized_concept_and_cold_guess(
+def _enter_reconstruction(
+    clean_page: Page,
+    base_url: str,
+    *,
+    source: str,
+    target: str,
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(source)
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+    clean_page.locator("#hero-door-submit").click()
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+
+
+def test_intake_hides_source_before_reconstruction(
     clean_page: Page, base_url: str
 ) -> None:
-    captured_payloads: list[dict] = []
+    source = "Voltage-gated sodium channels open before sodium enters the neuron."
+    target = "Explain why sodium influx starts an electrical signal."
+    _enter_reconstruction(
+        clean_page,
+        base_url,
+        source=source,
+        target=target,
+    )
 
-    def fulfill_extract(route) -> None:
+    expect(clean_page.locator("#hero-single-input")).to_be_hidden()
+    expect(clean_page.locator("#north-star-explanation-field")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert source not in clean_page.locator("body").inner_text()
+
+
+def test_exact_reconstruction_and_repair_survive_reload(
+    clean_page: Page, base_url: str
+) -> None:
+    source = "Retrieval practice strengthens access to a memory by requiring recall."
+    target = "Explain why retrieval practice improves later recall."
+    explanation = "  Trying to retrieve makes the route to the memory easier to use.  "
+    repair = "  The effortful retrieval itself strengthens later access.  "
+    _enter_reconstruction(
+        clean_page,
+        base_url,
+        source=source,
+        target=target,
+    )
+
+    clean_page.locator("#north-star-explanation-field").fill(explanation)
+    clean_page.locator("#north-star-reconstruction-submit").click()
+    expect(clean_page.locator("#north-star-saved")).to_be_visible()
+    assert (
+        clean_page.locator("#north-star-saved-explanation").text_content()
+        == explanation
+    )
+    expect(clean_page.locator("#north-star-repair-form")).to_be_visible(
+        timeout=20_000
+    )
+    clean_page.locator("#north-star-repair-field").fill(repair)
+    clean_page.locator("#north-star-repair-submit").click()
+    expect(clean_page.locator("#north-star-repair-saved")).to_be_visible()
+    assert (
+        clean_page.locator("#north-star-repair-saved-text").text_content()
+        == repair
+    )
+
+    clean_page.reload()
+    expect(clean_page.locator("#north-star-saved")).to_be_visible()
+    assert (
+        clean_page.locator("#north-star-saved-explanation").text_content()
+        == explanation
+    )
+    assert (
+        clean_page.locator("#north-star-repair-saved-text").text_content()
+        == repair
+    )
+
+
+def test_north_star_keyboard_submission_recovers_from_post_failures(
+    clean_page: Page, base_url: str
+) -> None:
+    source = "Memory B cells persist after an initial exposure."
+    target = "Explain why a second exposure triggers a faster response."
+    explanation = "The body remembers the pathogen and responds sooner."
+    repair = "Memory B cells persist and expand quickly after recognition."
+    failures = {target, explanation, repair}
+
+    def fail_first_matching_turn(route) -> None:
+        text = route.request.post_data_json["text"]
+        if text in failures:
+            failures.remove(text)
+            route.fulfill(
+                status=503,
+                content_type="application/json",
+                body=json.dumps({"message": f"Could not save: {text}"}),
+            )
+            return
+        route.continue_()
+
+    clean_page.route(
+        re.compile(r".*/api/session/[0-9a-f-]+/turn$"),
+        fail_first_matching_turn,
+    )
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(source)
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+
+    clean_page.locator("#hero-single-input-field").press("Control+Enter")
+    expect(clean_page.locator("#hero-door-error")).to_have_text(
+        f"Could not save: {target}"
+    )
+    expect(clean_page.locator("#hero-single-input-field")).to_be_hidden()
+    expect(clean_page.locator("#hero-cold-guess-field")).to_be_visible()
+    expect(clean_page.locator("#hero-door-submit")).to_have_text(
+        "Continue to explanation"
+    )
+
+    clean_page.locator("#hero-cold-guess-field").press("Control+Enter")
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    clean_page.locator("#north-star-explanation-field").fill(explanation)
+    clean_page.locator("#north-star-explanation-field").press("Control+Enter")
+    expect(clean_page.locator("#north-star-reconstruction-error")).to_have_text(
+        f"Could not save: {explanation}"
+    )
+
+    clean_page.locator("#north-star-explanation-field").press("Control+Enter")
+    expect(clean_page.locator("#north-star-repair-form")).to_be_visible(
+        timeout=20_000
+    )
+    clean_page.locator("#north-star-repair-field").fill(repair)
+    clean_page.locator("#north-star-repair-field").press("Control+Enter")
+    expect(clean_page.locator("#north-star-repair-error")).to_have_text(
+        f"Could not save: {repair}"
+    )
+
+    clean_page.locator("#north-star-repair-field").press("Control+Enter")
+    expect(clean_page.locator("#north-star-repair-saved")).to_be_visible()
+    expect(clean_page.locator("#north-star-repair-saved-text")).to_have_text(repair)
+    assert failures == set()
+
+
+def test_north_star_gap_unavailable_survives_retry_failure(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_reconstruction(
+        clean_page,
+        base_url,
+        source="Retrieval practice requires recalling without looking.",
+        target="Explain why retrieval practice strengthens later access.",
+    )
+    reconstructed: dict = {}
+
+    def intercept_gap_turn(route) -> None:
         payload = route.request.post_data_json
-        captured_payloads.append(payload)
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({
-                "provisional_map": {
-                    "metadata": {
-                        "core_thesis": "Sodium rushing into a neuron starts an electrical signal.",
-                    },
-                    "backbone": [{"id": "b1", "principle": "Sodium influx changes voltage."}],
-                    "clusters": [{
-                        "id": "c1",
-                        "label": "Sodium influx",
-                        "subnodes": [{
-                            "id": "c1_s1",
-                            "label": "Sodium influx",
-                            "mechanism": "Sodium entering the neuron changes membrane voltage.",
-                        }],
-                    }],
-                },
-            }),
-        )
+        if payload["text"] == "retry":
+            route.fulfill(
+                status=503,
+                content_type="application/json",
+                body=json.dumps({"message": "Gap retry unavailable."}),
+            )
+            return
+        if payload["text"] == "":
+            prior = reconstructed["body"]
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {
+                        **prior,
+                        "sessionVersion": payload["expectedVersion"] + 1,
+                        "awaiting": {"key": "retry_reconstruction_gap"},
+                        "reconstructionRepair": {
+                            "status": "unavailable",
+                            "retryable": True,
+                            "message": (
+                                "The gap could not be generated. "
+                                "Your explanation is still saved."
+                            ),
+                        },
+                    }
+                ),
+            )
+            return
+        response = route.fetch()
+        reconstructed["body"] = response.json()
+        route.fulfill(response=response)
 
-    clean_page.route("**/api/extract", fulfill_extract)
-    _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.locator("#nav-ignition").click()
-    clean_page.locator("#hero-single-input-field").fill(
-        "I want to understand why sodium rushing into a neuron starts an electrical signal"
+    clean_page.route(
+        re.compile(r".*/api/session/[0-9a-f-]+/turn$"),
+        intercept_gap_turn,
     )
-    clean_page.locator("#hero-cold-guess-field").fill(
-        "I think sodium crosses the membrane and that changes the electrical state."
+    clean_page.locator("#north-star-explanation-field").fill(
+        "Trying to recall makes the memory easier to reach later."
     )
-    clean_page.locator("#hero-door-submit").click()
+    clean_page.locator("#north-star-reconstruction-submit").click()
 
-    expect(clean_page.locator("#extract-overlay")).to_be_visible()
-    assert captured_payloads
-    assert captured_payloads[0]["name"] == "sodium rushing into a neuron starts an electrical signal"
-    assert captured_payloads[0]["starting_sketch"] == (
-        "I think sodium crosses the membrane and that changes the electrical state."
+    expect(clean_page.locator("#north-star-gap-retry")).to_be_visible()
+    expect(clean_page.locator("#north-star-gap-retry")).to_be_focused()
+    expect(clean_page.locator("#north-star-gap-error")).to_have_text(
+        "The gap could not be generated. Your explanation is still saved."
     )
-    assert captured_payloads[0]["source"] is None
+    clean_page.locator("#north-star-gap-retry").click()
+    expect(clean_page.locator("#north-star-gap-error")).to_have_text(
+        "Gap retry unavailable."
+    )
 
 
-def test_source_attached_door_forwards_source_and_cold_guess(
-    clean_page: Page, base_url: str
+@pytest.mark.parametrize(
+    ("status", "expected_error"),
+    [
+        (500, "The saved session could not be reopened."),
+        (404, ""),
+    ],
+)
+def test_north_star_saved_session_get_failure_recovers_to_intake(
+    clean_page: Page,
+    base_url: str,
+    status: int,
+    expected_error: str,
 ) -> None:
-    captured_payloads: list[dict] = []
-
-    def fulfill_extract(route) -> None:
-        captured_payloads.append(route.request.post_data_json)
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({
-                "provisional_map": {
-                    "metadata": {"core_thesis": "Practice improves recall."},
-                    "backbone": [{"id": "b1", "principle": "Retrieval strengthens memory."}],
-                    "clusters": [{
-                        "id": "c1",
-                        "label": "Retrieval",
-                        "subnodes": [{
-                            "id": "c1_s1",
-                            "label": "Retrieval",
-                            "mechanism": "Retrieval practice strengthens recall.",
-                        }],
-                    }],
-                },
-            }),
-        )
-
-    clean_page.route("**/api/extract", fulfill_extract)
+    session_id = "11111111-1111-4111-8111-111111111111"
     _enter_app_shell_as_guest(clean_page, base_url)
-    clean_page.locator("#nav-ignition").click()
-    clean_page.locator("#hero-single-input-field").fill("why practice improves recall")
-    clean_page.locator("#hero-cold-guess-field").fill("Trying to remember makes the memory easier to find.")
-    clean_page.locator("#hero-source-attach").click()
-    clean_page.locator("#hero-source-panel .overlay-textarea").fill("retrieval practice source note")
-    clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
-    clean_page.locator("#hero-door-submit").click()
-
-    expect(clean_page.locator("#extract-overlay")).to_be_visible()
-    assert captured_payloads
-    assert captured_payloads[0]["starting_sketch"] == (
-        "Trying to remember makes the memory easier to find."
+    clean_page.evaluate(
+        """([key, value]) => sessionStorage.setItem(key, value)""",
+        ["socratink:north-star-session:v1", session_id],
     )
-    assert captured_payloads[0]["source"] == {
-        "type": "text",
-        "text": "retrieval practice source note",
-    }
+    clean_page.route(
+        re.compile(rf".*/api/session/{session_id}$"),
+        lambda route: route.fulfill(
+            status=status,
+            content_type="application/json",
+            body=json.dumps({"message": "Session unavailable."}),
+        ),
+    )
+
+    clean_page.reload()
+    expect(clean_page.locator("#hero-single-input")).to_be_visible()
+    expect(clean_page.locator("#hero-door-error")).to_have_text(expected_error)
+    assert (
+        clean_page.evaluate(
+            """() => sessionStorage.getItem('socratink:north-star-session:v1')"""
+        )
+        is None
+    )
 
 
 def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_url: str) -> None:
     _enter_app_shell_as_guest(clean_page, base_url)
 
-    clean_page.locator("#hero-cold-guess-field").press("x")
-    clean_page.locator("#hero-source-attach").click()
-    expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
-    clean_page.locator("#hero-source-panel .overlay-textarea").fill("source text")
-    clean_page.locator("#hero-source-panel .creation-source-panel-attach").click()
-    expect(clean_page.locator("#hero-source-value")).to_have_text("11 chars pasted")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("Remove")
-    clean_page.locator("#hero-source-attach").click()
-    clean_page.locator("#hero-source-attach").click()
-    expect(clean_page.locator("#hero-source-panel .overlay-textarea")).to_be_visible()
-    clean_page.locator("#hero-source-panel .creation-source-panel-cancel").click()
-    expect(clean_page.locator("#hero-source-value")).to_have_text("Optional")
-    expect(clean_page.locator("#hero-source-attach")).to_have_text("Attach")
+    expect(clean_page.locator("#hero-single-input-field")).to_have_attribute(
+        "aria-label", "Source material"
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_attribute(
+        "aria-label", "Explanation target"
+    )
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_attached()
+    expect(clean_page.locator("#north-star-saved")).to_be_attached()
 
     clean_page.evaluate(
         """() => {

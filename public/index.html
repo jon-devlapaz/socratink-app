@@ -20,7 +20,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=200">
+  <link rel="stylesheet" href="/css/index.css?v=201">
   <link rel="stylesheet" href="/css/drill-chamber.css?v=22">
 </head>
 
@@ -284,10 +284,10 @@
         <header class="ig-header">
           <p class="ig-eyebrow">New session</p>
           <h2 class="ig-title" id="ignition-title" tabindex="-1">
-            What are you trying to explain?
+            Learn by rebuilding the idea
           </h2>
           <p class="ig-first-use" id="ignition-first-use">
-            Write what you remember first. We'll show what to study — not a summary.
+            Give Socratink one source and one explanation target. Then the source closes.
           </p>
         </header>
 
@@ -301,45 +301,99 @@
 
         <form class="composer-card composer-card--tall" id="hero-single-input"
               onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <label class="composer-card__label" for="hero-single-input-field">Topic or question</label>
+          <label class="composer-card__label" for="hero-single-input-field">Source material</label>
           <textarea class="composer-card__field composer-card__field--linear"
                     id="hero-single-input-field"
-                    rows="2" maxlength="200"
-                    placeholder="why vaccines create immune memory"
-                    aria-label="Learning goal"
+                    rows="7" maxlength="50000"
+                    placeholder="Paste the passage you want to understand"
+                    aria-label="Source material"
                     aria-describedby="ignition-boundary hero-door-error"></textarea>
-          <label class="composer-card__label" for="hero-cold-guess-field">Your first model</label>
+          <label class="composer-card__label" for="hero-cold-guess-field">Explanation target</label>
           <textarea class="composer-card__field" id="hero-cold-guess-field"
-                    rows="5" maxlength="1200"
-                    placeholder="I think…
-I'm fuzzy on…
-(e.g. parts, guesses, confusions)"
-                    aria-label="What do you already think?"
+                    rows="3" maxlength="1200"
+                    placeholder="What should you be able to explain?"
+                    aria-label="Explanation target"
                     aria-describedby="ignition-boundary hero-door-error"></textarea>
-
-          <div class="composer-card__properties">
-            <div class="ig-property">
-              <span class="ig-property__label">Source</span>
-              <span class="ig-property__value" id="hero-source-value">Optional</span>
-              <button type="button" class="ig-property__action"
-                      id="hero-source-attach" aria-expanded="false"
-                      aria-controls="hero-source-panel">Attach</button>
-            </div>
-          </div>
-
-          <div class="creation-source-panel" id="hero-source-panel" hidden></div>
 
           <p class="ig-error" id="hero-door-error"
              role="status" aria-live="polite"></p>
 
           <footer class="composer-card__footer">
             <p class="ig-footnote" id="ignition-boundary">
-              Add your first model to start.
+              The source disappears before you explain.
             </p>
             <button type="submit" class="ig-button ig-button--linear" id="hero-door-submit"
-                    disabled aria-label="Start session">Start session</button>
+                    disabled aria-label="Close source and explain">Close source and explain</button>
           </footer>
         </form>
+
+        <section class="north-star-step" id="north-star-reconstruction" aria-labelledby="north-star-reconstruction-title" hidden>
+          <header class="north-star-step__header">
+            <p class="ig-eyebrow">Source closed</p>
+            <h2 class="ig-title" id="north-star-reconstruction-title" tabindex="-1">Explain it from memory</h2>
+            <p class="ig-first-use">No notes. Use your own words; an incomplete model is useful evidence.</p>
+          </header>
+          <div class="north-star-target">
+            <span class="north-star-target__label">Your target</span>
+            <p id="north-star-target-text"></p>
+          </div>
+          <form class="composer-card composer-card--tall" id="north-star-reconstruction-form" autocomplete="off">
+            <label class="composer-card__label" for="north-star-explanation-field">Your explanation</label>
+            <textarea class="composer-card__field" id="north-star-explanation-field" rows="8" maxlength="12000"
+                      placeholder="Rebuild the idea without looking back"
+                      aria-describedby="north-star-reconstruction-note north-star-reconstruction-error"></textarea>
+            <p class="ig-error" id="north-star-reconstruction-error" role="status" aria-live="polite"></p>
+            <footer class="composer-card__footer">
+              <p class="ig-footnote" id="north-star-reconstruction-note">Saved exactly as written. This first attempt is not a score.</p>
+              <button type="submit" class="ig-button ig-button--linear" id="north-star-reconstruction-submit" disabled>Save explanation</button>
+            </footer>
+          </form>
+        </section>
+
+        <section class="north-star-step north-star-saved" id="north-star-saved" aria-labelledby="north-star-saved-title" hidden>
+          <header class="north-star-step__header">
+            <p class="ig-eyebrow">Explanation saved</p>
+            <h2 class="ig-title" id="north-star-saved-title" tabindex="-1">Your first model is on the record</h2>
+            <p class="ig-first-use">The source remains closed. This attempt is evidence for what to revisit, not proof of mastery.</p>
+          </header>
+          <dl class="north-star-record">
+            <div>
+              <dt>Target</dt>
+              <dd id="north-star-saved-target"></dd>
+            </div>
+            <div>
+              <dt>Your explanation</dt>
+              <dd id="north-star-saved-explanation"></dd>
+            </div>
+            <div>
+              <dt>Recorded</dt>
+              <dd id="north-star-saved-time"></dd>
+            </div>
+          </dl>
+          <div class="north-star-gap" id="north-star-gap" aria-live="polite">
+            <p class="ig-eyebrow">One gap to repair</p>
+            <p class="north-star-gap__text" id="north-star-gap-text">Finding one consequential gap…</p>
+            <p class="ig-error" id="north-star-gap-error" role="status"></p>
+            <button type="button" class="ig-button ig-button--linear" id="north-star-gap-retry" hidden>
+              Retry gap
+            </button>
+          </div>
+          <form class="composer-card composer-card--tall" id="north-star-repair-form" autocomplete="off" hidden>
+            <label class="composer-card__label" for="north-star-repair-field">Write the repair in your own words</label>
+            <textarea class="composer-card__field" id="north-star-repair-field" rows="6" maxlength="12000"
+                      placeholder="Repair the missing link without reopening the source"
+                      aria-describedby="north-star-repair-note north-star-repair-error"></textarea>
+            <p class="ig-error" id="north-star-repair-error" role="status" aria-live="polite"></p>
+            <footer class="composer-card__footer">
+              <p class="ig-footnote" id="north-star-repair-note">Your repair is saved exactly as written. It is practice, not proof of mastery.</p>
+              <button type="submit" class="ig-button ig-button--linear" id="north-star-repair-submit" disabled>Save repair</button>
+            </footer>
+          </form>
+          <div class="north-star-repair-saved" id="north-star-repair-saved" hidden>
+            <p class="ig-eyebrow">Repair saved</p>
+            <p id="north-star-repair-saved-text"></p>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -437,7 +491,7 @@ I'm fuzzy on…
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="/js/drill-chamber.js?v=20"></script>
-  <script type="module" src="/js/app.js?v=217"></script>
+  <script type="module" src="/js/app.js?v=218"></script>
   <script type="module" src="/js/floating-room-label.js?v=11"></script>
   <script type="module" src="/js/iso-board-state-surface.js?v=10"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>

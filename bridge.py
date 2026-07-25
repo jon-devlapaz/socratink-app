@@ -307,6 +307,8 @@ def _normalize_tui_evaluation(
 
 
 def build_repair_scaffold(request: dict[str, Any]) -> dict[str, Any]:
+    if os.environ.get("SOCRATINK_TUI_FAKE_REPAIR_SCAFFOLD_FAIL") == "1":
+        raise ValueError("fake-repair-scaffold-failure")
     if os.environ.get("SOCRATINK_TUI_FAKE_LLM") == "1":
         return _fake_repair_scaffold(request)
 
