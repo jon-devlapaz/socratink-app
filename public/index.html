@@ -307,7 +307,28 @@
                     rows="7" maxlength="50000"
                     placeholder="Paste the passage you want to understand"
                     aria-label="Source material"
-                    aria-describedby="ignition-boundary hero-door-error"></textarea>
+                    aria-describedby="ignition-boundary hero-source-error hero-door-error"></textarea>
+          <div class="composer-card__properties" id="hero-source-file-state">
+            <div class="ig-property">
+              <span class="ig-property__label">File</span>
+              <span class="ig-property__value" id="hero-source-file-value"
+                    role="status" aria-live="polite" aria-atomic="true">
+                TXT, MD, or PDF · up to 2MB
+              </span>
+              <input id="hero-source-file-input" type="file"
+                     accept=".txt,.md,.pdf" hidden>
+              <button class="ig-property__action" id="hero-source-file-action"
+                      type="button" aria-describedby="hero-source-file-value hero-source-error">
+                Attach
+              </button>
+              <button class="ig-property__action" id="hero-source-file-remove"
+                      type="button" hidden>
+                Remove
+              </button>
+            </div>
+          </div>
+          <p class="ig-error" id="hero-source-error"
+             role="status" aria-live="polite"></p>
           <label class="composer-card__label" for="hero-cold-guess-field">Explanation target</label>
           <textarea class="composer-card__field" id="hero-cold-guess-field"
                     rows="3" maxlength="1200"
@@ -491,7 +512,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="/js/drill-chamber.js?v=20"></script>
-  <script type="module" src="/js/app.js?v=219"></script>
+  <script type="module" src="/js/app.js?v=220"></script>
   <script type="module" src="/js/floating-room-label.js?v=11"></script>
   <script type="module" src="/js/iso-board-state-surface.js?v=10"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>

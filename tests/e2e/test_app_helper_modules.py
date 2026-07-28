@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import os
 import re
+from pathlib import Path
 from urllib.parse import urljoin
 
 import pytest
 from playwright.sync_api import Page, expect
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
@@ -53,6 +56,121 @@ def test_intake_hides_source_before_reconstruction(
     expect(clean_page.locator("#north-star-explanation-field")).to_be_visible()
     expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
     assert source not in clean_page.locator("body").inner_text()
+
+
+def test_file_intake_attaches_replaces_removes_and_hides_source(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    target = "Explain how the local app starts and verifies a learning session."
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+
+    with clean_page.expect_file_chooser() as chooser:
+        clean_page.locator("#hero-source-file-action").press("Enter")
+    chooser.value.set_files(REPO_ROOT / "README.md")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    expect(clean_page.locator("#hero-source-file-action")).to_have_text("Replace")
+    expect(clean_page.locator("#hero-source-file-remove")).to_be_visible()
+    expect(clean_page.locator("#hero-single-input-field")).to_be_hidden()
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    with clean_page.expect_file_chooser() as chooser:
+        clean_page.locator("#hero-source-file-action").press("Enter")
+    chooser.value.set_files(REPO_ROOT / "tests/fixtures/source-intake.pdf")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text(
+        "source-intake.pdf",
+        timeout=15_000,
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    clean_page.locator("#hero-source-file-remove").press("Enter")
+    expect(clean_page.locator("#hero-single-input-field")).to_be_visible()
+    expect(clean_page.locator("#hero-source-file-remove")).to_be_hidden()
+    expect(clean_page.locator("#hero-source-file-action")).to_have_text("Attach")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    clean_page.locator("#hero-source-file-input").set_input_files(REPO_ROOT / "README.md")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    clean_page.locator("#hero-door-submit").click()
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert "socratink-app is an MVP-stage learning product" not in clean_page.locator(
+        "body"
+    ).inner_text()
+
+
+def test_file_intake_errors_preserve_target_and_current_attachment(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    target = "Explain why retrieval must happen without the source."
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+    file_input = clean_page.locator("#hero-source-file-input")
+    error = clean_page.locator("#hero-source-error")
+
+    file_input.set_input_files(
+        {"name": "empty.txt", "mimeType": "text/plain", "buffer": b""}
+    )
+    expect(error).to_contain_text("does not contain readable text")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {"name": "notes.csv", "mimeType": "text/csv", "buffer": b"a,b"}
+    )
+    expect(error).to_contain_text("Unsupported file type")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {
+            "name": "unreadable.pdf",
+            "mimeType": "application/pdf",
+            "buffer": b"not a PDF",
+        }
+    )
+    expect(error).to_contain_text(
+        "Could not natively extract text from this PDF",
+        timeout=15_000,
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {
+            "name": "container-too-large.md",
+            "mimeType": "text/markdown",
+            "buffer": b"x" * (2 * 1024 * 1024 + 1),
+        }
+    )
+    expect(error).to_contain_text("Maximum size is 2MB")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {
+            "name": "turn-too-large.txt",
+            "mimeType": "text/plain",
+            "buffer": b'"' * (64 * 1024),
+        }
+    )
+    expect(error).to_have_text(
+        "This file contains too much text for one session. "
+        "Choose a shorter file or paste a focused passage."
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+    expect(clean_page.locator("#hero-source-file-remove")).to_be_hidden()
+
+    file_input.set_input_files(REPO_ROOT / "README.md")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    file_input.set_input_files(
+        {
+            "name": "bad-replacement.txt",
+            "mimeType": "text/plain",
+            "buffer": b'"' * (64 * 1024),
+        }
+    )
+    expect(error).to_contain_text("too much text for one session")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
 
 
 def test_exact_reconstruction_and_repair_survive_reload(

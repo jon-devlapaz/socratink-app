@@ -7,10 +7,58 @@ from pathlib import Path
 
 import pytest
 
+from loop_backend_proxy import _MAX_LOOP_REQUEST_BODY_BYTES
 from tests._helpers.node_runner import run_node_module
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_seda_turn_size_helper_matches_proxy_and_serialized_utf8() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import {
+          MAX_SEDA_REQUEST_BODY_BYTES,
+          createSedaTurnSubmission,
+          sedaTurnRequestBodyBytes,
+          sedaTurnTextFitsRequest,
+        } from './public/js/ai_service.js';
+
+        const requestId = '00000000-0000-4000-8000-000000000000';
+        const expectedVersion = 1;
+        const empty = createSedaTurnSubmission('', expectedVersion, requestId);
+        const overhead = sedaTurnRequestBodyBytes(empty);
+        const exactText = 'x'.repeat(MAX_SEDA_REQUEST_BODY_BYTES - overhead);
+
+        assert.equal(
+          sedaTurnRequestBodyBytes(
+            createSedaTurnSubmission(exactText, expectedVersion, requestId),
+          ),
+          MAX_SEDA_REQUEST_BODY_BYTES,
+        );
+        assert.equal(sedaTurnTextFitsRequest(exactText, expectedVersion), true);
+        assert.equal(sedaTurnTextFitsRequest(`${exactText}x`, expectedVersion), false);
+        assert.ok(
+          sedaTurnRequestBodyBytes(
+            createSedaTurnSubmission('é', expectedVersion, requestId),
+          ) > sedaTurnRequestBodyBytes(
+            createSedaTurnSubmission('e', expectedVersion, requestId),
+          ),
+        );
+        assert.ok(
+          sedaTurnRequestBodyBytes(
+            createSedaTurnSubmission('"', expectedVersion, requestId),
+          ) > sedaTurnRequestBodyBytes(
+            createSedaTurnSubmission('x', expectedVersion, requestId),
+          ),
+        );
+        console.log(MAX_SEDA_REQUEST_BODY_BYTES);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+    assert int(result.stdout.strip()) == _MAX_LOOP_REQUEST_BODY_BYTES
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
@@ -200,9 +248,11 @@ def test_seda_session_client_uses_app_boundary() -> None:
         """
         import assert from 'node:assert/strict';
         import {
+          MAX_SEDA_REQUEST_BODY_BYTES,
           createSedaSession,
           createSedaTurnSubmission,
           getSedaSession,
+          sedaTurnRequestBodyBytes,
           sendSedaTurn,
         } from './public/js/ai_service.js';
 
@@ -252,6 +302,23 @@ def test_seda_session_client_uses_app_boundary() -> None:
           () => createSedaTurnSubmission('bad version', -1),
           /expectedVersion/,
         );
+        const sizeProbe = createSedaTurnSubmission(
+          '',
+          5,
+          '00000000-0000-4000-8000-000000000000',
+        );
+        const oversizedText = 'x'.repeat(
+          MAX_SEDA_REQUEST_BODY_BYTES - sedaTurnRequestBodyBytes(sizeProbe) + 1,
+        );
+        const callCountBeforeOversizedTurn = calls.length;
+        assert.throws(
+          () => sendSedaTurn('session/1', {
+            ...sizeProbe,
+            text: oversizedText,
+          }),
+          (error) => error.code === 'seda_turn_too_large',
+        );
+        assert.equal(calls.length, callCountBeforeOversizedTurn);
         """
     )
     assert result.returncode == 0, result.stderr

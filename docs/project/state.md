@@ -43,6 +43,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - `solidified` can only result from spaced strong reconstruction evidence. Study, Repair Reps, and Gap drills must not produce `solidified`.
 - Clusters are containers in MVP, not primary drill targets.
 - Drill-session caps remain backend/doctrinal guardrails, but the current frontend MVP bypasses duration, node-count, and per-node retrieval enforcement while inline reconstruction is validated.
+- Temporary file-intake alpha: file containers may be up to 2 MB, but extracted text must fit the existing serialized 64 KiB SEDA session turn; do not truncate it, raise the request cap, durably store files, or add a new Source model in this slice. Source material remains context and learner reconstruction remains evidence; larger-source support requires a separate architecture decision.
 
 ## Current Priorities
 - keep graph state and persisted state aligned

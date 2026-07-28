@@ -1310,6 +1310,12 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
     assert 'for="hero-cold-guess-field">Explanation target</label>' in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'id="hero-cold-guess-field"' in index_html
+    assert 'id="hero-source-file-input"' in index_html
+    assert 'accept=".txt,.md,.pdf"' in index_html
+    assert 'id="hero-source-file-action"' in index_html
+    assert 'id="hero-source-file-remove"' in index_html
+    assert 'id="hero-source-file-value"' in index_html
+    assert 'aria-live="polite"' in index_html
     assert 'aria-label="Source material"' in index_html
     assert 'aria-label="Explanation target"' in index_html
     assert '>Close source and explain</button>' in index_html

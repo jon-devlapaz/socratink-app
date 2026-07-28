@@ -3,9 +3,10 @@ import {
   createSedaTurnSubmission,
   createSedaSession,
   getSedaSession,
+  sedaTurnTextFitsRequest,
   sendSedaTurn,
   submitConceptCreate,
-} from './ai_service.js?v=6';
+} from './ai_service.js?v=7';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -114,7 +115,7 @@ import { AudioFX } from './audio.js?v=4';
 import {
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=7';
+} from './launch-pad.js?v=8';
 import {
   coldAttemptCompletionLabel,
   nextSedaPromptAfterVerdict,
@@ -144,12 +145,19 @@ const App = (() => {
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
   const LOCAL_REPAIR_QA_NEXT_NODE_ID = 'depolarization-node';
   const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
+  const FILE_SOURCE_TOO_LARGE =
+    'This file contains too much text for one session. Choose a shorter file or paste a focused passage.';
+  const PASTED_SOURCE_TOO_LARGE =
+    'This source contains too much text for one session. Paste a shorter, more focused passage.';
   const trainingStore = createTrainingStore();
   let learnerStatePushTimer = null;
   let readyFilterActive = false;
   let cachedDueItems = [];
   let northStarSession = null;
   let northStarBusy = false;
+  let northStarFileBusy = false;
+  let northStarFileReadName = '';
+  let northStarFileSource = null;
   const freshSourceLessConceptIds = new Set();
 
   function saveConcepts(arr) {
@@ -708,6 +716,13 @@ const App = (() => {
       guessField.value = '';
       guessField.style.height = '';
     }
+    northStarFileBusy = false;
+    northStarFileReadName = '';
+    northStarFileSource = null;
+    const fileInput = document.getElementById('hero-source-file-input');
+    if (fileInput) fileInput.value = '';
+    setNorthStarSourceError('');
+    renderNorthStarSourceInput();
     const submitBtn = document.getElementById('hero-door-submit');
     if (submitBtn instanceof HTMLButtonElement) {
       submitBtn.disabled = true;
@@ -718,7 +733,7 @@ const App = (() => {
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       if (!_doorReady() || northStarBusy) return false;
-      const source = document.getElementById('hero-single-input-field')?.value || '';
+      const source = northStarSourceText();
       const target = document.getElementById('hero-cold-guess-field')?.value || '';
       const error = document.getElementById('hero-door-error');
       setNorthStarBusy(true);
@@ -731,7 +746,11 @@ const App = (() => {
         if (data.awaiting?.key === 'target') data = await sendNorthStarText(data, target);
         renderNorthStarState(data);
       } catch (err) {
-        if (error) error.textContent = err?.message || 'The session could not be saved. Try again.';
+        if (err?.code === 'seda_turn_too_large') {
+          setNorthStarSourceError(northStarFileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
+        } else if (error) {
+          error.textContent = err?.message || 'The session could not be saved. Try again.';
+        }
         if (northStarSession) renderNorthStarState(northStarSession);
       } finally {
         setNorthStarBusy(false);
@@ -764,12 +783,66 @@ const App = (() => {
     }
   }
 
+  function northStarSourceText() {
+    return northStarFileSource?.text
+      || document.getElementById('hero-single-input-field')?.value
+      || '';
+  }
+
+  function northStarSourceFits(text = northStarSourceText()) {
+    const expectedVersion = northStarSession?.sessionVersion ?? 1;
+    return sedaTurnTextFitsRequest(text, expectedVersion);
+  }
+
+  function setNorthStarSourceError(message) {
+    const error = document.getElementById('hero-source-error');
+    if (error) error.textContent = message;
+  }
+
+  function renderNorthStarSourceInput(waitingForTarget = false) {
+    const sourceField = document.getElementById('hero-single-input-field');
+    const sourceLabel = document.querySelector('label[for="hero-single-input-field"]');
+    const fileState = document.getElementById('hero-source-file-state');
+    const fileInput = document.getElementById('hero-source-file-input');
+    const fileValue = document.getElementById('hero-source-file-value');
+    const fileAction = document.getElementById('hero-source-file-action');
+    const fileRemove = document.getElementById('hero-source-file-remove');
+    const hasFile = Boolean(northStarFileSource);
+    const unavailable = northStarBusy || northStarFileBusy;
+
+    if (sourceField) sourceField.hidden = waitingForTarget || hasFile;
+    if (sourceLabel) sourceLabel.hidden = waitingForTarget || hasFile;
+    if (fileState) fileState.hidden = waitingForTarget;
+    if (fileInput) fileInput.disabled = unavailable;
+    if (fileValue) {
+      fileValue.textContent = northStarFileBusy
+        ? `Reading ${northStarFileReadName}…`
+        : (northStarFileSource?.filename || 'TXT, MD, or PDF · up to 2MB');
+    }
+    if (fileAction) {
+      fileAction.textContent = hasFile ? 'Replace' : 'Attach';
+      fileAction.disabled = unavailable;
+      fileAction.setAttribute(
+        'aria-label',
+        hasFile ? `Replace ${northStarFileSource.filename}` : 'Attach a technical file',
+      );
+    }
+    if (fileRemove) {
+      fileRemove.hidden = !hasFile;
+      fileRemove.disabled = unavailable;
+      fileRemove.setAttribute(
+        'aria-label',
+        hasFile ? `Remove ${northStarFileSource.filename}` : 'Remove attached file',
+      );
+    }
+  }
+
   function _doorReady() {
-    const f = document.getElementById('hero-single-input-field');
     const guess = document.getElementById('hero-cold-guess-field');
     if (!guess || !(guess.value || '').trim()) return false;
     if (northStarSession?.awaiting?.key === 'target') return true;
-    return Boolean(f && (f.value || '').trim());
+    const source = northStarSourceText();
+    return !northStarFileBusy && Boolean(source.trim()) && northStarSourceFits(source);
   }
 
   function reconstructionReady() {
@@ -803,6 +876,7 @@ const App = (() => {
     if (capture) capture.dataset.state = northStarBusy ? 'busy' : '';
     if (reconstruction) reconstruction.dataset.state = northStarBusy ? 'busy' : '';
     if (repair) repair.dataset.state = northStarBusy ? 'busy' : '';
+    renderNorthStarSourceInput(northStarSession?.awaiting?.key === 'target');
     _doorUpdateSubmitState();
     const reconstructionSubmit = document.getElementById('north-star-reconstruction-submit');
     if (reconstructionSubmit) reconstructionSubmit.disabled = northStarBusy || !reconstructionReady();
@@ -921,14 +995,11 @@ const App = (() => {
     }
 
     showNorthStarPanel('capture');
-    const sourceField = document.getElementById('hero-single-input-field');
-    const sourceLabel = document.querySelector('label[for="hero-single-input-field"]');
     const targetField = document.getElementById('hero-cold-guess-field');
     const submit = document.getElementById('hero-door-submit');
     const hint = document.getElementById('ignition-boundary');
     const waitingForTarget = session.awaiting?.key === 'target';
-    if (sourceField) sourceField.hidden = waitingForTarget;
-    if (sourceLabel) sourceLabel.hidden = waitingForTarget;
+    renderNorthStarSourceInput(waitingForTarget);
     if (submit) {
       submit.textContent = waitingForTarget ? 'Continue to explanation' : 'Close source and explain';
       submit.setAttribute('aria-label', submit.textContent);
@@ -959,10 +1030,71 @@ const App = (() => {
     if (!(conceptField instanceof HTMLTextAreaElement)) return;
 
     const form = document.getElementById('hero-single-input');
+    const fileInput = document.getElementById('hero-source-file-input');
+    const fileAction = document.getElementById('hero-source-file-action');
+    const fileRemove = document.getElementById('hero-source-file-remove');
 
-    conceptField.addEventListener('input', _doorUpdateSubmitState);
+    conceptField.addEventListener('input', () => {
+      const text = conceptField.value;
+      setNorthStarSourceError(
+        text && !northStarSourceFits(text) ? PASTED_SOURCE_TOO_LARGE : '',
+      );
+      _doorUpdateSubmitState();
+    });
     guessField?.addEventListener('input', _doorUpdateSubmitState);
+    renderNorthStarSourceInput();
     _doorUpdateSubmitState();
+
+    fileAction?.addEventListener('click', () => {
+      AudioFX.playFocusTap();
+      fileInput?.click();
+    });
+    fileRemove?.addEventListener('click', () => {
+      AudioFX.playFocusTap();
+      northStarFileSource = null;
+      setNorthStarSourceError('');
+      renderNorthStarSourceInput();
+      _doorUpdateSubmitState();
+      requestAnimationFrame(() => conceptField.focus());
+    });
+    fileInput?.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file) return;
+      northStarFileBusy = true;
+      northStarFileReadName = file.name;
+      setNorthStarSourceError('');
+      renderNorthStarSourceInput();
+      _doorUpdateSubmitState();
+      _readFile(
+        file,
+        (text, filename) => {
+          const extracted = String(text || '').trim();
+          northStarFileBusy = false;
+          northStarFileReadName = '';
+          if (!extracted) {
+            setNorthStarSourceError('This file does not contain readable text. Choose another file.');
+          } else if (!northStarSourceFits(extracted)) {
+            setNorthStarSourceError(FILE_SOURCE_TOO_LARGE);
+          } else {
+            northStarFileSource = { text: extracted, filename: String(filename || file.name) };
+            setNorthStarSourceError('');
+          }
+          renderNorthStarSourceInput();
+          _doorUpdateSubmitState();
+          if (northStarFileSource?.text === extracted) {
+            requestAnimationFrame(() => guessField?.focus());
+          }
+        },
+        (message) => {
+          northStarFileBusy = false;
+          northStarFileReadName = '';
+          setNorthStarSourceError(message || 'This file could not be read. Choose another file.');
+          renderNorthStarSourceInput();
+          _doorUpdateSubmitState();
+        },
+      );
+    });
 
     // Audio feedback (preserve existing behavior).
     const isPrintable = (e) =>
@@ -2024,6 +2156,7 @@ const App = (() => {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
       const fileReader = new FileReader();
+      fileReader.onerror = () => onError('This PDF could not be read. Choose another file.');
       fileReader.onload = async (e) => {
         try {
           const pdfData = new Uint8Array(e.target.result);
@@ -2047,7 +2180,15 @@ const App = (() => {
       fileReader.readAsArrayBuffer(file);
     } else {
       const reader = new FileReader();
-      reader.onload = e => onSuccess(e.target.result, file.name);
+      reader.onerror = () => onError('This file could not be read. Choose another file.');
+      reader.onload = (e) => {
+        const text = String(e.target.result || '').trim();
+        if (!text) {
+          onError('This file does not contain readable text. Choose another file.');
+          return;
+        }
+        onSuccess(text, file.name);
+      };
       reader.readAsText(file);
     }
   }
@@ -3464,7 +3605,9 @@ const App = (() => {
     renderIgnitionGate();
     if (window.innerWidth < 900) closeDrawer();
     // Focus the writing surface directly; aria-label provides SR announcement.
-    const field = document.getElementById('hero-single-input-field');
+    const field = northStarFileSource
+      ? document.getElementById('hero-source-file-action')
+      : document.getElementById('hero-single-input-field');
     if (field) requestAnimationFrame(() => field.focus());
   }
 
@@ -3484,6 +3627,7 @@ const App = (() => {
     if (field) field.disabled = northStarBusy;
     if (guessField) guessField.disabled = northStarBusy;
     if (submit) submit.disabled = northStarBusy || !_doorReady();
+    renderNorthStarSourceInput(northStarSession?.awaiting?.key === 'target');
 
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
