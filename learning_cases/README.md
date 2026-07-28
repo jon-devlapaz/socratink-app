@@ -13,8 +13,7 @@ fresh checkout.
 
 ## Case shape
 
-Use the short labels first. The old labels remain as compatibility aliases for
-current replay and dashboard readers.
+Use the short labels below. They are the only supported case metadata surface.
 
 ```json
 {
@@ -90,6 +89,3 @@ Every promoted case must answer:
 - What trace produced it?
 - What checks make the claim falsifiable?
 - Why is this a regression, golden, or research case?
-
-`expected_invariants` and `session_log` are compatibility aliases for current
-tools. New cases should be read as `checks` and `trace`.
