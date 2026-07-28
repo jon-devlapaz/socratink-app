@@ -33,8 +33,7 @@ The original thermostat starter-map MVP loop shipped. Per [ADR-0004](../adr/0004
 - `ai_service.py` still imports Gemini directly for `drill_chat` and `generate_repair_reps`; ADR-0002's temporary LLM seam exception remains unresolved until those paths migrate through `llm/`.
 - The app-local SEDA runtime now lives in root-level `lib/seda/`,
   `lib/loop-server/`, `bridge.py`, `bridge_lib/`, `vendor/python/`,
-  `learning_cases/`, and `pedagogical_agents/`. Treat `scripts/socratink_tui/`
-  as legacy CLI surface unless a task explicitly targets it.
+  `learning_cases/`, and `pedagogical_agents/`.
 
 ## Product Constraints
 - Generation Before Recognition is non-negotiable.

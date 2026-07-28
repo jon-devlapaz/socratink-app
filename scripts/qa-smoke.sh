@@ -140,6 +140,24 @@ while time.time() < deadline:
 raise SystemExit(f"local app did not become healthy: {last_error}")
 PY
   fi
+
+  if ! "$PYTHON_BIN" - "$TARGET" <<'PY'
+import sys
+import urllib.request
+
+try:
+    with urllib.request.urlopen(sys.argv[1], timeout=5) as response:
+        document = response.read().decode("utf-8", errors="replace")
+except Exception:
+    raise SystemExit(1)
+
+raise SystemExit(0 if 'id="guest-continue-link"' in document else 1)
+PY
+  then
+    echo "[qa-smoke] ERROR: $TARGET is healthy but not ready for local guest smoke tests." >&2
+    echo "[qa-smoke] Stop the existing server or pass an unused loopback URL, for example: bash scripts/qa-smoke.sh http://127.0.0.1:49173" >&2
+    exit 1
+  fi
 fi
 
 # 4. Run the suite.
