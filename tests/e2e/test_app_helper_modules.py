@@ -58,6 +58,30 @@ def test_intake_hides_source_before_reconstruction(
     assert source not in clean_page.locator("body").inner_text()
 
 
+def test_door_ctrl_enter_submits_once(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(
+        "A source that is long enough to exercise the Door readiness path."
+    )
+    clean_page.locator("#hero-cold-guess-field").fill(
+        "Explain the mechanism without reopening the source."
+    )
+    clean_page.locator("#hero-single-input").evaluate(
+        """(form) => {
+            let count = 0;
+            form.requestSubmit = () => { count += 1; };
+            form.getSubmitCount = () => count;
+        }"""
+    )
+    clean_page.locator("#hero-single-input-field").press("Control+Enter")
+    assert clean_page.locator("#hero-single-input").evaluate(
+        "form => form.getSubmitCount()"
+    ) == 1
+
+
 def test_identified_source_revision_reopens_without_persisting_source_client_side(
     clean_page: Page, base_url: str
 ) -> None:

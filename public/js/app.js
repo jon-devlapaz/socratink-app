@@ -67,7 +67,7 @@ import {
   renderDueSelectionHtml,
 } from './due-for-spaced.js?v=8';
 import { mountSourcePanel } from './source-panel.js?v=3';
-import { createDoorSourceController, readSourceFile, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=1';
+import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=1';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
   applyThemePreference as applyStoredThemePreference,
@@ -990,36 +990,7 @@ const App = (() => {
   }
 
   function initHeroSingleInput() {
-    const conceptField = document.getElementById('hero-single-input-field');
-    const guessField = document.getElementById('hero-cold-guess-field');
-    const form = document.getElementById('hero-single-input');
     doorSource.init({ isBusy: () => northStarBusy, session: () => northStarSession });
-
-    // Audio feedback (preserve existing behavior).
-    const isPrintable = (e) =>
-      !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
-      (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
-
-    conceptField.addEventListener('focus', () => AudioFX.playFocusTap());
-    guessField?.addEventListener('focus', () => AudioFX.playFocusTap());
-    conceptField.addEventListener('keydown', (e) => {
-      if (isPrintable(e)) {
-        AudioFX.playKeyClick();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        if (_doorReady()) {
-          e.preventDefault();
-          form?.requestSubmit?.();
-        }
-      }
-    });
-    guessField?.addEventListener('keydown', (e) => {
-      if (isPrintable(e)) AudioFX.playKeyClick();
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && _doorReady()) {
-        e.preventDefault();
-        form?.requestSubmit?.();
-      }
-    });
 
     const reconstructionForm = document.getElementById('north-star-reconstruction-form');
     const reconstructionField = document.getElementById('north-star-explanation-field');
@@ -2059,7 +2030,6 @@ const App = (() => {
     }
 
     mountSourcePanel(overlay, {
-      readFile: readSourceFile,
       onAttach: ({ text, type, filename, url }) => {
         const content = type === 'url' ? url : text;
         if (!content) return;
