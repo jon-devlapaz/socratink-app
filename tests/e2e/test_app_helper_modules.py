@@ -58,12 +58,186 @@ def test_intake_hides_source_before_reconstruction(
     assert source not in clean_page.locator("body").inner_text()
 
 
+def test_identified_source_revision_reopens_without_persisting_source_client_side(
+    clean_page: Page, base_url: str
+) -> None:
+    source = "SOURCE_TEXT_CANARY sodium channels open before sodium enters."
+    target = "Explain why sodium influx starts the signal."
+    source_id = "10000000-0000-4000-8000-000000000001"
+    revision_id = "20000000-0000-4000-8000-000000000002"
+    session_id = "30000000-0000-4000-8000-000000000003"
+    checksum = "a" * 64
+    source_requests: list[dict] = []
+    session_requests: list[dict] = []
+    turn_requests: list[dict] = []
+    reopen_requests: list[str] = []
+    reference = {
+        "source_id": source_id,
+        "revision_id": revision_id,
+        "normalization_version": "source-text-v1",
+        "extraction_version": "browser-paste-v1",
+        "parser_version": "plain-text-v1",
+        "source_kind": "paste",
+    }
+
+    clean_page.route(
+        re.compile(r".*/api/me$"),
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "auth_enabled": True,
+                    "authenticated": True,
+                    "guest_mode": False,
+                    "user": {"id": "identified-learner"},
+                }
+            ),
+        ),
+    )
+
+    def fulfill_source(route) -> None:
+        source_requests.append(route.request.post_data_json)
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sourceRevision": {
+                        "sourceId": source_id,
+                        "revisionId": revision_id,
+                        "checksumSha256": checksum,
+                        "normalizationVersion": "source-text-v1",
+                        "extractionVersion": "browser-paste-v1",
+                        "parserVersion": "plain-text-v1",
+                        "sourceKind": "paste",
+                        "provenance": {
+                            "input_method": "paste",
+                            "intake_surface": "promoted-alpha-file-intake",
+                        },
+                    }
+                }
+            ),
+        )
+
+    def fulfill_session(route) -> None:
+        session_requests.append(route.request.post_data_json)
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sessionId": session_id,
+                    "sessionVersion": 1,
+                    "status": "awaiting_input",
+                    "phase": "source_intake",
+                    "awaiting": {"key": "target"},
+                    "events": [
+                        {
+                            "type": "source_submitted",
+                            "source_revision": reference,
+                            "at": "2026-07-28T00:00:00.000Z",
+                            "phase": "source_intake",
+                        }
+                    ],
+                }
+            ),
+        )
+
+    def fulfill_turn(route) -> None:
+        turn_requests.append(route.request.post_data_json)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sessionId": session_id,
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "phase": "initial_reconstruction",
+                    "awaiting": {"key": "initial_reconstruction"},
+                    "events": [
+                        {"type": "source_submitted", "source_revision": reference},
+                        {"type": "target_submitted", "text": target},
+                    ],
+                }
+            ),
+        )
+
+    def fulfill_reopen(route) -> None:
+        reopen_requests.append(route.request.url)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sessionId": session_id,
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "phase": "initial_reconstruction",
+                    "awaiting": {"key": "initial_reconstruction"},
+                    "events": [
+                        {"type": "source_submitted", "source_revision": reference},
+                        {"type": "target_submitted", "text": target},
+                    ],
+                }
+            ),
+        )
+
+    clean_page.route(re.compile(r".*/api/source-revisions$"), fulfill_source)
+    clean_page.route(re.compile(r".*/api/session$"), fulfill_session)
+    clean_page.route(
+        re.compile(rf".*/api/session/{session_id}/turn$"),
+        fulfill_turn,
+    )
+    clean_page.route(
+        re.compile(rf".*/api/session/{session_id}$"),
+        fulfill_reopen,
+    )
+
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(source)
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert source not in clean_page.locator("body").inner_text()
+    assert len(source_requests) == 1
+    assert source_requests[0]["normalizedText"] == source
+    assert "filename" not in json.dumps(source_requests[0]).lower()
+    assert len(session_requests) == 1
+    assert "normalizedText" not in session_requests[0]
+    assert "text" not in session_requests[0]["sourceRevision"]
+    assert turn_requests[0]["text"] == target
+
+    storage = clean_page.evaluate(
+        """() => ({
+          local: Object.fromEntries(Object.entries(localStorage)),
+          session: Object.fromEntries(Object.entries(sessionStorage)),
+        })"""
+    )
+    assert source not in json.dumps(storage)
+    assert checksum not in json.dumps(storage)
+    assert storage["session"]["socratink:north-star-session:v1"] == session_id
+
+    clean_page.reload()
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert source not in clean_page.locator("body").inner_text()
+    assert len(reopen_requests) == 1
+    assert len(source_requests) == 1
+
+
 def test_file_intake_attaches_replaces_removes_and_hides_source(
     clean_page: Page, base_url: str
 ) -> None:
     _enter_app_shell_as_guest(clean_page, base_url)
     clean_page.locator("#nav-ignition").click()
     target = "Explain how the local app starts and verifies a learning session."
+    earlier_paste = "An earlier pasted source remains available after removing a file."
+    clean_page.locator("#hero-single-input-field").fill(earlier_paste)
     clean_page.locator("#hero-cold-guess-field").fill(target)
 
     with clean_page.expect_file_chooser() as chooser:
@@ -86,6 +260,7 @@ def test_file_intake_attaches_replaces_removes_and_hides_source(
 
     clean_page.locator("#hero-source-file-remove").press("Enter")
     expect(clean_page.locator("#hero-single-input-field")).to_be_visible()
+    expect(clean_page.locator("#hero-single-input-field")).to_have_value(earlier_paste)
     expect(clean_page.locator("#hero-source-file-remove")).to_be_hidden()
     expect(clean_page.locator("#hero-source-file-action")).to_have_text("Attach")
     expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
@@ -348,16 +523,22 @@ def test_north_star_gap_unavailable_survives_retry_failure(
 
 
 @pytest.mark.parametrize(
-    ("status", "expected_error"),
+    ("status", "payload", "expected_error"),
     [
-        (500, "The saved session could not be reopened."),
-        (404, ""),
+        (500, {"message": "Session unavailable."}, "The saved session could not be reopened."),
+        (404, {"message": "Session unavailable."}, ""),
+        (
+            404,
+            {"error": "source_unavailable", "code": "source_unavailable", "recoverable": True},
+            "The saved source is no longer available. Attach or paste it again.",
+        ),
     ],
 )
 def test_north_star_saved_session_get_failure_recovers_to_intake(
     clean_page: Page,
     base_url: str,
     status: int,
+    payload: dict,
     expected_error: str,
 ) -> None:
     session_id = "11111111-1111-4111-8111-111111111111"
@@ -371,7 +552,7 @@ def test_north_star_saved_session_get_failure_recovers_to_intake(
         lambda route: route.fulfill(
             status=status,
             content_type="application/json",
-            body=json.dumps({"message": "Session unavailable."}),
+            body=json.dumps(payload),
         ),
     )
 

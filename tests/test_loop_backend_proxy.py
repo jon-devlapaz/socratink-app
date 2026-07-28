@@ -265,6 +265,52 @@ def test_session_proxy_requires_user_token_for_vercel_internal_store(
     request.assert_not_called()
 
 
+def test_source_revision_proxy_requires_identified_user_and_forwards_token(
+    client: TestClient,
+) -> None:
+    original_service = main.app.state.auth_service
+    service = _GuestAuthService()
+    main.app.state.auth_service = service
+    try:
+        with patch("loop_backend_proxy._POOL.request") as request:
+            denied = client.post("/api/source-revisions", json={})
+        assert denied.status_code == 401
+        request.assert_not_called()
+
+        service.load_session = lambda _sealed: AuthSessionState(
+            auth_enabled=True,
+            authenticated=True,
+            guest_mode=False,
+            user=AuthUser(id="identified-user"),
+            access_token="identified-user-jwt",
+        )
+        upstream = MagicMock()
+        upstream.status = 201
+        upstream.headers = {"content-type": "application/json"}
+        upstream.read.return_value = b'{"sourceRevision":{"revisionId":"ok"}}'
+        upstream.release_conn = MagicMock()
+        with (
+            patch(
+                "loop_backend_proxy._start_local_loop_backend",
+                return_value="http://127.0.0.1:9999",
+            ),
+            patch(
+                "loop_backend_proxy._POOL.request",
+                return_value=upstream,
+            ) as request,
+        ):
+            accepted = client.post("/api/source-revisions", json={"source": "opaque"})
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert accepted.status_code == 201
+    assert request.call_args[0][1] == "http://127.0.0.1:9999/api/source-revisions"
+    assert (
+        request.call_args.kwargs["headers"]["X-Socratink-User-Access-Token"]
+        == "identified-user-jwt"
+    )
+
+
 def test_session_proxy_fails_closed_without_hosted_loop_service(
     client: TestClient,
 ) -> None:

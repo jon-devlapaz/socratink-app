@@ -88,6 +88,7 @@ async function postJson(url, body = {}) {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SEDA_TURN_SIZE_PROBE_REQUEST_ID = '00000000-0000-4000-8000-000000000000';
+const SOURCE_INTAKE_SIZE_PROBE_ID = '00000000-0000-4000-8000-000000000000';
 
 export const MAX_SEDA_REQUEST_BODY_BYTES = 64 * 1024;
 
@@ -120,10 +121,77 @@ export function sedaTurnTextFitsRequest(text, expectedVersion) {
 export function createSedaSession({
   sourceLessDoorBootstrap = false,
   northStarIntake = false,
+  sourceRevision = null,
 } = {}) {
   return postJson("/api/session", {
     ...(sourceLessDoorBootstrap === true ? { sourceLessDoorBootstrap: true } : {}),
     ...(northStarIntake === true ? { northStarIntake: true } : {}),
+    ...(sourceRevision ? { sourceRevision } : {}),
+  });
+}
+
+export function sourceRevisionRequestBodyBytes(input) {
+  return new TextEncoder().encode(JSON.stringify(input)).byteLength;
+}
+
+export function sourceRevisionTextFitsRequest({
+  normalizedText,
+  normalizationVersion,
+  extractionVersion,
+  parserVersion,
+  sourceKind,
+  provenance,
+}) {
+  return sourceRevisionRequestBodyBytes({
+    idempotencyKey: SOURCE_INTAKE_SIZE_PROBE_ID,
+    normalizedText,
+    normalizationVersion,
+    extractionVersion,
+    parserVersion,
+    sourceKind,
+    provenance,
+  }) <= MAX_SEDA_REQUEST_BODY_BYTES;
+}
+
+export function createSourceRevision(input) {
+  if (sourceRevisionRequestBodyBytes(input) > MAX_SEDA_REQUEST_BODY_BYTES) {
+    const error = new Error('A source intake request body is too large.');
+    error.code = 'source_too_large';
+    throw error;
+  }
+  return postJson('/api/source-revisions', input);
+}
+
+export async function getSourceRevision(revisionId) {
+  const response = await fetch(
+    `/api/source-revisions/${encodeURIComponent(revisionId)}`,
+    { method: 'GET', headers: { Accept: 'application/json' } },
+  );
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const error = new Error(payload?.message || payload?.error || 'Source unavailable.');
+    error.status = response.status;
+    error.code = payload?.code || payload?.error || null;
+    error.body = payload;
+    throw error;
+  }
+  return response.json();
+}
+
+export function eraseSourceRevision(revisionId) {
+  return fetch(`/api/source-revisions/${encodeURIComponent(revisionId)}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json' },
+  }).then(async (response) => {
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload?.message || payload?.error || 'Source unavailable.');
+      error.status = response.status;
+      error.code = payload?.code || payload?.error || null;
+      error.body = payload;
+      throw error;
+    }
+    return payload;
   });
 }
 

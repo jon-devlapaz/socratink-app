@@ -37,3 +37,30 @@ def test_loop_sessions_schema_bounds_journal_and_replay_payloads() -> None:
     assert "octet_length(turn_receipts::text) <= 2097152" in sql
     assert "REVOKE ALL ON public.loop_sessions FROM PUBLIC, anon" in sql
     assert "service_role" not in sql.lower()
+
+
+def test_source_revision_schema_is_owner_scoped_invoker_only_and_erasable() -> None:
+    sql = SCHEMA.read_text()
+    intake = sql.split(
+        "CREATE OR REPLACE FUNCTION public.intake_source_revision", 1
+    )[1].split("CREATE OR REPLACE FUNCTION public.erase_source_revision", 1)[0]
+    erase = sql.split(
+        "CREATE OR REPLACE FUNCTION public.erase_source_revision", 1
+    )[1].split("REVOKE ALL ON FUNCTION public.protect_source_revision_update", 1)[0]
+
+    assert "CREATE TABLE IF NOT EXISTS public.sources" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.source_revisions" in sql
+    assert "CREATE TABLE IF NOT EXISTS public.source_intake_requests" in sql
+    assert "source_revisions_owner_checksum_idx" in sql
+    assert "loop_sessions_source_revision_owner_fk" in sql
+    assert "SECURITY INVOKER" in intake
+    assert "SECURITY DEFINER" not in intake
+    assert "SECURITY INVOKER" in erase
+    assert "pg_advisory_xact_lock" in intake
+    assert "p_payload_hash" not in intake
+    assert "payload_hash := encode(sha256(convert_to(jsonb_build_object(" in intake
+    assert intake.index("p_idempotency_key::text") < intake.index("INTO prior")
+    assert intake.index("INTO prior") < intake.index("p_checksum_sha256, 0")
+    assert "USING ERRCODE = 'PT409'" in intake
+    assert "filename" not in sql.lower()
+    assert "DELETE FROM public.source_intake_requests" in erase

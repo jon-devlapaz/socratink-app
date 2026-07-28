@@ -21,7 +21,7 @@
 // can retry without re-typing the threshold.
 
 import { emitTelemetry } from './telemetry.js';
-import { submitConceptCreate } from './ai_service.js?v=7';
+import { submitConceptCreate } from './ai_service.js?v=8';
 import { AudioFX } from './audio.js?v=4';
 
 // Same printable-key heuristic the door uses (app.js) so launch-pad audio

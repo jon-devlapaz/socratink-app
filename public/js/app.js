@@ -1,12 +1,14 @@
 import { Bus } from './bus.js';
 import {
+  createSourceRevision,
   createSedaTurnSubmission,
   createSedaSession,
   getSedaSession,
   sedaTurnTextFitsRequest,
   sendSedaTurn,
+  sourceRevisionTextFitsRequest,
   submitConceptCreate,
-} from './ai_service.js?v=7';
+} from './ai_service.js?v=8';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -115,7 +117,7 @@ import { AudioFX } from './audio.js?v=4';
 import {
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=8';
+} from './launch-pad.js?v=9';
 import {
   coldAttemptCompletionLabel,
   nextSedaPromptAfterVerdict,
@@ -149,6 +151,7 @@ const App = (() => {
     'This file contains too much text for one session. Choose a shorter file or paste a focused passage.';
   const PASTED_SOURCE_TOO_LARGE =
     'This source contains too much text for one session. Paste a shorter, more focused passage.';
+  const SOURCE_NORMALIZATION_VERSION = 'source-text-v1';
   const trainingStore = createTrainingStore();
   let learnerStatePushTimer = null;
   let readyFilterActive = false;
@@ -158,6 +161,7 @@ const App = (() => {
   let northStarFileBusy = false;
   let northStarFileReadName = '';
   let northStarFileSource = null;
+  let northStarSourceIntakeKey = null;
   const freshSourceLessConceptIds = new Set();
 
   function saveConcepts(arr) {
@@ -719,6 +723,7 @@ const App = (() => {
     northStarFileBusy = false;
     northStarFileReadName = '';
     northStarFileSource = null;
+    northStarSourceIntakeKey = null;
     const fileInput = document.getElementById('hero-source-file-input');
     if (fileInput) fileInput.value = '';
     setNorthStarSourceError('');
@@ -739,7 +744,25 @@ const App = (() => {
       setNorthStarBusy(true);
       if (error) error.textContent = '';
       try {
-        let data = northStarSession || await createSedaSession({ northStarIntake: true });
+        const authSession = await fetchAuthSession();
+        let data = northStarSession;
+        if (!data && isIdentifiedUserSession(authSession)) {
+          northStarSourceIntakeKey ||= globalThis.crypto?.randomUUID?.();
+          if (!northStarSourceIntakeKey) throw new Error('Secure source intake is unavailable.');
+          const sourcePayload = northStarSourceIntakePayload(northStarSourceIntakeKey);
+          if (!sourceRevisionTextFitsRequest(sourcePayload)) {
+            setNorthStarSourceError(
+              northStarFileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE,
+            );
+            return;
+          }
+          const intake = await createSourceRevision(sourcePayload);
+          data = await createSedaSession({
+            northStarIntake: true,
+            sourceRevision: intake.sourceRevision,
+          });
+        }
+        data ||= await createSedaSession({ northStarIntake: true });
         northStarSession = data;
         rememberNorthStarSession(data.sessionId);
         if (data.awaiting?.key === 'source') data = await sendNorthStarText(data, source);
@@ -792,6 +815,36 @@ const App = (() => {
   function northStarSourceFits(text = northStarSourceText()) {
     const expectedVersion = northStarSession?.sessionVersion ?? 1;
     return sedaTurnTextFitsRequest(text, expectedVersion);
+  }
+
+  function northStarSourceDescriptor() {
+    if (northStarFileSource) {
+      return {
+        normalizationVersion: SOURCE_NORMALIZATION_VERSION,
+        extractionVersion: northStarFileSource.extractionVersion,
+        parserVersion: northStarFileSource.parserVersion,
+        sourceKind: northStarFileSource.sourceKind,
+        provenance: { ...northStarFileSource.provenance },
+      };
+    }
+    return {
+      normalizationVersion: SOURCE_NORMALIZATION_VERSION,
+      extractionVersion: 'browser-paste-v1',
+      parserVersion: 'plain-text-v1',
+      sourceKind: 'paste',
+      provenance: {
+        intake_surface: 'promoted-alpha-file-intake',
+        input_method: 'paste',
+      },
+    };
+  }
+
+  function northStarSourceIntakePayload(idempotencyKey) {
+    return {
+      idempotencyKey,
+      normalizedText: northStarSourceText(),
+      ...northStarSourceDescriptor(),
+    };
   }
 
   function setNorthStarSourceError(message) {
@@ -1015,9 +1068,11 @@ const App = (() => {
     try {
       renderNorthStarState(await getSedaSession(sessionId));
     } catch (err) {
-      if (![400, 404].includes(err?.status)) {
-        const error = document.getElementById('hero-door-error');
-        if (error) error.textContent = 'The saved session could not be reopened.';
+      const error = document.getElementById('hero-door-error');
+      if (error && err?.code === 'source_unavailable') {
+        error.textContent = 'The saved source is no longer available. Attach or paste it again.';
+      } else if (error && ![400, 404].includes(err?.status)) {
+        error.textContent = 'The saved session could not be reopened.';
       }
       try { sessionStorage.removeItem(NORTH_STAR_SESSION_KEY); } catch { /* no-op */ }
       northStarSession = null;
@@ -1036,6 +1091,7 @@ const App = (() => {
 
     conceptField.addEventListener('input', () => {
       const text = conceptField.value;
+      northStarSourceIntakeKey = null;
       setNorthStarSourceError(
         text && !northStarSourceFits(text) ? PASTED_SOURCE_TOO_LARGE : '',
       );
@@ -1052,6 +1108,7 @@ const App = (() => {
     fileRemove?.addEventListener('click', () => {
       AudioFX.playFocusTap();
       northStarFileSource = null;
+      northStarSourceIntakeKey = null;
       setNorthStarSourceError('');
       renderNorthStarSourceInput();
       _doorUpdateSubmitState();
@@ -1061,6 +1118,7 @@ const App = (() => {
       const file = fileInput.files?.[0];
       fileInput.value = '';
       if (!file) return;
+      northStarSourceIntakeKey = null;
       northStarFileBusy = true;
       northStarFileReadName = file.name;
       setNorthStarSourceError('');
@@ -1077,7 +1135,19 @@ const App = (() => {
           } else if (!northStarSourceFits(extracted)) {
             setNorthStarSourceError(FILE_SOURCE_TOO_LARGE);
           } else {
-            northStarFileSource = { text: extracted, filename: String(filename || file.name) };
+            const sourceKind = file.name.split('.').pop().toLowerCase();
+            const pdf = sourceKind === 'pdf';
+            northStarFileSource = {
+              text: extracted,
+              filename: String(filename || file.name),
+              sourceKind,
+              extractionVersion: pdf ? 'pdfjs-3.11.174' : 'browser-file-reader-v1',
+              parserVersion: pdf ? 'pdfjs-3.11.174' : 'plain-text-v1',
+              provenance: {
+                intake_surface: 'promoted-alpha-file-intake',
+                input_method: 'file',
+              },
+            };
             setNorthStarSourceError('');
           }
           renderNorthStarSourceInput();

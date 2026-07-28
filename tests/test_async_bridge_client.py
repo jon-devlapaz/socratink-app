@@ -219,6 +219,52 @@ time.sleep(5)
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_source_derived_bridge_diagnostic_redacts_output(tmp_path: Path) -> None:
+    bridge = tmp_path / "source_bridge.py"
+    bridge.write_text(
+        """
+import json
+import sys
+
+json.load(sys.stdin)
+print("SOURCE_TEXT_CANARY CLIENT_SECRET_PROJECT.pdf")
+print("SOURCE_TEXT_CANARY stderr", file=sys.stderr)
+raise SystemExit(1)
+""".strip()
+    )
+    diagnostics = tmp_path / "diagnostics"
+
+    result = run_node_module(
+        f"""
+        import assert from 'node:assert/strict';
+        import {{ createBridgeClient }} from './lib/bridge/client.mjs';
+
+        const client = createBridgeClient({{
+          workspaceRoot: {json.dumps(str(tmp_path))},
+          bridgePath: {json.dumps(str(bridge))},
+          python: {json.dumps(sys.executable)},
+          diagnosticsDir: {json.dumps(str(diagnostics))},
+          timeoutMs: 2_000,
+        }});
+        const response = await client.callBridgeResult(
+          'repair-scaffold',
+          {{ node_mechanism: 'SOURCE_TEXT_CANARY' }},
+        );
+        assert.equal(response.ok, false);
+        assert.ok(response.diagnostic?.path);
+        """
+    )
+
+    assert result.returncode == 0, result.stderr
+    diagnostic = json.loads(next(diagnostics.glob("*.json")).read_text())
+    serialized = json.dumps(diagnostic)
+    assert "SOURCE_TEXT_CANARY" not in serialized
+    assert "CLIENT_SECRET_PROJECT" not in serialized
+    assert diagnostic["bridge"]["stdout"] == "[redacted source-derived output]"
+    assert diagnostic["bridge"]["stderr"] == "[redacted source-derived output]"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 def test_bridge_output_is_bounded_and_fails_closed(tmp_path: Path) -> None:
     bridge = tmp_path / "noisy_bridge.py"
     bridge.write_text(
