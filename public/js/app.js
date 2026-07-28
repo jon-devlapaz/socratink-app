@@ -67,6 +67,7 @@ import {
   renderDueSelectionHtml,
 } from './due-for-spaced.js?v=8';
 import { mountSourcePanel } from './source-panel.js?v=3';
+import { createDoorSourceController, readSourceFile, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=1';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
   applyThemePreference as applyStoredThemePreference,
@@ -147,10 +148,6 @@ const App = (() => {
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
   const LOCAL_REPAIR_QA_NEXT_NODE_ID = 'depolarization-node';
   const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
-  const FILE_SOURCE_TOO_LARGE =
-    'This file contains too much text for one session. Choose a shorter file or paste a focused passage.';
-  const PASTED_SOURCE_TOO_LARGE =
-    'This source contains too much text for one session. Paste a shorter, more focused passage.';
   const SOURCE_NORMALIZATION_VERSION = 'source-text-v1';
   const trainingStore = createTrainingStore();
   let learnerStatePushTimer = null;
@@ -158,10 +155,11 @@ const App = (() => {
   let cachedDueItems = [];
   let northStarSession = null;
   let northStarBusy = false;
-  let northStarFileBusy = false;
-  let northStarFileReadName = '';
-  let northStarFileSource = null;
-  let northStarSourceIntakeKey = null;
+  const doorSource = createDoorSourceController({
+    normalizationVersion: SOURCE_NORMALIZATION_VERSION,
+    sourceFits: (text) => sedaTurnTextFitsRequest(text, northStarSession?.sessionVersion ?? 1),
+    onChange: () => _doorUpdateSubmitState(),
+  });
   const freshSourceLessConceptIds = new Set();
 
   function saveConcepts(arr) {
@@ -720,14 +718,7 @@ const App = (() => {
       guessField.value = '';
       guessField.style.height = '';
     }
-    northStarFileBusy = false;
-    northStarFileReadName = '';
-    northStarFileSource = null;
-    northStarSourceIntakeKey = null;
-    const fileInput = document.getElementById('hero-source-file-input');
-    if (fileInput) fileInput.value = '';
-    setNorthStarSourceError('');
-    renderNorthStarSourceInput();
+    doorSource.clear();
     const submitBtn = document.getElementById('hero-door-submit');
     if (submitBtn instanceof HTMLButtonElement) {
       submitBtn.disabled = true;
@@ -747,13 +738,11 @@ const App = (() => {
         const authSession = await fetchAuthSession();
         let data = northStarSession;
         if (!data && isIdentifiedUserSession(authSession)) {
-          northStarSourceIntakeKey ||= globalThis.crypto?.randomUUID?.();
-          if (!northStarSourceIntakeKey) throw new Error('Secure source intake is unavailable.');
-          const sourcePayload = northStarSourceIntakePayload(northStarSourceIntakeKey);
+          doorSource.intakeKey ||= globalThis.crypto?.randomUUID?.();
+          if (!doorSource.intakeKey) throw new Error('Secure source intake is unavailable.');
+          const sourcePayload = doorSource.payload(doorSource.intakeKey);
           if (!sourceRevisionTextFitsRequest(sourcePayload)) {
-            setNorthStarSourceError(
-              northStarFileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE,
-            );
+            setNorthStarSourceError(doorSource.fileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
             return;
           }
           const intake = await createSourceRevision(sourcePayload);
@@ -770,7 +759,7 @@ const App = (() => {
         renderNorthStarState(data);
       } catch (err) {
         if (err?.code === 'seda_turn_too_large') {
-          setNorthStarSourceError(northStarFileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
+          setNorthStarSourceError(doorSource.fileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
         } else if (error) {
           error.textContent = err?.message || 'The session could not be saved. Try again.';
         }
@@ -807,44 +796,7 @@ const App = (() => {
   }
 
   function northStarSourceText() {
-    return northStarFileSource?.text
-      || document.getElementById('hero-single-input-field')?.value
-      || '';
-  }
-
-  function northStarSourceFits(text = northStarSourceText()) {
-    const expectedVersion = northStarSession?.sessionVersion ?? 1;
-    return sedaTurnTextFitsRequest(text, expectedVersion);
-  }
-
-  function northStarSourceDescriptor() {
-    if (northStarFileSource) {
-      return {
-        normalizationVersion: SOURCE_NORMALIZATION_VERSION,
-        extractionVersion: northStarFileSource.extractionVersion,
-        parserVersion: northStarFileSource.parserVersion,
-        sourceKind: northStarFileSource.sourceKind,
-        provenance: { ...northStarFileSource.provenance },
-      };
-    }
-    return {
-      normalizationVersion: SOURCE_NORMALIZATION_VERSION,
-      extractionVersion: 'browser-paste-v1',
-      parserVersion: 'plain-text-v1',
-      sourceKind: 'paste',
-      provenance: {
-        intake_surface: 'promoted-alpha-file-intake',
-        input_method: 'paste',
-      },
-    };
-  }
-
-  function northStarSourceIntakePayload(idempotencyKey) {
-    return {
-      idempotencyKey,
-      normalizedText: northStarSourceText(),
-      ...northStarSourceDescriptor(),
-    };
+    return doorSource.sourceText();
   }
 
   function setNorthStarSourceError(message) {
@@ -852,50 +804,8 @@ const App = (() => {
     if (error) error.textContent = message;
   }
 
-  function renderNorthStarSourceInput(waitingForTarget = false) {
-    const sourceField = document.getElementById('hero-single-input-field');
-    const sourceLabel = document.querySelector('label[for="hero-single-input-field"]');
-    const fileState = document.getElementById('hero-source-file-state');
-    const fileInput = document.getElementById('hero-source-file-input');
-    const fileValue = document.getElementById('hero-source-file-value');
-    const fileAction = document.getElementById('hero-source-file-action');
-    const fileRemove = document.getElementById('hero-source-file-remove');
-    const hasFile = Boolean(northStarFileSource);
-    const unavailable = northStarBusy || northStarFileBusy;
-
-    if (sourceField) sourceField.hidden = waitingForTarget || hasFile;
-    if (sourceLabel) sourceLabel.hidden = waitingForTarget || hasFile;
-    if (fileState) fileState.hidden = waitingForTarget;
-    if (fileInput) fileInput.disabled = unavailable;
-    if (fileValue) {
-      fileValue.textContent = northStarFileBusy
-        ? `Reading ${northStarFileReadName}…`
-        : (northStarFileSource?.filename || 'TXT, MD, or PDF · up to 2MB');
-    }
-    if (fileAction) {
-      fileAction.textContent = hasFile ? 'Replace' : 'Attach';
-      fileAction.disabled = unavailable;
-      fileAction.setAttribute(
-        'aria-label',
-        hasFile ? `Replace ${northStarFileSource.filename}` : 'Attach a technical file',
-      );
-    }
-    if (fileRemove) {
-      fileRemove.hidden = !hasFile;
-      fileRemove.disabled = unavailable;
-      fileRemove.setAttribute(
-        'aria-label',
-        hasFile ? `Remove ${northStarFileSource.filename}` : 'Remove attached file',
-      );
-    }
-  }
-
   function _doorReady() {
-    const guess = document.getElementById('hero-cold-guess-field');
-    if (!guess || !(guess.value || '').trim()) return false;
-    if (northStarSession?.awaiting?.key === 'target') return true;
-    const source = northStarSourceText();
-    return !northStarFileBusy && Boolean(source.trim()) && northStarSourceFits(source);
+    return doorSource.ready(northStarSession);
   }
 
   function reconstructionReady() {
@@ -929,7 +839,7 @@ const App = (() => {
     if (capture) capture.dataset.state = northStarBusy ? 'busy' : '';
     if (reconstruction) reconstruction.dataset.state = northStarBusy ? 'busy' : '';
     if (repair) repair.dataset.state = northStarBusy ? 'busy' : '';
-    renderNorthStarSourceInput(northStarSession?.awaiting?.key === 'target');
+    doorSource.render(northStarSession?.awaiting?.key === 'target', northStarBusy);
     _doorUpdateSubmitState();
     const reconstructionSubmit = document.getElementById('north-star-reconstruction-submit');
     if (reconstructionSubmit) reconstructionSubmit.disabled = northStarBusy || !reconstructionReady();
@@ -1052,7 +962,7 @@ const App = (() => {
     const submit = document.getElementById('hero-door-submit');
     const hint = document.getElementById('ignition-boundary');
     const waitingForTarget = session.awaiting?.key === 'target';
-    renderNorthStarSourceInput(waitingForTarget);
+    doorSource.render(waitingForTarget, northStarBusy);
     if (submit) {
       submit.textContent = waitingForTarget ? 'Continue to explanation' : 'Close source and explain';
       submit.setAttribute('aria-label', submit.textContent);
@@ -1082,89 +992,8 @@ const App = (() => {
   function initHeroSingleInput() {
     const conceptField = document.getElementById('hero-single-input-field');
     const guessField = document.getElementById('hero-cold-guess-field');
-    if (!(conceptField instanceof HTMLTextAreaElement)) return;
-
     const form = document.getElementById('hero-single-input');
-    const fileInput = document.getElementById('hero-source-file-input');
-    const fileAction = document.getElementById('hero-source-file-action');
-    const fileRemove = document.getElementById('hero-source-file-remove');
-
-    conceptField.addEventListener('input', () => {
-      const text = conceptField.value;
-      northStarSourceIntakeKey = null;
-      setNorthStarSourceError(
-        text && !northStarSourceFits(text) ? PASTED_SOURCE_TOO_LARGE : '',
-      );
-      _doorUpdateSubmitState();
-    });
-    guessField?.addEventListener('input', _doorUpdateSubmitState);
-    renderNorthStarSourceInput();
-    _doorUpdateSubmitState();
-
-    fileAction?.addEventListener('click', () => {
-      AudioFX.playFocusTap();
-      fileInput?.click();
-    });
-    fileRemove?.addEventListener('click', () => {
-      AudioFX.playFocusTap();
-      northStarFileSource = null;
-      northStarSourceIntakeKey = null;
-      setNorthStarSourceError('');
-      renderNorthStarSourceInput();
-      _doorUpdateSubmitState();
-      requestAnimationFrame(() => conceptField.focus());
-    });
-    fileInput?.addEventListener('change', () => {
-      const file = fileInput.files?.[0];
-      fileInput.value = '';
-      if (!file) return;
-      northStarSourceIntakeKey = null;
-      northStarFileBusy = true;
-      northStarFileReadName = file.name;
-      setNorthStarSourceError('');
-      renderNorthStarSourceInput();
-      _doorUpdateSubmitState();
-      _readFile(
-        file,
-        (text, filename) => {
-          const extracted = String(text || '').trim();
-          northStarFileBusy = false;
-          northStarFileReadName = '';
-          if (!extracted) {
-            setNorthStarSourceError('This file does not contain readable text. Choose another file.');
-          } else if (!northStarSourceFits(extracted)) {
-            setNorthStarSourceError(FILE_SOURCE_TOO_LARGE);
-          } else {
-            const sourceKind = file.name.split('.').pop().toLowerCase();
-            const pdf = sourceKind === 'pdf';
-            northStarFileSource = {
-              text: extracted,
-              filename: String(filename || file.name),
-              sourceKind,
-              extractionVersion: pdf ? 'pdfjs-3.11.174' : 'browser-file-reader-v1',
-              parserVersion: pdf ? 'pdfjs-3.11.174' : 'plain-text-v1',
-              provenance: {
-                intake_surface: 'promoted-alpha-file-intake',
-                input_method: 'file',
-              },
-            };
-            setNorthStarSourceError('');
-          }
-          renderNorthStarSourceInput();
-          _doorUpdateSubmitState();
-          if (northStarFileSource?.text === extracted) {
-            requestAnimationFrame(() => guessField?.focus());
-          }
-        },
-        (message) => {
-          northStarFileBusy = false;
-          northStarFileReadName = '';
-          setNorthStarSourceError(message || 'This file could not be read. Choose another file.');
-          renderNorthStarSourceInput();
-          _doorUpdateSubmitState();
-        },
-      );
-    });
+    doorSource.init({ isBusy: () => northStarBusy, session: () => northStarSession });
 
     // Audio feedback (preserve existing behavior).
     const isPrintable = (e) =>
@@ -2208,61 +2037,6 @@ const App = (() => {
 
   // ── 14. Pipeline handlers ──────────────────────────────────
 
-  // Shared file reader. onSuccess(text, filename), onError(msg) or onError(msg, fallbackText, filename).
-  function _readFile(file, onSuccess, onError) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['txt', 'md', 'pdf'].includes(ext)) {
-      onError('Unsupported file type. Use .txt, .md, or .pdf.'); return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      onError('File too large. Maximum size is 2MB.'); return;
-    }
-
-    if (ext === 'pdf') {
-      // Defer to pdf.js for robust client-side extraction natively in the browser
-      if (typeof pdfjsLib === 'undefined') {
-        onError('PDF engine failed to load. Please check your connection.'); return;
-      }
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-      const fileReader = new FileReader();
-      fileReader.onerror = () => onError('This PDF could not be read. Choose another file.');
-      fileReader.onload = async (e) => {
-        try {
-          const pdfData = new Uint8Array(e.target.result);
-          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-
-          let extractedText = '';
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            extractedText += textContent.items.map(item => item.str).join(' ') + '\n';
-          }
-
-          if (extractedText.trim().length < 50) {
-            throw new Error("Scanned image or empty PDF.");
-          }
-          onSuccess(extractedText.trim(), file.name);
-        } catch (err) {
-          onError('Could not natively extract text from this PDF. Try pasting the content manually.');
-        }
-      };
-      fileReader.readAsArrayBuffer(file);
-    } else {
-      const reader = new FileReader();
-      reader.onerror = () => onError('This file could not be read. Choose another file.');
-      reader.onload = (e) => {
-        const text = String(e.target.result || '').trim();
-        if (!text) {
-          onError('This file does not contain readable text. Choose another file.');
-          return;
-        }
-        onSuccess(text, file.name);
-      };
-      reader.readAsText(file);
-    }
-  }
-
   function hideContentOverlay() {
     const overlay = document.getElementById('content-overlay');
     if (!overlay) return;
@@ -2285,7 +2059,7 @@ const App = (() => {
     }
 
     mountSourcePanel(overlay, {
-      readFile: _readFile,
+      readFile: readSourceFile,
       onAttach: ({ text, type, filename, url }) => {
         const content = type === 'url' ? url : text;
         if (!content) return;
@@ -3675,7 +3449,7 @@ const App = (() => {
     renderIgnitionGate();
     if (window.innerWidth < 900) closeDrawer();
     // Focus the writing surface directly; aria-label provides SR announcement.
-    const field = northStarFileSource
+    const field = doorSource.fileSource
       ? document.getElementById('hero-source-file-action')
       : document.getElementById('hero-single-input-field');
     if (field) requestAnimationFrame(() => field.focus());
@@ -3697,7 +3471,7 @@ const App = (() => {
     if (field) field.disabled = northStarBusy;
     if (guessField) guessField.disabled = northStarBusy;
     if (submit) submit.disabled = northStarBusy || !_doorReady();
-    renderNorthStarSourceInput(northStarSession?.awaiting?.key === 'target');
+    doorSource.render(northStarSession?.awaiting?.key === 'target', northStarBusy);
 
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
@@ -5990,7 +5764,6 @@ const App = (() => {
     syncLearnerStateIfIdentified, pushLearnerStateIfIdentified,
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     toggleTheme, setTheme, runHeroAction,
-    _readFile,  // exposed for concept-create.js's source-panel file uploader
     // C-prime launch pad — Round D implementation.
     // showLaunchPad is called by the no-source door path in runHeroAction after
     // writing the pending shell to sessionStorage. It hides the ignition view and
