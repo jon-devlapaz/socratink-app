@@ -66,7 +66,7 @@ import {
   renderReadyFilterHtml,
   renderDueSelectionHtml,
 } from './due-for-spaced.js?v=8';
-import { mountSourcePanel } from './source-panel.js?v=3';
+import { mountSourcePanel } from './source-panel.js?v=4';
 import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=1';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
