@@ -11,8 +11,8 @@ if [ -z "$expected_version" ]; then
 fi
 
 version_matches() {
-  actual="$1"
-  expected="$2"
+  local actual="$1"
+  local expected="$2"
   case "$expected" in
     [0-9]*.[0-9]*.[0-9]*) [ "$actual" = "$expected" ] ;;
     [0-9]*.[0-9]*) [ "${actual%.*}" = "$expected" ] ;;
@@ -27,23 +27,22 @@ if ! version_matches "$resolved_version" "$expected_version"; then
   exit 1
 fi
 
-if [ -x ".venv/bin/python" ]; then
-  venv_version="$(.venv/bin/python -c 'import sys; print("{}.{}.{}".format(*sys.version_info[:3]))' 2>/dev/null || true)"
-  if ! version_matches "$venv_version" "$expected_version"; then
+venv_python=".venv/bin/python"
+venv_version=""
+if [ -x "$venv_python" ]; then
+  venv_version="$("$venv_python" -c 'import sys; print("{}.{}.{}".format(*sys.version_info[:3]))' 2>/dev/null || true)"
+fi
+
+if ! version_matches "$venv_version" "$expected_version"; then
+  if [ -n "$venv_version" ]; then
     echo "[bootstrap-python] .venv has Python $venv_version, expected $expected_version — recreating" >&2
-    rm -rf .venv
+  else
+    echo "[bootstrap-python] creating .venv" >&2
   fi
+  python -m venv --clear .venv
 fi
 
-if [ ! -d ".venv" ]; then
-  python -m venv .venv
-fi
-
-. ".venv/bin/activate"
-
-python -m pip install --upgrade pip
-
-python -m pip install -r requirements.txt
-python -m pip install -r requirements-dev.txt
+"$venv_python" -m pip install "pip==26.1.2"
+"$venv_python" -m pip install -r requirements.txt -r requirements-dev.txt
 
 echo "[bootstrap-python] OK"
