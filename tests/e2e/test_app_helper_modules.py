@@ -254,6 +254,92 @@ def test_identified_source_revision_reopens_without_persisting_source_client_sid
     assert len(source_requests) == 1
 
 
+def test_identified_source_rejects_serialized_revision_over_request_limit(
+    clean_page: Page, base_url: str
+) -> None:
+    source_requests: list[dict] = []
+    clean_page.route(
+        re.compile(r".*/api/me$"),
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "auth_enabled": True,
+                    "authenticated": True,
+                    "guest_mode": False,
+                    "user": {"id": "identified-learner"},
+                }
+            ),
+        ),
+    )
+
+    def fail_unexpected_source_revision(route) -> None:
+        source_requests.append(route.request.post_data_json)
+        route.fulfill(status=500, body="unexpected source revision request")
+
+    clean_page.route(
+        re.compile(r".*/api/source-revisions$"),
+        fail_unexpected_source_revision,
+    )
+
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    source_length = clean_page.evaluate(
+        """async () => {
+          const ai = await import('/js/ai_service.js');
+          const descriptor = {
+            normalizationVersion: 'source-text-v1',
+            extractionVersion: 'browser-file-reader-v1',
+            parserVersion: 'plain-text-v1',
+            sourceKind: 'txt',
+            provenance: {
+              intake_surface: 'promoted-alpha-file-intake',
+              input_method: 'file',
+            },
+          };
+          let low = 0;
+          let high = ai.MAX_SEDA_REQUEST_BODY_BYTES;
+          while (low < high) {
+            const middle = Math.ceil((low + high) / 2);
+            if (ai.sourceRevisionTextFitsRequest({
+              ...descriptor,
+              normalizedText: 'x'.repeat(middle),
+            })) low = middle;
+            else high = middle - 1;
+          }
+          const sourceText = 'x'.repeat(low + 1);
+          if (!ai.sedaTurnTextFitsRequest(sourceText, 1)) {
+            throw new Error('Expected SourceRevision metadata to be the limiting overhead.');
+          }
+          return sourceText.length;
+        }"""
+    )
+    clean_page.locator("#hero-source-file-input").set_input_files(
+        {
+            "name": "serialized-limit.txt",
+            "mimeType": "text/plain",
+            "buffer": b"x" * source_length,
+        }
+    )
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text(
+        "serialized-limit.txt"
+    )
+    clean_page.locator("#hero-cold-guess-field").fill(
+        "Explain why the persisted source must fit one request."
+    )
+    expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
+    assert source_requests == []
+    expect(clean_page.locator("#hero-source-error")).to_have_text(
+        "This file contains too much text for one session. "
+        "Choose a shorter file or paste a focused passage."
+    )
+    expect(clean_page.locator("#hero-door-error")).to_have_text("")
+
+
 def test_file_intake_attaches_replaces_removes_and_hides_source(
     clean_page: Page, base_url: str
 ) -> None:
@@ -1456,6 +1542,38 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               () => aiService.sendSedaTurn('session-id', null),
               /SEDA turn submission is required/,
               'seda turn submission guard',
+            );
+            let oversizedSourceError = null;
+            try {
+              aiService.createSourceRevision({
+                idempotencyKey: '11111111-1111-4111-8111-111111111111',
+                normalizedText: '"'.repeat(aiService.MAX_SEDA_REQUEST_BODY_BYTES),
+                normalizationVersion: 'source-text-v1',
+                extractionVersion: 'browser-paste-v1',
+                parserVersion: 'plain-text-v1',
+                sourceKind: 'paste',
+                provenance: { input_method: 'paste' },
+              });
+            } catch (error) {
+              oversizedSourceError = error;
+            }
+            assert(
+              oversizedSourceError?.code === 'source_too_large',
+              'source revision size guard',
+            );
+            let oversizedTurnError = null;
+            try {
+              aiService.sendSedaTurn('session-id', {
+                text: '"'.repeat(aiService.MAX_SEDA_REQUEST_BODY_BYTES),
+                requestId: '11111111-1111-4111-8111-111111111111',
+                expectedVersion: 1,
+              });
+            } catch (error) {
+              oversizedTurnError = error;
+            }
+            assert(
+              oversizedTurnError?.code === 'seda_turn_too_large',
+              'seda turn size guard',
             );
 
             const routeBinding = await import('/js/seda-route-binding.js');

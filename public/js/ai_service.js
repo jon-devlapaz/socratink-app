@@ -162,39 +162,6 @@ export function createSourceRevision(input) {
   return postJson('/api/source-revisions', input);
 }
 
-export async function getSourceRevision(revisionId) {
-  const response = await fetch(
-    `/api/source-revisions/${encodeURIComponent(revisionId)}`,
-    { method: 'GET', headers: { Accept: 'application/json' } },
-  );
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    const error = new Error(payload?.message || payload?.error || 'Source unavailable.');
-    error.status = response.status;
-    error.code = payload?.code || payload?.error || null;
-    error.body = payload;
-    throw error;
-  }
-  return response.json();
-}
-
-export function eraseSourceRevision(revisionId) {
-  return fetch(`/api/source-revisions/${encodeURIComponent(revisionId)}`, {
-    method: 'DELETE',
-    headers: { Accept: 'application/json' },
-  }).then(async (response) => {
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const error = new Error(payload?.message || payload?.error || 'Source unavailable.');
-      error.status = response.status;
-      error.code = payload?.code || payload?.error || null;
-      error.body = payload;
-      throw error;
-    }
-    return payload;
-  });
-}
-
 export async function getSedaSession(sessionId) {
   const response = await fetch(`/api/session/${encodeURIComponent(sessionId)}`, {
     method: "GET",

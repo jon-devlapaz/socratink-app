@@ -162,9 +162,7 @@ export function createDoorSourceController({ sourceFits, normalizationVersion, o
     const extracted = String(text || '').trim();
     fileBusy = false;
     fileReadName = '';
-    if (!extracted) {
-      setError('This file does not contain readable text. Choose another file.');
-    } else if (!sourceFits(extracted)) {
+    if (!sourceFits(extracted)) {
       setError(FILE_SOURCE_TOO_LARGE);
     } else {
       const sourceKind = file.name.split('.').pop().toLowerCase();

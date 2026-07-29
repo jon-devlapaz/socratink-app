@@ -35,7 +35,7 @@
 //     explicit cleanup can opt in by replacing the implementation.
 
 import { AudioFX } from "./audio.js?v=4";
-import { readSourceFile } from "./door-source.js?v=1";
+import { readSourceFile } from "./door-source.js?v=2";
 
 // Same printable-key heuristic used by the door (app.js) and launch pad —
 // keeps audio cues consistent across every text-entry surface.

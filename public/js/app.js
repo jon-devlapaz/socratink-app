@@ -8,7 +8,7 @@ import {
   sendSedaTurn,
   sourceRevisionTextFitsRequest,
   submitConceptCreate,
-} from './ai_service.js?v=8';
+} from './ai_service.js?v=9';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -67,7 +67,7 @@ import {
   renderDueSelectionHtml,
 } from './due-for-spaced.js?v=8';
 import { mountSourcePanel } from './source-panel.js?v=4';
-import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=1';
+import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=2';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
   applyThemePreference as applyStoredThemePreference,
@@ -758,11 +758,7 @@ const App = (() => {
         if (data.awaiting?.key === 'target') data = await sendNorthStarText(data, target);
         renderNorthStarState(data);
       } catch (err) {
-        if (err?.code === 'seda_turn_too_large') {
-          setNorthStarSourceError(doorSource.fileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
-        } else if (error) {
-          error.textContent = err?.message || 'The session could not be saved. Try again.';
-        }
+        if (error) error.textContent = err?.message || 'The session could not be saved. Try again.';
         if (northStarSession) renderNorthStarState(northStarSession);
       } finally {
         setNorthStarBusy(false);
@@ -3423,10 +3419,6 @@ const App = (() => {
       ? document.getElementById('hero-source-file-action')
       : document.getElementById('hero-single-input-field');
     if (field) requestAnimationFrame(() => field.focus());
-  }
-
-  function hideIgnition() {
-    document.getElementById('ignition-view').hidden = true;
   }
 
   function renderIgnitionGate() {
