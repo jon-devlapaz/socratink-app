@@ -10,7 +10,8 @@ For an agent-crawler index see [`/llms.txt`](../../llms.txt).
 
 - [`docs/README.md`](../README.md) - docs-vault front door and memory boundary
 - [`/README.md`](../../README.md) - repo shape, runtime surfaces, and local run/test commands
-- [`/PRODUCT.md`](../../PRODUCT.md) - strategic product brief
+- [`docs/product/north-star.md`](../product/north-star.md) - canonical product doctrine (north star)
+- [`/PRODUCT.md`](../../PRODUCT.md) - implementation contract derived from the north star
 - [`/DESIGN.md`](../../DESIGN.md) - product/design hub, primitives, voice, and boundaries
 - [`/AGENTS.md`](../../AGENTS.md) - agent ops canon, commands, conventions, git workflow
 - [`/UBIQUITOUS_LANGUAGE.md`](../../UBIQUITOUS_LANGUAGE.md) - canonical terms and aliases to avoid
@@ -31,6 +32,7 @@ On all other topics, the doc listed below for that topic is authoritative.
 
 | Topic | Doc |
 | --- | --- |
+| Product north star / doctrine | [`docs/product/north-star.md`](../product/north-star.md) |
 | Product contract: loop, routing, progression layers, inline modes, guardrails | [`docs/product/spec.md`](../product/spec.md) |
 | Evidence-weighted graph doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
 | Post-drill result-surface UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |

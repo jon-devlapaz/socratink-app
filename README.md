@@ -8,7 +8,8 @@ The tracked repo contains the hosted product surface:
 - production Gemini prompt assets in `app_prompts/`
 - the app-local SEDA loop runtime used by learner concept sessions
 
-The product doctrine is stable even while implementation is still moving:
+The product doctrine is stable even while implementation is still moving.
+Canonical north star: [`docs/product/north-star.md`](docs/product/north-star.md).
 
 - generation before recognition
 - the graph tells the truth
