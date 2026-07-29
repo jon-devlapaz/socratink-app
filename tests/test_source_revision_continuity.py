@@ -226,6 +226,8 @@ def test_source_intake_session_reopen_and_unavailable_fail_closed() -> None:
             input_method: "paste",
             intake_surface: "promoted-alpha-file-intake",
           },
+          replayed: false,
+          deduplicated: false,
         };
         let unavailable = null;
         let sourceReads = 0;
@@ -276,23 +278,20 @@ def test_source_intake_session_reopen_and_unavailable_fail_closed() -> None:
         });
 
         try {
-          const intakeResponse = await post("/api/source-revisions", {
-            idempotencyKey: "30000000-0000-4000-8000-000000000003",
-            normalizedText: sourceText,
-          });
-          assert.equal(intakeResponse.status, 201);
-          const intake = await intakeResponse.json();
-
-          const requestedReference = {
-            ...intake.sourceRevision,
-            provenance: {
-              input_method: "paste",
-              intake_surface: "promoted-alpha-file-intake",
-            },
-          };
           const startedResponse = await post("/api/session", {
             northStarIntake: true,
-            sourceRevision: requestedReference,
+            sourceIntake: {
+              idempotencyKey: "30000000-0000-4000-8000-000000000003",
+              normalizedText: sourceText,
+              normalizationVersion: "source-text-v1",
+              extractionVersion: "browser-paste-v1",
+              parserVersion: "plain-text-v1",
+              sourceKind: "paste",
+              provenance: {
+                input_method: "paste",
+                intake_surface: "promoted-alpha-file-intake",
+              },
+            },
           });
           assert.equal(startedResponse.status, 201);
           const started = await startedResponse.json();
@@ -379,6 +378,143 @@ def test_source_intake_session_reopen_and_unavailable_fail_closed() -> None:
         } finally {
           await new Promise((resolve) => server.close(resolve));
           await fs.rm(root, { recursive: true, force: true });
+        }
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_session_owned_intake_erases_only_new_source_when_session_create_fails() -> None:
+    result = run_node_module(
+        r"""
+        import assert from "node:assert/strict";
+        import { createLoopServerWithStore } from "./lib/loop-server/http-server.mjs";
+        import { SessionStoreError } from "./lib/loop-server/session-store.mjs";
+
+        const newRevision = {
+          sourceId: "10000000-0000-4000-8000-000000000001",
+          revisionId: "20000000-0000-4000-8000-000000000002",
+          checksumSha256: "a".repeat(64),
+          normalizationVersion: "source-text-v1",
+          extractionVersion: "browser-paste-v1",
+          parserVersion: "plain-text-v1",
+          sourceKind: "paste",
+          provenance: {
+            input_method: "paste",
+            intake_surface: "promoted-alpha-file-intake",
+          },
+          replayed: false,
+          deduplicated: false,
+        };
+        const sharedRevision = {
+          ...newRevision,
+          sourceId: "30000000-0000-4000-8000-000000000003",
+          revisionId: "40000000-0000-4000-8000-000000000004",
+          deduplicated: true,
+        };
+        const cleanupFailureRevision = {
+          ...newRevision,
+          sourceId: "70000000-0000-4000-8000-000000000007",
+          revisionId: "80000000-0000-4000-8000-000000000008",
+        };
+        const erased = [];
+        let intakeCount = 0;
+        const sourceStore = {
+          intake: async () => [
+            newRevision,
+            sharedRevision,
+            cleanupFailureRevision,
+          ][intakeCount++],
+          read: async (revisionId) => ({
+            ...(revisionId === newRevision.revisionId
+              ? newRevision
+              : sharedRevision),
+            normalizedText: "bounded source text",
+          }),
+          erase: async (revisionId) => {
+            erased.push(revisionId);
+            if (revisionId === cleanupFailureRevision.revisionId) {
+              throw new Error("forced cleanup failure");
+            }
+            return { erased: true };
+          },
+        };
+        const sessionStore = {
+          create: async () => {
+            throw new SessionStoreError(
+              "StoreUnavailable",
+              "forced session create failure",
+            );
+          },
+        };
+        const createSession = async ({ id }) => ({
+          id,
+          status: "active",
+          phase: "source_intake",
+          awaiting: null,
+          events: [],
+        });
+        const server = createLoopServerWithStore({
+          sessionStore,
+          sourceStore,
+          createSession,
+        });
+        await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+        const base = `http://127.0.0.1:${server.address().port}`;
+        const post = (url, body) => fetch(`${base}${url}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const sourceIntake = {
+          idempotencyKey: "50000000-0000-4000-8000-000000000005",
+          normalizedText: "bounded source text",
+          normalizationVersion: "source-text-v1",
+          extractionVersion: "browser-paste-v1",
+          parserVersion: "plain-text-v1",
+          sourceKind: "paste",
+          provenance: {
+            input_method: "paste",
+            intake_surface: "promoted-alpha-file-intake",
+          },
+        };
+
+        try {
+          const standalone = await post("/api/source-revisions", sourceIntake);
+          assert.equal(standalone.status, 404);
+          const detached = await post("/api/session", {
+            northStarIntake: true,
+            sourceRevision: newRevision,
+          });
+          assert.equal(detached.status, 400);
+
+          const first = await post("/api/session", {
+            northStarIntake: true,
+            sourceIntake,
+          });
+          assert.equal(first.status, 503);
+          const second = await post("/api/session", {
+            northStarIntake: true,
+            sourceIntake: {
+              ...sourceIntake,
+              idempotencyKey: "60000000-0000-4000-8000-000000000006",
+            },
+          });
+          assert.equal(second.status, 503);
+          const third = await post("/api/session", {
+            northStarIntake: true,
+            sourceIntake: {
+              ...sourceIntake,
+              idempotencyKey: "90000000-0000-4000-8000-000000000009",
+            },
+          });
+          assert.equal(third.status, 503);
+          assert.deepEqual(erased, [
+            newRevision.revisionId,
+            cleanupFailureRevision.revisionId,
+          ]);
+        } finally {
+          await new Promise((resolve) => server.close(resolve));
         }
         """
     )

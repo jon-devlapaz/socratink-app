@@ -123,6 +123,48 @@ def test_loop_proxy_forwards_to_configured_backend(client: TestClient) -> None:
     upstream.release_conn.assert_called_once()
 
 
+def test_generic_loop_proxy_never_forwards_user_access_token(
+    client: TestClient,
+) -> None:
+    upstream = MagicMock()
+    upstream.status = 200
+    upstream.headers = {"content-type": "application/json"}
+    upstream.read.return_value = b'{"status":"ok"}'
+    upstream.release_conn = MagicMock()
+    service = _GuestAuthService()
+    service.load_session = lambda _sealed: AuthSessionState(
+        auth_enabled=True,
+        authenticated=True,
+        guest_mode=False,
+        user=AuthUser(id="identified-user"),
+        access_token="identified-user-jwt",
+    )
+    original_service = main.app.state.auth_service
+    main.app.state.auth_service = service
+    try:
+        with (
+            patch.dict(
+                "os.environ",
+                {"LOOP_BACKEND_URL": "http://loop.example"},
+                clear=False,
+            ),
+            patch(
+                "loop_backend_proxy._POOL.request",
+                return_value=upstream,
+            ) as request,
+        ):
+            response = client.get("/health")
+    finally:
+        main.app.state.auth_service = original_service
+
+    assert response.status_code == 200
+    forwarded = {
+        key.lower(): value
+        for key, value in request.call_args.kwargs["headers"].items()
+    }
+    assert "x-socratink-user-access-token" not in forwarded
+
+
 def test_loop_proxy_turns_upstream_timeout_into_retryable_503(
     client: TestClient,
 ) -> None:
@@ -265,15 +307,16 @@ def test_session_proxy_requires_user_token_for_vercel_internal_store(
     request.assert_not_called()
 
 
-def test_source_revision_proxy_requires_identified_user_and_forwards_token(
+def test_source_revision_read_proxy_requires_identified_user_and_forwards_token(
     client: TestClient,
 ) -> None:
+    revision_id = "20000000-0000-4000-8000-000000000002"
     original_service = main.app.state.auth_service
     service = _GuestAuthService()
     main.app.state.auth_service = service
     try:
         with patch("loop_backend_proxy._POOL.request") as request:
-            denied = client.post("/api/source-revisions", json={})
+            denied = client.get(f"/api/source-revisions/{revision_id}")
         assert denied.status_code == 401
         request.assert_not_called()
 
@@ -285,7 +328,7 @@ def test_source_revision_proxy_requires_identified_user_and_forwards_token(
             access_token="identified-user-jwt",
         )
         upstream = MagicMock()
-        upstream.status = 201
+        upstream.status = 200
         upstream.headers = {"content-type": "application/json"}
         upstream.read.return_value = b'{"sourceRevision":{"revisionId":"ok"}}'
         upstream.release_conn = MagicMock()
@@ -299,12 +342,14 @@ def test_source_revision_proxy_requires_identified_user_and_forwards_token(
                 return_value=upstream,
             ) as request,
         ):
-            accepted = client.post("/api/source-revisions", json={"source": "opaque"})
+            accepted = client.get(f"/api/source-revisions/{revision_id}")
     finally:
         main.app.state.auth_service = original_service
 
-    assert accepted.status_code == 201
-    assert request.call_args[0][1] == "http://127.0.0.1:9999/api/source-revisions"
+    assert accepted.status_code == 200
+    assert request.call_args[0][1] == (
+        f"http://127.0.0.1:9999/api/source-revisions/{revision_id}"
+    )
     assert (
         request.call_args.kwargs["headers"]["X-Socratink-User-Access-Token"]
         == "identified-user-jwt"

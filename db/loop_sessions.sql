@@ -59,9 +59,17 @@ CREATE TABLE IF NOT EXISTS public.source_revisions (
         )
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS source_revisions_owner_checksum_idx
-ON public.source_revisions (user_id, checksum_sha256)
+CREATE UNIQUE INDEX IF NOT EXISTS source_revisions_owner_pipeline_checksum_idx
+ON public.source_revisions (
+    user_id,
+    checksum_sha256,
+    normalization_version,
+    extraction_version,
+    parser_version,
+    source_kind
+)
 WHERE checksum_sha256 IS NOT NULL;
+DROP INDEX IF EXISTS public.source_revisions_owner_checksum_idx;
 
 CREATE INDEX IF NOT EXISTS source_revisions_owner_source_idx
 ON public.source_revisions (user_id, source_id);
@@ -411,13 +419,25 @@ BEGIN
     END IF;
 
     PERFORM pg_advisory_xact_lock(
-        hashtextextended(owner_id::text || ':' || p_checksum_sha256, 0)
+        hashtextextended(
+            owner_id::text
+            || ':' || p_checksum_sha256
+            || ':' || p_normalization_version
+            || ':' || p_extraction_version
+            || ':' || p_parser_version
+            || ':' || p_source_kind,
+            0
+        )
     );
     SELECT *
     INTO revision
     FROM public.source_revisions
     WHERE user_id = owner_id
       AND checksum_sha256 = p_checksum_sha256
+      AND normalization_version = p_normalization_version
+      AND extraction_version = p_extraction_version
+      AND parser_version = p_parser_version
+      AND source_kind = p_source_kind
       AND erased_at IS NULL;
 
     IF FOUND THEN

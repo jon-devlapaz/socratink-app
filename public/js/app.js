@@ -1,14 +1,13 @@
 import { Bus } from './bus.js';
 import {
-  createSourceRevision,
   createSedaTurnSubmission,
   createSedaSession,
   getSedaSession,
+  sessionSourceTextFitsRequest,
   sedaTurnTextFitsRequest,
   sendSedaTurn,
-  sourceRevisionTextFitsRequest,
   submitConceptCreate,
-} from './ai_service.js?v=9';
+} from './ai_service.js?v=10';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -741,14 +740,13 @@ const App = (() => {
           doorSource.intakeKey ||= globalThis.crypto?.randomUUID?.();
           if (!doorSource.intakeKey) throw new Error('Secure source intake is unavailable.');
           const sourcePayload = doorSource.payload(doorSource.intakeKey);
-          if (!sourceRevisionTextFitsRequest(sourcePayload)) {
+          if (!sessionSourceTextFitsRequest(sourcePayload)) {
             setNorthStarSourceError(doorSource.fileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
             return;
           }
-          const intake = await createSourceRevision(sourcePayload);
           data = await createSedaSession({
             northStarIntake: true,
-            sourceRevision: intake.sourceRevision,
+            sourceIntake: sourcePayload,
           });
         }
         data ||= await createSedaSession({ northStarIntake: true });

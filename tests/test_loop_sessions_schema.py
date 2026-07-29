@@ -51,7 +51,7 @@ def test_source_revision_schema_is_owner_scoped_invoker_only_and_erasable() -> N
     assert "CREATE TABLE IF NOT EXISTS public.sources" in sql
     assert "CREATE TABLE IF NOT EXISTS public.source_revisions" in sql
     assert "CREATE TABLE IF NOT EXISTS public.source_intake_requests" in sql
-    assert "source_revisions_owner_checksum_idx" in sql
+    assert "source_revisions_owner_pipeline_checksum_idx" in sql
     assert "loop_sessions_source_revision_owner_fk" in sql
     assert "SECURITY INVOKER" in intake
     assert "SECURITY DEFINER" not in intake
@@ -60,7 +60,11 @@ def test_source_revision_schema_is_owner_scoped_invoker_only_and_erasable() -> N
     assert "p_payload_hash" not in intake
     assert "payload_hash := encode(sha256(convert_to(jsonb_build_object(" in intake
     assert intake.index("p_idempotency_key::text") < intake.index("INTO prior")
-    assert intake.index("INTO prior") < intake.index("p_checksum_sha256, 0")
+    assert intake.index("INTO prior") < intake.index("|| ':' || p_checksum_sha256")
+    assert "normalization_version = p_normalization_version" in intake
+    assert "extraction_version = p_extraction_version" in intake
+    assert "parser_version = p_parser_version" in intake
+    assert "source_kind = p_source_kind" in intake
     assert "USING ERRCODE = 'PT409'" in intake
     assert "filename" not in sql.lower()
     assert "DELETE FROM public.source_intake_requests" in erase

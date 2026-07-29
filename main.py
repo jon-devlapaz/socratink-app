@@ -147,7 +147,6 @@ PROTECTED_API_PATHS = frozenset(
         "/api/extract-url",
         "/api/repair-reps",
         "/api/session",
-        "/api/source-revisions",
         "/api/learner-state",
     }
 )
@@ -1160,17 +1159,6 @@ async def proxy_loop_session_path(request: Request, path: str) -> Response:
         f"/api/session/{path}",
         force_local_runtime=True,
     )
-
-@app.api_route("/api/source-revisions", methods=_LOOP_PROXY_METHODS)
-async def proxy_source_revisions_root(request: Request) -> Response:
-    _require_identified_user(request)
-    return await proxy_loop_backend(
-        request,
-        "/api/source-revisions",
-        force_local_runtime=True,
-        require_user_token=True,
-    )
-
 
 @app.api_route("/api/source-revisions/{path:path}", methods=_LOOP_PROXY_METHODS)
 async def proxy_source_revisions_path(request: Request, path: str) -> Response:

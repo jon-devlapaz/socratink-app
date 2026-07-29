@@ -22,7 +22,10 @@ docker run \
 
 for _ in $(seq 1 60); do
   if docker exec "$container" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
-    break
+    sleep 0.5
+    if docker exec "$container" pg_isready -U postgres -d postgres >/dev/null 2>&1; then
+      break
+    fi
   fi
   sleep 0.25
 done
@@ -199,6 +202,47 @@ BEGIN
           <> current_setting('proof.a_revision_id')
        OR (current_setting('proof.dedupe_result')::jsonb ->> 'deduplicated')::BOOLEAN IS NOT TRUE THEN
         RAISE EXCEPTION 'owner-scoped checksum dedupe failed';
+    END IF;
+END;
+$$;
+
+SELECT public.intake_source_revision(
+    'a0000000-0000-4000-8000-000000000004',
+    E'Alpha β\nline two SOURCE_TEXT_CANARY',
+    :'a_checksum',
+    'source-text-v1',
+    'browser-file-reader-v1',
+    'plain-text-v1',
+    'txt',
+    '{"input_method":"file","intake_surface":"promoted-alpha-file-intake"}'::jsonb
+) AS pipeline_result \gset
+SELECT set_config('proof.pipeline_result', :'pipeline_result', FALSE);
+
+DO $$
+BEGIN
+    IF (current_setting('proof.pipeline_result')::jsonb ->> 'revisionId')
+          = current_setting('proof.a_revision_id')
+       OR (current_setting('proof.pipeline_result')::jsonb ->> 'deduplicated')::BOOLEAN IS TRUE
+       OR current_setting('proof.pipeline_result')::jsonb ->> 'sourceKind' <> 'txt' THEN
+        RAISE EXCEPTION 'cross-pipeline intake reused stale revision metadata';
+    END IF;
+END;
+$$;
+
+SELECT public.erase_source_revision(
+    (current_setting('proof.pipeline_result')::jsonb ->> 'revisionId')::UUID
+) AS pipeline_erase_result \gset
+SELECT set_config(
+    'proof.pipeline_erase_result',
+    :'pipeline_erase_result',
+    FALSE
+);
+DO $$
+BEGIN
+    IF (
+        current_setting('proof.pipeline_erase_result')::jsonb ->> 'erased'
+    )::BOOLEAN IS NOT TRUE THEN
+        RAISE EXCEPTION 'cross-pipeline proof fixture was not erased';
     END IF;
 END;
 $$;

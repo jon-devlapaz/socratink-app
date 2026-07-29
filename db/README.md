@@ -14,7 +14,11 @@ Do not configure a Supabase service-role or secret key for this path.
 Authenticated source intake stores normalized extracted UTF-8 text only; it
 does not retain raw files or filenames. Session metadata and append-only events
 keep only opaque source/revision IDs plus pipeline version and source-kind
-fields. `bash scripts/verify-source-rls.sh` applies the real schema to an
+fields. The session-creation request owns intake; standalone revision creation
+is disabled, and a new revision is erased if no session row can be created.
+Identical text is deduplicated only within the same extraction/parser pipeline,
+so a later pipeline cannot inherit stale provenance. `bash
+scripts/verify-source-rls.sh` applies the real schema to an
 isolated `postgres:16-alpine` container and proves RLS, concurrent idempotency,
 dedupe, immutability, exact hashing, reference ownership, and erasure.
 

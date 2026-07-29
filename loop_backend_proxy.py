@@ -310,13 +310,6 @@ async def proxy_loop_backend(
                 include_user_token=(
                     require_user_token
                     or (force_local_runtime and is_vercel_runtime())
-                    or bool(
-                        getattr(
-                            getattr(request.state, "auth_session", None),
-                            "access_token",
-                            None,
-                        )
-                    )
                 ),
             ),
             redirect=False,

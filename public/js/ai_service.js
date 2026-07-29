@@ -121,20 +121,26 @@ export function sedaTurnTextFitsRequest(text, expectedVersion) {
 export function createSedaSession({
   sourceLessDoorBootstrap = false,
   northStarIntake = false,
-  sourceRevision = null,
+  sourceIntake = null,
 } = {}) {
-  return postJson("/api/session", {
+  const body = {
     ...(sourceLessDoorBootstrap === true ? { sourceLessDoorBootstrap: true } : {}),
     ...(northStarIntake === true ? { northStarIntake: true } : {}),
-    ...(sourceRevision ? { sourceRevision } : {}),
-  });
+    ...(sourceIntake ? { sourceIntake } : {}),
+  };
+  if (jsonRequestBodyBytes(body) > MAX_SEDA_REQUEST_BODY_BYTES) {
+    const error = new Error('A source intake request body is too large.');
+    error.code = 'source_too_large';
+    throw error;
+  }
+  return postJson("/api/session", body);
 }
 
-export function sourceRevisionRequestBodyBytes(input) {
+export function jsonRequestBodyBytes(input) {
   return new TextEncoder().encode(JSON.stringify(input)).byteLength;
 }
 
-export function sourceRevisionTextFitsRequest({
+export function sessionSourceTextFitsRequest({
   normalizedText,
   normalizationVersion,
   extractionVersion,
@@ -142,24 +148,18 @@ export function sourceRevisionTextFitsRequest({
   sourceKind,
   provenance,
 }) {
-  return sourceRevisionRequestBodyBytes({
-    idempotencyKey: SOURCE_INTAKE_SIZE_PROBE_ID,
-    normalizedText,
-    normalizationVersion,
-    extractionVersion,
-    parserVersion,
-    sourceKind,
-    provenance,
+  return jsonRequestBodyBytes({
+    northStarIntake: true,
+    sourceIntake: {
+      idempotencyKey: SOURCE_INTAKE_SIZE_PROBE_ID,
+      normalizedText,
+      normalizationVersion,
+      extractionVersion,
+      parserVersion,
+      sourceKind,
+      provenance,
+    },
   }) <= MAX_SEDA_REQUEST_BODY_BYTES;
-}
-
-export function createSourceRevision(input) {
-  if (sourceRevisionRequestBodyBytes(input) > MAX_SEDA_REQUEST_BODY_BYTES) {
-    const error = new Error('A source intake request body is too large.');
-    error.code = 'source_too_large';
-    throw error;
-  }
-  return postJson('/api/source-revisions', input);
 }
 
 export async function getSedaSession(sessionId) {

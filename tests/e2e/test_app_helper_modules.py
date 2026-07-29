@@ -91,7 +91,6 @@ def test_identified_source_revision_reopens_without_persisting_source_client_sid
     revision_id = "20000000-0000-4000-8000-000000000002"
     session_id = "30000000-0000-4000-8000-000000000003"
     checksum = "a" * 64
-    source_requests: list[dict] = []
     session_requests: list[dict] = []
     turn_requests: list[dict] = []
     reopen_requests: list[str] = []
@@ -119,30 +118,6 @@ def test_identified_source_revision_reopens_without_persisting_source_client_sid
             ),
         ),
     )
-
-    def fulfill_source(route) -> None:
-        source_requests.append(route.request.post_data_json)
-        route.fulfill(
-            status=201,
-            content_type="application/json",
-            body=json.dumps(
-                {
-                    "sourceRevision": {
-                        "sourceId": source_id,
-                        "revisionId": revision_id,
-                        "checksumSha256": checksum,
-                        "normalizationVersion": "source-text-v1",
-                        "extractionVersion": "browser-paste-v1",
-                        "parserVersion": "plain-text-v1",
-                        "sourceKind": "paste",
-                        "provenance": {
-                            "input_method": "paste",
-                            "intake_surface": "promoted-alpha-file-intake",
-                        },
-                    }
-                }
-            ),
-        )
 
     def fulfill_session(route) -> None:
         session_requests.append(route.request.post_data_json)
@@ -208,7 +183,6 @@ def test_identified_source_revision_reopens_without_persisting_source_client_sid
             ),
         )
 
-    clean_page.route(re.compile(r".*/api/source-revisions$"), fulfill_source)
     clean_page.route(re.compile(r".*/api/session$"), fulfill_session)
     clean_page.route(
         re.compile(rf".*/api/session/{session_id}/turn$"),
@@ -228,12 +202,9 @@ def test_identified_source_revision_reopens_without_persisting_source_client_sid
     expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
     expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
     assert source not in clean_page.locator("body").inner_text()
-    assert len(source_requests) == 1
-    assert source_requests[0]["normalizedText"] == source
-    assert "filename" not in json.dumps(source_requests[0]).lower()
     assert len(session_requests) == 1
-    assert "normalizedText" not in session_requests[0]
-    assert "text" not in session_requests[0]["sourceRevision"]
+    assert session_requests[0]["sourceIntake"]["normalizedText"] == source
+    assert "filename" not in json.dumps(session_requests[0]).lower()
     assert turn_requests[0]["text"] == target
 
     storage = clean_page.evaluate(
@@ -251,13 +222,13 @@ def test_identified_source_revision_reopens_without_persisting_source_client_sid
     expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
     assert source not in clean_page.locator("body").inner_text()
     assert len(reopen_requests) == 1
-    assert len(source_requests) == 1
+    assert len(session_requests) == 1
 
 
 def test_identified_source_rejects_serialized_revision_over_request_limit(
     clean_page: Page, base_url: str
 ) -> None:
-    source_requests: list[dict] = []
+    session_requests: list[dict] = []
     clean_page.route(
         re.compile(r".*/api/me$"),
         lambda route: route.fulfill(
@@ -274,13 +245,13 @@ def test_identified_source_rejects_serialized_revision_over_request_limit(
         ),
     )
 
-    def fail_unexpected_source_revision(route) -> None:
-        source_requests.append(route.request.post_data_json)
-        route.fulfill(status=500, body="unexpected source revision request")
+    def fail_unexpected_session(route) -> None:
+        session_requests.append(route.request.post_data_json)
+        route.fulfill(status=500, body="unexpected session request")
 
     clean_page.route(
-        re.compile(r".*/api/source-revisions$"),
-        fail_unexpected_source_revision,
+        re.compile(r".*/api/session$"),
+        fail_unexpected_session,
     )
 
     _enter_app_shell_as_guest(clean_page, base_url)
@@ -302,7 +273,7 @@ def test_identified_source_rejects_serialized_revision_over_request_limit(
           let high = ai.MAX_SEDA_REQUEST_BODY_BYTES;
           while (low < high) {
             const middle = Math.ceil((low + high) / 2);
-            if (ai.sourceRevisionTextFitsRequest({
+            if (ai.sessionSourceTextFitsRequest({
               ...descriptor,
               normalizedText: 'x'.repeat(middle),
             })) low = middle;
@@ -332,7 +303,7 @@ def test_identified_source_rejects_serialized_revision_over_request_limit(
     clean_page.locator("#hero-door-submit").click()
 
     expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
-    assert source_requests == []
+    assert session_requests == []
     expect(clean_page.locator("#hero-source-error")).to_have_text(
         "This file contains too much text for one session. "
         "Choose a shorter file or paste a focused passage."
@@ -1545,14 +1516,17 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
             );
             let oversizedSourceError = null;
             try {
-              aiService.createSourceRevision({
-                idempotencyKey: '11111111-1111-4111-8111-111111111111',
-                normalizedText: '"'.repeat(aiService.MAX_SEDA_REQUEST_BODY_BYTES),
-                normalizationVersion: 'source-text-v1',
-                extractionVersion: 'browser-paste-v1',
-                parserVersion: 'plain-text-v1',
-                sourceKind: 'paste',
-                provenance: { input_method: 'paste' },
+              aiService.createSedaSession({
+                northStarIntake: true,
+                sourceIntake: {
+                  idempotencyKey: '11111111-1111-4111-8111-111111111111',
+                  normalizedText: '"'.repeat(aiService.MAX_SEDA_REQUEST_BODY_BYTES),
+                  normalizationVersion: 'source-text-v1',
+                  extractionVersion: 'browser-paste-v1',
+                  parserVersion: 'plain-text-v1',
+                  sourceKind: 'paste',
+                  provenance: { input_method: 'paste' },
+                },
               });
             } catch (error) {
               oversizedSourceError = error;
