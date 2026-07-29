@@ -20,7 +20,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=6">
   <link rel="shortcut icon" href="/favicon-32x32.png?v=6">
-  <link rel="stylesheet" href="/css/index.css?v=202">
+  <link rel="stylesheet" href="/css/index.css?v=207">
   <link rel="stylesheet" href="/css/drill-chamber.css?v=22">
 </head>
 
@@ -279,18 +279,8 @@
 
     <!-- Ignition View: door for new concept entry (paper system) -->
     <section id="ignition-view" class="primary-view ignition-view ignition-view--linear"
-             aria-labelledby="ignition-title" hidden>
+             aria-label="New session" hidden>
       <div class="ignition-view__inner">
-        <header class="ig-header">
-          <p class="ig-eyebrow">New session</p>
-          <h2 class="ig-title" id="ignition-title" tabindex="-1">
-            Learn by rebuilding the idea
-          </h2>
-          <p class="ig-first-use" id="ignition-first-use">
-            Give Socratink one source and one explanation target. Then the source closes.
-          </p>
-        </header>
-
         <div class="ignition-cap-gate" id="ignition-cap-gate" hidden>
           <p class="ignition-cap-gate__message">
             The board holds nine sessions. Retire one to start another.
@@ -299,53 +289,65 @@
                   onclick="App.showLibrary()">Open library</button>
         </div>
 
-        <form class="composer-card composer-card--tall" id="hero-single-input"
+        <form class="entrance-form" id="hero-single-input" data-step="source"
               onsubmit="return App.runHeroAction(event)" autocomplete="off">
-          <label class="composer-card__label" for="hero-single-input-field">Source material</label>
-          <textarea class="composer-card__field composer-card__field--linear"
-                    id="hero-single-input-field"
-                    rows="7" maxlength="50000"
-                    placeholder="Paste the passage you want to understand"
-                    aria-label="Source material"
-                    aria-describedby="ignition-boundary hero-source-error hero-door-error"></textarea>
-          <div class="composer-card__properties" id="hero-source-file-state">
-            <div class="ig-property">
-              <span class="ig-property__label">File</span>
-              <span class="ig-property__value" id="hero-source-file-value"
-                    role="status" aria-live="polite" aria-atomic="true">
-                TXT, MD, or PDF · up to 2MB
-              </span>
-              <input id="hero-source-file-input" type="file"
-                     accept=".txt,.md,.pdf" hidden>
-              <button class="ig-property__action" id="hero-source-file-action"
-                      type="button" aria-describedby="hero-source-file-value hero-source-error">
-                Attach
+          <div class="entrance-track" aria-label="Source then Target">
+            <span id="hero-source-track" aria-current="step">Source</span>
+            <span class="entrance-track__line" aria-hidden="true"></span>
+            <span id="hero-target-track">Target</span>
+          </div>
+
+          <div class="entrance-canvas">
+            <div class="entrance-step" id="hero-source-step">
+              <label class="entrance-step__label" for="hero-single-input-field">Source</label>
+              <textarea class="entrance-source-field" id="hero-single-input-field"
+                        rows="7" maxlength="50000"
+                        placeholder="Paste a source"
+                        aria-describedby="hero-source-error hero-door-error"></textarea>
+              <div class="entrance-source-actions" id="hero-source-file-state">
+                <button class="entrance-icon-button" id="hero-source-file-action"
+                        type="button" aria-label="Attach source file"
+                        aria-describedby="hero-source-file-value hero-source-error">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m20.5 11.5-8.7 8.7a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7L9 17.4a2 2 0 0 1-2.8-2.8l8.5-8.5"></path>
+                  </svg>
+                </button>
+                <input id="hero-source-file-input" type="file"
+                       accept=".txt,.md,.pdf" hidden>
+                <span class="entrance-file-status" id="hero-source-file-value"
+                      role="status" aria-live="polite" aria-atomic="true" hidden></span>
+                <button class="entrance-remove-action" id="hero-source-file-remove"
+                        type="button" hidden>Remove</button>
+                <button class="entrance-arrow" id="hero-source-next" type="button"
+                        disabled aria-label="Continue to Target">→</button>
+              </div>
+              <p class="ig-error" id="hero-source-error"
+                 role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="entrance-step" id="hero-target-step" hidden>
+              <button class="entrance-source-receipt" id="hero-source-revise"
+                      type="button" aria-label="Change Source">
+                <span class="entrance-source-receipt__label">Source</span>
+                <span class="entrance-source-receipt__summary" id="hero-source-summary"></span>
+                <span aria-hidden="true">↖</span>
               </button>
-              <button class="ig-property__action" id="hero-source-file-remove"
-                      type="button" hidden>
-                Remove
-              </button>
+              <label class="entrance-step__label" for="hero-cold-guess-field">Target</label>
+              <div class="entrance-target-row">
+                <textarea class="entrance-target-field" id="hero-cold-guess-field"
+                          rows="2" maxlength="1200"
+                          placeholder="What must you be able to explain?"
+                          aria-describedby="hero-door-error"></textarea>
+                <button class="entrance-arrow" type="submit" id="hero-door-submit"
+                        disabled aria-label="Start">→</button>
+              </div>
             </div>
           </div>
-          <p class="ig-error" id="hero-source-error"
-             role="status" aria-live="polite"></p>
-          <label class="composer-card__label" for="hero-cold-guess-field">Explanation target</label>
-          <textarea class="composer-card__field" id="hero-cold-guess-field"
-                    rows="3" maxlength="1200"
-                    placeholder="What should you be able to explain?"
-                    aria-label="Explanation target"
-                    aria-describedby="ignition-boundary hero-door-error"></textarea>
 
-          <p class="ig-error" id="hero-door-error"
+          <p class="ig-error entrance-form__error" id="hero-door-error"
              role="status" aria-live="polite"></p>
-
-          <footer class="composer-card__footer">
-            <p class="ig-footnote" id="ignition-boundary">
-              The source disappears before you explain.
-            </p>
-            <button type="submit" class="ig-button ig-button--linear" id="hero-door-submit"
-                    disabled aria-label="Close source and explain">Close source and explain</button>
-          </footer>
+          <span class="visually-hidden" id="hero-step-announcement"
+                aria-live="polite"></span>
         </form>
 
         <section class="north-star-step" id="north-star-reconstruction" aria-labelledby="north-star-reconstruction-title" hidden>
@@ -512,7 +514,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
   <script src="/js/drill-chamber.js?v=20"></script>
-  <script type="module" src="/js/app.js?v=226"></script>
+  <script type="module" src="/js/app.js?v=230"></script>
   <script type="module" src="/js/floating-room-label.js?v=11"></script>
   <script type="module" src="/js/iso-board-state-surface.js?v=10"></script>
   <script type="module" src="/js/feedback.js?v=6"></script>

@@ -47,9 +47,18 @@ export function createDoorSourceController({ sourceFits, normalizationVersion, o
   let fileSource = null;
   let intakeKey = null;
   let readGeneration = 0;
+  let step = 'source';
+  let getBusy = () => false;
+  let getSession = () => null;
 
   const stateChanged = () => onChange?.();
   const sourceText = () => fileSource?.text || document.getElementById('hero-single-input-field')?.value || '';
+  const sourceSummary = (session = getSession()) => {
+    if (fileSource?.filename) return fileSource.filename;
+    const text = sourceText().trim().replace(/\s+/g, ' ').slice(0, 240);
+    if (text) return text;
+    return session?.awaiting?.key === 'target' ? 'Source saved' : '';
+  };
   const descriptor = () => fileSource ? {
     normalizationVersion,
     extractionVersion: fileSource.extractionVersion,
@@ -63,43 +72,104 @@ export function createDoorSourceController({ sourceFits, normalizationVersion, o
     sourceKind: 'paste',
     provenance: { intake_surface: 'promoted-alpha-file-intake', input_method: 'paste' },
   };
+  const sourceReady = (session = getSession()) => {
+    if (session?.awaiting?.key === 'target') return true;
+    return !fileBusy && Boolean(sourceText().trim()) && sourceFits(sourceText());
+  };
+  const ready = (session = getSession()) => {
+    const target = document.getElementById('hero-cold-guess-field');
+    return Boolean((target?.value || '').trim()) && sourceReady(session);
+  };
+  const setCurrentTrack = (sourceTrack, targetTrack, targetStep) => {
+    sourceTrack?.removeAttribute?.('aria-current');
+    targetTrack?.removeAttribute?.('aria-current');
+    (targetStep ? targetTrack : sourceTrack)?.setAttribute?.('aria-current', 'step');
+  };
+  const focusCurrent = () => {
+    const session = getSession();
+    if (step === 'target' || session?.awaiting?.key === 'target') {
+      document.getElementById('hero-cold-guess-field')?.focus();
+      return;
+    }
+    const focusTarget = fileSource
+      ? document.getElementById('hero-source-file-action')
+      : document.getElementById('hero-single-input-field');
+    focusTarget?.focus();
+  };
   const render = (waitingForTarget = false, busy = false) => {
+    const previousStep = step;
+    if (waitingForTarget) step = 'target';
+    const targetStep = step === 'target';
+    const session = getSession();
+    const sourceLocked = session?.awaiting?.key === 'target';
+    const form = document.getElementById('hero-single-input');
+    const sourceStep = document.getElementById('hero-source-step');
+    const targetStepEl = document.getElementById('hero-target-step');
+    const sourceTrack = document.getElementById('hero-source-track');
+    const targetTrack = document.getElementById('hero-target-track');
     const sourceField = document.getElementById('hero-single-input-field');
-    const sourceLabel = document.querySelector('label[for="hero-single-input-field"]');
-    const fileState = document.getElementById('hero-source-file-state');
     const fileInput = document.getElementById('hero-source-file-input');
     const fileValue = document.getElementById('hero-source-file-value');
     const fileAction = document.getElementById('hero-source-file-action');
     const fileRemove = document.getElementById('hero-source-file-remove');
+    const sourceNext = document.getElementById('hero-source-next');
+    const sourceRevise = document.getElementById('hero-source-revise');
+    const summary = document.getElementById('hero-source-summary');
+    const targetField = document.getElementById('hero-cold-guess-field');
+    const announcement = document.getElementById('hero-step-announcement');
     const hasFile = Boolean(fileSource);
     const unavailable = busy || fileBusy;
-    if (sourceField) sourceField.hidden = waitingForTarget || hasFile;
-    if (sourceLabel) sourceLabel.hidden = waitingForTarget || hasFile;
-    if (fileState) fileState.hidden = waitingForTarget;
-    if (fileInput) fileInput.disabled = unavailable;
-    if (fileValue) fileValue.textContent = fileBusy ? `Reading ${fileReadName}…` : (fileSource?.filename || 'TXT, MD, or PDF · up to 2MB');
+    if (form?.dataset) form.dataset.step = step;
+    if (sourceStep) sourceStep.hidden = targetStep;
+    if (targetStepEl) targetStepEl.hidden = !targetStep;
+    setCurrentTrack(sourceTrack, targetTrack, targetStep);
+    if (sourceField) {
+      sourceField.hidden = hasFile;
+      sourceField.disabled = unavailable || sourceLocked;
+    }
+    if (fileInput) fileInput.disabled = unavailable || sourceLocked;
+    if (fileValue) {
+      fileValue.hidden = !(fileBusy || hasFile);
+      fileValue.textContent = fileBusy ? `Reading ${fileReadName}…` : (fileSource?.filename || '');
+    }
     if (fileAction) {
-      fileAction.textContent = hasFile ? 'Replace' : 'Attach';
-      fileAction.disabled = unavailable;
-      fileAction.setAttribute('aria-label', hasFile ? `Replace ${fileSource.filename}` : 'Attach a technical file');
+      const actionLabel = hasFile ? `Replace ${fileSource.filename}` : 'Attach source file';
+      fileAction.disabled = unavailable || sourceLocked;
+      fileAction.setAttribute?.('aria-label', actionLabel);
+      fileAction.setAttribute?.('title', actionLabel);
     }
     if (fileRemove) {
       fileRemove.hidden = !hasFile;
-      fileRemove.disabled = unavailable;
-      fileRemove.setAttribute('aria-label', hasFile ? `Remove ${fileSource.filename}` : 'Remove attached file');
+      fileRemove.disabled = unavailable || sourceLocked;
+      fileRemove.setAttribute?.('aria-label', hasFile ? `Remove ${fileSource.filename}` : 'Remove attached file');
     }
+    if (sourceNext) sourceNext.disabled = unavailable || !sourceReady(session);
+    if (sourceRevise) sourceRevise.disabled = unavailable || sourceLocked;
+    if (summary) summary.textContent = sourceSummary(session);
+    if (targetField) targetField.disabled = busy;
+    if (announcement && previousStep !== step) announcement.textContent = targetStep ? 'Target' : 'Source';
   };
   const setError = (message) => {
     const error = document.getElementById('hero-source-error');
     if (error) error.textContent = message;
   };
-  const ready = (session) => {
-    const guess = document.getElementById('hero-cold-guess-field');
-    if (!guess || !(guess.value || '').trim()) return false;
-    if (session?.awaiting?.key === 'target') return true;
-    return !fileBusy && Boolean(sourceText().trim()) && sourceFits(sourceText());
+  const showSource = () => {
+    if (getSession()?.awaiting?.key === 'target') return false;
+    step = 'source';
+    render(false, getBusy());
+    requestAnimationFrame(() => focusCurrent());
+    return true;
+  };
+  const showTarget = () => {
+    if (!sourceReady(getSession())) return false;
+    step = 'target';
+    render(false, getBusy());
+    requestAnimationFrame(() => focusCurrent());
+    return true;
   };
   const init = ({ isBusy = () => false, session = () => null } = {}) => {
+    getBusy = isBusy;
+    getSession = session;
     const field = document.getElementById('hero-single-input-field');
     const guess = document.getElementById('hero-cold-guess-field');
     if (!(field instanceof HTMLTextAreaElement)) return;
@@ -114,7 +184,7 @@ export function createDoorSourceController({ sourceFits, normalizationVersion, o
       fileSource = null;
       intakeKey = null;
       setError('');
-      render(false, isBusy());
+      render(false, getBusy());
       stateChanged();
       requestAnimationFrame(() => field.focus());
     };
@@ -126,38 +196,49 @@ export function createDoorSourceController({ sourceFits, normalizationVersion, o
     const onFileChange = () => {
       const file = fileInput?.files?.[0];
       if (fileInput) fileInput.value = '';
-      if (file) beginFileRead(file, { isBusy, guess });
+      if (file) beginFileRead(file);
     };
     document.getElementById('hero-source-file-action')?.addEventListener('click', onFileAction);
     document.getElementById('hero-source-file-remove')?.addEventListener('click', onFileRemove);
+    document.getElementById('hero-source-next')?.addEventListener('click', showTarget);
+    document.getElementById('hero-source-revise')?.addEventListener('click', showSource);
     field.addEventListener('input', onSourceInput);
     guess?.addEventListener('input', stateChanged);
     fileInput?.addEventListener('change', onFileChange);
     const printable = (event) => !event.metaKey && !event.ctrlKey && !event.altKey && !event.repeat && (event.key.length === 1 || event.key === 'Backspace' || event.key === 'Enter');
-    [field, guess].forEach((element) => {
-      element?.addEventListener('focus', () => AudioFX.playFocusTap());
-      element?.addEventListener('keydown', (event) => {
-        if (printable(event)) AudioFX.playKeyClick();
-        if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && ready(session())) {
-          event.preventDefault();
-          form?.requestSubmit?.();
-        }
-      });
+    [field, guess].forEach((element) => element?.addEventListener('focus', () => AudioFX.playFocusTap()));
+    field.addEventListener('keydown', (event) => {
+      if (printable(event)) AudioFX.playKeyClick();
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault();
+        showTarget();
+      }
     });
-    render(false, isBusy()); stateChanged();
+    guess?.addEventListener('keydown', (event) => {
+      if (printable(event)) AudioFX.playKeyClick();
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && ready(getSession())) {
+        event.preventDefault();
+        form?.requestSubmit?.();
+      }
+    });
+    render(false, getBusy());
+    stateChanged();
   };
-  function beginFileRead(file, { isBusy, guess }) {
+  function beginFileRead(file) {
     const generation = ++readGeneration;
     intakeKey = null;
     fileBusy = true;
     fileReadName = file.name;
     setError('');
-    render(false, isBusy());
+    render(false, getBusy());
     stateChanged();
-    readSourceFile(file, (text, filename) => completeFileRead(generation, file, text, filename, { isBusy, guess }),
-      (message) => failFileRead(generation, message, { isBusy }));
+    readSourceFile(
+      file,
+      (text, filename) => completeFileRead(generation, file, text, filename),
+      (message) => failFileRead(generation, message),
+    );
   }
-  function completeFileRead(generation, file, text, filename, { isBusy, guess }) {
+  function completeFileRead(generation, file, text, filename) {
     if (generation !== readGeneration) return;
     const extracted = String(text || '').trim();
     fileBusy = false;
@@ -177,29 +258,34 @@ export function createDoorSourceController({ sourceFits, normalizationVersion, o
       };
       setError('');
     }
-    render(false, isBusy());
+    render(false, getBusy());
     stateChanged();
-    if (fileSource?.text === extracted) requestAnimationFrame(() => guess?.focus());
+    if (fileSource?.text === extracted) {
+      requestAnimationFrame(() => document.getElementById('hero-source-next')?.focus());
+    }
   }
-  function failFileRead(generation, message, { isBusy }) {
+  function failFileRead(generation, message) {
     if (generation !== readGeneration) return;
     fileBusy = false;
     fileReadName = '';
     setError(message || 'This file could not be read. Choose another file.');
-    render(false, isBusy());
+    render(false, getBusy());
     stateChanged();
   }
   return {
-    init, render, ready, sourceText, descriptor,
+    init, render, ready, sourceReady, sourceText, sourceSummary, descriptor,
+    showSource, showTarget, focusCurrent,
     payload: (idempotencyKey) => ({ idempotencyKey, normalizedText: sourceText(), ...descriptor() }),
     get intakeKey() { return intakeKey; }, set intakeKey(value) { intakeKey = value; },
     get fileSource() { return fileSource; }, get fileBusy() { return fileBusy; },
+    get step() { return step; },
     clear() {
       readGeneration += 1;
       fileBusy = false;
       fileReadName = '';
       fileSource = null;
       intakeKey = null;
+      step = 'source';
       const input = document.getElementById('hero-source-file-input');
       if (input) input.value = '';
       setError('');
