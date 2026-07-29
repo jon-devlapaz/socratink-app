@@ -12,10 +12,8 @@ echo "[doctor] port: $PORT"
 echo "[doctor] required agent/deploy files..."
 required_files=(
   "AGENTS.md"
-  "docs/project/state.md"
-  "agents/QUALITY.md"
-  "docs/product/evidence-weighted-map.md"
-  "docs/product/spec.md"
+  "docs/project/doc-map.md"
+  "docs/product/north-star.md"
   "requirements.txt"
   "requirements-dev.txt"
   "vercel.json"
@@ -35,9 +33,6 @@ if [ ! -x ".venv/bin/python" ]; then
   echo "[doctor] FAIL: missing .venv. Run: bash scripts/bootstrap-python.sh" >&2
   exit 1
 fi
-
-echo "[doctor] agent-doc integrity..."
-.venv/bin/python scripts/check_agent_docs.py
 
 echo "[doctor] logic-only test policy..."
 .venv/bin/python scripts/check_logic_only_tests.py

@@ -13,7 +13,7 @@ This file is the lightweight local operating guide for this repository.
 
 ## Read this before edits
 - Current architecture/truth lives in `README.md`, `docs/project/doc-map.md`, and `docs/product/north-star.md`.
-- Agent workflow and verification doctrine lives in `agents/QUALITY.md`.
+- Agent workflow and verification doctrine lives in `docs/project/doc-map.md`.
 - Runtime and deployment notes are in `.github/workflows/` and related scripts.
 - Product doctrine lives in `docs/product/north-star.md` (canonical), with `PRODUCT.md`, `DESIGN.md`, and `UBIQUITOUS_LANGUAGE.md` as derived contracts.
 ## Safe change sequence
