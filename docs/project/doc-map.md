@@ -1,65 +1,39 @@
 # Docs Registry
-
-This is the intentionally small map of docs that still earn a place in the repo.
+This is the intentionally small map of docs that still earn a place in this repo.
 If a file is not listed here or reachable from one listed here, treat it as
 non-canonical working material.
 
 For an agent-crawler index see [`/llms.txt`](../../llms.txt).
 
 ## Entry Points
-
-- [`docs/README.md`](../README.md) - docs-vault front door and memory boundary
-- [`/README.md`](../../README.md) - repo shape, runtime surfaces, and local run/test commands
-- [`docs/product/north-star.md`](../product/north-star.md) - canonical product doctrine (north star)
+- [`docs/project/doc-map.md`](doc-map.md) - docs-vault front door and memory boundary
+- [`docs/product/north-star.md`](../product/north-star.md) - canonical product doctrine
+- [`/AGENTS.md`](../../AGENTS.md) - agent ops canon, commands, and conventions
 - [`/PRODUCT.md`](../../PRODUCT.md) - implementation contract derived from the north star
 - [`/DESIGN.md`](../../DESIGN.md) - product/design hub, primitives, voice, and boundaries
-- [`/AGENTS.md`](../../AGENTS.md) - agent ops canon, commands, conventions, git workflow
 - [`/UBIQUITOUS_LANGUAGE.md`](../../UBIQUITOUS_LANGUAGE.md) - canonical terms and aliases to avoid
-- [`docs/project/state.md`](state.md) - current release posture and active risks
+- [`docs/.obsidian/app.json`](../.obsidian/app.json) - Obsidian vault link config
 
 ## Precedence
-
-On any claim about **graph truth, evidence, mastery, completion, diagnostic
-capability, or what the learner knows**,
-[`product/evidence-weighted-map.md`](../product/evidence-weighted-map.md)
-overrides every other binding doc, including `DESIGN.md`, `spec.md`, and
-implementation-tier specs. Legacy knowledge/completion shorthand falls under
-its §14 Legacy Shorthand Replacement Table.
-
-On all other topics, the doc listed below for that topic is authoritative.
+- With the pruned docs cleanup, there is currently no in-tree `docs/` replacement for
+  the former product/spec or evidence docs. Use the canonical repo-level docs above
+  as the current authority, and add a dedicated in-tree docs file before reintroducing
+  those references.
+- On all other topics, use the file listed as the top-level canonical source for that
+  topic in this registry.
 
 ## Canonical Docs
 
 | Topic | Doc |
 | --- | --- |
 | Product north star / doctrine | [`docs/product/north-star.md`](../product/north-star.md) |
-| Product contract: loop, routing, progression layers, inline modes, guardrails | [`docs/product/spec.md`](../product/spec.md) |
-| Evidence-weighted graph doctrine | [`docs/product/evidence-weighted-map.md`](../product/evidence-weighted-map.md) |
-| Post-drill result-surface UX | [`docs/product/post-drill-ux-spec.md`](../product/post-drill-ux-spec.md) |
-| First-session momentum (door → first verdict, psychology-backed) | [`docs/product/first-session-momentum-spec.md`](../product/first-session-momentum-spec.md) |
-| Founder mental model | [`docs/product/test-driven-learning.md`](../product/test-driven-learning.md) |
-| Full UX manifesto and voice rationale | [`docs/design/socratink-ux.md`](../design/socratink-ux.md) |
-| Drill data model, training evidence, derivation math, rendering fields | [`docs/superpowers/specs/2026-05-15-drill-data-model-design.md`](../superpowers/specs/2026-05-15-drill-data-model-design.md) |
-| Architectural decisions | [`docs/adr/README.md`](../adr/README.md) |
-
-## Accepted implementation specs
-
-These production-backed contracts passed the initial Taste Gate on 14 July
-2026. Their accepted status makes them implementation authority for their
-bounded repair packets.
-
-| Topic | Doc |
-| --- | --- |
-| Source-less route continuity and evidence preservation | [`docs/product/source-less-route-continuity-spec.md`](../product/source-less-route-continuity-spec.md) |
-| Signed-in local-save and account-sync honesty | [`docs/product/learner-state-sync-honesty-spec.md`](../product/learner-state-sync-honesty-spec.md) |
-| Model-backed wait states and recovery | [`docs/product/learner-wait-and-recovery-spec.md`](../product/learner-wait-and-recovery-spec.md) |
 
 ## Maintenance
-
-- Open `docs/` as an Obsidian vault only as a navigation layer. Git and this
-  registry remain authoritative.
+- Open `docs/` as an Obsidian vault only as a navigation layer. Git and this registry
+  remain authoritative.
 - Do not add working plans, QA prompts, research notes, implementation handoffs,
   generated artifacts, or deprecated redirects under `docs/`.
-- If a temporary note matters long-term, promote only its durable rule into the
-  relevant canonical doc above. Otherwise rely on git history.
+- If a temporary note matters long-term, promote only its durable rule into the relevant
+  canonical doc above. Otherwise rely on git history.
 - When doctrine shifts, update the authoritative doc first; this registry follows.
+- This map was intentionally pruned to match currently checked-in files in this branch.

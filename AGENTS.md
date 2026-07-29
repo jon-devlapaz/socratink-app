@@ -12,11 +12,10 @@ This file is the lightweight local operating guide for this repository.
 - Record blockers and follow-ups in the task summary.
 
 ## Read this before edits
-- Current architecture/truth lives in `README.md`, `docs/project/doc-map.md`, and `docs/project/state.md`.
+- Current architecture/truth lives in `README.md`, `docs/project/doc-map.md`, and `docs/product/north-star.md`.
 - Agent workflow and verification doctrine lives in `agents/QUALITY.md`.
 - Runtime and deployment notes are in `.github/workflows/` and related scripts.
 - Product doctrine lives in `docs/product/north-star.md` (canonical), with `PRODUCT.md`, `DESIGN.md`, and `UBIQUITOUS_LANGUAGE.md` as derived contracts.
-
 ## Safe change sequence
 - Confirm branch and dirty state before touching files.
 - For normal code work, start from the clean home checkout with `agent-work start <slug>` and do edits only in the printed sibling worktree.
