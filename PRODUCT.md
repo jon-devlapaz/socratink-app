@@ -1,6 +1,6 @@
 # Socratink product truth
 
-Authority: `socratink-north-star`, decided by the founder and effective 22 July 2026. The canonical note is `/Users/jondev/dev/socratink/research/socratink-research-vault/60-product-doctrine/north-star.md`. This repository contract mirrors that doctrine for implementation. If they conflict, the canonical note wins.
+Authority: `socratink-north-star`, decided by the founder and effective 28 July 2026. The canonical doctrine is [`docs/product/north-star.md`](docs/product/north-star.md). This file is the implementation contract derived from that doctrine. If they conflict, the north star wins.
 
 ## Who it is for
 
