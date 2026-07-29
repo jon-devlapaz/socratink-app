@@ -89,7 +89,7 @@ IKEA/endowment, loss aversion, contrast). **Socratink-compatible** forms only.
 | Source-less `mountExtractOverlay` | `public/js/launch-pad.js`, `public/js/app.js` (`mountExtractOverlay({ sourceLess: true })`) |
 | SEDA verdict helpers (partial) | `public/js/app.js` (`sedaTurnVerdict`, `requestSedaTurn`), `public/js/drill-chamber.js` (`appendVerdict`) |
 
-**Verify:** `tests/test_frontend_app_helper_modules.py` (launch pad overlay), e2e chamber copy, manual taste gate on worktree server.
+**Verify:** application-logic tests plus a manual taste gate on the worktree server.
 
 ---
 
@@ -190,7 +190,6 @@ Never repeat the identical question string in the active prompt area after verdi
 - [ ] After "Check my answer" with non-empty text, verdict strip visible within 2s (no silent spinner >3s without copy).
 - [ ] Same prompt text does not reappear as empty active question after verdict.
 - [ ] `See what to study` or `Reveal notes and compare` visible when routing permits study.
-- [ ] `tests/e2e/test_smoke.py` or new e2e: launch → drill → submit → expects verdict element.
 - [ ] Node contract test for `sedaTurnVerdict` / verdict copy mapping.
 - [ ] POST-launch and GET-rehydrate responses expose the same versioned ready route.
 - [ ] Missing/stale route recovery keeps the Door sketch and never replaces recorded evidence.
@@ -363,14 +362,14 @@ Add or preserve telemetry:
 
 ---
 
-## Test plan
+## Automated checks
 
 | Layer | Commands |
 | --- | --- |
-| Unit | `.venv/bin/pytest -q tests/test_frontend_app_helper_modules.py -k "launch_pad or door"` |
-| Node | `sedaTurnVerdict`, overlay mount, library filter with stub concept |
-| E2E | `pytest tests/e2e/test_smoke.py -k "launch_pad or chamber"` (worktree server) |
-| Manual taste gate | `http://localhost:8002` guest → photosynthesis path; screenshot folder |
+| Logic | `.venv/bin/pytest -q tests/test_frontend_logic_modules.py` |
+
+Manual product review remains separate from automated tests: use the worktree
+server for the guest photosynthesis path and retain screenshots with the review.
 
 ---
 

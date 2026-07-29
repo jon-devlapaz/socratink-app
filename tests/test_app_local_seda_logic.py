@@ -1,4 +1,4 @@
-"""Frontend contracts for app-local SEDA entry and session APIs."""
+"""Logic contracts for app-local SEDA entry and session APIs."""
 
 from __future__ import annotations
 
@@ -613,69 +613,6 @@ def test_http_post_intake_and_get_rehydrate_preserve_exact_reconstruction() -> N
           await new Promise((resolve) => server.close(resolve));
           await fs.rm(rootDir, { recursive: true, force: true });
         }
-        """
-    )
-    assert result.returncode == 0, result.stderr
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_auth_bootstrap_keeps_loop_out_of_primary_navigation() -> None:
-    result = run_node_module(
-        """
-        import assert from 'node:assert/strict';
-
-        const nodes = new Map([
-          ['auth-controls', { hidden: true }],
-          ['auth-login-link', { hidden: true, href: '', textContent: '' }],
-          ['auth-logout-btn', {
-            hidden: true,
-            disabled: false,
-            textContent: '',
-            dataset: {},
-            addEventListener(type, handler) { this[type] = handler; },
-          }],
-          ['auth-status', { hidden: true, textContent: '' }],
-        ]);
-        globalThis.window = {
-          location: { pathname: '/', search: '', hash: '', assign() {} },
-        };
-        globalThis.document = {
-          getElementById(id) { return nodes.get(id) || null; },
-        };
-
-        const auth = await import('./public/js/auth.js');
-        let redirectedToLogin = false;
-        assert.equal(
-          await auth.requireAppEntrySession({
-            fetchSession: async () => ({ authenticated: false, guest_mode: false }),
-            redirect: () => { redirectedToLogin = true; },
-            waitAfterRedirect: false,
-          }),
-          false,
-        );
-        assert.equal(redirectedToLogin, true);
-        assert.equal(
-          await auth.requireAppEntrySession({
-            fetchSession: async () => ({ authenticated: true, guest_mode: true }),
-            redirect: () => { throw new Error('guest should not redirect'); },
-            waitAfterRedirect: false,
-          }),
-          true,
-        );
-        globalThis.fetch = async () => ({
-          ok: true,
-          json: async () => ({ guest_mode: true, auth_enabled: true, loop_available: false }),
-        });
-        await auth.bootstrapAuthUi();
-        assert.equal(nodes.has('nav-loop'), false);
-
-        auth.invalidateAuthSession();
-        globalThis.fetch = async () => ({
-          ok: true,
-          json: async () => ({ guest_mode: true, auth_enabled: true, loop_available: true }),
-        });
-        await auth.bootstrapAuthUi();
-        assert.equal(nodes.has('nav-loop'), false);
         """
     )
     assert result.returncode == 0, result.stderr

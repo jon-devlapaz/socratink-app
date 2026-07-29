@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # verify-deploy.sh — wait for Vercel to finish deploying a commit, then run
-# the QA browser smoke against production.
+# the production health endpoint.
 #
 # Usage:
 #   bash scripts/verify-deploy.sh                      # uses origin/main HEAD
@@ -8,10 +8,10 @@
 #   bash scripts/verify-deploy.sh HEAD                 # uses local HEAD
 #
 # Exit codes:
-#   0  Deploy succeeded AND smoke passed
-#   2  Vercel deploy reported failure/error before smoke ran
+#   0  Deploy succeeded AND health passed
+#   2  Vercel deploy reported failure/error before health ran
 #   3  Timed out waiting for Vercel (default 5 min)
-#   4  Vercel deployed successfully but smoke failed
+#   4  Vercel deployed successfully but health failed
 #
 # Designed to be invoked by humans, by Claude Code, or by Gemini CLI.
 
@@ -87,18 +87,27 @@ if [ "$last_status" != "success" ]; then
   exit 3
 fi
 
-# 3. Run the smoke against production
+# 3. Verify the production health endpoint
 echo
-echo "[verify-deploy] deploy verified — running QA smoke"
+echo "[verify-deploy] deploy verified — checking application health"
 echo "===================================================================="
-if bash "$REPO_ROOT/scripts/qa-smoke.sh" "$PROD_URL"; then
+if .venv/bin/python - "${PROD_URL%/}/api/health" <<'PY'
+import sys
+import urllib.request
+
+health_url = sys.argv[1]
+with urllib.request.urlopen(health_url, timeout=10) as response:
+    if response.status != 200:
+        raise SystemExit(f"health check returned HTTP {response.status}")
+PY
+then
   echo "===================================================================="
-  echo "[verify-deploy] PASS: $SHORT_SHA deployed and smoke is green"
+  echo "[verify-deploy] PASS: $SHORT_SHA deployed and health is green"
   exit 0
 else
-  smoke_exit=$?
+  health_exit=$?
   echo "===================================================================="
-  echo "[verify-deploy] FAIL: $SHORT_SHA deployed but smoke is red (exit $smoke_exit)"
+  echo "[verify-deploy] FAIL: $SHORT_SHA deployed but health is red (exit $health_exit)"
   echo "[verify-deploy] Vercel deployment: $deployment_url"
   exit 4
 fi

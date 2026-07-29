@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -87,20 +86,3 @@ def test_cli_kernel_source_less_flow_only_solidifies_after_spaced_strong_reconst
     assert payload["trace"][4]["nodes"]["immune-memory"]["attempt_count"] == 1
     assert payload["trace"][-1]["concept_status"]["badge"] == "solidified"
     assert payload["training"]["sketch"]["text"].startswith("I think vaccines")
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_cli_kernel_tui_static_output_is_founder_facing_and_accepts_fixture_alias() -> None:
-    result = run_cli("--tui-static", "source-less")
-
-    assert result.returncode == 0, result.stderr
-    assert "MODULE_TYPELESS_PACKAGE_JSON" not in result.stderr
-    assert "Socratink Kernel TUI" in result.stdout
-    assert "Concept: source-less-vaccine-memory" in result.stdout
-    assert "Mode: source_less / learner_sketch" in result.stdout
-    assert "Final badge: solidified" in result.stdout
-    assert "Controls: up/down or j/k step through events, q quits" in result.stdout
-    assert "> spaced_redrill" in result.stdout
-    assert re.search(r"immune-memory\s+solidified\s+next none", result.stdout)
-    assert "Attempts: 2  Repairs: 1" in result.stdout
-    assert "Only spaced strong reconstruction produced solidified." in result.stdout

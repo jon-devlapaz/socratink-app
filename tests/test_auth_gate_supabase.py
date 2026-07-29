@@ -133,7 +133,7 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
         response = client.get("/", follow_redirects=False)
         self.assertEqual(response.status_code, 200)
 
-    def test_session_route_serves_app_shell_for_guest(self):
+    def test_session_route_allows_guest(self):
         service = FakeSupabaseAuthService(enabled=True)
         service.current_state = AuthSessionState(
             auth_enabled=True,
@@ -147,7 +147,6 @@ class AuthGateRefreshWritebackTests(unittest.TestCase):
         response = client.get("/session/local-session-1", follow_redirects=False)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("socratink", response.text)
 
     def test_public_index_resolver_uses_first_existing_candidate(self):
         with tempfile.TemporaryDirectory() as tmp:

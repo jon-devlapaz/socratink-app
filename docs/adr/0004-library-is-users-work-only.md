@@ -34,7 +34,9 @@ A first-run user with no source of their own currently has no built-in sandbox c
 
 - **Files removed:** `public/data/library/hermes_agent.json`, `docs/reference/hermes-agent-concept-source.md`, `docs/reference/hermes-agent-docs-manifest.md`, `BUILT_IN_LIBRARY_CONCEPTS` and `importLibraryConcept` in `public/js/app.js`, `loadLibraryConcept` in `public/js/api-client.js`, the `App.importLibraryConcept` namespace export.
 - **Files kept:** `.library-card-vault` CSS rules (still used by the user's own concept cards), `getLibraryConceptMeta` (called for user concepts in the non-empty render path), the `Your Library` section render.
-- **Tests rewritten:** Three smoke tests in `tests/e2e/test_smoke.py` previously used Hermes Agent as a fixture (not as a feature under test). They now seed a single concept directly into `learnops_concepts` localStorage via a new `_seed_one_concept(page)` helper. No test coverage of real behavior is lost.
+- **Historical test note:** An earlier browser suite used Hermes Agent as a
+  fixture rather than as the feature under test. That suite was later removed
+  when the repository adopted logic-only automated tests.
 - **Term affected:** the old seed-card state label for "this seed hasn't been imported yet" has no referent now that seeding is gone. It is removed from product copy. Future copy should use current route language only.
 - **First-run friction:** A user landing on Library with no concepts sees only the empty-state line: *"No concepts yet. Start one at New concept."* This ADR still forbids pre-loaded sample concepts in Library; current entry flows may start from source-less launch attempts instead of imported source material.
 

@@ -443,7 +443,6 @@ const App = (() => {
   }
 
   async function seedLocalQaConcept() {
-    /* c8 ignore next -- localhost-only guard; exercised positively by e2e */
     if (!isLocalDevHost()) return;
 
     const concepts = loadConcepts();
@@ -487,7 +486,6 @@ const App = (() => {
   }
 
   async function seedLocalRepairQaConcept() {
-    /* c8 ignore next -- localhost-only guard; exercised positively by e2e */
     if (!isLocalDevHost()) return;
 
     const concepts = loadConcepts();
@@ -1695,7 +1693,6 @@ const App = (() => {
   //   name   — non-empty trimmed concept name string from the door
   //   source — { type: 'text'|'url'|'file', text?, url?, filename? } payload
   //            captured by the door's source-panel.
-  /* c8 ignore next -- source-attached creation uses the same persistence boundary as launch-pad and is covered by live smoke. */
   async function runSourceAttachedSubmit({ name, source, startingSketch = '' }) {
     const setDoorError = (msg) => {
       const errEl = document.getElementById('hero-door-error');
@@ -4886,7 +4883,6 @@ const App = (() => {
         }
       }
     } catch (err) {
-      /* c8 ignore start -- stale/error SEDA turn handling is defensive; happy path is covered by product e2e. */
       hideTypingIndicator();
       if (sessionToken !== drillState.sessionToken) return;
       drillState.pending = false;
@@ -4898,7 +4894,6 @@ const App = (() => {
       console.error(err);
       showSedaTransportRetry(normalizedText, { internal });
       return;
-      /* c8 ignore stop */
     }
   }
 

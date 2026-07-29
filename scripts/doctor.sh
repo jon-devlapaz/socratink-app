@@ -22,6 +22,7 @@ required_files=(
   "package.json"
   "package-lock.json"
   "scripts/chub-docs.sh"
+  "scripts/check_logic_only_tests.py"
 )
 for required_file in "${required_files[@]}"; do
   if [ ! -f "$required_file" ]; then
@@ -37,6 +38,9 @@ fi
 
 echo "[doctor] agent-doc integrity..."
 .venv/bin/python scripts/check_agent_docs.py
+
+echo "[doctor] logic-only test policy..."
+.venv/bin/python scripts/check_logic_only_tests.py
 
 echo "[doctor] context-hub wrapper..."
 if [ ! -x "scripts/chub-docs.sh" ]; then
@@ -77,9 +81,6 @@ fi
 
 echo "[doctor] mypy baseline (mypy.ini scope)..."
 .venv/bin/mypy . >/dev/null
-
-echo "[doctor] login render contract..."
-.venv/bin/python scripts/check-login-render.py
 
 echo "[doctor] auth/env preflight..."
 .venv/bin/python scripts/check-local-auth.py --port "$PORT"

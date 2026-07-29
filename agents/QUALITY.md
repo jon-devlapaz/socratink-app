@@ -56,5 +56,5 @@ Do not create parallel source-of-truth files accidentally. The intentional migra
 | Auth/session behavior | targeted auth pytest plus `bash scripts/doctor.sh` |
 | Drill, graph, or mastery behavior | targeted pytest plus review against `docs/product/evidence-weighted-map.md` |
 | Production backend or public JS behavior | targeted pytest plus `./scripts/check-coverage.sh` |
-| External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs, Playwright, browser APIs) | retrieve current primary docs before editing, using the agent runtime's current-docs tool or `bash scripts/chub-docs.sh`; run targeted pytest when behavior is testable and `bash scripts/qa-smoke.sh` when the surface is hosted-visible |
+| External SDK/API/platform integration (Supabase, Vercel, Gemini/AI SDKs) | retrieve current primary docs before editing, using the agent runtime's current-docs tool or `bash scripts/chub-docs.sh`; run targeted logic tests when behavior is testable and verify the production health endpoint after deployment |
 | Hosted release confidence | `bash scripts/verify-deploy.sh HEAD` after deployment |

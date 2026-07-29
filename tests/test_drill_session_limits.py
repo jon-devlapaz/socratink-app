@@ -300,7 +300,7 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
     def test_cold_attempt_preserves_classification_after_generative_commitment(self):
         """Cold attempts still need grader evidence once the learner commits.
 
-        The first attempt should route the UI into study, but the classification
+        The first attempt should route the learner into study, but the classification
         must flow back so the training event can record honest gap state.
         """
         with (
@@ -427,7 +427,7 @@ class DrillBypassAndDegradedResponseTests(unittest.TestCase):
         self.assertEqual(result["help_request_reason"], "explicit_explain_request")
 
     def test_cold_attempt_passes_learner_scaffold_into_drill_contract(self):
-        """Drill evaluation must see the same scaffold that shaped the UI."""
+        """Drill evaluation must see the same scaffold that shaped the prompt."""
         captured = {}
 
         def fake_call(_client, *, model, contents, config):
