@@ -170,6 +170,5 @@ Design and code-contract boundaries only. For git, deploy, hooks, and other oper
 - SEDA/UI state alignment → [`docs/design/seda-ui-state-alignment.md`](docs/design/seda-ui-state-alignment.md)
 - Domain language → [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
 - ADR history → [`docs/adr/`](docs/adr/)
-- Product spec deep-dive → [`docs/product/spec.md`](docs/product/spec.md)
 - Design tokens (code) → [`public/css/tokens.css`](public/css/tokens.css)
 - Agent workflows → [`agents/`](agents/)

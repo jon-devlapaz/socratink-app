@@ -12,7 +12,6 @@
 
 ## Deep-dive
 - [Full UX manifesto](/docs/design/socratink-ux.md): the prose source for DESIGN.md voice/state-model sections
-- [Product spec](/docs/product/spec.md): three-phase loop, inline concept-entry/result-surface modes, guardrails
 
 ## Code-adjacent
 - [SEDA runtime map](/lib/README.md)
