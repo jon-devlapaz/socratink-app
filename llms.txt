@@ -8,7 +8,6 @@
 - [AGENTS.md](/AGENTS.md): agent ops — commands, conventions, git workflow
 - [UBIQUITOUS_LANGUAGE.md](/UBIQUITOUS_LANGUAGE.md): canonical domain terms + aliases to avoid
 - [Project state](/docs/project/state.md): current release posture, persistence truth, active risks
-- [ADR index](/docs/adr/README.md): append-only architectural decisions
 
 ## Code-adjacent
 - [SEDA runtime map](/lib/README.md)

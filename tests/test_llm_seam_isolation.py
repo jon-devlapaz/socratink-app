@@ -4,7 +4,6 @@ If this test fails, application code re-coupled to a provider. The fix is
 NOT to add the file to ``_ALLOWED``; it is to route the call through
 ``llm.LLMClient`` instead.
 
-See ADR-0003 for the rationale.
 """
 from __future__ import annotations
 

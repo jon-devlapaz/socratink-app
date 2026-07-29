@@ -57,10 +57,10 @@ Door (concept name [+ optional Learner goal] [+ optional Imported source])
 
 Architectural seams:
 
-- **Map typed contract** — `ProvisionalMap` is a Pydantic model; the route boundary is the only `dict` shape. ADR-0001.
-- **LLM seam** — application code imports `LLMClient`, never `google.genai`. Adding a provider is one new adapter file. ADR-0002.
-- **Retry contract** — encoded in type system via `RetriableLLMError` marker class. ADR-0003.
-- **Library boundary** — Library shows only the user's own reconstructed work; no built-in samples. ADR-0004.
+- **Map typed contract** — `ProvisionalMap` is a Pydantic model; the route boundary is the only `dict` shape.
+- **LLM seam** — application code imports `LLMClient`, never `google.genai`. Adding a provider is one new adapter file.
+- **Retry contract** — encoded in type system via `RetriableLLMError` marker class.
+- **Library boundary** — Library shows only the user's own reconstructed work; no built-in samples.
 
 Internal-only signals (routing hints, source-dependence scores, causal-depth) **never** surface to the learner.
 Learner goal is relevance context for prompts and graph metadata; it is not graph-truth evidence.
@@ -71,10 +71,10 @@ Learner goal is relevance context for prompts and graph metadata; it is not grap
 
 | Decision | Why | Don't do | Ref |
 | --- | --- | --- | --- |
-| `ProvisionalMap` is a typed Pydantic model, not a dict | Catches structural breakage at parse time, not three steps later | Walk dicts in downstream code; reintroduce loose JSON | ADR-0001 |
-| LLM provider lives behind `llm/` package | Switching providers is a one-file addition; tests don't patch private names | Import `google.genai` outside `llm/gemini_adapter.py` | ADR-0002 |
-| `RetriableLLMError` marker class governs retry set | Class hierarchy *is* the contract; no separate tuple to forget | Add error to an `except (...)` tuple instead of subclassing | ADR-0003 |
-| Library is users' work only | The trust signal of Library is the user's own reconstructed work; samples dilute it | Add `BUILT_IN_LIBRARY_CONCEPTS`, "Saved articles", side-by-side curated cards | ADR-0004 |
+| `ProvisionalMap` is a typed Pydantic model, not a dict | Catches structural breakage at parse time, not three steps later | Walk dicts in downstream code; reintroduce loose JSON | code |
+| LLM provider lives behind `llm/` package | Switching providers is a one-file addition; tests don't patch private names | Import `google.genai` outside `llm/gemini_adapter.py` | code |
+| `RetriableLLMError` marker class governs retry set | Class hierarchy *is* the contract; no separate tuple to forget | Add error to an `except (...)` tuple instead of subclassing | code |
+| Library is users' work only | The trust signal of Library is the user's own reconstructed work; samples dilute it | Add `BUILT_IN_LIBRARY_CONCEPTS`, "Saved articles", side-by-side curated cards | product |
 | Threshold is global; cold attempt is local | Different scope, different prompt, different surface — protects against generation fatigue | Re-ask the threshold question at the first cold attempt | manifesto |
 | No content before the cold attempt | The Locked Study Silhouette's absence of content is intentional — peeking defeats the cold attempt | Show definitions, solved diagrams, or examples on the locked node | manifesto |
 | Interleaving Bridge is the target after repair | A fresh repair re-drilled immediately tests short-term echo, not reconstruction; current POC exposes a graph-neutral Gap drill via `Pressure-check this link` so the learner can pressure-test a repaired link | Present Gap drill as mastery, spacing, or interleaving credit | manifesto |
@@ -165,6 +165,5 @@ Design and code-contract boundaries only. For git, deploy, hooks, and other oper
 
 - Ops canon → [`AGENTS.md`](AGENTS.md)
 - Domain language → [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
-- ADR history → [`docs/adr/`](docs/adr/)
 - Design tokens (code) → [`public/css/tokens.css`](public/css/tokens.css)
 - Agent workflows → [`agents/`](agents/)
