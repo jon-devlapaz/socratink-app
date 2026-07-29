@@ -33,7 +33,7 @@ This file is the lightweight local operating guide for this repository.
 - Agent prompt line: `Work only in <worktree-path>. Before editing, run agent-work guard .`
 - For Herdr delegation, a short ask like `Use agent-work for nav icons` is enough; clarify only if scope is ambiguous, then run `agent-work launch "<task>"` from the home checkout.
 - Before publishing feature work, rename or recreate the review branch as `feat/<slug>`. Cleanup commits on `main` publish to `origin/main`.
-- After merge, delete the merged `feat/<slug>` branch residue and remove the clean worktree with the repo cleanup helper.
+- After merge, use `$socratink-app-publish` to remove the clean worktree and delete proven merged `feat/<slug>` branch residue.
 
 ## Git-golden state
 Call the repo `git-golden` only when all of these are true:
