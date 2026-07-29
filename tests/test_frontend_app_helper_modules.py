@@ -13,6 +13,77 @@ from tests._helpers.node_runner import run_node_module
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_door_source_controller_owns_source_state_and_provenance() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { createDoorSourceController } from './public/js/door-source.js';
+
+        const field = { value: '  pasted source  ' };
+        globalThis.document = {
+          getElementById(id) { return id === 'hero-single-input-field' ? field : null; },
+          querySelector() { return null; },
+        };
+        const controller = createDoorSourceController({
+          normalizationVersion: 'source-text-v1',
+          sourceFits: () => true,
+        });
+        assert.equal(controller.sourceText(), '  pasted source  ');
+        assert.deepEqual(controller.descriptor(), {
+          normalizationVersion: 'source-text-v1',
+          extractionVersion: 'browser-paste-v1',
+          parserVersion: 'plain-text-v1',
+          sourceKind: 'paste',
+          provenance: { intake_surface: 'promoted-alpha-file-intake', input_method: 'paste' },
+        });
+        assert.equal(controller.payload('retry-1').normalizedText, '  pasted source  ');
+        controller.intakeKey = 'retry-1';
+        controller.clear();
+        assert.equal(controller.intakeKey, null);
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
+def test_door_source_controller_discards_stale_file_reads() -> None:
+    result = run_node_module(
+        """
+        import assert from 'node:assert/strict';
+        import { createDoorSourceController } from './public/js/door-source.js';
+
+        class TextArea {}
+        const nodes = new Map();
+        const field = Object.assign(new TextArea(), { value: '', addEventListener() {} });
+        const guess = { value: '', addEventListener() {}, focus() {} };
+        const fileInput = { files: [], value: '', listeners: {}, addEventListener(type, handler) { this.listeners[type] = handler; } };
+        const makeNode = () => ({ addEventListener() {}, setAttribute() {}, classList: { toggle() {} } });
+        for (const id of ['hero-source-file-action', 'hero-source-file-remove', 'hero-source-file-state', 'hero-source-file-value', 'hero-source-file-error']) nodes.set(id, makeNode());
+        nodes.set('hero-single-input-field', field);
+        nodes.set('hero-cold-guess-field', guess);
+        nodes.set('hero-source-file-input', fileInput);
+        globalThis.HTMLTextAreaElement = TextArea;
+        globalThis.document = { getElementById(id) { return nodes.get(id) || null; }, querySelector() { return null; } };
+        globalThis.requestAnimationFrame = (callback) => callback();
+        const readers = [];
+        globalThis.FileReader = class { readAsText() { readers.push(this); } };
+        const controller = createDoorSourceController({ normalizationVersion: 'source-text-v1', sourceFits: () => true });
+        controller.init({ isBusy: () => false, session: () => null });
+        fileInput.files = [{ name: 'a.txt', size: 1 }];
+        fileInput.listeners.change();
+        fileInput.files = [{ name: 'b.md', size: 1 }];
+        fileInput.listeners.change();
+        readers[1].onload({ target: { result: 'source B' } });
+        readers[0].onload({ target: { result: 'source A' } });
+        assert.equal(controller.sourceText(), 'source B');
+        assert.equal(controller.fileSource.filename, 'b.md');
+        assert.equal(controller.descriptor().sourceKind, 'md');
+        """
+    )
+    assert result.returncode == 0, result.stderr
+
+
 class ButtonTypeParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -1310,6 +1381,12 @@ def test_new_concept_field_has_unique_accessible_label() -> None:
     assert 'for="hero-cold-guess-field">Explanation target</label>' in index_html
     assert 'id="hero-single-input-field"' in index_html
     assert 'id="hero-cold-guess-field"' in index_html
+    assert 'id="hero-source-file-input"' in index_html
+    assert 'accept=".txt,.md,.pdf"' in index_html
+    assert 'id="hero-source-file-action"' in index_html
+    assert 'id="hero-source-file-remove"' in index_html
+    assert 'id="hero-source-file-value"' in index_html
+    assert 'aria-live="polite"' in index_html
     assert 'aria-label="Source material"' in index_html
     assert 'aria-label="Explanation target"' in index_html
     assert '>Close source and explain</button>' in index_html

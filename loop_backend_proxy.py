@@ -287,6 +287,7 @@ async def proxy_loop_backend(
     upstream_path: str,
     *,
     force_local_runtime: bool = False,
+    require_user_token: bool = False,
 ) -> Response:
     try:
         base = _loop_backend_base(
@@ -307,7 +308,8 @@ async def proxy_loop_backend(
             headers=_forward_headers(
                 request,
                 include_user_token=(
-                    force_local_runtime and is_vercel_runtime()
+                    require_user_token
+                    or (force_local_runtime and is_vercel_runtime())
                 ),
             ),
             redirect=False,

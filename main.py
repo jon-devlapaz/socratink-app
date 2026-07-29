@@ -202,7 +202,11 @@ def _is_protected_api_request(request: Request) -> bool:
         return False
     if path.startswith("/api/auth/"):
         return False
-    return path in PROTECTED_API_PATHS or path.startswith("/api/session/")
+    return (
+        path in PROTECTED_API_PATHS
+        or path.startswith("/api/session/")
+        or path.startswith("/api/source-revisions/")
+    )
 
 
 def _resolve_session_state(request: Request):
@@ -1154,6 +1158,16 @@ async def proxy_loop_session_path(request: Request, path: str) -> Response:
         request,
         f"/api/session/{path}",
         force_local_runtime=True,
+    )
+
+@app.api_route("/api/source-revisions/{path:path}", methods=_LOOP_PROXY_METHODS)
+async def proxy_source_revisions_path(request: Request, path: str) -> Response:
+    _require_identified_user(request)
+    return await proxy_loop_backend(
+        request,
+        f"/api/source-revisions/{path}",
+        force_local_runtime=True,
+        require_user_token=True,
     )
 
 

@@ -196,7 +196,7 @@
     "repair-scaffold": {
       "bridge_function": "build_repair_scaffold",
       "template_key": "delta",
-      "template_version": "socratink-delta-v5",
+      "template_version": "socratink-delta-v6",
       "response_schema": "bridge.RepairScaffold",
       "request": {
         "required": ["node_label", "node_mechanism", "learner_text"],

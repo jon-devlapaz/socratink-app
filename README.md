@@ -177,6 +177,19 @@ This makes the loop event journal durable and account-scoped. Concepts and the
 app-shell training record are still browser `localStorage`; full cross-device
 learner continuity is not yet complete.
 
+For identified learners, source intake persists one owner-scoped immutable
+SourceRevision containing only normalized extracted text and fixed pipeline
+provenance. The session journal stores an opaque revision reference, never
+source text, checksums, filenames, or full provenance. Reopening resolves the
+revision through the current user's RLS identity and fails with recoverable
+`source_unavailable` before bridge work when it is missing or erased. Legacy
+text-backed preview events remain read-only and are not migrated. Erasing a
+SourceRevision removes the exact stored extracted source and intake fingerprints
+only; persisted source-derived AI or session outputs may quote or paraphrase the
+source and are not erased. This is not a universal deletion or full
+data-subject-erasure claim; a professional-pilot blocker or later whole-session
+deletion policy must decide that boundary.
+
 For source-less Door starts, `/api/extract` now returns only a deterministic
 graph-neutral shell. It does not query Learning Commons or generate a route;
 the typed SEDA `sourceLessRoute` is the single authoritative route owner. This

@@ -87,15 +87,79 @@ async function postJson(url, body = {}) {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SEDA_TURN_SIZE_PROBE_REQUEST_ID = '00000000-0000-4000-8000-000000000000';
+const SOURCE_INTAKE_SIZE_PROBE_ID = '00000000-0000-4000-8000-000000000000';
+
+export const MAX_SEDA_REQUEST_BODY_BYTES = 64 * 1024;
+
+function normalizeSedaTurnSubmission(submission) {
+  if (!submission || typeof submission !== 'object') {
+    throw new Error('A SEDA turn submission is required.');
+  }
+  const requestId = String(submission.requestId || '').trim();
+  if (!UUID_RE.test(requestId)) throw new Error('A SEDA turn requestId UUID is required.');
+  return {
+    text: String(submission.text ?? ''),
+    requestId,
+    expectedVersion: assertSessionVersion(submission.expectedVersion),
+  };
+}
+
+export function sedaTurnRequestBodyBytes(submission) {
+  const body = JSON.stringify(normalizeSedaTurnSubmission(submission));
+  return new TextEncoder().encode(body).byteLength;
+}
+
+export function sedaTurnTextFitsRequest(text, expectedVersion) {
+  return sedaTurnRequestBodyBytes({
+    text,
+    requestId: SEDA_TURN_SIZE_PROBE_REQUEST_ID,
+    expectedVersion,
+  }) <= MAX_SEDA_REQUEST_BODY_BYTES;
+}
 
 export function createSedaSession({
   sourceLessDoorBootstrap = false,
   northStarIntake = false,
+  sourceIntake = null,
 } = {}) {
-  return postJson("/api/session", {
+  const body = {
     ...(sourceLessDoorBootstrap === true ? { sourceLessDoorBootstrap: true } : {}),
     ...(northStarIntake === true ? { northStarIntake: true } : {}),
-  });
+    ...(sourceIntake ? { sourceIntake } : {}),
+  };
+  if (jsonRequestBodyBytes(body) > MAX_SEDA_REQUEST_BODY_BYTES) {
+    const error = new Error('A source intake request body is too large.');
+    error.code = 'source_too_large';
+    throw error;
+  }
+  return postJson("/api/session", body);
+}
+
+export function jsonRequestBodyBytes(input) {
+  return new TextEncoder().encode(JSON.stringify(input)).byteLength;
+}
+
+export function sessionSourceTextFitsRequest({
+  normalizedText,
+  normalizationVersion,
+  extractionVersion,
+  parserVersion,
+  sourceKind,
+  provenance,
+}) {
+  return jsonRequestBodyBytes({
+    northStarIntake: true,
+    sourceIntake: {
+      idempotencyKey: SOURCE_INTAKE_SIZE_PROBE_ID,
+      normalizedText,
+      normalizationVersion,
+      extractionVersion,
+      parserVersion,
+      sourceKind,
+      provenance,
+    },
+  }) <= MAX_SEDA_REQUEST_BODY_BYTES;
 }
 
 export async function getSedaSession(sessionId) {
@@ -137,15 +201,11 @@ export function createSedaTurnSubmission(text, expectedVersion, requestId = null
 }
 
 export function sendSedaTurn(sessionId, submission) {
-  const turn = submission;
-  if (!turn || typeof turn !== 'object') {
-    throw new Error('A SEDA turn submission is required.');
+  const turn = normalizeSedaTurnSubmission(submission);
+  if (sedaTurnRequestBodyBytes(turn) > MAX_SEDA_REQUEST_BODY_BYTES) {
+    const error = new Error('A SEDA turn request body is too large.');
+    error.code = 'seda_turn_too_large';
+    throw error;
   }
-  const requestId = String(turn.requestId || '').trim();
-  if (!UUID_RE.test(requestId)) throw new Error('A SEDA turn requestId UUID is required.');
-  return postJson(`/api/session/${encodeURIComponent(sessionId)}/turn`, {
-    text: String(turn.text ?? ''),
-    requestId,
-    expectedVersion: assertSessionVersion(turn.expectedVersion),
-  });
+  return postJson(`/api/session/${encodeURIComponent(sessionId)}/turn`, turn);
 }

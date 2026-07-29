@@ -3,9 +3,11 @@ import {
   createSedaTurnSubmission,
   createSedaSession,
   getSedaSession,
+  sessionSourceTextFitsRequest,
+  sedaTurnTextFitsRequest,
   sendSedaTurn,
   submitConceptCreate,
-} from './ai_service.js?v=6';
+} from './ai_service.js?v=10';
 import {
   playAnim,
   renderGrid as renderDeskGrid,
@@ -63,7 +65,8 @@ import {
   renderReadyFilterHtml,
   renderDueSelectionHtml,
 } from './due-for-spaced.js?v=8';
-import { mountSourcePanel } from './source-panel.js?v=3';
+import { mountSourcePanel } from './source-panel.js?v=4';
+import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=2';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
   applyThemePreference as applyStoredThemePreference,
@@ -114,7 +117,7 @@ import { AudioFX } from './audio.js?v=4';
 import {
   showLaunchPad as _showLaunchPad,
   runLaunchPadAction as _runLaunchPadAction,
-} from './launch-pad.js?v=7';
+} from './launch-pad.js?v=9';
 import {
   coldAttemptCompletionLabel,
   nextSedaPromptAfterVerdict,
@@ -144,12 +147,18 @@ const App = (() => {
   const LOCAL_REPAIR_QA_NODE_ID = 'repair-node';
   const LOCAL_REPAIR_QA_NEXT_NODE_ID = 'depolarization-node';
   const DRILL_NODE_MECHANISM_MAX_CHARS = 10000;
+  const SOURCE_NORMALIZATION_VERSION = 'source-text-v1';
   const trainingStore = createTrainingStore();
   let learnerStatePushTimer = null;
   let readyFilterActive = false;
   let cachedDueItems = [];
   let northStarSession = null;
   let northStarBusy = false;
+  const doorSource = createDoorSourceController({
+    normalizationVersion: SOURCE_NORMALIZATION_VERSION,
+    sourceFits: (text) => sedaTurnTextFitsRequest(text, northStarSession?.sessionVersion ?? 1),
+    onChange: () => _doorUpdateSubmitState(),
+  });
   const freshSourceLessConceptIds = new Set();
 
   function saveConcepts(arr) {
@@ -708,6 +717,7 @@ const App = (() => {
       guessField.value = '';
       guessField.style.height = '';
     }
+    doorSource.clear();
     const submitBtn = document.getElementById('hero-door-submit');
     if (submitBtn instanceof HTMLButtonElement) {
       submitBtn.disabled = true;
@@ -718,13 +728,28 @@ const App = (() => {
     if (evtOrNothing && typeof evtOrNothing.preventDefault === 'function') {
       evtOrNothing.preventDefault();
       if (!_doorReady() || northStarBusy) return false;
-      const source = document.getElementById('hero-single-input-field')?.value || '';
+      const source = northStarSourceText();
       const target = document.getElementById('hero-cold-guess-field')?.value || '';
       const error = document.getElementById('hero-door-error');
       setNorthStarBusy(true);
       if (error) error.textContent = '';
       try {
-        let data = northStarSession || await createSedaSession({ northStarIntake: true });
+        const authSession = await fetchAuthSession();
+        let data = northStarSession;
+        if (!data && isIdentifiedUserSession(authSession)) {
+          doorSource.intakeKey ||= globalThis.crypto?.randomUUID?.();
+          if (!doorSource.intakeKey) throw new Error('Secure source intake is unavailable.');
+          const sourcePayload = doorSource.payload(doorSource.intakeKey);
+          if (!sessionSourceTextFitsRequest(sourcePayload)) {
+            setNorthStarSourceError(doorSource.fileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
+            return;
+          }
+          data = await createSedaSession({
+            northStarIntake: true,
+            sourceIntake: sourcePayload,
+          });
+        }
+        data ||= await createSedaSession({ northStarIntake: true });
         northStarSession = data;
         rememberNorthStarSession(data.sessionId);
         if (data.awaiting?.key === 'source') data = await sendNorthStarText(data, source);
@@ -764,12 +789,17 @@ const App = (() => {
     }
   }
 
+  function northStarSourceText() {
+    return doorSource.sourceText();
+  }
+
+  function setNorthStarSourceError(message) {
+    const error = document.getElementById('hero-source-error');
+    if (error) error.textContent = message;
+  }
+
   function _doorReady() {
-    const f = document.getElementById('hero-single-input-field');
-    const guess = document.getElementById('hero-cold-guess-field');
-    if (!guess || !(guess.value || '').trim()) return false;
-    if (northStarSession?.awaiting?.key === 'target') return true;
-    return Boolean(f && (f.value || '').trim());
+    return doorSource.ready(northStarSession);
   }
 
   function reconstructionReady() {
@@ -803,6 +833,7 @@ const App = (() => {
     if (capture) capture.dataset.state = northStarBusy ? 'busy' : '';
     if (reconstruction) reconstruction.dataset.state = northStarBusy ? 'busy' : '';
     if (repair) repair.dataset.state = northStarBusy ? 'busy' : '';
+    doorSource.render(northStarSession?.awaiting?.key === 'target', northStarBusy);
     _doorUpdateSubmitState();
     const reconstructionSubmit = document.getElementById('north-star-reconstruction-submit');
     if (reconstructionSubmit) reconstructionSubmit.disabled = northStarBusy || !reconstructionReady();
@@ -921,14 +952,11 @@ const App = (() => {
     }
 
     showNorthStarPanel('capture');
-    const sourceField = document.getElementById('hero-single-input-field');
-    const sourceLabel = document.querySelector('label[for="hero-single-input-field"]');
     const targetField = document.getElementById('hero-cold-guess-field');
     const submit = document.getElementById('hero-door-submit');
     const hint = document.getElementById('ignition-boundary');
     const waitingForTarget = session.awaiting?.key === 'target';
-    if (sourceField) sourceField.hidden = waitingForTarget;
-    if (sourceLabel) sourceLabel.hidden = waitingForTarget;
+    doorSource.render(waitingForTarget, northStarBusy);
     if (submit) {
       submit.textContent = waitingForTarget ? 'Continue to explanation' : 'Close source and explain';
       submit.setAttribute('aria-label', submit.textContent);
@@ -944,9 +972,11 @@ const App = (() => {
     try {
       renderNorthStarState(await getSedaSession(sessionId));
     } catch (err) {
-      if (![400, 404].includes(err?.status)) {
-        const error = document.getElementById('hero-door-error');
-        if (error) error.textContent = 'The saved session could not be reopened.';
+      const error = document.getElementById('hero-door-error');
+      if (error && err?.code === 'source_unavailable') {
+        error.textContent = 'The saved source is no longer available. Attach or paste it again.';
+      } else if (error && ![400, 404].includes(err?.status)) {
+        error.textContent = 'The saved session could not be reopened.';
       }
       try { sessionStorage.removeItem(NORTH_STAR_SESSION_KEY); } catch { /* no-op */ }
       northStarSession = null;
@@ -954,41 +984,7 @@ const App = (() => {
   }
 
   function initHeroSingleInput() {
-    const conceptField = document.getElementById('hero-single-input-field');
-    const guessField = document.getElementById('hero-cold-guess-field');
-    if (!(conceptField instanceof HTMLTextAreaElement)) return;
-
-    const form = document.getElementById('hero-single-input');
-
-    conceptField.addEventListener('input', _doorUpdateSubmitState);
-    guessField?.addEventListener('input', _doorUpdateSubmitState);
-    _doorUpdateSubmitState();
-
-    // Audio feedback (preserve existing behavior).
-    const isPrintable = (e) =>
-      !e.metaKey && !e.ctrlKey && !e.altKey && !e.repeat &&
-      (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter');
-
-    conceptField.addEventListener('focus', () => AudioFX.playFocusTap());
-    guessField?.addEventListener('focus', () => AudioFX.playFocusTap());
-    conceptField.addEventListener('keydown', (e) => {
-      if (isPrintable(e)) {
-        AudioFX.playKeyClick();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        if (_doorReady()) {
-          e.preventDefault();
-          form?.requestSubmit?.();
-        }
-      }
-    });
-    guessField?.addEventListener('keydown', (e) => {
-      if (isPrintable(e)) AudioFX.playKeyClick();
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && _doorReady()) {
-        e.preventDefault();
-        form?.requestSubmit?.();
-      }
-    });
+    doorSource.init({ isBusy: () => northStarBusy, session: () => northStarSession });
 
     const reconstructionForm = document.getElementById('north-star-reconstruction-form');
     const reconstructionField = document.getElementById('north-star-explanation-field');
@@ -2006,52 +2002,6 @@ const App = (() => {
 
   // ── 14. Pipeline handlers ──────────────────────────────────
 
-  // Shared file reader. onSuccess(text, filename), onError(msg) or onError(msg, fallbackText, filename).
-  function _readFile(file, onSuccess, onError) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['txt', 'md', 'pdf'].includes(ext)) {
-      onError('Unsupported file type. Use .txt, .md, or .pdf.'); return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      onError('File too large. Maximum size is 2MB.'); return;
-    }
-
-    if (ext === 'pdf') {
-      // Defer to pdf.js for robust client-side extraction natively in the browser
-      if (typeof pdfjsLib === 'undefined') {
-        onError('PDF engine failed to load. Please check your connection.'); return;
-      }
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-      const fileReader = new FileReader();
-      fileReader.onload = async (e) => {
-        try {
-          const pdfData = new Uint8Array(e.target.result);
-          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-
-          let extractedText = '';
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            extractedText += textContent.items.map(item => item.str).join(' ') + '\n';
-          }
-
-          if (extractedText.trim().length < 50) {
-            throw new Error("Scanned image or empty PDF.");
-          }
-          onSuccess(extractedText.trim(), file.name);
-        } catch (err) {
-          onError('Could not natively extract text from this PDF. Try pasting the content manually.');
-        }
-      };
-      fileReader.readAsArrayBuffer(file);
-    } else {
-      const reader = new FileReader();
-      reader.onload = e => onSuccess(e.target.result, file.name);
-      reader.readAsText(file);
-    }
-  }
-
   function hideContentOverlay() {
     const overlay = document.getElementById('content-overlay');
     if (!overlay) return;
@@ -2074,7 +2024,6 @@ const App = (() => {
     }
 
     mountSourcePanel(overlay, {
-      readFile: _readFile,
       onAttach: ({ text, type, filename, url }) => {
         const content = type === 'url' ? url : text;
         if (!content) return;
@@ -3464,12 +3413,10 @@ const App = (() => {
     renderIgnitionGate();
     if (window.innerWidth < 900) closeDrawer();
     // Focus the writing surface directly; aria-label provides SR announcement.
-    const field = document.getElementById('hero-single-input-field');
+    const field = doorSource.fileSource
+      ? document.getElementById('hero-source-file-action')
+      : document.getElementById('hero-single-input-field');
     if (field) requestAnimationFrame(() => field.focus());
-  }
-
-  function hideIgnition() {
-    document.getElementById('ignition-view').hidden = true;
   }
 
   function renderIgnitionGate() {
@@ -3484,6 +3431,7 @@ const App = (() => {
     if (field) field.disabled = northStarBusy;
     if (guessField) guessField.disabled = northStarBusy;
     if (submit) submit.disabled = northStarBusy || !_doorReady();
+    doorSource.render(northStarSession?.awaiting?.key === 'target', northStarBusy);
 
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
@@ -5776,7 +5724,6 @@ const App = (() => {
     syncLearnerStateIfIdentified, pushLearnerStateIfIdentified,
     hidePrimaryViews,  // exposed for launch-pad.js to avoid enumerating view IDs directly
     toggleTheme, setTheme, runHeroAction,
-    _readFile,  // exposed for concept-create.js's source-panel file uploader
     // C-prime launch pad — Round D implementation.
     // showLaunchPad is called by the no-source door path in runHeroAction after
     // writing the pending shell to sessionStorage. It hides the ignition view and

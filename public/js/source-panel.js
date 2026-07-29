@@ -35,6 +35,7 @@
 //     explicit cleanup can opt in by replacing the implementation.
 
 import { AudioFX } from "./audio.js?v=4";
+import { readSourceFile } from "./door-source.js?v=2";
 
 // Same printable-key heuristic used by the door (app.js) and launch pad —
 // keeps audio cues consistent across every text-entry surface.
@@ -59,7 +60,7 @@ export function isBlockedVideoUrl(value) {
 export function mountSourcePanel(targetEl, opts = {}) {
   const onAttach = opts.onAttach || (() => {});
   const onCancel = opts.onCancel || (() => {});
-  const readFile = opts.readFile || null;
+  const readFile = opts.readFile || readSourceFile;
 
   targetEl.innerHTML = `
     <div class="creation-source-panel">
@@ -220,27 +221,7 @@ export function mountSourcePanel(targetEl, opts = {}) {
       refreshAttachEnabled();
     };
 
-    // Prefer the app-level _readFile helper (handles PDFs via pdf.js, txt/md via
-    // readAsText). Falls back to readAsText for text files only when the helper
-    // isn't available (e.g., test harness loading source-panel in isolation).
-    const appReadFile = readFile || ((typeof window !== "undefined" && window.App && typeof window.App._readFile === "function")
-      ? window.App._readFile
-      : null);
-    if (appReadFile) {
-      appReadFile(file, onReadOk, onReadError);
-      return;
-    }
-
-    // Fallback: only safe for text files. Reject PDFs explicitly so we never
-    // produce garbage extracted text.
-    if (/\.pdf$/i.test(file.name)) {
-      onReadError("PDF reader unavailable.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => onReadOk(reader.result, file.name);
-    reader.onerror = () => onReadError("Couldn't read that file.");
-    reader.readAsText(file);
+    readFile(file, onReadOk, onReadError);
   }
 
   // Audio cues — match the door + launch-pad pattern so the source-attach

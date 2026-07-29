@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import os
 import re
+from pathlib import Path
 from urllib.parse import urljoin
 
 import pytest
 from playwright.sync_api import Page, expect
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _enter_app_shell_as_guest(page: Page, base_url: str) -> None:
@@ -53,6 +56,377 @@ def test_intake_hides_source_before_reconstruction(
     expect(clean_page.locator("#north-star-explanation-field")).to_be_visible()
     expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
     assert source not in clean_page.locator("body").inner_text()
+
+
+def test_door_ctrl_enter_submits_once(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(
+        "A source that is long enough to exercise the Door readiness path."
+    )
+    clean_page.locator("#hero-cold-guess-field").fill(
+        "Explain the mechanism without reopening the source."
+    )
+    clean_page.locator("#hero-single-input").evaluate(
+        """(form) => {
+            let count = 0;
+            form.requestSubmit = () => { count += 1; };
+            form.getSubmitCount = () => count;
+        }"""
+    )
+    clean_page.locator("#hero-single-input-field").press("Control+Enter")
+    assert clean_page.locator("#hero-single-input").evaluate(
+        "form => form.getSubmitCount()"
+    ) == 1
+
+
+def test_identified_source_revision_reopens_without_persisting_source_client_side(
+    clean_page: Page, base_url: str
+) -> None:
+    source = "SOURCE_TEXT_CANARY sodium channels open before sodium enters."
+    target = "Explain why sodium influx starts the signal."
+    source_id = "10000000-0000-4000-8000-000000000001"
+    revision_id = "20000000-0000-4000-8000-000000000002"
+    session_id = "30000000-0000-4000-8000-000000000003"
+    checksum = "a" * 64
+    session_requests: list[dict] = []
+    turn_requests: list[dict] = []
+    reopen_requests: list[str] = []
+    reference = {
+        "source_id": source_id,
+        "revision_id": revision_id,
+        "normalization_version": "source-text-v1",
+        "extraction_version": "browser-paste-v1",
+        "parser_version": "plain-text-v1",
+        "source_kind": "paste",
+    }
+
+    clean_page.route(
+        re.compile(r".*/api/me$"),
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "auth_enabled": True,
+                    "authenticated": True,
+                    "guest_mode": False,
+                    "user": {"id": "identified-learner"},
+                }
+            ),
+        ),
+    )
+
+    def fulfill_session(route) -> None:
+        session_requests.append(route.request.post_data_json)
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sessionId": session_id,
+                    "sessionVersion": 1,
+                    "status": "awaiting_input",
+                    "phase": "source_intake",
+                    "awaiting": {"key": "target"},
+                    "events": [
+                        {
+                            "type": "source_submitted",
+                            "source_revision": reference,
+                            "at": "2026-07-28T00:00:00.000Z",
+                            "phase": "source_intake",
+                        }
+                    ],
+                }
+            ),
+        )
+
+    def fulfill_turn(route) -> None:
+        turn_requests.append(route.request.post_data_json)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sessionId": session_id,
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "phase": "initial_reconstruction",
+                    "awaiting": {"key": "initial_reconstruction"},
+                    "events": [
+                        {"type": "source_submitted", "source_revision": reference},
+                        {"type": "target_submitted", "text": target},
+                    ],
+                }
+            ),
+        )
+
+    def fulfill_reopen(route) -> None:
+        reopen_requests.append(route.request.url)
+        route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "sessionId": session_id,
+                    "sessionVersion": 2,
+                    "status": "awaiting_input",
+                    "phase": "initial_reconstruction",
+                    "awaiting": {"key": "initial_reconstruction"},
+                    "events": [
+                        {"type": "source_submitted", "source_revision": reference},
+                        {"type": "target_submitted", "text": target},
+                    ],
+                }
+            ),
+        )
+
+    clean_page.route(re.compile(r".*/api/session$"), fulfill_session)
+    clean_page.route(
+        re.compile(rf".*/api/session/{session_id}/turn$"),
+        fulfill_turn,
+    )
+    clean_page.route(
+        re.compile(rf".*/api/session/{session_id}$"),
+        fulfill_reopen,
+    )
+
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    clean_page.locator("#hero-single-input-field").fill(source)
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert source not in clean_page.locator("body").inner_text()
+    assert len(session_requests) == 1
+    assert session_requests[0]["sourceIntake"]["normalizedText"] == source
+    assert "filename" not in json.dumps(session_requests[0]).lower()
+    assert turn_requests[0]["text"] == target
+
+    storage = clean_page.evaluate(
+        """() => ({
+          local: Object.fromEntries(Object.entries(localStorage)),
+          session: Object.fromEntries(Object.entries(sessionStorage)),
+        })"""
+    )
+    assert source not in json.dumps(storage)
+    assert checksum not in json.dumps(storage)
+    assert storage["session"]["socratink:north-star-session:v1"] == session_id
+
+    clean_page.reload()
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert source not in clean_page.locator("body").inner_text()
+    assert len(reopen_requests) == 1
+    assert len(session_requests) == 1
+
+
+def test_identified_source_rejects_serialized_revision_over_request_limit(
+    clean_page: Page, base_url: str
+) -> None:
+    session_requests: list[dict] = []
+    clean_page.route(
+        re.compile(r".*/api/me$"),
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "auth_enabled": True,
+                    "authenticated": True,
+                    "guest_mode": False,
+                    "user": {"id": "identified-learner"},
+                }
+            ),
+        ),
+    )
+
+    def fail_unexpected_session(route) -> None:
+        session_requests.append(route.request.post_data_json)
+        route.fulfill(status=500, body="unexpected session request")
+
+    clean_page.route(
+        re.compile(r".*/api/session$"),
+        fail_unexpected_session,
+    )
+
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    source_length = clean_page.evaluate(
+        """async () => {
+          const ai = await import('/js/ai_service.js');
+          const descriptor = {
+            normalizationVersion: 'source-text-v1',
+            extractionVersion: 'browser-file-reader-v1',
+            parserVersion: 'plain-text-v1',
+            sourceKind: 'txt',
+            provenance: {
+              intake_surface: 'promoted-alpha-file-intake',
+              input_method: 'file',
+            },
+          };
+          let low = 0;
+          let high = ai.MAX_SEDA_REQUEST_BODY_BYTES;
+          while (low < high) {
+            const middle = Math.ceil((low + high) / 2);
+            if (ai.sessionSourceTextFitsRequest({
+              ...descriptor,
+              normalizedText: 'x'.repeat(middle),
+            })) low = middle;
+            else high = middle - 1;
+          }
+          const sourceText = 'x'.repeat(low + 1);
+          if (!ai.sedaTurnTextFitsRequest(sourceText, 1)) {
+            throw new Error('Expected SourceRevision metadata to be the limiting overhead.');
+          }
+          return sourceText.length;
+        }"""
+    )
+    clean_page.locator("#hero-source-file-input").set_input_files(
+        {
+            "name": "serialized-limit.txt",
+            "mimeType": "text/plain",
+            "buffer": b"x" * source_length,
+        }
+    )
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text(
+        "serialized-limit.txt"
+    )
+    clean_page.locator("#hero-cold-guess-field").fill(
+        "Explain why the persisted source must fit one request."
+    )
+    expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
+    clean_page.locator("#hero-door-submit").click()
+
+    expect(clean_page.locator("#hero-door-submit")).to_be_enabled()
+    assert session_requests == []
+    expect(clean_page.locator("#hero-source-error")).to_have_text(
+        "This file contains too much text for one session. "
+        "Choose a shorter file or paste a focused passage."
+    )
+    expect(clean_page.locator("#hero-door-error")).to_have_text("")
+
+
+def test_file_intake_attaches_replaces_removes_and_hides_source(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    target = "Explain how the local app starts and verifies a learning session."
+    earlier_paste = "An earlier pasted source remains available after removing a file."
+    clean_page.locator("#hero-single-input-field").fill(earlier_paste)
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+
+    with clean_page.expect_file_chooser() as chooser:
+        clean_page.locator("#hero-source-file-action").press("Enter")
+    chooser.value.set_files(REPO_ROOT / "README.md")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    expect(clean_page.locator("#hero-source-file-action")).to_have_text("Replace")
+    expect(clean_page.locator("#hero-source-file-remove")).to_be_visible()
+    expect(clean_page.locator("#hero-single-input-field")).to_be_hidden()
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    with clean_page.expect_file_chooser() as chooser:
+        clean_page.locator("#hero-source-file-action").press("Enter")
+    chooser.value.set_files(REPO_ROOT / "tests/fixtures/source-intake.pdf")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text(
+        "source-intake.pdf",
+        timeout=15_000,
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    clean_page.locator("#hero-source-file-remove").press("Enter")
+    expect(clean_page.locator("#hero-single-input-field")).to_be_visible()
+    expect(clean_page.locator("#hero-single-input-field")).to_have_value(earlier_paste)
+    expect(clean_page.locator("#hero-source-file-remove")).to_be_hidden()
+    expect(clean_page.locator("#hero-source-file-action")).to_have_text("Attach")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    clean_page.locator("#hero-source-file-input").set_input_files(REPO_ROOT / "README.md")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    clean_page.locator("#hero-door-submit").click()
+    expect(clean_page.locator("#north-star-reconstruction")).to_be_visible()
+    expect(clean_page.locator("#north-star-target-text")).to_have_text(target)
+    assert "socratink-app is an MVP-stage learning product" not in clean_page.locator(
+        "body"
+    ).inner_text()
+
+
+def test_file_intake_errors_preserve_target_and_current_attachment(
+    clean_page: Page, base_url: str
+) -> None:
+    _enter_app_shell_as_guest(clean_page, base_url)
+    clean_page.locator("#nav-ignition").click()
+    target = "Explain why retrieval must happen without the source."
+    clean_page.locator("#hero-cold-guess-field").fill(target)
+    file_input = clean_page.locator("#hero-source-file-input")
+    error = clean_page.locator("#hero-source-error")
+
+    file_input.set_input_files(
+        {"name": "empty.txt", "mimeType": "text/plain", "buffer": b""}
+    )
+    expect(error).to_contain_text("does not contain readable text")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {"name": "notes.csv", "mimeType": "text/csv", "buffer": b"a,b"}
+    )
+    expect(error).to_contain_text("Unsupported file type")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {
+            "name": "unreadable.pdf",
+            "mimeType": "application/pdf",
+            "buffer": b"not a PDF",
+        }
+    )
+    expect(error).to_contain_text(
+        "Could not natively extract text from this PDF",
+        timeout=15_000,
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {
+            "name": "container-too-large.md",
+            "mimeType": "text/markdown",
+            "buffer": b"x" * (2 * 1024 * 1024 + 1),
+        }
+    )
+    expect(error).to_contain_text("Maximum size is 2MB")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+
+    file_input.set_input_files(
+        {
+            "name": "turn-too-large.txt",
+            "mimeType": "text/plain",
+            "buffer": b'"' * (64 * 1024),
+        }
+    )
+    expect(error).to_have_text(
+        "This file contains too much text for one session. "
+        "Choose a shorter file or paste a focused passage."
+    )
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
+    expect(clean_page.locator("#hero-source-file-remove")).to_be_hidden()
+
+    file_input.set_input_files(REPO_ROOT / "README.md")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    file_input.set_input_files(
+        {
+            "name": "bad-replacement.txt",
+            "mimeType": "text/plain",
+            "buffer": b'"' * (64 * 1024),
+        }
+    )
+    expect(error).to_contain_text("too much text for one session")
+    expect(clean_page.locator("#hero-source-file-value")).to_have_text("README.md")
+    expect(clean_page.locator("#hero-cold-guess-field")).to_have_value(target)
 
 
 def test_exact_reconstruction_and_repair_survive_reload(
@@ -230,16 +604,22 @@ def test_north_star_gap_unavailable_survives_retry_failure(
 
 
 @pytest.mark.parametrize(
-    ("status", "expected_error"),
+    ("status", "payload", "expected_error"),
     [
-        (500, "The saved session could not be reopened."),
-        (404, ""),
+        (500, {"message": "Session unavailable."}, "The saved session could not be reopened."),
+        (404, {"message": "Session unavailable."}, ""),
+        (
+            404,
+            {"error": "source_unavailable", "code": "source_unavailable", "recoverable": True},
+            "The saved source is no longer available. Attach or paste it again.",
+        ),
     ],
 )
 def test_north_star_saved_session_get_failure_recovers_to_intake(
     clean_page: Page,
     base_url: str,
     status: int,
+    payload: dict,
     expected_error: str,
 ) -> None:
     session_id = "11111111-1111-4111-8111-111111111111"
@@ -253,7 +633,7 @@ def test_north_star_saved_session_get_failure_recovers_to_intake(
         lambda route: route.fulfill(
             status=status,
             content_type="application/json",
-            body=json.dumps({"message": "Session unavailable."}),
+            body=json.dumps(payload),
         ),
     )
 
@@ -1133,6 +1513,41 @@ def test_app_helper_modules_preserve_browser_contracts(clean_page: Page, base_ur
               () => aiService.sendSedaTurn('session-id', null),
               /SEDA turn submission is required/,
               'seda turn submission guard',
+            );
+            let oversizedSourceError = null;
+            try {
+              aiService.createSedaSession({
+                northStarIntake: true,
+                sourceIntake: {
+                  idempotencyKey: '11111111-1111-4111-8111-111111111111',
+                  normalizedText: '"'.repeat(aiService.MAX_SEDA_REQUEST_BODY_BYTES),
+                  normalizationVersion: 'source-text-v1',
+                  extractionVersion: 'browser-paste-v1',
+                  parserVersion: 'plain-text-v1',
+                  sourceKind: 'paste',
+                  provenance: { input_method: 'paste' },
+                },
+              });
+            } catch (error) {
+              oversizedSourceError = error;
+            }
+            assert(
+              oversizedSourceError?.code === 'source_too_large',
+              'source revision size guard',
+            );
+            let oversizedTurnError = null;
+            try {
+              aiService.sendSedaTurn('session-id', {
+                text: '"'.repeat(aiService.MAX_SEDA_REQUEST_BODY_BYTES),
+                requestId: '11111111-1111-4111-8111-111111111111',
+                expectedVersion: 1,
+              });
+            } catch (error) {
+              oversizedTurnError = error;
+            }
+            assert(
+              oversizedTurnError?.code === 'seda_turn_too_large',
+              'seda turn size guard',
             );
 
             const routeBinding = await import('/js/seda-route-binding.js');

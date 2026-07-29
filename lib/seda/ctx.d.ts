@@ -64,6 +64,15 @@ export interface SedaCtx {
   // --- North-star intake (hosted first vertical slice) ---
   /** writer: source-intake. reader: initial-reconstruction. */
   sourceText: string | null;
+  /** Immutable authenticated source identity; source text never enters its event fact. */
+  sourceRevision: {
+    source_id: string;
+    revision_id: string;
+    normalization_version: string;
+    extraction_version: string;
+    parser_version: string;
+    source_kind: "paste" | "txt" | "md" | "pdf";
+  } | null;
   /** writer: source-intake. reader: initial-reconstruction. */
   explanationTarget: string | null;
   /** writer: initial-reconstruction. replayed from its immutable event. */

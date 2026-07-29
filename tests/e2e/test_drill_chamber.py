@@ -569,7 +569,8 @@ def test_mobile_intake_and_chamber_actions_fit_without_horizontal_shift(
         assert abs(geometry["mapPaddingTop"] - geometry["headerHeight"]) <= 0.5
         assert geometry["mapScrollWidth"] <= geometry["mapClientWidth"]
         for target in ("send", "mic", "voice", "exit"):
-            assert geometry[target]["height"] >= 44
+            height = geometry[target]["height"]
+            assert height + 0.01 >= 44, (target, geometry[target])
 
 
 def test_drill_start_from_non_map_view_routes_to_inline_concept(
