@@ -19,6 +19,7 @@
    ─────────────────────────────────────────────────────────────────── */
 .composer-card button,
 .creation-source-panel button,
+.entrance-form button,
 .ignition-cap-gate button {
   flex: 0 0 auto;
   letter-spacing: normal;
@@ -258,16 +259,9 @@
 /* ── Linear-style door (ignition only) ─────────────────────── */
 
 .ignition-view--linear .ignition-view__inner {
-  width: min(100%, 560px);
+  width: min(100%, 640px);
   gap: var(--space-5);
   align-items: stretch;
-}
-
-.ignition-view--linear .ig-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  text-align: left;
 }
 
 .ignition-view--linear .ig-eyebrow {
@@ -295,17 +289,6 @@
   color: var(--text-muted);
 }
 
-.ignition-view--linear .composer-card--linear {
-  max-width: none;
-  margin: 0;
-  padding: 0;
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  box-shadow: none;
-  overflow: hidden;
-}
-
 .ignition-view--linear .composer-card--tall {
   max-width: none;
   margin: 0;
@@ -319,27 +302,280 @@
   overflow: hidden;
 }
 
-.ignition-view--linear .composer-card__field--linear {
+.entrance-form {
+  width: min(100%, 40rem);
+  margin-inline: auto;
+}
+
+.entrance-form[data-state="busy"] {
+  opacity: 0.55;
+  transition: opacity var(--duration-quick) var(--ease-standard);
+}
+
+.entrance-form[data-state="busy"] :is(button, textarea, input) {
+  pointer-events: none;
+}
+
+.entrance-track {
+  display: grid;
+  grid-template-columns: auto minmax(3rem, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  width: min(100%, 18rem);
+  margin: 0 auto clamp(2.5rem, 8vh, 5rem);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.entrance-track__line {
+  height: 1px;
+  background: var(--border-strong);
+}
+
+.entrance-track [aria-current="step"] {
+  color: var(--text-strong);
+}
+
+.entrance-form[data-step="target"] #hero-source-track {
+  color: var(--accent-primary);
+}
+
+.entrance-canvas {
+  min-height: 22rem;
+  padding: clamp(1.25rem, 4vw, 2rem) 0;
+  border-block: 1px solid var(--border-subtle);
+}
+
+.entrance-step {
+  min-height: 18rem;
+}
+
+.entrance-step[hidden] {
+  display: none;
+}
+
+.entrance-step__label {
+  display: block;
+  margin-bottom: 1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  font-weight: 720;
+  letter-spacing: var(--tracking-tight);
+}
+
+.entrance-source-field,
+.entrance-target-field {
+  appearance: none;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
   background: transparent;
-  min-height: 180px;
-  padding: 14px 16px;
-  line-height: 1.5;
-  font-size: var(--text-base);
+  box-shadow: none;
+  color: var(--text-strong);
+  resize: none;
+}
+
+.entrance-source-field:focus-visible,
+.entrance-target-field:focus-visible {
+  box-shadow: none;
+}
+
+.entrance-source-field {
+  min-height: 12rem;
+  font-size: clamp(1.05rem, 2.3vw, 1.25rem);
+  line-height: var(--leading-relaxed);
+}
+
+.entrance-source-field::placeholder,
+.entrance-target-field::placeholder {
+  color: var(--text-muted);
+  opacity: 0.64;
+}
+
+.entrance-step:focus-within > .entrance-step__label {
+  color: var(--accent-primary);
+}
+
+.entrance-source-actions,
+.entrance-target-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.entrance-source-actions {
+  min-height: 3.25rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.entrance-form :is(
+  .entrance-icon-button,
+  .entrance-arrow,
+  .entrance-remove-action,
+  .entrance-source-receipt
+) {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+.entrance-form :is(
+  .entrance-icon-button,
+  .entrance-arrow,
+  .entrance-remove-action,
+  .entrance-source-receipt
+):hover:not(:disabled) {
+  box-shadow: none;
+  transform: none;
+}
+
+.entrance-form :is(
+  .entrance-icon-button,
+  .entrance-arrow,
+  .entrance-remove-action,
+  .entrance-source-receipt
+):focus-visible {
+  outline: none;
+  box-shadow: var(--accent-ring);
+}
+
+.entrance-icon-button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.entrance-icon-button:hover:not(:disabled) {
+  background: transparent;
+  color: var(--accent-primary);
+}
+
+.entrance-icon-button svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.entrance-file-status {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entrance-remove-action {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.entrance-remove-action:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text-strong);
+}
+
+.entrance-arrow {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  min-height: 3rem;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--primary-fill);
+  color: var(--text-on-primary);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.entrance-arrow:hover:not(:disabled) {
+  background: var(--primary-fill-hover);
+}
+
+.entrance-arrow:disabled {
+  background: var(--surface-nested);
+  color: var(--text-muted);
+}
+
+.entrance-source-receipt {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3rem;
+  margin: 0 0 clamp(2.5rem, 8vh, 4rem);
   border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  text-align: left;
 }
 
-.ignition-view--linear .composer-card__field--linear::placeholder {
-  font-style: normal;
-  color: rgba(var(--ink-900-rgb), 0.42);
+.entrance-source-receipt:hover:not(:disabled) {
+  background: transparent;
+  color: var(--text-strong);
 }
 
-[data-theme="dark"] .ignition-view--linear .composer-card__field--linear::placeholder {
-  color: rgba(var(--cream-50-rgb), 0.38);
+.entrance-source-receipt:disabled {
+  background: transparent;
+  color: var(--text-muted);
 }
 
-.ignition-view--linear .composer-card__field--linear:focus-visible {
-  box-shadow: inset 0 -1px 0 rgba(var(--violet-600-rgb), 0.34);
-  background: rgba(var(--paper-0-rgb), 0.42);
+.entrance-source-receipt__label {
+  color: var(--accent-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.entrance-source-receipt__summary {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entrance-target-row {
+  align-items: end;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.entrance-target-row:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.entrance-target-field {
+  min-width: 0;
+  min-height: 4rem;
+  padding-bottom: 0.8rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  letter-spacing: var(--tracking-tight);
+}
+
+.entrance-target-row .entrance-arrow {
+  margin-bottom: 0.55rem;
 }
 
 .ignition-view--linear .composer-card__label {
@@ -356,75 +592,6 @@
 
 .ignition-view--linear .composer-card__label + .composer-card__field {
   padding-top: 8px;
-}
-
-.ignition-view--linear #hero-cold-guess-field {
-  padding: 10px 16px 0;
-  min-height: calc(var(--rule-step) * 4.35);
-  color: var(--text-strong);
-}
-
-.ignition-view--linear #hero-cold-guess-field::placeholder {
-  color: rgba(var(--ink-900-rgb), 0.54);
-}
-
-.ignition-view--linear #hero-cold-guess-field:focus-visible {
-  box-shadow: inset 0 -1px 0 rgba(var(--violet-600-rgb), 0.26);
-}
-
-.ignition-view--linear .composer-card__properties {
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.ignition-view--linear .ig-property {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 40px;
-  padding: 0 16px;
-  font-size: var(--text-sm);
-}
-
-.ignition-view--linear .ig-property__label {
-  flex: 0 0 4.5rem;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-}
-
-.ignition-view--linear .ig-property__value {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--text-strong);
-  font-style: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ignition-view--linear .ig-property__action {
-  flex: 0 0 auto;
-  margin-left: auto;
-  padding: 5px 9px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  font-weight: 500;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: background-color 120ms ease-out, color 120ms ease-out;
-}
-
-.ignition-view--linear .ig-property__action:hover {
-  background: rgba(var(--mauve-200-rgb), 0.24);
-  color: var(--text-strong);
-}
-
-.ignition-view--linear .ig-property__action:focus-visible {
-  outline: none;
-  box-shadow: var(--accent-ring);
 }
 
 .ignition-view--linear .creation-source-panel {
@@ -487,6 +654,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  width: min(100%, 560px);
+  margin-inline: auto;
 }
 
 .north-star-step[hidden] {
@@ -562,7 +731,29 @@
   box-shadow: none;
 }
 
+@media (max-width: 700px) {
+  .ignition-view--linear .ignition-view__inner {
+    gap: var(--space-3);
+  }
+
+  .entrance-track {
+    margin-bottom: clamp(2rem, 7vh, 3.5rem);
+  }
+
+  .entrance-canvas {
+    min-height: 19rem;
+  }
+
+  .entrance-step {
+    min-height: 16.5rem;
+  }
+}
+
 @media (max-width: 520px) {
+  .entrance-source-receipt {
+    margin-bottom: 2.25rem;
+  }
+
   .ignition-view--linear .composer-card__footer {
     flex-direction: column;
     align-items: stretch;
@@ -1189,7 +1380,6 @@ body.antigravity-theme .settings-page-kicker {
   font-size: var(--text-xs);
 }
 
-.ignition-view--linear .ig-property__action,
 .ignition-view--linear .composer-card__footer .ig-button--linear {
   min-height: 40px;
 }
@@ -1295,7 +1485,6 @@ body.antigravity-theme .settings-toggle:active:not(:disabled) {
 }
 
 @media (max-width: 899px) {
-  .ignition-view--linear .ig-property__action,
   .ignition-view--linear .composer-card__footer .ig-button--linear {
     min-height: 44px;
   }

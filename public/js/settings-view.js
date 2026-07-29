@@ -300,7 +300,6 @@ function wireStoredSwitch(toggle, { key, defaultEnabled }) {
 
   write(read());
   toggle.addEventListener('click', () => {
-    /* c8 ignore next -- settings toggles are clicked in browser smoke; helper coverage only imports this module. */
     write(toggle.getAttribute('aria-checked') !== 'true');
   });
 }

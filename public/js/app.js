@@ -66,7 +66,7 @@ import {
   renderDueSelectionHtml,
 } from './due-for-spaced.js?v=8';
 import { mountSourcePanel } from './source-panel.js?v=4';
-import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=2';
+import { createDoorSourceController, FILE_SOURCE_TOO_LARGE, PASTED_SOURCE_TOO_LARGE } from './door-source.js?v=4';
 import { renderSettingsView as renderSettingsContent } from './settings-view.js?v=1';
 import {
   applyThemePreference as applyStoredThemePreference,
@@ -443,7 +443,6 @@ const App = (() => {
   }
 
   async function seedLocalQaConcept() {
-    /* c8 ignore next -- localhost-only guard; exercised positively by e2e */
     if (!isLocalDevHost()) return;
 
     const concepts = loadConcepts();
@@ -487,7 +486,6 @@ const App = (() => {
   }
 
   async function seedLocalRepairQaConcept() {
-    /* c8 ignore next -- localhost-only guard; exercised positively by e2e */
     if (!isLocalDevHost()) return;
 
     const concepts = loadConcepts();
@@ -741,6 +739,7 @@ const App = (() => {
           if (!doorSource.intakeKey) throw new Error('Secure source intake is unavailable.');
           const sourcePayload = doorSource.payload(doorSource.intakeKey);
           if (!sessionSourceTextFitsRequest(sourcePayload)) {
+            doorSource.showSource();
             setNorthStarSourceError(doorSource.fileSource ? FILE_SOURCE_TOO_LARGE : PASTED_SOURCE_TOO_LARGE);
             return;
           }
@@ -811,18 +810,12 @@ const App = (() => {
   }
 
   function _doorUpdateSubmitState() {
+    const sourceNext = document.getElementById('hero-source-next');
     const submitBtn = document.getElementById('hero-door-submit');
-    const hint = document.getElementById('ignition-boundary');
-    if (!submitBtn) return;
-    const ready = _doorReady();
-    submitBtn.disabled = northStarBusy || !ready;
-    if (hint) {
-      hint.textContent = northStarSession?.awaiting?.key === 'target'
-        ? 'Source saved. Retry the explanation target.'
-        : ready
-          ? 'Ready. The source will close before you explain.'
-          : 'The source disappears before you explain.';
+    if (sourceNext) {
+      sourceNext.disabled = northStarBusy || !doorSource.sourceReady(northStarSession);
     }
+    if (submitBtn) submitBtn.disabled = northStarBusy || !_doorReady();
   }
 
   function setNorthStarBusy(value) {
@@ -830,7 +823,10 @@ const App = (() => {
     const capture = document.getElementById('hero-single-input');
     const reconstruction = document.getElementById('north-star-reconstruction-form');
     const repair = document.getElementById('north-star-repair-form');
-    if (capture) capture.dataset.state = northStarBusy ? 'busy' : '';
+    if (capture) {
+      capture.dataset.state = northStarBusy ? 'busy' : '';
+      capture.setAttribute('aria-busy', northStarBusy ? 'true' : 'false');
+    }
     if (reconstruction) reconstruction.dataset.state = northStarBusy ? 'busy' : '';
     if (repair) repair.dataset.state = northStarBusy ? 'busy' : '';
     doorSource.render(northStarSession?.awaiting?.key === 'target', northStarBusy);
@@ -954,14 +950,11 @@ const App = (() => {
     showNorthStarPanel('capture');
     const targetField = document.getElementById('hero-cold-guess-field');
     const submit = document.getElementById('hero-door-submit');
-    const hint = document.getElementById('ignition-boundary');
     const waitingForTarget = session.awaiting?.key === 'target';
     doorSource.render(waitingForTarget, northStarBusy);
     if (submit) {
-      submit.textContent = waitingForTarget ? 'Continue to explanation' : 'Close source and explain';
-      submit.setAttribute('aria-label', submit.textContent);
+      submit.setAttribute('aria-label', 'Start');
     }
-    if (waitingForTarget && hint) hint.textContent = 'Source saved. Retry the explanation target.';
     if (waitingForTarget) requestAnimationFrame(() => targetField?.focus());
   }
 
@@ -1700,7 +1693,6 @@ const App = (() => {
   //   name   — non-empty trimmed concept name string from the door
   //   source — { type: 'text'|'url'|'file', text?, url?, filename? } payload
   //            captured by the door's source-panel.
-  /* c8 ignore next -- source-attached creation uses the same persistence boundary as launch-pad and is covered by live smoke. */
   async function runSourceAttachedSubmit({ name, source, startingSketch = '' }) {
     const setDoorError = (msg) => {
       const errEl = document.getElementById('hero-door-error');
@@ -3412,26 +3404,20 @@ const App = (() => {
     document.getElementById('ignition-view').hidden = false;
     renderIgnitionGate();
     if (window.innerWidth < 900) closeDrawer();
-    // Focus the writing surface directly; aria-label provides SR announcement.
-    const field = doorSource.fileSource
-      ? document.getElementById('hero-source-file-action')
-      : document.getElementById('hero-single-input-field');
-    if (field) requestAnimationFrame(() => field.focus());
+    requestAnimationFrame(() => doorSource.focusCurrent());
   }
 
   function renderIgnitionGate() {
     const gate = document.getElementById('ignition-cap-gate');
     const form = document.getElementById('hero-single-input');
-    const field = document.getElementById('hero-single-input-field');
-    const guessField = document.getElementById('hero-cold-guess-field');
-    const submit = document.getElementById('hero-door-submit');
 
     if (gate) gate.hidden = true;
-    if (form) form.dataset.state = northStarBusy ? 'busy' : '';
-    if (field) field.disabled = northStarBusy;
-    if (guessField) guessField.disabled = northStarBusy;
-    if (submit) submit.disabled = northStarBusy || !_doorReady();
+    if (form) {
+      form.dataset.state = northStarBusy ? 'busy' : '';
+      form.setAttribute('aria-busy', northStarBusy ? 'true' : 'false');
+    }
     doorSource.render(northStarSession?.awaiting?.key === 'target', northStarBusy);
+    _doorUpdateSubmitState();
 
     ['nav-ignition', 'bn-ignition'].forEach((id) => {
       const el = document.getElementById(id);
@@ -4897,7 +4883,6 @@ const App = (() => {
         }
       }
     } catch (err) {
-      /* c8 ignore start -- stale/error SEDA turn handling is defensive; happy path is covered by product e2e. */
       hideTypingIndicator();
       if (sessionToken !== drillState.sessionToken) return;
       drillState.pending = false;
@@ -4909,7 +4894,6 @@ const App = (() => {
       console.error(err);
       showSedaTransportRetry(normalizedText, { internal });
       return;
-      /* c8 ignore stop */
     }
   }
 

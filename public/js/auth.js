@@ -36,7 +36,6 @@ export async function requireAppEntrySession({
     return true;
   }
 
-  /* v8 ignore next 5 -- browser smoke enters as local guest; redirect fallback is covered by Node helper tests. */
   redirect();
   if (waitAfterRedirect) {
     await new Promise(() => {});

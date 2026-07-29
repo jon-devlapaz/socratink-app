@@ -232,7 +232,6 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
     // Route external learner-state changes back through app.js so the
     // canonical Desk renderer owns markup, due surfaces, and semantics.
     window.addEventListener('storage', (e) => {
-      /* c8 ignore start -- browser cross-tab storage events are verified by smoke behavior */
       if (
         e.key === STORE_KEY
         || e.key === null
@@ -240,7 +239,6 @@ import { TRAINING_STORE_KEY_PREFIX } from './training-store.js';
       ) {
         Bus.emit('desk:external-state-change');
       }
-      /* c8 ignore stop */
     });
     window.addEventListener('focus', () => Bus.emit('desk:external-state-change'));
     document.addEventListener('visibilitychange', () => {

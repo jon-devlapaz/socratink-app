@@ -1,4 +1,4 @@
-"""Storage boundary tests for browser-local node training records."""
+"""Storage boundary tests for local node training records."""
 
 from __future__ import annotations
 

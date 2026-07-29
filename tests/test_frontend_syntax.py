@@ -1,11 +1,4 @@
-"""Guards against shipping a syntactically broken frontend bundle.
-
-`public/js/app.js` is loaded with `<script type="module">`. A parse error there
-takes the whole UI down silently — the deploy is READY but the browser fails to
-load the module. This regressed once via merge-conflict residue (orphan tags
-and a stray backtick after a closed template literal); the test below would
-have caught it.
-"""
+"""Guards against shipping syntactically broken JavaScript modules."""
 
 from __future__ import annotations
 
@@ -26,8 +19,7 @@ def _module_js_files() -> list[Path]:
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
 @pytest.mark.parametrize("js_path", _module_js_files(), ids=lambda p: p.name)
 def test_module_js_parses(tmp_path: Path, js_path: Path) -> None:
-    # Copy under a .mjs extension so `node --check` parses it in module mode,
-    # matching how `<script type="module">` evaluates the file in-browser.
+    # Copy under a .mjs extension so `node --check` parses module syntax.
     target = tmp_path / f"{js_path.stem}.mjs"
     target.write_bytes(js_path.read_bytes())
 

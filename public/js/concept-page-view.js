@@ -137,7 +137,6 @@ function entryLearnerState(backbone, index, training, options = {}) {
   });
   if (derived.attempted) {
     if (derived.state === 'needs repair' && repairPhase === 'checked') {
-      /* c8 ignore next -- secondary route-state label is covered by Node render tests; source-less browser route chrome is hidden */
       return 'repair checked';
     }
     return derived.state || 'attempted';

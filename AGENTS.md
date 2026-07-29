@@ -60,7 +60,7 @@ gh pr list --state open
 ## Commands
 - Setup: `bash scripts/bootstrap-python.sh`
 - Local checks: `bash scripts/doctor.sh`
-- App smoke: `bash scripts/qa-smoke.sh`
+- Logic tests: `.venv/bin/pytest -q`
 
 ## Practical constraints
 - Avoid editing generated artifacts.

@@ -7,8 +7,7 @@ name: preflight
 # real Vercel credentials. That gate stays local-only because it needs
 # secrets and the full deploy toolchain.
 #
-# The coverage job starts a loopback uvicorn server and runs
-# scripts/check-coverage.sh, which includes the browser/V8 coverage path.
+# The coverage job runs the logic-only coverage gate.
 
 on:
   pull_request:
@@ -57,7 +56,7 @@ jobs:
       - name: Pytest
         env:
           GEMINI_API_KEY: dummy-for-tests
-        run: .venv/bin/pytest -q --ignore=tests/e2e
+        run: .venv/bin/pytest -q
 
   coverage:
     runs-on: ubuntu-latest
@@ -70,8 +69,6 @@ jobs:
       APP_BASE_URL: 'http://localhost:8000'
       GEMINI_API_KEY: dummy-for-tests
       SOCRATINK_TUI_FAKE_LLM: '1'
-      SOCRATINK_BASE_URL: 'http://localhost:8000'
-      SOCRATINK_E2E_LOCAL_GUEST: '1'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -101,11 +98,6 @@ jobs:
             requirements.txt
             requirements-dev.txt
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-        with:
-          node-version: '22'
-          cache: 'npm'
-
       - name: Generate per-run Fernet key
         run: |
           echo "SESSION_COOKIE_KEY=$(python -c 'import os, base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" >> $GITHUB_ENV
@@ -114,42 +106,6 @@ jobs:
         run: |
           bash scripts/bootstrap-python.sh
 
-      - name: Install frontend coverage tooling
-        run: |
-          npm ci
-
-      - name: Install Chromium
-        run: |
-          .venv/bin/playwright install chromium
-
-      - name: Start local app
-        run: |
-          .venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
-          echo "$!" > uvicorn.pid
-          .venv/bin/python - <<'PY'
-          import time
-          import urllib.request
-
-          deadline = time.time() + 30
-          last_error = None
-          while time.time() < deadline:
-              try:
-                  with urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=2) as response:
-                      if response.status == 200:
-                          raise SystemExit(0)
-              except Exception as exc:
-                  last_error = exc
-                  time.sleep(1)
-          raise SystemExit(f"local app did not become healthy: {last_error}")
-          PY
-
       - name: Diff coverage
         run: |
           bash scripts/check-coverage.sh
-
-      - name: Stop local app
-        if: always()
-        run: |
-          if [ -f uvicorn.pid ]; then
-            kill "$(cat uvicorn.pid)" 2>/dev/null || true
-          fi

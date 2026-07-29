@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": ".venv/bin/pytest -q --ignore=tests/e2e"
+    "test": ".venv/bin/pytest -q"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/jon-devlapaz/socratink-app#readme",
   "devDependencies": {
-    "@aisuite/chub": "0.1.4",
-    "monocart-coverage-reports": "^2.12.11"
+    "@aisuite/chub": "0.1.4"
   }
 }

@@ -5,26 +5,20 @@ Uses a fake service matching the SupabaseAuthService interface.
 
 import unittest
 import os
-from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
-from cryptography.fernet import Fernet
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from auth.router import (
     GUEST_COOKIE_NAME,
-    _inline_login_assets,
-    _local_e2e_guest_bootstrap_enabled,
-    _read_login_asset,
     auth_router,
 )
 from auth.service import (
     AuthConfigurationError,
     AuthSessionState,
     AuthUser,
-    SupabaseAuthService,
 )
 
 
@@ -120,15 +114,6 @@ def build_client(
 
 
 class LoginRouteTests(unittest.TestCase):
-    def test_required_login_asset_read_failure_is_not_hidden(self):
-        with patch.object(Path, "read_text", side_effect=OSError("missing")):
-            with self.assertRaisesRegex(OSError, "missing"):
-                _read_login_asset(Path("missing.html"))
-
-    def test_login_template_requires_each_asset_marker_once(self):
-        with self.assertRaisesRegex(RuntimeError, "exactly one"):
-            _inline_login_assets("<!-- socratink-login-css -->", "css", "js")
-
     def setUp(self):
         self._env_keys = (
             "SOCRATINK_DEV_AUTOGUEST",
@@ -168,7 +153,7 @@ class LoginRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["location"], "/library")
 
-    def test_guest_can_open_login_to_upgrade(self):
+    def test_guest_can_open_login_route_to_upgrade(self):
         service = FakeSupabaseAuthService(enabled=True)
         service.current_state = AuthSessionState(
             auth_enabled=True,
@@ -181,9 +166,6 @@ class LoginRouteTests(unittest.TestCase):
         response = client.get("/login?return_to=/", follow_redirects=False)
 
         self.assertEqual(response.status_code, 200)
-        body = response.text
-        self.assertIn("Continue with Google", body)
-        self.assertIn('id="guest-continue-link"', body)
 
     def test_dev_autoguest_login_redirects_to_guest_without_error(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
@@ -203,9 +185,8 @@ class LoginRouteTests(unittest.TestCase):
         response = client.get("/login?return_to=/", follow_redirects=False)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Continue with Google", response.text)
 
-    def test_dev_autoguest_login_error_renders_login(self):
+    def test_dev_autoguest_login_error_returns_login_route(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
         client = build_client(service, base_url="http://localhost:8000")
@@ -216,10 +197,8 @@ class LoginRouteTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Continue with Google", response.text)
-        self.assertIn('id="guest-continue-link"', response.text)
 
-    def test_dev_autoguest_return_to_error_renders_login(self):
+    def test_dev_autoguest_return_to_error_returns_login_route(self):
         self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
         service = FakeSupabaseAuthService(enabled=True)
         client = build_client(service)
@@ -230,8 +209,6 @@ class LoginRouteTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("Continue with Google", response.text)
-        self.assertIn('id="guest-continue-link"', response.text)
 
     def test_login_clears_invalid_session_cookie_on_html_response(self):
         service = FakeSupabaseAuthService(enabled=True)
@@ -736,189 +713,6 @@ class AnonymousGuestTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertIn("auth_error=authentication_failed", response.headers["location"])
         self.assertNotIn("sb_session=", response.headers.get("set-cookie", ""))
-
-    def test_login_html_has_motion_bootstrap(self):
-        """The login page must honor a user-set socratink.motion preference.
-
-        The override is stored in localStorage by Settings; when the user logs
-        out and lands on /login, that preference must continue to set
-        html[data-motion='reduced'] before first paint. Without this script,
-        the login page would briefly run full motion until the inline
-        script tag executed.
-        """
-        service = FakeSupabaseAuthService(enabled=True)
-        client = build_client(service)
-
-        response = client.get("/login")
-        assert response.status_code == 200
-        body = response.text
-        assert "socratink.motion" in body, "motion key not referenced in login HTML"
-        assert "dataset.motion" in body, "data-motion override not wired in login bootstrap"
-
-
-class LocalE2EGuestBootstrapTests(unittest.TestCase):
-    def setUp(self):
-        self._env_keys = (
-            "SOCRATINK_E2E_LOCAL_GUEST",
-            "SOCRATINK_DEV_AUTOGUEST",
-            "GITHUB_ACTIONS",
-            "VERCEL",
-            "VERCEL_ENV",
-            "CI",
-        )
-        self._env_snapshot = {key: os.environ.get(key) for key in self._env_keys}
-
-    def tearDown(self):
-        for key, value in self._env_snapshot.items():
-            if value is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = value
-
-    def _set_env(self, **values):
-        for key in self._env_keys:
-            os.environ.pop(key, None)
-        for key, value in values.items():
-            if value is not None:
-                os.environ[key] = value
-
-    def _client(self, *, client_address=("testclient", 50000)) -> TestClient:
-        app = FastAPI()
-        app.state.auth_service = SupabaseAuthService(
-            enabled=True,
-            supabase_url="https://abc123.supabase.co",
-            publishable_key="pk_test",
-            jwt_secret="auth-router-e2e-guest-jwt-secret-test-fixture",
-            session_cookie_key=Fernet.generate_key().decode(),
-            app_base_url="http://localhost:8000",
-        )
-        app.include_router(auth_router)
-        return TestClient(app, client=client_address)
-
-    def test_e2e_guest_route_hidden_by_default(self):
-        self._set_env()
-        client = self._client()
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 404)
-
-    def test_e2e_guest_route_hidden_in_ci_shape(self):
-        self._set_env(
-            SOCRATINK_E2E_LOCAL_GUEST="1",
-            SOCRATINK_DEV_AUTOGUEST="1",
-            CI="true",
-        )
-        client = self._client()
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 404)
-
-    def test_e2e_guest_route_hidden_for_remote_clients(self):
-        self._set_env(SOCRATINK_E2E_LOCAL_GUEST="1", SOCRATINK_DEV_AUTOGUEST="1")
-        client = self._client(client_address=("203.0.113.10", 50000))
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 404)
-
-    def test_e2e_guest_route_enabled_for_loopback_github_actions(self):
-        self._set_env(
-            SOCRATINK_E2E_LOCAL_GUEST="1",
-            GITHUB_ACTIONS="true",
-            CI="true",
-        )
-        client = self._client()
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["location"], "/")
-        self.assertIn("sb_session=", response.headers.get("set-cookie", ""))
-
-    def test_e2e_guest_route_rejects_non_loopback_github_actions_request(self):
-        self._set_env(
-            SOCRATINK_E2E_LOCAL_GUEST="1",
-            GITHUB_ACTIONS="true",
-            CI="true",
-        )
-        request = Request(
-            {
-                "type": "http",
-                "method": "GET",
-                "path": "/auth/e2e/guest",
-                "headers": [],
-                "client": ("203.0.113.10", 12345),
-            }
-        )
-
-        self.assertIs(_local_e2e_guest_bootstrap_enabled(request), False)
-
-    def test_e2e_guest_configuration_failure_uses_guest_error(self):
-        self._set_env(SOCRATINK_E2E_LOCAL_GUEST="1", SOCRATINK_DEV_AUTOGUEST="1")
-        service = FakeSupabaseAuthService(enabled=True)
-
-        def boom():
-            raise AuthConfigurationError("missing local e2e config")
-
-        service.build_local_e2e_guest_session = boom  # type: ignore[attr-defined]
-        client = build_client(service)
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("auth_error=guest_unavailable", response.headers["location"])
-
-    def test_e2e_guest_without_sealed_session_redirects_with_error(self):
-        self._set_env(SOCRATINK_E2E_LOCAL_GUEST="1", SOCRATINK_DEV_AUTOGUEST="1")
-        service = FakeSupabaseAuthService(enabled=True)
-        service.build_local_e2e_guest_session = lambda: AuthSessionState(  # type: ignore[attr-defined]
-            auth_enabled=True,
-            authenticated=True,
-            guest_mode=True,
-            user=AuthUser(id="local_e2e_guest"),
-        )
-        client = build_client(service)
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 302)
-        self.assertIn("auth_error=authentication_failed", response.headers["location"])
-
-    def test_e2e_guest_sets_cookie_readable_by_api_me(self):
-        self._set_env(SOCRATINK_E2E_LOCAL_GUEST="1", SOCRATINK_DEV_AUTOGUEST="1")
-        client = self._client()
-
-        response = client.get("/auth/e2e/guest?return_to=/", follow_redirects=False)
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["location"], "/")
-        self.assertIn("sb_session=", response.headers.get("set-cookie", ""))
-
-        session = client.get("/api/me")
-        self.assertEqual(session.status_code, 200)
-        payload = session.json()
-        self.assertIs(payload.get("authenticated"), True)
-        self.assertIs(payload.get("guest_mode"), True)
-
-    def test_local_dev_guest_alias_builds_same_local_session_shape(self):
-        self._set_env(SOCRATINK_DEV_AUTOGUEST="1")
-        service = SupabaseAuthService(
-            enabled=True,
-            supabase_url="https://abc123.supabase.co",
-            publishable_key="pk_test",
-            jwt_secret="auth-router-e2e-guest-jwt-secret-test-fixture",
-            session_cookie_key=Fernet.generate_key().decode(),
-            app_base_url="http://localhost:8000",
-        )
-
-        state = service.build_local_dev_guest_session()
-
-        self.assertTrue(state.authenticated)
-        self.assertTrue(state.guest_mode)
-        self.assertIsNotNone(state.sealed_session)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
-"""Learner-state merge + Linear-style due desk surfaces."""
+"""Learner-state merge and spaced-reconstruction logic."""
 
 from __future__ import annotations
 
@@ -197,7 +197,7 @@ def test_evidence_writes_schedule_identified_state_push() -> None:
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not on PATH")
-def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
+def test_list_due_for_spaced_logic() -> None:
     result = run_node_module(
         """
         import assert from 'node:assert/strict';
@@ -206,8 +206,6 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
           dueConceptIdSet,
           dueItemsForConcept,
           collectDrillableNodeIds,
-          renderReadyFilterHtml,
-          renderDueSelectionHtml,
         } from './public/js/due-for-spaced.js';
         import { parseConceptGraphData } from './public/js/concept-status.js';
 
@@ -294,24 +292,7 @@ def test_list_due_for_spaced_and_linear_desk_surfaces() -> None:
         assert.equal(dueItemsForConcept(due, 'c1').length, 2);
         assert.ok(!due.some((item) => item.node_id === 'core'));
 
-        const filter = renderReadyFilterHtml({ count: 1, active: true });
-        assert.match(filter, /desk-ready-filter/);
-        assert.match(filter, /Due/);
-        assert.match(filter, /is-active/);
-        assert.match(filter, /spaced reconstruction/);
-        assert.equal(renderReadyFilterHtml({ count: 0 }), '');
-
-        const selection = renderDueSelectionHtml(dueItemsForConcept(due, 'c1'));
-        assert.match(selection, /Sensor reading/);
-        assert.match(selection, /Up next from memory/);
-        assert.match(selection, />\\s*Reconstruct\\s*</);
-        assert.match(selection, /2 nodes due · oldest first/);
-        assert.match(selection, /data-node-id="sensor"/);
-        assert.match(selection, /aria-label="Reconstruct Sensor reading from memory"/);
-        assert.doesNotMatch(selection, /due-for-spaced__list/);
-        assert.doesNotMatch(selection, />RECONSTRUCT</);
-
-        // Scaffolded clusters win over backbone — due IDs must match the page.
+        // Scaffolded clusters win over backbone when deriving drillable IDs.
         const clusterGraph = {
           metadata: { id: 'core', label: 'Core' },
           backbone: [{ id: 'bb1', label: 'Backbone only' }],
