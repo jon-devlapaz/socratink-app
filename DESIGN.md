@@ -164,7 +164,6 @@ Design and code-contract boundaries only. For git, deploy, hooks, and other oper
 ## 8. Pointers
 
 - Ops canon → [`AGENTS.md`](AGENTS.md)
-- SEDA/UI state alignment → [`docs/design/seda-ui-state-alignment.md`](docs/design/seda-ui-state-alignment.md)
 - Domain language → [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
 - ADR history → [`docs/adr/`](docs/adr/)
 - Design tokens (code) → [`public/css/tokens.css`](public/css/tokens.css)
