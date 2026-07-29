@@ -10,9 +10,6 @@
 - [Project state](/docs/project/state.md): current release posture, persistence truth, active risks
 - [ADR index](/docs/adr/README.md): append-only architectural decisions
 
-## Deep-dive
-- [Full UX manifesto](/docs/design/socratink-ux.md): the prose source for DESIGN.md voice/state-model sections
-
 ## Code-adjacent
 - [SEDA runtime map](/lib/README.md)
 - [Design tokens](/public/css/tokens.css)

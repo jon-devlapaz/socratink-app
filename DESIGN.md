@@ -1,8 +1,8 @@
 # socratink — DESIGN
 
-Canonical product/design hub for agents and contributors. Slim by design: this file points to depth, it doesn't carry it.
+Canonical product/design hub for agents and contributors.
 
-For human-prose UX manifesto, read [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md). For ops (commands, git workflow, conventions), read [`AGENTS.md`](AGENTS.md).
+For ops (commands, git workflow, conventions), read [`AGENTS.md`](AGENTS.md).
 
 ---
 
@@ -147,8 +147,6 @@ This section also governs LLM-generated content. Drill prompts, system prompts, 
 
 **Allowed state copy:** *suggested first · ready to reconstruct · primed for study · needs repair · solidified through spaced reconstruction.* **Forbidden:** *you know this · mastered · completed · advanced · diagnostic · evaluate · beginner/intermediate/advanced · we found your misconceptions.*
 
-Full tone-by-surface table in [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md) §10.
-
 ---
 
 ## 7. Boundaries
@@ -166,7 +164,6 @@ Design and code-contract boundaries only. For git, deploy, hooks, and other oper
 ## 8. Pointers
 
 - Ops canon → [`AGENTS.md`](AGENTS.md)
-- Full UX manifesto → [`docs/design/socratink-ux.md`](docs/design/socratink-ux.md)
 - SEDA/UI state alignment → [`docs/design/seda-ui-state-alignment.md`](docs/design/seda-ui-state-alignment.md)
 - Domain language → [`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md)
 - ADR history → [`docs/adr/`](docs/adr/)
